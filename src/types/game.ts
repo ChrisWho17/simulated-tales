@@ -26,9 +26,16 @@ export interface ScheduleEntry {
 }
 
 export interface Memory {
+  id: string;
   tick: number;
+  type: 'witnessed' | 'experienced' | 'heard' | 'caused';
   event: string;
+  involvedEntities: string[];
+  emotionalImpact: number; // -100 to 100
   sentiment: 'grateful' | 'angry' | 'fearful' | 'curious' | 'neutral' | 'happy' | 'sad';
+  reliability: 'certain' | 'probable' | 'uncertain' | 'false';
+  decayRate: number;
+  sharable: boolean;
   target?: string;
   description?: string;
 }
@@ -46,8 +53,64 @@ export type Trait =
   | 'brave' | 'cunning' | 'honest' | 'lazy' | 'friendly'
   | 'aggressive' | 'calm' | 'curious' | 'secretive';
 
-export interface NPC {
-  id: string;
+// ============= NPC CHAIN ARCHITECTURE =============
+
+// IDENTITY CHAIN - Who the NPC believes they are
+export interface NPCIdentity {
+  selfStory: string; // Who they believe they are
+  identityThreat: string; // What threatens their self-image
+  restorationBehavior: string; // What they do when identity is threatened
+}
+
+// NEEDS CHAIN - Hierarchical needs with satisfaction levels
+export interface NPCNeed {
+  type: 'survival' | 'stability' | 'status' | 'belonging' | 'meaning';
+  satisfaction: number; // 0-100
+  priority: number; // Lower = higher priority
+  description: string;
+}
+
+// THREAT MODEL - How the NPC perceives and responds to danger
+export type DefenseType = 'avoidance' | 'appeasement' | 'confrontation' | 'deception';
+
+export interface NPCThreatModel {
+  fears: string[];
+  detectionTriggers: string[];
+  defaultDefense: DefenseType;
+}
+
+// SOCIAL RANKING - How the NPC views other entities
+export interface SocialRankEntry {
+  trust: number; // -100 to 100
+  utility: number; // How useful they are
+  fear: number; // How afraid of them
+  intimacy: number; // Emotional closeness
+}
+
+// EMOTIONAL STATE - Multi-layered emotional system
+export type EmotionalState = 
+  | 'calm' | 'anxious' | 'angry' | 'fearful' | 'happy' 
+  | 'sad' | 'hopeful' | 'desperate' | 'numb' | 'vigilant'
+  | 'content' | 'bitter' | 'nostalgic' | 'suspicious';
+
+export interface NPCEmotionalState {
+  current: EmotionalState; // Moment-to-moment emotion
+  baseline: EmotionalState; // Weeks-level default mood
+  scarEmotion: EmotionalState; // Years-level trauma anchor
+  scarTriggers: string[]; // What activates the scar
+}
+
+// KNOWN FACTS - What the NPC knows and how they share it
+export type FactReliability = 'witnessed' | 'trusted_source' | 'rumor' | 'assumed' | 'invented';
+
+export interface KnownFact {
+  fact: string;
+  reliability: FactReliability;
+  shareCondition: string; // When they'll share this
+}
+
+// META - Original NPC properties (legacy structure preserved)
+export interface NPCMeta {
   name: string;
   age: number;
   occupation: string;
@@ -56,13 +119,43 @@ export interface NPC {
   stats: Stats;
   traits: Trait[];
   schedule: Record<number, ScheduleEntry>;
-  memory: Memory[];
-  relationships: Record<string, Relationship>;
   desires: string[];
   secrets: string[];
+}
+
+// FULL NPC TYPE - Chain-driven cognitive system
+export interface NPC {
+  id: string;
+  
+  // Core identity and personality
+  identity: NPCIdentity;
+  
+  // Hierarchical needs system
+  needs: NPCNeed[];
+  
+  // Threat perception and response
+  threatModel: NPCThreatModel;
+  
+  // Social relationships with trust/utility/fear/intimacy
+  socialRanking: Record<string, SocialRankEntry>;
+  
+  // Multi-layered emotional state
+  emotionalState: NPCEmotionalState;
+  
+  // What this NPC knows
+  knownFacts: KnownFact[];
+  
+  // Legacy/meta information
+  meta: NPCMeta;
+  
+  // Dynamic state
+  memory: Memory[];
+  relationships: Record<string, Relationship>; // Keep for compatibility
   currentLocation: string;
   currentActivity: string;
 }
+
+// ============= OTHER CORE TYPES =============
 
 export interface Item {
   id: string;
