@@ -88,13 +88,13 @@ function simulateNPCs(state: GameState): Record<string, NPC> {
   for (const npcId in npcs) {
     const npc = { ...npcs[npcId] };
     
-    // Find the appropriate schedule entry
-    const scheduleHours = Object.keys(npc.schedule).map(Number).sort((a, b) => a - b);
-    let currentSchedule = npc.schedule[scheduleHours[0]];
+    // Find the appropriate schedule entry from meta
+    const scheduleHours = Object.keys(npc.meta.schedule).map(Number).sort((a, b) => a - b);
+    let currentSchedule = npc.meta.schedule[scheduleHours[0]];
     
     for (const hour of scheduleHours) {
       if (state.time.hour >= hour) {
-        currentSchedule = npc.schedule[hour];
+        currentSchedule = npc.meta.schedule[hour];
       }
     }
     
@@ -104,11 +104,14 @@ function simulateNPCs(state: GameState): Record<string, NPC> {
       npc.currentActivity = currentSchedule.activity;
     }
     
-    // Update NPC stats slightly
-    npc.stats = {
-      ...npc.stats,
-      energy: Math.min(100, Math.max(0, npc.stats.energy + (npc.currentActivity.includes('sleep') ? 10 : -1))),
-      mood: Math.min(100, Math.max(0, npc.stats.mood + (Math.random() > 0.5 ? 1 : -1))),
+    // Update NPC stats slightly (in meta)
+    npc.meta = {
+      ...npc.meta,
+      stats: {
+        ...npc.meta.stats,
+        energy: Math.min(100, Math.max(0, npc.meta.stats.energy + (npc.currentActivity.includes('sleep') ? 10 : -1))),
+        mood: Math.min(100, Math.max(0, npc.meta.stats.mood + (Math.random() > 0.5 ? 1 : -1))),
+      },
     };
     
     npcs[npcId] = npc;
@@ -162,7 +165,7 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       if (timeDesc) description += '\n\n' + timeDesc;
       
       if (npcsHere.length > 0) {
-        description += '\n\nYou see: ' + npcsHere.map(npc => `${npc.name} (${npc.currentActivity})`).join(', ') + '.';
+        description += '\n\nYou see: ' + npcsHere.map(npc => `${npc.meta.name} (${npc.currentActivity})`).join(', ') + '.';
       }
       
       if (location.connectedLocations.length > 0) {
@@ -192,7 +195,7 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       
       const targetName = action.target.toLowerCase();
       const npcsHere = getNPCsAtLocation(newState, newState.player.currentLocation);
-      const targetNPC = npcsHere.find(npc => npc.name.toLowerCase().includes(targetName));
+      const targetNPC = npcsHere.find(npc => npc.meta.name.toLowerCase().includes(targetName));
       
       if (!targetNPC) {
         events.push({
@@ -211,7 +214,7 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       events.push({
         id: `evt_${Date.now()}`,
         type: 'dialogue',
-        content: `**${targetNPC.name}**: "${greeting}"`,
+        content: `**${targetNPC.meta.name}**: "${greeting}"`,
         timestamp: newState.time.tick,
         involvedNPCs: [targetNPC.id],
       });

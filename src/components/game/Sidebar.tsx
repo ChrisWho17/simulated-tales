@@ -160,7 +160,7 @@ export function Sidebar({ gameState }: SidebarProps) {
                     className="p-2 rounded bg-secondary/50 border border-border"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{npc.name}</span>
+                      <span className="font-medium text-sm">{npc.meta.name}</span>
                       <span className={`text-xs ${
                         disposition === 'Friendly' ? 'text-forest' :
                         disposition === 'Hostile' ? 'text-blood' : 'text-muted-foreground'
@@ -168,7 +168,7 @@ export function Sidebar({ gameState }: SidebarProps) {
                         {disposition}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">{npc.occupation}</p>
+                    <p className="text-xs text-muted-foreground">{npc.meta.occupation}</p>
                     <p className="text-xs text-muted-foreground/70 italic mt-1">
                       {npc.currentActivity}
                     </p>
