@@ -17,6 +17,7 @@ export const initialPlayer: Player = {
     mood: 60,
     wealth: 25,
     hunger: 70,
+    gold: 50,
   },
   inventory: [
     {
