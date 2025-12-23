@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
 import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2 } from 'lucide-react';
 import { GameGenre } from '@/types/genreData';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 
 interface ScenarioSelection {
@@ -78,6 +79,11 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+        {/* Color Picker - Top Right */}
+        <div className="absolute top-4 right-4 z-20">
+          <ColorPicker />
+        </div>
+        
         {/* Logo/Title */}
         <div className="text-center mb-10 animate-fade-in">
           <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary mb-3 tracking-wider">
