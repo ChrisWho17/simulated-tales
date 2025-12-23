@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { GameEvent } from '@/types/game';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { User } from 'lucide-react';
 
 interface NarrativeDisplayProps {
   events: GameEvent[];
@@ -66,7 +67,36 @@ export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
               className={`animate-fade-in ${getEventStyle(event.type)}`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
-              {formatContent(event.content)}
+              {/* Show NPC portrait for dialogue events */}
+              {event.type === 'dialogue' && event.npcPortrait && (
+                <div className="flex items-start gap-4 mb-2">
+                  <div className="w-16 h-20 rounded-lg border-2 border-primary/30 bg-muted/20 overflow-hidden shrink-0 shadow-lg">
+                    <img 
+                      src={event.npcPortrait} 
+                      alt="NPC portrait" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 pt-2">
+                    {formatContent(event.content)}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show placeholder portrait for dialogue without generated portrait */}
+              {event.type === 'dialogue' && !event.npcPortrait && (
+                <div className="flex items-start gap-4 mb-2">
+                  <div className="w-16 h-20 rounded-lg border-2 border-dashed border-border/50 bg-muted/10 flex items-center justify-center shrink-0">
+                    <User className="w-8 h-8 text-muted-foreground/30" />
+                  </div>
+                  <div className="flex-1 pt-2">
+                    {formatContent(event.content)}
+                  </div>
+                </div>
+              )}
+              
+              {/* Regular content for non-dialogue events */}
+              {event.type !== 'dialogue' && formatContent(event.content)}
             </div>
           ))
         )}
