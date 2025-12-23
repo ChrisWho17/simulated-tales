@@ -17,9 +17,9 @@ const REPLY_KEYWORDS = ['reply', 'respond', 'answer', 'nod', 'shake', 'agree', '
 const INVENTORY_KEYWORDS = ['inventory', 'inv', 'items', 'bag', 'pocket', 'equip', 'unequip', 'wear', 'remove', 'check'];
 const TERRAIN_KEYWORDS = ['dig', 'build', 'place', 'destroy', 'craft', 'make', 'create', 'demolish', 'construct', 'plant', 'harvest', 'climb', 'jump', 'swim', 'hide'];
 const LOOK_KEYWORDS = ['look', 'see', 'observe', 'view', 'scan', 'watch', 'peer', 'gaze', 'glance'];
-const MOVE_KEYWORDS = ['go', 'walk', 'run', 'move', 'travel', 'head', 'enter', 'exit', 'leave', 'north', 'south', 'east', 'west', 'n', 's', 'e', 'w'];
+const MOVE_KEYWORDS = ['go', 'walk', 'run', 'move', 'travel', 'head', 'enter', 'exit', 'north', 'south', 'east', 'west', 'n', 's', 'e', 'w'];
 const SYSTEM_KEYWORDS = ['help', 'save', 'load', 'status', 'wait', 'rest', 'sleep'];
-const END_CONVERSATION_KEYWORDS = ['bye', 'end', 'goodbye', 'farewell', 'leave', 'later', 'cya'];
+const END_CONVERSATION_KEYWORDS = ['bye', 'goodbye', 'farewell', 'later', 'cya', 'seeya'];
 
 export function parseEnhancedCommand(input: string): ParsedCommand {
   const trimmed = input.trim().toLowerCase();

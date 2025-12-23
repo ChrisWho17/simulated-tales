@@ -5,21 +5,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface AppearanceData {
+  bodyType: string;
+  height: string;
+  hairColor: string;
+  hairLength: string;
+  eyeColor: string;
+  skinTone: string;
+  bustSize?: string;
+  curviness?: string;
+  muscles?: string;
+  bodyHair?: string;
+  customDescription?: string;
+}
+
+interface BasicInfoData {
+  name: string;
+  age: number;
+  gender: string;
+}
+
+interface BackgroundData {
+  origin: string;
+  spawnPoint: string;
+}
+
+interface PersonalityData {
+  disposition: string;
+  socialStyle: string;
+}
+
+interface PortraitRequest {
+  appearance: AppearanceData;
+  basicInfo: BasicInfoData;
+  background: BackgroundData;
+  personality: PersonalityData;
+  additionalFeaturesEnabled: boolean;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { appearance, basicInfo, background, personality, additionalFeaturesEnabled } = await req.json();
+    const { appearance, basicInfo, background, personality, additionalFeaturesEnabled } = await req.json() as PortraitRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Validate required fields
+    if (!appearance || !basicInfo) {
+      throw new Error("Missing required appearance or basicInfo data");
+    }
+
     // Build additional body details based on gender and features enabled
-    let bodyDetails = `${appearance.height} height, ${appearance.bodyType} build`;
+    let bodyDetails = `${appearance.height || 'average'} height, ${appearance.bodyType || 'average'} build`;
     
     if (additionalFeaturesEnabled && basicInfo.gender === 'female') {
       bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves`;
@@ -29,14 +72,20 @@ serve(async (req) => {
       bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves, ${appearance.muscles || 'toned'} muscle definition`;
     }
 
+    // Build custom description section if provided
+    let customSection = '';
+    if (appearance.customDescription && appearance.customDescription.trim().length > 0) {
+      customSection = `\nAdditional specific details: ${appearance.customDescription.trim()}`;
+    }
+
     // Build a detailed prompt for the character portrait - MODERN TIMES ONLY, FULL BODY
     const prompt = `Generate a full body portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'} in modern day contemporary setting. 
-Physical appearance: ${bodyDetails}, ${appearance.hairLength} ${appearance.hairColor} hair, ${appearance.eyeColor} eyes, ${appearance.skinTone} skin tone.
-Personality: ${personality.disposition} disposition with a ${personality.socialStyle} social style.
-Background: ${background.origin}.
-Style: Modern contemporary realistic full body portrait, professional photography style, natural lighting, present-day urban setting. Full body shot from head to feet. Modern casual clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
+Physical appearance: ${bodyDetails}, ${appearance.hairLength || 'medium'} ${appearance.hairColor || 'brown'} hair, ${appearance.eyeColor || 'brown'} eyes, ${appearance.skinTone || 'medium'} skin tone.
+Personality: ${personality?.disposition || 'Adaptable'} disposition with a ${personality?.socialStyle || 'Charming'} social style.
+Background: ${background?.origin || 'Stable upbringing'}.${customSection}
+Style: Modern contemporary realistic full body portrait, professional photography style, natural lighting, present-day urban setting. Full body shot from head to feet. Modern casual clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements. Ultra high resolution.`;
 
-    console.log("Generating portrait with prompt:", prompt);
+    console.log("Generating portrait with prompt:", prompt.substring(0, 200) + "...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -77,13 +126,13 @@ Style: Modern contemporary realistic full body portrait, professional photograph
     }
 
     const data = await response.json();
-    console.log("AI response received");
+    console.log("AI response received for character:", basicInfo.name || "unnamed");
     
     // Extract image from the response
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageUrl) {
-      console.error("No image in response:", JSON.stringify(data));
+      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
       throw new Error("No image generated");
     }
 
