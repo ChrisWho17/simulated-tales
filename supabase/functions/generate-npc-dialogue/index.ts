@@ -30,6 +30,16 @@ interface NPCContext {
     distinguishing: string;
   };
   knownFacts?: string[];
+  // Memory system additions
+  memoryContext?: string;
+  impression?: {
+    overallSentiment: string;
+    trustLevel: number;
+    traits: string[];
+  };
+  activeTrauma?: boolean;
+  recentMemories?: string[];
+  patterns?: string[];
 }
 
 interface DialogueRequest {
@@ -78,6 +88,31 @@ serve(async (req) => {
         ).join('\n');
     }
 
+    // Build memory context
+    let memorySection = '';
+    if (npc.memoryContext) {
+      memorySection = `\n\nYOUR MEMORIES ABOUT THIS PERSON:\n${npc.memoryContext}`;
+    }
+    
+    if (npc.impression) {
+      memorySection += `\n\nYOUR IMPRESSION: You feel ${npc.impression.overallSentiment} about them. Trust: ${npc.impression.trustLevel}/100.`;
+      if (npc.impression.traits.length > 0) {
+        memorySection += ` You think they are: ${npc.impression.traits.join(', ')}.`;
+      }
+    }
+    
+    if (npc.activeTrauma) {
+      memorySection += '\n\n⚠️ TRAUMA TRIGGERED: Something about this interaction is bringing up painful memories. You may be distressed, defensive, or emotionally reactive.';
+    }
+    
+    if (npc.recentMemories && npc.recentMemories.length > 0) {
+      memorySection += '\n\nRELEVANT PAST EVENTS:\n' + npc.recentMemories.map(m => `- ${m}`).join('\n');
+    }
+    
+    if (npc.patterns && npc.patterns.length > 0) {
+      memorySection += `\n\nPATTERNS YOU'VE NOTICED: ${npc.patterns.join('; ')}`;
+    }
+
     // Build the system prompt for modern realistic dialogue
     const systemPrompt = `You are ${npc.name}, a ${npc.age}-year-old ${npc.occupation} in a modern-day urban setting. 
 
@@ -92,6 +127,7 @@ ${appearanceContext}
 RELATIONSHIP WITH PLAYER:
 ${relationshipDesc}
 ${npc.isGeneric ? '\nYou are a random person the player has just encountered. You have your own life and concerns.' : '\nYou are a recurring character in this world.'}
+${memorySection}
 
 DIALOGUE GUIDELINES:
 - Respond naturally as this character would in real life
@@ -106,13 +142,20 @@ DIALOGUE GUIDELINES:
 - You can have opinions, biases, and make mistakes
 ${npc.knownFacts && npc.knownFacts.length > 0 ? `\nThings you know: ${npc.knownFacts.join('; ')}` : ''}
 
+MEMORY-BASED BEHAVIOR:
+- Reference your memories naturally when relevant ("You helped me before...", "Last time we talked...", "I remember when...")
+- If you have negative memories about the player, be appropriately guarded or hostile
+- If you have positive memories, be warmer and more trusting
+- If the player contradicts something you remember, express confusion or suspicion
+- Traumatic memories may cause you to react strongly to certain topics
+
 SETTING:
 - Location: ${location}
 - Time: ${timeOfDay}
 - This is a realistic modern urban environment
 ${conversationContext}
 
-${isFirstInteraction ? 'This is your first interaction with this player. React naturally to being approached by a stranger.' : 'Continue the conversation naturally based on context.'}
+${isFirstInteraction ? 'This is your first interaction with this player. React naturally to being approached by a stranger.' : 'Continue the conversation naturally based on your memories and relationship.'}
 
 Respond ONLY with your dialogue and brief actions. Do not include your name prefix or quotation marks. Write as if speaking naturally.`;
 
