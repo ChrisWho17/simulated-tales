@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { GameState, GameEvent } from '@/types/game';
+import { GameState, GameEvent, NPC } from '@/types/game';
 import { CharacterData, SPAWN_POINTS } from '@/types/characterCreation';
 import { 
   createInitialGameState, 
@@ -7,8 +7,10 @@ import {
   parseCommand,
   updateLocationNPCs,
   processDebugCommand,
+  getTimePeriod,
 } from '@/game/gameEngine';
 import { createLifeSimFromCharacter, generateCharacterIntroNarrative, getSpawnLocationId } from '@/game/characterIntegration';
+import { generateGenericNPC, getSpawnCount, generateRandomEncounter } from '@/game/genericNPCSystem';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
@@ -22,6 +24,47 @@ import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
+
+// Generate AI dialogue for NPCs
+async function generateAIDialogue(npc: NPC, playerInput: string, location: string, timeOfDay: string, isFirst: boolean): Promise<string | null> {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-npc-dialogue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        npc: {
+          name: npc.meta.name,
+          age: npc.meta.age,
+          occupation: npc.meta.occupation,
+          description: npc.meta.description,
+          traits: npc.meta.traits,
+          currentActivity: npc.currentActivity,
+          currentMood: npc.emotionalState.current,
+          stressLevel: npc.stressLevel,
+          relationship: npc.relationships.player || { affection: 0, trust: 0, fear: 0, respect: 0 },
+          isGeneric: (npc as any).isGeneric || false,
+          appearance: (npc as any).appearance,
+          knownFacts: npc.knownFacts?.map(f => f.fact),
+        },
+        playerInput,
+        location,
+        timeOfDay,
+        isFirstInteraction: isFirst,
+      }),
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      return data.fallbackDialogue || null;
+    }
+    
+    const data = await response.json();
+    return data.dialogue;
+  } catch (error) {
+    console.error('Error generating AI dialogue:', error);
+    return null;
+  }
+}
 
 export function GameUI() {
   const [showCharacterCreation, setShowCharacterCreation] = useState(() => {
@@ -186,7 +229,70 @@ export function GameUI() {
       return;
     }
     
-    const { newState, events } = processAction(gameState, action);
+    let { newState, events } = processAction(gameState, action);
+    
+    // Spawn generic NPCs when entering a location or looking around
+    if (action.type === 'go' || action.type === 'look') {
+      const locationId = newState.player.currentLocation;
+      const timePeriod = getTimePeriod(newState.time.hour) as 'morning' | 'afternoon' | 'evening' | 'night';
+      const existingIds = new Set(Object.keys(newState.npcs));
+      
+      // Remove old generic NPCs from previous location
+      const newNpcs = { ...newState.npcs };
+      Object.keys(newNpcs).forEach(id => {
+        if ((newNpcs[id] as any).isGeneric && newNpcs[id].currentLocation !== locationId) {
+          delete newNpcs[id];
+        }
+      });
+      
+      // Spawn new generic NPCs for current location
+      const spawnCount = getSpawnCount(locationId, timePeriod);
+      for (let i = 0; i < spawnCount; i++) {
+        const genericNPC = generateGenericNPC(locationId, timePeriod, existingIds);
+        if (genericNPC) {
+          newNpcs[genericNPC.id] = genericNPC;
+          existingIds.add(genericNPC.id);
+        }
+      }
+      newState = { ...newState, npcs: newNpcs };
+      
+      // Random encounter chance
+      const encounter = generateRandomEncounter(locationId);
+      if (encounter) {
+        events.push({
+          id: `enc_${Date.now()}`,
+          type: 'observation' as const,
+          content: `\n**Random Encounter:** ${encounter.description}`,
+          timestamp: newState.time.tick,
+        });
+      }
+    }
+    
+    // Handle talk command with AI dialogue
+    if (action.type === 'talk' && action.target) {
+      const targetName = action.target.toLowerCase();
+      const npcsHere = Object.values(newState.npcs).filter(npc => npc.currentLocation === newState.player.currentLocation);
+      const targetNPC = npcsHere.find(npc => npc.meta.name.toLowerCase().includes(targetName));
+      
+      if (targetNPC) {
+        const timePeriod = getTimePeriod(newState.time.hour);
+        const location = newState.locations[newState.player.currentLocation]?.name || 'unknown';
+        const isFirst = !targetNPC.memory.some(m => m.involvedEntities.includes('player'));
+        
+        const aiDialogue = await generateAIDialogue(targetNPC, action.target, location, timePeriod, isFirst);
+        
+        if (aiDialogue) {
+          // Replace the last dialogue event with AI-generated one
+          const lastDialogueIdx = events.findIndex(e => e.type === 'dialogue' && e.involvedNPCs?.includes(targetNPC.id));
+          if (lastDialogueIdx >= 0) {
+            events[lastDialogueIdx] = {
+              ...events[lastDialogueIdx],
+              content: `**${targetNPC.meta.name}**: "${aiDialogue}"`,
+            };
+          }
+        }
+      }
+    }
     
     const deathState = checkPlayerDeath(newState);
     if (deathState.isDead) {
@@ -209,7 +315,6 @@ export function GameUI() {
           if (npc) {
             const portrait = await generateNPCPortrait(npc);
             if (portrait) {
-              // Also update the NPC in state with the portrait
               newState.npcs[npcId] = { ...npc, portrait };
               return { ...event, npcPortrait: portrait };
             }
