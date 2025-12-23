@@ -2,7 +2,10 @@ import { useRef, useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, RotateCcw, Settings, Loader2, User, Heart, Coins, Backpack, Dices, ImageIcon } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { StatBar, CircularStat } from '@/components/ui/stat-bar';
+import { AtmosphericBackground } from '@/components/ui/particle-background';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield } from 'lucide-react';
 import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -80,7 +83,6 @@ export function AdventureDisplay({
     }
   }, [isLoading]);
 
-  // Show dice roll modal when mechanics require it
   useEffect(() => {
     if (pendingMechanics?.rollRequired) {
       setShowDiceRoll(true);
@@ -96,7 +98,6 @@ export function AdventureDisplay({
 
   const handleDiceRollComplete = (roll: any) => {
     setShowDiceRoll(false);
-    // Re-send the last action with the dice roll result
     onPlayerAction(`[Dice roll for: ${pendingMechanics?.rollRequired?.reason}]`, roll);
     onClearMechanics();
   };
@@ -108,9 +109,9 @@ export function AdventureDisplay({
       const dialogueMatch = paragraph.match(/^\*\*(.+?)\*\*:\s*"(.+)"$/);
       if (dialogueMatch) {
         return (
-          <div key={idx} className="my-3 pl-4 border-l-2 border-primary/40">
+          <div key={idx} className="my-4 pl-4 border-l-2 border-primary/50 glass-panel-subtle py-3 pr-4 rounded-r-lg">
             <span className="font-semibold text-primary">{dialogueMatch[1]}:</span>
-            <span className="italic ml-2">"{dialogueMatch[2]}"</span>
+            <span className="italic ml-2 text-foreground/90">&ldquo;{dialogueMatch[2]}&rdquo;</span>
           </div>
         );
       }
@@ -122,13 +123,13 @@ export function AdventureDisplay({
 
       const fullyFormatted = formattedParagraph.replace(
         /\*(.+?)\*/g,
-        '<em>$1</em>'
+        '<em class="text-muted-foreground">$1</em>'
       );
 
       return (
         <p
           key={idx}
-          className="my-3 leading-relaxed"
+          className="my-4 leading-relaxed text-foreground/90"
           dangerouslySetInnerHTML={{ __html: fullyFormatted }}
         />
       );
@@ -136,89 +137,117 @@ export function AdventureDisplay({
   };
 
   const charClass = CHARACTER_CLASSES.find(c => c.id === character.classId);
+  const healthPercent = (character.currentHealth / character.maxHealth) * 100;
+  const isCritical = healthPercent < 25;
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-border/30">
-        <h1 className="text-xl font-narrative font-bold text-gradient-gold tracking-wide">
-          UNTOLD
-        </h1>
-        
-        {/* Character Quick Stats */}
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-destructive" />
-              <span className={character.currentHealth < character.maxHealth * 0.3 ? 'text-destructive' : ''}>
-                {character.currentHealth}/{character.maxHealth}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-gold" />
-              <span>{character.gold}</span>
-            </div>
-            <span className="text-muted-foreground">
-              Lv.{character.level} {charClass?.name}
-            </span>
-          </div>
+    <div className="h-screen flex flex-col relative overflow-hidden">
+      {/* Subtle atmospheric background */}
+      <div className="absolute inset-0 z-0 opacity-30">
+        <AtmosphericBackground />
+      </div>
 
-          <div className="flex items-center gap-1">
-            {cheatMode && (
-              <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded">
-                CHEAT
-              </span>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowCharacterSheet(true)}
-              className="text-muted-foreground hover:text-foreground"
-              title="Character Sheet"
-            >
-              <Backpack className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCheatMode}
-              className="text-muted-foreground hover:text-foreground"
-              title="Toggle Cheat Mode"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRestart}
-              className="text-muted-foreground hover:text-foreground"
-              title="New Adventure"
-            >
-              <RotateCcw className="w-5 h-5" />
-            </Button>
+      {/* Header */}
+      <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
+        <div className="flex items-center justify-between px-4 md:px-8 py-3">
+          <h1 className="text-xl font-display font-bold text-gradient-primary tracking-wider">
+            UNTOLD
+          </h1>
+          
+          {/* Character Quick Stats */}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-6">
+              {/* Health */}
+              <div className="flex items-center gap-2">
+                <CircularStat 
+                  value={character.currentHealth} 
+                  max={character.maxHealth} 
+                  type="health"
+                  size={40}
+                  strokeWidth={3}
+                  icon={<Heart className="w-4 h-4" />}
+                />
+                <div className="text-xs">
+                  <span className={`font-mono font-bold ${isCritical ? 'text-destructive animate-pulse' : 'text-success'}`}>
+                    {character.currentHealth}
+                  </span>
+                  <span className="text-muted-foreground">/{character.maxHealth}</span>
+                </div>
+              </div>
+
+              {/* Gold */}
+              <div className="flex items-center gap-2 px-3 py-1.5 glass-panel-subtle rounded-full">
+                <Coins className="w-4 h-4 text-warning" />
+                <span className="font-mono font-semibold text-warning">{character.gold}</span>
+              </div>
+
+              {/* Class & Level */}
+              <div className="px-3 py-1.5 glass-panel-subtle rounded-full">
+                <span className="text-xs text-muted-foreground">Lv.</span>
+                <span className="font-mono font-bold text-primary ml-1">{character.level}</span>
+                <span className="text-muted-foreground mx-1.5">•</span>
+                <span className="text-sm text-foreground">{charClass?.name}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1">
+              {cheatMode && (
+                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full border border-primary/30 animate-glow-pulse">
+                  DEV
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCharacterSheet(true)}
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Character Sheet"
+              >
+                <Backpack className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleCheatMode}
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Toggle Dev Mode"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRestart}
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                title="New Adventure"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Story Content */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
+      <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
           {story.map((entry, index) => (
             <div
               key={entry.id}
-              className={`animate-fade-in mb-6 ${entry.role === 'user' ? 'text-right' : ''}`}
+              className={`animate-fade-in-up mb-8 ${entry.role === 'user' ? 'text-right' : ''}`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               {entry.role === 'user' ? (
-                <div className="inline-block max-w-[85%] bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 text-left">
-                  <p className="text-sm text-primary/70 mb-1 font-ui">You</p>
-                  <p className="font-narrative text-lg">{entry.content}</p>
+                <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left">
+                  <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
+                  <p className="font-narrative text-lg text-foreground">{entry.content}</p>
                 </div>
               ) : (
-                <div className="font-narrative text-lg text-foreground leading-relaxed">
+                <Card className="border-0 bg-transparent shadow-none">
                   {/* Scene Image */}
                   {entry.imageUrl && (
-                    <div className="mb-4 rounded-lg overflow-hidden border border-border/30">
+                    <div className="mb-6 rounded-xl overflow-hidden border border-[rgba(139,92,246,0.3)] shadow-glow">
                       <img 
                         src={entry.imageUrl} 
                         alt="Scene illustration" 
@@ -227,16 +256,18 @@ export function AdventureDisplay({
                     </div>
                   )}
                   
-                  {formatNarrativeContent(entry.content)}
+                  <div className="font-narrative text-lg text-foreground leading-relaxed">
+                    {formatNarrativeContent(entry.content)}
+                  </div>
                   
                   {/* Generate Image Button */}
                   {!entry.imageUrl && index === story.length - 1 && entry.role === 'narrator' && (
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => onGenerateImage(entry.id)}
                       disabled={!!generatingImageFor}
-                      className="mt-2 text-muted-foreground hover:text-primary"
+                      className="mt-4"
                     >
                       {generatingImageFor === entry.id ? (
                         <>
@@ -251,13 +282,13 @@ export function AdventureDisplay({
                       )}
                     </Button>
                   )}
-                </div>
+                </Card>
               )}
             </div>
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-3 text-muted-foreground animate-pulse">
+            <div className="flex items-center gap-3 text-primary animate-pulse glass-panel-subtle px-4 py-3 rounded-xl inline-flex">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="font-narrative italic">The story unfolds...</span>
             </div>
@@ -266,7 +297,7 @@ export function AdventureDisplay({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-border/30 p-4 md:p-6">
+      <div className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3">
             <Input
@@ -274,15 +305,15 @@ export function AdventureDisplay({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="What do you do?"
-              className="flex-1 bg-card border-border/50 text-foreground placeholder:text-muted-foreground font-narrative text-lg py-6"
+              className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-lg py-6 focus:border-primary focus:shadow-glow"
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
               disabled={isLoading || showDiceRoll}
             />
             <Button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading || showDiceRoll}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-6"
               size="lg"
+              className="px-6"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -291,9 +322,17 @@ export function AdventureDisplay({
               )}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Describe your action, use abilities ({character.abilities.join(', ')}), or explore
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+            {character.abilities.slice(0, 4).map((ability) => (
+              <button
+                key={ability}
+                onClick={() => setInput(`I use ${ability}`)}
+                className="text-xs px-3 py-1 rounded-full glass-panel-subtle text-muted-foreground hover:text-primary hover:border-primary/50 transition-all border border-transparent"
+              >
+                {ability}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
