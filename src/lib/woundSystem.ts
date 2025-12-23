@@ -201,3 +201,26 @@ export function getAffectedStats(wound: Wound): string[] {
   
   return Array.from(stats);
 }
+
+// Severity label helper
+export function getWoundSeverityLabel(severity: number): string {
+  const labels = ['Minor', 'Light', 'Moderate', 'Severe', 'Critical'];
+  return labels[severity - 1] || 'Unknown';
+}
+
+// WOUND_CONFIG for component usage
+export const WOUND_CONFIG: Record<WoundType, { affectedStats: string[]; baseHealRate: number }> = {
+  cut: { affectedStats: WOUND_EFFECTS.cut, baseHealRate: HEALING_RATES.cut },
+  bruise: { affectedStats: WOUND_EFFECTS.bruise, baseHealRate: HEALING_RATES.bruise },
+  fracture: { affectedStats: WOUND_EFFECTS.fracture, baseHealRate: HEALING_RATES.fracture },
+  burn: { affectedStats: WOUND_EFFECTS.burn, baseHealRate: HEALING_RATES.burn },
+  concussion: { affectedStats: WOUND_EFFECTS.concussion, baseHealRate: HEALING_RATES.concussion },
+  sprain: { affectedStats: WOUND_EFFECTS.sprain, baseHealRate: HEALING_RATES.sprain },
+  puncture: { affectedStats: WOUND_EFFECTS.puncture, baseHealRate: HEALING_RATES.puncture },
+};
+
+// Calculate penalty for a specific stat from wounds
+export function calculateWoundPenalty(wounds: Wound[], stat: string): number {
+  const penalties = calculateWoundPenalties(wounds);
+  return penalties[stat] ? Math.round(-penalties[stat] * 100) : 0;
+}
