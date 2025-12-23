@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AdventureCreator } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { toast } from 'sonner';
@@ -29,7 +30,7 @@ interface ScenarioSelection {
   genreTitle: string;
 }
 
-type GamePhase = 'scenario' | 'character' | 'playing';
+type GamePhase = 'loading' | 'scenario' | 'character' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
@@ -37,6 +38,9 @@ const SCENARIO_KEY = 'untold-adventure-scenario';
 const GENRE_KEY = 'untold-adventure-genre';
 
 export function AdventureGame() {
+  // Initial loading state
+  const [initialLoading, setInitialLoading] = useState(true);
+
   // Load saved state
   const [phase, setPhase] = useState<GamePhase>(() => {
     const savedChar = localStorage.getItem(CHARACTER_KEY);
@@ -76,6 +80,14 @@ export function AdventureGame() {
   const [cheatMode, setCheatMode] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
   const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
+
+  // Handle initial loading complete
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const saveData = useCallback((newStory: StoryEntry[], newCharacter: RPGCharacter, scenario: string, genre: GameGenre) => {
     localStorage.setItem(STORY_KEY, JSON.stringify(newStory));
@@ -227,6 +239,11 @@ export function AdventureGame() {
     localStorage.removeItem(SCENARIO_KEY);
     localStorage.removeItem(GENRE_KEY);
   }, []);
+
+  // Show loading screen on initial load
+  if (initialLoading) {
+    return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." />;
+  }
 
   // Phase 1: Scenario selection
   if (phase === 'scenario') {

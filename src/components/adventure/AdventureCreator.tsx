@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun } from 'lucide-react';
+import { CardInteractive } from '@/components/ui/card';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2 } from 'lucide-react';
 import { GameGenre } from '@/types/genreData';
+import { AtmosphericBackground } from '@/components/ui/particle-background';
 
 interface ScenarioSelection {
   scenario: string;
@@ -16,14 +18,14 @@ interface AdventureCreatorProps {
 }
 
 const PRESET_SCENARIOS = [
-  { id: 'fantasy', genre: 'fantasy' as GameGenre, title: 'Fantasy Quest', description: 'Begin a fantasy adventure in a mystical realm where magic flows freely and ancient prophecies unfold.', icon: Castle },
-  { id: 'space', genre: 'scifi' as GameGenre, title: 'Space Explorer', description: 'Start a sci-fi journey aboard a deep space exploration vessel at the edge of known space.', icon: Rocket },
-  { id: 'detective', genre: 'mystery' as GameGenre, title: 'Detective Mystery', description: 'Investigate a complex case in a noir mystery where nothing is quite what it seems.', icon: Search },
-  { id: 'survival', genre: 'horror' as GameGenre, title: 'Survival Horror', description: 'Wake up in an abandoned facility with no memory. Something is hunting you in the dark.', icon: Skull },
-  { id: 'pirate', genre: 'pirate' as GameGenre, title: 'High Seas Adventure', description: 'Captain your own ship across treacherous waters in search of legendary treasure.', icon: Compass },
-  { id: 'cyberpunk', genre: 'cyberpunk' as GameGenre, title: 'Neon Dystopia', description: 'Navigate the neon-lit streets of a corporate-controlled megacity as a skilled hacker or street samurai.', icon: Zap },
-  { id: 'warrior', genre: 'fantasy' as GameGenre, title: 'Arena Champion', description: 'Fight your way to glory in the grand coliseum, facing ever deadlier opponents.', icon: Sword },
-  { id: 'western', genre: 'mystery' as GameGenre, title: 'Frontier Justice', description: 'Ride into a dusty frontier town where outlaws rule and justice needs a champion.', icon: Sun },
+  { id: 'fantasy', genre: 'fantasy' as GameGenre, title: 'Fantasy Quest', description: 'Begin a fantasy adventure in a mystical realm where magic flows freely and ancient prophecies unfold.', icon: Castle, gradient: 'genre-fantasy' },
+  { id: 'space', genre: 'scifi' as GameGenre, title: 'Space Explorer', description: 'Start a sci-fi journey aboard a deep space exploration vessel at the edge of known space.', icon: Rocket, gradient: 'genre-scifi' },
+  { id: 'detective', genre: 'mystery' as GameGenre, title: 'Detective Mystery', description: 'Investigate a complex case in a noir mystery where nothing is quite what it seems.', icon: Search, gradient: 'genre-mystery' },
+  { id: 'survival', genre: 'horror' as GameGenre, title: 'Survival Horror', description: 'Wake up in an abandoned facility with no memory. Something is hunting you in the dark.', icon: Skull, gradient: 'genre-horror' },
+  { id: 'pirate', genre: 'pirate' as GameGenre, title: 'High Seas Adventure', description: 'Captain your own ship across treacherous waters in search of legendary treasure.', icon: Compass, gradient: 'genre-pirate' },
+  { id: 'cyberpunk', genre: 'cyberpunk' as GameGenre, title: 'Neon Dystopia', description: 'Navigate the neon-lit streets of a corporate-controlled megacity as a skilled hacker or street samurai.', icon: Zap, gradient: 'genre-cyberpunk' },
+  { id: 'warrior', genre: 'fantasy' as GameGenre, title: 'Arena Champion', description: 'Fight your way to glory in the grand coliseum, facing ever deadlier opponents.', icon: Sword, gradient: 'genre-fantasy' },
+  { id: 'western', genre: 'western' as GameGenre, title: 'Frontier Justice', description: 'Ride into a dusty frontier town where outlaws rule and justice needs a champion.', icon: Sun, gradient: 'genre-western' },
 ];
 
 const RANDOM_SCENARIOS: Array<{ text: string; genre: GameGenre }> = [
@@ -43,6 +45,7 @@ const RANDOM_SCENARIOS: Array<{ text: string; genre: GameGenre }> = [
 
 export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps) {
   const [customScenario, setCustomScenario] = useState('');
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   const handleRandomScenario = () => {
     const random = RANDOM_SCENARIOS[Math.floor(Math.random() * RANDOM_SCENARIOS.length)];
@@ -55,7 +58,6 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
 
   const handleCustomStart = () => {
     if (customScenario.trim()) {
-      // Auto-detect genre from custom scenario
       const lower = customScenario.toLowerCase();
       let genre: GameGenre = 'fantasy';
       if (lower.includes('space') || lower.includes('ship') || lower.includes('galaxy')) genre = 'scifi';
@@ -63,107 +65,131 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
       else if (lower.includes('detective') || lower.includes('mystery') || lower.includes('murder')) genre = 'mystery';
       else if (lower.includes('pirate') || lower.includes('treasure') || lower.includes('seas')) genre = 'pirate';
       else if (lower.includes('cyber') || lower.includes('hacker') || lower.includes('neon')) genre = 'cyberpunk';
+      else if (lower.includes('western') || lower.includes('frontier') || lower.includes('cowboy')) genre = 'western';
+      else if (lower.includes('apocalypse') || lower.includes('wasteland')) genre = 'postapoc';
       
       onSelect({ scenario: customScenario.trim(), genre, genreTitle: 'Custom Adventure' });
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
-      {/* Logo/Title */}
-      <div className="text-center mb-8 animate-fade-in">
-        <h1 className="text-4xl md:text-6xl font-narrative font-bold text-gradient-gold mb-2 tracking-wide">
-          UNTOLD
-        </h1>
-        <p className="text-primary/80 uppercase tracking-[0.3em] text-sm">
-          Begin Your Unique Adventure
-        </p>
-      </div>
-
-      {/* Main Content */}
-      <div className="w-full max-w-2xl space-y-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-        {/* Custom Scenario */}
-        <div className="space-y-3">
-          <h2 className="text-primary font-semibold text-lg">Create Your Own Story</h2>
-          <div className="flex gap-2">
-            <Input
-              value={customScenario}
-              onChange={(e) => setCustomScenario(e.target.value)}
-              placeholder="Describe your scenario..."
-              className="flex-1 bg-card border-border/50 text-foreground placeholder:text-muted-foreground"
-              onKeyDown={(e) => e.key === 'Enter' && handleCustomStart()}
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={handleCustomStart}
-              disabled={!customScenario.trim() || isLoading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Begin
-            </Button>
-          </div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Atmospheric Background */}
+      <AtmosphericBackground />
+      
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+        {/* Logo/Title */}
+        <div className="text-center mb-10 animate-fade-in">
+          <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary mb-3 tracking-wider">
+            UNTOLD
+          </h1>
+          <p className="text-muted-foreground uppercase tracking-[0.4em] text-sm">
+            Begin Your Unique Adventure
+          </p>
         </div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-border/50" />
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Or try something random</span>
-          <div className="flex-1 h-px bg-border/50" />
-        </div>
-
-        {/* Random Button */}
-        <Button
-          variant="outline"
-          className="w-full py-6 border-border/50 hover:border-primary/50 hover:bg-card transition-all group"
-          onClick={handleRandomScenario}
-          disabled={isLoading}
-        >
-          <Sparkles className="w-5 h-5 mr-3 text-primary group-hover:animate-pulse" />
-          <span>Surprise Me! Generate a Random Story</span>
-        </Button>
-
-        {/* Preset Scenarios */}
-        <div className="space-y-3">
-          <h2 className="text-primary font-semibold text-lg">Or Choose a Preset Scenario</h2>
-          <div className="grid gap-3">
-            {PRESET_SCENARIOS.map((scenario) => (
-              <button
-                key={scenario.id}
-                onClick={() => handlePresetStart(scenario)}
+        {/* Main Content */}
+        <div className="w-full max-w-3xl space-y-8">
+          {/* Custom Scenario - Glass Panel */}
+          <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <h2 className="text-primary font-display text-xl mb-4 tracking-wide">Create Your Own Story</h2>
+            <div className="flex gap-3">
+              <Input
+                value={customScenario}
+                onChange={(e) => setCustomScenario(e.target.value)}
+                placeholder="Describe your scenario..."
+                className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
+                onKeyDown={(e) => e.key === 'Enter' && handleCustomStart()}
                 disabled={isLoading}
-                className="w-full p-4 bg-card/50 border border-border/30 rounded-lg text-left hover:border-primary/50 hover:bg-card transition-all group disabled:opacity-50"
+              />
+              <Button 
+                onClick={handleCustomStart}
+                disabled={!customScenario.trim() || isLoading}
+                variant="default"
+                size="lg"
               >
-                <div className="flex items-start gap-3">
-                  <scenario.icon className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {scenario.title}
-                      </h3>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                Begin
+              </Button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            <span className="text-muted-foreground text-xs uppercase tracking-wider px-4">Or choose your fate</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          </div>
+
+          {/* Random Button */}
+          <Button
+            variant="glass"
+            className="w-full py-7 text-base group animate-fade-in-up"
+            style={{ animationDelay: '0.3s' }}
+            onClick={handleRandomScenario}
+            disabled={isLoading}
+          >
+            <Sparkles className="w-5 h-5 mr-3 text-primary group-hover:animate-pulse" />
+            <span>Surprise Me! Generate a Random Story</span>
+            <Shuffle className="w-4 h-4 ml-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+          </Button>
+
+          {/* Preset Scenarios */}
+          <div className="space-y-4">
+            <h2 className="text-primary font-display text-xl tracking-wide animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              Choose a Preset Scenario
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {PRESET_SCENARIOS.map((scenario, index) => (
+                <CardInteractive
+                  key={scenario.id}
+                  onClick={() => handlePresetStart(scenario)}
+                  onMouseEnter={() => setHoveredCard(scenario.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  className={`p-5 ${scenario.gradient} animate-fade-in-up cursor-pointer ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
+                  style={{ animationDelay: `${0.4 + index * 0.05}s` }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-xl bg-primary/20 border border-primary/30 transition-all duration-300 ${
+                      hoveredCard === scenario.id ? 'shadow-glow scale-110' : ''
+                    }`}>
+                      <scenario.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-display text-lg text-foreground tracking-wide">
+                          {scenario.title}
+                        </h3>
+                      </div>
+                      <span className="inline-block text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase tracking-wider mb-2">
                         {scenario.genre}
                       </span>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {scenario.description}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {scenario.description}
-                    </p>
                   </div>
-                </div>
-              </button>
-            ))}
+                </CardInteractive>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="text-center space-y-4">
-            <Shuffle className="w-12 h-12 text-primary mx-auto animate-spin" />
-            <p className="text-foreground font-narrative text-xl">Preparing your adventure...</p>
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-background/90 backdrop-blur-md flex items-center justify-center z-50">
+            <div className="text-center space-y-6 glass-panel p-10 rounded-2xl">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 animate-glow-pulse rounded-full" />
+                <Loader2 className="w-16 h-16 text-primary animate-spin" />
+              </div>
+              <p className="text-foreground font-display text-2xl tracking-wide">Preparing your adventure...</p>
+              <div className="w-48 h-1 bg-black/50 rounded-full overflow-hidden mx-auto">
+                <div className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
