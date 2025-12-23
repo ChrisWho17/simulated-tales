@@ -21,8 +21,11 @@ export interface CharacterAppearance {
   skinTone: string;
 }
 
+export type SpawnPointType = 'college' | 'home' | 'homeless';
+
 export interface CharacterBackground {
   origin: string;
+  spawnPoint: SpawnPointType;
 }
 
 export interface CharacterPersonality {
@@ -43,6 +46,58 @@ export interface BackgroundEffect {
   skills: string[];
   traumaSeeds: string[];
 }
+
+export interface SpawnPointData {
+  id: SpawnPointType;
+  name: string;
+  startingLocation: string;
+  housing: string;
+  money: number;
+  stress: number;
+  socialCapital: string[];
+  schedule: string;
+  narrativeHook: string;
+  uniqueEvents: string[];
+}
+
+export const SPAWN_POINTS: Record<SpawnPointType, SpawnPointData> = {
+  college: {
+    id: 'college',
+    name: 'College Student',
+    startingLocation: 'University District',
+    housing: 'Dorm room (shared)',
+    money: 500,
+    stress: 20,
+    socialCapital: ['academic connections', 'student ID'],
+    schedule: 'Class timetable (9AM-4PM)',
+    narrativeHook: 'Student loans, academic pressure, campus politics',
+    uniqueEvents: ['Exams week', 'Fraternity rush', 'Professor office hours', 'Library all-nighter'],
+  },
+  home: {
+    id: 'home',
+    name: 'Living at Home',
+    startingLocation: 'Mid-Income Residential',
+    housing: 'Family home',
+    money: 1000,
+    stress: 10,
+    socialCapital: ['family support', 'local reputation'],
+    schedule: 'Flexible but family obligations',
+    narrativeHook: 'Family dynamics, neighborhood watch, suburban ennui',
+    uniqueEvents: ['Family dinner conflicts', 'Neighborhood BBQs', 'Local council meetings', 'Home maintenance crises'],
+  },
+  homeless: {
+    id: 'homeless',
+    name: 'Street Survivor',
+    startingLocation: 'Decaying Sector/Underbridge',
+    housing: 'Makeshift shelter',
+    money: 50,
+    stress: 60,
+    socialCapital: ['street network', 'survival skills'],
+    schedule: 'Day-to-day survival',
+    narrativeHook: 'System avoidance, resource scavenging, invisible population dynamics',
+    uniqueEvents: ['Shelter lotteries', 'Soup kitchen lines', 'Police sweeps', 'Squatting opportunities'],
+  },
+};
 
 export const BACKGROUND_EFFECTS: Record<string, BackgroundEffect> = {
   'Stable upbringing': {
@@ -87,6 +142,7 @@ export const DEFAULT_CHARACTER: CharacterData = {
   },
   background: {
     origin: 'Stable upbringing',
+    spawnPoint: 'home',
   },
   personality: {
     disposition: 'Adaptable',

@@ -1,5 +1,5 @@
-import { CharacterData, BACKGROUND_EFFECTS } from '@/types/characterCreation';
-import { LifeSimPlayerState, BodyType, HairLength } from '@/types/lifeSim';
+import { CharacterData, BACKGROUND_EFFECTS, SPAWN_POINTS } from '@/types/characterCreation';
+import { LifeSimPlayerState, BodyType, HairLength, HousingType } from '@/types/lifeSim';
 import { initializeLifeSimState } from './lifeSimIntegration';
 
 // Map character creation values to life sim values
@@ -113,6 +113,7 @@ function calculateAttractivenessModifier(personality: CharacterData['personality
 export function createLifeSimFromCharacter(character: CharacterData): LifeSimPlayerState {
   const baseState = initializeLifeSimState();
   const backgroundEffect = BACKGROUND_EFFECTS[character.background.origin];
+  const spawnPoint = SPAWN_POINTS[character.background.spawnPoint];
   
   // Apply character appearance to body
   baseState.body = {
@@ -126,25 +127,33 @@ export function createLifeSimFromCharacter(character: CharacterData): LifeSimPla
     attractiveness: 50 + calculateAttractivenessModifier(character.personality),
   };
   
-  // Apply background effects
-  if (backgroundEffect) {
-    // Starting stress
-    baseState.needs.psychological.stress = backgroundEffect.startingStress;
+  // Apply spawn point effects first (base values)
+  if (spawnPoint) {
+    baseState.economy.money = spawnPoint.money;
+    baseState.needs.psychological.stress = spawnPoint.stress;
     
-    // Starting money
-    baseState.economy.money = backgroundEffect.startingMoney;
+    // Set housing based on spawn point
+    if (spawnPoint.id === 'homeless') {
+      baseState.economy.housing = 'homeless' as HousingType;
+      baseState.home = null;
+    } else if (spawnPoint.id === 'college') {
+      baseState.economy.housing = 'renting_room' as HousingType;
+    } else {
+      baseState.economy.housing = 'renting_apartment' as HousingType;
+    }
+  }
+  
+  // Apply background effects on top (additive bonuses)
+  if (backgroundEffect) {
+    // Add stress from background
+    baseState.needs.psychological.stress += backgroundEffect.startingStress;
+    
+    // Add money from background
+    baseState.economy.money += backgroundEffect.startingMoney;
     
     // Apply skill bonuses
     const skillBonuses = calculateSkillBonuses(backgroundEffect.skills);
     Object.assign(baseState, applySkillBonuses(baseState, skillBonuses));
-    
-    // Adjust housing based on background
-    if (character.background.origin === 'Street survivor') {
-      baseState.economy.housing = 'homeless';
-      baseState.home = null;
-    } else if (character.background.origin === 'Sheltered life') {
-      baseState.economy.housing = 'renting_apartment';
-    }
   }
   
   // Personality affects social skills
@@ -175,6 +184,7 @@ export function createLifeSimFromCharacter(character: CharacterData): LifeSimPla
 export function generateCharacterIntroNarrative(character: CharacterData): string {
   const { basicInfo, appearance, background, personality } = character;
   const backgroundEffect = BACKGROUND_EFFECTS[background.origin];
+  const spawnPoint = SPAWN_POINTS[background.spawnPoint];
   
   const heightDesc = appearance.height === 'short' ? 'of modest stature' : 
                      appearance.height === 'tall' ? 'tall and striking' : 'of average height';
@@ -191,19 +201,37 @@ export function generateCharacterIntroNarrative(character: CharacterData): strin
   let narrative = `You are **${basicInfo.name}**, a ${basicInfo.age}-year-old ${basicInfo.gender || 'soul'} ${heightDesc} with a ${buildDesc} frame. `;
   narrative += `Your ${appearance.hairLength} ${appearance.hairColor} hair frames ${appearance.eyeColor} eyes ${dispositionDesc}.\n\n`;
   
+  // Spawn point flavor
+  if (spawnPoint) {
+    switch (spawnPoint.id) {
+      case 'college':
+        narrative += `You find yourself in the **${spawnPoint.startingLocation}**, surrounded by the bustle of academic life. `;
+        narrative += `Your ${spawnPoint.housing} is cramped but serviceable. ${spawnPoint.narrativeHook}.\n\n`;
+        break;
+      case 'home':
+        narrative += `You're back in the **${spawnPoint.startingLocation}**, the familiar surroundings of home both comforting and constraining. `;
+        narrative += `${spawnPoint.narrativeHook}.\n\n`;
+        break;
+      case 'homeless':
+        narrative += `The **${spawnPoint.startingLocation}** stretches before you—a harsh landscape of concrete and survival. `;
+        narrative += `Your ${spawnPoint.housing} offers little protection. ${spawnPoint.narrativeHook}.\n\n`;
+        break;
+    }
+  }
+  
   // Background flavor
   switch (background.origin) {
     case 'Stable upbringing':
-      narrative += `Life has treated you fairly, granting you the basics of education and social grace. You enter this world with modest savings and no deep scars.`;
+      narrative += `Life has treated you fairly, granting you the basics of education and social grace.`;
       break;
     case 'Turbulent past':
-      narrative += `The past clings to you like shadow. Trust comes hard, earned through trials that left you street-smart but wary. You carry less coin but greater resilience.`;
+      narrative += `The past clings to you like shadow. Trust comes hard, earned through trials that left you street-smart but wary.`;
       break;
     case 'Sheltered life':
-      narrative += `Books and safety were your companions. The world beyond your walls is new and strange, but you possess knowledge others lack—and coin to cushion early mistakes.`;
+      narrative += `Books and safety were your companions. The world beyond your walls is new and strange, but you possess knowledge others lack.`;
       break;
     case 'Street survivor':
-      narrative += `Every meal was earned, every night survived. The streets taught you lessons no academy offers. You begin with almost nothing—except the skills to get more.`;
+      narrative += `Every meal was earned, every night survived. The streets taught you lessons no academy offers.`;
       break;
   }
   
