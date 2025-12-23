@@ -11,19 +11,30 @@ serve(async (req) => {
   }
 
   try {
-    const { appearance, basicInfo, background, personality } = await req.json();
+    const { appearance, basicInfo, background, personality, additionalFeaturesEnabled } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build a detailed prompt for the character portrait - MODERN TIMES ONLY
-    const prompt = `Generate a portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'} in modern day contemporary setting. 
-Physical appearance: ${appearance.height} height, ${appearance.bodyType} build, ${appearance.hairLength} ${appearance.hairColor} hair, ${appearance.eyeColor} eyes, ${appearance.skinTone} skin tone.
+    // Build additional body details based on gender and features enabled
+    let bodyDetails = `${appearance.height} height, ${appearance.bodyType} build`;
+    
+    if (additionalFeaturesEnabled && basicInfo.gender === 'female') {
+      bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves`;
+    } else if (additionalFeaturesEnabled && basicInfo.gender === 'male') {
+      bodyDetails += `, ${appearance.muscles || 'toned'} muscle definition, ${appearance.bodyHair || 'light'} body hair`;
+    } else if (additionalFeaturesEnabled && basicInfo.gender) {
+      bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves, ${appearance.muscles || 'toned'} muscle definition`;
+    }
+
+    // Build a detailed prompt for the character portrait - MODERN TIMES ONLY, FULL BODY
+    const prompt = `Generate a full body portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'} in modern day contemporary setting. 
+Physical appearance: ${bodyDetails}, ${appearance.hairLength} ${appearance.hairColor} hair, ${appearance.eyeColor} eyes, ${appearance.skinTone} skin tone.
 Personality: ${personality.disposition} disposition with a ${personality.socialStyle} social style.
 Background: ${background.origin}.
-Style: Modern contemporary realistic portrait, professional photography style, natural lighting, present-day urban setting. Head and shoulders portrait format. Modern clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
+Style: Modern contemporary realistic full body portrait, professional photography style, natural lighting, present-day urban setting. Full body shot from head to feet. Modern casual clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
 
     console.log("Generating portrait with prompt:", prompt);
 
