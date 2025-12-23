@@ -2,6 +2,9 @@
 
 import { GameState, NPC, GameEvent, Memory } from '@/types/game';
 import { getTimePeriod } from './gameEngine';
+import { detectBreakpoints, analyzeNPCRelationships, simulateRelationshipEvolution, tickWorldEvolution, initializeWorldEvolution, Breakpoint } from './advancedDynamics';
+import { addStress, relieveStress, getStressTier, checkTraumaTrigger, processPsychologicalTick, createDefaultPsychState } from './psychologicalSystem';
+import { processConsequences, createConsequence, Consequence, getDayPhase, getEnvironmentalEffects } from './consequenceSystem';
 
 // ============= WORLD EVENT TYPES =============
 
@@ -319,13 +322,27 @@ export interface WorldTickResult {
   updatedState: GameState;
   worldEvents: WorldEvent[];
   summary: string[];
+  breakpoints: Breakpoint[];
+  evolutionEvents: string[];
 }
 
-export function worldTick(state: GameState): WorldTickResult {
+export function worldTick(state: GameState, previousState?: GameState): WorldTickResult {
   let updatedState = { ...state };
   const worldEvents: WorldEvent[] = [];
   const summary: string[] = [];
   const npcs = { ...state.npcs };
+  let breakpoints: Breakpoint[] = [];
+  let evolutionEvents: string[] = [];
+  
+  // 0. Initialize world evolution if not present
+  if (!updatedState.worldEvolution) {
+    const evolution = initializeWorldEvolution();
+    updatedState.worldEvolution = {
+      economicHealth: evolution.economicHealth,
+      socialStability: evolution.socialStability,
+      resourceAvailability: evolution.resourceAvailability,
+    };
+  }
   
   // 1. Move NPCs according to schedules (already in simulateNPCs)
   // 2. Process NPC autonomous decisions
@@ -482,10 +499,68 @@ export function worldTick(state: GameState): WorldTickResult {
     summary.push(event.desc);
   }
   
+  // 4. Detect breakpoints (Phase 7)
+  try {
+    breakpoints = detectBreakpoints(updatedState, previousState);
+    breakpoints.forEach(bp => {
+      summary.push(`[BREAKPOINT] ${bp.trigger}`);
+      updatedState.breakpoints = [...(updatedState.breakpoints || []), {
+        id: bp.id,
+        type: bp.type,
+        description: bp.trigger,
+        tick: bp.tick,
+      }];
+    });
+  } catch (e) {
+    // Breakpoint detection failed, continue without
+  }
+  
+  // 5. Tick world evolution (Phase 7)
+  try {
+    if (updatedState.worldEvolution) {
+      const evolutionResult = tickWorldEvolution(
+        {
+          economicHealth: updatedState.worldEvolution.economicHealth,
+          socialStability: updatedState.worldEvolution.socialStability,
+          resourceAvailability: updatedState.worldEvolution.resourceAvailability,
+          powerStructure: [],
+          pendingShifts: [],
+        },
+        updatedState
+      );
+      
+      updatedState.worldEvolution = {
+        economicHealth: evolutionResult.updated.economicHealth,
+        socialStability: evolutionResult.updated.socialStability,
+        resourceAvailability: evolutionResult.updated.resourceAvailability,
+      };
+      
+      evolutionEvents = evolutionResult.events;
+      evolutionEvents.forEach(evt => summary.push(evt));
+    }
+  } catch (e) {
+    // World evolution failed, continue without
+  }
+  
+  // 6. Simulate NPC-NPC relationship evolution (Phase 7)
+  try {
+    const relationships = analyzeNPCRelationships(updatedState);
+    relationships.slice(0, 3).forEach(rel => {
+      const result = simulateRelationshipEvolution(rel, updatedState);
+      if (result.event) {
+        summary.push(result.event.description);
+      }
+    });
+  } catch (e) {
+    // Relationship evolution failed, continue without
+  }
+  
   return {
     updatedState,
     worldEvents,
     summary,
+    breakpoints,
+    evolutionEvents,
   };
 }
 

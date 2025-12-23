@@ -230,6 +230,21 @@ export interface GameState {
   flags: Record<string, boolean>;
   eventQueue: GameEvent[];
   worldEvents: WorldEventLog[]; // Off-screen events that happened
+  
+  // Extended state from Phase 6-8
+  narratorVoice?: 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
+  worldEvolution?: {
+    economicHealth: number;
+    socialStability: number;
+    resourceAvailability: Record<string, number>;
+  };
+  breakpoints?: {
+    id: string;
+    type: string;
+    description: string;
+    tick: number;
+  }[];
+  debugMode?: boolean;
 }
 
 export type ActionType = 'look' | 'talk' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help';
