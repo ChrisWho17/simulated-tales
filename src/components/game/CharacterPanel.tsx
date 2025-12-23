@@ -18,6 +18,7 @@ import {
   Sparkles,
   Brain,
   Home,
+  Flame,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -33,12 +34,16 @@ import {
   getShortRelLabel,
   RELATIONSHIP_COLORS 
 } from '@/lib/relationshipSystem';
+import { WoundDisplay } from './WoundDisplay';
+import { Wound } from '@/lib/woundSystem';
+import { getGameSettings } from '@/lib/gameSettings';
 
 interface CharacterPanelProps {
   gameState: GameState;
   isOpen: boolean;
   onToggle: () => void;
   onStartConversation?: (npc: NPC) => void;
+  wounds?: Wound[];
 }
 
 interface StatBarProps {
@@ -94,13 +99,16 @@ const StatBar = forwardRef<HTMLDivElement, StatBarProps>(({
 });
 StatBar.displayName = 'StatBar';
 
-export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversation }: CharacterPanelProps) {
+export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversation, wounds = [] }: CharacterPanelProps) {
   const [npcsOpen, setNpcsOpen] = useState(true);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [woundsOpen, setWoundsOpen] = useState(true);
   
   const { player, time, locations, lifeSim } = gameState;
   const currentLocation = locations[player.currentLocation];
   const npcsHere = getNPCsAtLocation(gameState, player.currentLocation);
+  const settings = getGameSettings();
+  const showTension = settings.adultContent;
   
   return (
     <>
@@ -194,6 +202,15 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
               value={100 - (lifeSim?.needs.psychological.stress ?? 20)} 
               color="bg-forest"
             />
+            {/* Tension need - only visible with 18+ content enabled */}
+            {showTension && (
+              <StatBar 
+                icon={Flame} 
+                label="Tension" 
+                value={lifeSim?.needs.psychological.tension ?? 50} 
+                color="bg-pink-500"
+              />
+            )}
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Coins className="h-3.5 w-3.5" />
@@ -208,6 +225,13 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
                   <span>Housing</span>
                 </div>
                 <span className="text-xs capitalize">{lifeSim.home?.type.replace('_', ' ') ?? 'None'}</span>
+              </div>
+            )}
+            
+            {/* Wound display */}
+            {wounds.length > 0 && (
+              <div className="pt-2 border-t border-border">
+                <WoundDisplay wounds={wounds} compact />
               </div>
             )}
           </div>

@@ -25,13 +25,17 @@ export const DEFAULT_SETTINGS: GameSettings = {
   fontSize: 'medium',
 };
 
+// Get current settings (alias for loadSettings)
+export function getGameSettings(): GameSettings {
+  return loadSettings();
+}
+
 // Load settings from storage
 export function loadSettings(): GameSettings {
   try {
     const saved = localStorage.getItem(SETTINGS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Merge with defaults to ensure all keys exist
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch (e) {
