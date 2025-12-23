@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NPC, EmotionalState } from '@/types/game';
-import { X, Heart, Shield, Eye, Award, MessageCircle, Loader2, User, Sparkles } from 'lucide-react';
+import { X, Heart, Shield, Eye, Award, MessageCircle, Loader2, User, Sparkles, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -11,12 +11,20 @@ import {
   RelationshipDisplayData,
   RELATIONSHIP_COLORS,
 } from '@/lib/relationshipSystem';
+import {
+  NPCKnowledgeEntry,
+  KnowledgeLevel,
+  formatStatValue,
+  getDisplayName,
+} from '@/lib/knowledgeSystem';
+import { isAdultContentEnabled } from '@/lib/gameSettings';
 
 interface CharacterProfileModalProps {
   npc: NPC;
   onClose: () => void;
   onStartConversation?: (npc: NPC) => void;
   playerLocation?: string;
+  knowledge?: NPCKnowledgeEntry;
 }
 
 function getEmotionLabel(emotion: EmotionalState): string {
@@ -39,11 +47,16 @@ function getEmotionLabel(emotion: EmotionalState): string {
   return labels[emotion] || emotion;
 }
 
-function ProfileStat({ label, value }: { label: string; value: string | number }) {
+function ProfileStat({ label, value, knowledgeLevel }: { label: string; value: string | number; knowledgeLevel?: KnowledgeLevel }) {
+  const isUnknown = knowledgeLevel === 'unknown';
+  const isEstimated = knowledgeLevel === 'estimated';
+  
   return (
-    <div className="profile-stat">
+    <div className={cn('profile-stat', isUnknown && 'stat-unknown', isEstimated && 'stat-estimated')}>
       <span className="label">{label}</span>
-      <span className="value">{value}</span>
+      <span className={cn('value', isUnknown && 'mystery-text', isEstimated && 'estimated-text')}>
+        {isUnknown ? '???' : isEstimated ? `~${value}` : value}
+      </span>
     </div>
   );
 }
@@ -171,7 +184,8 @@ export function CharacterProfileModal({
   npc,
   onClose,
   onStartConversation,
-  playerLocation
+  playerLocation,
+  knowledge
 }: CharacterProfileModalProps) {
   const [portrait, setPortrait] = useState<string | null>(npc.portrait || null);
   const [isLoading, setIsLoading] = useState(!npc.portrait);
@@ -179,6 +193,12 @@ export function CharacterProfileModal({
 
   const relData = calculateRelationshipDisplay(npc);
   const isHere = npc.currentLocation === playerLocation;
+  const isAdultEnabled = isAdultContentEnabled();
+  
+  // Get display name based on knowledge
+  const displayName = knowledge ? getDisplayName(knowledge, npc) : npc.meta.name;
+  const knowsName = knowledge?.knowsName ?? true;
+  const familiarity = knowledge?.familiarity ?? 100;
 
   // Load portrait if not available
   useEffect(() => {
@@ -315,9 +335,16 @@ export function CharacterProfileModal({
               className="profile-name"
               style={{ textShadow: `0 0 20px ${relData.colors.glow}` }}
             >
-              {npc.meta.name}
+              {displayName}
+              {!knowsName && (
+                <span className="name-unknown-hint"> (name unknown)</span>
+              )}
             </h2>
-            <span className="profile-title">{npc.meta.occupation}</span>
+            <span className="profile-title">
+              {knowledge?.background.occupation === 'known' ? npc.meta.occupation : 
+               knowledge?.background.occupation === 'estimated' ? `~${npc.meta.occupation}` : 
+               familiarity > 15 ? npc.meta.occupation : '???'}
+            </span>
           </div>
 
           {/* RELATIONSHIP SECTION */}
@@ -366,8 +393,8 @@ export function CharacterProfileModal({
                 />
               )}
               
-              {/* Romance bars - only if romance unlocked */}
-              {relData.romanceUnlocked && (
+              {/* Romance bars - only if romance unlocked AND adult content enabled */}
+              {relData.romanceUnlocked && isAdultEnabled && (
                 <>
                   <div className="romance-bars-divider">
                     <span>💕 Romance</span>
@@ -416,13 +443,50 @@ export function CharacterProfileModal({
           <div className="profile-section">
             <h3>Basic Info</h3>
             <div className="profile-stats">
-              <ProfileStat label="Age" value={npc.meta.age} />
-              <ProfileStat label="Location" value={npc.currentLocation.replace(/_/g, ' ')} />
+              <ProfileStat 
+                label="Age" 
+                value={npc.meta.age} 
+                knowledgeLevel={familiarity > 10 ? 'known' : 'estimated'}
+              />
+              <ProfileStat 
+                label="Location" 
+                value={npc.currentLocation.replace(/_/g, ' ')} 
+              />
             </div>
             <p className="profile-activity">
               Currently: <span className="italic">{npc.currentActivity}</span>
             </p>
           </div>
+          
+          {/* Familiarity indicator */}
+          {knowledge && (
+            <div className="profile-section">
+              <h3>
+                <Eye className="inline h-4 w-4 mr-2" />
+                Familiarity
+              </h3>
+              <div className="familiarity-bar">
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill"
+                    style={{ 
+                      width: `${familiarity}%`,
+                      background: 'var(--accent-gradient)',
+                      boxShadow: '0 0 10px var(--accent-glow)'
+                    }}
+                  />
+                </div>
+                <span className="familiarity-value">{familiarity}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {familiarity < 20 ? 'You barely know this person.' :
+                 familiarity < 40 ? 'You have a passing acquaintance.' :
+                 familiarity < 60 ? 'You know them fairly well.' :
+                 familiarity < 80 ? 'You know them quite well.' :
+                 'You know them intimately.'}
+              </p>
+            </div>
+          )}
 
           {/* Description */}
           <div className="profile-section">
