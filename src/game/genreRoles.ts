@@ -109,6 +109,17 @@ const PIRATE_ROLES: GenreRole[] = [
   { id: 'smuggler', name: 'Smuggler', description: 'Moves illegal goods', portraitPromptHints: ['shifty eyes', 'hidden pockets', 'dark clothes'], clothingStyle: 'nondescript dark clothes', commonLocations: ['docks', 'tavern'] },
 ];
 
+// War roles - covers various war eras
+const WAR_ROLES: GenreRole[] = [
+  { id: 'soldier', name: 'Soldier', description: 'Front line fighter', portraitPromptHints: ['military uniform', 'weapon', 'combat ready', 'battlefield'], clothingStyle: 'military combat uniform', commonLocations: ['battlefield', 'barracks', 'trenches'] },
+  { id: 'officer', name: 'Officer', description: 'Commands troops', portraitPromptHints: ['officer uniform', 'medals', 'commanding presence', 'stern'], clothingStyle: 'military officer dress', commonLocations: ['command post', 'headquarters'] },
+  { id: 'medic', name: 'Combat Medic', description: 'Saves lives under fire', portraitPromptHints: ['medical bag', 'red cross', 'compassionate', 'blood stained'], clothingStyle: 'medic uniform with red cross', commonLocations: ['field hospital', 'battlefield'] },
+  { id: 'civilian', name: 'Civilian', description: 'Caught in the crossfire', portraitPromptHints: ['worn clothes', 'frightened', 'carrying belongings', 'refugee'], clothingStyle: 'civilian clothes', commonLocations: ['village', 'city', 'shelter'] },
+  { id: 'resistance', name: 'Resistance Fighter', description: 'Fights the occupiers', portraitPromptHints: ['hidden weapons', 'determined', 'civilian disguise', 'secretive'], clothingStyle: 'nondescript civilian with hidden weapons', commonLocations: ['safe house', 'underground'] },
+  { id: 'spy', name: 'Military Spy', description: 'Gathers intelligence', portraitPromptHints: ['unremarkable appearance', 'sharp eyes', 'coded messages', 'disguise'], clothingStyle: 'varies by cover identity', commonLocations: ['enemy territory', 'embassy'] },
+  { id: 'prisoner', name: 'POW', description: 'Captured by enemy', portraitPromptHints: ['worn uniform', 'thin', 'defiant eyes', 'camp setting'], clothingStyle: 'ragged prisoner attire', commonLocations: ['prison camp', 'cell'] },
+];
+
 // Map of genre to roles
 export const GENRE_ROLES: Record<GameGenre, GenreRole[]> = {
   fantasy: FANTASY_ROLES,
@@ -119,6 +130,7 @@ export const GENRE_ROLES: Record<GameGenre, GenreRole[]> = {
   mystery: MYSTERY_ROLES,
   postapoc: POSTAPOC_ROLES,
   pirate: PIRATE_ROLES,
+  war: WAR_ROLES,
   custom: FANTASY_ROLES, // Default to fantasy for custom
 };
 
@@ -150,6 +162,7 @@ export function getRolePortraitPrompt(role: GenreRole, genre: GameGenre): string
     mystery: 'noir, dramatic shadows, 1940s style',
     postapoc: 'post-apocalyptic, wasteland, gritty',
     pirate: 'golden age of piracy, nautical, adventure',
+    war: 'military, wartime, dramatic lighting, battlefield',
     custom: 'detailed portrait',
   };
 

@@ -50,6 +50,11 @@ const GENRE_KEYWORDS: Record<GameGenre, { keywords: string[]; weight: number }[]
     { keywords: ['bunker', 'vault', 'scavenger', 'raider', 'tribe', 'settlement', 'collapse', 'plague'], weight: 2 },
     { keywords: ['water', 'gas', 'fuel', 'desert', 'wreck', 'camp', 'salvage', 'supplies', 'survival'], weight: 1 },
   ],
+  war: [
+    { keywords: ['war', 'battle', 'soldier', 'military', 'army', 'combat', 'infantry', 'battlefield'], weight: 3 },
+    { keywords: ['trench', 'tank', 'sniper', 'marine', 'battalion', 'regiment', 'commander', 'general'], weight: 2 },
+    { keywords: ['front', 'artillery', 'medic', 'bunker', 'invasion', 'occupation', 'resistance', 'veteran'], weight: 1 },
+  ],
   custom: [], // Fallback, no keywords
 };
 
@@ -62,6 +67,7 @@ const GENRE_TITLES: Record<GameGenre, string> = {
   western: 'Western Adventure',
   cyberpunk: 'Cyberpunk Adventure',
   postapoc: 'Post-Apocalyptic Adventure',
+  war: 'War Adventure',
   custom: 'Custom Adventure',
 };
 
@@ -74,6 +80,7 @@ export const GENRE_ICONS: Record<GameGenre, string> = {
   western: '🤠',
   cyberpunk: '⚡',
   postapoc: '☢️',
+  war: '⚔️',
   custom: '✨',
 };
 
@@ -97,6 +104,7 @@ export function detectGenreFromText(text: string): GenreDetectionResult {
     western: { score: 0, matches: [] },
     cyberpunk: { score: 0, matches: [] },
     postapoc: { score: 0, matches: [] },
+    war: { score: 0, matches: [] },
     custom: { score: 0, matches: [] },
   };
 
@@ -150,6 +158,7 @@ export function getAllGenres(): { id: GameGenre; name: string; icon: string }[] 
     { id: 'western', name: 'Western', icon: GENRE_ICONS.western },
     { id: 'cyberpunk', name: 'Cyberpunk', icon: GENRE_ICONS.cyberpunk },
     { id: 'postapoc', name: 'Post-Apocalyptic', icon: GENRE_ICONS.postapoc },
+    { id: 'war', name: 'War', icon: GENRE_ICONS.war },
   ];
 }
 

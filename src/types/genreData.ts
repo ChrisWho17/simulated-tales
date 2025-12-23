@@ -1,7 +1,10 @@
 // Genre-specific RPG Character Types and Data
 import { CharacterClass, CharacterBackground, CharacterStats, InventoryItem, RPGCharacter, getStatModifier, calculateMaxHealth } from './rpgCharacter';
 
-export type GameGenre = 'fantasy' | 'scifi' | 'horror' | 'mystery' | 'pirate' | 'western' | 'cyberpunk' | 'postapoc' | 'custom';
+export type GameGenre = 'fantasy' | 'scifi' | 'horror' | 'mystery' | 'pirate' | 'western' | 'cyberpunk' | 'postapoc' | 'war' | 'custom';
+
+// War Era type for era-specific roles
+export type WarEra = 'past' | 'modern' | 'future';
 
 export interface GenreData {
   id: GameGenre;
@@ -189,6 +192,91 @@ const POSTAPOC_BACKGROUNDS: CharacterBackground[] = [
   { id: 'water_merchant', name: 'Water Merchant', description: 'Liquid gold. You controlled the most precious resource.', statBonuses: { charisma: 1 }, startingItems: ['Water Purifier', 'Trade Connections'], skills: ['Bargaining', 'Water Lore', 'Greed'] },
 ];
 
+// WAR Classes - Era-Specific (Past: Ancient to WWI, Modern: WWII to Present, Future: Sci-Fi warfare)
+const WAR_CLASSES_PAST: CharacterClass[] = [
+  { id: 'legionary', name: 'Roman Legionary', description: 'Disciplined soldier of the greatest empire. Shield wall and gladius.', statBonuses: { strength: 2, constitution: 1 }, startingItems: ['Gladius', 'Scutum Shield', 'Pilum Javelin'], abilities: ['Shield Wall', 'Testudo Formation', 'Roman Discipline'], portraitHints: ['roman armor', 'red plume helmet', 'gladius', 'shield', 'disciplined'], clothingStyle: 'lorica segmentata armor with centurion helmet' },
+  { id: 'knight', name: 'Medieval Knight', description: 'Armored warrior sworn to lord and code of chivalry.', statBonuses: { strength: 2, charisma: 1 }, startingItems: ['Longsword', 'Plate Armor', 'Warhorse'], abilities: ['Cavalry Charge', 'Challenge', 'Honorable Combat'], portraitHints: ['plate armor', 'sword', 'heraldry', 'noble bearing', 'knight'], clothingStyle: 'full plate armor with heraldic tabard' },
+  { id: 'samurai', name: 'Samurai Warrior', description: 'Master of blade and bow, bound by bushido.', statBonuses: { dexterity: 2, wisdom: 1 }, startingItems: ['Katana', 'Wakizashi', 'Longbow'], abilities: ['Iaijutsu Strike', 'Meditation', 'Death Before Dishonor'], portraitHints: ['samurai armor', 'katana', 'topknot', 'stoic expression', 'bushido'], clothingStyle: 'traditional samurai armor with kabuto helmet' },
+  { id: 'viking', name: 'Viking Raider', description: 'Norse warrior who fears nothing but a straw death.', statBonuses: { strength: 2, constitution: 1 }, startingItems: ['Battle Axe', 'Round Shield', 'Seax Knife'], abilities: ['Berserker Rage', 'Shield Bash', 'Fearless'], portraitHints: ['viking helmet', 'battle axe', 'beard', 'fierce eyes', 'norse'], clothingStyle: 'chainmail with furs and viking helmet' },
+  { id: 'archer', name: 'English Longbowman', description: 'The arrow storm that breaks cavalry charges.', statBonuses: { dexterity: 2, strength: 1 }, startingItems: ['English Longbow', 'Arrow Quiver', 'Buckler'], abilities: ['Volley Fire', 'Aimed Shot', 'Stake Defense'], portraitHints: ['longbow', 'leather armor', 'medieval', 'keen eyes', 'archer'], clothingStyle: 'leather jerkin with longbow and quiver' },
+  { id: 'trench_soldier', name: 'WWI Trench Fighter', description: 'Survivor of the Great War. Mud, gas, and endless horror.', statBonuses: { constitution: 2, wisdom: 1 }, startingItems: ['Lee-Enfield Rifle', 'Gas Mask', 'Trench Club'], abilities: ['Trench Warfare', 'Gas Alert', 'Over the Top'], portraitHints: ['trench coat', 'brodie helmet', 'gas mask', 'muddy', 'haunted eyes'], clothingStyle: 'WWI uniform with brodie helmet and trench coat' },
+];
+
+const WAR_CLASSES_MODERN: CharacterClass[] = [
+  { id: 'infantry', name: 'Infantry Grunt', description: 'Boots on the ground. You are the backbone of any army.', statBonuses: { constitution: 2, dexterity: 1 }, startingItems: ['Assault Rifle', 'Combat Helmet', 'First Aid Kit'], abilities: ['Suppressing Fire', 'Take Cover', 'Combat Buddy'], portraitHints: ['combat uniform', 'assault rifle', 'helmet', 'military', 'soldier'], clothingStyle: 'modern combat fatigues with tactical vest' },
+  { id: 'sniper', name: 'Scout Sniper', description: 'One shot, one kill. Patient, precise, deadly.', statBonuses: { dexterity: 2, wisdom: 1 }, startingItems: ['Sniper Rifle', 'Ghillie Suit', 'Rangefinder'], abilities: ['Steady Aim', 'Camouflage', 'Spotter'], portraitHints: ['ghillie suit', 'sniper rifle', 'scope', 'patient', 'hidden'], clothingStyle: 'ghillie suit or tactical sniper attire' },
+  { id: 'medic', name: 'Combat Medic', description: 'You save lives under fire. The most respected soldier.', statBonuses: { wisdom: 2, constitution: 1 }, startingItems: ['Medical Kit', 'Sidearm', 'Stretcher'], abilities: ['Field Surgery', 'Triage', 'Under Fire Treatment'], portraitHints: ['red cross', 'medical bag', 'compassionate', 'battlefield', 'healer'], clothingStyle: 'combat medic uniform with red cross insignia' },
+  { id: 'tank_crew', name: 'Tank Commander', description: 'Steel beast commander. Armored fury on the battlefield.', statBonuses: { intelligence: 2, dexterity: 1 }, startingItems: ['Tank Commander Pistol', 'Radio Headset', 'Tactical Maps'], abilities: ['Hull Down', 'Coordinate Fire', 'Emergency Repairs'], portraitHints: ['tank helmet', 'headset', 'oil stains', 'commander', 'armored'], clothingStyle: 'tanker coveralls with communications headset' },
+  { id: 'special_ops', name: 'Special Forces Operator', description: 'Elite tier-one operator. Trained for impossible missions.', statBonuses: { dexterity: 2, intelligence: 1 }, startingItems: ['Suppressed SMG', 'Night Vision', 'Breaching Charges'], abilities: ['Breach and Clear', 'Silent Takedown', 'Tactical Insertion'], portraitHints: ['tactical gear', 'night vision', 'elite', 'professional', 'dangerous'], clothingStyle: 'black tactical gear with advanced equipment' },
+  { id: 'pilot', name: 'Combat Pilot', description: 'Soar above the battlefield. Air superiority is everything.', statBonuses: { dexterity: 2, wisdom: 1 }, startingItems: ['Flight Suit', 'Service Pistol', 'Survival Kit'], abilities: ['Evasive Maneuvers', 'Strafing Run', 'Eject'], portraitHints: ['flight suit', 'pilot helmet', 'cockpit', 'confident', 'aviator'], clothingStyle: 'flight suit with pilot helmet' },
+];
+
+const WAR_CLASSES_FUTURE: CharacterClass[] = [
+  { id: 'power_armor', name: 'Power Armor Trooper', description: 'Walking tank in powered exoskeleton. Ultimate infantry.', statBonuses: { strength: 2, constitution: 1 }, startingItems: ['Heavy Plasma Gun', 'Power Armor Suit', 'Jump Jets'], abilities: ['Orbital Drop', 'Power Slam', 'Shield Generator'], portraitHints: ['power armor', 'heavy weapon', 'futuristic soldier', 'imposing', 'armored'], clothingStyle: 'heavy powered exoskeleton armor with integrated weapons' },
+  { id: 'mech_pilot', name: 'Mech Pilot', description: 'Command a towering war machine. You are the weapon.', statBonuses: { dexterity: 2, intelligence: 1 }, startingItems: ['Neural Link', 'Mech Interface', 'Sidearm'], abilities: ['Mech Sync', 'Weapons Array', 'Emergency Eject'], portraitHints: ['neural interface', 'pilot suit', 'mech cockpit', 'focused', 'connected'], clothingStyle: 'sleek pilot suit with neural interface ports' },
+  { id: 'clone_trooper', name: 'Clone Soldier', description: 'One of millions. Bred for war, programmed to obey.', statBonuses: { constitution: 2, dexterity: 1 }, startingItems: ['Blaster Rifle', 'Clone Armor', 'Thermal Detonator'], abilities: ['Squad Tactics', 'Genetic Enhancement', 'Execute Order'], portraitHints: ['clone armor', 'identical face', 'blaster', 'soldier', 'obedient'], clothingStyle: 'white clone trooper armor with blaster' },
+  { id: 'combat_android', name: 'Combat Android', description: 'Machine soldier. No fear, no pain, perfect obedience.', statBonuses: { dexterity: 2, intelligence: 1 }, startingItems: ['Integrated Weapons', 'Repair Module', 'Tactical Database'], abilities: ['Machine Precision', 'Self-Repair', 'Threat Analysis'], portraitHints: ['robotic', 'military android', 'glowing eyes', 'mechanical', 'weapon systems'], clothingStyle: 'military android chassis with visible weapon systems' },
+  { id: 'psi_soldier', name: 'Psionic Operative', description: 'Mind is the ultimate weapon. Trained psychic soldier.', statBonuses: { wisdom: 2, intelligence: 1 }, startingItems: ['Psi Amplifier', 'Light Armor', 'Mental Shielding'], abilities: ['Mind Blast', 'Telekinesis', 'Psi Shield'], portraitHints: ['glowing eyes', 'psi amp', 'psychic energy', 'mysterious', 'powerful'], clothingStyle: 'sleek psionic operative uniform with amplifier headgear' },
+  { id: 'starship_marine', name: 'Starship Marine', description: 'Boarding actions and zero-G combat. Space is your battlefield.', statBonuses: { dexterity: 2, constitution: 1 }, startingItems: ['Mag Boots', 'Vacuum Suit', 'Railgun Carbine'], abilities: ['Zero-G Combat', 'Breach Assault', 'Void Walk'], portraitHints: ['space marine armor', 'vacuum suit', 'mag boots', 'starship', 'elite'], clothingStyle: 'space marine armor with magnetic boots and sealed helmet' },
+];
+
+const WAR_BACKGROUNDS: CharacterBackground[] = [
+  { id: 'conscript', name: 'Drafted Conscript', description: 'You did not choose this war. It chose you.', statBonuses: { constitution: 1 }, startingItems: ['Letters from Home', 'Lucky Charm'], skills: ['Survival', 'Improvisation', 'Homesickness'] },
+  { id: 'veteran', name: 'Combat Veteran', description: 'This is not your first war. The scars prove it.', statBonuses: { wisdom: 1 }, startingItems: ['Campaign Medals', 'Old Wounds'], skills: ['Tactics', 'Leadership', 'War Stories'] },
+  { id: 'officer', name: 'Commissioned Officer', description: 'You lead men into battle. Their lives are your burden.', statBonuses: { charisma: 1 }, startingItems: ['Officer Insignia', 'Sidearm'], skills: ['Command', 'Strategy', 'Responsibility'] },
+  { id: 'mercenary', name: 'Professional Mercenary', description: 'You fight for whoever pays. Loyalty is a luxury.', statBonuses: { dexterity: 1 }, startingItems: ['Contract', 'Personal Weapon'], skills: ['Negotiation', 'Survival', 'Pragmatism'] },
+  { id: 'resistance', name: 'Resistance Fighter', description: 'Guerrilla warfare against an occupying force.', statBonuses: { dexterity: 1 }, startingItems: ['Hidden Weapons', 'Secret Codes'], skills: ['Stealth', 'Sabotage', 'Propaganda'] },
+  { id: 'refugee', name: 'War Refugee', description: 'You lost everything. Now you fight to survive.', statBonuses: { constitution: 1 }, startingItems: ['Worn Photograph', 'Scavenged Supplies'], skills: ['Scavenging', 'Languages', 'Trauma'] },
+  { id: 'spy', name: 'Military Intelligence', description: 'Information wins wars. You gather it by any means.', statBonuses: { intelligence: 1 }, startingItems: ['Cipher Machine', 'False Identity'], skills: ['Espionage', 'Interrogation', 'Deception'] },
+  { id: 'prisoner', name: 'Former POW', description: 'You survived capture. The camp taught you endurance.', statBonuses: { constitution: 1 }, startingItems: ['Hidden Tools', 'Escape Plans'], skills: ['Endurance', 'Escape', 'Hatred'] },
+];
+
+const WAR_TRAITS = ['Brave', 'Shell-shocked', 'Disciplined', 'Rebellious', 'Patriotic', 'Cynical', 'Merciful', 'Ruthless', 'Loyal', 'Deserter', 'Heroic', 'Cowardly', 'Battle-hardened', 'Traumatized', 'Leader'];
+
+// Helper to get war classes based on detected era
+export function getWarClassesForEra(era: WarEra): CharacterClass[] {
+  switch (era) {
+    case 'past': return WAR_CLASSES_PAST;
+    case 'modern': return WAR_CLASSES_MODERN;
+    case 'future': return WAR_CLASSES_FUTURE;
+    default: return WAR_CLASSES_MODERN;
+  }
+}
+
+// Detect war era from text (years or keywords)
+export function detectWarEra(text: string): WarEra {
+  const lower = text.toLowerCase();
+  
+  // Check for explicit year ranges
+  const yearMatch = text.match(/\b(1[0-9]{3}|20[0-9]{2}|2[1-9][0-9]{2}|[3-9][0-9]{3})\b/);
+  if (yearMatch) {
+    const year = parseInt(yearMatch[1]);
+    if (year < 1920) return 'past';
+    if (year <= 2050) return 'modern';
+    return 'future';
+  }
+  
+  // Future warfare keywords
+  if (lower.includes('space war') || lower.includes('galactic') || lower.includes('starship') || 
+      lower.includes('mech') || lower.includes('android') || lower.includes('clone') ||
+      lower.includes('psionic') || lower.includes('power armor') || lower.includes('plasma') ||
+      lower.includes('laser') || lower.includes('future war') || lower.includes('interstellar')) {
+    return 'future';
+  }
+  
+  // Past warfare keywords
+  if (lower.includes('roman') || lower.includes('medieval') || lower.includes('knight') ||
+      lower.includes('samurai') || lower.includes('viking') || lower.includes('ancient') ||
+      lower.includes('crusade') || lower.includes('longbow') || lower.includes('gladiator') ||
+      lower.includes('trench') || lower.includes('wwi') || lower.includes('world war one') ||
+      lower.includes('great war') || lower.includes('napoleonic') || lower.includes('civil war')) {
+    return 'past';
+  }
+  
+  // Default to modern
+  return 'modern';
+}
+
 // Genre Trait Sets
 const FANTASY_TRAITS = ['Brave', 'Cautious', 'Cunning', 'Honest', 'Mysterious', 'Hot-headed', 'Calm', 'Curious', 'Loyal', 'Ambitious', 'Compassionate', 'Ruthless', 'Witty', 'Stoic', 'Optimistic'];
 const SCIFI_TRAITS = ['Analytical', 'Rebellious', 'Methodical', 'Reckless', 'Paranoid', 'Idealistic', 'Cynical', 'Tech-savvy', 'Lone Wolf', 'Team Player', 'By-the-book', 'Improviser', 'Cold', 'Empathetic', 'Resourceful'];
@@ -199,7 +287,7 @@ const WESTERN_TRAITS = ['Stoic', 'Hot-headed', 'Honorable', 'Vengeful', 'Mercifu
 const CYBERPUNK_TRAITS = ['Paranoid', 'Reckless', 'Cynical', 'Idealistic', 'Corporate', 'Anti-establishment', 'Augmented', 'Purist', 'Connected', 'Isolated', 'Street smart', 'Cold', 'Passionate', 'Calculating', 'Impulsive'];
 const POSTAPOC_TRAITS = ['Hopeful', 'Nihilistic', 'Tribal', 'Isolationist', 'Trader', 'Raider mentality', 'Pacifist', 'Violent', 'Resourceful', 'Wasteful', 'Trusting', 'Paranoid', 'Mutant-friendly', 'Purist', 'Survivor'];
 
-// Genre Data Map
+// Genre Data Map - War defaults to modern era, use getWarGenreData() for era-specific
 export const GENRE_DATA: Record<GameGenre, GenreData> = {
   fantasy: { id: 'fantasy', name: 'Fantasy', classes: FANTASY_CLASSES, backgrounds: FANTASY_BACKGROUNDS, traits: FANTASY_TRAITS, currency: 'Gold', startingCurrency: 15 },
   scifi: { id: 'scifi', name: 'Sci-Fi', classes: SCIFI_CLASSES, backgrounds: SCIFI_BACKGROUNDS, traits: SCIFI_TRAITS, currency: 'Credits', startingCurrency: 500 },
@@ -209,8 +297,22 @@ export const GENRE_DATA: Record<GameGenre, GenreData> = {
   western: { id: 'western', name: 'Western', classes: WESTERN_CLASSES, backgrounds: WESTERN_BACKGROUNDS, traits: WESTERN_TRAITS, currency: 'Dollars', startingCurrency: 25 },
   cyberpunk: { id: 'cyberpunk', name: 'Cyberpunk', classes: CYBERPUNK_CLASSES, backgrounds: CYBERPUNK_BACKGROUNDS, traits: CYBERPUNK_TRAITS, currency: 'Eddies', startingCurrency: 1000 },
   postapoc: { id: 'postapoc', name: 'Post-Apocalyptic', classes: POSTAPOC_CLASSES, backgrounds: POSTAPOC_BACKGROUNDS, traits: POSTAPOC_TRAITS, currency: 'Caps', startingCurrency: 30 },
+  war: { id: 'war', name: 'War', classes: WAR_CLASSES_MODERN, backgrounds: WAR_BACKGROUNDS, traits: WAR_TRAITS, currency: 'Rations', startingCurrency: 10 },
   custom: { id: 'custom', name: 'Custom', classes: FANTASY_CLASSES, backgrounds: FANTASY_BACKGROUNDS, traits: FANTASY_TRAITS, currency: 'Gold', startingCurrency: 15 },
 };
+
+// Get war genre data with era-specific classes
+export function getWarGenreData(era: WarEra): GenreData {
+  return {
+    id: 'war',
+    name: `War (${era.charAt(0).toUpperCase() + era.slice(1)})`,
+    classes: getWarClassesForEra(era),
+    backgrounds: WAR_BACKGROUNDS,
+    traits: WAR_TRAITS,
+    currency: era === 'future' ? 'Credits' : era === 'past' ? 'Coin' : 'Rations',
+    startingCurrency: era === 'future' ? 100 : era === 'past' ? 20 : 10,
+  };
+}
 
 // Detect genre from scenario text
 export function detectGenreFromScenario(scenario: string): GameGenre {

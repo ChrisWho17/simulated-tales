@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check } from 'lucide-react';
-import { GameGenre, GENRE_DATA } from '@/types/genreData';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield } from 'lucide-react';
+import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
@@ -32,7 +32,7 @@ const PRESET_SCENARIOS = [
   { id: 'survival', genre: 'horror' as GameGenre, title: 'Survival Horror', description: 'Wake up in an abandoned facility with no memory. Something is hunting you in the dark.', icon: Skull, gradient: 'genre-horror' },
   { id: 'pirate', genre: 'pirate' as GameGenre, title: 'High Seas Adventure', description: 'Captain your own ship across treacherous waters in search of legendary treasure.', icon: Compass, gradient: 'genre-pirate' },
   { id: 'cyberpunk', genre: 'cyberpunk' as GameGenre, title: 'Neon Dystopia', description: 'Navigate the neon-lit streets of a corporate-controlled megacity as a skilled hacker or street samurai.', icon: Zap, gradient: 'genre-cyberpunk' },
-  { id: 'warrior', genre: 'fantasy' as GameGenre, title: 'Arena Champion', description: 'Fight your way to glory in the grand coliseum, facing ever deadlier opponents.', icon: Sword, gradient: 'genre-fantasy' },
+  { id: 'war', genre: 'war' as GameGenre, title: 'Theater of War', description: 'Experience the chaos and heroism of warfare across any era - ancient battles, modern conflicts, or future wars.', icon: Shield, gradient: 'genre-western' },
   { id: 'western', genre: 'western' as GameGenre, title: 'Frontier Justice', description: 'Ride into a dusty frontier town where outlaws rule and justice needs a champion.', icon: Sun, gradient: 'genre-western' },
 ];
 
@@ -61,9 +61,21 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
     return detectGenreFromText(customScenario);
   }, [customScenario]);
 
+  // Detect war era from text when war genre is active
+  const detectedWarEra = useMemo(() => {
+    return detectWarEra(customScenario);
+  }, [customScenario]);
+
   // Active genre is override or detected
   const activeGenre = genreOverride || detectedGenre.genre;
-  const activeGenreData = GENRE_DATA[activeGenre];
+  
+  // Get genre data - for war, use era-specific data
+  const activeGenreData = useMemo(() => {
+    if (activeGenre === 'war') {
+      return getWarGenreData(detectedWarEra);
+    }
+    return GENRE_DATA[activeGenre];
+  }, [activeGenre, detectedWarEra]);
 
   const handleRandomScenario = () => {
     const random = RANDOM_SCENARIOS[Math.floor(Math.random() * RANDOM_SCENARIOS.length)];
@@ -196,7 +208,8 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
             {customScenario.trim() && (
               <div className="mt-3 p-3 rounded-lg bg-background/30 border border-border/30">
                 <p className="text-xs text-muted-foreground mb-2">
-                  Available roles for {activeGenreData.name}:
+                  Available roles for {activeGenreData.name}
+                  {activeGenre === 'war' && ` (${detectedWarEra} era detected)`}:
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {activeGenreData.classes.slice(0, 6).map((cls) => (
