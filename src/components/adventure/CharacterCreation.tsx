@@ -2,12 +2,26 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   CharacterStats,
   getStatModifier,
 } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA, createGenreCharacter } from '@/types/genreData';
-import { ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, Dices, Rocket, Skull, Search, Compass } from 'lucide-react';
+import { 
+  DetailLevel, Gender, TieredAppearance, 
+  GENDER_OPTIONS, HEIGHT_OPTIONS, BUILD_OPTIONS,
+  SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, FACE_SHAPES,
+  DISTINGUISHING_FEATURES, ACCESSORIES,
+  BUST_OPTIONS, HIP_OPTIONS, MUSCLE_OPTIONS, BODY_HAIR_OPTIONS,
+  formatAppearanceForAI
+} from '@/types/characterCreation';
+import { 
+  ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, 
+  Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
+  Eye, Crosshair, Zap
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -18,7 +32,7 @@ interface CharacterCreationProps {
   isLoading: boolean;
 }
 
-type CreationStep = 'name' | 'class' | 'background' | 'stats' | 'traits';
+type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | 'traits' | 'portrait';
 
 const STAT_POINT_POOL = 15;
 
@@ -33,6 +47,19 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
+  
+  // Appearance state
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>('simple');
+  const [appearance, setAppearance] = useState<TieredAppearance>({
+    detailLevel: 'simple',
+    simple: { gender: 'male', height: 'average', build: 'average' },
+    detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
+    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '' },
+  });
+  
+  // Portrait state
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
 
   const pointsSpent = Object.values(statAllocation).reduce((sum, val) => sum + (val || 0), 0);
   const pointsRemaining = STAT_POINT_POOL - pointsSpent;
@@ -53,22 +80,91 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }
   };
 
+  const toggleFeature = (feature: string) => {
+    const current = appearance.detailed?.distinguishingFeatures || [];
+    if (current.includes(feature)) {
+      updateAppearance('detailed', 'distinguishingFeatures', current.filter(f => f !== feature));
+    } else if (current.length < 5) {
+      updateAppearance('detailed', 'distinguishingFeatures', [...current, feature]);
+    }
+  };
+
+  const toggleAccessory = (accessory: string) => {
+    const current = appearance.detailed?.accessories || [];
+    if (current.includes(accessory)) {
+      updateAppearance('detailed', 'accessories', current.filter(a => a !== accessory));
+    } else if (current.length < 4) {
+      updateAppearance('detailed', 'accessories', [...current, accessory]);
+    }
+  };
+
+  const updateAppearance = (level: 'simple' | 'detailed' | 'full', key: string, value: any) => {
+    setAppearance(prev => ({
+      ...prev,
+      detailLevel,
+      [level]: { ...prev[level], [key]: value }
+    }));
+  };
+
+  const handleGeneratePortrait = async () => {
+    setIsGeneratingPortrait(true);
+    try {
+      const appearanceDesc = formatAppearanceForAI({ ...appearance, detailLevel }, genre);
+      const className = genreData.classes.find(c => c.id === selectedClass)?.name || selectedClass;
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appearance: appearanceDesc,
+          characterClass: className,
+          genre,
+          name,
+          detailLevel,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          toast.error('Rate limit exceeded', { description: 'Please try again in a moment.' });
+        } else if (response.status === 402) {
+          toast.error('Usage limit reached', { description: 'Please add credits to continue.' });
+        } else {
+          toast.error('Failed to generate portrait', { description: errorData.error });
+        }
+        return;
+      }
+
+      const data = await response.json();
+      setPortraitUrl(data.imageUrl);
+      toast.success('Portrait generated!');
+    } catch (error) {
+      console.error('Error generating portrait:', error);
+      toast.error('Failed to generate portrait');
+    } finally {
+      setIsGeneratingPortrait(false);
+    }
+  };
+
   const handleComplete = () => {
-    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre);
+    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined);
     onComplete(character, scenario);
   };
 
   const canProceed = () => {
     switch (step) {
       case 'name': return name.trim().length >= 2;
+      case 'appearance': return true;
       case 'class': return selectedClass !== '';
       case 'background': return selectedBackground !== '';
       case 'stats': return true;
       case 'traits': return selectedTraits.length >= 1;
+      case 'portrait': return true;
     }
   };
 
-  const steps: CreationStep[] = ['name', 'class', 'background', 'stats', 'traits'];
+  const steps: CreationStep[] = ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'portrait'];
   
   const nextStep = () => {
     const currentIndex = steps.indexOf(step);
@@ -85,19 +181,55 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   };
 
   const getClassIcon = (classId: string) => {
-    if (genre === 'scifi' || genre === 'cyberpunk') return <Rocket className="w-5 h-5" />;
+    if (genre === 'scifi') return <Rocket className="w-5 h-5" />;
+    if (genre === 'cyberpunk') return <Zap className="w-5 h-5" />;
     if (genre === 'horror' || genre === 'postapoc') return <Skull className="w-5 h-5" />;
     if (genre === 'mystery') return <Search className="w-5 h-5" />;
     if (genre === 'pirate') return <Compass className="w-5 h-5" />;
+    if (genre === 'western') return <Crosshair className="w-5 h-5" />;
     
     switch (classId) {
-      case 'warrior': case 'marine': case 'enforcer': return <Sword className="w-5 h-5" />;
-      case 'mage': case 'hacker': case 'occultist': return <Wand2 className="w-5 h-5" />;
-      case 'cleric': case 'medic': return <Heart className="w-5 h-5" />;
-      case 'rogue': case 'grifter': case 'scavenger': return <Sparkles className="w-5 h-5" />;
+      case 'warrior': case 'marine': case 'enforcer': case 'solo': return <Sword className="w-5 h-5" />;
+      case 'mage': case 'hacker': case 'occultist': case 'netrunner': return <Wand2 className="w-5 h-5" />;
+      case 'cleric': case 'medic': case 'frontier_doctor': return <Heart className="w-5 h-5" />;
       default: return <Shield className="w-5 h-5" />;
     }
   };
+
+  const renderDetailLevelSelector = () => (
+    <div className="mb-6">
+      <h3 className="text-sm font-medium text-muted-foreground mb-3">Detail Level</h3>
+      <div className="flex gap-2">
+        {[
+          { level: 'simple' as DetailLevel, label: 'Simple', desc: 'Gender, Height, Build' },
+          { level: 'detailed' as DetailLevel, label: 'Detailed', desc: 'Hair, Eyes, Skin, Features' },
+          { level: 'all' as DetailLevel, label: 'All (18+)', desc: 'Full body customization' },
+        ].map(({ level, label, desc }) => (
+          <button
+            key={level}
+            onClick={() => {
+              setDetailLevel(level);
+              setAppearance(prev => ({ ...prev, detailLevel: level }));
+            }}
+            className={`flex-1 p-3 rounded-lg text-left transition-all border ${
+              detailLevel === level
+                ? 'bg-primary/20 border-primary'
+                : 'bg-background/50 border-border/30 hover:border-primary/50'
+            }`}
+          >
+            <div className="font-medium text-sm">{label}</div>
+            <div className="text-xs text-muted-foreground">{desc}</div>
+          </button>
+        ))}
+      </div>
+      {detailLevel === 'all' && (
+        <div className="mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
+          <p className="text-xs text-destructive">Adult content mode enabled. This includes mature body customization options.</p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
@@ -131,6 +263,257 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 className="text-lg py-6 bg-background border-border/50"
                 autoFocus
               />
+            </div>
+          )}
+
+          {/* Appearance Step */}
+          {step === 'appearance' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-primary">Define Your Appearance</h2>
+              
+              {renderDetailLevelSelector()}
+              
+              <ScrollArea className="h-[350px] pr-4">
+                {/* Simple Level - Always shown */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Gender</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {GENDER_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => updateAppearance('simple', 'gender', opt.value as Gender)}
+                          className={`px-4 py-2 rounded-lg text-sm transition-all border ${
+                            appearance.simple.gender === opt.value
+                              ? 'bg-primary/20 border-primary'
+                              : 'bg-background/50 border-border/30 hover:border-primary/50'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {appearance.simple.gender === 'other' && detailLevel === 'all' && (
+                      <label className="flex items-center gap-2 mt-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={appearance.full?.isHermaphrodite || false}
+                          onChange={(e) => updateAppearance('full', 'isHermaphrodite', e.target.checked)}
+                          className="rounded"
+                        />
+                        <span>Hermaphrodite (both anatomies)</span>
+                      </label>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Height</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {HEIGHT_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => updateAppearance('simple', 'height', opt.value)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all border ${
+                            appearance.simple.height === opt.value
+                              ? 'bg-primary/20 border-primary'
+                              : 'bg-background/50 border-border/30 hover:border-primary/50'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Build</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {BUILD_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => updateAppearance('simple', 'build', opt.value)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-all border ${
+                            appearance.simple.build === opt.value
+                              ? 'bg-primary/20 border-primary'
+                              : 'bg-background/50 border-border/30 hover:border-primary/50'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Level */}
+                {(detailLevel === 'detailed' || detailLevel === 'all') && (
+                  <div className="space-y-4 mt-6 pt-4 border-t border-border/30">
+                    <h3 className="text-primary font-medium">Detailed Features</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground">Skin Tone</label>
+                        <select
+                          value={appearance.detailed?.skinTone || 'Medium'}
+                          onChange={(e) => updateAppearance('detailed', 'skinTone', e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          {SKIN_TONES.map(tone => <option key={tone} value={tone}>{tone}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Face Shape</label>
+                        <select
+                          value={appearance.detailed?.faceShape || 'oval'}
+                          onChange={(e) => updateAppearance('detailed', 'faceShape', e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          {FACE_SHAPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Hair Style</label>
+                        <select
+                          value={appearance.detailed?.hairStyle || 'Medium'}
+                          onChange={(e) => updateAppearance('detailed', 'hairStyle', e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          {HAIR_STYLES.map(style => <option key={style} value={style}>{style}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Hair Color</label>
+                        <select
+                          value={appearance.detailed?.hairColor || 'Brown'}
+                          onChange={(e) => updateAppearance('detailed', 'hairColor', e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          {HAIR_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Eye Color</label>
+                        <select
+                          value={appearance.detailed?.eyeColor || 'Brown'}
+                          onChange={(e) => updateAppearance('detailed', 'eyeColor', e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          {EYE_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-muted-foreground">Distinguishing Features (up to 5)</label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {DISTINGUISHING_FEATURES.map(feature => (
+                          <button
+                            key={feature}
+                            onClick={() => toggleFeature(feature)}
+                            className={`px-2 py-1 rounded text-xs transition-all ${
+                              appearance.detailed?.distinguishingFeatures?.includes(feature)
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                            }`}
+                          >
+                            {feature}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-muted-foreground">Accessories (up to 4)</label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {ACCESSORIES.map(acc => (
+                          <button
+                            key={acc}
+                            onClick={() => toggleAccessory(acc)}
+                            className={`px-2 py-1 rounded text-xs transition-all ${
+                              appearance.detailed?.accessories?.includes(acc)
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                            }`}
+                          >
+                            {acc}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* All Level (18+) */}
+                {detailLevel === 'all' && (
+                  <div className="space-y-4 mt-6 pt-4 border-t border-destructive/30">
+                    <h3 className="text-destructive font-medium flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      Adult Content
+                    </h3>
+                    
+                    {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-muted-foreground">Bust Size</label>
+                          <select
+                            value={appearance.full?.bustSize || 'medium'}
+                            onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
+                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                          >
+                            {BUST_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Hip Width</label>
+                          <select
+                            value={appearance.full?.hipWidth || 'average'}
+                            onChange={(e) => updateAppearance('full', 'hipWidth', e.target.value)}
+                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                          >
+                            {HIP_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {(appearance.simple.gender === 'male' || appearance.simple.gender === 'other') && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-muted-foreground">Muscle Definition</label>
+                          <select
+                            value={appearance.full?.muscleDefinition || 'toned'}
+                            onChange={(e) => updateAppearance('full', 'muscleDefinition', e.target.value)}
+                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                          >
+                            {MUSCLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Body Hair</label>
+                          <select
+                            value={appearance.full?.bodyHair || 'light'}
+                            onChange={(e) => updateAppearance('full', 'bodyHair', e.target.value)}
+                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                          >
+                            {BODY_HAIR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-sm text-muted-foreground">Additional Intimate Details (optional)</label>
+                      <Textarea
+                        value={appearance.full?.intimateDetails || ''}
+                        onChange={(e) => updateAppearance('full', 'intimateDetails', e.target.value)}
+                        placeholder="Describe additional physical characteristics..."
+                        className="mt-1 bg-background border-border/50"
+                        maxLength={200}
+                      />
+                    </div>
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           )}
 
@@ -268,15 +651,57 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 ))}
               </div>
               <p className="text-sm text-muted-foreground">Selected: {selectedTraits.length}/3</p>
+            </div>
+          )}
+
+          {/* Portrait Step */}
+          {step === 'portrait' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-primary">Generate Your Portrait</h2>
               
-              {/* Character Summary */}
-              <div className="p-4 bg-background/50 rounded-lg border border-border/30 mt-6">
-                <h3 className="font-semibold text-primary mb-2">Character Summary</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div><span className="text-muted-foreground">Name:</span> {name}</div>
-                  <div><span className="text-muted-foreground">Role:</span> {genreData.classes.find(c => c.id === selectedClass)?.name}</div>
-                  <div><span className="text-muted-foreground">Background:</span> {genreData.backgrounds.find(b => b.id === selectedBackground)?.name}</div>
-                  <div><span className="text-muted-foreground">Starting {genreData.currency}:</span> {genreData.startingCurrency}</div>
+              <div className="flex flex-col md:flex-row gap-6 items-center">
+                {/* Portrait Preview */}
+                <div className="w-48 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                  {portraitUrl ? (
+                    <img src={portraitUrl} alt="Character portrait" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-16 h-16 text-muted-foreground/30" />
+                  )}
+                </div>
+                
+                <div className="flex-1 space-y-4">
+                  {/* Character Summary */}
+                  <div className="p-4 bg-background/50 rounded-lg border border-border/30">
+                    <h3 className="font-semibold text-primary mb-2">Character Summary</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-muted-foreground">Name:</span> {name}</div>
+                      <div><span className="text-muted-foreground">Role:</span> {genreData.classes.find(c => c.id === selectedClass)?.name}</div>
+                      <div><span className="text-muted-foreground">Background:</span> {genreData.backgrounds.find(b => b.id === selectedBackground)?.name}</div>
+                      <div><span className="text-muted-foreground">Starting {genreData.currency}:</span> {genreData.startingCurrency}</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleGeneratePortrait}
+                    disabled={isGeneratingPortrait}
+                    className="w-full gap-2"
+                    variant="outline"
+                  >
+                    {isGeneratingPortrait ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand className="w-4 h-4" />
+                        {portraitUrl ? 'Regenerate Portrait' : 'Generate AI Portrait'}
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Portrait is optional. You can skip this step.
+                  </p>
                 </div>
               </div>
             </div>
@@ -290,7 +715,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             Back
           </Button>
 
-          {step === 'traits' ? (
+          {step === 'portrait' ? (
             <Button onClick={handleComplete} disabled={!canProceed() || isLoading} className="gap-2 bg-primary text-primary-foreground">
               <Dices className="w-4 h-4" />
               Begin Adventure
