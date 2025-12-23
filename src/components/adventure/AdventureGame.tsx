@@ -3,6 +3,8 @@ import { AdventureCreator } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
+import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { toast } from 'sonner';
@@ -30,12 +32,13 @@ interface ScenarioSelection {
   genreTitle: string;
 }
 
-type GamePhase = 'loading' | 'scenario' | 'character' | 'playing';
+type GamePhase = 'loading' | 'scenario' | 'color' | 'character' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
 const SCENARIO_KEY = 'untold-adventure-scenario';
 const GENRE_KEY = 'untold-adventure-genre';
+const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
   // Initial loading state
@@ -54,6 +57,8 @@ export function AdventureGame() {
     }
     return 'scenario';
   });
+
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(() => getSavedColorId());
 
   const [scenarioSelection, setScenarioSelection] = useState<ScenarioSelection | null>(() => {
     const savedScenario = localStorage.getItem(SCENARIO_KEY);
@@ -81,8 +86,9 @@ export function AdventureGame() {
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
   const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
 
-  // Handle initial loading complete
+  // Handle initial loading complete and load color
   useEffect(() => {
+    loadColorPreference();
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 2500);
@@ -137,9 +143,20 @@ export function AdventureGame() {
     }
   }, [character, cheatMode]);
 
-  // Step 1: Scenario selection
+  // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
     setScenarioSelection(selection);
+    // Skip color selection if already chosen before
+    if (selectedColorId) {
+      setPhase('character');
+    } else {
+      setPhase('color');
+    }
+  }, [selectedColorId]);
+
+  // Step 2: Color selection complete
+  const handleColorSelect = useCallback((colorId: string) => {
+    setSelectedColorId(colorId);
     setPhase('character');
   }, []);
 
@@ -248,6 +265,16 @@ export function AdventureGame() {
   // Phase 1: Scenario selection
   if (phase === 'scenario') {
     return <AdventureCreator onSelect={handleScenarioSelect} isLoading={isLoading} />;
+  }
+
+  // Phase 1.5: Color selection
+  if (phase === 'color' && scenarioSelection) {
+    return (
+      <ColorSelectionScreen
+        onSelect={handleColorSelect}
+        currentSelection={selectedColorId || 'violet'}
+      />
+    );
   }
 
   // Phase 2: Character creation

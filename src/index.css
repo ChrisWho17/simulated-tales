@@ -52,10 +52,27 @@
 
     /* === CUSTOM DESIGN TOKENS === */
     
+    /* Accent Colors - Set dynamically by color picker */
+    --accent-primary: #8b5cf6;
+    --accent-secondary: #a78bfa;
+    --accent-tertiary: #c4b5fd;
+    --accent-glow: rgba(139, 92, 246, 0.4);
+    --accent-glow-intense: rgba(139, 92, 246, 0.6);
+    --accent-border: rgba(139, 92, 246, 0.2);
+    --accent-bg: rgba(139, 92, 246, 0.1);
+    --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    
     /* Gradient Colors */
     --gradient-start: #8b5cf6;
     --gradient-end: #d946ef;
     --gradient-tertiary: #22d3ee;
+    
+    /* Particle Colors - Set dynamically by color picker */
+    --particle-primary: #8b5cf6;
+    --particle-secondary: #a78bfa;
+    --particle-tertiary: #c4b5fd;
+    --ambient-primary: #8b5cf6;
+    --ambient-secondary: #d946ef;
     
     /* Text Hierarchy */
     --text-primary: #f1f5f9;
@@ -74,6 +91,24 @@
     --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     --shadow-deep: 0 20px 60px -15px rgba(0, 0, 0, 0.8);
     --shadow-glow: var(--glow-primary);
+    --shadow-accent: 0 0 20px var(--accent-glow), 0 4px 15px rgba(0, 0, 0, 0.3);
+    --shadow-accent-hover: 0 0 30px var(--accent-glow-intense), 0 6px 20px rgba(0, 0, 0, 0.4);
+    
+    /* Fixed Semantic Colors (don't change with theme) */
+    --health-color: #ef4444;
+    --health-glow: rgba(239, 68, 68, 0.4);
+    --energy-color: #f59e0b;
+    --energy-glow: rgba(245, 158, 11, 0.4);
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    
+    /* Relationship Colors (fixed semantic) */
+    --rel-friendly: #10b981;
+    --rel-neutral: #64748b;
+    --rel-hostile: #ef4444;
+    --rel-romantic: #ec4899;
+    --rel-mysterious: #8b5cf6;
     
     /* Stat Bar Colors */
     --health-start: #10b981;
@@ -730,23 +765,23 @@
 
   /* === CHARACTER NAME LINK === */
   .character-name-link {
-    color: hsl(var(--accent));
+    color: var(--accent-secondary);
     cursor: pointer;
-    transition: all 0.3s ease;
-    border-bottom: 1px dotted hsl(var(--primary));
+    transition: all var(--transition-normal);
+    border-bottom: 1px dotted var(--accent-primary);
     padding-bottom: 1px;
     font-weight: 500;
   }
 
   .character-name-link:hover {
-    color: hsl(var(--primary));
-    text-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+    color: var(--accent-primary);
+    text-shadow: 0 0 15px var(--accent-glow);
     border-bottom-style: solid;
   }
 
   .character-name-link:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 0 2px var(--accent-border);
     border-radius: 2px;
   }
 }
@@ -767,7 +802,7 @@
 .profile-modal {
   background: linear-gradient(135deg, rgba(15, 15, 25, 0.95) 0%, rgba(30, 20, 40, 0.95) 100%);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--accent-border);
   border-radius: 24px;
   max-width: 480px;
   width: 100%;
@@ -775,7 +810,7 @@
   overflow-y: auto;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
-              0 0 40px rgba(139, 92, 246, 0.2);
+              0 0 40px var(--accent-glow);
 }
 
 .profile-close {
@@ -797,9 +832,10 @@
 }
 
 .profile-close:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: hsl(var(--primary));
-  color: hsl(var(--primary));
+  background: var(--accent-bg);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 
 /* Portrait section */
@@ -808,7 +844,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+  background: linear-gradient(180deg, var(--accent-bg) 0%, transparent 100%);
 }
 
 .profile-portrait-frame {
@@ -909,7 +945,7 @@
 }
 
 .profile-title {
-  color: hsl(var(--primary));
+  color: var(--accent-primary);
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -979,9 +1015,9 @@
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 0.75rem;
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-secondary);
   text-transform: capitalize;
 }
 
@@ -1049,19 +1085,20 @@
 .expand-details-btn {
   width: 100%;
   padding: 8px 12px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid var(--glass-border);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
   border-radius: 8px;
-  color: hsl(var(--primary));
+  color: var(--accent-primary);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal);
   text-align: left;
 }
 
 .expand-details-btn:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: hsl(var(--primary));
+  background: rgba(var(--accent-primary), 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .expanded-details {
