@@ -681,6 +681,8 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       let helpContent = `**Available Commands:**
 • **look** - Examine your surroundings
 • **talk [name]** - Speak with someone
+• **say [message]** - Continue a conversation
+• **bye** - End a conversation
 • **go [place]** - Travel to a connected location
 • **wait [hours]** - Pass time (1-12 hours)
 • **inventory** - Check your belongings
@@ -691,6 +693,11 @@ export function processAction(state: GameState, action: Action): { newState: Gam
 • **sleep [hours]** - Rest to restore energy (default: 6 hours)
 • **bathe** - Clean yourself to restore hygiene
 • **status** - View your physical and psychological condition
+
+**RPG Systems:**
+• **journal** / **j** - Open the quest journal
+• **weather** - Check current weather conditions
+• **attack [name]** - Initiate combat with someone
 
 • **help** - Show this message`;
 
@@ -866,6 +873,24 @@ export function parseCommand(input: string): Action & { debug?: string } {
     case 'needs':
     case 'condition':
       return { type: 'status' };
+    // Conversation commands
+    case 'say':
+      return { type: 'say' as any, args: target ? target.split(' ') : [] };
+    case 'bye':
+    case 'goodbye':
+    case 'farewell':
+    case 'leave':
+      return { type: 'end_conversation' as any };
+    // RPG commands (handled in GameUI directly)
+    case 'journal':
+    case 'quests':
+    case 'j':
+    case 'weather':
+    case 'attack':
+    case 'fight':
+      return { type: 'help' }; // These are handled in GameUI
+    case 'accept':
+      return { type: 'help', debug: `accept_quest ${target}` };
     // Debug commands
     case 'debug':
       return { type: 'help', debug: 'toggle' };
