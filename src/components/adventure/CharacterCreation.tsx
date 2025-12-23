@@ -3,40 +3,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  RPGCharacter, 
   CharacterStats,
-  CHARACTER_CLASSES, 
-  CHARACTER_BACKGROUNDS, 
-  CHARACTER_TRAITS,
-  createCharacter,
   getStatModifier,
 } from '@/types/rpgCharacter';
-import { ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, Dices } from 'lucide-react';
+import { GameGenre, GENRE_DATA, createGenreCharacter } from '@/types/genreData';
+import { ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, Dices, Rocket, Skull, Search, Compass } from 'lucide-react';
 
 interface CharacterCreationProps {
-  onComplete: (character: RPGCharacter, scenario: string) => void;
+  genre: GameGenre;
+  scenario: string;
+  genreTitle: string;
+  onComplete: (character: ReturnType<typeof createGenreCharacter>, scenario: string) => void;
+  onBack: () => void;
   isLoading: boolean;
 }
 
-type CreationStep = 'name' | 'class' | 'background' | 'stats' | 'traits' | 'scenario';
+type CreationStep = 'name' | 'class' | 'background' | 'stats' | 'traits';
 
 const STAT_POINT_POOL = 15;
 
-export function CharacterCreation({ onComplete, isLoading }: CharacterCreationProps) {
+export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading }: CharacterCreationProps) {
+  const genreData = GENRE_DATA[genre];
+  
   const [step, setStep] = useState<CreationStep>('name');
   const [name, setName] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedBackground, setSelectedBackground] = useState<string>('');
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
-    strength: 0,
-    dexterity: 0,
-    constitution: 0,
-    intelligence: 0,
-    wisdom: 0,
-    charisma: 0,
+    strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
-  const [scenario, setScenario] = useState('');
 
   const pointsSpent = Object.values(statAllocation).reduce((sum, val) => sum + (val || 0), 0);
   const pointsRemaining = STAT_POINT_POOL - pointsSpent;
@@ -44,10 +40,8 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
   const adjustStat = (stat: keyof CharacterStats, delta: number) => {
     const current = statAllocation[stat] || 0;
     const newValue = current + delta;
-    
     if (newValue < 0 || newValue > 7) return;
     if (delta > 0 && pointsRemaining <= 0) return;
-
     setStatAllocation(prev => ({ ...prev, [stat]: newValue }));
   };
 
@@ -60,15 +54,8 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
   };
 
   const handleComplete = () => {
-    const character = createCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation);
-    const finalScenario = scenario.trim() || generateDefaultScenario();
-    onComplete(character, finalScenario);
-  };
-
-  const generateDefaultScenario = () => {
-    const charClass = CHARACTER_CLASSES.find(c => c.id === selectedClass);
-    const background = CHARACTER_BACKGROUNDS.find(b => b.id === selectedBackground);
-    return `You are ${name}, a ${charClass?.name} with a ${background?.name} background. Your adventure begins in a mysterious tavern where rumors of dark happenings have drawn adventurers from across the land.`;
+    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre);
+    onComplete(character, scenario);
   };
 
   const canProceed = () => {
@@ -78,32 +65,36 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
       case 'background': return selectedBackground !== '';
       case 'stats': return true;
       case 'traits': return selectedTraits.length >= 1;
-      case 'scenario': return true;
     }
   };
 
+  const steps: CreationStep[] = ['name', 'class', 'background', 'stats', 'traits'];
+  
   const nextStep = () => {
-    const steps: CreationStep[] = ['name', 'class', 'background', 'stats', 'traits', 'scenario'];
     const currentIndex = steps.indexOf(step);
-    if (currentIndex < steps.length - 1) {
-      setStep(steps[currentIndex + 1]);
-    }
+    if (currentIndex < steps.length - 1) setStep(steps[currentIndex + 1]);
   };
 
   const prevStep = () => {
-    const steps: CreationStep[] = ['name', 'class', 'background', 'stats', 'traits', 'scenario'];
     const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
       setStep(steps[currentIndex - 1]);
+    } else {
+      onBack();
     }
   };
 
   const getClassIcon = (classId: string) => {
+    if (genre === 'scifi' || genre === 'cyberpunk') return <Rocket className="w-5 h-5" />;
+    if (genre === 'horror' || genre === 'postapoc') return <Skull className="w-5 h-5" />;
+    if (genre === 'mystery') return <Search className="w-5 h-5" />;
+    if (genre === 'pirate') return <Compass className="w-5 h-5" />;
+    
     switch (classId) {
-      case 'warrior': return <Sword className="w-5 h-5" />;
-      case 'mage': return <Wand2 className="w-5 h-5" />;
-      case 'cleric': return <Heart className="w-5 h-5" />;
-      case 'rogue': return <Sparkles className="w-5 h-5" />;
+      case 'warrior': case 'marine': case 'enforcer': return <Sword className="w-5 h-5" />;
+      case 'mage': case 'hacker': case 'occultist': return <Wand2 className="w-5 h-5" />;
+      case 'cleric': case 'medic': return <Heart className="w-5 h-5" />;
+      case 'rogue': case 'grifter': case 'scavenger': return <Sparkles className="w-5 h-5" />;
       default: return <Shield className="w-5 h-5" />;
     }
   };
@@ -112,12 +103,18 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-3xl md:text-4xl font-narrative font-bold text-gradient-gold mb-2">
+        <div className="text-center mb-6 animate-fade-in">
+          <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-wider">
+            {genreData.name} Adventure
+          </span>
+          <h1 className="text-3xl md:text-4xl font-narrative font-bold text-gradient-gold mt-3 mb-2">
             Create Your Hero
           </h1>
-          <p className="text-muted-foreground">
-            Step {['name', 'class', 'background', 'stats', 'traits', 'scenario'].indexOf(step) + 1} of 6
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            {scenario.slice(0, 80)}...
+          </p>
+          <p className="text-muted-foreground mt-2">
+            Step {steps.indexOf(step) + 1} of {steps.length}
           </p>
         </div>
 
@@ -126,7 +123,7 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
           {/* Name Step */}
           {step === 'name' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">What is your name, adventurer?</h2>
+              <h2 className="text-xl font-semibold text-primary">What is your name?</h2>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -140,10 +137,10 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
           {/* Class Step */}
           {step === 'class' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">Choose your class</h2>
+              <h2 className="text-xl font-semibold text-primary">Choose your role</h2>
               <ScrollArea className="h-[400px] pr-4">
                 <div className="grid gap-3">
-                  {CHARACTER_CLASSES.map((charClass) => (
+                  {genreData.classes.map((charClass) => (
                     <button
                       key={charClass.id}
                       onClick={() => setSelectedClass(charClass.id)}
@@ -161,6 +158,13 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
                           <div className="flex gap-4 mt-2 text-xs text-primary/80">
                             <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
                           </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {charClass.abilities.map(ability => (
+                              <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                {ability}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -176,7 +180,7 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
               <h2 className="text-xl font-semibold text-primary">What is your origin?</h2>
               <ScrollArea className="h-[400px] pr-4">
                 <div className="grid gap-3">
-                  {CHARACTER_BACKGROUNDS.map((bg) => (
+                  {genreData.backgrounds.map((bg) => (
                     <button
                       key={bg.id}
                       onClick={() => setSelectedBackground(bg.id)}
@@ -186,16 +190,14 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
                           : 'bg-background/50 border border-border/30 hover:border-primary/50'
                       }`}
                     >
-                      <div>
-                        <h3 className="font-semibold text-foreground">{bg.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          {bg.skills.map(skill => (
-                            <span key={skill} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
+                      <h3 className="font-semibold text-foreground">{bg.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {bg.skills.map(skill => (
+                          <span key={skill} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                            {skill}
+                          </span>
+                        ))}
                       </div>
                     </button>
                   ))}
@@ -213,15 +215,12 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
                   {pointsRemaining} points remaining
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Distribute {STAT_POINT_POOL} points across your attributes (base 8, max 15 each)
-              </p>
               <div className="grid gap-3">
                 {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
                   const base = 8;
                   const allocated = statAllocation[stat] || 0;
-                  const classBonus = CHARACTER_CLASSES.find(c => c.id === selectedClass)?.statBonuses[stat] || 0;
-                  const bgBonus = CHARACTER_BACKGROUNDS.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
+                  const classBonus = genreData.classes.find(c => c.id === selectedClass)?.statBonuses[stat] || 0;
+                  const bgBonus = genreData.backgrounds.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
                   const total = base + allocated + classBonus + bgBonus;
                   const modifier = getStatModifier(total);
 
@@ -230,36 +229,16 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
                       <div>
                         <span className="font-medium capitalize">{stat}</span>
                         {(classBonus > 0 || bgBonus > 0) && (
-                          <span className="text-xs text-primary ml-2">
-                            (+{classBonus + bgBonus} bonus)
-                          </span>
+                          <span className="text-xs text-primary ml-2">(+{classBonus + bgBonus})</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => adjustStat(stat, -1)}
-                          disabled={allocated <= 0}
-                          className="h-8 w-8"
-                        >
-                          -
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, -1)} disabled={allocated <= 0} className="h-8 w-8">-</Button>
                         <div className="w-16 text-center">
                           <span className="text-lg font-bold">{total}</span>
-                          <span className="text-sm text-muted-foreground ml-1">
-                            ({modifier >= 0 ? '+' : ''}{modifier})
-                          </span>
+                          <span className="text-sm text-muted-foreground ml-1">({modifier >= 0 ? '+' : ''}{modifier})</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => adjustStat(stat, 1)}
-                          disabled={allocated >= 7 || pointsRemaining <= 0}
-                          className="h-8 w-8"
-                        >
-                          +
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, 1)} disabled={allocated >= 7 || pointsRemaining <= 0} className="h-8 w-8">+</Button>
                       </div>
                     </div>
                   );
@@ -273,7 +252,7 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Select up to 3 personality traits</h2>
               <div className="flex flex-wrap gap-2">
-                {CHARACTER_TRAITS.map((trait) => (
+                {genreData.traits.map((trait) => (
                   <button
                     key={trait}
                     onClick={() => toggleTrait(trait)}
@@ -288,34 +267,16 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
                   </button>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">
-                Selected: {selectedTraits.length}/3
-              </p>
-            </div>
-          )}
-
-          {/* Scenario Step */}
-          {step === 'scenario' && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">Where does your story begin?</h2>
-              <p className="text-sm text-muted-foreground">
-                Describe your starting scenario, or leave blank for a default adventure
-              </p>
-              <textarea
-                value={scenario}
-                onChange={(e) => setScenario(e.target.value)}
-                placeholder={`Leave blank for: "${generateDefaultScenario().slice(0, 100)}..."`}
-                className="w-full h-32 p-4 bg-background border border-border/50 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+              <p className="text-sm text-muted-foreground">Selected: {selectedTraits.length}/3</p>
               
               {/* Character Summary */}
-              <div className="p-4 bg-background/50 rounded-lg border border-border/30">
+              <div className="p-4 bg-background/50 rounded-lg border border-border/30 mt-6">
                 <h3 className="font-semibold text-primary mb-2">Character Summary</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div><span className="text-muted-foreground">Name:</span> {name}</div>
-                  <div><span className="text-muted-foreground">Class:</span> {CHARACTER_CLASSES.find(c => c.id === selectedClass)?.name}</div>
-                  <div><span className="text-muted-foreground">Background:</span> {CHARACTER_BACKGROUNDS.find(b => b.id === selectedBackground)?.name}</div>
-                  <div><span className="text-muted-foreground">Traits:</span> {selectedTraits.join(', ')}</div>
+                  <div><span className="text-muted-foreground">Role:</span> {genreData.classes.find(c => c.id === selectedClass)?.name}</div>
+                  <div><span className="text-muted-foreground">Background:</span> {genreData.backgrounds.find(b => b.id === selectedBackground)?.name}</div>
+                  <div><span className="text-muted-foreground">Starting {genreData.currency}:</span> {genreData.startingCurrency}</div>
                 </div>
               </div>
             </div>
@@ -324,31 +285,18 @@ export function CharacterCreation({ onComplete, isLoading }: CharacterCreationPr
 
         {/* Navigation */}
         <div className="flex justify-between">
-          <Button
-            variant="ghost"
-            onClick={prevStep}
-            disabled={step === 'name'}
-            className="gap-2"
-          >
+          <Button variant="ghost" onClick={prevStep} className="gap-2">
             <ChevronLeft className="w-4 h-4" />
             Back
           </Button>
 
-          {step === 'scenario' ? (
-            <Button
-              onClick={handleComplete}
-              disabled={!canProceed() || isLoading}
-              className="gap-2 bg-primary text-primary-foreground"
-            >
+          {step === 'traits' ? (
+            <Button onClick={handleComplete} disabled={!canProceed() || isLoading} className="gap-2 bg-primary text-primary-foreground">
               <Dices className="w-4 h-4" />
               Begin Adventure
             </Button>
           ) : (
-            <Button
-              onClick={nextStep}
-              disabled={!canProceed()}
-              className="gap-2"
-            >
+            <Button onClick={nextStep} disabled={!canProceed()} className="gap-2">
               Next
               <ChevronRight className="w-4 h-4" />
             </Button>
