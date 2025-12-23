@@ -1,6 +1,7 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { GameState } from '@/types/game';
 import { formatTime, getNPCsAtLocation } from '@/game/gameEngine';
+import { getTensionLevel } from '@/game/lifeSimIntegration';
 import { 
   Heart, 
   Zap, 
@@ -12,7 +13,12 @@ import {
   Users,
   ChevronDown,
   Sword,
-  Package
+  Package,
+  Droplets,
+  Sparkles,
+  Brain,
+  Home,
+  Briefcase
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -21,7 +27,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { useState } from 'react';
 
 interface SidebarProps {
   gameState: GameState;
@@ -67,8 +72,9 @@ StatBar.displayName = 'StatBar';
 export function Sidebar({ gameState }: SidebarProps) {
   const [npcsOpen, setNpcsOpen] = useState(true);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [needsOpen, setNeedsOpen] = useState(false);
   
-  const { player, time, locations } = gameState;
+  const { player, time, locations, lifeSim } = gameState;
   const currentLocation = locations[player.currentLocation];
   const npcsHere = getNPCsAtLocation(gameState, player.currentLocation);
   
@@ -109,25 +115,37 @@ export function Sidebar({ gameState }: SidebarProps) {
         <StatBar 
           icon={Heart} 
           label="Health" 
-          value={player.stats.health} 
+          value={lifeSim?.needs.physical.health ?? player.stats.health} 
           color="bg-blood"
         />
         <StatBar 
           icon={Zap} 
           label="Energy" 
-          value={player.stats.energy} 
+          value={lifeSim?.needs.physical.energy ?? player.stats.energy} 
           color="bg-gold"
         />
         <StatBar 
           icon={UtensilsCrossed} 
           label="Hunger" 
-          value={player.stats.hunger} 
+          value={lifeSim?.needs.physical.hunger ?? player.stats.hunger} 
           color="bg-copper"
         />
         <StatBar 
-          icon={Smile} 
-          label="Mood" 
-          value={player.stats.mood} 
+          icon={Droplets} 
+          label="Thirst" 
+          value={lifeSim?.needs.physical.thirst ?? 80} 
+          color="bg-sky-500"
+        />
+        <StatBar 
+          icon={Sparkles} 
+          label="Hygiene" 
+          value={lifeSim?.needs.physical.hygiene ?? 80} 
+          color="bg-purple-400"
+        />
+        <StatBar 
+          icon={Brain} 
+          label="Stress" 
+          value={100 - (lifeSim?.needs.psychological.stress ?? 20)} 
           color="bg-forest"
         />
         <div className="flex items-center justify-between pt-2">
@@ -135,8 +153,17 @@ export function Sidebar({ gameState }: SidebarProps) {
             <Coins className="h-3.5 w-3.5" />
             <span>Gold</span>
           </div>
-          <span className="font-mono text-gold">{player.stats.wealth}</span>
+          <span className="font-mono text-gold">{lifeSim?.economy.money ?? player.stats.wealth}</span>
         </div>
+        {lifeSim && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Home className="h-3.5 w-3.5" />
+              <span>Housing</span>
+            </div>
+            <span className="text-xs capitalize">{lifeSim.home?.type.replace('_', ' ') ?? 'None'}</span>
+          </div>
+        )}
       </div>
       
       {/* NPCs Present */}

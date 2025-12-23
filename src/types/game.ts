@@ -1,5 +1,7 @@
 // Core game types for the Living World RPG Engine
 
+import { LifeSimPlayerState } from './lifeSim';
+
 export interface GameTime {
   tick: number;
   hour: number;
@@ -230,6 +232,9 @@ export interface GameState {
   flags: Record<string, boolean>;
   eventQueue: GameEvent[];
   worldEvents: WorldEventLog[]; // Off-screen events that happened
+  
+  // Phase 9: Life Sim State
+  lifeSim?: LifeSimPlayerState;
   
   // Extended state from Phase 6-8
   narratorVoice?: 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
