@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import { GameState } from '@/types/game';
+import { GameState, NPC } from '@/types/game';
 import { formatTime, getNPCsAtLocation } from '@/game/gameEngine';
 import { 
   Heart, 
@@ -27,11 +27,13 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { CharacterNameLink } from './CharacterNameLink';
 
 interface CharacterPanelProps {
   gameState: GameState;
   isOpen: boolean;
   onToggle: () => void;
+  onStartConversation?: (npc: NPC) => void;
 }
 
 interface StatBarProps {
@@ -87,7 +89,7 @@ const StatBar = forwardRef<HTMLDivElement, StatBarProps>(({
 });
 StatBar.displayName = 'StatBar';
 
-export function CharacterPanel({ gameState, isOpen, onToggle }: CharacterPanelProps) {
+export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversation }: CharacterPanelProps) {
   const [npcsOpen, setNpcsOpen] = useState(true);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   
@@ -227,10 +229,15 @@ export function CharacterPanel({ gameState, isOpen, onToggle }: CharacterPanelPr
                     return (
                       <div 
                         key={npc.id} 
-                        className="p-2 rounded bg-secondary/50 border border-border"
+                        className="p-2 rounded bg-secondary/50 border border-border hover:border-primary/30 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">{npc.meta.name}</span>
+                          <CharacterNameLink 
+                            npc={npc} 
+                            className="font-medium text-sm"
+                            onStartConversation={onStartConversation}
+                            playerLocation={player.currentLocation}
+                          />
                           <span className={`text-xs ${
                             disposition === 'Friendly' ? 'text-forest' :
                             disposition === 'Hostile' ? 'text-blood' : 'text-muted-foreground'
