@@ -1,6 +1,20 @@
-import { CharacterData, BACKGROUND_EFFECTS, SPAWN_POINTS } from '@/types/characterCreation';
+import { CharacterData, BACKGROUND_EFFECTS, SPAWN_POINTS, SpawnPointType } from '@/types/characterCreation';
 import { LifeSimPlayerState, BodyType, HairLength, HousingType } from '@/types/lifeSim';
 import { initializeLifeSimState } from './lifeSimIntegration';
+
+// Map spawn point to starting location ID
+export function getSpawnLocationId(spawnPoint: SpawnPointType): string {
+  switch (spawnPoint) {
+    case 'college':
+      return 'university_district';
+    case 'home':
+      return 'family_home';
+    case 'homeless':
+      return 'underbridge';
+    default:
+      return 'town_square';
+  }
+}
 
 // Map character creation values to life sim values
 function mapHeight(height: string): number {
