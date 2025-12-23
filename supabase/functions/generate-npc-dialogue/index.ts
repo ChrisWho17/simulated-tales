@@ -42,12 +42,18 @@ interface NPCContext {
   patterns?: string[];
 }
 
+interface ConversationExchange {
+  playerSaid: string;
+  npcResponse: string;
+  tick?: number;
+}
+
 interface DialogueRequest {
   npc: NPCContext;
   playerInput: string;
   location: string;
   timeOfDay: string;
-  conversationHistory?: { role: 'player' | 'npc'; content: string }[];
+  conversationHistory?: ConversationExchange[];
   isFirstInteraction: boolean;
 }
 
@@ -79,13 +85,14 @@ serve(async (req) => {
       appearanceContext = `They have ${npc.appearance.hair} and ${npc.appearance.eyes}. They have a ${npc.appearance.build} build and dress in ${npc.appearance.clothing} style. Notable: ${npc.appearance.distinguishing}.`;
     }
 
-    // Build conversation context
+    // Build conversation context from exchanges
     let conversationContext = '';
     if (conversationHistory && conversationHistory.length > 0) {
-      conversationContext = '\n\nPrevious conversation:\n' + 
-        conversationHistory.slice(-6).map(msg => 
-          msg.role === 'player' ? `Player: "${msg.content}"` : `${npc.name}: "${msg.content}"`
-        ).join('\n');
+      conversationContext = '\n\nCURRENT CONVERSATION (what was said in this session):\n' + 
+        conversationHistory.slice(-8).map(exchange => 
+          `Player: "${exchange.playerSaid}"\n${npc.name}: "${exchange.npcResponse}"`
+        ).join('\n\n');
+      conversationContext += '\n\nContinue the conversation naturally. Remember what was already discussed.';
     }
 
     // Build memory context
@@ -216,9 +223,22 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
 
     console.log(`Generated dialogue for ${npc.name}: "${dialogue.substring(0, 50)}..."`);
 
+    // Detect important topics mentioned in the response
+    const importantKeywords = [
+      'secret', 'promise', 'love', 'hate', 'kill', 'death', 'family', 'money',
+      'help', 'please', 'sorry', 'forgive', 'trust', 'betray', 'truth', 'lie',
+      'remember', 'never', 'always', 'important', 'dangerous', 'fear', 'scared'
+    ];
+    const dialogueLower = dialogue.toLowerCase();
+    const inputLower = (playerInput || '').toLowerCase();
+    const importantTopics = importantKeywords.filter(keyword => 
+      dialogueLower.includes(keyword) || inputLower.includes(keyword)
+    );
+
     return new Response(JSON.stringify({ 
       dialogue,
       npcId: npc.name,
+      importantTopics,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
