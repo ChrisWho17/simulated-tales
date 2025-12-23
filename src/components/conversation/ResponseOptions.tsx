@@ -11,7 +11,7 @@ import { ConversationResponse } from './ConversationUI';
 
 export type ResponseType = 
   | 'direct' | 'probe' | 'emotional' | 'flirt' 
-  | 'threaten' | 'deceive' | 'deflect' | 'friendly';
+  | 'threaten' | 'deceive' | 'deflect' | 'friendly' | 'aggressive';
 
 interface ResponseOptionsProps {
   responses: ConversationResponse[];
@@ -27,7 +27,8 @@ const RESPONSE_ICONS: Record<ResponseType, typeof MessageSquare> = {
   threaten: Skull,
   deceive: Theater,
   deflect: Shield,
-  friendly: Handshake
+  friendly: Handshake,
+  aggressive: Angry
 };
 
 const RESPONSE_COLORS: Record<ResponseType, string> = {
@@ -38,7 +39,8 @@ const RESPONSE_COLORS: Record<ResponseType, string> = {
   threaten: 'hover:border-destructive/60 hover:bg-destructive/10',
   deceive: 'hover:border-warning/60 hover:bg-warning/10',
   deflect: 'hover:border-muted-foreground/60 hover:bg-muted/30',
-  friendly: 'hover:border-success/60 hover:bg-success/10'
+  friendly: 'hover:border-success/60 hover:bg-success/10',
+  aggressive: 'hover:border-orange-500/60 hover:bg-orange-500/10'
 };
 
 const RESPONSE_ICON_COLORS: Record<ResponseType, string> = {
@@ -49,7 +51,8 @@ const RESPONSE_ICON_COLORS: Record<ResponseType, string> = {
   threaten: 'text-destructive',
   deceive: 'text-warning',
   deflect: 'text-muted-foreground',
-  friendly: 'text-success'
+  friendly: 'text-success',
+  aggressive: 'text-orange-500'
 };
 
 export function ResponseOptions({
