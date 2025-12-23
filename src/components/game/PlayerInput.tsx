@@ -10,6 +10,7 @@ interface PlayerInputProps {
 
 const quickActions = [
   { label: 'Look', command: 'look', icon: Eye },
+  { label: 'Status', command: 'status', icon: MessageSquare },
   { label: 'Inventory', command: 'inventory', icon: Backpack },
   { label: 'Wait', command: 'wait 1', icon: Clock },
   { label: 'Help', command: 'help', icon: HelpCircle },
