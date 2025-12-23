@@ -20,6 +20,7 @@ export interface Stats {
 
 export interface PlayerStats extends Stats {
   hunger: number;
+  gold: number;
 }
 
 export interface ScheduleEntry {

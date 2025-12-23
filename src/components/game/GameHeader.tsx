@@ -1,6 +1,6 @@
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
-import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -12,6 +12,7 @@ interface GameHeaderProps {
   time: GameTime;
   onSave: () => void;
   onLoad: () => void;
+  onNewGame?: () => void;
 }
 
 function TimeIcon({ hour }: { hour: number }) {
@@ -28,7 +29,7 @@ function TimeIcon({ hour }: { hour: number }) {
   }
 }
 
-export function GameHeader({ time, onSave, onLoad }: GameHeaderProps) {
+export function GameHeader({ time, onSave, onLoad, onNewGame }: GameHeaderProps) {
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -45,6 +46,22 @@ export function GameHeader({ time, onSave, onLoad }: GameHeaderProps) {
       </div>
       
       <div className="flex items-center gap-2">
+        {onNewGame && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onNewGame}
+                className="hover:bg-secondary hover:text-primary"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>New Game</TooltipContent>
+          </Tooltip>
+        )}
+        
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
