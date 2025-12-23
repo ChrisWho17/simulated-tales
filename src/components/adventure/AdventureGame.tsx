@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { AdventureCreator } from './AdventureCreator';
+import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
+import { RPGCharacter } from '@/types/rpgCharacter';
 import { toast } from 'sonner';
 
 interface StoryEntry {
@@ -8,43 +10,55 @@ interface StoryEntry {
   role: 'user' | 'narrator';
   content: string;
   timestamp: number;
+  imageUrl?: string;
 }
 
-const STORAGE_KEY = 'untold-adventure-save';
+interface GameMechanics {
+  rollRequired?: { stat: string; difficulty: number; reason: string };
+  xpGained?: { amount: number; reason: string };
+  goldGained?: number;
+  lootGained?: string;
+  damage?: number;
+  heal?: number;
+}
+
+const STORY_KEY = 'untold-adventure-story';
+const CHARACTER_KEY = 'untold-adventure-character';
 
 export function AdventureGame() {
+  const [character, setCharacter] = useState<RPGCharacter | null>(() => {
+    const saved = localStorage.getItem(CHARACTER_KEY);
+    if (saved) try { return JSON.parse(saved); } catch { return null; }
+    return null;
+  });
+
   const [story, setStory] = useState<StoryEntry[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return [];
-      }
-    }
+    const saved = localStorage.getItem(STORY_KEY);
+    if (saved) try { return JSON.parse(saved); } catch { return []; }
     return [];
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
-  const [currentScenario, setCurrentScenario] = useState<string>('');
+  const [currentScenario, setCurrentScenario] = useState('');
+  const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
+  const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
 
-  const saveStory = useCallback((newStory: StoryEntry[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newStory));
+  const saveData = useCallback((newStory: StoryEntry[], newCharacter: RPGCharacter) => {
+    localStorage.setItem(STORY_KEY, JSON.stringify(newStory));
+    localStorage.setItem(CHARACTER_KEY, JSON.stringify(newCharacter));
   }, []);
 
   const generateNarrative = useCallback(async (
     scenario: string,
     playerAction?: string,
-    history: StoryEntry[] = []
+    history: StoryEntry[] = [],
+    diceRoll?: any
   ) => {
+    if (!character) return null;
     setIsLoading(true);
 
     try {
-      const conversationHistory = history.map(entry => ({
-        role: entry.role,
-        content: entry.content,
-      }));
-
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
@@ -53,52 +67,50 @@ export function AdventureGame() {
           body: JSON.stringify({
             scenario,
             playerAction,
-            conversationHistory,
+            conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
             cheatMode,
+            character,
+            diceRoll,
           }),
         }
       );
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate narrative');
-      }
-
-      if (!data.narrative) {
-        throw new Error('No narrative received');
-      }
-
+      if (!response.ok) throw new Error(data.error || 'Failed to generate');
+      
+      if (data.mechanics) setPendingMechanics(data.mechanics);
       return data.narrative;
     } catch (error) {
-      console.error('Error generating narrative:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate story');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate');
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [cheatMode]);
+  }, [character, cheatMode]);
 
-  const handleStartAdventure = useCallback(async (scenario: string) => {
+  const handleCharacterComplete = useCallback(async (char: RPGCharacter, scenario: string) => {
+    setCharacter(char);
     setCurrentScenario(scenario);
-    const narrative = await generateNarrative(scenario);
-    
-    if (narrative) {
-      const newStory: StoryEntry[] = [
-        {
-          id: `narrator_${Date.now()}`,
-          role: 'narrator',
-          content: narrative,
-          timestamp: Date.now(),
-        },
-      ];
-      setStory(newStory);
-      saveStory(newStory);
-    }
-  }, [generateNarrative, saveStory]);
+    localStorage.setItem(CHARACTER_KEY, JSON.stringify(char));
 
-  const handlePlayerAction = useCallback(async (action: string) => {
-    // Add player action to story immediately
+    setIsLoading(true);
+    const narrative = await generateNarrative(scenario, undefined, []);
+    if (narrative) {
+      const newStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: narrative,
+        timestamp: Date.now(),
+      }];
+      setStory(newStory);
+      saveData(newStory, char);
+    }
+    setIsLoading(false);
+  }, [generateNarrative, saveData]);
+
+  const handlePlayerAction = useCallback(async (action: string, diceRoll?: any) => {
+    if (!character) return;
+
     const playerEntry: StoryEntry = {
       id: `user_${Date.now()}`,
       role: 'user',
@@ -109,9 +121,7 @@ export function AdventureGame() {
     const updatedStory = [...story, playerEntry];
     setStory(updatedStory);
 
-    // Generate AI response
-    const narrative = await generateNarrative(currentScenario, action, updatedStory);
-    
+    const narrative = await generateNarrative(currentScenario, action, updatedStory, diceRoll);
     if (narrative) {
       const narratorEntry: StoryEntry = {
         id: `narrator_${Date.now()}`,
@@ -119,38 +129,57 @@ export function AdventureGame() {
         content: narrative,
         timestamp: Date.now(),
       };
-      
       const finalStory = [...updatedStory, narratorEntry];
       setStory(finalStory);
-      saveStory(finalStory);
+      saveData(finalStory, character);
     }
-  }, [story, currentScenario, generateNarrative, saveStory]);
+  }, [story, currentScenario, character, generateNarrative, saveData]);
+
+  const handleGenerateImage = useCallback(async (entryId: string) => {
+    const entry = story.find(e => e.id === entryId);
+    if (!entry) return;
+
+    setGeneratingImageFor(entryId);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sceneDescription: entry.content.slice(0, 500) }),
+        }
+      );
+      const data = await response.json();
+      if (data.imageUrl) {
+        setStory(prev => prev.map(e => 
+          e.id === entryId ? { ...e, imageUrl: data.imageUrl } : e
+        ));
+      }
+    } catch (error) {
+      toast.error('Failed to generate image');
+    } finally {
+      setGeneratingImageFor(undefined);
+    }
+  }, [story]);
 
   const handleRestart = useCallback(() => {
     setStory([]);
+    setCharacter(null);
     setCurrentScenario('');
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORY_KEY);
+    localStorage.removeItem(CHARACTER_KEY);
   }, []);
 
-  const handleToggleCheatMode = useCallback(() => {
-    setCheatMode(prev => {
-      const newMode = !prev;
-      toast.info(newMode ? 'Cheat mode enabled - collaborative storytelling active' : 'Cheat mode disabled');
-      return newMode;
-    });
-  }, []);
-
-  // Show creator if no story exists
-  if (story.length === 0) {
-    return (
-      <AdventureCreator
-        onStart={handleStartAdventure}
-        isLoading={isLoading}
-      />
-    );
+  // No character - show character creation
+  if (!character) {
+    return <CharacterCreation onComplete={handleCharacterComplete} isLoading={isLoading} />;
   }
 
-  // Show adventure display
+  // No story - shouldn't happen, but handle it
+  if (story.length === 0 && !isLoading) {
+    return <CharacterCreation onComplete={handleCharacterComplete} isLoading={isLoading} />;
+  }
+
   return (
     <AdventureDisplay
       story={story}
@@ -158,7 +187,13 @@ export function AdventureGame() {
       onRestart={handleRestart}
       isLoading={isLoading}
       cheatMode={cheatMode}
-      onToggleCheatMode={handleToggleCheatMode}
+      onToggleCheatMode={() => setCheatMode(p => !p)}
+      character={character}
+      onUpdateCharacter={setCharacter}
+      pendingMechanics={pendingMechanics}
+      onClearMechanics={() => setPendingMechanics(undefined)}
+      onGenerateImage={handleGenerateImage}
+      generatingImageFor={generatingImageFor}
     />
   );
 }
