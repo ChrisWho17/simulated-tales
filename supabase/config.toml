@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-npc-portrait]
 verify_jwt = false
+
+[functions.generate-npc-dialogue]
+verify_jwt = false
