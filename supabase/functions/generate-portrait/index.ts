@@ -5,42 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AppearanceData {
-  bodyType: string;
-  height: string;
-  hairColor: string;
-  hairLength: string;
-  eyeColor: string;
-  skinTone: string;
-  bustSize?: string;
-  curviness?: string;
-  muscles?: string;
-  bodyHair?: string;
-  customDescription?: string;
-}
-
-interface BasicInfoData {
-  name: string;
-  age: number;
-  gender: string;
-}
-
-interface BackgroundData {
-  origin: string;
-  spawnPoint: string;
-}
-
-interface PersonalityData {
-  disposition: string;
-  socialStyle: string;
-}
-
 interface PortraitRequest {
-  appearance: AppearanceData;
-  basicInfo: BasicInfoData;
-  background: BackgroundData;
-  personality: PersonalityData;
-  additionalFeaturesEnabled: boolean;
+  appearance: string;
+  characterClass: string;
+  genre: string;
+  name: string;
+  detailLevel: 'simple' | 'detailed' | 'all';
 }
 
 serve(async (req) => {
@@ -49,43 +19,73 @@ serve(async (req) => {
   }
 
   try {
-    const { appearance, basicInfo, background, personality, additionalFeaturesEnabled } = await req.json() as PortraitRequest;
+    const { appearance, characterClass, genre, name, detailLevel } = await req.json() as PortraitRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Validate required fields
-    if (!appearance || !basicInfo) {
-      throw new Error("Missing required appearance or basicInfo data");
+    console.log("Generating character portrait for:", name, "in genre:", genre);
+
+    // Genre-specific art styles
+    const genreStyles: Record<string, string> = {
+      fantasy: "high fantasy art style, magical realm aesthetic, detailed fantasy illustration, epic adventure feel",
+      scifi: "sci-fi concept art, futuristic chrome and holographics, space opera aesthetic, sleek technology",
+      horror: "dark horror atmosphere, moody dramatic lighting, unsettling beauty, survival horror aesthetic",
+      mystery: "noir detective style, 1940s film noir aesthetic, dramatic shadows, rain and cigarette smoke",
+      pirate: "golden age of piracy, salty sea dog aesthetic, Caribbean adventure, weathered sailor look",
+      western: "old west frontier, dusty desert sun, rugged cowboy aesthetic, frontier justice vibe",
+      cyberpunk: "neon-drenched cyberpunk, chrome implants, rain-slicked streets, corporate dystopia aesthetic",
+      postapoc: "post-apocalyptic wasteland, worn and weathered gear, survival aesthetic, gritty realism",
+      custom: "cinematic illustration style, highly detailed character portrait"
+    };
+
+    // Genre-specific costume guidance
+    const genreCostumes: Record<string, string> = {
+      fantasy: "medieval fantasy attire, leather and cloth armor, magical accessories, adventurer's gear",
+      scifi: "futuristic jumpsuit or armor, tech accessories, space-age materials, practical gear",
+      horror: "modern casual or practical clothing, survival gear, worn and stained from struggle",
+      mystery: "1940s detective attire, trench coat and fedora, vintage style, professional wear",
+      pirate: "pirate captain attire, tricorn hat, weathered coat, nautical accessories, cutlass",
+      western: "cowboy duster coat, wide-brimmed hat, leather boots, gun belt, frontier wear",
+      cyberpunk: "neon-accented clothing, leather and tech, cybernetic visible implants, street fashion",
+      postapoc: "scavenged armor, gas mask or respirator, patched clothing, survival gear",
+      custom: "appropriate attire for their role and setting"
+    };
+
+    const style = genreStyles[genre] || genreStyles.custom;
+    const costume = genreCostumes[genre] || genreCostumes.custom;
+
+    // Build the prompt based on detail level
+    let matureContentNote = "";
+    if (detailLevel === 'all') {
+      matureContentNote = "This is for a mature audience. Include tasteful sensuality appropriate to the character description while maintaining artistic quality.";
     }
 
-    // Build additional body details based on gender and features enabled
-    let bodyDetails = `${appearance.height || 'average'} height, ${appearance.bodyType || 'average'} build`;
-    
-    if (additionalFeaturesEnabled && basicInfo.gender === 'female') {
-      bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves`;
-    } else if (additionalFeaturesEnabled && basicInfo.gender === 'male') {
-      bodyDetails += `, ${appearance.muscles || 'toned'} muscle definition, ${appearance.bodyHair || 'light'} body hair`;
-    } else if (additionalFeaturesEnabled && basicInfo.gender) {
-      bodyDetails += `, ${appearance.bustSize || 'medium'} bust, ${appearance.curviness || 'moderate'} curves, ${appearance.muscles || 'toned'} muscle definition`;
-    }
+    const prompt = `Generate a character portrait for ${name}, an RPG adventure game protagonist.
 
-    // Build custom description section if provided
-    let customSection = '';
-    if (appearance.customDescription && appearance.customDescription.trim().length > 0) {
-      customSection = `\nAdditional specific details: ${appearance.customDescription.trim()}`;
-    }
+ROLE: ${characterClass}
+GENRE: ${genre}
 
-    // Build a detailed prompt for the character portrait - MODERN TIMES ONLY, FULL BODY
-    const prompt = `Generate a full body portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'} in modern day contemporary setting. 
-Physical appearance: ${bodyDetails}, ${appearance.hairLength || 'medium'} ${appearance.hairColor || 'brown'} hair, ${appearance.eyeColor || 'brown'} eyes, ${appearance.skinTone || 'medium'} skin tone.
-Personality: ${personality?.disposition || 'Adaptable'} disposition with a ${personality?.socialStyle || 'Charming'} social style.
-Background: ${background?.origin || 'Stable upbringing'}.${customSection}
-Style: Modern contemporary realistic full body portrait, professional photography style, natural lighting, present-day urban setting. Full body shot from head to feet. Modern casual clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements. Ultra high resolution.`;
+PHYSICAL APPEARANCE: ${appearance}
 
-    console.log("Generating portrait with prompt:", prompt.substring(0, 200) + "...");
+COSTUME/ATTIRE: ${costume}
+
+ART STYLE: ${style}
+
+REQUIREMENTS:
+- Portrait orientation, head and shoulders or upper body focus
+- High quality detailed illustration
+- Expressive eyes that convey personality and depth
+- Professional quality game character concept art
+- The character should look like a protagonist/hero ready for adventure
+- Dramatic lighting appropriate to the genre
+${matureContentNote}
+
+DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
+
+    console.log("Portrait prompt length:", prompt.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -126,21 +126,23 @@ Style: Modern contemporary realistic full body portrait, professional photograph
     }
 
     const data = await response.json();
-    console.log("AI response received for character:", basicInfo.name || "unnamed");
+    console.log("Portrait generation response received for:", name);
     
-    // Extract image from the response
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageUrl) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+      console.error("No image in response");
       throw new Error("No image generated");
     }
 
-    return new Response(JSON.stringify({ imageUrl }), {
+    return new Response(JSON.stringify({ 
+      imageUrl,
+      characterName: name 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error generating portrait:", error);
+    console.error("Error generating character portrait:", error);
     const errorMessage = error instanceof Error ? error.message : "Failed to generate portrait";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
