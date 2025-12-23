@@ -28,6 +28,11 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { CharacterNameLink } from './CharacterNameLink';
+import { 
+  calculateRelationshipDisplay, 
+  getShortRelLabel,
+  RELATIONSHIP_COLORS 
+} from '@/lib/relationshipSystem';
 
 interface CharacterPanelProps {
   gameState: GameState;
@@ -223,32 +228,59 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
                   <p className="text-xs text-muted-foreground italic">No one else is here.</p>
                 ) : (
                   npcsHere.map(npc => {
-                    const rel = npc.relationships.player;
-                    const disposition = rel?.affection > 20 ? 'Friendly' : 
-                                       rel?.affection < -20 ? 'Hostile' : 'Neutral';
+                    const relData = calculateRelationshipDisplay(npc);
+                    const colors = RELATIONSHIP_COLORS[relData.displayColor];
+                    
                     return (
                       <div 
                         key={npc.id} 
-                        className="p-2 rounded bg-secondary/50 border border-border hover:border-primary/30 transition-colors cursor-pointer"
+                        className="npc-sidebar-card"
+                        style={{
+                          '--card-rel-primary': colors.primary,
+                          '--card-rel-glow': colors.glow,
+                        } as React.CSSProperties}
                       >
-                        <div className="flex items-center justify-between">
-                          <CharacterNameLink 
-                            npc={npc} 
-                            className="font-medium text-sm"
-                            onStartConversation={onStartConversation}
-                            playerLocation={player.currentLocation}
-                          />
-                          <span className={`text-xs ${
-                            disposition === 'Friendly' ? 'text-forest' :
-                            disposition === 'Hostile' ? 'text-blood' : 'text-muted-foreground'
-                          }`}>
-                            {disposition}
-                          </span>
+                        {/* Left relationship bar */}
+                        <div 
+                          className="npc-rel-bar"
+                          style={{ background: colors.gradient }}
+                        />
+                        
+                        <div className="flex items-center justify-between flex-1 ml-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <CharacterNameLink 
+                                npc={npc} 
+                                className="font-medium text-sm"
+                                onStartConversation={onStartConversation}
+                                playerLocation={player.currentLocation}
+                              />
+                              {/* Romance heart indicator */}
+                              {relData.romanceUnlocked && relData.romance > 20 && (
+                                <Heart 
+                                  className="h-3 w-3" 
+                                  style={{ color: colors.primary, fill: relData.romance > 50 ? colors.primary : 'none' }}
+                                />
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{npc.meta.occupation}</p>
+                            <p className="text-xs text-muted-foreground/70 italic mt-0.5 line-clamp-1">
+                              {npc.currentActivity}
+                            </p>
+                          </div>
+                          
+                          {/* Relationship indicator */}
+                          <div className="flex flex-col items-center gap-1 ml-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ 
+                                background: colors.gradient,
+                                boxShadow: `0 0 8px ${colors.glow}`
+                              }}
+                            />
+                            <span className="text-sm">{getShortRelLabel(relData)}</span>
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">{npc.meta.occupation}</p>
-                        <p className="text-xs text-muted-foreground/70 italic mt-1">
-                          {npc.currentActivity}
-                        </p>
                       </div>
                     );
                   })
