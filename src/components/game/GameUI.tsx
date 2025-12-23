@@ -23,12 +23,39 @@ import {
   processNPCGossip,
   generateGossipEvents,
 } from '@/game/memorySystem';
+// RPG Systems
+import { 
+  WeatherState, 
+  initializeWeather, 
+  updateWeather, 
+  getWeatherDescription,
+  getWeatherEffects,
+  generateAmbientEvent,
+  AmbientEvent,
+} from '@/game/worldEventsSystem';
+import { 
+  QuestLog, 
+  initializeQuestLog, 
+  startQuest, 
+  updateObjectiveProgress,
+  abandonQuest,
+  checkQuestAvailability,
+  QUEST_DEFINITIONS,
+} from '@/game/questSystem';
+import { 
+  CombatEncounter, 
+  CombatOutcome,
+  initializeCombat,
+} from '@/game/combatSystem';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
 import { CharacterPanel } from './CharacterPanel';
 import { MapPanel } from './MapPanel';
 import { GameHeader } from './GameHeader';
+import { WeatherDisplay } from './WeatherDisplay';
+import { QuestJournal } from './QuestJournal';
+import { CombatUI } from './CombatUI';
 import { toast } from 'sonner';
 import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
 import { calculateSimulationStats } from '@/game/metaSystems';
@@ -224,6 +251,23 @@ export function GameUI() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   
+  // RPG System States
+  const [weather, setWeather] = useState<WeatherState>(() => initializeWeather('spring'));
+  const [questLog, setQuestLog] = useState<QuestLog>(() => {
+    const saved = localStorage.getItem('living-world-quests');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to load quest log:', e);
+      }
+    }
+    return initializeQuestLog();
+  });
+  const [showQuestJournal, setShowQuestJournal] = useState(false);
+  const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
+  const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
+  
   // NPC Memory stores - persisted per NPC
   const [npcMemories, setNpcMemories] = useState<Record<string, NPCMemoryStore>>(() => {
     const saved = localStorage.getItem(MEMORY_STORE_KEY);
@@ -260,6 +304,19 @@ export function GameUI() {
   useEffect(() => {
     localStorage.setItem(MEMORY_STORE_KEY, JSON.stringify(npcMemories));
   }, [npcMemories]);
+  
+  // Save quest log when it changes
+  useEffect(() => {
+    localStorage.setItem('living-world-quests', JSON.stringify(questLog));
+  }, [questLog]);
+  
+  // Update weather periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWeather(prev => updateWeather(prev, gameState.time.season, 1));
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [gameState.time.season]);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
@@ -374,6 +431,91 @@ export function GameUI() {
   }, []);
   
   const handleCommand = useCallback(async (input: string) => {
+    // Handle RPG system commands before normal processing
+    const lowerInput = input.toLowerCase().trim();
+    
+    // Quest journal command
+    if (lowerInput === 'journal' || lowerInput === 'quests' || lowerInput === 'j') {
+      setShowQuestJournal(true);
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Weather command
+    if (lowerInput === 'weather') {
+      const timePeriod = getTimePeriod(gameState.time.hour);
+      const weatherDesc = getWeatherDescription(weather, timePeriod);
+      const effects = getWeatherEffects(weather);
+      
+      let effectsText = '';
+      if (effects.visibilityMod !== 0 || effects.outdoorActivityMod !== 0 || effects.moodMod !== 0) {
+        effectsText = '\n\n**Current Effects:**';
+        if (effects.visibilityMod !== 0) effectsText += `\n- Visibility: ${effects.visibilityMod}%`;
+        if (effects.outdoorActivityMod !== 0) effectsText += `\n- Outdoor Activity: ${effects.outdoorActivityMod}%`;
+        if (effects.moodMod !== 0) effectsText += `\n- Mood: ${effects.moodMod > 0 ? '+' : ''}${effects.moodMod}`;
+      }
+      
+      setDisplayEvents(prev => [...prev, {
+        id: `weather_${Date.now()}`,
+        type: 'observation' as const,
+        content: `**Current Weather:** ${weather.intensity} ${weather.current}\n\n${weatherDesc}${effectsText}`,
+        timestamp: gameState.time.tick,
+      }]);
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Attack command - initiate combat
+    if (lowerInput.startsWith('attack ') || lowerInput.startsWith('fight ')) {
+      const targetName = input.slice(lowerInput.startsWith('attack ') ? 7 : 6).trim().toLowerCase();
+      const npcsHere = Object.values(gameState.npcs).filter(npc => npc.currentLocation === gameState.player.currentLocation);
+      const targetNPC = npcsHere.find(npc => npc.meta.name.toLowerCase().includes(targetName));
+      
+      if (!targetNPC) {
+        setDisplayEvents(prev => [...prev, {
+          id: `err_${Date.now()}`,
+          type: 'system' as const,
+          content: `*You don't see anyone named "${targetName}" to fight.*`,
+          timestamp: gameState.time.tick,
+        }]);
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!gameState.lifeSim) {
+        setDisplayEvents(prev => [...prev, {
+          id: `err_${Date.now()}`,
+          type: 'system' as const,
+          content: `*Combat system requires life sim state.*`,
+          timestamp: gameState.time.tick,
+        }]);
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Initialize combat
+      const encounter = initializeCombat(
+        gameState.lifeSim,
+        targetNPC,
+        gameState.player.currentLocation,
+        []
+      );
+      
+      setActiveCombat(encounter);
+      setCombatNPC(targetNPC);
+      
+      setDisplayEvents(prev => [...prev, {
+        id: `combat_start_${Date.now()}`,
+        type: 'combat' as const,
+        content: `**Combat Initiated!** You engage ${targetNPC.meta.name} in combat!`,
+        timestamp: gameState.time.tick,
+      }]);
+      
+      toast.warning(`Combat started with ${targetNPC.meta.name}!`);
+      setIsProcessing(false);
+      return;
+    }
+    
     setIsProcessing(true);
     
     setDisplayEvents(prev => [...prev, {
@@ -399,6 +541,130 @@ export function GameUI() {
     }
     
     let { newState, events } = processAction(gameState, action);
+    
+    // Update weather when time passes
+    if (action.type === 'wait' || action.type === 'go') {
+      setWeather(prev => updateWeather(prev, newState.time.season, 1));
+    }
+    
+    // Check for quest objective updates
+    if (action.type === 'go') {
+      // Check if going to a quest location
+      const locationId = newState.player.currentLocation;
+      Object.entries(questLog.quests).forEach(([questId, quest]) => {
+        if (quest.status !== 'active') return;
+        quest.objectives.forEach(obj => {
+          if (obj.status === 'active' && obj.targetType === 'go' && obj.targetId === locationId) {
+            const result = updateObjectiveProgress(questLog, questId, obj.id, 1);
+            setQuestLog(result.questLog);
+            if (result.message) {
+              events.push({
+                id: `quest_${Date.now()}`,
+                type: 'system' as const,
+                content: result.message,
+                timestamp: newState.time.tick,
+              });
+            }
+          }
+        });
+      });
+      
+      // Check for new available quests at this location
+      const newQuests = checkQuestAvailability(questLog, newState);
+      if (newQuests.length > 0) {
+        setQuestLog(prev => ({
+          ...prev,
+          availableQuests: [...new Set([...prev.availableQuests, ...newQuests])],
+        }));
+      }
+      
+      // Generate ambient event
+      const timePeriod = getTimePeriod(newState.time.hour);
+      const location = newState.locations[locationId];
+      if (location) {
+        const ambientEvent = generateAmbientEvent(
+          locationId,
+          location.name.toLowerCase(),
+          weather,
+          timePeriod,
+          location.npcsPresent
+        );
+        if (ambientEvent) {
+          events.push({
+            id: `ambient_${Date.now()}`,
+            type: 'observation' as const,
+            content: `\n*${ambientEvent.description}*${ambientEvent.interactionPrompt ? ` ${ambientEvent.interactionPrompt}` : ''}`,
+            timestamp: newState.time.tick,
+          });
+        }
+      }
+    }
+    
+    // Check talk objectives
+    if (action.type === 'talk' && action.target) {
+      const targetName = action.target.toLowerCase();
+      const targetNPC = Object.values(newState.npcs).find(npc => 
+        npc.meta.name.toLowerCase().includes(targetName)
+      );
+      
+      if (targetNPC) {
+        Object.entries(questLog.quests).forEach(([questId, quest]) => {
+          if (quest.status !== 'active') return;
+          quest.objectives.forEach(obj => {
+            if (obj.status === 'active' && obj.targetType === 'talk' && 
+                (!obj.targetId || obj.targetId === targetNPC.id)) {
+              const result = updateObjectiveProgress(questLog, questId, obj.id, 1);
+              setQuestLog(result.questLog);
+              if (result.message) {
+                events.push({
+                  id: `quest_${Date.now()}`,
+                  type: 'system' as const,
+                  content: result.message,
+                  timestamp: newState.time.tick,
+                });
+              }
+            }
+          });
+        });
+        
+        // Check for quest offers from this NPC
+        const availableFromNPC = checkQuestAvailability(questLog, newState, targetNPC.id);
+        if (availableFromNPC.length > 0) {
+          availableFromNPC.forEach(questId => {
+            const def = QUEST_DEFINITIONS[questId];
+            if (def) {
+              events.push({
+                id: `quest_offer_${Date.now()}`,
+                type: 'system' as const,
+                content: `\n**Quest Available:** ${def.title}\n*${def.description}*\n\n*Type "accept ${questId}" to start this quest.*`,
+                timestamp: newState.time.tick,
+              });
+            }
+          });
+        }
+      }
+    }
+    
+    // Handle look objectives  
+    if (action.type === 'look') {
+      Object.entries(questLog.quests).forEach(([questId, quest]) => {
+        if (quest.status !== 'active') return;
+        quest.objectives.forEach(obj => {
+          if (obj.status === 'active' && obj.targetType === 'custom' && obj.id === 'obj_look_around') {
+            const result = updateObjectiveProgress(questLog, questId, obj.id, 1);
+            setQuestLog(result.questLog);
+            if (result.message) {
+              events.push({
+                id: `quest_${Date.now()}`,
+                type: 'system' as const,
+                content: result.message,
+                timestamp: newState.time.tick,
+              });
+            }
+          }
+        });
+      });
+    }
     
     // Spawn generic NPCs when entering a location or looking around
     if (action.type === 'go' || action.type === 'look') {
@@ -790,7 +1056,69 @@ export function GameUI() {
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState, generateNPCPortrait, npcMemories]);
+  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog]);
+  
+  // Combat handlers
+  const handleCombatEnd = useCallback((outcome: CombatOutcome, updatedEncounter: CombatEncounter) => {
+    setActiveCombat(null);
+    setCombatNPC(null);
+    
+    // Apply combat aftermath to game state
+    if (gameState.lifeSim) {
+      const newLifeSim = {
+        ...gameState.lifeSim,
+        needs: {
+          ...gameState.lifeSim.needs,
+          physical: {
+            ...gameState.lifeSim.needs.physical,
+            health: updatedEncounter.playerStats.health,
+            energy: Math.max(0, gameState.lifeSim.needs.physical.energy - 20),
+          },
+          psychological: {
+            ...gameState.lifeSim.needs.psychological,
+            stress: Math.min(100, gameState.lifeSim.needs.psychological.stress + 20),
+          },
+        },
+      };
+      
+      setGameState(prev => ({
+        ...prev,
+        lifeSim: newLifeSim,
+        player: {
+          ...prev.player,
+          stats: {
+            ...prev.player.stats,
+            health: updatedEncounter.playerStats.health,
+            energy: Math.max(0, prev.player.stats.energy - 20),
+          },
+        },
+      }));
+    }
+    
+    setDisplayEvents(prev => [...prev, {
+      id: `combat_end_${Date.now()}`,
+      type: 'system' as const,
+      content: `*Combat ended: ${outcome}*`,
+      timestamp: gameState.time.tick,
+    }]);
+  }, [gameState]);
+  
+  const handleCombatUpdate = useCallback((encounter: CombatEncounter) => {
+    setActiveCombat(encounter);
+  }, []);
+  
+  // Quest handlers
+  const handleStartQuest = useCallback((questId: string) => {
+    const updated = startQuest(questLog, questId);
+    setQuestLog(updated);
+    toast.success(`Quest started: ${QUEST_DEFINITIONS[questId]?.title || questId}`);
+  }, [questLog]);
+  
+  const handleAbandonQuest = useCallback((questId: string) => {
+    const updated = abandonQuest(questLog, questId);
+    setQuestLog(updated);
+    toast.info(`Quest abandoned`);
+  }, [questLog]);
   
   const handleSave = useCallback(() => {
     try {
@@ -828,7 +1156,10 @@ export function GameUI() {
   const handleNewGame = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CHARACTER_KEY);
+    localStorage.removeItem('living-world-quests');
     setDisplayEvents([]);
+    setQuestLog(initializeQuestLog());
+    setWeather(initializeWeather('spring'));
     setShowCharacterCreation(true);
   }, []);
   
@@ -849,6 +1180,25 @@ export function GameUI() {
         onLoad={handleLoad}
         onNewGame={handleNewGame}
       />
+      
+      {/* Weather Display - Top bar */}
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20">
+        <WeatherDisplay weather={weather} timeOfDay={getTimePeriod(gameState.time.hour)} compact />
+      </div>
+      
+      {/* Quest Journal Button */}
+      <button
+        onClick={() => setShowQuestJournal(true)}
+        className="absolute top-16 right-4 z-20 p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
+        title="Quest Journal (J)"
+      >
+        <span className="text-sm font-medium">📜 Journal</span>
+        {questLog.currentActiveCount > 0 && (
+          <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
+            {questLog.currentActiveCount}
+          </span>
+        )}
+      </button>
       
       {/* Character Panel - slides out from left */}
       <CharacterPanel 
@@ -876,8 +1226,29 @@ export function GameUI() {
         <div className="flex-1 overflow-hidden bg-parchment">
           <NarrativeDisplay events={displayEvents} />
         </div>
-        <PlayerInput onSubmit={handleCommand} disabled={isProcessing} />
+        <PlayerInput onSubmit={handleCommand} disabled={isProcessing || !!activeCombat} />
       </div>
+      
+      {/* Quest Journal Modal */}
+      {showQuestJournal && (
+        <QuestJournal
+          questLog={questLog}
+          onClose={() => setShowQuestJournal(false)}
+          onStartQuest={handleStartQuest}
+          onAbandonQuest={handleAbandonQuest}
+        />
+      )}
+      
+      {/* Combat UI Modal */}
+      {activeCombat && combatNPC && gameState.lifeSim && (
+        <CombatUI
+          encounter={activeCombat}
+          npc={combatNPC}
+          playerState={gameState.lifeSim}
+          onCombatEnd={handleCombatEnd}
+          onEncounterUpdate={handleCombatUpdate}
+        />
+      )}
     </div>
   );
 }
