@@ -11,10 +11,28 @@ import {
   getConflictBehavior,
 } from './npcSpeech';
 import { worldTick, generateTickSummary, WorldEvent } from './worldSimulation';
+import { 
+  NarratorContract, 
+  generateLocationProse, 
+  generateNarrativeSummary, 
+  calculatePerceptionFilter,
+  buildAIContext 
+} from './narratorSystem';
+import { checkPlayerDeath, generateDeathNarrative } from './advancedDynamics';
+import { calculateSimulationStats } from './metaSystems';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
 const WEEKS_PER_SEASON = 4;
+
+// Default narrator contract
+const defaultNarratorContract: NarratorContract = {
+  voice: 'LITERARY',
+  maxDetail: 'MODERATE',
+  emotionalLeakage: true,
+  timeCompression: true,
+  unreliabilityLevel: 0,
+};
 
 export function createInitialGameState(): GameState {
   return {
@@ -26,6 +44,8 @@ export function createInitialGameState(): GameState {
     flags: {},
     eventQueue: [],
     worldEvents: [],
+    narratorVoice: 'LITERARY',
+    debugMode: false,
   };
 }
 
@@ -77,8 +97,11 @@ export function advanceTime(state: GameState, hours: number = 1): GameState {
       }
     }
     
-    // Run world simulation for each tick
-    const tickResult = worldTick(currentState);
+    // Store previous state for breakpoint detection
+    const previousState = { ...currentState };
+    
+    // Run world simulation for each tick (now includes Phase 6-8 systems)
+    const tickResult = worldTick(currentState, previousState);
     currentState = tickResult.updatedState;
     
     // Store world events
@@ -104,6 +127,13 @@ export function advanceTime(state: GameState, hours: number = 1): GameState {
         energy: Math.max(0, currentState.player.stats.energy - 1),
       },
     };
+    
+    // Check for player death (Phase 7)
+    const deathState = checkPlayerDeath(currentState);
+    if (deathState.isDead) {
+      // Player died - this will be handled by the caller
+      currentState.flags = { ...currentState.flags, playerDead: true };
+    }
   }
   
   return currentState;
@@ -188,16 +218,53 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       const timePeriod = getTimePeriod(newState.time.hour);
       const timeDesc = location.timeDescriptions?.[timePeriod] || '';
       
-      let description = location.description;
+      // Use narrator system for prose generation (Phase 6)
+      const narratorContract: NarratorContract = {
+        voice: (newState.narratorVoice as any) || 'LITERARY',
+        maxDetail: 'MODERATE',
+        emotionalLeakage: true,
+        timeCompression: true,
+        unreliabilityLevel: 0,
+      };
+      
+      const perceptionFilter = calculatePerceptionFilter(newState);
+      const proseFragments = generateLocationProse(newState, narratorContract);
+      
+      let description = proseFragments.map(f => f.text).join(' ');
+      description += '\n\n' + location.description;
       if (timeDesc) description += '\n\n' + timeDesc;
       
+      // Apply perception filter distortions
+      if (perceptionFilter.emotionalBias === 'pessimistic') {
+        description = description.replace(/pleasant/g, 'dreary');
+        description = description.replace(/warm/g, 'oppressive');
+      } else if (perceptionFilter.emotionalBias === 'fearful') {
+        description += '\n\n*Every shadow seems to hide a threat.*';
+      }
+      
       if (npcsHere.length > 0) {
-        description += '\n\nYou see: ' + npcsHere.map(npc => `${npc.meta.name} (${npc.currentActivity})`).join(', ') + '.';
+        const npcDescriptions = npcsHere.map(npc => {
+          let desc = `**${npc.meta.name}** (${npc.currentActivity})`;
+          // Add stress/emotion indicators based on narrator voice
+          if (narratorContract.voice === 'LITERARY' && npc.stressLevel > 50) {
+            desc += ' — tension visible in their posture';
+          } else if (narratorContract.voice === 'NOIR' && npc.stressLevel > 50) {
+            desc += ' — trouble written all over them';
+          }
+          return desc;
+        });
+        description += '\n\nPresent: ' + npcDescriptions.join(', ') + '.';
       }
       
       if (location.connectedLocations.length > 0) {
         const connections = location.connectedLocations.map(id => newState.locations[id]?.name || id);
         description += '\n\nExits: ' + connections.join(', ') + '.';
+      }
+      
+      // Add simulation depth if debug mode
+      if (newState.debugMode) {
+        const stats = calculateSimulationStats(newState);
+        description += `\n\n*[DEBUG: ${stats.activeNPCs} NPCs active, ${stats.totalMemories} memories, ${stats.averageNPCStress}% avg stress]*`;
       }
       
       events.push({
@@ -436,16 +503,26 @@ export function processAction(state: GameState, action: Action): { newState: Gam
     }
     
     case 'help': {
-      events.push({
-        id: `evt_${Date.now()}`,
-        type: 'system',
-        content: `**Available Commands:**
+      let helpContent = `**Available Commands:**
 • **look** - Examine your surroundings
 • **talk [name]** - Speak with someone
 • **go [place]** - Travel to a connected location
 • **wait [hours]** - Pass time (1-12 hours)
 • **inventory** - Check your belongings
-• **help** - Show this message`,
+• **help** - Show this message`;
+
+      if (newState.debugMode) {
+        helpContent += `\n\n**Debug Commands:**
+• **debug** - Toggle debug mode
+• **time [hour]** - Set time of day
+• **health/energy/mood/hunger [value]** - Set player stat
+• **tp [location]** - Teleport to location`;
+      }
+
+      events.push({
+        id: `evt_${Date.now()}`,
+        type: 'system',
+        content: helpContent,
         timestamp: newState.time.tick,
       });
       break;
@@ -556,7 +633,7 @@ export function updateNPCEscalation(npc: NPC, delta: number): NPC {
   };
 }
 
-export function parseCommand(input: string): Action {
+export function parseCommand(input: string): Action & { debug?: string } {
   const parts = input.toLowerCase().trim().split(/\s+/);
   const command = parts[0];
   const target = parts.slice(1).join(' ');
@@ -587,7 +664,72 @@ export function parseCommand(input: string): Action {
     case 'h':
     case '?':
       return { type: 'help' };
+    // Debug commands
+    case 'debug':
+      return { type: 'help', debug: 'toggle' };
+    case 'time':
+    case 'health':
+    case 'energy':
+    case 'mood':
+    case 'hunger':
+    case 'tp':
+    case 'teleport':
+      return { type: 'help', debug: `${command} ${target}` };
     default:
       return { type: 'help' };
   }
+}
+
+// Process debug commands
+export function processDebugCommand(state: GameState, debugCmd: string): { newState: GameState; message: string } {
+  const parts = debugCmd.split(' ');
+  const cmd = parts[0];
+  const value = parts[1];
+  
+  let newState = { ...state };
+  let message = '';
+  
+  switch (cmd) {
+    case 'toggle':
+      newState.debugMode = !newState.debugMode;
+      message = `Debug mode ${newState.debugMode ? 'enabled' : 'disabled'}`;
+      break;
+    case 'time':
+      const hour = parseInt(value) || 12;
+      newState.time = { ...newState.time, hour: Math.max(0, Math.min(23, hour)) };
+      message = `Time set to ${hour}:00`;
+      break;
+    case 'health':
+    case 'energy':
+    case 'mood':
+    case 'hunger':
+      const statValue = parseInt(value) || 100;
+      newState.player = {
+        ...newState.player,
+        stats: { ...newState.player.stats, [cmd]: Math.max(0, Math.min(100, statValue)) },
+      };
+      message = `${cmd} set to ${statValue}`;
+      break;
+    case 'tp':
+    case 'teleport':
+      const locId = Object.keys(newState.locations).find(id => 
+        id.includes(value) || newState.locations[id].name.toLowerCase().includes(value)
+      );
+      if (locId) {
+        newState.player = { ...newState.player, currentLocation: locId };
+        message = `Teleported to ${newState.locations[locId].name}`;
+      } else {
+        message = `Location not found: ${value}`;
+      }
+      break;
+    default:
+      message = `Unknown debug command: ${cmd}`;
+  }
+  
+  return { newState, message };
+}
+
+// Toggle narrator voice
+export function setNarratorVoice(state: GameState, voice: GameState['narratorVoice']): GameState {
+  return { ...state, narratorVoice: voice };
 }

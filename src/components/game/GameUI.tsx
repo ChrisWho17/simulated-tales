@@ -4,13 +4,16 @@ import {
   createInitialGameState, 
   processAction, 
   parseCommand,
-  updateLocationNPCs 
+  updateLocationNPCs,
+  processDebugCommand,
 } from '@/game/gameEngine';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
 import { Sidebar } from './Sidebar';
 import { GameHeader } from './GameHeader';
 import { toast } from 'sonner';
+import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
+import { calculateSimulationStats } from '@/game/metaSystems';
 
 const STORAGE_KEY = 'living-world-save';
 
@@ -36,10 +39,12 @@ export function GameUI() {
   useEffect(() => {
     if (displayEvents.length === 0) {
       const location = gameState.locations[gameState.player.currentLocation];
+      const stats = calculateSimulationStats(gameState);
+      
       setDisplayEvents([{
         id: 'evt_welcome',
         type: 'observation',
-        content: `You find yourself in **${location.name}**.\n\n${location.description}\n\n*Type "look" to examine your surroundings, or "help" for available commands.*`,
+        content: `You find yourself in **${location.name}**.\n\n${location.description}\n\n*Type "look" to examine your surroundings, or "help" for available commands.*\n\n*[Living World Engine active: ${stats.totalNPCs} NPCs, ${stats.totalRelationships} relationships tracked]*`,
         timestamp: 0,
       }]);
     }
@@ -56,9 +61,38 @@ export function GameUI() {
       timestamp: gameState.time.tick,
     }]);
     
-    // Parse and process command
+    // Parse command - check for debug commands
     const action = parseCommand(input);
+    
+    // Handle debug commands
+    if (action.debug) {
+      const { newState, message } = processDebugCommand(gameState, action.debug);
+      setGameState(newState);
+      setDisplayEvents(prev => [...prev, {
+        id: `debug_${Date.now()}`,
+        type: 'system' as const,
+        content: `*[DEBUG] ${message}*`,
+        timestamp: newState.time.tick,
+      }]);
+      setIsProcessing(false);
+      return;
+    }
+    
+    // Process regular command
     const { newState, events } = processAction(gameState, action);
+    
+    // Check for player death
+    const deathState = checkPlayerDeath(newState);
+    if (deathState.isDead) {
+      const deathNarrative = generateDeathNarrative(deathState, newState);
+      events.push({
+        id: `death_${Date.now()}`,
+        type: 'system' as const,
+        content: deathNarrative,
+        timestamp: newState.time.tick,
+      });
+      toast.error('You have died', { description: deathState.causeOfDeath });
+    }
     
     // Update state and display
     setGameState(newState);
