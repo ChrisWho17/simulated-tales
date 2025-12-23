@@ -61,15 +61,35 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
     if (customScenario.trim()) {
       const lower = customScenario.toLowerCase();
       let genre: GameGenre = 'fantasy';
-      if (lower.includes('space') || lower.includes('ship') || lower.includes('galaxy')) genre = 'scifi';
-      else if (lower.includes('horror') || lower.includes('monster') || lower.includes('abandoned')) genre = 'horror';
-      else if (lower.includes('detective') || lower.includes('mystery') || lower.includes('murder')) genre = 'mystery';
-      else if (lower.includes('pirate') || lower.includes('treasure') || lower.includes('seas')) genre = 'pirate';
-      else if (lower.includes('cyber') || lower.includes('hacker') || lower.includes('neon')) genre = 'cyberpunk';
-      else if (lower.includes('western') || lower.includes('frontier') || lower.includes('cowboy')) genre = 'western';
-      else if (lower.includes('apocalypse') || lower.includes('wasteland')) genre = 'postapoc';
+      let genreTitle = 'Fantasy Adventure';
       
-      onSelect({ scenario: customScenario.trim(), genre, genreTitle: 'Custom Adventure' });
+      if (lower.includes('space') || lower.includes('ship') || lower.includes('galaxy') || lower.includes('alien') || lower.includes('starship') || lower.includes('planet')) {
+        genre = 'scifi';
+        genreTitle = 'Sci-Fi Adventure';
+      } else if (lower.includes('horror') || lower.includes('monster') || lower.includes('abandoned') || lower.includes('nightmare') || lower.includes('haunted') || lower.includes('terror')) {
+        genre = 'horror';
+        genreTitle = 'Horror Adventure';
+      } else if (lower.includes('detective') || lower.includes('mystery') || lower.includes('murder') || lower.includes('investigate') || lower.includes('noir') || lower.includes('crime')) {
+        genre = 'mystery';
+        genreTitle = 'Mystery Adventure';
+      } else if (lower.includes('pirate') || lower.includes('treasure') || lower.includes('seas') || lower.includes('captain') || lower.includes('ship') || lower.includes('sail')) {
+        genre = 'pirate';
+        genreTitle = 'Pirate Adventure';
+      } else if (lower.includes('cyber') || lower.includes('hacker') || lower.includes('neon') || lower.includes('corporation') || lower.includes('dystopia') || lower.includes('chrome') || lower.includes('implant')) {
+        genre = 'cyberpunk';
+        genreTitle = 'Cyberpunk Adventure';
+      } else if (lower.includes('western') || lower.includes('frontier') || lower.includes('cowboy') || lower.includes('outlaw') || lower.includes('sheriff') || lower.includes('saloon') || lower.includes('gunslinger')) {
+        genre = 'western';
+        genreTitle = 'Western Adventure';
+      } else if (lower.includes('apocalypse') || lower.includes('wasteland') || lower.includes('survivor') || lower.includes('radiation') || lower.includes('fallout') || lower.includes('ruins')) {
+        genre = 'postapoc';
+        genreTitle = 'Post-Apocalyptic Adventure';
+      } else if (lower.includes('magic') || lower.includes('dragon') || lower.includes('wizard') || lower.includes('kingdom') || lower.includes('quest') || lower.includes('sword') || lower.includes('elf') || lower.includes('dwarf')) {
+        genre = 'fantasy';
+        genreTitle = 'Fantasy Adventure';
+      }
+      
+      onSelect({ scenario: customScenario.trim(), genre, genreTitle });
     }
   };
 
