@@ -1,5 +1,6 @@
-import { GameState, GameEvent, Action, NPC, GameTime } from '@/types/game';
+import { GameState, GameEvent, Action, NPC, GameTime, EscalationState } from '@/types/game';
 import { initialTime, initialPlayer, initialNPCs, initialLocations } from './initialData';
+import { generateNPCResponseContext, NPCResponseData } from './npcSpeech';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -207,31 +208,62 @@ export function processAction(state: GameState, action: Action): { newState: Gam
         break;
       }
       
-      // Generate dialogue based on NPC personality and relationship
+      // Check for authority presence
+      const authorityPresent = npcsHere.some(npc => npc.id === 'npc_guard_james' && npc.id !== targetNPC.id);
+      
+      // Generate speech context using the new system
+      const speechContext = generateNPCResponseContext(targetNPC, {
+        playerInput: action.target,
+        playerLocation: newState.player.currentLocation,
+        presentNPCs: npcsHere.map(n => n.id),
+        timeOfDay: getTimePeriod(newState.time.hour),
+        recentEvents: newState.events.slice(-3).map(e => e.content),
+        playerTrust: targetNPC.socialRanking.player?.trust || 0,
+        authorityPresent,
+      });
+      
+      // Generate dialogue based on NPC personality, relationship, and speech context
       const relationship = targetNPC.relationships.player || { affection: 0, trust: 0, fear: 0, respect: 0 };
-      const greeting = generateNPCGreeting(targetNPC, relationship);
+      const greeting = generateNPCGreeting(targetNPC, relationship, speechContext);
+      
+      // Build response content with speech metadata
+      let dialogueContent = `**${targetNPC.meta.name}**: "${greeting}"`;
+      
+      // Add subtle cues about NPC state
+      if (speechContext.motivation === 'ESCAPE') {
+        dialogueContent += `\n\n*${targetNPC.meta.name} seems eager to end the conversation.*`;
+      } else if (speechContext.motivation === 'RELIEVE') {
+        dialogueContent += `\n\n*${targetNPC.meta.name} seems to want to talk.*`;
+      } else if (speechContext.truthStrategy === 'DEFENSIVE') {
+        dialogueContent += `\n\n*${targetNPC.meta.name} seems guarded.*`;
+      }
       
       events.push({
         id: `evt_${Date.now()}`,
         type: 'dialogue',
-        content: `**${targetNPC.meta.name}**: "${greeting}"`,
+        content: dialogueContent,
         timestamp: newState.time.tick,
         involvedNPCs: [targetNPC.id],
       });
       
-      // Slightly improve relationship on interaction
-      newState.npcs = {
-        ...newState.npcs,
-        [targetNPC.id]: {
-          ...targetNPC,
-          relationships: {
-            ...targetNPC.relationships,
-            player: {
-              ...relationship,
-              affection: Math.min(100, relationship.affection + 1),
-            },
+      // Update NPC with current speech state
+      const updatedNPC = {
+        ...targetNPC,
+        currentMotivation: speechContext.motivation,
+        currentTruthStrategy: speechContext.truthStrategy,
+        currentVerbalBudget: speechContext.verbalBudget,
+        relationships: {
+          ...targetNPC.relationships,
+          player: {
+            ...relationship,
+            affection: Math.min(100, relationship.affection + 1),
           },
         },
+      };
+      
+      newState.npcs = {
+        ...newState.npcs,
+        [targetNPC.id]: updatedNPC,
       };
       
       newState = advanceTime(newState, 1);
@@ -352,38 +384,90 @@ export function processAction(state: GameState, action: Action): { newState: Gam
   return { newState, events };
 }
 
-function generateNPCGreeting(npc: NPC, relationship: { affection: number; trust: number; fear: number; respect: number }): string {
-  const greetings: Record<string, string[]> = {
-    npc_martha: [
-      relationship.affection > 20 
-        ? "Ah, good to see you again, friend. What can I get you?"
-        : "Welcome to the Rusty Nail. Mind your manners and pay your tab.",
-      "Busy night tonight. Everyone's on edge about something...",
-      "Don't cause trouble in my establishment, stranger.",
-    ],
-    npc_thomas: [
-      relationship.trust > 0
-        ? "Psst... you looking for something? I might know a thing or two."
-        : "What do you want? I'm busy.",
-      "Keep your voice down, will you? Walls have ears around here.",
-      "*glances around nervously* You didn't see me, got it?",
-    ],
-    npc_guard_james: [
-      "Evening, citizen. Staying out of trouble, I hope?",
-      relationship.respect > 20 
-        ? "Good to see someone decent around here."
-        : "Watch yourself. I've got my eye on everyone.",
-      "Quiet night so far. Let's keep it that way.",
-    ],
-    npc_old_edgar: [
-      "Ah, young one! Sit, sit. Let me tell you a tale...",
-      "*coughs* These old bones... but my memory is still sharp as ever.",
-      "You remind me of someone I knew, long ago. An adventurer, like yourself.",
-    ],
+function generateNPCGreeting(npc: NPC, relationship: { affection: number; trust: number; fear: number; respect: number }, context?: NPCResponseData): string {
+  // Use the speech system to modify greetings
+  const budget = context?.verbalBudget || 'NORMAL';
+  const motivation = context?.motivation || 'OBSERVE';
+  const truthStrategy = context?.truthStrategy || 'SELECTIVE';
+  
+  // Base greetings by NPC
+  const baseGreetings: Record<string, Record<string, string[]>> = {
+    npc_martha: {
+      ACQUIRE: ["What'll it be? I haven't got all night.", "Looking for something? I might be able to help... for a price."],
+      DEFEND: ["Don't start trouble in my establishment.", "I run a clean place here. Remember that."],
+      RELIEVE: ["It's been a long day... *sighs* What can I get you?", "You look like you could use a drink. I know I could."],
+      OBSERVE: ["Hmm. New face.", "What brings you here?"],
+      ASSERT: ["My tavern, my rules. Understand?", "You'll follow my rules or find the door."],
+      ESCAPE: ["Can't talk now. Busy.", "*hurries past*"],
+    },
+    npc_thomas: {
+      ACQUIRE: ["Psst... you look like someone with coin. Got a proposition...", "Looking for information? I might know things."],
+      DEFEND: ["I didn't do anything. You can't prove nothing.", "*backs away* What do you want?"],
+      RELIEVE: ["It's hard, you know? Living like this...", "*looks around nervously* Sometimes I wonder..."],
+      OBSERVE: ["...", "*watches silently*"],
+      ASSERT: ["I know more than you think.", "Don't underestimate me."],
+      ESCAPE: ["Gotta go.", "*eyes dart toward the exit*"],
+    },
+    npc_guard_james: {
+      ACQUIRE: ["Citizen. Seen anything suspicious?", "Keep your eyes open. Report anything unusual."],
+      DEFEND: ["I do my job. That's all anyone needs to know.", "Everything's under control here."],
+      RELIEVE: ["*stares into his drink* Long day on patrol...", "Sometimes this job... *trails off*"],
+      OBSERVE: ["Evening, citizen.", "Quiet tonight."],
+      ASSERT: ["I'm watching everyone here. Remember that.", "Law keeps order. Don't forget it."],
+      ESCAPE: ["Duty calls.", "*stands abruptly*"],
+    },
+    npc_old_edgar: {
+      ACQUIRE: ["Ah, young one! Perhaps we can help each other...", "I have knowledge. You have... potential."],
+      DEFEND: ["I've seen more than you know. Don't test me.", "Age doesn't mean weakness, stranger."],
+      RELIEVE: ["Sit, sit. Let me tell you of the old days...", "*coughs* These old bones carry many memories..."],
+      OBSERVE: ["Hmm... *peers at you*", "Interesting..."],
+      ASSERT: ["Listen well, for I won't repeat myself.", "The young should respect their elders."],
+      ESCAPE: ["My bones ache. Another time.", "*waves dismissively*"],
+    },
   };
   
-  const npcGreetings = greetings[npc.id] || ["Hello there."];
-  return npcGreetings[Math.floor(Math.random() * npcGreetings.length)];
+  const npcGreetings = baseGreetings[npc.id]?.[motivation] || ["Hello there."];
+  let greeting = npcGreetings[Math.floor(Math.random() * npcGreetings.length)];
+  
+  // Modify by verbal budget
+  if (budget === 'MICRO') {
+    greeting = greeting.split('.')[0] + '.';
+  } else if (budget === 'LONG' || budget === 'HUGE') {
+    // Add extra context based on truth strategy
+    if (truthStrategy === 'TRANSPARENT' && npc.meta.traits.includes('gossip')) {
+      greeting += ` Word is there's trouble brewing in town.`;
+    } else if (truthStrategy === 'MYTHIC') {
+      greeting += ` In my day, we knew the old ways...`;
+    }
+  }
+  
+  // Add stress indicators
+  if (npc.stressLevel > 60) {
+    greeting = greeting.replace(/\.$/, '... *looks tense*');
+  }
+  
+  return greeting;
+}
+
+// Update NPC escalation based on interaction
+export function updateNPCEscalation(npc: NPC, delta: number): NPC {
+  const escalationLevels: EscalationState[] = [
+    'POLITE_DISTANCE',
+    'GUARDED_HONESTY', 
+    'IRRITATION',
+    'DEFENSIVE_JUSTIFICATION',
+    'OPEN_HOSTILITY',
+    'WITHDRAWAL_OR_CONFRONTATION'
+  ];
+  
+  const currentIndex = escalationLevels.indexOf(npc.escalationState);
+  const newIndex = Math.max(0, Math.min(escalationLevels.length - 1, currentIndex + delta));
+  
+  return {
+    ...npc,
+    escalationState: escalationLevels[newIndex],
+    stressLevel: Math.max(0, Math.min(100, npc.stressLevel + delta * 5)),
+  };
 }
 
 export function parseCommand(input: string): Action {

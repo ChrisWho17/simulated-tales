@@ -123,6 +123,13 @@ export interface NPCMeta {
   secrets: string[];
 }
 
+// SPEECH SYSTEM TYPES
+export type VerbalBudgetTier = 'MICRO' | 'SHORT' | 'NORMAL' | 'LONG' | 'HUGE';
+export type TruthStrategy = 'TRANSPARENT' | 'SELECTIVE' | 'PERFORMATIVE' | 'DEFENSIVE' | 'MANIPULATIVE' | 'MYTHIC' | 'INSTITUTIONAL';
+export type MotivationVector = 'ACQUIRE' | 'DEFEND' | 'RELIEVE' | 'ASSERT' | 'OBSERVE' | 'ESCAPE';
+export type ConflictStyle = 'AVOIDANT' | 'PASSIVE_AGGRESSIVE' | 'NEGOTIATIVE' | 'DOMINANT' | 'MORALISTIC' | 'RESIGNED';
+export type EscalationState = 'POLITE_DISTANCE' | 'GUARDED_HONESTY' | 'IRRITATION' | 'DEFENSIVE_JUSTIFICATION' | 'OPEN_HOSTILITY' | 'WITHDRAWAL_OR_CONFRONTATION';
+
 // FULL NPC TYPE - Chain-driven cognitive system
 export interface NPC {
   id: string;
@@ -153,6 +160,16 @@ export interface NPC {
   relationships: Record<string, Relationship>; // Keep for compatibility
   currentLocation: string;
   currentActivity: string;
+  
+  // Dynamic speech state (recalculated on interaction)
+  currentMotivation?: MotivationVector;
+  currentTruthStrategy?: TruthStrategy;
+  currentVerbalBudget?: VerbalBudgetTier;
+  
+  // Conflict system (Prompt 1.5)
+  conflictStyle: ConflictStyle;
+  escalationState: EscalationState;
+  stressLevel: number; // 0-100
 }
 
 // ============= OTHER CORE TYPES =============
