@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2 } from 'lucide-react';
-import { GameGenre } from '@/types/genreData';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check } from 'lucide-react';
+import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
+import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ScenarioSelection {
   scenario: string;
@@ -47,10 +54,20 @@ const RANDOM_SCENARIOS: Array<{ text: string; genre: GameGenre }> = [
 export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps) {
   const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [genreOverride, setGenreOverride] = useState<GameGenre | null>(null);
+
+  // Real-time genre detection
+  const detectedGenre = useMemo(() => {
+    return detectGenreFromText(customScenario);
+  }, [customScenario]);
+
+  // Active genre is override or detected
+  const activeGenre = genreOverride || detectedGenre.genre;
+  const activeGenreData = GENRE_DATA[activeGenre];
 
   const handleRandomScenario = () => {
     const random = RANDOM_SCENARIOS[Math.floor(Math.random() * RANDOM_SCENARIOS.length)];
-    onSelect({ scenario: random.text, genre: random.genre, genreTitle: random.genre });
+    onSelect({ scenario: random.text, genre: random.genre, genreTitle: getGenreTitle(random.genre) });
   };
 
   const handlePresetStart = (preset: typeof PRESET_SCENARIOS[0]) => {
@@ -59,39 +76,15 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
 
   const handleCustomStart = () => {
     if (customScenario.trim()) {
-      const lower = customScenario.toLowerCase();
-      let genre: GameGenre = 'fantasy';
-      let genreTitle = 'Fantasy Adventure';
-      
-      if (lower.includes('space') || lower.includes('ship') || lower.includes('galaxy') || lower.includes('alien') || lower.includes('starship') || lower.includes('planet')) {
-        genre = 'scifi';
-        genreTitle = 'Sci-Fi Adventure';
-      } else if (lower.includes('horror') || lower.includes('monster') || lower.includes('abandoned') || lower.includes('nightmare') || lower.includes('haunted') || lower.includes('terror')) {
-        genre = 'horror';
-        genreTitle = 'Horror Adventure';
-      } else if (lower.includes('detective') || lower.includes('mystery') || lower.includes('murder') || lower.includes('investigate') || lower.includes('noir') || lower.includes('crime')) {
-        genre = 'mystery';
-        genreTitle = 'Mystery Adventure';
-      } else if (lower.includes('pirate') || lower.includes('treasure') || lower.includes('seas') || lower.includes('captain') || lower.includes('ship') || lower.includes('sail')) {
-        genre = 'pirate';
-        genreTitle = 'Pirate Adventure';
-      } else if (lower.includes('cyber') || lower.includes('hacker') || lower.includes('neon') || lower.includes('corporation') || lower.includes('dystopia') || lower.includes('chrome') || lower.includes('implant')) {
-        genre = 'cyberpunk';
-        genreTitle = 'Cyberpunk Adventure';
-      } else if (lower.includes('western') || lower.includes('frontier') || lower.includes('cowboy') || lower.includes('outlaw') || lower.includes('sheriff') || lower.includes('saloon') || lower.includes('gunslinger')) {
-        genre = 'western';
-        genreTitle = 'Western Adventure';
-      } else if (lower.includes('apocalypse') || lower.includes('wasteland') || lower.includes('survivor') || lower.includes('radiation') || lower.includes('fallout') || lower.includes('ruins')) {
-        genre = 'postapoc';
-        genreTitle = 'Post-Apocalyptic Adventure';
-      } else if (lower.includes('magic') || lower.includes('dragon') || lower.includes('wizard') || lower.includes('kingdom') || lower.includes('quest') || lower.includes('sword') || lower.includes('elf') || lower.includes('dwarf')) {
-        genre = 'fantasy';
-        genreTitle = 'Fantasy Adventure';
-      }
-      
-      onSelect({ scenario: customScenario.trim(), genre, genreTitle });
+      onSelect({ 
+        scenario: customScenario.trim(), 
+        genre: activeGenre, 
+        genreTitle: getGenreTitle(activeGenre) 
+      });
     }
   };
+
+  const allGenres = getAllGenres();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -118,12 +111,48 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
         <div className="w-full max-w-3xl space-y-8">
           {/* Custom Scenario - Glass Panel */}
           <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <h2 className="text-primary font-display text-xl mb-4 tracking-wide">Create Your Own Story</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-primary font-display text-xl tracking-wide">Create Your Own Story</h2>
+              
+              {/* Genre Override Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 bg-background/50">
+                    <span className="text-lg">{GENRE_ICONS[activeGenre]}</span>
+                    <span className="hidden sm:inline">{genreOverride ? 'Override: ' : ''}{activeGenreData.name}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem 
+                    onClick={() => setGenreOverride(null)}
+                    className="gap-2"
+                  >
+                    <span className="text-lg">✨</span>
+                    <span className="flex-1">Auto-detect</span>
+                    {!genreOverride && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  <div className="h-px bg-border my-1" />
+                  {allGenres.map((g) => (
+                    <DropdownMenuItem 
+                      key={g.id}
+                      onClick={() => setGenreOverride(g.id)}
+                      className="gap-2"
+                    >
+                      <span className="text-lg">{g.icon}</span>
+                      <span className="flex-1">{g.name}</span>
+                      {genreOverride === g.id && <Check className="h-4 w-4" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
             <div className="flex gap-3">
               <Input
                 value={customScenario}
                 onChange={(e) => setCustomScenario(e.target.value)}
-                placeholder="Describe your scenario..."
+                placeholder="Describe your scenario... (e.g., 'A hacker in a neon-lit city')"
                 className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
                 onKeyDown={(e) => e.key === 'Enter' && handleCustomStart()}
                 disabled={isLoading}
@@ -137,6 +166,55 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
                 Begin
               </Button>
             </div>
+
+            {/* Real-time Genre Indicator */}
+            {customScenario.trim() && (
+              <div className="mt-3 flex items-center gap-2 animate-fade-in">
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                  detectedGenre.confidence === 'high' 
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                    : detectedGenre.confidence === 'medium'
+                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    : 'bg-muted/50 text-muted-foreground border border-border/30'
+                }`}>
+                  <span>{GENRE_ICONS[detectedGenre.genre]}</span>
+                  <span>Detected: {detectedGenre.title}</span>
+                  {genreOverride && (
+                    <span className="text-xs opacity-70">(overridden)</span>
+                  )}
+                </div>
+                {detectedGenre.matchedKeywords.length > 0 && !genreOverride && (
+                  <span className="text-xs text-muted-foreground">
+                    Keywords: {detectedGenre.matchedKeywords.slice(0, 3).join(', ')}
+                    {detectedGenre.matchedKeywords.length > 3 && '...'}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Role Preview */}
+            {customScenario.trim() && (
+              <div className="mt-3 p-3 rounded-lg bg-background/30 border border-border/30">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Available roles for {activeGenreData.name}:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {activeGenreData.classes.slice(0, 6).map((cls) => (
+                    <span 
+                      key={cls.id}
+                      className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary border border-primary/20"
+                    >
+                      {cls.name}
+                    </span>
+                  ))}
+                  {activeGenreData.classes.length > 6 && (
+                    <span className="px-2 py-0.5 text-xs text-muted-foreground">
+                      +{activeGenreData.classes.length - 6} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Divider */}
