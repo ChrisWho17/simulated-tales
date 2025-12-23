@@ -252,7 +252,7 @@ export interface GameState {
   debugMode?: boolean;
 }
 
-export type ActionType = 'look' | 'talk' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help';
+export type ActionType = 'look' | 'talk' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help' | 'eat' | 'drink' | 'sleep' | 'bathe' | 'status';
 
 export interface Action {
   type: ActionType;

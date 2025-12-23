@@ -522,6 +522,131 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       break;
     }
     
+    case 'eat': {
+      if (!newState.lifeSim) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      const currentHunger = newState.lifeSim.needs.physical.hunger;
+      if (currentHunger >= 90) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are not hungry right now.', timestamp: newState.time.tick });
+        break;
+      }
+      const hungerRestored = Math.min(100 - currentHunger, 40);
+      newState.lifeSim = {
+        ...newState.lifeSim,
+        needs: { ...newState.lifeSim.needs, physical: { ...newState.lifeSim.needs.physical, hunger: currentHunger + hungerRestored } },
+      };
+      newState.player = { ...newState.player, stats: { ...newState.player.stats, hunger: newState.lifeSim.needs.physical.hunger } };
+      newState = advanceTime(newState, 1);
+      const mealDesc = currentHunger < 30 ? 'You eat ravenously, barely tasting the food.' : 'You enjoy a satisfying meal.';
+      events.push({ id: `evt_${Date.now()}`, type: 'observation', content: `${mealDesc}\n\n*Hunger restored by ${hungerRestored}. An hour passes.*`, timestamp: newState.time.tick });
+      break;
+    }
+    
+    case 'drink': {
+      if (!newState.lifeSim) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      const currentThirst = newState.lifeSim.needs.physical.thirst;
+      if (currentThirst >= 90) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are not thirsty right now.', timestamp: newState.time.tick });
+        break;
+      }
+      const thirstRestored = Math.min(100 - currentThirst, 50);
+      newState.lifeSim = {
+        ...newState.lifeSim,
+        needs: { ...newState.lifeSim.needs, physical: { ...newState.lifeSim.needs.physical, thirst: currentThirst + thirstRestored } },
+      };
+      newState = advanceTime(newState, 1);
+      const drinkDesc = currentThirst < 30 ? 'You drink deeply, the water soothing your parched throat.' : 'You take a refreshing drink.';
+      events.push({ id: `evt_${Date.now()}`, type: 'observation', content: `${drinkDesc}\n\n*Thirst restored by ${thirstRestored}. An hour passes.*`, timestamp: newState.time.tick });
+      break;
+    }
+    
+    case 'sleep': {
+      if (!newState.lifeSim) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      const currentEnergy = newState.lifeSim.needs.physical.energy;
+      if (currentEnergy >= 90) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are not tired enough to sleep.', timestamp: newState.time.tick });
+        break;
+      }
+      const sleepHours = action.target ? Math.min(Math.max(parseInt(action.target) || 6, 1), 12) : 6;
+      const energyPerHour = 15;
+      const energyRestored = Math.min(100 - currentEnergy, sleepHours * energyPerHour);
+      const stressReduced = Math.min(newState.lifeSim.needs.psychological.stress, sleepHours * 5);
+      newState.lifeSim = {
+        ...newState.lifeSim,
+        needs: {
+          ...newState.lifeSim.needs,
+          physical: { ...newState.lifeSim.needs.physical, energy: currentEnergy + energyRestored },
+          psychological: { ...newState.lifeSim.needs.psychological, stress: newState.lifeSim.needs.psychological.stress - stressReduced },
+        },
+      };
+      newState.player = { ...newState.player, stats: { ...newState.player.stats, energy: newState.lifeSim.needs.physical.energy, mood: 100 - newState.lifeSim.needs.psychological.stress } };
+      newState = advanceTime(newState, sleepHours);
+      const sleepDesc = currentEnergy < 30 ? 'You collapse into a deep, exhausted sleep.' : 'You rest peacefully.';
+      events.push({ id: `evt_${Date.now()}`, type: 'observation', content: `${sleepDesc}\n\n*You sleep for ${sleepHours} hours. Energy restored by ${energyRestored}. Stress reduced by ${stressReduced}.*`, timestamp: newState.time.tick });
+      break;
+    }
+    
+    case 'bathe': {
+      if (!newState.lifeSim) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      const currentHygiene = newState.lifeSim.needs.physical.hygiene;
+      if (currentHygiene >= 90) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are already clean.', timestamp: newState.time.tick });
+        break;
+      }
+      const hygieneRestored = Math.min(100 - currentHygiene, 60);
+      const comfortGain = Math.min(100 - newState.lifeSim.needs.psychological.comfort, 20);
+      newState.lifeSim = {
+        ...newState.lifeSim,
+        needs: {
+          ...newState.lifeSim.needs,
+          physical: { ...newState.lifeSim.needs.physical, hygiene: currentHygiene + hygieneRestored },
+          psychological: { ...newState.lifeSim.needs.psychological, comfort: newState.lifeSim.needs.psychological.comfort + comfortGain },
+        },
+        body: { ...newState.lifeSim.body, cleanliness: Math.min(100, newState.lifeSim.body.cleanliness + hygieneRestored) },
+      };
+      newState = advanceTime(newState, 1);
+      const bathDesc = currentHygiene < 30 ? 'You scrub away the grime, feeling human again.' : 'The warm water relaxes your muscles.';
+      events.push({ id: `evt_${Date.now()}`, type: 'observation', content: `${bathDesc}\n\n*Hygiene restored by ${hygieneRestored}. Comfort increased by ${comfortGain}. An hour passes.*`, timestamp: newState.time.tick });
+      break;
+    }
+    
+    case 'status': {
+      if (!newState.lifeSim) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      const { physical, psychological } = newState.lifeSim.needs;
+      const statusContent = `**Your Condition:**
+
+**Physical:**
+• Health: ${physical.health}/100
+• Energy: ${physical.energy}/100
+• Hunger: ${physical.hunger}/100
+• Thirst: ${physical.thirst}/100
+• Hygiene: ${physical.hygiene}/100
+• Bladder: ${physical.bladder}/100
+
+**Psychological:**
+• Stress: ${psychological.stress}/100
+• Tension: ${psychological.tension}/100
+• Comfort: ${psychological.comfort}/100
+• Social: ${psychological.social}/100
+• Fulfillment: ${psychological.fulfillment}/100`;
+      events.push({ id: `evt_${Date.now()}`, type: 'system', content: statusContent, timestamp: newState.time.tick });
+      break;
+    }
+    
     case 'help': {
       let helpContent = `**Available Commands:**
 • **look** - Examine your surroundings
@@ -529,6 +654,14 @@ export function processAction(state: GameState, action: Action): { newState: Gam
 • **go [place]** - Travel to a connected location
 • **wait [hours]** - Pass time (1-12 hours)
 • **inventory** - Check your belongings
+
+**Life Sim:**
+• **eat** - Consume food to restore hunger
+• **drink** - Drink to restore thirst
+• **sleep [hours]** - Rest to restore energy (default: 6 hours)
+• **bathe** - Clean yourself to restore hygiene
+• **status** - View your physical and psychological condition
+
 • **help** - Show this message`;
 
       if (newState.debugMode) {
@@ -684,6 +817,25 @@ export function parseCommand(input: string): Action & { debug?: string } {
     case 'h':
     case '?':
       return { type: 'help' };
+    // Life sim commands
+    case 'eat':
+    case 'food':
+      return { type: 'eat', target: target || undefined };
+    case 'drink':
+    case 'water':
+      return { type: 'drink', target: target || undefined };
+    case 'sleep':
+    case 'nap':
+      return { type: 'sleep', target: target || undefined };
+    case 'bathe':
+    case 'wash':
+    case 'shower':
+    case 'clean':
+      return { type: 'bathe', target: target || undefined };
+    case 'status':
+    case 'needs':
+    case 'condition':
+      return { type: 'status' };
     // Debug commands
     case 'debug':
       return { type: 'help', debug: 'toggle' };
