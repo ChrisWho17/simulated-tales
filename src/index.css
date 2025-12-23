@@ -594,4 +594,137 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  /* === PORTRAIT EMOTION CSS FALLBACKS === */
+  .portrait-emotion-angry {
+    filter: saturate(1.1) contrast(1.1) brightness(0.95);
+  }
+
+  .portrait-emotion-sad {
+    filter: saturate(0.8) brightness(0.9) contrast(0.95);
+  }
+
+  .portrait-emotion-happy {
+    filter: saturate(1.15) brightness(1.05) contrast(1.02);
+  }
+
+  .portrait-emotion-fearful {
+    filter: saturate(0.9) brightness(1.1) contrast(1.1);
+  }
+
+  .portrait-emotion-flirty {
+    filter: saturate(1.1) brightness(1.02) contrast(1.05);
+  }
+
+  .portrait-emotion-suspicious {
+    filter: saturate(0.95) brightness(0.92) contrast(1.08);
+  }
+
+  .portrait-emotion-hurt {
+    filter: saturate(0.85) brightness(0.88) contrast(1.05);
+  }
+
+  .portrait-emotion-smug {
+    filter: saturate(1.08) brightness(1.03) contrast(1.05);
+  }
+
+  .portrait-emotion-surprised {
+    filter: saturate(1.1) brightness(1.08) contrast(1.02);
+  }
+
+  .portrait-emotion-disgusted {
+    filter: saturate(0.9) brightness(0.95) hue-rotate(10deg);
+  }
+
+  .portrait-emotion-thoughtful {
+    filter: saturate(0.95) brightness(0.98) contrast(1.02);
+  }
+
+  /* === PORTRAIT TRANSITION ANIMATIONS === */
+  @keyframes portrait-fade-in {
+    0% {
+      opacity: 0;
+      transform: scale(1.02);
+      filter: blur(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes portrait-fade-out {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+
+  .animate-portrait-fade-in {
+    animation: portrait-fade-in 0.6s ease-out forwards;
+  }
+
+  .animate-portrait-fade-out {
+    animation: portrait-fade-out 0.6s ease-out forwards;
+  }
+
+  /* Subtle shake for fear */
+  @keyframes portrait-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+  }
+
+  .animate-portrait-shake {
+    animation: portrait-shake 0.5s ease-in-out infinite;
+  }
+
+  /* Breathing effect */
+  @keyframes breathe {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.2; }
+  }
+
+  /* Shimmer for sci-fi */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  /* === SLIDE ANIMATIONS === */
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.4s ease-out forwards;
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  .animate-fade-out {
+    animation: fade-out 0.3s ease-out forwards;
+  }
+
+  @keyframes scale-out {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.95); }
+  }
+
+  .animate-scale-out {
+    animation: scale-out 0.3s ease-out forwards;
+  }
 }

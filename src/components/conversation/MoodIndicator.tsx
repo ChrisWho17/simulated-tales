@@ -5,7 +5,7 @@ import { EmotionType } from '@/game/portraitSystem';
 import { EmotionalState } from '@/types/game';
 import { 
   Smile, Frown, Angry, AlertCircle, Heart, 
-  Meh, Eye, Ghost
+  Meh, Eye, Ghost, Zap, ThumbsUp, Brain, HelpCircle
 } from 'lucide-react';
 
 interface MoodIndicatorProps {
@@ -43,11 +43,23 @@ const EMOTION_CONFIG: Record<EmotionType, {
     bgColor: 'bg-blue-400/20',
     label: 'Sad'
   },
-  scared: {
+  fearful: {
     icon: Ghost,
     color: 'text-purple-400',
     bgColor: 'bg-purple-400/20',
     label: 'Fearful'
+  },
+  surprised: {
+    icon: Zap,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-400/20',
+    label: 'Surprised'
+  },
+  disgusted: {
+    icon: HelpCircle,
+    color: 'text-green-500',
+    bgColor: 'bg-green-500/20',
+    label: 'Disgusted'
   },
   flirty: {
     icon: Heart,
@@ -60,6 +72,24 @@ const EMOTION_CONFIG: Record<EmotionType, {
     color: 'text-warning',
     bgColor: 'bg-warning/20',
     label: 'Suspicious'
+  },
+  hurt: {
+    icon: AlertCircle,
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-400/20',
+    label: 'Hurt'
+  },
+  smug: {
+    icon: ThumbsUp,
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-400/20',
+    label: 'Smug'
+  },
+  thoughtful: {
+    icon: Brain,
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-400/20',
+    label: 'Thoughtful'
   }
 };
 
