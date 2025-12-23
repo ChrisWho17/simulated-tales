@@ -3,6 +3,8 @@ import {
   CharacterData, 
   DEFAULT_CHARACTER, 
   BACKGROUND_EFFECTS,
+  SPAWN_POINTS,
+  SpawnPointType,
   BodyTypeOption,
   HeightOption,
   HairLengthOption,
@@ -57,10 +59,10 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
     }));
   };
 
-  const updateBackground = (origin: string) => {
+  const updateBackground = (key: 'origin' | 'spawnPoint', value: string) => {
     setCharacter(prev => ({
       ...prev,
-      background: { origin },
+      background: { ...prev.background, [key]: value },
     }));
   };
 
@@ -315,16 +317,64 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-primary">
                 <BookOpen className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">Background</h2>
+                <h2 className="text-lg font-semibold">Background & Starting Point</h2>
               </div>
               <Separator className="bg-border/30" />
 
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Spawn Point Selection */}
+                <div className="space-y-3">
+                  <Label>Starting Location</Label>
+                  <p className="text-xs text-muted-foreground">Where does your story begin?</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {Object.values(SPAWN_POINTS).map((spawn) => (
+                      <div
+                        key={spawn.id}
+                        onClick={() => updateBackground('spawnPoint', spawn.id)}
+                        className={`p-4 rounded-lg cursor-pointer transition-all border ${
+                          character.background.spawnPoint === spawn.id
+                            ? 'bg-primary/20 border-primary'
+                            : 'bg-input/30 border-border/50 hover:bg-input/50'
+                        }`}
+                      >
+                        <h4 className="font-medium mb-1">{spawn.name}</h4>
+                        <p className="text-xs text-muted-foreground mb-2">{spawn.startingLocation}</p>
+                        <div className="text-xs space-y-1">
+                          <p><span className="text-muted-foreground">Housing:</span> {spawn.housing}</p>
+                          <p><span className="text-muted-foreground">Money:</span> ${spawn.money}</p>
+                          <p><span className="text-muted-foreground">Stress:</span> {spawn.stress}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Show spawn point details */}
+                  {SPAWN_POINTS[character.background.spawnPoint] && (
+                    <div className="p-4 rounded-lg bg-accent/10 border border-accent/30 space-y-2 text-sm">
+                      <p className="font-medium text-accent">{SPAWN_POINTS[character.background.spawnPoint].narrativeHook}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Schedule:</span> {SPAWN_POINTS[character.background.spawnPoint].schedule}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Social Capital:</span> {SPAWN_POINTS[character.background.spawnPoint].socialCapital.join(', ')}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {SPAWN_POINTS[character.background.spawnPoint].uniqueEvents.map((event) => (
+                          <span key={event} className="px-2 py-0.5 text-xs rounded-full bg-muted/50 text-muted-foreground">
+                            {event}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Origin (personality background) */}
                 <div className="space-y-2">
-                  <Label>Origin</Label>
+                  <Label>Personal History</Label>
                   <Select 
                     value={character.background.origin} 
-                    onValueChange={updateBackground}
+                    onValueChange={(v) => updateBackground('origin', v)}
                   >
                     <SelectTrigger className="bg-input/50">
                       <SelectValue />
@@ -341,8 +391,8 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
 
                 {backgroundEffect && (
                   <div className="p-4 rounded-lg bg-muted/30 border border-border/30 space-y-2 text-sm">
-                    <p><span className="text-muted-foreground">Starting Stress:</span> {backgroundEffect.startingStress}</p>
-                    <p><span className="text-muted-foreground">Starting Money:</span> ${backgroundEffect.startingMoney}</p>
+                    <p><span className="text-muted-foreground">Bonus Stress:</span> +{backgroundEffect.startingStress}</p>
+                    <p><span className="text-muted-foreground">Bonus Money:</span> +${backgroundEffect.startingMoney}</p>
                     <p><span className="text-muted-foreground">Skills:</span> {backgroundEffect.skills.join(', ')}</p>
                     {backgroundEffect.traumaSeeds.length > 0 && (
                       <p className="text-destructive/80">
