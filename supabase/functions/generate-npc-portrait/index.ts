@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { npc } = await req.json();
+    const { npc, prompt, config } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -22,19 +22,11 @@ serve(async (req) => {
       throw new Error("Invalid NPC data");
     }
 
-    // Build a detailed prompt for the NPC portrait - MODERN TIMES ONLY
-    const traits = npc.meta.traits?.slice(0, 3).join(', ') || 'mysterious';
-    const emotionalState = npc.emotionalState?.current || 'calm';
-    const occupation = npc.meta.occupation || 'unknown';
-    
-    const prompt = `Generate a portrait of a ${npc.meta.age}-year-old ${occupation} in modern day contemporary setting. 
-Name: ${npc.meta.name}
-Personality traits: ${traits}
-Current mood: ${emotionalState}
-Description: ${npc.meta.description}
-Style: Modern contemporary realistic portrait, professional photography style, natural lighting, present-day urban setting. Head and shoulders portrait format. Modern clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
+    // Use provided prompt or build from NPC data
+    const finalPrompt = prompt || buildDefaultPrompt(npc, config);
 
     console.log("Generating NPC portrait for:", npc.meta.name);
+    console.log("Using prompt:", finalPrompt.substring(0, 200) + "...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -47,7 +39,7 @@ Style: Modern contemporary realistic portrait, professional photography style, n
         messages: [
           {
             role: "user",
-            content: prompt,
+            content: finalPrompt,
           },
         ],
         modalities: ["image", "text"],
@@ -77,7 +69,6 @@ Style: Modern contemporary realistic portrait, professional photography style, n
     const data = await response.json();
     console.log("AI response received for NPC:", npc.meta.name);
     
-    // Extract image from the response
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageUrl) {
@@ -100,3 +91,10 @@ Style: Modern contemporary realistic portrait, professional photography style, n
     });
   }
 });
+
+function buildDefaultPrompt(npc: any, config: any) {
+  const genre = config?.genre || 'fantasy';
+  const emotion = config?.emotion || 'neutral';
+  
+  return `Portrait of ${npc.meta.name}, a ${npc.meta.age} year old ${npc.meta.occupation}. ${npc.meta.description}. Expression: ${emotion}. Style: ${genre} art, detailed face, looking at viewer.`;
+}
