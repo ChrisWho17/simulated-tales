@@ -301,7 +301,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           onChange={(e) => updateAppearance('full', 'isHermaphrodite', e.target.checked)}
                           className="rounded"
                         />
-                        <span>Hermaphrodite (both anatomies)</span>
+                        <span>Both anatomies</span>
                       </label>
                     )}
                   </div>

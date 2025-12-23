@@ -72,7 +72,7 @@ export const BODY_HAIR_OPTIONS = [{ value: 'none', label: 'None' }, { value: 'li
 
 export function formatAppearanceForAI(appearance: TieredAppearance, genre: string): string {
   const { simple, detailed, full, detailLevel } = appearance;
-  let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'hermaphrodite' : simple.gender === 'other' ? 'androgynous' : simple.gender;
+  let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
   let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
     description += `, ${detailed.skinTone} skin, ${detailed.hairStyle} ${detailed.hairColor} hair, ${detailed.eyeColor} eyes`;

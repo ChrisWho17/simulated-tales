@@ -16,6 +16,8 @@ export interface CharacterClass {
   statBonuses: Partial<CharacterStats>;
   startingItems: string[];
   abilities: string[];
+  portraitHints?: string[]; // AI portrait generation hints
+  clothingStyle?: string; // Description for AI portrait clothing
 }
 
 export interface CharacterBackground {
