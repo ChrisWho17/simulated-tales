@@ -110,7 +110,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     setIsGeneratingPortrait(true);
     try {
       const appearanceDesc = formatAppearanceForAI({ ...appearance, detailLevel }, genre);
-      const className = genreData.classes.find(c => c.id === selectedClass)?.name || selectedClass;
+      const selectedClassData = genreData.classes.find(c => c.id === selectedClass);
+      const className = selectedClassData?.name || selectedClass;
       
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
         method: 'POST',
@@ -121,6 +122,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           genre,
           name,
           detailLevel,
+          portraitHints: selectedClassData?.portraitHints || [],
+          clothingStyle: selectedClassData?.clothingStyle || undefined,
         }),
       });
 

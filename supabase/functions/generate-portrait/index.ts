@@ -11,6 +11,8 @@ interface PortraitRequest {
   genre: string;
   name: string;
   detailLevel: 'simple' | 'detailed' | 'all';
+  portraitHints?: string[];
+  clothingStyle?: string;
 }
 
 serve(async (req) => {
@@ -19,14 +21,14 @@ serve(async (req) => {
   }
 
   try {
-    const { appearance, characterClass, genre, name, detailLevel } = await req.json() as PortraitRequest;
+    const { appearance, characterClass, genre, name, detailLevel, portraitHints, clothingStyle } = await req.json() as PortraitRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating character portrait for:", name, "in genre:", genre);
+    console.log("Generating character portrait for:", name, "in genre:", genre, "class:", characterClass);
 
     // Genre-specific art styles
     const genreStyles: Record<string, string> = {
@@ -55,7 +57,10 @@ serve(async (req) => {
     };
 
     const style = genreStyles[genre] || genreStyles.custom;
-    const costume = genreCostumes[genre] || genreCostumes.custom;
+    // Use provided clothingStyle or fall back to genre default
+    const costume = clothingStyle || genreCostumes[genre] || genreCostumes.custom;
+    // Use provided portrait hints or empty
+    const roleHints = portraitHints?.length ? portraitHints.join(', ') : '';
 
     // Build the prompt based on detail level
     let matureContentNote = "";
@@ -71,6 +76,7 @@ GENRE: ${genre}
 PHYSICAL APPEARANCE: ${appearance}
 
 COSTUME/ATTIRE: ${costume}
+${roleHints ? `\nROLE-SPECIFIC DETAILS: ${roleHints}` : ''}
 
 ART STYLE: ${style}
 
@@ -81,6 +87,7 @@ REQUIREMENTS:
 - Professional quality game character concept art
 - The character should look like a protagonist/hero ready for adventure
 - Dramatic lighting appropriate to the genre
+- Include role-specific visual elements that identify their profession
 ${matureContentNote}
 
 DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
