@@ -2,7 +2,7 @@
 // Supports: talking, actions, replies, inventory, terrain manipulation
 
 export interface ParsedCommand {
-  type: 'talk' | 'say' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system';
+  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system';
   verb: string;
   target?: string;
   args: string[];
@@ -19,6 +19,7 @@ const TERRAIN_KEYWORDS = ['dig', 'build', 'place', 'destroy', 'craft', 'make', '
 const LOOK_KEYWORDS = ['look', 'see', 'observe', 'view', 'scan', 'watch', 'peer', 'gaze', 'glance'];
 const MOVE_KEYWORDS = ['go', 'walk', 'run', 'move', 'travel', 'head', 'enter', 'exit', 'leave', 'north', 'south', 'east', 'west', 'n', 's', 'e', 'w'];
 const SYSTEM_KEYWORDS = ['help', 'save', 'load', 'status', 'wait', 'rest', 'sleep'];
+const END_CONVERSATION_KEYWORDS = ['bye', 'end', 'goodbye', 'farewell', 'leave', 'later', 'cya'];
 
 export function parseEnhancedCommand(input: string): ParsedCommand {
   const trimmed = input.trim().toLowerCase();
@@ -43,6 +44,17 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       type: 'say',
       verb: firstWord,
       target: undefined, // Say doesn't target, it continues conversation
+      args: rest,
+      raw: input,
+    };
+  }
+  
+  // End conversation command
+  if (END_CONVERSATION_KEYWORDS.includes(firstWord)) {
+    return {
+      type: 'end_conversation',
+      verb: firstWord,
+      target: undefined,
       args: rest,
       raw: input,
     };
@@ -135,6 +147,8 @@ export function getCommandTypeInfo(type: ParsedCommand['type']): { icon: string;
       return { icon: '💬', label: 'Talk', color: 'text-blue-400' };
     case 'say':
       return { icon: '🗣️', label: 'Say', color: 'text-sky-400' };
+    case 'end_conversation':
+      return { icon: '👋', label: 'Goodbye', color: 'text-amber-400' };
     case 'reply':
       return { icon: '↩️', label: 'Reply', color: 'text-cyan-400' };
     case 'action':
@@ -159,6 +173,7 @@ export function getAllKeywords(): Record<string, string[]> {
   return {
     'Talk': TALK_KEYWORDS,
     'Say': SAY_KEYWORDS,
+    'End Conversation': END_CONVERSATION_KEYWORDS,
     'Reply': REPLY_KEYWORDS,
     'Action': ACTION_KEYWORDS,
     'Inventory': INVENTORY_KEYWORDS,

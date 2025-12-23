@@ -55,6 +55,16 @@ interface DialogueRequest {
   timeOfDay: string;
   conversationHistory?: ConversationExchange[];
   isFirstInteraction: boolean;
+  isFarewell?: boolean;
+}
+
+interface DialogueIndicators {
+  memoryReferenced: boolean;
+  memoryDetails?: string;
+  traumaTriggered: boolean;
+  contradictionDetected: boolean;
+  contradictionDetails?: string;
+  emotionalState?: string;
 }
 
 serve(async (req) => {
@@ -63,7 +73,7 @@ serve(async (req) => {
   }
 
   try {
-    const { npc, playerInput, location, timeOfDay, conversationHistory, isFirstInteraction } = await req.json() as DialogueRequest;
+    const { npc, playerInput, location, timeOfDay, conversationHistory, isFirstInteraction, isFarewell } = await req.json() as DialogueRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -120,6 +130,12 @@ serve(async (req) => {
       memorySection += `\n\nPATTERNS YOU'VE NOTICED: ${npc.patterns.join('; ')}`;
     }
 
+    // Farewell context
+    let farewellContext = '';
+    if (isFarewell) {
+      farewellContext = '\n\nThe player is saying goodbye and ending the conversation. Give a natural farewell response that reflects your relationship and the conversation you just had.';
+    }
+
     // Build the system prompt for modern realistic dialogue
     const systemPrompt = `You are ${npc.name}, a ${npc.age}-year-old ${npc.occupation} in a modern-day urban setting. 
 
@@ -156,11 +172,18 @@ MEMORY-BASED BEHAVIOR:
 - If the player contradicts something you remember, express confusion or suspicion
 - Traumatic memories may cause you to react strongly to certain topics
 
+IMPORTANT - SPECIAL MARKERS:
+When your dialogue references a memory, start that sentence with [MEMORY].
+When you detect a contradiction with something you know, include [CONTRADICTION] at the start.
+When trauma is affecting your response, include [TRAUMA] at the start.
+These markers help the game system display appropriate visual cues.
+
 SETTING:
 - Location: ${location}
 - Time: ${timeOfDay}
 - This is a realistic modern urban environment
 ${conversationContext}
+${farewellContext}
 
 ${isFirstInteraction ? 'This is your first interaction with this player. React naturally to being approached by a stranger.' : 'Continue the conversation naturally based on your memories and relationship.'}
 
@@ -214,7 +237,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
     }
 
     const data = await response.json();
-    const dialogue = data.choices?.[0]?.message?.content?.trim();
+    let dialogue = data.choices?.[0]?.message?.content?.trim();
     
     if (!dialogue) {
       console.error("No dialogue in response:", JSON.stringify(data));
@@ -222,6 +245,36 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
     }
 
     console.log(`Generated dialogue for ${npc.name}: "${dialogue.substring(0, 50)}..."`);
+
+    // Parse special markers from dialogue and build indicators
+    const indicators: DialogueIndicators = {
+      memoryReferenced: dialogue.includes('[MEMORY]'),
+      traumaTriggered: dialogue.includes('[TRAUMA]') || npc.activeTrauma === true,
+      contradictionDetected: dialogue.includes('[CONTRADICTION]'),
+      emotionalState: npc.currentMood,
+    };
+
+    // Extract details from markers
+    if (indicators.memoryReferenced) {
+      const memoryMatch = dialogue.match(/\[MEMORY\]\s*([^.!?]+[.!?])/);
+      if (memoryMatch) {
+        indicators.memoryDetails = memoryMatch[1].trim();
+      }
+    }
+    
+    if (indicators.contradictionDetected) {
+      const contradictionMatch = dialogue.match(/\[CONTRADICTION\]\s*([^.!?]+[.!?])/);
+      if (contradictionMatch) {
+        indicators.contradictionDetails = contradictionMatch[1].trim();
+      }
+    }
+
+    // Clean markers from final dialogue
+    dialogue = dialogue
+      .replace(/\[MEMORY\]\s*/g, '')
+      .replace(/\[TRAUMA\]\s*/g, '')
+      .replace(/\[CONTRADICTION\]\s*/g, '')
+      .trim();
 
     // Detect important topics mentioned in the response
     const importantKeywords = [
@@ -239,6 +292,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
       dialogue,
       npcId: npc.name,
       importantTopics,
+      indicators,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -680,6 +680,94 @@ export function shareMemory(
   return createMemory(targetStore, sharedMemory, currentTick);
 }
 
+/**
+ * Process NPC-to-NPC gossip when NPCs are at the same location
+ * Returns updated memory stores for all NPCs involved
+ */
+export function processNPCGossip(
+  npcMemories: Record<string, NPCMemoryStore>,
+  npcsAtLocation: Array<{ id: string; name: string }>,
+  currentTick: number,
+  gossipChance: number = 0.3
+): Record<string, NPCMemoryStore> {
+  // Need at least 2 NPCs to gossip
+  if (npcsAtLocation.length < 2) return npcMemories;
+  
+  const updatedMemories = { ...npcMemories };
+  
+  // Each pair of NPCs has a chance to gossip
+  for (let i = 0; i < npcsAtLocation.length; i++) {
+    for (let j = i + 1; j < npcsAtLocation.length; j++) {
+      if (Math.random() > gossipChance) continue;
+      
+      const npc1 = npcsAtLocation[i];
+      const npc2 = npcsAtLocation[j];
+      
+      const store1 = updatedMemories[npc1.id] || initializeMemoryStore();
+      const store2 = updatedMemories[npc2.id] || initializeMemoryStore();
+      
+      // Find shareable memories about the player
+      const sharableFromNpc1 = [...store1.shortTerm, ...store1.mediumTerm, ...store1.longTerm]
+        .filter(m => m.sharable && !m.secret && m.entities.includes('player'))
+        .sort((a, b) => b.emotionalIntensity - a.emotionalIntensity);
+      
+      const sharableFromNpc2 = [...store2.shortTerm, ...store2.mediumTerm, ...store2.longTerm]
+        .filter(m => m.sharable && !m.secret && m.entities.includes('player'))
+        .sort((a, b) => b.emotionalIntensity - a.emotionalIntensity);
+      
+      // Share top memory from each
+      if (sharableFromNpc1.length > 0) {
+        updatedMemories[npc2.id] = shareMemory(sharableFromNpc1[0], store2, npc1.name, currentTick);
+      }
+      
+      if (sharableFromNpc2.length > 0) {
+        updatedMemories[npc1.id] = shareMemory(sharableFromNpc2[0], store1, npc2.name, currentTick);
+      }
+    }
+  }
+  
+  return updatedMemories;
+}
+
+/**
+ * Get gossip events for display to the player
+ */
+export function generateGossipEvents(
+  npcMemories: Record<string, NPCMemoryStore>,
+  npcsAtLocation: Array<{ id: string; name: string }>,
+  currentTick: number
+): Array<{ npc1: string; npc2: string; topic: string }> {
+  const gossipEvents: Array<{ npc1: string; npc2: string; topic: string }> = [];
+  
+  if (npcsAtLocation.length < 2) return gossipEvents;
+  
+  for (let i = 0; i < npcsAtLocation.length; i++) {
+    for (let j = i + 1; j < npcsAtLocation.length; j++) {
+      if (Math.random() > 0.15) continue; // 15% visible gossip chance
+      
+      const npc1 = npcsAtLocation[i];
+      const npc2 = npcsAtLocation[j];
+      
+      const store1 = npcMemories[npc1.id];
+      if (!store1) continue;
+      
+      const playerMemories = [...store1.shortTerm, ...store1.mediumTerm, ...store1.longTerm]
+        .filter(m => m.sharable && !m.secret && m.entities.includes('player'));
+      
+      if (playerMemories.length > 0) {
+        const memory = playerMemories[Math.floor(Math.random() * playerMemories.length)];
+        gossipEvents.push({
+          npc1: npc1.name,
+          npc2: npc2.name,
+          topic: memory.summary,
+        });
+      }
+    }
+  }
+  
+  return gossipEvents;
+}
+
 // ============= MEMORY SUMMARY FOR DIALOGUE =============
 
 /**
