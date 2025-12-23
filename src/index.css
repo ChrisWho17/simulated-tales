@@ -1574,3 +1574,114 @@
   border-radius: 2px;
   transition: width var(--transition-slow);
 }
+
+/* === SCENE ILLUSTRATION STYLES === */
+.scene-illustration-container {
+  position: relative;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.scene-illustration-container:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.scene-illustration-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform var(--transition-normal), opacity var(--transition-fast);
+}
+
+.scene-illustration-image:hover {
+  transform: scale(1.02);
+  opacity: 0.95;
+}
+
+.scene-illustration-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.scene-illustration-container:hover .scene-illustration-controls {
+  opacity: 1;
+}
+
+.scene-illustration-loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.05) 0%,
+    rgba(217, 70, 239, 0.05) 50%,
+    rgba(139, 92, 246, 0.05) 100%
+  );
+  background-size: 200% 200%;
+  animation: scene-loading-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes scene-loading-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.scene-illustration-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: scene-fade-in 0.3s ease-out;
+}
+
+@keyframes scene-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.scene-illustration-fullscreen-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.scene-illustration-fullscreen-image {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 0 40px var(--accent-glow), var(--shadow-deep);
+}
+
+.scene-illustration-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  border-radius: 0 0 12px 12px;
+}
+
+.scene-illustration-caption p {
+  font-family: var(--font-narrative);
+  font-style: italic;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
