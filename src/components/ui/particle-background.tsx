@@ -155,8 +155,20 @@ export function ParticleBackground({
 export function AmbientGlow() {
   return (
     <>
-      <div className="ambient-glow ambient-glow-primary" style={{ background: 'var(--ambient-primary, #8b5cf6)' }} />
-      <div className="ambient-glow ambient-glow-secondary" style={{ background: 'var(--ambient-secondary, #d946ef)' }} />
+      <div 
+        className="ambient-glow ambient-glow-primary" 
+        style={{ 
+          background: 'radial-gradient(ellipse at center, var(--ambient-primary, #8b5cf6) 0%, transparent 70%)',
+          opacity: 0.15
+        }} 
+      />
+      <div 
+        className="ambient-glow ambient-glow-secondary" 
+        style={{ 
+          background: 'radial-gradient(ellipse at center, var(--ambient-secondary, #d946ef) 0%, transparent 70%)',
+          opacity: 0.12
+        }} 
+      />
     </>
   );
 }
