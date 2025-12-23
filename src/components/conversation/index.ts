@@ -7,3 +7,4 @@ export { DialogueBubble } from './DialogueBubble';
 export { ResponseOptions } from './ResponseOptions';
 export type { ResponseType } from './ResponseOptions';
 export { MoodIndicator, MoodIndicatorCompact } from './MoodIndicator';
+export { CharacterInfoSheet } from './CharacterInfoSheet';

@@ -1,6 +1,6 @@
-// Dialogue Bubble Component with typewriter effect
+// Dialogue Bubble Component with typewriter effect and italics support
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { DialogueEntry } from './ConversationUI';
 
@@ -9,6 +9,44 @@ interface DialogueBubbleProps {
   npcName: string;
   typewriterEffect: boolean;
   accentColor: 'green' | 'yellow' | 'red' | 'pink' | 'cyan';
+}
+
+// Parse text for *"dialogue"* patterns and convert to italics
+function parseDialogueForItalics(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  // Match *"..."* or *'...'* or just *...* for italicized speech
+  const regex = /\*([^*]+)\*/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(
+        <span key={`text-${lastIndex}`}>
+          {text.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+    // Add the italicized dialogue
+    parts.push(
+      <em key={`italic-${match.index}`} className="italic text-foreground/95">
+        {match[1]}
+      </em>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key={`text-${lastIndex}`}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return parts.length > 0 ? parts : [<span key="full">{text}</span>];
 }
 
 export function DialogueBubble({
@@ -43,6 +81,12 @@ export function DialogueBubble({
     return () => clearInterval(typeInterval);
   }, [entry.content, typewriterEffect]);
 
+  // Memoize parsed content for performance
+  const parsedContent = useMemo(() => 
+    parseDialogueForItalics(displayedText), 
+    [displayedText]
+  );
+
   const getAccentClasses = () => {
     switch (accentColor) {
       case 'green': return 'border-success/40 bg-success/5';
@@ -75,7 +119,7 @@ export function DialogueBubble({
       )}
     >
       {isNPC ? (
-        // NPC dialogue
+        // NPC dialogue with italics support
         <div className={cn(
           "glass-panel-subtle rounded-xl p-4",
           "border-l-4",
@@ -88,7 +132,7 @@ export function DialogueBubble({
             {npcName}
           </div>
           <p className="text-foreground leading-relaxed font-narrative">
-            {displayedText}
+            {parsedContent}
             {isTyping && (
               <span className="inline-block w-0.5 h-4 ml-0.5 bg-primary animate-blink" />
             )}
@@ -100,8 +144,8 @@ export function DialogueBubble({
           <div className="text-xs text-primary/70 mb-1 uppercase tracking-wider">
             You
           </div>
-          <p className="text-foreground font-narrative">
-            {entry.content}
+          <p className="text-foreground font-narrative italic">
+            "{entry.content}"
           </p>
         </div>
       )}

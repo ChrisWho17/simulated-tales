@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { NPC, EmotionalState } from '@/types/game';
+import { NPC, EmotionalState, Relationship } from '@/types/game';
 import { EraId } from '@/game/eraSystem';
 import { EmotionType, emotionalStateToEmotion, getOrGeneratePortrait, PortraitConfig } from '@/game/portraitSystem';
 import { PortraitFrame } from './PortraitFrame';
 import { DialogueBubble } from './DialogueBubble';
 import { ResponseOptions, ResponseType } from './ResponseOptions';
 import { MoodIndicator } from './MoodIndicator';
+import { CharacterInfoSheet } from './CharacterInfoSheet';
 import { 
   MessageSquare, X, Loader2, ChevronRight
 } from 'lucide-react';
@@ -59,10 +60,19 @@ export function ConversationUI({
   const [currentEmotion, setCurrentEmotion] = useState<EmotionType>('neutral');
   const [isEntering, setIsEntering] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
+  const [showCharacterSheet, setShowCharacterSheet] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Get relationship
+  const relationship: Relationship = npc.relationships?.player || {
+    affection: 50,
+    trust: 50,
+    fear: 0,
+    respect: 50
+  };
+
   // Get relationship color
-  const getRelationshipColor = () => {
+  const getRelationshipColor = (): 'green' | 'yellow' | 'red' | 'pink' | 'cyan' => {
     const rel = npc.relationships?.player;
     if (!rel) return 'cyan'; // mysterious
     
@@ -118,6 +128,10 @@ export function ConversationUI({
     setTimeout(onEndConversation, 400);
   };
 
+  const handlePortraitClick = () => {
+    setShowCharacterSheet(true);
+  };
+
   const relationshipColor = getRelationshipColor();
 
   return (
@@ -139,7 +153,7 @@ export function ConversationUI({
           isExiting && "animate-scale-out"
         )}
       >
-        {/* Left side - Portrait */}
+        {/* Left side - Portrait (clickable for character sheet) */}
         <div 
           className={cn(
             "w-full md:w-80 shrink-0",
@@ -148,14 +162,20 @@ export function ConversationUI({
           )}
           style={{ animationDelay: '0.1s' }}
         >
-          <PortraitFrame
-            portrait={portrait}
-            isLoading={isLoadingPortrait}
-            relationshipColor={relationshipColor}
-            genre={genre}
-            npcName={npc.meta.name}
-            emotion={currentEmotion}
-          />
+          <div 
+            onClick={handlePortraitClick}
+            className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            title="Tap to view character details"
+          >
+            <PortraitFrame
+              portrait={portrait}
+              isLoading={isLoadingPortrait}
+              relationshipColor={relationshipColor}
+              genre={genre}
+              npcName={npc.meta.name}
+              emotion={currentEmotion}
+            />
+          </div>
           
           {/* NPC Info */}
           <div className="mt-4 text-center w-full">
@@ -257,6 +277,18 @@ export function ConversationUI({
           </div>
         </div>
       </div>
+
+      {/* Character Info Sheet Modal */}
+      {showCharacterSheet && (
+        <CharacterInfoSheet
+          npc={npc}
+          portrait={portrait}
+          relationship={relationship}
+          emotion={currentEmotion}
+          onClose={() => setShowCharacterSheet(false)}
+          relationshipColor={relationshipColor}
+        />
+      )}
     </div>
   );
 }
