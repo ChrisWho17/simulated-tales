@@ -47,6 +47,12 @@ import {
   CombatOutcome,
   initializeCombat,
 } from '@/game/combatSystem';
+import {
+  shouldTriggerHostileEncounter,
+  generateHostileEncounter,
+  HostileEncounter,
+  dangerousLocations,
+} from '@/game/genericNPCSystem';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
@@ -551,6 +557,23 @@ export function GameUI() {
     if (action.type === 'go') {
       // Check if going to a quest location
       const locationId = newState.player.currentLocation;
+      const timePeriod = getTimePeriod(newState.time.hour) as 'morning' | 'afternoon' | 'evening' | 'night';
+      
+      // Warn about dangerous locations
+      const dangerInfo = dangerousLocations[locationId];
+      if (dangerInfo) {
+        const isNight = timePeriod === 'night';
+        const isEvening = timePeriod === 'evening';
+        const dangerLevel = isNight ? 'very dangerous' : isEvening ? 'dangerous' : 'somewhat dangerous';
+        
+        events.push({
+          id: `danger_warning_${Date.now()}`,
+          type: 'system' as const,
+          content: `⚠️ *This area is ${dangerLevel}${isNight ? ' at night' : ''}. Stay alert for hostile encounters.*`,
+          timestamp: newState.time.tick,
+        });
+      }
+      
       Object.entries(questLog.quests).forEach(([questId, quest]) => {
         if (quest.status !== 'active') return;
         quest.objectives.forEach(obj => {
@@ -577,9 +600,6 @@ export function GameUI() {
           availableQuests: [...new Set([...prev.availableQuests, ...newQuests])],
         }));
       }
-      
-      // Generate ambient event
-      const timePeriod = getTimePeriod(newState.time.hour);
       const location = newState.locations[locationId];
       if (location) {
         const ambientEvent = generateAmbientEvent(
@@ -596,6 +616,52 @@ export function GameUI() {
             content: `\n*${ambientEvent.description}*${ambientEvent.interactionPrompt ? ` ${ambientEvent.interactionPrompt}` : ''}`,
             timestamp: newState.time.tick,
           });
+        }
+      }
+      
+      // Check for hostile encounter in dangerous locations
+      if (newState.lifeSim) {
+        const playerStats = {
+          health: newState.lifeSim.needs.physical.health,
+          energy: newState.lifeSim.needs.physical.energy,
+        };
+        
+        if (shouldTriggerHostileEncounter(locationId, timePeriod, playerStats)) {
+          const hostileEncounter = generateHostileEncounter(locationId, timePeriod);
+          
+          if (hostileEncounter) {
+            // Add hostile NPC to the game state
+            newState.npcs[hostileEncounter.npc.id] = hostileEncounter.npc;
+            
+            // Show encounter message
+            events.push({
+              id: `hostile_${Date.now()}`,
+              type: 'combat' as const,
+              content: `**⚠️ DANGER!**\n\n${hostileEncounter.initiativeMessage}\n\n*A hostile ${hostileEncounter.npc.meta.occupation} confronts you! Combat difficulty: ${hostileEncounter.difficultyRating}*`,
+              timestamp: newState.time.tick,
+            });
+            
+            // Auto-initiate combat
+            const encounter = initializeCombat(
+              newState.lifeSim,
+              hostileEncounter.npc,
+              locationId,
+              []
+            );
+            
+            // Modify encounter based on hostile settings
+            encounter.canFlee = hostileEncounter.canFlee;
+            if (!hostileEncounter.canFlee) {
+              encounter.maxFleeAttempts = 1;
+            }
+            
+            setActiveCombat(encounter);
+            setCombatNPC(hostileEncounter.npc);
+            
+            toast.error('You\'ve been ambushed!', { 
+              description: `A ${hostileEncounter.npc.meta.occupation} attacks you!` 
+            });
+          }
         }
       }
     }
