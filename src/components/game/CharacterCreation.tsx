@@ -105,6 +105,7 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
           basicInfo: character.basicInfo,
           background: character.background,
           personality: character.personality,
+          additionalFeaturesEnabled: adultContentEnabled,
         }),
       });
 
@@ -169,8 +170,8 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
               <Separator className="bg-border/30" />
               
               <div className="flex flex-col sm:flex-row gap-4 items-center">
-                {/* Portrait Preview */}
-                <div className="w-32 h-40 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                {/* Portrait Preview - Full Body */}
+                <div className="w-40 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
                   {portraitUrl ? (
                     <img 
                       src={portraitUrl} 
@@ -184,7 +185,7 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 
                 <div className="flex-1 space-y-3 text-center sm:text-left">
                   <p className="text-sm text-muted-foreground">
-                    Generate a unique AI portrait based on your character's appearance settings.
+                    Generate a unique full-body AI portrait based on your character's appearance settings.
                   </p>
                   <Button
                     type="button"
@@ -270,12 +271,12 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
               </div>
             </section>
 
-            {/* 18+ Content Toggle */}
+            {/* Additional Features Toggle */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-destructive">
-                  <Shield className="w-5 h-5" />
-                  <h2 className="text-lg font-semibold">18+ Content</h2>
+                <div className="flex items-center gap-2 text-accent">
+                  <Sparkles className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">Additional Features</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="adult-content" className="text-sm text-muted-foreground">
@@ -289,7 +290,7 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Enable additional body customization options. You must be 18+ to enable this feature.
+                Enable additional body customization options for more detailed character creation.
               </p>
             </section>
 
@@ -421,10 +422,10 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                   </div>
                 </div>
 
-                {/* 18+ Body Options */}
+                {/* Additional Features Body Options */}
                 {adultContentEnabled && character.basicInfo.gender && (
-                  <div className="space-y-4 p-4 rounded-lg border border-destructive/30 bg-destructive/5">
-                    <p className="text-sm font-medium text-destructive">Adult Body Options</p>
+                  <div className="space-y-4 p-4 rounded-lg border border-accent/30 bg-accent/5">
+                    <p className="text-sm font-medium text-accent">Additional Body Options</p>
                     
                     {/* Female-specific options */}
                     {character.basicInfo.gender === 'female' && (
