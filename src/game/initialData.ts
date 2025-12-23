@@ -403,7 +403,7 @@ export const initialLocations: Record<string, Location> = {
     id: 'town_square',
     name: 'Town Square',
     description: 'The heart of the town. A weathered fountain stands in the center, and cobblestone paths lead in all directions.',
-    connectedLocations: ['tavern_main', 'market', 'alley'],
+    connectedLocations: ['tavern_main', 'market', 'alley', 'university_district', 'mid_residential', 'decaying_sector'],
     npcsPresent: [],
     items: [],
     possibleEvents: ['town_crier', 'public_execution', 'traveling_merchant'],
