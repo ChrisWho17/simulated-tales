@@ -1461,3 +1461,116 @@
   height: 4px;
   border-radius: 0 0 4px 4px;
 }
+
+/* === KNOWLEDGE SYSTEM STYLES === */
+.stat-unknown .value,
+.mystery-text {
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 0.15em;
+}
+
+.stat-estimated .value,
+.estimated-text {
+  color: var(--accent-tertiary);
+  opacity: 0.85;
+}
+
+.name-unknown-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: var(--font-body);
+  font-weight: 400;
+}
+
+.familiarity-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.familiarity-bar .bar-track {
+  flex: 1;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.familiarity-bar .bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width var(--transition-slow);
+}
+
+.familiarity-value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent-secondary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* === WOUND SYSTEM STYLES === */
+.wound-tag {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  margin: 4px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: all var(--transition-normal);
+}
+
+.wound-tag:hover {
+  background: rgba(239, 68, 68, 0.15);
+  transform: translateY(-2px);
+}
+
+.wound-name {
+  font-weight: 600;
+  color: var(--danger-color);
+}
+
+.wound-location {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.wound-effects {
+  margin-top: 4px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-penalty {
+  font-size: 0.65rem;
+  color: var(--danger-color);
+  background: rgba(239, 68, 68, 0.15);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.wound-tag.healing {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.wound-healing-bar {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.wound-healing-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #22c55e);
+  border-radius: 2px;
+  transition: width var(--transition-slow);
+}
