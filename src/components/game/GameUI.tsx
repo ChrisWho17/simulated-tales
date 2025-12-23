@@ -20,6 +20,8 @@ import {
   formatMemoriesForAI,
   updateImpression,
   decayMemories,
+  processNPCGossip,
+  generateGossipEvents,
 } from '@/game/memorySystem';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
@@ -49,6 +51,16 @@ interface ConversationSession {
   importantTopics: string[]; // Topics flagged as important for stronger memories
 }
 
+// Dialogue indicators from AI response
+interface DialogueIndicators {
+  memoryReferenced: boolean;
+  memoryDetails?: string;
+  traumaTriggered: boolean;
+  contradictionDetected: boolean;
+  contradictionDetails?: string;
+  emotionalState?: string;
+}
+
 // Generate AI dialogue for NPCs with memory context and conversation history
 async function generateAIDialogue(
   npc: NPC, 
@@ -57,8 +69,9 @@ async function generateAIDialogue(
   timeOfDay: string, 
   isFirst: boolean,
   memoryStore?: NPCMemoryStore,
-  conversationHistory?: Array<{ playerSaid: string; npcResponse: string }>
-): Promise<{ dialogue: string; importantTopics: string[] } | null> {
+  conversationHistory?: Array<{ playerSaid: string; npcResponse: string }>,
+  isFarewell?: boolean
+): Promise<{ dialogue: string; importantTopics: string[]; indicators?: DialogueIndicators } | null> {
   try {
     // Build memory context for the NPC
     let memoryContext = '';
@@ -128,18 +141,20 @@ async function generateAIDialogue(
         timeOfDay,
         isFirstInteraction: isFirst,
         conversationHistory: conversationHistory || [],
+        isFarewell: isFarewell || false,
       }),
     });
     
     if (!response.ok) {
       const data = await response.json();
-      return data.fallbackDialogue ? { dialogue: data.fallbackDialogue, importantTopics: [] } : null;
+      return data.fallbackDialogue ? { dialogue: data.fallbackDialogue, importantTopics: [], indicators: undefined } : null;
     }
     
     const data = await response.json();
     return { 
       dialogue: data.dialogue, 
-      importantTopics: data.importantTopics || [] 
+      importantTopics: data.importantTopics || [],
+      indicators: data.indicators,
     };
   } catch (error) {
     console.error('Error generating AI dialogue:', error);
@@ -157,6 +172,35 @@ function detectImportantTopics(playerSaid: string, npcResponse: string): string[
   
   const combined = `${playerSaid} ${npcResponse}`.toLowerCase();
   return importantKeywords.filter(keyword => combined.includes(keyword));
+}
+
+// Format dialogue with visual indicators
+function formatDialogueWithIndicators(
+  npcName: string, 
+  dialogue: string, 
+  indicators?: DialogueIndicators
+): string {
+  let indicatorBadges = '';
+  
+  if (indicators) {
+    const badges: string[] = [];
+    
+    if (indicators.memoryReferenced) {
+      badges.push('🧠 *Referencing memory*');
+    }
+    if (indicators.traumaTriggered) {
+      badges.push('⚠️ *Trauma triggered*');
+    }
+    if (indicators.contradictionDetected) {
+      badges.push('❓ *Suspicious of contradiction*');
+    }
+    
+    if (badges.length > 0) {
+      indicatorBadges = `\n${badges.join(' | ')}`;
+    }
+  }
+  
+  return `**${npcName}**: "${dialogue}"${indicatorBadges}`;
 }
 
 export function GameUI() {
@@ -413,25 +457,26 @@ export function GameUI() {
           };
           setConversationSession(newSession);
           
-          // Replace the last dialogue event with AI-generated one
+          // Replace the last dialogue event with AI-generated one with indicators
+          const dialogueContent = formatDialogueWithIndicators(targetNPC.meta.name, result.dialogue, result.indicators);
           const lastDialogueIdx = events.findIndex(e => e.type === 'dialogue' && e.involvedNPCs?.includes(targetNPC.id));
           if (lastDialogueIdx >= 0) {
             events[lastDialogueIdx] = {
               ...events[lastDialogueIdx],
-              content: `**${targetNPC.meta.name}**: "${result.dialogue}"\n\n*[Conversation started - use "say <message>" to continue talking]*`,
+              content: `${dialogueContent}\n\n*[Conversation started - use "say <message>" to continue, or "bye" to end]*`,
             };
           } else {
             events.push({
               id: `dialogue_${Date.now()}`,
               type: 'dialogue' as const,
-              content: `**${targetNPC.meta.name}**: "${result.dialogue}"\n\n*[Conversation started - use "say <message>" to continue talking]*`,
+              content: `${dialogueContent}\n\n*[Conversation started - use "say <message>" to continue, or "bye" to end]*`,
               timestamp: newState.time.tick,
               involvedNPCs: [targetNPC.id],
             });
           }
           
           toast.info(`Talking to ${targetNPC.meta.name}`, { 
-            description: 'Use "say <message>" to continue the conversation' 
+            description: 'Use "say <message>" to continue, or "bye" to end' 
           });
         }
       }
@@ -508,10 +553,12 @@ export function GameUI() {
               timestamp: newState.time.tick,
             });
             
+            // Format dialogue with visual indicators
+            const dialogueContent = formatDialogueWithIndicators(targetNPC.meta.name, result.dialogue, result.indicators);
             events.push({
               id: `npc_reply_${Date.now()}`,
               type: 'dialogue' as const,
-              content: `**${targetNPC.meta.name}**: "${result.dialogue}"`,
+              content: dialogueContent,
               timestamp: newState.time.tick,
               involvedNPCs: [targetNPC.id],
             });
@@ -557,7 +604,86 @@ export function GameUI() {
       }
     }
     
-    // End conversation when leaving or doing other actions
+    // Handle end_conversation command (bye, goodbye, farewell, etc.)
+    if (action.type === 'end_conversation' && conversationSession) {
+      const targetNPC = newState.npcs[conversationSession.npcId];
+      
+      if (targetNPC && targetNPC.currentLocation === newState.player.currentLocation) {
+        const timePeriod = getTimePeriod(newState.time.hour);
+        const location = newState.locations[newState.player.currentLocation]?.name || 'unknown';
+        const memoryStore = npcMemories[targetNPC.id] || initializeMemoryStore();
+        
+        // Generate a farewell response
+        const result = await generateAIDialogue(
+          targetNPC, 
+          'goodbye', 
+          location, 
+          timePeriod, 
+          false,
+          memoryStore,
+          conversationSession.exchanges,
+          true // isFarewell
+        );
+        
+        if (result) {
+          events.push({
+            id: `player_bye_${Date.now()}`,
+            type: 'dialogue' as const,
+            content: `**You**: "Goodbye."`,
+            timestamp: newState.time.tick,
+          });
+          
+          const dialogueContent = formatDialogueWithIndicators(targetNPC.meta.name, result.dialogue, result.indicators);
+          events.push({
+            id: `npc_farewell_${Date.now()}`,
+            type: 'dialogue' as const,
+            content: dialogueContent,
+            timestamp: newState.time.tick,
+            involvedNPCs: [targetNPC.id],
+          });
+        }
+        
+        // Create a summary memory of the entire conversation
+        const conversationLength = conversationSession.exchanges.length;
+        const topics = conversationSession.importantTopics;
+        const intensity = Math.min(25 + conversationLength * 5 + topics.length * 10, 75);
+        
+        const updatedMemory = createMemory(memoryStore, {
+          type: 'experienced',
+          summary: topics.length > 0 
+            ? `Had a ${conversationLength}-exchange conversation about ${topics.slice(0, 3).join(', ')}. Ended politely.`
+            : `Had a ${conversationLength}-exchange conversation with the player. Ended politely.`,
+          details: `Full conversation: ${conversationSession.exchanges.map(e => 
+            `Player: "${e.playerSaid}" - Me: "${e.npcResponse.substring(0, 50)}..."`
+          ).join(' | ')}`,
+          entities: ['player'],
+          location: gameState.player.currentLocation,
+          emotionalIntensity: intensity,
+          sentiment: topics.some(t => ['love', 'help', 'trust'].includes(t)) ? 'positive' : 
+                     topics.some(t => ['hate', 'kill', 'betray'].includes(t)) ? 'negative' : 'neutral',
+          emotionTags: [...topics, 'polite_farewell'],
+          source: 'firsthand',
+          sharable: true,
+        }, newState.time.tick);
+        
+        setNpcMemories(prev => ({
+          ...prev,
+          [targetNPC.id]: updatedMemory,
+        }));
+      }
+      
+      setConversationSession(null);
+      toast.info('Conversation ended gracefully');
+    } else if (action.type === 'end_conversation' && !conversationSession) {
+      events.push({
+        id: `err_${Date.now()}`,
+        type: 'system' as const,
+        content: `*You're not in a conversation.*`,
+        timestamp: newState.time.tick,
+      });
+    }
+    
+    // End conversation when leaving (existing behavior)
     if (conversationSession && action.type === 'go') {
       const targetNPC = newState.npcs[conversationSession.npcId];
       if (targetNPC) {
@@ -571,8 +697,8 @@ export function GameUI() {
         const updatedMemory = createMemory(memoryStore, {
           type: 'experienced',
           summary: topics.length > 0 
-            ? `Had a ${conversationLength}-exchange conversation about ${topics.slice(0, 3).join(', ')}`
-            : `Had a ${conversationLength}-exchange conversation with the player`,
+            ? `Had a ${conversationLength}-exchange conversation about ${topics.slice(0, 3).join(', ')}. Player left abruptly.`
+            : `Had a ${conversationLength}-exchange conversation with the player. Player left abruptly.`,
           details: `Full conversation: ${conversationSession.exchanges.map(e => 
             `Player: "${e.playerSaid}" - Me: "${e.npcResponse.substring(0, 50)}..."`
           ).join(' | ')}`,
@@ -581,7 +707,7 @@ export function GameUI() {
           emotionalIntensity: intensity,
           sentiment: topics.some(t => ['love', 'help', 'trust'].includes(t)) ? 'positive' : 
                      topics.some(t => ['hate', 'kill', 'betray'].includes(t)) ? 'negative' : 'neutral',
-          emotionTags: topics,
+          emotionTags: [...topics, 'abrupt_departure'],
           source: 'firsthand',
           sharable: true,
         }, newState.time.tick);
@@ -593,7 +719,31 @@ export function GameUI() {
       }
       
       setConversationSession(null);
-      toast.info(`Conversation ended`);
+      toast.info(`Conversation ended (you left)`);
+    }
+    
+    // Process NPC-to-NPC gossip when looking around or entering a location
+    if (action.type === 'go' || action.type === 'look') {
+      const npcsHere = Object.values(newState.npcs)
+        .filter(npc => npc.currentLocation === newState.player.currentLocation && !(npc as any).isGeneric)
+        .map(npc => ({ id: npc.id, name: npc.meta.name }));
+      
+      if (npcsHere.length >= 2) {
+        // Process gossip between NPCs
+        const updatedMemories = processNPCGossip(npcMemories, npcsHere, newState.time.tick);
+        setNpcMemories(updatedMemories);
+        
+        // Generate visible gossip events
+        const gossipEvents = generateGossipEvents(npcMemories, npcsHere, newState.time.tick);
+        gossipEvents.forEach(gossip => {
+          events.push({
+            id: `gossip_${Date.now()}_${Math.random()}`,
+            type: 'observation' as const,
+            content: `*You notice **${gossip.npc1}** and **${gossip.npc2}** whispering to each other. You catch fragments: "...${gossip.topic}..."*`,
+            timestamp: newState.time.tick,
+          });
+        });
+      }
     }
     
     const deathState = checkPlayerDeath(newState);

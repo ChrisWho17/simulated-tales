@@ -257,7 +257,7 @@ export interface GameState {
   debugMode?: boolean;
 }
 
-export type ActionType = 'look' | 'talk' | 'say' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help' | 'eat' | 'drink' | 'sleep' | 'bathe' | 'status';
+export type ActionType = 'look' | 'talk' | 'say' | 'end_conversation' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help' | 'eat' | 'drink' | 'sleep' | 'bathe' | 'status';
 
 export interface Action {
   type: ActionType;

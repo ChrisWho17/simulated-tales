@@ -31,6 +31,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -292,6 +293,25 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
               <p className="text-xs text-muted-foreground">
                 Enable additional body customization options for more detailed character creation.
               </p>
+              
+              {/* Custom AI Portrait Description */}
+              <div className="space-y-2 p-4 rounded-lg border border-primary/30 bg-primary/5">
+                <Label htmlFor="custom-description" className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4 text-primary" />
+                  Custom Portrait Details
+                </Label>
+                <Textarea
+                  id="custom-description"
+                  placeholder="Add specific details for your AI portrait: facial features, scars, tattoos, accessories, clothing style, poses, expressions, unique characteristics..."
+                  value={character.appearance.customDescription || ''}
+                  onChange={(e) => updateAppearance('customDescription', e.target.value)}
+                  className="bg-input/50 min-h-[80px] resize-none"
+                  maxLength={500}
+                />
+                <p className="text-xs text-muted-foreground">
+                  These details will be combined with your character settings to generate a more precise portrait. ({character.appearance.customDescription?.length || 0}/500)
+                </p>
+              </div>
             </section>
 
             {/* Appearance */}

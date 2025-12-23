@@ -29,6 +29,8 @@ export interface CharacterAppearance {
   curviness?: CurvinessOption;
   muscles?: MuscleOption;
   bodyHair?: BodyHairOption;
+  // Custom AI portrait description
+  customDescription?: string;
 }
 
 export type SpawnPointType = 'college' | 'home' | 'homeless';
