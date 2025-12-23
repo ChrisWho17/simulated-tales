@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { GameState } from '@/types/game';
 import { formatTime, getNPCsAtLocation } from '@/game/gameEngine';
 import { 
@@ -26,23 +27,25 @@ interface SidebarProps {
   gameState: GameState;
 }
 
-function StatBar({ 
-  icon: Icon, 
-  label, 
-  value, 
-  max = 100, 
-  color 
-}: { 
+interface StatBarProps {
   icon: React.ElementType; 
   label: string; 
   value: number; 
   max?: number;
   color: string;
-}) {
+}
+
+const StatBar = forwardRef<HTMLDivElement, StatBarProps>(({ 
+  icon: Icon, 
+  label, 
+  value, 
+  max = 100, 
+  color 
+}, ref) => {
   const percentage = (value / max) * 100;
   
   return (
-    <div className="space-y-1">
+    <div ref={ref} className="space-y-1">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Icon className="h-3.5 w-3.5" />
@@ -58,7 +61,8 @@ function StatBar({
       </div>
     </div>
   );
-}
+});
+StatBar.displayName = 'StatBar';
 
 export function Sidebar({ gameState }: SidebarProps) {
   const [npcsOpen, setNpcsOpen] = useState(true);

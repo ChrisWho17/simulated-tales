@@ -212,6 +212,15 @@ export interface GameEvent {
   involvedItems?: string[];
 }
 
+export interface WorldEventLog {
+  id: string;
+  tick: number;
+  type: string;
+  description: string;
+  involvedEntities: string[];
+  location: string;
+}
+
 export interface GameState {
   time: GameTime;
   player: Player;
@@ -220,6 +229,7 @@ export interface GameState {
   events: GameEvent[];
   flags: Record<string, boolean>;
   eventQueue: GameEvent[];
+  worldEvents: WorldEventLog[]; // Off-screen events that happened
 }
 
 export type ActionType = 'look' | 'talk' | 'go' | 'take' | 'use' | 'wait' | 'inventory' | 'help';
