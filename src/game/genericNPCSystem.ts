@@ -389,3 +389,221 @@ export function generateRandomEncounter(locationId: string): RandomEncounter | n
   
   return { ...randomFrom(templates), id: `encounter_${Date.now()}` };
 }
+
+// ============= HOSTILE NPC SYSTEM =============
+
+// Locations considered dangerous, especially at night
+export const dangerousLocations: Record<string, {
+  dangerLevel: number; // 0-100
+  nightMultiplier: number; // How much more dangerous at night
+  hostileTypes: string[];
+  combatChance: number; // Base chance of combat encounter
+}> = {
+  alley: {
+    dangerLevel: 70,
+    nightMultiplier: 2.0,
+    hostileTypes: ['Mugger', 'Gang Member', 'Desperate Thief', 'Drug Addict'],
+    combatChance: 0.4,
+  },
+  decaying_sector: {
+    dangerLevel: 60,
+    nightMultiplier: 1.8,
+    hostileTypes: ['Gang Member', 'Desperate Criminal', 'Violent Vagrant', 'Thug'],
+    combatChance: 0.3,
+  },
+  abandoned_warehouse: {
+    dangerLevel: 80,
+    nightMultiplier: 1.5,
+    hostileTypes: ['Squatter', 'Gang Enforcer', 'Drug Dealer Guard', 'Hired Muscle'],
+    combatChance: 0.5,
+  },
+  docks: {
+    dangerLevel: 50,
+    nightMultiplier: 2.2,
+    hostileTypes: ['Smuggler', 'Drunken Sailor', 'Dock Thug', 'Gang Lookout'],
+    combatChance: 0.25,
+  },
+};
+
+// Hostile NPC appearance descriptors
+const hostileAppearance = {
+  builds: ['muscular', 'wiry', 'heavyset', 'scarred'],
+  clothing: ['dark hoodie', 'leather jacket', 'worn street clothes', 'gang colors'],
+  features: ['cold eyes', 'broken nose', 'facial scars', 'menacing tattoos', 'hardened expression'],
+  weapons: ['switchblade', 'brass knuckles', 'pipe', 'broken bottle', 'knife'],
+};
+
+export interface HostileEncounter {
+  npc: NPC;
+  initiativeMessage: string;
+  canFlee: boolean;
+  canNegotiate: boolean;
+  difficultyRating: 'easy' | 'moderate' | 'hard' | 'deadly';
+}
+
+export function generateHostileNPC(
+  locationId: string,
+  timePeriod: 'morning' | 'afternoon' | 'evening' | 'night'
+): NPC | null {
+  const dangerInfo = dangerousLocations[locationId];
+  if (!dangerInfo) return null;
+  
+  const appearance = generateAppearance();
+  const hostileType = randomFrom(dangerInfo.hostileTypes);
+  const name = generateGenericNPCName(appearance.gender);
+  const build = randomFrom(hostileAppearance.builds);
+  const clothing = randomFrom(hostileAppearance.clothing);
+  const feature = randomFrom(hostileAppearance.features);
+  const weapon = randomFrom(hostileAppearance.weapons);
+  
+  const age = randomInRange(18, 45);
+  const description = `A ${build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} with ${feature}, wearing ${clothing}. They carry what looks like a ${weapon}.`;
+  
+  const id = `npc_hostile_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  
+  // Hostile NPCs have aggressive traits
+  const hostileTraits: Trait[] = ['aggressive', 'cunning', 'greedy'];
+  
+  const npc: NPC = {
+    id,
+    identity: {
+      selfStory: `A ${hostileType.toLowerCase()} who takes what they want`,
+      identityThreat: 'Being seen as weak or losing face',
+      restorationBehavior: 'Violence or intimidation',
+    },
+    needs: [
+      { type: 'survival', satisfaction: 30, priority: 1, description: 'Get money by any means' },
+      { type: 'status', satisfaction: 40, priority: 2, description: 'Maintain street cred' },
+    ],
+    threatModel: {
+      fears: ['police', 'stronger opponents', 'witnesses'],
+      detectionTriggers: ['easy target', 'visible wealth'],
+      defaultDefense: 'confrontation',
+    },
+    socialRanking: {
+      player: { trust: -50, utility: 50, fear: 0, intimacy: 0 },
+    },
+    emotionalState: {
+      current: 'vigilant',
+      baseline: 'angry',
+      scarEmotion: 'bitter',
+      scarTriggers: [],
+    },
+    knownFacts: [],
+    meta: {
+      name: `${hostileType} (${name.split(' ')[0]})`,
+      age,
+      occupation: hostileType,
+      homeLocation: locationId,
+      description,
+      stats: { 
+        health: randomInRange(60, 100), 
+        energy: randomInRange(50, 80), 
+        mood: randomInRange(20, 40), 
+        wealth: randomInRange(5, 50) 
+      },
+      traits: hostileTraits,
+      schedule: {},
+      desires: ['get money', 'show dominance', 'survive'],
+      secrets: [],
+    },
+    memory: [],
+    relationships: {
+      player: { affection: -30, trust: -50, fear: 0, respect: 0 },
+    },
+    currentLocation: locationId,
+    currentActivity: timePeriod === 'night' ? 'lurking in shadows' : 'hanging around menacingly',
+    conflictStyle: 'DOMINANT' as ConflictStyle,
+    escalationState: 'OPEN_HOSTILITY' as EscalationState,
+    stressLevel: randomInRange(40, 70),
+    isGeneric: true,
+    isHostile: true,
+    appearance,
+  } as NPC & { isGeneric: boolean; isHostile: boolean; appearance: GeneratedAppearance };
+  
+  return npc;
+}
+
+export function shouldTriggerHostileEncounter(
+  locationId: string,
+  timePeriod: 'morning' | 'afternoon' | 'evening' | 'night',
+  playerStats?: { health: number; energy: number }
+): boolean {
+  const dangerInfo = dangerousLocations[locationId];
+  if (!dangerInfo) return false;
+  
+  // Base chance
+  let chance = dangerInfo.combatChance;
+  
+  // Night multiplier
+  if (timePeriod === 'night') {
+    chance *= dangerInfo.nightMultiplier;
+  } else if (timePeriod === 'evening') {
+    chance *= 1.3;
+  } else if (timePeriod === 'morning') {
+    chance *= 0.5; // Safer in daylight
+  }
+  
+  // Low player stats make them look like easier targets
+  if (playerStats) {
+    if (playerStats.health < 50) chance *= 1.3;
+    if (playerStats.energy < 30) chance *= 1.2;
+  }
+  
+  // Cap at 80%
+  chance = Math.min(0.8, chance);
+  
+  return Math.random() < chance;
+}
+
+export function generateHostileEncounter(
+  locationId: string,
+  timePeriod: 'morning' | 'afternoon' | 'evening' | 'night'
+): HostileEncounter | null {
+  const hostileNPC = generateHostileNPC(locationId, timePeriod);
+  if (!hostileNPC) return null;
+  
+  const dangerInfo = dangerousLocations[locationId];
+  
+  // Generate initiative message based on time and location
+  const nightMessages = [
+    `A shadowy figure emerges from the darkness, blocking your path.`,
+    `"Hey, you! Stop right there!" A threatening voice calls out from the shadows.`,
+    `You hear footsteps behind you. Before you can react, someone is in front of you.`,
+    `"Nice night for a walk, huh?" The voice drips with malice as a figure steps forward.`,
+  ];
+  
+  const dayMessages = [
+    `Someone approaches you with hostile intent, eyeing your belongings.`,
+    `"You don't belong here." A figure moves to intercept you.`,
+    `A rough-looking individual steps into your path, sizing you up.`,
+  ];
+  
+  const initiativeMessage = timePeriod === 'night' 
+    ? randomFrom(nightMessages)
+    : randomFrom(dayMessages);
+  
+  // Determine difficulty based on danger level
+  let difficultyRating: 'easy' | 'moderate' | 'hard' | 'deadly';
+  if (dangerInfo.dangerLevel >= 75) {
+    difficultyRating = 'hard';
+  } else if (dangerInfo.dangerLevel >= 50) {
+    difficultyRating = 'moderate';
+  } else {
+    difficultyRating = 'easy';
+  }
+  
+  // Night encounters are harder to flee from
+  const canFlee = timePeriod !== 'night' || Math.random() > 0.3;
+  
+  // Can negotiate in daytime or if not too aggressive
+  const canNegotiate = timePeriod !== 'night' && Math.random() > 0.4;
+  
+  return {
+    npc: hostileNPC,
+    initiativeMessage,
+    canFlee,
+    canNegotiate,
+    difficultyRating,
+  };
+}
