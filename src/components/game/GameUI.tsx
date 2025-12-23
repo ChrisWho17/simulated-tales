@@ -79,12 +79,25 @@ export function GameUI() {
     const location = newGameState.locations[newGameState.player.currentLocation];
     const stats = calculateSimulationStats(newGameState);
     
-    setDisplayEvents([{
-      id: 'evt_intro',
-      type: 'observation',
-      content: `${introNarrative}\n\n---\n\nYou find yourself in **${location.name}**.\n\n${location.description}\n\n*Type "look" to examine your surroundings, or "help" for available commands.*\n\n*[Living World Engine active: ${stats.totalNPCs} NPCs, ${stats.totalRelationships} relationships tracked]*`,
-      timestamp: 0,
-    }]);
+    // Safety check - if spawn location doesn't exist, fallback to town_square
+    if (!location) {
+      console.warn(`Spawn location ${newGameState.player.currentLocation} not found, falling back to town_square`);
+      newGameState.player.currentLocation = 'town_square';
+      const fallbackLocation = newGameState.locations['town_square'];
+      setDisplayEvents([{
+        id: 'evt_intro',
+        type: 'observation',
+        content: `${introNarrative}\n\n---\n\nYou find yourself in **${fallbackLocation.name}**.\n\n${fallbackLocation.description}\n\n*Type "look" to examine your surroundings, or "help" for available commands.*\n\n*[Living World Engine active: ${stats.totalNPCs} NPCs, ${stats.totalRelationships} relationships tracked]*`,
+        timestamp: 0,
+      }]);
+    } else {
+      setDisplayEvents([{
+        id: 'evt_intro',
+        type: 'observation',
+        content: `${introNarrative}\n\n---\n\nYou find yourself in **${location.name}**.\n\n${location.description}\n\n*Type "look" to examine your surroundings, or "help" for available commands.*\n\n*[Living World Engine active: ${stats.totalNPCs} NPCs, ${stats.totalRelationships} relationships tracked]*`,
+        timestamp: 0,
+      }]);
+    }
     
     setShowCharacterCreation(false);
     toast.success(`Welcome, ${character.basicInfo.name}!`);
@@ -93,6 +106,10 @@ export function GameUI() {
   useEffect(() => {
     if (displayEvents.length === 0 && !showCharacterCreation) {
       const location = gameState.locations[gameState.player.currentLocation];
+      if (!location) {
+        console.warn(`Current location ${gameState.player.currentLocation} not found`);
+        return;
+      }
       const stats = calculateSimulationStats(gameState);
       
       setDisplayEvents([{

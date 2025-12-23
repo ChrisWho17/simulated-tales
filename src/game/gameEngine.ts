@@ -441,10 +441,15 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       const currentLoc = getCurrentLocation(newState);
       const targetName = action.target.toLowerCase();
       
-      const targetLocId = currentLoc.connectedLocations.find(id => {
-        const loc = newState.locations[id];
-        return loc && loc.name.toLowerCase().includes(targetName);
-      });
+      // Check for exact ID match first (for map panel clicks), then by name
+      let targetLocId = currentLoc.connectedLocations.find(id => id === action.target);
+      
+      if (!targetLocId) {
+        targetLocId = currentLoc.connectedLocations.find(id => {
+          const loc = newState.locations[id];
+          return loc && loc.name.toLowerCase().includes(targetName);
+        });
+      }
       
       if (!targetLocId) {
         events.push({
