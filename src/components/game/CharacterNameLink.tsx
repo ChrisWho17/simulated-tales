@@ -1,22 +1,47 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NPC } from '@/types/game';
 import { CharacterProfileModal } from './CharacterProfileModal';
 import { cn } from '@/lib/utils';
+import { 
+  PlayerKnowledgeStore, 
+  getOrCreateKnowledge, 
+  getDisplayName,
+  NPCKnowledgeEntry
+} from '@/lib/knowledgeSystem';
 
 interface CharacterNameLinkProps {
   npc: NPC;
   className?: string;
   onStartConversation?: (npc: NPC) => void;
   playerLocation?: string;
+  knowledgeStore?: PlayerKnowledgeStore;
 }
 
 export function CharacterNameLink({ 
   npc, 
   className,
   onStartConversation,
-  playerLocation
+  playerLocation,
+  knowledgeStore
 }: CharacterNameLinkProps) {
   const [showProfile, setShowProfile] = useState(false);
+
+  // Get knowledge entry for this NPC
+  const knowledge = useMemo((): NPCKnowledgeEntry | undefined => {
+    if (!knowledgeStore) return undefined;
+    return getOrCreateKnowledge(knowledgeStore, npc);
+  }, [knowledgeStore, npc]);
+
+  // Get display name based on knowledge
+  const displayName = useMemo(() => {
+    if (!knowledge) {
+      return npc.meta.name; // Fallback to real name if no knowledge system
+    }
+    return getDisplayName(knowledge, npc);
+  }, [knowledge, npc]);
+
+  // Check if name is known for styling
+  const isNameKnown = knowledge?.knowsName ?? true;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,14 +59,18 @@ export function CharacterNameLink({
   return (
     <>
       <span
-        className={cn('character-name-link', className)}
+        className={cn(
+          'character-name-link',
+          !isNameKnown && 'character-name-unknown',
+          className
+        )}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         role="button"
         tabIndex={0}
-        aria-label={`View ${npc.meta.name}'s profile`}
+        aria-label={isNameKnown ? `View ${npc.meta.name}'s profile` : `View unknown character's profile`}
       >
-        {npc.meta.name}
+        {displayName}
       </span>
 
       {showProfile && (
@@ -50,6 +79,7 @@ export function CharacterNameLink({
           onClose={() => setShowProfile(false)}
           onStartConversation={onStartConversation}
           playerLocation={playerLocation}
+          knowledge={knowledge}
         />
       )}
     </>
@@ -62,13 +92,15 @@ interface ParsedTextProps {
   npcs: NPC[];
   onStartConversation?: (npc: NPC) => void;
   playerLocation?: string;
+  knowledgeStore?: PlayerKnowledgeStore;
 }
 
 export function ParsedTextWithCharacterLinks({ 
   text, 
   npcs, 
   onStartConversation,
-  playerLocation 
+  playerLocation,
+  knowledgeStore
 }: ParsedTextProps) {
   // Sort by name length (longest first) to avoid partial matches
   const sortedNpcs = [...npcs].sort(
@@ -108,6 +140,7 @@ export function ParsedTextWithCharacterLinks({
           npc={matchedNpc}
           onStartConversation={onStartConversation}
           playerLocation={playerLocation}
+          knowledgeStore={knowledgeStore}
         />
       );
     } else {
