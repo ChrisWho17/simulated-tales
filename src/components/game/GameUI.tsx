@@ -11,6 +11,16 @@ import {
 } from '@/game/gameEngine';
 import { createLifeSimFromCharacter, generateCharacterIntroNarrative, getSpawnLocationId } from '@/game/characterIntegration';
 import { generateGenericNPC, getSpawnCount, generateRandomEncounter } from '@/game/genericNPCSystem';
+import { 
+  NPCMemoryStore, 
+  initializeMemoryStore, 
+  createMemory, 
+  recallMemories, 
+  triggerMemory,
+  formatMemoriesForAI,
+  updateImpression,
+  decayMemories,
+} from '@/game/memorySystem';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
@@ -24,10 +34,58 @@ import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
+const MEMORY_STORE_KEY = 'living-world-npc-memories';
 
-// Generate AI dialogue for NPCs
-async function generateAIDialogue(npc: NPC, playerInput: string, location: string, timeOfDay: string, isFirst: boolean): Promise<string | null> {
+// Generate AI dialogue for NPCs with memory context
+async function generateAIDialogue(
+  npc: NPC, 
+  playerInput: string, 
+  location: string, 
+  timeOfDay: string, 
+  isFirst: boolean,
+  memoryStore?: NPCMemoryStore
+): Promise<string | null> {
   try {
+    // Build memory context for the NPC
+    let memoryContext = '';
+    let impression = undefined;
+    let activeTrauma = false;
+    let recentMemories: string[] = [];
+    let patterns: string[] = [];
+    
+    if (memoryStore) {
+      memoryContext = formatMemoriesForAI(memoryStore, 'player', 8);
+      
+      const playerImpression = memoryStore.impressions['player'];
+      if (playerImpression) {
+        impression = {
+          overallSentiment: playerImpression.overallSentiment,
+          trustLevel: playerImpression.trustLevel,
+          traits: playerImpression.traits,
+        };
+      }
+      
+      // Check for trauma triggers
+      const traumaResult = triggerMemory(memoryStore, { 
+        entities: ['player'], 
+        location,
+        keywords: playerInput.split(' ').filter(w => w.length > 3)
+      }, Date.now());
+      activeTrauma = traumaResult.traumaTriggered;
+      
+      // Get recent relevant memories
+      const { memories } = recallMemories(memoryStore, {
+        entities: ['player'],
+        location,
+      }, 5, Date.now());
+      recentMemories = memories.map(m => m.summary);
+      
+      // Get patterns
+      patterns = memoryStore.patterns
+        .filter(p => p.relatedEntities.some(e => e.toLowerCase().includes('player')))
+        .map(p => `${p.pattern} (${p.confidence}% confident)`);
+    }
+    
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-npc-dialogue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,6 +103,11 @@ async function generateAIDialogue(npc: NPC, playerInput: string, location: strin
           isGeneric: (npc as any).isGeneric || false,
           appearance: (npc as any).appearance,
           knownFacts: npc.knownFacts?.map(f => f.fact),
+          memoryContext,
+          impression,
+          activeTrauma,
+          recentMemories,
+          patterns,
         },
         playerInput,
         location,
@@ -76,6 +139,19 @@ export function GameUI() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   
+  // NPC Memory stores - persisted per NPC
+  const [npcMemories, setNpcMemories] = useState<Record<string, NPCMemoryStore>>(() => {
+    const saved = localStorage.getItem(MEMORY_STORE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to load NPC memories:', e);
+      }
+    }
+    return {};
+  });
+  
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -91,6 +167,11 @@ export function GameUI() {
   
   const [displayEvents, setDisplayEvents] = useState<GameEvent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Save memories when they change
+  useEffect(() => {
+    localStorage.setItem(MEMORY_STORE_KEY, JSON.stringify(npcMemories));
+  }, [npcMemories]);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
@@ -268,7 +349,7 @@ export function GameUI() {
       }
     }
     
-    // Handle talk command with AI dialogue
+    // Handle talk command with AI dialogue and memory
     if (action.type === 'talk' && action.target) {
       const targetName = action.target.toLowerCase();
       const npcsHere = Object.values(newState.npcs).filter(npc => npc.currentLocation === newState.player.currentLocation);
@@ -279,7 +360,10 @@ export function GameUI() {
         const location = newState.locations[newState.player.currentLocation]?.name || 'unknown';
         const isFirst = !targetNPC.memory.some(m => m.involvedEntities.includes('player'));
         
-        const aiDialogue = await generateAIDialogue(targetNPC, action.target, location, timePeriod, isFirst);
+        // Get or create memory store for this NPC
+        const memoryStore = npcMemories[targetNPC.id] || initializeMemoryStore();
+        
+        const aiDialogue = await generateAIDialogue(targetNPC, action.target, location, timePeriod, isFirst, memoryStore);
         
         if (aiDialogue) {
           // Replace the last dialogue event with AI-generated one
@@ -290,6 +374,28 @@ export function GameUI() {
               content: `**${targetNPC.meta.name}**: "${aiDialogue}"`,
             };
           }
+          
+          // Create a memory of this conversation
+          const updatedMemory = createMemory(memoryStore, {
+            type: 'experienced',
+            summary: `Had a conversation with the player`,
+            details: `Player said: "${action.target}". I responded: "${aiDialogue.substring(0, 100)}..."`,
+            entities: ['player'],
+            location: newState.player.currentLocation,
+            emotionalIntensity: 20,
+            sentiment: 'neutral',
+            emotionTags: [],
+            source: 'firsthand',
+            sharable: true,
+          }, newState.time.tick);
+          
+          // Update memories with decay
+          const decayedMemory = decayMemories(updatedMemory, 1);
+          
+          setNpcMemories(prev => ({
+            ...prev,
+            [targetNPC.id]: decayedMemory,
+          }));
         }
       }
     }
@@ -327,7 +433,7 @@ export function GameUI() {
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState, generateNPCPortrait]);
+  }, [gameState, generateNPCPortrait, npcMemories]);
   
   const handleSave = useCallback(() => {
     try {
