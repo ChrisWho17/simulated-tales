@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllustration';
 import { AdventureCreator } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
@@ -85,6 +86,9 @@ export function AdventureGame() {
   const [cheatMode, setCheatMode] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
   const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
+  const lastIllustrationTick = useRef<number>(0);
+  const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
+  const [isGeneratingScene, setIsGeneratingScene] = useState(false);
 
   // Handle initial loading complete and load color
   useEffect(() => {
@@ -101,6 +105,56 @@ export function AdventureGame() {
     localStorage.setItem(SCENARIO_KEY, scenario);
     localStorage.setItem(GENRE_KEY, genre);
   }, []);
+
+  // Generate scene illustration based on triggers
+  const generateSceneIllustration = useCallback(async (
+    description: string,
+    trigger: SceneTrigger
+  ) => {
+    if (isGeneratingScene) return;
+    
+    setIsGeneratingScene(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sceneDescription: description.slice(0, 500),
+            style: scenarioSelection?.genre || 'fantasy',
+            mood: trigger.type === 'combat_start' ? 'intense' : 
+                  trigger.type === 'dramatic_moment' ? 'dramatic' :
+                  trigger.type === 'romantic_scene' ? 'romantic' : 'atmospheric',
+          }),
+        }
+      );
+      const data = await response.json();
+      if (data.imageUrl) {
+        setSceneImageUrl(data.imageUrl);
+        lastIllustrationTick.current = Date.now();
+      }
+    } catch (error) {
+      console.error('Failed to generate scene illustration:', error);
+    } finally {
+      setIsGeneratingScene(false);
+    }
+  }, [isGeneratingScene, scenarioSelection]);
+
+  // Check for scene illustration triggers
+  const checkSceneTriggers = useCallback((eventType: string, content: string) => {
+    const trigger = shouldIllustrateScene(
+      eventType,
+      content,
+      lastIllustrationTick.current,
+      Date.now(),
+      5 // 5 ticks minimum between illustrations
+    );
+    
+    if (trigger) {
+      generateSceneIllustration(content, trigger);
+    }
+  }, [generateSceneIllustration]);
 
   const generateNarrative = useCallback(async (
     scenario: string,
@@ -211,8 +265,11 @@ export function AdventureGame() {
       const finalStory = [...updatedStory, narratorEntry];
       setStory(finalStory);
       saveData(finalStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+      
+      // Check for scene illustration triggers
+      checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
@@ -307,6 +364,9 @@ export function AdventureGame() {
         onClearMechanics={() => setPendingMechanics(undefined)}
         onGenerateImage={handleGenerateImage}
         generatingImageFor={generatingImageFor}
+        sceneImageUrl={sceneImageUrl}
+        isGeneratingScene={isGeneratingScene}
+        onCloseSceneImage={() => setSceneImageUrl(null)}
       />
     );
   }

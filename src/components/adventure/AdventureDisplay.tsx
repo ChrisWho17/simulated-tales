@@ -9,6 +9,7 @@ import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, 
 import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
+import { SceneIllustration } from '@/components/game/SceneIllustration';
 
 interface StoryEntry {
   id: string;
@@ -46,6 +47,9 @@ interface AdventureDisplayProps {
   onClearMechanics: () => void;
   onGenerateImage: (entryId: string) => void;
   generatingImageFor?: string;
+  sceneImageUrl?: string | null;
+  isGeneratingScene?: boolean;
+  onCloseSceneImage?: () => void;
 }
 
 export function AdventureDisplay({
@@ -61,6 +65,9 @@ export function AdventureDisplay({
   onClearMechanics,
   onGenerateImage,
   generatingImageFor,
+  sceneImageUrl,
+  isGeneratingScene,
+  onCloseSceneImage,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -228,6 +235,20 @@ export function AdventureDisplay({
           </div>
         </div>
       </header>
+
+      {/* Auto-generated Scene Illustration */}
+      {(sceneImageUrl || isGeneratingScene) && (
+        <div className="relative z-20 p-4 bg-background/50 backdrop-blur-sm border-b border-border/50">
+          <div className="max-w-3xl mx-auto">
+            <SceneIllustration
+              imageUrl={sceneImageUrl}
+              isLoading={isGeneratingScene}
+              onClose={onCloseSceneImage}
+              showControls={true}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Story Content */}
       <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
