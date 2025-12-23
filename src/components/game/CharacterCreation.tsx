@@ -184,9 +184,9 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                   >
                     {(['slim', 'average', 'athletic', 'curvy', 'heavy'] as const).map((type) => (
                       <div key={type} className="flex items-center">
-                        <RadioGroupItem value={type} id={`body-${type}`} className="sr-only" />
+                        <RadioGroupItem value={type} id={`bodytype-${type}`} className="sr-only peer" />
                         <Label
-                          htmlFor={`body-${type}`}
+                          htmlFor={`bodytype-${type}`}
                           className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
                             character.appearance.bodyType === type
                               ? 'bg-primary/20 border-primary text-primary'
@@ -209,9 +209,9 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                   >
                     {(['short', 'average', 'tall'] as const).map((h) => (
                       <div key={h} className="flex items-center">
-                        <RadioGroupItem value={h} id={`height-${h}`} className="sr-only" />
+                        <RadioGroupItem value={h} id={`charheight-${h}`} className="sr-only peer" />
                         <Label
-                          htmlFor={`height-${h}`}
+                          htmlFor={`charheight-${h}`}
                           className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
                             character.appearance.height === h
                               ? 'bg-primary/20 border-primary text-primary'
@@ -254,9 +254,9 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                     >
                       {(['short', 'medium', 'long'] as const).map((l) => (
                         <div key={l} className="flex items-center">
-                          <RadioGroupItem value={l} id={`hair-${l}`} className="sr-only" />
+                          <RadioGroupItem value={l} id={`hairlength-${l}`} className="sr-only peer" />
                           <Label
-                            htmlFor={`hair-${l}`}
+                            htmlFor={`hairlength-${l}`}
                             className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
                               character.appearance.hairLength === l
                                 ? 'bg-primary/20 border-primary text-primary'
@@ -373,9 +373,9 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                   >
                     {(['Bold', 'Cautious', 'Adaptable'] as const).map((d) => (
                       <div key={d} className="flex items-center">
-                        <RadioGroupItem value={d} id={`disp-${d}`} className="sr-only" />
+                        <RadioGroupItem value={d} id={`disposition-${d}`} className="sr-only peer" />
                         <Label
-                          htmlFor={`disp-${d}`}
+                          htmlFor={`disposition-${d}`}
                           className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
                             character.personality.disposition === d
                               ? 'bg-primary/20 border-primary text-primary'
@@ -399,9 +399,9 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                   >
                     {(['Charming', 'Reserved', 'Blunt'] as const).map((s) => (
                       <div key={s} className="flex items-center">
-                        <RadioGroupItem value={s} id={`social-${s}`} className="sr-only" />
+                        <RadioGroupItem value={s} id={`socialstyle-${s}`} className="sr-only peer" />
                         <Label
-                          htmlFor={`social-${s}`}
+                          htmlFor={`socialstyle-${s}`}
                           className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
                             character.personality.socialStyle === s
                               ? 'bg-primary/20 border-primary text-primary'
