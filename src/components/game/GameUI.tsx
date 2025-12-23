@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, GameEvent } from '@/types/game';
-import { CharacterData } from '@/types/characterCreation';
+import { CharacterData, SPAWN_POINTS } from '@/types/characterCreation';
 import { 
   createInitialGameState, 
   processAction, 
@@ -8,11 +8,12 @@ import {
   updateLocationNPCs,
   processDebugCommand,
 } from '@/game/gameEngine';
-import { createLifeSimFromCharacter, generateCharacterIntroNarrative } from '@/game/characterIntegration';
+import { createLifeSimFromCharacter, generateCharacterIntroNarrative, getSpawnLocationId } from '@/game/characterIntegration';
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
 import { CharacterPanel } from './CharacterPanel';
+import { MapPanel } from './MapPanel';
 import { GameHeader } from './GameHeader';
 import { toast } from 'sonner';
 import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
@@ -29,7 +30,8 @@ export function GameUI() {
     return !saved && !character;
   });
   
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -53,10 +55,14 @@ export function GameUI() {
     const newGameState = updateLocationNPCs(createInitialGameState());
     const lifeSimState = createLifeSimFromCharacter(character);
     
+    // Set spawn location based on character creation selection
+    const spawnLocationId = getSpawnLocationId(character.background.spawnPoint);
+    
     newGameState.lifeSim = lifeSimState;
     newGameState.player = {
       ...newGameState.player,
       name: character.basicInfo.name,
+      currentLocation: spawnLocationId,
       stats: {
         ...newGameState.player.stats,
         hunger: lifeSimState.needs.physical.hunger,
@@ -182,6 +188,11 @@ export function GameUI() {
     setShowCharacterCreation(true);
   }, []);
   
+  const handleTravel = useCallback((locationId: string) => {
+    // Use the existing move action
+    handleCommand(`go ${locationId}`);
+  }, [handleCommand]);
+  
   if (showCharacterCreation) {
     return <CharacterCreation onComplete={handleCharacterComplete} />;
   }
@@ -198,15 +209,24 @@ export function GameUI() {
       {/* Character Panel - slides out from left */}
       <CharacterPanel 
         gameState={gameState}
-        isOpen={panelOpen}
-        onToggle={() => setPanelOpen(!panelOpen)}
+        isOpen={leftPanelOpen}
+        onToggle={() => setLeftPanelOpen(!leftPanelOpen)}
       />
       
-      {/* Main Content - centered and adjusts when panel opens */}
+      {/* Map Panel - slides out from right */}
+      <MapPanel
+        gameState={gameState}
+        isOpen={rightPanelOpen}
+        onToggle={() => setRightPanelOpen(!rightPanelOpen)}
+        onTravel={handleTravel}
+      />
+      
+      {/* Main Content - centered and adjusts when panels open */}
       <div 
         className={cn(
           "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          panelOpen ? "ml-64 sm:ml-72" : "ml-0"
+          leftPanelOpen ? "ml-64 sm:ml-72" : "ml-0",
+          rightPanelOpen ? "mr-64 sm:mr-72" : "mr-0"
         )}
       >
         <div className="flex-1 overflow-hidden bg-parchment">
