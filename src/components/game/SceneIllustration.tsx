@@ -36,12 +36,13 @@ export function SceneIllustration({
       {/* Thumbnail/inline view */}
       <div 
         className={cn(
-          "scene-illustration-container",
-          isLoading && "scene-illustration-loading"
+          "scene-illustration-container relative rounded-lg overflow-hidden bg-muted/50 border border-border/50",
+          "min-h-[200px] max-h-[300px]",
+          isLoading && "animate-pulse"
         )}
       >
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 p-4">
+          <div className="flex flex-col items-center justify-center h-full gap-3 p-4 min-h-[200px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground text-center">
               Illustrating scene...
@@ -53,7 +54,7 @@ export function SceneIllustration({
             )}
           </div>
         ) : hasError ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 p-4">
+          <div className="flex flex-col items-center justify-center h-full gap-2 p-4 min-h-[200px]">
             <ImageIcon className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Failed to load scene</p>
             {onGenerate && (
@@ -67,13 +68,13 @@ export function SceneIllustration({
             <img 
               src={imageUrl} 
               alt="Scene illustration"
-              className="scene-illustration-image"
+              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => setIsExpanded(true)}
               onError={() => setHasError(true)}
             />
             
             {showControls && (
-              <div className="scene-illustration-controls">
+              <div className="absolute top-2 right-2 flex gap-1">
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -101,14 +102,14 @@ export function SceneIllustration({
       {/* Fullscreen expanded view */}
       {isExpanded && imageUrl && (
         <div 
-          className="scene-illustration-fullscreen"
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsExpanded(false)}
         >
-          <div className="scene-illustration-fullscreen-content">
+          <div className="relative max-w-4xl max-h-full">
             <img 
               src={imageUrl} 
               alt="Scene illustration"
-              className="scene-illustration-fullscreen-image"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
             
