@@ -21,6 +21,7 @@ import {
 import { checkPlayerDeath, generateDeathNarrative } from './advancedDynamics';
 import { calculateSimulationStats } from './metaSystems';
 import { initializeLifeSimState, processLifeSimTick } from './lifeSimIntegration';
+import { canPerformActionAtLocation, getLocationTags } from './locationRequirements';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -527,6 +528,12 @@ export function processAction(state: GameState, action: Action): { newState: Gam
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
         break;
       }
+      // Check location requirement
+      const eatLocationCheck = canPerformActionAtLocation('eat', newState.player.currentLocation, getLocationTags(newState.player.currentLocation));
+      if (!eatLocationCheck.allowed) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: eatLocationCheck.errorMessage || 'You cannot eat here.', timestamp: newState.time.tick });
+        break;
+      }
       const currentHunger = newState.lifeSim.needs.physical.hunger;
       if (currentHunger >= 90) {
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are not hungry right now.', timestamp: newState.time.tick });
@@ -549,6 +556,12 @@ export function processAction(state: GameState, action: Action): { newState: Gam
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
         break;
       }
+      // Check location requirement
+      const drinkLocationCheck = canPerformActionAtLocation('drink', newState.player.currentLocation, getLocationTags(newState.player.currentLocation));
+      if (!drinkLocationCheck.allowed) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: drinkLocationCheck.errorMessage || 'You cannot drink here.', timestamp: newState.time.tick });
+        break;
+      }
       const currentThirst = newState.lifeSim.needs.physical.thirst;
       if (currentThirst >= 90) {
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'You are not thirsty right now.', timestamp: newState.time.tick });
@@ -568,6 +581,12 @@ export function processAction(state: GameState, action: Action): { newState: Gam
     case 'sleep': {
       if (!newState.lifeSim) {
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      // Check location requirement
+      const sleepLocationCheck = canPerformActionAtLocation('sleep', newState.player.currentLocation, getLocationTags(newState.player.currentLocation));
+      if (!sleepLocationCheck.allowed) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: sleepLocationCheck.errorMessage || 'You cannot sleep here.', timestamp: newState.time.tick });
         break;
       }
       const currentEnergy = newState.lifeSim.needs.physical.energy;
@@ -597,6 +616,12 @@ export function processAction(state: GameState, action: Action): { newState: Gam
     case 'bathe': {
       if (!newState.lifeSim) {
         events.push({ id: `evt_${Date.now()}`, type: 'system', content: 'Life sim not initialized.', timestamp: newState.time.tick });
+        break;
+      }
+      // Check location requirement
+      const batheLocationCheck = canPerformActionAtLocation('bathe', newState.player.currentLocation, getLocationTags(newState.player.currentLocation));
+      if (!batheLocationCheck.allowed) {
+        events.push({ id: `evt_${Date.now()}`, type: 'system', content: batheLocationCheck.errorMessage || 'You cannot bathe here.', timestamp: newState.time.tick });
         break;
       }
       const currentHygiene = newState.lifeSim.needs.physical.hygiene;
