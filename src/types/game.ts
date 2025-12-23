@@ -173,6 +173,9 @@ export interface NPC {
   conflictStyle: ConflictStyle;
   escalationState: EscalationState;
   stressLevel: number; // 0-100
+  
+  // AI-generated portrait
+  portrait?: string;
 }
 
 // ============= OTHER CORE TYPES =============
@@ -213,6 +216,7 @@ export interface GameEvent {
   timestamp: number;
   involvedNPCs?: string[];
   involvedItems?: string[];
+  npcPortrait?: string; // AI-generated portrait URL for dialogue events
 }
 
 export interface WorldEventLog {

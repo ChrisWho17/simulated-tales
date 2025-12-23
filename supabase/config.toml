@@ -2,3 +2,6 @@ project_id = "hrlvdxoopcxtjrelhncf"
 
 [functions.generate-portrait]
 verify_jwt = false
+
+[functions.generate-npc-portrait]
+verify_jwt = false

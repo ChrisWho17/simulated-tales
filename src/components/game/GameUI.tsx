@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameState, GameEvent } from '@/types/game';
 import { CharacterData, SPAWN_POINTS } from '@/types/characterCreation';
 import { 
@@ -104,7 +104,47 @@ export function GameUI() {
     }
   }, [showCharacterCreation]);
   
-  const handleCommand = useCallback((input: string) => {
+  // Cache for NPC portraits to avoid regenerating
+  const npcPortraitCache = useRef<Record<string, string>>({});
+  
+  const generateNPCPortrait = useCallback(async (npc: any): Promise<string | undefined> => {
+    // Check cache first
+    if (npcPortraitCache.current[npc.id]) {
+      return npcPortraitCache.current[npc.id];
+    }
+    
+    // Check if NPC already has a portrait
+    if (npc.portrait) {
+      npcPortraitCache.current[npc.id] = npc.portrait;
+      return npc.portrait;
+    }
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-npc-portrait`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ npc }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to generate NPC portrait:', response.status);
+        return undefined;
+      }
+
+      const data = await response.json();
+      if (data.imageUrl) {
+        npcPortraitCache.current[npc.id] = data.imageUrl;
+        return data.imageUrl;
+      }
+    } catch (error) {
+      console.error('Error generating NPC portrait:', error);
+    }
+    return undefined;
+  }, []);
+  
+  const handleCommand = useCallback(async (input: string) => {
     setIsProcessing(true);
     
     setDisplayEvents(prev => [...prev, {
@@ -143,10 +183,29 @@ export function GameUI() {
       toast.error('You have died', { description: deathState.causeOfDeath });
     }
     
+    // Process dialogue events to add NPC portraits
+    const eventsWithPortraits = await Promise.all(
+      events.map(async (event) => {
+        if (event.type === 'dialogue' && event.involvedNPCs && event.involvedNPCs.length > 0) {
+          const npcId = event.involvedNPCs[0];
+          const npc = newState.npcs[npcId];
+          if (npc) {
+            const portrait = await generateNPCPortrait(npc);
+            if (portrait) {
+              // Also update the NPC in state with the portrait
+              newState.npcs[npcId] = { ...npc, portrait };
+              return { ...event, npcPortrait: portrait };
+            }
+          }
+        }
+        return event;
+      })
+    );
+    
     setGameState(newState);
-    setDisplayEvents(prev => [...prev, ...events]);
+    setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState]);
+  }, [gameState, generateNPCPortrait]);
   
   const handleSave = useCallback(() => {
     try {
