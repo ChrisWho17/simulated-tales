@@ -36,15 +36,29 @@ const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
 const MEMORY_STORE_KEY = 'living-world-npc-memories';
 
-// Generate AI dialogue for NPCs with memory context
+// Conversation session type for tracking ongoing dialogues
+interface ConversationSession {
+  npcId: string;
+  npcName: string;
+  startTick: number;
+  exchanges: Array<{
+    playerSaid: string;
+    npcResponse: string;
+    tick: number;
+  }>;
+  importantTopics: string[]; // Topics flagged as important for stronger memories
+}
+
+// Generate AI dialogue for NPCs with memory context and conversation history
 async function generateAIDialogue(
   npc: NPC, 
   playerInput: string, 
   location: string, 
   timeOfDay: string, 
   isFirst: boolean,
-  memoryStore?: NPCMemoryStore
-): Promise<string | null> {
+  memoryStore?: NPCMemoryStore,
+  conversationHistory?: Array<{ playerSaid: string; npcResponse: string }>
+): Promise<{ dialogue: string; importantTopics: string[] } | null> {
   try {
     // Build memory context for the NPC
     let memoryContext = '';
@@ -113,20 +127,36 @@ async function generateAIDialogue(
         location,
         timeOfDay,
         isFirstInteraction: isFirst,
+        conversationHistory: conversationHistory || [],
       }),
     });
     
     if (!response.ok) {
       const data = await response.json();
-      return data.fallbackDialogue || null;
+      return data.fallbackDialogue ? { dialogue: data.fallbackDialogue, importantTopics: [] } : null;
     }
     
     const data = await response.json();
-    return data.dialogue;
+    return { 
+      dialogue: data.dialogue, 
+      importantTopics: data.importantTopics || [] 
+    };
   } catch (error) {
     console.error('Error generating AI dialogue:', error);
     return null;
   }
+}
+
+// Detect important topics from conversation for stronger memories
+function detectImportantTopics(playerSaid: string, npcResponse: string): string[] {
+  const importantKeywords = [
+    'secret', 'promise', 'love', 'hate', 'kill', 'death', 'family', 'money',
+    'help', 'please', 'sorry', 'forgive', 'trust', 'betray', 'truth', 'lie',
+    'remember', 'never', 'always', 'important', 'dangerous', 'fear', 'scared'
+  ];
+  
+  const combined = `${playerSaid} ${npcResponse}`.toLowerCase();
+  return importantKeywords.filter(keyword => combined.includes(keyword));
 }
 
 export function GameUI() {
@@ -167,6 +197,9 @@ export function GameUI() {
   
   const [displayEvents, setDisplayEvents] = useState<GameEvent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Active conversation session (for 'say' command)
+  const [conversationSession, setConversationSession] = useState<ConversationSession | null>(null);
   
   // Save memories when they change
   useEffect(() => {
@@ -349,7 +382,7 @@ export function GameUI() {
       }
     }
     
-    // Handle talk command with AI dialogue and memory
+    // Handle talk command - starts a new conversation session
     if (action.type === 'talk' && action.target) {
       const targetName = action.target.toLowerCase();
       const npcsHere = Object.values(newState.npcs).filter(npc => npc.currentLocation === newState.player.currentLocation);
@@ -363,41 +396,204 @@ export function GameUI() {
         // Get or create memory store for this NPC
         const memoryStore = npcMemories[targetNPC.id] || initializeMemoryStore();
         
-        const aiDialogue = await generateAIDialogue(targetNPC, action.target, location, timePeriod, isFirst, memoryStore);
+        const result = await generateAIDialogue(targetNPC, `greeting`, location, timePeriod, isFirst, memoryStore);
         
-        if (aiDialogue) {
+        if (result) {
+          // Start a new conversation session
+          const newSession: ConversationSession = {
+            npcId: targetNPC.id,
+            npcName: targetNPC.meta.name,
+            startTick: newState.time.tick,
+            exchanges: [{
+              playerSaid: 'greeting',
+              npcResponse: result.dialogue,
+              tick: newState.time.tick,
+            }],
+            importantTopics: [...result.importantTopics, ...detectImportantTopics('greeting', result.dialogue)],
+          };
+          setConversationSession(newSession);
+          
           // Replace the last dialogue event with AI-generated one
           const lastDialogueIdx = events.findIndex(e => e.type === 'dialogue' && e.involvedNPCs?.includes(targetNPC.id));
           if (lastDialogueIdx >= 0) {
             events[lastDialogueIdx] = {
               ...events[lastDialogueIdx],
-              content: `**${targetNPC.meta.name}**: "${aiDialogue}"`,
+              content: `**${targetNPC.meta.name}**: "${result.dialogue}"\n\n*[Conversation started - use "say <message>" to continue talking]*`,
             };
+          } else {
+            events.push({
+              id: `dialogue_${Date.now()}`,
+              type: 'dialogue' as const,
+              content: `**${targetNPC.meta.name}**: "${result.dialogue}"\n\n*[Conversation started - use "say <message>" to continue talking]*`,
+              timestamp: newState.time.tick,
+              involvedNPCs: [targetNPC.id],
+            });
           }
           
-          // Create a memory of this conversation
-          const updatedMemory = createMemory(memoryStore, {
-            type: 'experienced',
-            summary: `Had a conversation with the player`,
-            details: `Player said: "${action.target}". I responded: "${aiDialogue.substring(0, 100)}..."`,
-            entities: ['player'],
-            location: newState.player.currentLocation,
-            emotionalIntensity: 20,
-            sentiment: 'neutral',
-            emotionTags: [],
-            source: 'firsthand',
-            sharable: true,
-          }, newState.time.tick);
-          
-          // Update memories with decay
-          const decayedMemory = decayMemories(updatedMemory, 1);
-          
-          setNpcMemories(prev => ({
-            ...prev,
-            [targetNPC.id]: decayedMemory,
-          }));
+          toast.info(`Talking to ${targetNPC.meta.name}`, { 
+            description: 'Use "say <message>" to continue the conversation' 
+          });
         }
       }
+    }
+    
+    // Handle say command - continues an existing conversation
+    if (action.type === 'say') {
+      const playerMessage = action.args.join(' ');
+      
+      if (!conversationSession) {
+        events.push({
+          id: `err_${Date.now()}`,
+          type: 'system' as const,
+          content: `*You're not in a conversation. Use "talk <name>" to start talking to someone.*`,
+          timestamp: newState.time.tick,
+        });
+      } else if (!playerMessage) {
+        events.push({
+          id: `err_${Date.now()}`,
+          type: 'system' as const,
+          content: `*What do you want to say? Use "say <your message>"*`,
+          timestamp: newState.time.tick,
+        });
+      } else {
+        const targetNPC = newState.npcs[conversationSession.npcId];
+        
+        if (!targetNPC || targetNPC.currentLocation !== newState.player.currentLocation) {
+          // NPC left or is no longer here
+          events.push({
+            id: `err_${Date.now()}`,
+            type: 'system' as const,
+            content: `*${conversationSession.npcName} is no longer here.*`,
+            timestamp: newState.time.tick,
+          });
+          setConversationSession(null);
+        } else {
+          const timePeriod = getTimePeriod(newState.time.hour);
+          const location = newState.locations[newState.player.currentLocation]?.name || 'unknown';
+          
+          // Get or create memory store for this NPC
+          const memoryStore = npcMemories[targetNPC.id] || initializeMemoryStore();
+          
+          // Pass conversation history for context
+          const result = await generateAIDialogue(
+            targetNPC, 
+            playerMessage, 
+            location, 
+            timePeriod, 
+            false,
+            memoryStore,
+            conversationSession.exchanges
+          );
+          
+          if (result) {
+            // Add to conversation session
+            const newExchange = {
+              playerSaid: playerMessage,
+              npcResponse: result.dialogue,
+              tick: newState.time.tick,
+            };
+            
+            const detectedTopics = detectImportantTopics(playerMessage, result.dialogue);
+            const updatedSession: ConversationSession = {
+              ...conversationSession,
+              exchanges: [...conversationSession.exchanges, newExchange],
+              importantTopics: [...new Set([...conversationSession.importantTopics, ...result.importantTopics, ...detectedTopics])],
+            };
+            setConversationSession(updatedSession);
+            
+            events.push({
+              id: `player_say_${Date.now()}`,
+              type: 'dialogue' as const,
+              content: `**You**: "${playerMessage}"`,
+              timestamp: newState.time.tick,
+            });
+            
+            events.push({
+              id: `npc_reply_${Date.now()}`,
+              type: 'dialogue' as const,
+              content: `**${targetNPC.meta.name}**: "${result.dialogue}"`,
+              timestamp: newState.time.tick,
+              involvedNPCs: [targetNPC.id],
+            });
+            
+            // Calculate memory intensity based on conversation length and important topics
+            const baseIntensity = 15;
+            const topicBonus = detectedTopics.length * 15;
+            const lengthBonus = Math.min(updatedSession.exchanges.length * 5, 25);
+            const emotionalIntensity = Math.min(baseIntensity + topicBonus + lengthBonus, 80);
+            
+            // Create a memory of this exchange
+            const sentiment = detectedTopics.some(t => 
+              ['love', 'help', 'please', 'sorry', 'forgive', 'trust'].includes(t)
+            ) ? 'positive' : detectedTopics.some(t => 
+              ['hate', 'kill', 'death', 'betray', 'lie', 'fear', 'scared'].includes(t)
+            ) ? 'negative' : 'neutral';
+            
+            const updatedMemory = createMemory(memoryStore, {
+              type: 'experienced',
+              summary: detectedTopics.length > 0 
+                ? `Discussed ${detectedTopics.slice(0, 3).join(', ')} with the player`
+                : `Had a conversation with the player`,
+              details: `Player said: "${playerMessage}". I responded: "${result.dialogue.substring(0, 150)}..."`,
+              entities: ['player'],
+              location: newState.player.currentLocation,
+              emotionalIntensity,
+              sentiment,
+              emotionTags: detectedTopics,
+              source: 'firsthand',
+              sharable: true,
+              traumatic: detectedTopics.some(t => ['kill', 'death', 'betray'].includes(t)),
+            }, newState.time.tick);
+            
+            // Update memories with decay
+            const decayedMemory = decayMemories(updatedMemory, 1);
+            
+            setNpcMemories(prev => ({
+              ...prev,
+              [targetNPC.id]: decayedMemory,
+            }));
+          }
+        }
+      }
+    }
+    
+    // End conversation when leaving or doing other actions
+    if (conversationSession && action.type === 'go') {
+      const targetNPC = newState.npcs[conversationSession.npcId];
+      if (targetNPC) {
+        const memoryStore = npcMemories[targetNPC.id] || initializeMemoryStore();
+        
+        // Create a summary memory of the entire conversation
+        const conversationLength = conversationSession.exchanges.length;
+        const topics = conversationSession.importantTopics;
+        const intensity = Math.min(20 + conversationLength * 5 + topics.length * 10, 70);
+        
+        const updatedMemory = createMemory(memoryStore, {
+          type: 'experienced',
+          summary: topics.length > 0 
+            ? `Had a ${conversationLength}-exchange conversation about ${topics.slice(0, 3).join(', ')}`
+            : `Had a ${conversationLength}-exchange conversation with the player`,
+          details: `Full conversation: ${conversationSession.exchanges.map(e => 
+            `Player: "${e.playerSaid}" - Me: "${e.npcResponse.substring(0, 50)}..."`
+          ).join(' | ')}`,
+          entities: ['player'],
+          location: gameState.player.currentLocation,
+          emotionalIntensity: intensity,
+          sentiment: topics.some(t => ['love', 'help', 'trust'].includes(t)) ? 'positive' : 
+                     topics.some(t => ['hate', 'kill', 'betray'].includes(t)) ? 'negative' : 'neutral',
+          emotionTags: topics,
+          source: 'firsthand',
+          sharable: true,
+        }, newState.time.tick);
+        
+        setNpcMemories(prev => ({
+          ...prev,
+          [targetNPC.id]: updatedMemory,
+        }));
+      }
+      
+      setConversationSession(null);
+      toast.info(`Conversation ended`);
     }
     
     const deathState = checkPlayerDeath(newState);

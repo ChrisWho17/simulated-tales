@@ -2,7 +2,7 @@
 // Supports: talking, actions, replies, inventory, terrain manipulation
 
 export interface ParsedCommand {
-  type: 'talk' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system';
+  type: 'talk' | 'say' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system';
   verb: string;
   target?: string;
   args: string[];
@@ -10,7 +10,8 @@ export interface ParsedCommand {
 }
 
 // Keyword mappings for different command types
-const TALK_KEYWORDS = ['say', 'tell', 'ask', 'shout', 'whisper', 'speak', 'greet', 'chat', 'talk'];
+const TALK_KEYWORDS = ['tell', 'greet', 'chat', 'talk'];
+const SAY_KEYWORDS = ['say', 'ask', 'shout', 'whisper', 'speak'];
 const ACTION_KEYWORDS = ['do', 'use', 'open', 'close', 'push', 'pull', 'hit', 'attack', 'touch', 'grab', 'take', 'drop', 'throw', 'kick', 'break', 'search', 'examine', 'inspect'];
 const REPLY_KEYWORDS = ['reply', 'respond', 'answer', 'nod', 'shake', 'agree', 'disagree', 'accept', 'refuse', 'decline'];
 const INVENTORY_KEYWORDS = ['inventory', 'inv', 'items', 'bag', 'pocket', 'equip', 'unequip', 'wear', 'remove', 'check'];
@@ -31,6 +32,17 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       type: 'talk',
       verb: firstWord,
       target: rest[0],
+      args: rest,
+      raw: input,
+    };
+  }
+  
+  // Say command - for ongoing conversations
+  if (SAY_KEYWORDS.includes(firstWord)) {
+    return {
+      type: 'say',
+      verb: firstWord,
+      target: undefined, // Say doesn't target, it continues conversation
       args: rest,
       raw: input,
     };
@@ -121,6 +133,8 @@ export function getCommandTypeInfo(type: ParsedCommand['type']): { icon: string;
   switch (type) {
     case 'talk':
       return { icon: '💬', label: 'Talk', color: 'text-blue-400' };
+    case 'say':
+      return { icon: '🗣️', label: 'Say', color: 'text-sky-400' };
     case 'reply':
       return { icon: '↩️', label: 'Reply', color: 'text-cyan-400' };
     case 'action':
@@ -144,6 +158,7 @@ export function getCommandTypeInfo(type: ParsedCommand['type']): { icon: string;
 export function getAllKeywords(): Record<string, string[]> {
   return {
     'Talk': TALK_KEYWORDS,
+    'Say': SAY_KEYWORDS,
     'Reply': REPLY_KEYWORDS,
     'Action': ACTION_KEYWORDS,
     'Inventory': INVENTORY_KEYWORDS,
