@@ -119,6 +119,11 @@ export const initialNPCs: Record<string, NPC> = {
     },
     currentLocation: 'tavern_main',
     currentActivity: 'serving the evening crowd',
+    
+    // Conflict & Speech State
+    conflictStyle: 'DOMINANT',
+    escalationState: 'POLITE_DISTANCE',
+    stressLevel: 35,
   },
   
   npc_thomas: {
@@ -192,6 +197,11 @@ export const initialNPCs: Record<string, NPC> = {
     },
     currentLocation: 'tavern_main',
     currentActivity: 'drinking and listening',
+    
+    // Conflict & Speech State
+    conflictStyle: 'AVOIDANT',
+    escalationState: 'GUARDED_HONESTY',
+    stressLevel: 55,
   },
   
   npc_guard_james: {
@@ -266,6 +276,11 @@ export const initialNPCs: Record<string, NPC> = {
     },
     currentLocation: 'tavern_main',
     currentActivity: 'off-duty drink',
+    
+    // Conflict & Speech State
+    conflictStyle: 'MORALISTIC',
+    escalationState: 'POLITE_DISTANCE',
+    stressLevel: 25,
   },
   
   npc_old_edgar: {
@@ -339,6 +354,11 @@ export const initialNPCs: Record<string, NPC> = {
     },
     currentLocation: 'tavern_main',
     currentActivity: 'drinking and reminiscing',
+    
+    // Conflict & Speech State
+    conflictStyle: 'NEGOTIATIVE',
+    escalationState: 'POLITE_DISTANCE',
+    stressLevel: 20,
   },
 };
 
