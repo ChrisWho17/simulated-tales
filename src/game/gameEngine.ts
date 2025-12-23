@@ -1,6 +1,15 @@
 import { GameState, GameEvent, Action, NPC, GameTime, EscalationState } from '@/types/game';
 import { initialTime, initialPlayer, initialNPCs, initialLocations } from './initialData';
-import { generateNPCResponseContext, NPCResponseData } from './npcSpeech';
+import { 
+  generateNPCResponseContext, 
+  NPCResponseData,
+  evaluateEscalationTriggers,
+  calculateEscalationDelta,
+  getEscalationDialoguePrefix,
+  updateNPCStress,
+  getEscalationModifiers,
+  getConflictBehavior,
+} from './npcSpeech';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -211,6 +220,25 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       // Check for authority presence
       const authorityPresent = npcsHere.some(npc => npc.id === 'npc_guard_james' && npc.id !== targetNPC.id);
       
+      // Evaluate escalation triggers from player input
+      const escalationTriggers = evaluateEscalationTriggers(targetNPC, action.args?.join(' ') || action.target, {
+        recentEvents: newState.events.slice(-5).map(e => e.content),
+        timeSinceLastConflict: 0, // TODO: track this properly
+      });
+      
+      // Calculate escalation changes
+      const escalationDelta = calculateEscalationDelta(targetNPC, escalationTriggers);
+      const newStressLevel = updateNPCStress(targetNPC, escalationTriggers);
+      
+      // Update escalation state
+      const escalationLevels: EscalationState[] = [
+        'POLITE_DISTANCE', 'GUARDED_HONESTY', 'IRRITATION', 
+        'DEFENSIVE_JUSTIFICATION', 'OPEN_HOSTILITY', 'WITHDRAWAL_OR_CONFRONTATION'
+      ];
+      const currentEscIndex = escalationLevels.indexOf(targetNPC.escalationState);
+      const newEscIndex = Math.max(0, Math.min(escalationLevels.length - 1, currentEscIndex + escalationDelta));
+      const newEscalationState = escalationLevels[newEscIndex];
+      
       // Generate speech context using the new system
       const speechContext = generateNPCResponseContext(targetNPC, {
         playerInput: action.target,
@@ -226,16 +254,38 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       const relationship = targetNPC.relationships.player || { affection: 0, trust: 0, fear: 0, respect: 0 };
       const greeting = generateNPCGreeting(targetNPC, relationship, speechContext);
       
-      // Build response content with speech metadata
-      let dialogueContent = `**${targetNPC.meta.name}**: "${greeting}"`;
+      // Get escalation prefix for dialogue
+      const escalationPrefix = getEscalationDialoguePrefix(newEscalationState, targetNPC.conflictStyle);
+      const escalationMods = getEscalationModifiers(newEscalationState);
       
-      // Add subtle cues about NPC state
-      if (speechContext.motivation === 'ESCAPE') {
+      // Build response content with speech metadata and escalation
+      let dialogueContent = `**${targetNPC.meta.name}**: ${escalationPrefix}"${greeting}"`;
+      
+      // Add subtle cues about NPC state based on escalation
+      if (newEscalationState === 'WITHDRAWAL_OR_CONFRONTATION') {
+        const conflictBehavior = getConflictBehavior(targetNPC.conflictStyle);
+        if (targetNPC.conflictStyle === 'AVOIDANT' || targetNPC.conflictStyle === 'RESIGNED') {
+          dialogueContent += `\n\n*${targetNPC.meta.name} turns away, ending the conversation.*`;
+        } else {
+          dialogueContent += `\n\n*${targetNPC.meta.name} looks ready for a confrontation.*`;
+        }
+      } else if (newEscalationState === 'OPEN_HOSTILITY') {
+        dialogueContent += `\n\n*${targetNPC.meta.name} is clearly hostile. Tread carefully.*`;
+      } else if (newEscalationState === 'IRRITATION') {
+        dialogueContent += `\n\n*${targetNPC.meta.name} seems irritated.*`;
+      } else if (speechContext.motivation === 'ESCAPE') {
         dialogueContent += `\n\n*${targetNPC.meta.name} seems eager to end the conversation.*`;
       } else if (speechContext.motivation === 'RELIEVE') {
         dialogueContent += `\n\n*${targetNPC.meta.name} seems to want to talk.*`;
       } else if (speechContext.truthStrategy === 'DEFENSIVE') {
         dialogueContent += `\n\n*${targetNPC.meta.name} seems guarded.*`;
+      }
+      
+      // Show escalation change if significant
+      if (escalationDelta > 0 && newEscIndex > currentEscIndex) {
+        dialogueContent += `\n\n*The tension between you increases.*`;
+      } else if (escalationDelta < 0 && newEscIndex < currentEscIndex) {
+        dialogueContent += `\n\n*${targetNPC.meta.name} seems to relax slightly.*`;
       }
       
       events.push({
@@ -246,17 +296,19 @@ export function processAction(state: GameState, action: Action): { newState: Gam
         involvedNPCs: [targetNPC.id],
       });
       
-      // Update NPC with current speech state
-      const updatedNPC = {
+      // Update NPC with current speech state and escalation
+      const updatedNPC: NPC = {
         ...targetNPC,
         currentMotivation: speechContext.motivation,
         currentTruthStrategy: speechContext.truthStrategy,
         currentVerbalBudget: speechContext.verbalBudget,
+        escalationState: newEscalationState,
+        stressLevel: newStressLevel,
         relationships: {
           ...targetNPC.relationships,
           player: {
             ...relationship,
-            affection: Math.min(100, relationship.affection + 1),
+            affection: Math.min(100, relationship.affection + (escalationDelta >= 0 ? 1 : -1)),
           },
         },
       };
