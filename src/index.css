@@ -784,6 +784,19 @@
     box-shadow: 0 0 0 2px var(--accent-border);
     border-radius: 2px;
   }
+
+  /* Unknown character name - descriptor style */
+  .character-name-unknown {
+    color: var(--text-muted);
+    font-style: italic;
+    border-bottom-color: var(--border);
+  }
+
+  .character-name-unknown:hover {
+    color: var(--text-secondary);
+    text-shadow: none;
+    border-bottom-color: var(--text-muted);
+  }
 }
 
 /* === CHARACTER PROFILE MODAL === */
