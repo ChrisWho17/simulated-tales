@@ -207,7 +207,18 @@ export function GameUI() {
   const [showCharacterCreation, setShowCharacterCreation] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const character = localStorage.getItem(CHARACTER_KEY);
-    return !saved && !character;
+    // Show character creation if no valid saved game exists
+    // A valid game requires both a character AND a game state
+    if (!character) return true;
+    if (!saved) return true;
+    try {
+      const parsedChar = JSON.parse(character);
+      const parsedSave = JSON.parse(saved);
+      // Verify both have essential data
+      return !parsedChar?.basicInfo?.name || !parsedSave?.player;
+    } catch {
+      return true;
+    }
   });
   
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
