@@ -10,11 +10,16 @@ import {
   HairLengthOption,
   DispositionOption,
   SocialStyleOption,
+  BustSizeOption,
+  CurvinessOption,
+  MuscleOption,
+  BodyHairOption,
 } from '@/types/characterCreation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { 
   Select, 
   SelectContent, 
@@ -26,7 +31,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CharacterCreationProps {
@@ -37,6 +42,7 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
   const [character, setCharacter] = useState<CharacterData>(DEFAULT_CHARACTER);
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [adultContentEnabled, setAdultContentEnabled] = useState(false);
 
   const backgroundEffect = useMemo(() => {
     return BACKGROUND_EFFECTS[character.background.origin];
@@ -264,6 +270,29 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
               </div>
             </section>
 
+            {/* 18+ Content Toggle */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-destructive">
+                  <Shield className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">18+ Content</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="adult-content" className="text-sm text-muted-foreground">
+                    {adultContentEnabled ? 'Enabled' : 'Disabled'}
+                  </Label>
+                  <Switch
+                    id="adult-content"
+                    checked={adultContentEnabled}
+                    onCheckedChange={setAdultContentEnabled}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enable additional body customization options. You must be 18+ to enable this feature.
+              </p>
+            </section>
+
             {/* Appearance */}
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-primary">
@@ -391,6 +420,188 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                     </Select>
                   </div>
                 </div>
+
+                {/* 18+ Body Options */}
+                {adultContentEnabled && character.basicInfo.gender && (
+                  <div className="space-y-4 p-4 rounded-lg border border-destructive/30 bg-destructive/5">
+                    <p className="text-sm font-medium text-destructive">Adult Body Options</p>
+                    
+                    {/* Female-specific options */}
+                    {character.basicInfo.gender === 'female' && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Bust Size</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {(['small', 'medium', 'large', 'very large'] as const).map((size) => (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => updateAppearance('bustSize', size)}
+                                className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
+                                  character.appearance.bustSize === size
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-input/30 border-border/50 hover:bg-input/50'
+                                }`}
+                              >
+                                {size.charAt(0).toUpperCase() + size.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Curviness</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {(['subtle', 'moderate', 'pronounced', 'very curvy'] as const).map((curve) => (
+                              <button
+                                key={curve}
+                                type="button"
+                                onClick={() => updateAppearance('curviness', curve)}
+                                className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
+                                  character.appearance.curviness === curve
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-input/30 border-border/50 hover:bg-input/50'
+                                }`}
+                              >
+                                {curve.charAt(0).toUpperCase() + curve.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Male-specific options */}
+                    {character.basicInfo.gender === 'male' && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Muscle Definition</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {(['lean', 'toned', 'muscular', 'very muscular'] as const).map((muscle) => (
+                              <button
+                                key={muscle}
+                                type="button"
+                                onClick={() => updateAppearance('muscles', muscle)}
+                                className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
+                                  character.appearance.muscles === muscle
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-input/30 border-border/50 hover:bg-input/50'
+                                }`}
+                              >
+                                {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Body Hair</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {(['none', 'light', 'moderate', 'heavy'] as const).map((hair) => (
+                              <button
+                                key={hair}
+                                type="button"
+                                onClick={() => updateAppearance('bodyHair', hair)}
+                                className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
+                                  character.appearance.bodyHair === hair
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-input/30 border-border/50 hover:bg-input/50'
+                                }`}
+                              >
+                                {hair.charAt(0).toUpperCase() + hair.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Non-binary / other options - show both */}
+                    {character.basicInfo.gender && !['male', 'female'].includes(character.basicInfo.gender) && (
+                      <div className="grid gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>Bust Size</Label>
+                            <Select 
+                              value={character.appearance.bustSize} 
+                              onValueChange={(v) => updateAppearance('bustSize', v as BustSizeOption)}
+                            >
+                              <SelectTrigger className="bg-input/50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['small', 'medium', 'large', 'very large'] as const).map((size) => (
+                                  <SelectItem key={size} value={size}>
+                                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Curviness</Label>
+                            <Select 
+                              value={character.appearance.curviness} 
+                              onValueChange={(v) => updateAppearance('curviness', v as CurvinessOption)}
+                            >
+                              <SelectTrigger className="bg-input/50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['subtle', 'moderate', 'pronounced', 'very curvy'] as const).map((curve) => (
+                                  <SelectItem key={curve} value={curve}>
+                                    {curve.charAt(0).toUpperCase() + curve.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>Muscle Definition</Label>
+                            <Select 
+                              value={character.appearance.muscles} 
+                              onValueChange={(v) => updateAppearance('muscles', v as MuscleOption)}
+                            >
+                              <SelectTrigger className="bg-input/50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['lean', 'toned', 'muscular', 'very muscular'] as const).map((muscle) => (
+                                  <SelectItem key={muscle} value={muscle}>
+                                    {muscle.charAt(0).toUpperCase() + muscle.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Body Hair</Label>
+                            <Select 
+                              value={character.appearance.bodyHair} 
+                              onValueChange={(v) => updateAppearance('bodyHair', v as BodyHairOption)}
+                            >
+                              <SelectTrigger className="bg-input/50">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['none', 'light', 'moderate', 'heavy'] as const).map((hair) => (
+                                  <SelectItem key={hair} value={hair}>
+                                    {hair.charAt(0).toUpperCase() + hair.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
 

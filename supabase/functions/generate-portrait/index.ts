@@ -18,12 +18,12 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build a detailed prompt for the character portrait
-    const prompt = `Generate a portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'}. 
+    // Build a detailed prompt for the character portrait - MODERN TIMES ONLY
+    const prompt = `Generate a portrait of a ${basicInfo.age}-year-old ${basicInfo.gender || 'person'} in modern day contemporary setting. 
 Physical appearance: ${appearance.height} height, ${appearance.bodyType} build, ${appearance.hairLength} ${appearance.hairColor} hair, ${appearance.eyeColor} eyes, ${appearance.skinTone} skin tone.
 Personality: ${personality.disposition} disposition with a ${personality.socialStyle} social style.
 Background: ${background.origin}.
-Style: Realistic digital art portrait, fantasy RPG character portrait style, dramatic lighting, detailed, high quality. Head and shoulders portrait format.`;
+Style: Modern contemporary realistic portrait, professional photography style, natural lighting, present-day urban setting. Head and shoulders portrait format. Modern clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
 
     console.log("Generating portrait with prompt:", prompt);
 

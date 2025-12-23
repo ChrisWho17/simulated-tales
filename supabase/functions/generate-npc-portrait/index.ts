@@ -22,17 +22,17 @@ serve(async (req) => {
       throw new Error("Invalid NPC data");
     }
 
-    // Build a detailed prompt for the NPC portrait
+    // Build a detailed prompt for the NPC portrait - MODERN TIMES ONLY
     const traits = npc.meta.traits?.slice(0, 3).join(', ') || 'mysterious';
     const emotionalState = npc.emotionalState?.current || 'calm';
     const occupation = npc.meta.occupation || 'unknown';
     
-    const prompt = `Generate a portrait of a ${npc.meta.age}-year-old ${occupation}. 
+    const prompt = `Generate a portrait of a ${npc.meta.age}-year-old ${occupation} in modern day contemporary setting. 
 Name: ${npc.meta.name}
 Personality traits: ${traits}
 Current mood: ${emotionalState}
 Description: ${npc.meta.description}
-Style: Realistic digital art portrait, fantasy RPG character portrait style, dramatic lighting, detailed, high quality. Head and shoulders portrait format. The character should look like they belong in a medieval fantasy tavern setting.`;
+Style: Modern contemporary realistic portrait, professional photography style, natural lighting, present-day urban setting. Head and shoulders portrait format. Modern clothing and hairstyle appropriate for current era. NO fantasy elements, NO historical costumes, NO futuristic elements.`;
 
     console.log("Generating NPC portrait for:", npc.meta.name);
 

@@ -12,6 +12,11 @@ export interface CharacterBasicInfo {
   gender: string;
 }
 
+export type BustSizeOption = 'small' | 'medium' | 'large' | 'very large';
+export type CurvinessOption = 'subtle' | 'moderate' | 'pronounced' | 'very curvy';
+export type MuscleOption = 'lean' | 'toned' | 'muscular' | 'very muscular';
+export type BodyHairOption = 'none' | 'light' | 'moderate' | 'heavy';
+
 export interface CharacterAppearance {
   bodyType: BodyTypeOption;
   height: HeightOption;
@@ -19,6 +24,11 @@ export interface CharacterAppearance {
   hairLength: HairLengthOption;
   eyeColor: string;
   skinTone: string;
+  // 18+ options (gender-specific)
+  bustSize?: BustSizeOption;
+  curviness?: CurvinessOption;
+  muscles?: MuscleOption;
+  bodyHair?: BodyHairOption;
 }
 
 export type SpawnPointType = 'college' | 'home' | 'homeless';
@@ -139,6 +149,10 @@ export const DEFAULT_CHARACTER: CharacterData = {
     hairLength: 'medium',
     eyeColor: 'brown',
     skinTone: 'medium',
+    bustSize: 'medium',
+    curviness: 'moderate',
+    muscles: 'toned',
+    bodyHair: 'light',
   },
   background: {
     origin: 'Stable upbringing',
