@@ -20,6 +20,7 @@ import {
 } from './narratorSystem';
 import { checkPlayerDeath, generateDeathNarrative } from './advancedDynamics';
 import { calculateSimulationStats } from './metaSystems';
+import { initializeLifeSimState, processLifeSimTick } from './lifeSimIntegration';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -46,6 +47,7 @@ export function createInitialGameState(): GameState {
     worldEvents: [],
     narratorVoice: 'LITERARY',
     debugMode: false,
+    lifeSim: initializeLifeSimState(),
   };
 }
 
@@ -118,15 +120,33 @@ export function advanceTime(state: GameState, hours: number = 1): GameState {
     // Also run basic NPC schedule simulation
     currentState.npcs = simulateNPCs(currentState);
     
-    // Decay player stats
-    currentState.player = {
-      ...currentState.player,
-      stats: {
-        ...currentState.player.stats,
-        hunger: Math.max(0, currentState.player.stats.hunger - 2),
-        energy: Math.max(0, currentState.player.stats.energy - 1),
-      },
-    };
+    // Phase 9: Process life sim tick
+    if (currentState.lifeSim) {
+      const lifeSimResult = processLifeSimTick(currentState.lifeSim, 1, []);
+      currentState.lifeSim = lifeSimResult.updatedState;
+      
+      // Sync life sim needs with player stats
+      currentState.player = {
+        ...currentState.player,
+        stats: {
+          ...currentState.player.stats,
+          hunger: currentState.lifeSim.needs.physical.hunger,
+          energy: currentState.lifeSim.needs.physical.energy,
+          health: currentState.lifeSim.needs.physical.health,
+          mood: 100 - currentState.lifeSim.needs.psychological.stress,
+        },
+      };
+    } else {
+      // Fallback: Decay player stats
+      currentState.player = {
+        ...currentState.player,
+        stats: {
+          ...currentState.player.stats,
+          hunger: Math.max(0, currentState.player.stats.hunger - 2),
+          energy: Math.max(0, currentState.player.stats.energy - 1),
+        },
+      };
+    }
     
     // Check for player death (Phase 7)
     const deathState = checkPlayerDeath(currentState);
