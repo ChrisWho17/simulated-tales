@@ -26,7 +26,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Palette, BookOpen, Brain, Sparkles } from 'lucide-react';
+import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CharacterCreationProps {
   onComplete: (character: CharacterData) => void;
@@ -34,6 +35,8 @@ interface CharacterCreationProps {
 
 export function CharacterCreation({ onComplete }: CharacterCreationProps) {
   const [character, setCharacter] = useState<CharacterData>(DEFAULT_CHARACTER);
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
 
   const backgroundEffect = useMemo(() => {
     return BACKGROUND_EFFECTS[character.background.origin];
@@ -83,6 +86,45 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
     onComplete(character);
   };
 
+  const handleGeneratePortrait = async () => {
+    setIsGeneratingPortrait(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appearance: character.appearance,
+          basicInfo: character.basicInfo,
+          background: character.background,
+          personality: character.personality,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 429) {
+          toast.error('Rate limit exceeded', { description: 'Please try again in a moment.' });
+        } else if (response.status === 402) {
+          toast.error('Usage limit reached', { description: 'Please add credits to continue.' });
+        } else {
+          toast.error('Failed to generate portrait', { description: errorData.error });
+        }
+        return;
+      }
+
+      const data = await response.json();
+      setPortraitUrl(data.imageUrl);
+      toast.success('Portrait generated!');
+    } catch (error) {
+      console.error('Error generating portrait:', error);
+      toast.error('Failed to generate portrait');
+    } finally {
+      setIsGeneratingPortrait(false);
+    }
+  };
+
   const characterSummary = useMemo(() => {
     const { basicInfo, appearance, background, personality } = character;
     return {
@@ -112,6 +154,60 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
 
         <ScrollArea className="h-[60vh]">
           <CardContent className="p-6 space-y-8">
+            {/* AI Portrait Generation */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Wand2 className="w-5 h-5" />
+                <h2 className="text-lg font-semibold">AI Character Portrait</h2>
+              </div>
+              <Separator className="bg-border/30" />
+              
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+                {/* Portrait Preview */}
+                <div className="w-32 h-40 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                  {portraitUrl ? (
+                    <img 
+                      src={portraitUrl} 
+                      alt="Character portrait" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-muted-foreground/30" />
+                  )}
+                </div>
+                
+                <div className="flex-1 space-y-3 text-center sm:text-left">
+                  <p className="text-sm text-muted-foreground">
+                    Generate a unique AI portrait based on your character's appearance settings.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeneratePortrait}
+                    disabled={isGeneratingPortrait}
+                    className="gap-2"
+                  >
+                    {isGeneratingPortrait ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4" />
+                        {portraitUrl ? 'Regenerate Portrait' : 'Generate Portrait'}
+                      </>
+                    )}
+                  </Button>
+                  {portraitUrl && (
+                    <p className="text-xs text-muted-foreground">
+                      Click to regenerate with current settings
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
+
             {/* Basic Information */}
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-primary">
