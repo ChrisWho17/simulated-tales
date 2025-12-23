@@ -1,6 +1,6 @@
-// NPC Speech System - Verbal Budget, Truth Strategy, and Motivation Vectors
+// NPC Speech System - Verbal Budget, Truth Strategy, Motivation Vectors, Conflict & Escalation
 
-import { NPC, SocialRankEntry, EmotionalState } from '@/types/game';
+import { NPC, SocialRankEntry, EmotionalState, ConflictStyle, EscalationState } from '@/types/game';
 
 // ============= VERBAL BUDGET SYSTEM =============
 
@@ -436,4 +436,260 @@ export function generateNPCResponseContext(npc: NPC, context: NPCResponseContext
     motivationBehavior,
     shareableFacts,
   };
+}
+
+// ============= CONFLICT & ESCALATION SYSTEM (Prompt 1.5) =============
+
+export interface ConflictBehavior {
+  responseStyle: string;
+  escalationTendency: 'quick' | 'slow' | 'none';
+  deescalationMethod: string;
+  dialogueModifiers: string[];
+}
+
+export function getConflictBehavior(style: ConflictStyle): ConflictBehavior {
+  switch (style) {
+    case 'AVOIDANT':
+      return {
+        responseStyle: 'delays, dodges, minimizes',
+        escalationTendency: 'slow',
+        deescalationMethod: 'changes topic, agrees superficially',
+        dialogueModifiers: ['vague answers', 'topic changes', 'nervous laughter'],
+      };
+    case 'PASSIVE_AGGRESSIVE':
+      return {
+        responseStyle: 'indirect jabs, sarcasm, backhanded compliments',
+        escalationTendency: 'slow',
+        deescalationMethod: 'retreats while maintaining deniability',
+        dialogueModifiers: ['sarcastic tone', 'subtle insults', 'forced smiles'],
+      };
+    case 'NEGOTIATIVE':
+      return {
+        responseStyle: 'bargains, reframes, seeks compromise',
+        escalationTendency: 'none',
+        deescalationMethod: 'offers alternatives, finds common ground',
+        dialogueModifiers: ['diplomatic language', 'offers', 'questions'],
+      };
+    case 'DOMINANT':
+      return {
+        responseStyle: 'sets terms, escalates quickly, demands compliance',
+        escalationTendency: 'quick',
+        deescalationMethod: 'only deescalates when opponent submits',
+        dialogueModifiers: ['commands', 'ultimatums', 'firm tone'],
+      };
+    case 'MORALISTIC':
+      return {
+        responseStyle: 'frames as right vs wrong, appeals to principles',
+        escalationTendency: 'slow',
+        deescalationMethod: 'requires acknowledgment of moral position',
+        dialogueModifiers: ['moral appeals', 'principle references', 'disappointment'],
+      };
+    case 'RESIGNED':
+      return {
+        responseStyle: 'expects loss, complies bitterly, martyrdom',
+        escalationTendency: 'none',
+        deescalationMethod: 'gives up before conflict peaks',
+        dialogueModifiers: ['sighs', 'bitter acceptance', 'fatalistic comments'],
+      };
+  }
+}
+
+export interface EscalationModifiers {
+  toneShift: string;
+  cooperationLevel: number; // 0-100
+  informationWillingness: 'none' | 'minimal' | 'guarded' | 'normal' | 'open';
+  bodyLanguage: string;
+}
+
+export function getEscalationModifiers(state: EscalationState): EscalationModifiers {
+  switch (state) {
+    case 'POLITE_DISTANCE':
+      return {
+        toneShift: 'neutral, professional',
+        cooperationLevel: 70,
+        informationWillingness: 'normal',
+        bodyLanguage: 'relaxed but reserved',
+      };
+    case 'GUARDED_HONESTY':
+      return {
+        toneShift: 'careful, measured',
+        cooperationLevel: 55,
+        informationWillingness: 'guarded',
+        bodyLanguage: 'slightly tense, watchful',
+      };
+    case 'IRRITATION':
+      return {
+        toneShift: 'clipped, impatient',
+        cooperationLevel: 40,
+        informationWillingness: 'minimal',
+        bodyLanguage: 'crossed arms, frowning',
+      };
+    case 'DEFENSIVE_JUSTIFICATION':
+      return {
+        toneShift: 'defensive, explaining, justifying',
+        cooperationLevel: 25,
+        informationWillingness: 'minimal',
+        bodyLanguage: 'backing away, hands up',
+      };
+    case 'OPEN_HOSTILITY':
+      return {
+        toneShift: 'aggressive, threatening',
+        cooperationLevel: 10,
+        informationWillingness: 'none',
+        bodyLanguage: 'aggressive stance, glaring',
+      };
+    case 'WITHDRAWAL_OR_CONFRONTATION':
+      return {
+        toneShift: 'final, ultimatum or silence',
+        cooperationLevel: 0,
+        informationWillingness: 'none',
+        bodyLanguage: 'turning away or squaring up',
+      };
+  }
+}
+
+export interface EscalationTrigger {
+  type: 'identity_challenge' | 'need_threat' | 'boundary_violation' | 'unresolved_tension' | 'validation' | 'offering' | 'vulnerability' | 'time_passage';
+  delta: number; // positive = escalate, negative = deescalate
+}
+
+export function evaluateEscalationTriggers(
+  npc: NPC,
+  playerInput: string,
+  context: { recentEvents: string[]; timeSinceLastConflict: number }
+): EscalationTrigger[] {
+  const triggers: EscalationTrigger[] = [];
+  const input = playerInput.toLowerCase();
+  
+  // Check identity challenge
+  const identityWords = npc.identity.identityThreat.toLowerCase().split(' ');
+  if (identityWords.some(word => word.length > 3 && input.includes(word))) {
+    triggers.push({ type: 'identity_challenge', delta: 2 });
+  }
+  
+  // Check need threats (mentions of their fears or weak points)
+  const fearWords = npc.threatModel.fears.flatMap(f => f.toLowerCase().split(' '));
+  if (fearWords.some(word => word.length > 3 && input.includes(word))) {
+    triggers.push({ type: 'need_threat', delta: 1 });
+  }
+  
+  // Check for validation (positive words, agreement)
+  const validationWords = ['agree', 'right', 'understand', 'sorry', 'thank', 'appreciate', 'respect'];
+  if (validationWords.some(word => input.includes(word))) {
+    triggers.push({ type: 'validation', delta: -1 });
+  }
+  
+  // Check for offering (help, give, offer)
+  const offeringWords = ['help', 'give', 'offer', 'share', 'support'];
+  if (offeringWords.some(word => input.includes(word))) {
+    triggers.push({ type: 'offering', delta: -1 });
+  }
+  
+  // Check for vulnerability (personal disclosure)
+  const vulnerabilityWords = ['feel', 'struggle', 'afraid', 'worried', 'hope'];
+  if (vulnerabilityWords.some(word => input.includes(word))) {
+    triggers.push({ type: 'vulnerability', delta: -1 });
+  }
+  
+  // Time passage helps deescalation
+  if (context.timeSinceLastConflict > 5) {
+    triggers.push({ type: 'time_passage', delta: -1 });
+  }
+  
+  // Check for boundary violations (demands, commands)
+  const boundaryWords = ['must', 'demand', 'tell me', 'now', 'immediately'];
+  if (boundaryWords.some(word => input.includes(word))) {
+    triggers.push({ type: 'boundary_violation', delta: 1 });
+  }
+  
+  return triggers;
+}
+
+export function calculateEscalationDelta(
+  npc: NPC,
+  triggers: EscalationTrigger[]
+): number {
+  let baseDelta = triggers.reduce((sum, t) => sum + t.delta, 0);
+  
+  // Modify by conflict style
+  const conflictBehavior = getConflictBehavior(npc.conflictStyle);
+  switch (conflictBehavior.escalationTendency) {
+    case 'quick':
+      baseDelta = baseDelta > 0 ? baseDelta * 1.5 : baseDelta * 0.5;
+      break;
+    case 'slow':
+      baseDelta = baseDelta > 0 ? baseDelta * 0.5 : baseDelta * 1.5;
+      break;
+    case 'none':
+      baseDelta = baseDelta > 0 ? 0 : baseDelta;
+      break;
+  }
+  
+  // High stress makes escalation easier
+  if (npc.stressLevel > 60) {
+    baseDelta += 0.5;
+  }
+  
+  return Math.round(baseDelta);
+}
+
+export function getEscalationDialoguePrefix(state: EscalationState, style: ConflictStyle): string {
+  const modifiers = getEscalationModifiers(state);
+  const behavior = getConflictBehavior(style);
+  
+  switch (state) {
+    case 'POLITE_DISTANCE':
+      return '';
+    case 'GUARDED_HONESTY':
+      if (style === 'AVOIDANT') return '*glances away* ';
+      if (style === 'PASSIVE_AGGRESSIVE') return '*thin smile* ';
+      return '*pauses carefully* ';
+    case 'IRRITATION':
+      if (style === 'DOMINANT') return '*jaw tightens* ';
+      if (style === 'MORALISTIC') return '*sighs disapprovingly* ';
+      return '*frowns* ';
+    case 'DEFENSIVE_JUSTIFICATION':
+      if (style === 'AVOIDANT') return '*backs up slightly* ';
+      if (style === 'RESIGNED') return '*shoulders slump* ';
+      return '*voice rises* ';
+    case 'OPEN_HOSTILITY':
+      if (style === 'DOMINANT') return '*steps forward aggressively* ';
+      if (style === 'PASSIVE_AGGRESSIVE') return '*cold stare* ';
+      return '*voice hardens* ';
+    case 'WITHDRAWAL_OR_CONFRONTATION':
+      if (style === 'AVOIDANT' || style === 'RESIGNED') return '*turns away* ';
+      return '*final warning tone* ';
+  }
+}
+
+export function updateNPCStress(npc: NPC, triggers: EscalationTrigger[]): number {
+  let stressChange = 0;
+  
+  for (const trigger of triggers) {
+    switch (trigger.type) {
+      case 'identity_challenge':
+        stressChange += 15;
+        break;
+      case 'need_threat':
+        stressChange += 10;
+        break;
+      case 'boundary_violation':
+        stressChange += 8;
+        break;
+      case 'validation':
+        stressChange -= 5;
+        break;
+      case 'offering':
+        stressChange -= 3;
+        break;
+      case 'vulnerability':
+        stressChange -= 5;
+        break;
+      case 'time_passage':
+        stressChange -= 2;
+        break;
+    }
+  }
+  
+  return Math.max(0, Math.min(100, npc.stressLevel + stressChange));
 }
