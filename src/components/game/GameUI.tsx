@@ -12,25 +12,26 @@ import { createLifeSimFromCharacter, generateCharacterIntroNarrative } from '@/g
 import { CharacterCreation } from './CharacterCreation';
 import { NarrativeDisplay } from './NarrativeDisplay';
 import { PlayerInput } from './PlayerInput';
-import { Sidebar } from './Sidebar';
+import { CharacterPanel } from './CharacterPanel';
 import { GameHeader } from './GameHeader';
 import { toast } from 'sonner';
 import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
 import { calculateSimulationStats } from '@/game/metaSystems';
+import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
 
 export function GameUI() {
   const [showCharacterCreation, setShowCharacterCreation] = useState(() => {
-    // Show character creation if no saved game and no saved character
     const saved = localStorage.getItem(STORAGE_KEY);
     const character = localStorage.getItem(CHARACTER_KEY);
     return !saved && !character;
   });
   
+  const [panelOpen, setPanelOpen] = useState(true);
+  
   const [gameState, setGameState] = useState<GameState>(() => {
-    // Try to load saved game
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -47,14 +48,11 @@ export function GameUI() {
   const [isProcessing, setIsProcessing] = useState(false);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
-    // Save character data
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
     
-    // Create new game state with character's life sim data
     const newGameState = updateLocationNPCs(createInitialGameState());
     const lifeSimState = createLifeSimFromCharacter(character);
     
-    // Apply character data to game state
     newGameState.lifeSim = lifeSimState;
     newGameState.player = {
       ...newGameState.player,
@@ -71,7 +69,6 @@ export function GameUI() {
     
     setGameState(newGameState);
     
-    // Generate intro narrative
     const introNarrative = generateCharacterIntroNarrative(character);
     const location = newGameState.locations[newGameState.player.currentLocation];
     const stats = calculateSimulationStats(newGameState);
@@ -87,7 +84,6 @@ export function GameUI() {
     toast.success(`Welcome, ${character.basicInfo.name}!`);
   }, []);
   
-  // Add welcome event on first load (if no character creation)
   useEffect(() => {
     if (displayEvents.length === 0 && !showCharacterCreation) {
       const location = gameState.locations[gameState.player.currentLocation];
@@ -105,7 +101,6 @@ export function GameUI() {
   const handleCommand = useCallback((input: string) => {
     setIsProcessing(true);
     
-    // Add player command echo
     setDisplayEvents(prev => [...prev, {
       id: `cmd_${Date.now()}`,
       type: 'system' as const,
@@ -113,10 +108,8 @@ export function GameUI() {
       timestamp: gameState.time.tick,
     }]);
     
-    // Parse command - check for debug commands
     const action = parseCommand(input);
     
-    // Handle debug commands
     if (action.debug) {
       const { newState, message } = processDebugCommand(gameState, action.debug);
       setGameState(newState);
@@ -130,10 +123,8 @@ export function GameUI() {
       return;
     }
     
-    // Process regular command
     const { newState, events } = processAction(gameState, action);
     
-    // Check for player death
     const deathState = checkPlayerDeath(newState);
     if (deathState.isDead) {
       const deathNarrative = generateDeathNarrative(deathState, newState);
@@ -146,7 +137,6 @@ export function GameUI() {
       toast.error('You have died', { description: deathState.causeOfDeath });
     }
     
-    // Update state and display
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...events]);
     setIsProcessing(false);
@@ -186,14 +176,12 @@ export function GameUI() {
   }, []);
 
   const handleNewGame = useCallback(() => {
-    // Clear saved data and show character creation
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CHARACTER_KEY);
     setDisplayEvents([]);
     setShowCharacterCreation(true);
   }, []);
   
-  // Show character creation screen
   if (showCharacterCreation) {
     return <CharacterCreation onComplete={handleCharacterComplete} />;
   }
@@ -207,19 +195,24 @@ export function GameUI() {
         onNewGame={handleNewGame}
       />
       
-      <div className="flex-1 flex overflow-hidden">
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-hidden bg-parchment">
-            <NarrativeDisplay events={displayEvents} />
-          </div>
-          <PlayerInput onSubmit={handleCommand} disabled={isProcessing} />
+      {/* Character Panel - slides out from left */}
+      <CharacterPanel 
+        gameState={gameState}
+        isOpen={panelOpen}
+        onToggle={() => setPanelOpen(!panelOpen)}
+      />
+      
+      {/* Main Content - centered and adjusts when panel opens */}
+      <div 
+        className={cn(
+          "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
+          panelOpen ? "ml-64 sm:ml-72" : "ml-0"
+        )}
+      >
+        <div className="flex-1 overflow-hidden bg-parchment">
+          <NarrativeDisplay events={displayEvents} />
         </div>
-        
-        {/* Sidebar */}
-        <aside className="w-72 hidden lg:block">
-          <Sidebar gameState={gameState} />
-        </aside>
+        <PlayerInput onSubmit={handleCommand} disabled={isProcessing} />
       </div>
     </div>
   );

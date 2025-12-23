@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Eye, MessageSquare, MapPin, Clock, Backpack, HelpCircle } from 'lucide-react';
+import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle } from 'lucide-react';
+import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
 
 interface PlayerInputProps {
   onSubmit: (command: string) => void;
@@ -25,6 +26,14 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+  
+  // Parse current input for live feedback
+  const parsedCommand = useMemo(() => {
+    if (!input.trim()) return null;
+    return parseEnhancedCommand(input);
+  }, [input]);
+  
+  const commandInfo = parsedCommand ? getCommandTypeInfo(parsedCommand.type) : null;
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,9 +67,9 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
   };
   
   return (
-    <div className="border-t border-border bg-card/50 backdrop-blur-sm p-4">
+    <div className="border-t border-border bg-card/50 backdrop-blur-sm p-3 sm:p-4">
       {/* Quick Actions */}
-      <div className="flex gap-2 mb-3 flex-wrap">
+      <div className="flex gap-1.5 sm:gap-2 mb-3 flex-wrap">
         {quickActions.map(({ label, command, icon: Icon }) => (
           <Button
             key={command}
@@ -68,10 +77,10 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
             size="sm"
             onClick={() => handleQuickAction(command)}
             disabled={disabled}
-            className="text-xs gap-1.5 bg-secondary/50 border-border hover:bg-secondary hover:border-primary/30 transition-all"
+            className="text-xs gap-1 sm:gap-1.5 bg-secondary/50 border-border hover:bg-secondary hover:border-primary/30 transition-all px-2 sm:px-3"
           >
             <Icon className="h-3 w-3" />
-            {label}
+            <span className="hidden sm:inline">{label}</span>
           </Button>
         ))}
       </div>
@@ -87,10 +96,17 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter your command..."
+            placeholder="say, ask, take, go, look, use..."
             disabled={disabled}
-            className="pl-8 bg-background border-border focus:border-primary focus:ring-primary/20 font-mono"
+            className="pl-8 pr-24 bg-background border-border focus:border-primary focus:ring-primary/20 font-mono text-sm"
           />
+          {/* Command type indicator */}
+          {commandInfo && (
+            <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs ${commandInfo.color}`}>
+              <span>{commandInfo.icon}</span>
+              <span className="hidden sm:inline">{commandInfo.label}</span>
+            </div>
+          )}
         </div>
         <Button 
           type="submit" 
@@ -100,6 +116,11 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
           <Send className="h-4 w-4" />
         </Button>
       </form>
+      
+      {/* Command hint */}
+      <p className="text-[10px] text-muted-foreground mt-2 text-center">
+        Keywords: <span className="text-primary/70">say/ask</span> to talk • <span className="text-primary/70">take/use</span> for actions • <span className="text-primary/70">go/walk</span> to move
+      </p>
     </div>
   );
 }
