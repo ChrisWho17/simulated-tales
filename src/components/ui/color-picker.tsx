@@ -7,17 +7,18 @@ interface ColorOption {
   saturation: number;
   lightness: number;
   gradient: string;
+  particles: [string, string, string]; // primary, secondary, tertiary
 }
 
 const COLOR_OPTIONS: ColorOption[] = [
-  { name: 'Violet', hue: 262, saturation: 83, lightness: 66, gradient: '#8b5cf6, #d946ef' },
-  { name: 'Crimson', hue: 350, saturation: 89, lightness: 60, gradient: '#ef4444, #f43f5e' },
-  { name: 'Emerald', hue: 160, saturation: 84, lightness: 40, gradient: '#10b981, #14b8a6' },
-  { name: 'Ocean', hue: 200, saturation: 90, lightness: 50, gradient: '#0ea5e9, #06b6d4' },
-  { name: 'Amber', hue: 38, saturation: 92, lightness: 50, gradient: '#f59e0b, #eab308' },
-  { name: 'Rose', hue: 330, saturation: 80, lightness: 60, gradient: '#ec4899, #f472b6' },
-  { name: 'Cyan', hue: 187, saturation: 94, lightness: 48, gradient: '#22d3ee, #06b6d4' },
-  { name: 'Lime', hue: 84, saturation: 85, lightness: 45, gradient: '#84cc16, #a3e635' },
+  { name: 'Violet', hue: 262, saturation: 83, lightness: 66, gradient: '#8b5cf6, #d946ef', particles: ['#8b5cf6', '#d946ef', '#22d3ee'] },
+  { name: 'Crimson', hue: 350, saturation: 89, lightness: 60, gradient: '#ef4444, #f43f5e', particles: ['#ef4444', '#f43f5e', '#fb923c'] },
+  { name: 'Emerald', hue: 160, saturation: 84, lightness: 40, gradient: '#10b981, #14b8a6', particles: ['#10b981', '#14b8a6', '#22d3ee'] },
+  { name: 'Ocean', hue: 200, saturation: 90, lightness: 50, gradient: '#0ea5e9, #06b6d4', particles: ['#0ea5e9', '#06b6d4', '#6366f1'] },
+  { name: 'Amber', hue: 38, saturation: 92, lightness: 50, gradient: '#f59e0b, #eab308', particles: ['#f59e0b', '#eab308', '#fb923c'] },
+  { name: 'Rose', hue: 330, saturation: 80, lightness: 60, gradient: '#ec4899, #f472b6', particles: ['#ec4899', '#f472b6', '#a855f7'] },
+  { name: 'Cyan', hue: 187, saturation: 94, lightness: 48, gradient: '#22d3ee, #06b6d4', particles: ['#22d3ee', '#06b6d4', '#3b82f6'] },
+  { name: 'Lime', hue: 84, saturation: 85, lightness: 45, gradient: '#84cc16, #a3e635', particles: ['#84cc16', '#a3e635', '#22c55e'] },
 ];
 
 interface ColorPickerProps {
@@ -48,6 +49,15 @@ export function ColorPicker({ onColorChange }: ColorPickerProps) {
     
     // Update glass border
     root.style.setProperty('--glass-border', `${glowColor.replace(')', ', 0.2)')}`);
+    
+    // Update particle colors for background effects
+    root.style.setProperty('--particle-primary', color.particles[0]);
+    root.style.setProperty('--particle-secondary', color.particles[1]);
+    root.style.setProperty('--particle-tertiary', color.particles[2]);
+    
+    // Update ambient glow colors
+    root.style.setProperty('--ambient-primary', color.particles[0]);
+    root.style.setProperty('--ambient-secondary', color.particles[1]);
     
     setSelectedColor(color);
     onColorChange?.(color);

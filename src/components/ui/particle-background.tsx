@@ -18,9 +18,22 @@ interface ParticleBackgroundProps {
   className?: string;
 }
 
+function getParticleColors(): string[] {
+  const root = getComputedStyle(document.documentElement);
+  const primary = root.getPropertyValue('--particle-primary').trim();
+  const secondary = root.getPropertyValue('--particle-secondary').trim();
+  const tertiary = root.getPropertyValue('--particle-tertiary').trim();
+  
+  // Return CSS variable colors if set, otherwise defaults
+  if (primary && secondary && tertiary) {
+    return [primary, secondary, tertiary];
+  }
+  return ['#8b5cf6', '#d946ef', '#22d3ee'];
+}
+
 export function ParticleBackground({
   particleCount = 50,
-  colors = ['#8b5cf6', '#d946ef', '#22d3ee'],
+  colors,
   maxSize = 3,
   speed = 0.3,
   className = '',
@@ -28,6 +41,7 @@ export function ParticleBackground({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number>();
+  const colorsRef = useRef<string[]>(colors || getParticleColors());
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,7 +55,17 @@ export function ParticleBackground({
       canvas.height = window.innerHeight;
     };
 
+    // Update colors from CSS variables
+    const updateColors = () => {
+      colorsRef.current = colors || getParticleColors();
+      // Update existing particles with new colors
+      particlesRef.current.forEach(particle => {
+        particle.color = colorsRef.current[Math.floor(Math.random() * colorsRef.current.length)];
+      });
+    };
+
     const createParticles = () => {
+      const currentColors = colorsRef.current;
       particlesRef.current = [];
       for (let i = 0; i < particleCount; i++) {
         particlesRef.current.push({
@@ -51,10 +75,21 @@ export function ParticleBackground({
           speedX: (Math.random() - 0.5) * speed,
           speedY: (Math.random() - 0.5) * speed,
           opacity: Math.random() * 0.5 + 0.1,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          color: currentColors[Math.floor(Math.random() * currentColors.length)],
         });
       }
     };
+
+    // Listen for CSS variable changes via MutationObserver
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'style') {
+          updateColors();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -102,6 +137,7 @@ export function ParticleBackground({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      observer.disconnect();
       window.removeEventListener('resize', resizeCanvas);
     };
   }, [particleCount, colors, maxSize, speed]);
@@ -115,12 +151,12 @@ export function ParticleBackground({
   );
 }
 
-// Ambient glow orbs that drift slowly
+// Ambient glow orbs that drift slowly - uses CSS variables for colors
 export function AmbientGlow() {
   return (
     <>
-      <div className="ambient-glow ambient-glow-primary" />
-      <div className="ambient-glow ambient-glow-secondary" />
+      <div className="ambient-glow ambient-glow-primary" style={{ background: 'var(--ambient-primary, #8b5cf6)' }} />
+      <div className="ambient-glow ambient-glow-secondary" style={{ background: 'var(--ambient-secondary, #d946ef)' }} />
     </>
   );
 }
