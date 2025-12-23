@@ -1,7 +1,7 @@
-import { GameUI } from '@/components/game/GameUI';
+import { AdventureGame } from '@/components/adventure/AdventureGame';
 
 const Index = () => {
-  return <GameUI />;
+  return <AdventureGame />;
 };
 
 export default Index;
