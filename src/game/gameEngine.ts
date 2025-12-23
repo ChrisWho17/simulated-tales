@@ -10,6 +10,7 @@ import {
   getEscalationModifiers,
   getConflictBehavior,
 } from './npcSpeech';
+import { worldTick, generateTickSummary, WorldEvent } from './worldSimulation';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -24,6 +25,7 @@ export function createInitialGameState(): GameState {
     events: [],
     flags: {},
     eventQueue: [],
+    worldEvents: [],
   };
 }
 
@@ -46,50 +48,65 @@ export function getTimePeriod(hour: number): string {
 }
 
 export function advanceTime(state: GameState, hours: number = 1): GameState {
-  const newState = { ...state };
-  newState.time = { ...state.time };
+  let currentState = { ...state };
+  currentState.time = { ...state.time };
   
   for (let i = 0; i < hours; i++) {
-    newState.time.tick++;
-    newState.time.hour++;
+    currentState.time.tick++;
+    currentState.time.hour++;
     
-    if (newState.time.hour >= HOURS_PER_DAY) {
-      newState.time.hour = 0;
-      newState.time.day++;
+    if (currentState.time.hour >= HOURS_PER_DAY) {
+      currentState.time.hour = 0;
+      currentState.time.day++;
       
-      if (newState.time.day > DAYS_PER_WEEK) {
-        newState.time.day = 1;
-        newState.time.week++;
+      if (currentState.time.day > DAYS_PER_WEEK) {
+        currentState.time.day = 1;
+        currentState.time.week++;
         
-        if (newState.time.week > WEEKS_PER_SEASON) {
-          newState.time.week = 1;
+        if (currentState.time.week > WEEKS_PER_SEASON) {
+          currentState.time.week = 1;
           const seasons: GameTime['season'][] = ['spring', 'summer', 'autumn', 'winter'];
-          const currentIdx = seasons.indexOf(newState.time.season);
+          const currentIdx = seasons.indexOf(currentState.time.season);
           if (currentIdx === 3) {
-            newState.time.season = 'spring';
-            newState.time.year++;
+            currentState.time.season = 'spring';
+            currentState.time.year++;
           } else {
-            newState.time.season = seasons[currentIdx + 1];
+            currentState.time.season = seasons[currentIdx + 1];
           }
         }
       }
     }
     
     // Run world simulation for each tick
-    newState.npcs = simulateNPCs(newState);
+    const tickResult = worldTick(currentState);
+    currentState = tickResult.updatedState;
+    
+    // Store world events
+    const worldEventLogs = tickResult.worldEvents.map(we => ({
+      id: we.id,
+      tick: we.tick,
+      type: we.type,
+      description: we.description,
+      involvedEntities: we.involvedEntities,
+      location: we.location,
+    }));
+    currentState.worldEvents = [...(currentState.worldEvents || []), ...worldEventLogs];
+    
+    // Also run basic NPC schedule simulation
+    currentState.npcs = simulateNPCs(currentState);
     
     // Decay player stats
-    newState.player = {
-      ...newState.player,
+    currentState.player = {
+      ...currentState.player,
       stats: {
-        ...newState.player.stats,
-        hunger: Math.max(0, newState.player.stats.hunger - 2),
-        energy: Math.max(0, newState.player.stats.energy - 1),
+        ...currentState.player.stats,
+        hunger: Math.max(0, currentState.player.stats.hunger - 2),
+        energy: Math.max(0, currentState.player.stats.energy - 1),
       },
     };
   }
   
-  return newState;
+  return currentState;
 }
 
 function simulateNPCs(state: GameState): Record<string, NPC> {
@@ -369,12 +386,29 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       const hours = action.target ? parseInt(action.target) || 1 : 1;
       const clampedHours = Math.min(Math.max(hours, 1), 12);
       
+      const preWaitEventCount = newState.worldEvents?.length || 0;
       newState = advanceTime(newState, clampedHours);
+      
+      // Get events that happened during the wait
+      const newWorldEvents = (newState.worldEvents || []).slice(preWaitEventCount);
+      const visibleEvents = newWorldEvents.filter(e => 
+        e.location === newState.player.currentLocation || 
+        e.type === 'environmental'
+      );
+      
+      let waitSummary = `You wait for ${clampedHours} hour${clampedHours > 1 ? 's' : ''}. Time passes...`;
+      
+      if (visibleEvents.length > 0) {
+        waitSummary += '\n\n**While you waited:**';
+        visibleEvents.slice(0, 3).forEach(evt => {
+          waitSummary += `\n• ${evt.description}`;
+        });
+      }
       
       events.push({
         id: `evt_${Date.now()}`,
         type: 'system',
-        content: `You wait for ${clampedHours} hour${clampedHours > 1 ? 's' : ''}. Time passes...`,
+        content: waitSummary,
         timestamp: newState.time.tick,
       });
       break;
