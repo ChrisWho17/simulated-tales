@@ -22,7 +22,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -179,52 +179,42 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
               <div className="space-y-6">
                 <div className="space-y-3">
                   <Label>Body Type</Label>
-                  <RadioGroup
-                    value={character.appearance.bodyType}
-                    onValueChange={(v) => updateAppearance('bodyType', v as BodyTypeOption)}
-                    className="flex flex-wrap gap-2"
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(['slim', 'average', 'athletic', 'curvy', 'heavy'] as const).map((type) => (
-                      <div key={type} className="flex items-center">
-                        <RadioGroupItem value={type} id={`bodytype-${type}`} className="sr-only peer" />
-                        <Label
-                          htmlFor={`bodytype-${type}`}
-                          className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
-                            character.appearance.bodyType === type
-                              ? 'bg-primary/20 border-primary text-primary'
-                              : 'bg-input/30 border-border/50 hover:bg-input/50'
-                          }`}
-                        >
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </Label>
-                      </div>
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => updateAppearance('bodyType', type)}
+                        className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
+                          character.appearance.bodyType === type
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-input/30 border-border/50 hover:bg-input/50'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
                     ))}
-                  </RadioGroup>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
                   <Label>Height</Label>
-                  <RadioGroup
-                    value={character.appearance.height}
-                    onValueChange={(v) => updateAppearance('height', v as HeightOption)}
-                    className="flex flex-wrap gap-2"
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(['short', 'average', 'tall'] as const).map((h) => (
-                      <div key={h} className="flex items-center">
-                        <RadioGroupItem value={h} id={`charheight-${h}`} className="sr-only peer" />
-                        <Label
-                          htmlFor={`charheight-${h}`}
-                          className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
-                            character.appearance.height === h
-                              ? 'bg-primary/20 border-primary text-primary'
-                              : 'bg-input/30 border-border/50 hover:bg-input/50'
-                          }`}
-                        >
-                          {h.charAt(0).toUpperCase() + h.slice(1)}
-                        </Label>
-                      </div>
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => updateAppearance('height', h)}
+                        className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
+                          character.appearance.height === h
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-input/30 border-border/50 hover:bg-input/50'
+                        }`}
+                      >
+                        {h.charAt(0).toUpperCase() + h.slice(1)}
+                      </button>
                     ))}
-                  </RadioGroup>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -249,27 +239,22 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
 
                   <div className="space-y-2">
                     <Label>Hair Length</Label>
-                    <RadioGroup
-                      value={character.appearance.hairLength}
-                      onValueChange={(v) => updateAppearance('hairLength', v as HairLengthOption)}
-                      className="flex flex-wrap gap-2"
-                    >
+                    <div className="flex flex-wrap gap-2">
                       {(['short', 'medium', 'long'] as const).map((l) => (
-                        <div key={l} className="flex items-center">
-                          <RadioGroupItem value={l} id={`hairlength-${l}`} className="sr-only peer" />
-                          <Label
-                            htmlFor={`hairlength-${l}`}
-                            className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
-                              character.appearance.hairLength === l
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-input/30 border-border/50 hover:bg-input/50'
-                            }`}
-                          >
-                            {l.charAt(0).toUpperCase() + l.slice(1)}
-                          </Label>
-                        </div>
+                        <button
+                          key={l}
+                          type="button"
+                          onClick={() => updateAppearance('hairLength', l)}
+                          className={`px-3 py-1.5 text-sm rounded-md cursor-pointer transition-all border ${
+                            character.appearance.hairLength === l
+                              ? 'bg-primary/20 border-primary text-primary'
+                              : 'bg-input/30 border-border/50 hover:bg-input/50'
+                          }`}
+                        >
+                          {l.charAt(0).toUpperCase() + l.slice(1)}
+                        </button>
                       ))}
-                    </RadioGroup>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -416,53 +401,43 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 <div className="space-y-3">
                   <Label>Disposition</Label>
                   <p className="text-xs text-muted-foreground">Affects your approach to challenges and risks</p>
-                  <RadioGroup
-                    value={character.personality.disposition}
-                    onValueChange={(v) => updatePersonality('disposition', v as DispositionOption)}
-                    className="flex flex-wrap gap-2"
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(['Bold', 'Cautious', 'Adaptable'] as const).map((d) => (
-                      <div key={d} className="flex items-center">
-                        <RadioGroupItem value={d} id={`disposition-${d}`} className="sr-only peer" />
-                        <Label
-                          htmlFor={`disposition-${d}`}
-                          className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
-                            character.personality.disposition === d
-                              ? 'bg-primary/20 border-primary text-primary'
-                              : 'bg-input/30 border-border/50 hover:bg-input/50'
-                          }`}
-                        >
-                          {d}
-                        </Label>
-                      </div>
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => updatePersonality('disposition', d)}
+                        className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
+                          character.personality.disposition === d
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-input/30 border-border/50 hover:bg-input/50'
+                        }`}
+                      >
+                        {d}
+                      </button>
                     ))}
-                  </RadioGroup>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
                   <Label>Social Style</Label>
                   <p className="text-xs text-muted-foreground">Affects how NPCs react to you</p>
-                  <RadioGroup
-                    value={character.personality.socialStyle}
-                    onValueChange={(v) => updatePersonality('socialStyle', v as SocialStyleOption)}
-                    className="flex flex-wrap gap-2"
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(['Charming', 'Reserved', 'Blunt'] as const).map((s) => (
-                      <div key={s} className="flex items-center">
-                        <RadioGroupItem value={s} id={`socialstyle-${s}`} className="sr-only peer" />
-                        <Label
-                          htmlFor={`socialstyle-${s}`}
-                          className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
-                            character.personality.socialStyle === s
-                              ? 'bg-primary/20 border-primary text-primary'
-                              : 'bg-input/30 border-border/50 hover:bg-input/50'
-                          }`}
-                        >
-                          {s}
-                        </Label>
-                      </div>
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => updatePersonality('socialStyle', s)}
+                        className={`px-4 py-2 rounded-md cursor-pointer transition-all border ${
+                          character.personality.socialStyle === s
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-input/30 border-border/50 hover:bg-input/50'
+                        }`}
+                      >
+                        {s}
+                      </button>
                     ))}
-                  </RadioGroup>
+                  </div>
                 </div>
               </div>
             </section>
