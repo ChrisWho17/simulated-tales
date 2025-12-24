@@ -16,9 +16,17 @@ interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadSave?: (save: GameSave) => void;
+  onManualSave?: () => void;
+  currentCharacterName?: string;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, onLoadSave }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
+  isOpen, 
+  onClose, 
+  onLoadSave, 
+  onManualSave,
+  currentCharacterName 
+}) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
@@ -49,8 +57,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, o
       setConfirmDelete(null);
     } else {
       setConfirmDelete(saveId);
-      // Reset confirm after 3 seconds
       setTimeout(() => setConfirmDelete(null), 3000);
+    }
+  };
+  
+  const handleManualSave = () => {
+    if (onManualSave) {
+      onManualSave();
+      // Refresh saves list after saving
+      setTimeout(() => setSaves(loadAllSaves()), 100);
     }
   };
   
@@ -188,11 +203,32 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, o
           {/* Saves Tab */}
           {activeTab === 'saves' && (
             <div className="space-y-6">
-              {saves.length === 0 ? (
+              {/* Manual Save Button */}
+              {onManualSave && (
+                <button
+                  onClick={handleManualSave}
+                  className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary/40 
+                             bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-all group"
+                >
+                  <Save className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                  <div className="text-left">
+                    <span className="font-medium text-sm text-primary">Save Snapshot</span>
+                    {currentCharacterName && (
+                      <p className="text-xs text-muted-foreground">Save {currentCharacterName}'s current progress</p>
+                    )}
+                  </div>
+                </button>
+              )}
+              
+              {saves.length === 0 && !onManualSave ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Save className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">No saves yet</p>
                   <p className="text-xs mt-1">Your adventure saves will appear here</p>
+                </div>
+              ) : saves.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-xs">No saves yet — create your first snapshot above!</p>
                 </div>
               ) : (
                 <>
