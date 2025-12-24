@@ -1,6 +1,22 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
+import { 
+  CampaignMemoryStore, 
+  Campaign,
+  MemoryRetrievalContext 
+} from '@/types/campaignMemory';
+import {
+  createCampaign,
+  initializeCampaignMemoryStore,
+  serializeCampaignMemory,
+  deserializeCampaignMemory,
+  retrieveMemoryContext,
+  decayMemories,
+  progressLoops,
+  startSession,
+  endSession,
+} from '@/game/campaignMemorySystem';
 
 // ============================================================================
 // GAME SETTINGS
@@ -48,6 +64,16 @@ interface GameContextType {
   // Adult content
   adultContent: boolean;
   setAdultContent: (enabled: boolean) => void;
+  
+  // Campaign Memory System
+  campaignMemory: CampaignMemoryStore | null;
+  initializeCampaign: (name: string, characterName: string, toneProfile?: string[]) => void;
+  loadCampaign: (campaignId: string) => boolean;
+  saveCampaignMemory: () => void;
+  getCampaignContext: (location: string, entities: string[], tick: number) => MemoryRetrievalContext | null;
+  advanceCampaignTime: (ticks: number) => void;
+  endCurrentSession: (tick: number) => void;
+  getCampaign: () => Campaign | null;
 }
 
 // ============================================================================
@@ -74,6 +100,7 @@ export const useGameOptional = (): GameContextType | null => {
 // ============================================================================
 
 const SETTINGS_STORAGE_KEY = 'untold-game-settings';
+const CAMPAIGN_MEMORY_KEY = 'untold-campaign-memory';
 
 const loadSettings = (): GameSettings => {
   try {
@@ -93,6 +120,26 @@ const saveSettings = (settings: GameSettings): void => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
     console.error('Failed to save game settings:', e);
+  }
+};
+
+const loadCampaignMemoryFromStorage = (): CampaignMemoryStore | null => {
+  try {
+    const saved = localStorage.getItem(CAMPAIGN_MEMORY_KEY);
+    if (saved) {
+      return deserializeCampaignMemory(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load campaign memory:', e);
+  }
+  return null;
+};
+
+const saveCampaignMemoryToStorage = (store: CampaignMemoryStore): void => {
+  try {
+    localStorage.setItem(CAMPAIGN_MEMORY_KEY, serializeCampaignMemory(store));
+  } catch (e) {
+    console.error('Failed to save campaign memory:', e);
   }
 };
 
@@ -122,6 +169,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return COLOR_PRESETS.find(c => c.id === settings.colorTheme) || COLOR_PRESETS[0];
   });
   
+  // Campaign Memory State
+  const [campaignMemory, setCampaignMemory] = useState<CampaignMemoryStore | null>(() => {
+    return loadCampaignMemoryFromStorage();
+  });
+  
   // Apply color theme on mount
   useEffect(() => {
     applyColorTheme(colorTheme);
@@ -131,6 +183,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+  
+  // Auto-save campaign memory when it changes
+  useEffect(() => {
+    if (campaignMemory) {
+      saveCampaignMemoryToStorage(campaignMemory);
+    }
+  }, [campaignMemory]);
   
   const updateSettings = useCallback((partial: Partial<GameSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));
@@ -154,6 +213,65 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setSettings(prev => ({ ...prev, adultContent: enabled }));
   }, []);
   
+  // Campaign Memory Functions
+  const initializeCampaignFunc = useCallback((name: string, characterName: string, toneProfile: string[] = []) => {
+    const campaign = createCampaign(name, characterName, toneProfile);
+    const store = initializeCampaignMemoryStore(campaign);
+    const activeStore = startSession(store);
+    setCampaignMemory(activeStore);
+    console.log(`[Campaign Memory] Initialized: ${name} for ${characterName}`);
+  }, []);
+  
+  const loadCampaignFunc = useCallback((campaignId: string): boolean => {
+    const saved = loadCampaignMemoryFromStorage();
+    if (saved && saved.campaign.id === campaignId) {
+      const activeStore = startSession(saved);
+      setCampaignMemory(activeStore);
+      console.log(`[Campaign Memory] Loaded: ${saved.campaign.name}`);
+      return true;
+    }
+    return false;
+  }, []);
+  
+  const saveCampaignMemoryFunc = useCallback(() => {
+    if (campaignMemory) {
+      saveCampaignMemoryToStorage(campaignMemory);
+      console.log(`[Campaign Memory] Saved: ${campaignMemory.campaign.name}`);
+    }
+  }, [campaignMemory]);
+  
+  const getCampaignContextFunc = useCallback((location: string, entities: string[], tick: number): MemoryRetrievalContext | null => {
+    if (!campaignMemory) return null;
+    return retrieveMemoryContext(campaignMemory, location, entities, tick);
+  }, [campaignMemory]);
+  
+  const advanceCampaignTimeFunc = useCallback((ticks: number) => {
+    if (!campaignMemory) return;
+    
+    let updated = decayMemories(campaignMemory, ticks);
+    updated = progressLoops(updated, ticks);
+    updated = {
+      ...updated,
+      campaign: {
+        ...updated.campaign,
+        currentTick: updated.campaign.currentTick + ticks,
+      },
+    };
+    
+    setCampaignMemory(updated);
+  }, [campaignMemory]);
+  
+  const endCurrentSessionFunc = useCallback((tick: number) => {
+    if (!campaignMemory) return;
+    const ended = endSession(campaignMemory, tick);
+    setCampaignMemory(ended);
+    console.log(`[Campaign Memory] Session ${campaignMemory.campaign.currentSession} ended`);
+  }, [campaignMemory]);
+  
+  const getCampaignFunc = useCallback((): Campaign | null => {
+    return campaignMemory?.campaign ?? null;
+  }, [campaignMemory]);
+  
   const value: GameContextType = {
     settings,
     updateSettings,
@@ -162,7 +280,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     colorTheme,
     setColorTheme,
     adultContent: settings.adultContent,
-    setAdultContent
+    setAdultContent,
+    // Campaign Memory
+    campaignMemory,
+    initializeCampaign: initializeCampaignFunc,
+    loadCampaign: loadCampaignFunc,
+    saveCampaignMemory: saveCampaignMemoryFunc,
+    getCampaignContext: getCampaignContextFunc,
+    advanceCampaignTime: advanceCampaignTimeFunc,
+    endCurrentSession: endCurrentSessionFunc,
+    getCampaign: getCampaignFunc,
   };
   
   return (
