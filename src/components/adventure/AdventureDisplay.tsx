@@ -46,6 +46,7 @@ interface AdventureDisplayProps {
   story: StoryEntry[];
   onPlayerAction: (action: string, diceRoll?: any) => void;
   onRestart: () => void;
+  onLoadSave?: (save: GameSave) => void;
   isLoading: boolean;
   cheatMode: boolean;
   onToggleCheatMode: () => void;
@@ -64,6 +65,7 @@ export function AdventureDisplay({
   story,
   onPlayerAction,
   onRestart,
+  onLoadSave,
   isLoading,
   cheatMode,
   onToggleCheatMode,
@@ -98,24 +100,28 @@ export function AdventureDisplay({
       timestamp: Date.now()
     };
     
-    const save = saveGame(character.name, gameState, false);
+    // Include campaign memory in save if available
+    const campaignMem = gameContext?.campaignMemory ?? undefined;
+    saveGame(character.name, gameState, false, campaignMem);
     
     toast({
       title: "Adventure Saved",
       description: `${character.name}'s progress has been saved.`,
       duration: 3000,
     });
-  }, [story, character, toast]);
+  }, [story, character, toast, gameContext?.campaignMemory]);
 
-  // Load save handler
+  // Load save handler - delegates to parent for actual state restoration
   const handleLoadSave = useCallback((save: GameSave) => {
-    // This would need to be wired to the parent component to actually restore state
+    if (onLoadSave) {
+      onLoadSave(save);
+    }
     toast({
       title: "Save Loaded",
       description: `Restored ${save.characterName}'s adventure.`,
       duration: 3000,
     });
-  }, [toast]);
+  }, [onLoadSave, toast]);
 
   // Auto-save every 5 minutes when enabled
   useEffect(() => {
@@ -132,7 +138,9 @@ export function AdventureDisplay({
         timestamp: Date.now()
       };
       
-      saveGame(character.name, gameState, true); // true = auto-save (overwrites previous for this campaign)
+      // Include campaign memory in auto-save
+      const campaignMem = gameContext?.campaignMemory ?? undefined;
+      saveGame(character.name, gameState, true, campaignMem);
       
       // Subtle toast notification for auto-save
       toast({
@@ -149,7 +157,7 @@ export function AdventureDisplay({
     
     // Cleanup on unmount or when settings change
     return () => clearInterval(intervalId);
-  }, [gameContext?.settings?.autoSave, character, story]);
+  }, [gameContext?.settings?.autoSave, gameContext?.campaignMemory, character, story, toast]);
 
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content

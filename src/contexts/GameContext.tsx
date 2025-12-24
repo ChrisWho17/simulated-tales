@@ -69,6 +69,7 @@ interface GameContextType {
   campaignMemory: CampaignMemoryStore | null;
   initializeCampaign: (name: string, characterName: string, toneProfile?: string[]) => void;
   loadCampaign: (campaignId: string) => boolean;
+  restoreCampaignFromSave: (serializedMemory: string) => boolean;
   saveCampaignMemory: () => void;
   getCampaignContext: (location: string, entities: string[], tick: number) => MemoryRetrievalContext | null;
   advanceCampaignTime: (ticks: number) => void;
@@ -233,6 +234,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return false;
   }, []);
   
+  // Restore campaign memory from serialized save data
+  const restoreCampaignFromSaveFunc = useCallback((serializedMemory: string): boolean => {
+    try {
+      const restored = deserializeCampaignMemory(serializedMemory);
+      if (restored) {
+        const activeStore = startSession(restored);
+        setCampaignMemory(activeStore);
+        console.log(`[Campaign Memory] Restored from save: ${restored.campaign.name}`);
+        return true;
+      }
+    } catch (e) {
+      console.error('[Campaign Memory] Failed to restore from save:', e);
+    }
+    return false;
+  }, []);
+  
   const saveCampaignMemoryFunc = useCallback(() => {
     if (campaignMemory) {
       saveCampaignMemoryToStorage(campaignMemory);
@@ -285,6 +302,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     campaignMemory,
     initializeCampaign: initializeCampaignFunc,
     loadCampaign: loadCampaignFunc,
+    restoreCampaignFromSave: restoreCampaignFromSaveFunc,
     saveCampaignMemory: saveCampaignMemoryFunc,
     getCampaignContext: getCampaignContextFunc,
     advanceCampaignTime: advanceCampaignTimeFunc,

@@ -12,6 +12,7 @@ import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
+import { GameSave } from '@/lib/saveSystem';
 
 interface StoryEntry {
   id: string;
@@ -39,7 +40,7 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
-  const { setDiceMode } = useGame();
+  const { setDiceMode, initializeCampaign, restoreCampaignFromSave } = useGame();
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -227,6 +228,12 @@ export function AdventureGame() {
     setCharacter(char);
     setIsLoading(true);
 
+    // Initialize campaign memory for new adventure
+    const campaignId = `campaign_${char.name}_${Date.now()}`;
+    const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
+    initializeCampaign(campaignId, char.name, toneProfile);
+    console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+
     const narrative = await generateNarrative(scenario, undefined, [], undefined, char);
     if (narrative) {
       const newStory: StoryEntry[] = [{
@@ -240,7 +247,7 @@ export function AdventureGame() {
       setPhase('playing');
     }
     setIsLoading(false);
-  }, [generateNarrative, saveData, scenarioSelection]);
+  }, [generateNarrative, saveData, scenarioSelection, initializeCampaign]);
 
   // Back to scenario selection
   const handleBackToScenario = useCallback(() => {
@@ -322,6 +329,37 @@ export function AdventureGame() {
     localStorage.removeItem(GENRE_KEY);
   }, []);
 
+  // Load save with campaign memory restoration
+  const handleLoadSave = useCallback((save: GameSave) => {
+    const gameData = save.gameData as { story?: StoryEntry[]; character?: RPGCharacter };
+    
+    if (gameData.story && gameData.character) {
+      setStory(gameData.story);
+      setCharacter(gameData.character);
+      
+      // Restore campaign memory if available
+      if (save.campaignMemory) {
+        const restored = restoreCampaignFromSave(save.campaignMemory);
+        if (restored) {
+          console.log(`[Campaign Memory] Restored campaign for ${save.characterName}`);
+        } else {
+          // Failed to restore, initialize a new one for continuity
+          const campaignId = `campaign_${gameData.character.name}_restored_${Date.now()}`;
+          initializeCampaign(campaignId, gameData.character.name, []);
+          console.log(`[Campaign Memory] Initialized new campaign for restored save: ${campaignId}`);
+        }
+      } else {
+        // Legacy save without campaign memory - initialize new
+        const campaignId = `campaign_${gameData.character.name}_legacy_${Date.now()}`;
+        initializeCampaign(campaignId, gameData.character.name, []);
+        console.log(`[Campaign Memory] Initialized campaign for legacy save: ${campaignId}`);
+      }
+      
+      setPhase('playing');
+      toast.success(`Loaded ${save.characterName}'s adventure`);
+    }
+  }, [restoreCampaignFromSave, initializeCampaign]);
+
   // Show loading screen on initial load
   if (initialLoading) {
     return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." />;
@@ -363,6 +401,7 @@ export function AdventureGame() {
         story={story}
         onPlayerAction={handlePlayerAction}
         onRestart={handleRestart}
+        onLoadSave={handleLoadSave}
         isLoading={isLoading}
         cheatMode={cheatMode}
         onToggleCheatMode={() => setCheatMode(p => !p)}
