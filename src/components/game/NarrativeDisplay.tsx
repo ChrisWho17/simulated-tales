@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { GameEvent } from '@/types/game';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User } from 'lucide-react';
@@ -16,21 +16,30 @@ export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
     }
   }, [events]);
   
+  // Safe text formatting using React components instead of dangerouslySetInnerHTML
+  const formatTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
+    const result: React.ReactNode[] = [];
+    const parts = text.split(/\*\*(.+?)\*\*/g);
+    
+    parts.forEach((part, i) => {
+      if (i % 2 === 1) {
+        result.push(<strong key={`${keyPrefix}-${i}`} className="text-primary">{part}</strong>);
+      } else if (part) {
+        result.push(<span key={`${keyPrefix}-${i}`}>{part}</span>);
+      }
+    });
+    
+    return result;
+  };
+
   const formatContent = (content: string) => {
-    // Convert markdown-like formatting
     return content
       .split('\n')
-      .map((line, i) => {
-        // Bold text
-        const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary">$1</strong>');
-        return (
-          <span 
-            key={i} 
-            className="block"
-            dangerouslySetInnerHTML={{ __html: formatted }}
-          />
-        );
-      });
+      .map((line, i) => (
+        <span key={i} className="block">
+          {formatTextSegment(line, `line-${i}`)}
+        </span>
+      ));
   };
   
   const getEventStyle = (type: GameEvent['type']) => {

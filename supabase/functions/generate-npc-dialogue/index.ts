@@ -298,8 +298,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
     });
   } catch (error) {
     console.error("Error generating NPC dialogue:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to generate dialogue";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Unable to generate dialogue at this time" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

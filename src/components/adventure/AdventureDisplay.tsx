@@ -205,6 +205,32 @@ export function AdventureDisplay({
     }
   };
 
+  // Safe text formatting using React components instead of dangerouslySetInnerHTML
+  const formatTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
+    const result: React.ReactNode[] = [];
+    // Split by bold markers first
+    const boldParts = text.split(/\*\*(.+?)\*\*/g);
+    
+    boldParts.forEach((part, i) => {
+      if (i % 2 === 1) {
+        // This is bold text
+        result.push(<strong key={`${keyPrefix}-b-${i}`} className="text-primary font-semibold">{part}</strong>);
+      } else if (part) {
+        // Check for italic within non-bold text
+        const italicParts = part.split(/\*(.+?)\*/g);
+        italicParts.forEach((iPart, j) => {
+          if (j % 2 === 1) {
+            result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{iPart}</em>);
+          } else if (iPart) {
+            result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{iPart}</span>);
+          }
+        });
+      }
+    });
+    
+    return result;
+  };
+
   const formatNarrativeContent = (content: string) => {
     return content.split('\n').map((paragraph, idx) => {
       if (!paragraph.trim()) return null;
@@ -219,22 +245,10 @@ export function AdventureDisplay({
         );
       }
 
-      const formattedParagraph = paragraph.replace(
-        /\*\*(.+?)\*\*/g,
-        '<strong class="text-primary font-semibold">$1</strong>'
-      );
-
-      const fullyFormatted = formattedParagraph.replace(
-        /\*(.+?)\*/g,
-        '<em class="text-muted-foreground">$1</em>'
-      );
-
       return (
-        <p
-          key={idx}
-          className="my-4 leading-relaxed text-foreground/90"
-          dangerouslySetInnerHTML={{ __html: fullyFormatted }}
-        />
+        <p key={idx} className="my-4 leading-relaxed text-foreground/90">
+          {formatTextSegment(paragraph, `p-${idx}`)}
+        </p>
       );
     });
   };

@@ -150,8 +150,7 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
     });
   } catch (error) {
     console.error("Error generating character portrait:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to generate portrait";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Unable to generate portrait at this time" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
