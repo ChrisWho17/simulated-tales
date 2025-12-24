@@ -109,11 +109,11 @@ export const SmartScrollContainer: React.FC<SmartScrollContainerProps> = ({
         <button 
           className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 
                      bg-primary/90 backdrop-blur-sm text-primary-foreground rounded-full shadow-lg
-                     hover:bg-primary transition-all duration-300 animate-bounce-subtle cursor-pointer
-                     border border-primary-foreground/20"
+                     hover:bg-primary transition-all duration-300 cursor-pointer
+                     border border-primary-foreground/20 animate-pulse-subtle animate-glow-breathe"
           onClick={scrollToBottom}
         >
-          <ChevronDown size={16} />
+          <ChevronDown size={16} className="animate-bounce-subtle" />
           <span className="text-sm font-medium">New content below</span>
           {newContentCount > 1 && (
             <span className="bg-primary-foreground/20 px-2 py-0.5 rounded-full text-xs">
