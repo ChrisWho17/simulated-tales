@@ -230,15 +230,38 @@ export function AdventureDisplay({
     }
   }, [isLoading]);
 
+  // Process mechanics and trigger emotional state changes
   useEffect(() => {
-    if (pendingMechanics?.rollRequired && diceMode !== 'story') {
+    if (!pendingMechanics) return;
+
+    // Trigger emotional events based on mechanics
+    if (gameContext?.processGameEvent) {
+      if (pendingMechanics.damage && pendingMechanics.damage > 0) {
+        gameContext.processGameEvent('took_damage', character);
+      }
+      if (pendingMechanics.heal && pendingMechanics.heal > 0) {
+        gameContext.processGameEvent('received_healing', character);
+      }
+      if (pendingMechanics.goldGained && pendingMechanics.goldGained > 0) {
+        gameContext.processGameEvent('found_treasure', character);
+      }
+      if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
+        gameContext.processGameEvent('quest_completed', character);
+      }
+      if (pendingMechanics.lootGained) {
+        gameContext.processGameEvent('found_treasure', character);
+      }
+    }
+
+    // Handle dice rolls
+    if (pendingMechanics.rollRequired && diceMode !== 'story') {
       handlePendingRoll();
-    } else if (pendingMechanics?.rollRequired) {
+    } else if (pendingMechanics.rollRequired) {
       // Story mode - just pass through without dice
       onPlayerAction(`[Automatic success for: ${pendingMechanics.rollRequired.reason}]`);
       onClearMechanics();
     }
-  }, [pendingMechanics, diceMode]);
+  }, [pendingMechanics, diceMode, gameContext, character]);
 
   // Map pending roll stat to action type
   const statToActionType = (stat: string): string => {
