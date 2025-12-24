@@ -15,6 +15,7 @@ import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult } from '@/game/diceSystem';
+import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 
 interface StoryEntry {
   id: string;
@@ -232,7 +233,10 @@ export function AdventureDisplay({
   };
 
   const formatNarrativeContent = (content: string) => {
-    return content.split('\n').map((paragraph, idx) => {
+    // Clean the content to remove OOC messages and technical talk
+    const cleanedContent = cleanNarrativeForDisplay(content);
+    
+    return cleanedContent.split('\n').map((paragraph, idx) => {
       if (!paragraph.trim()) return null;
       
       const dialogueMatch = paragraph.match(/^\*\*(.+?)\*\*:\s*"(.+)"$/);

@@ -163,6 +163,9 @@ DIALOGUE GUIDELINES:
 - Don't be overly helpful or exposition-heavy - real people have limited patience
 - If you're busy or stressed, show it in your responses
 - You can have opinions, biases, and make mistakes
+- NEVER include OOC (Out of Character) messages or technical instructions
+- NEVER break character or reference game mechanics directly
+- NEVER include meta-commentary about the conversation format
 ${npc.knownFacts && npc.knownFacts.length > 0 ? `\nThings you know: ${npc.knownFacts.join('; ')}` : ''}
 
 MEMORY-BASED BEHAVIOR:
@@ -323,7 +326,8 @@ function getRelationshipDescription(rel: { affection: number; trust: number; fea
 }
 
 function generateFallbackDialogue(npc: NPCContext, isFirst: boolean): string {
-  const greetings = [
+  // Mood-based greetings for more immersive fallback
+  const neutralGreetings = [
     "Hey.",
     "What's up?",
     "Can I help you?",
@@ -333,16 +337,40 @@ function generateFallbackDialogue(npc: NPCContext, isFirst: boolean): string {
     "Oh, hi.",
   ];
   
-  const busy = [
-    "Sorry, I'm kind of in the middle of something.",
-    "Now's not really a good time.",
-    "Can we make this quick?",
-    "*seems distracted*",
+  const friendlyGreetings = [
+    "Good to see you!",
+    "Hey there!",
+    "*smiles warmly*",
+    "Oh, hello!",
   ];
   
+  const guardedGreetings = [
+    "*eyes you warily*",
+    "What do you want?",
+    "...yes?",
+    "*keeps their distance*",
+  ];
+  
+  const busyResponses = [
+    "Sorry, I'm in the middle of something.",
+    "Now's not really a good time.",
+    "Can we make this quick?",
+    "*seems distracted* Hang on a moment...",
+    "I'm a bit tied up right now.",
+  ];
+  
+  // Choose based on NPC state
   if (npc.stressLevel > 60) {
-    return busy[Math.floor(Math.random() * busy.length)];
+    return busyResponses[Math.floor(Math.random() * busyResponses.length)];
   }
   
-  return greetings[Math.floor(Math.random() * greetings.length)];
+  if (npc.relationship.affection > 30) {
+    return friendlyGreetings[Math.floor(Math.random() * friendlyGreetings.length)];
+  }
+  
+  if (npc.relationship.trust < -10 || npc.relationship.fear > 20) {
+    return guardedGreetings[Math.floor(Math.random() * guardedGreetings.length)];
+  }
+  
+  return neutralGreetings[Math.floor(Math.random() * neutralGreetings.length)];
 }

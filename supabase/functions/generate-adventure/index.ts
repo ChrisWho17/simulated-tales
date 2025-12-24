@@ -92,6 +92,10 @@ IMPORTANT RULES:
 - If the player's action would be fatal or impossible, narrate a dramatic near-miss or complication
 - Keep mature themes tasteful but don't shy away from drama and peril
 - Use the character's personality traits to inform how NPCs react to them
+- NEVER include OOC (Out of Character) messages or meta-instructions in your response
+- NEVER ask the player for dice roll numbers directly - just narrate the outcome based on the roll result provided
+- NEVER include formatting instructions or technical guidance in the narrative
+- If you need to request a dice roll, use ONLY the [ROLL:stat:difficulty:reason] format, nothing else
 
 For the FIRST message of a new adventure, set the scene vividly and introduce an immediate hook or situation.`;
 
@@ -299,11 +303,23 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-adventure:', error);
+    
+    // Generate a neutral fallback narrative to maintain immersion
+    const fallbackNarratives = [
+      "A moment of uncertainty passes. The world around you continues, waiting for your next action.",
+      "The scene settles into quiet anticipation. You take a breath and consider what to do next.",
+      "Time flows onward without incident. The path ahead remains open to your choices.",
+      "A brief pause in the adventure. You find yourself ready for whatever comes next.",
+      "The moment resolves itself quietly. Your journey continues uninterrupted.",
+    ];
+    
+    const fallbackNarrative = fallbackNarratives[Math.floor(Math.random() * fallbackNarratives.length)];
+    
     return new Response(JSON.stringify({ 
-      error: 'Unable to generate adventure content at this time',
-      narrative: null 
+      narrative: fallbackNarrative,
+      mechanics: undefined
     }), {
-      status: 500,
+      status: 200, // Return 200 with fallback to maintain flow
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

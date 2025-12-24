@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { GameEvent } from '@/types/game';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User } from 'lucide-react';
+import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 
 interface NarrativeDisplayProps {
   events: GameEvent[];
@@ -33,7 +34,10 @@ export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
   };
 
   const formatContent = (content: string) => {
-    return content
+    // Clean the content to remove OOC messages and technical talk
+    const cleanedContent = cleanNarrativeForDisplay(content);
+    
+    return cleanedContent
       .split('\n')
       .map((line, i) => (
         <span key={i} className="block">

@@ -11,6 +11,7 @@ import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { toast } from 'sonner';
+import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 
 interface StoryEntry {
   id: string;
@@ -182,13 +183,21 @@ export function AdventureGame() {
       );
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to generate');
       
+      // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
       if (data.mechanics) setPendingMechanics(data.mechanics);
-      return data.narrative;
+      
+      // If we have a narrative, use it (even if it's a fallback)
+      if (data.narrative) {
+        return data.narrative;
+      }
+      
+      // If no narrative at all, generate a local neutral continuation
+      return generateNeutralContinuation({ lastAction: playerAction });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to generate');
-      return null;
+      // Network or parsing error - generate local fallback to maintain immersion
+      console.error('Error generating narrative:', error);
+      return generateNeutralContinuation({ lastAction: playerAction });
     } finally {
       setIsLoading(false);
     }
