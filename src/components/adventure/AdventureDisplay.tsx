@@ -87,14 +87,8 @@ export function AdventureDisplay({
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollElement) {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
-      }
-    }
-  }, [story]);
+  // NOTE: No auto-scroll on new content - preserves reading position for immersion
+  // User scrolls down manually to see new content
 
   useEffect(() => {
     if (!isLoading && inputRef.current) {

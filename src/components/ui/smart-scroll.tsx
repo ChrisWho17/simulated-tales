@@ -57,7 +57,7 @@ export const SmartScrollContainer: React.FC<SmartScrollContainerProps> = ({
     return () => container.removeEventListener('scroll', trackPosition);
   }, [checkIfAtBottom]);
 
-  // Detect new content and handle scroll behavior
+  // Detect new content - NEVER auto-scroll, always preserve reading position
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -65,24 +65,15 @@ export const SmartScrollContainer: React.FC<SmartScrollContainerProps> = ({
     
     // Content was added
     if (currentScrollHeight > previousScrollHeight.current) {
-      if (wasAtBottom.current) {
-        // User was at bottom, scroll to new content smoothly
-        requestAnimationFrame(() => {
-          if (containerRef.current) {
-            containerRef.current.scrollTo({
-              top: containerRef.current.scrollHeight,
-              behavior: 'smooth'
-            });
-          }
-        });
-      } else {
-        // User was reading above, preserve position and show indicator
-        requestAnimationFrame(() => {
-          if (containerRef.current) {
-            containerRef.current.scrollTop = savedScrollTop.current;
-          }
-        });
-        
+      // Always preserve scroll position - never auto-scroll for immersion
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = savedScrollTop.current;
+        }
+      });
+      
+      // Show indicator if user is not already at bottom
+      if (!wasAtBottom.current) {
         setHasNewContent(true);
         setNewContentCount(prev => prev + 1);
       }
