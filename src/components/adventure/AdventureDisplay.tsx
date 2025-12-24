@@ -5,15 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders } from 'lucide-react';
 import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
+import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
-import { useGame } from '@/contexts/GameContext';
-import { DiceRollResult, ACTION_CATEGORIES } from '@/game/diceSystem';
+import { useGameOptional } from '@/contexts/GameContext';
+import { DiceRollResult } from '@/game/diceSystem';
 
 interface StoryEntry {
   id: string;
@@ -76,11 +77,13 @@ export function AdventureDisplay({
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
   const [showDiceRoll, setShowDiceRoll] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const { diceMode } = useGame();
+  const gameContext = useGameOptional();
+  const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
 
   useEffect(() => {
@@ -309,6 +312,15 @@ export function AdventureDisplay({
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => setShowSettings(true)}
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Settings"
+              >
+                <Sliders className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={onToggleCheatMode}
                 className="text-muted-foreground hover:text-primary hover:bg-primary/10"
                 title="Toggle Dev Mode"
@@ -460,8 +472,8 @@ export function AdventureDisplay({
         />
       )}
 
-      {/* Legacy Dice Roll Modal - fallback for old mechanics */}
-      {showDiceRoll && !currentDiceRoll && pendingMechanics?.rollRequired && diceMode === 'story' && (
+      {/* Legacy Dice Roll Modal - fallback only when new system has no roll */}
+      {showDiceRoll && !currentDiceRoll && pendingMechanics?.rollRequired && (
         <DiceRollModal
           stat={pendingMechanics.rollRequired.stat as any}
           difficulty={pendingMechanics.rollRequired.difficulty}
@@ -483,6 +495,12 @@ export function AdventureDisplay({
           onUpdateCharacter={onUpdateCharacter}
         />
       )}
+
+      {/* Settings Panel */}
+      <SettingsPanel 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+      />
     </div>
   );
 }
