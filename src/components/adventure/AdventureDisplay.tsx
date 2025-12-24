@@ -10,6 +10,7 @@ import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
+import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
@@ -422,6 +423,16 @@ export function AdventureDisplay({
                   <span className="text-muted-foreground">/{character.maxHealth}</span>
                 </div>
               </div>
+
+              {/* Mood Indicator */}
+              {gameContext?.emotionalState && (
+                <PlayerMoodIndicator
+                  currentMood={gameContext.emotionalState.currentMood}
+                  moodIntensity={gameContext.emotionalState.moodIntensity}
+                  characterName={character.name}
+                  size="sm"
+                />
+              )}
 
               {/* Gold */}
               <div className="flex items-center gap-2 px-3 py-1.5 glass-panel-subtle rounded-full">

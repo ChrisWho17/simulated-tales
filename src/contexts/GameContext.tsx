@@ -17,6 +17,14 @@ import {
   startSession,
   endSession,
 } from '@/game/campaignMemorySystem';
+import {
+  EmotionalState,
+  MoodState,
+  createInitialEmotionalState,
+  processEventForMood,
+  decayMoodTowardsNeutral,
+} from '@/game/emotionalStateSystem';
+import { RPGCharacter } from '@/types/rpgCharacter';
 
 // ============================================================================
 // GAME SETTINGS
@@ -64,6 +72,12 @@ interface GameContextType {
   // Adult content
   adultContent: boolean;
   setAdultContent: (enabled: boolean) => void;
+  
+  // Emotional State System
+  emotionalState: EmotionalState;
+  processGameEvent: (eventType: string, character: RPGCharacter) => void;
+  setMood: (mood: MoodState, intensity?: number) => void;
+  decayMood: () => void;
   
   // Campaign Memory System
   campaignMemory: CampaignMemoryStore | null;
@@ -176,6 +190,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return loadCampaignMemoryFromStorage();
   });
   
+  // Emotional State
+  const [emotionalState, setEmotionalState] = useState<EmotionalState>(() => {
+    return createInitialEmotionalState();
+  });
+  
   // Apply color theme on mount
   useEffect(() => {
     applyColorTheme(colorTheme);
@@ -213,6 +232,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   
   const setAdultContent = useCallback((enabled: boolean) => {
     setSettings(prev => ({ ...prev, adultContent: enabled }));
+  }, []);
+  
+  // Emotional State Functions
+  const processGameEvent = useCallback((eventType: string, character: RPGCharacter) => {
+    setEmotionalState(prev => processEventForMood(prev, eventType, character));
+  }, []);
+  
+  const setMood = useCallback((mood: MoodState, intensity: number = 0.6) => {
+    setEmotionalState(prev => ({
+      ...prev,
+      currentMood: mood,
+      moodIntensity: Math.min(1, Math.max(0, intensity)),
+      moodHistory: [...prev.moodHistory.slice(-9), {
+        from: prev.currentMood,
+        to: mood,
+        trigger: 'manual_set',
+        intensity
+      }]
+    }));
+  }, []);
+  
+  const decayMood = useCallback(() => {
+    setEmotionalState(prev => decayMoodTowardsNeutral(prev));
   }, []);
   
   // Campaign Memory Functions
@@ -303,6 +345,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setColorTheme,
     adultContent: settings.adultContent,
     setAdultContent,
+    // Emotional State
+    emotionalState,
+    processGameEvent,
+    setMood,
+    decayMood,
     // Campaign Memory
     campaignMemory,
     initializeCampaign: initializeCampaignFunc,
