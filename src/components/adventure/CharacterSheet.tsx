@@ -1,13 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { RPGCharacter, getStatModifier, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { GENRE_DATA, GameGenre } from '@/types/genreData';
-import { X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, Plus, Minus, Sparkles, User } from 'lucide-react';
+import { 
+  X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
+  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Image
+} from 'lucide-react';
+import { 
+  EmotionType, 
+  EMOTION_TO_PORTRAIT,
+  getCachedPortrait, 
+  setCachedPortrait,
+  getAllCachedEmotions,
+  EMOTION_DESCRIPTORS
+} from '@/game/portraitSystem';
+import { useGameOptional } from '@/contexts/GameContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
   onClose: () => void;
-  onUpdateCharacter: (character: RPGCharacter) => void;
+  onUpdateCharacter: (character: RPGCharacter & { portraitUrl?: string }) => void;
 }
 
 // Helper to find class/background across all genres
@@ -26,6 +40,22 @@ function findBackgroundAcrossGenres(backgroundId: string) {
   }
   return null;
 }
+
+// Get emotion icon/color
+const EMOTION_STYLES: Record<EmotionType, { color: string; label: string }> = {
+  neutral: { color: 'text-muted-foreground', label: 'Neutral' },
+  happy: { color: 'text-success', label: 'Happy' },
+  angry: { color: 'text-destructive', label: 'Angry' },
+  sad: { color: 'text-blue-400', label: 'Sad' },
+  fearful: { color: 'text-purple-400', label: 'Fearful' },
+  surprised: { color: 'text-warning', label: 'Surprised' },
+  disgusted: { color: 'text-green-600', label: 'Disgusted' },
+  flirty: { color: 'text-pink-400', label: 'Flirty' },
+  suspicious: { color: 'text-amber-500', label: 'Suspicious' },
+  hurt: { color: 'text-red-300', label: 'Hurt' },
+  smug: { color: 'text-indigo-400', label: 'Smug' },
+  thoughtful: { color: 'text-cyan-400', label: 'Thoughtful' },
+};
 
 // Level up stat allocation component
 function LevelUpModal({ 
@@ -138,10 +168,200 @@ function LevelUpModal({
   );
 }
 
+// Portrait Gallery Component
+function PortraitGallery({ 
+  character,
+  currentEmotion,
+  onUpdatePortrait 
+}: { 
+  character: RPGCharacter & { portraitUrl?: string };
+  currentEmotion: EmotionType;
+  onUpdatePortrait: (url: string, emotion?: EmotionType) => void;
+}) {
+  const [cachedEmotions, setCachedEmotions] = useState<EmotionType[]>([]);
+  const [selectedEmotion, setSelectedEmotion] = useState<EmotionType>(currentEmotion);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const charClass = findClassAcrossGenres(character.classId);
+
+  useEffect(() => {
+    // Load cached emotions for this character
+    const cached = getAllCachedEmotions(`player_${character.name}`);
+    setCachedEmotions(cached);
+    
+    // Also cache the current portrait as neutral if not already cached
+    if (character.portraitUrl && !cached.includes('neutral')) {
+      setCachedPortrait(`player_${character.name}`, 'neutral', character.portraitUrl);
+      setCachedEmotions(prev => [...prev, 'neutral']);
+    }
+  }, [character.name, character.portraitUrl]);
+
+  const getPortraitForEmotion = (emotion: EmotionType): string | null => {
+    return getCachedPortrait(`player_${character.name}`, emotion);
+  };
+
+  const handleGenerateEmotion = async (emotion: EmotionType) => {
+    setIsGenerating(true);
+    try {
+      const emotionDesc = EMOTION_DESCRIPTORS[emotion] || 'neutral expression';
+      
+      const response = await supabase.functions.invoke('generate-portrait', {
+        body: {
+          appearance: `Character portrait for ${character.name}, a ${charClass?.name || 'adventurer'}. ${emotionDesc}`,
+          characterClass: charClass?.name || 'Adventurer',
+          genre: 'fantasy',
+          name: character.name,
+          detailLevel: 'detailed',
+          portraitHints: charClass?.portraitHints || [],
+          clothingStyle: charClass?.clothingStyle,
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const url = response.data?.imageUrl;
+      if (url) {
+        setCachedPortrait(`player_${character.name}`, emotion, url);
+        setCachedEmotions(prev => prev.includes(emotion) ? prev : [...prev, emotion]);
+        setSelectedEmotion(emotion);
+        toast.success(`Generated ${EMOTION_STYLES[emotion].label} portrait`);
+      }
+    } catch (error) {
+      console.error('Failed to generate portrait:', error);
+      toast.error('Failed to generate portrait');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleRegeneratePortrait = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await supabase.functions.invoke('generate-portrait', {
+        body: {
+          appearance: `Character portrait for ${character.name}, a Level ${character.level} ${charClass?.name || 'adventurer'}. Heroic, confident expression.`,
+          characterClass: charClass?.name || 'Adventurer',
+          genre: 'fantasy',
+          name: character.name,
+          detailLevel: 'detailed',
+          portraitHints: charClass?.portraitHints || [],
+          clothingStyle: charClass?.clothingStyle,
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const url = response.data?.imageUrl;
+      if (url) {
+        setCachedPortrait(`player_${character.name}`, 'neutral', url);
+        onUpdatePortrait(url, 'neutral');
+        toast.success('Portrait updated!');
+      }
+    } catch (error) {
+      console.error('Failed to regenerate portrait:', error);
+      toast.error('Failed to regenerate portrait');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const displayedPortrait = getPortraitForEmotion(selectedEmotion) || character.portraitUrl;
+
+  return (
+    <div className="space-y-3">
+      {/* Main Portrait Display */}
+      <div className="relative">
+        <div className="w-full aspect-square max-w-[200px] mx-auto rounded-lg border-2 border-primary/30 overflow-hidden bg-background/50">
+          {displayedPortrait ? (
+            <img 
+              src={displayedPortrait} 
+              alt={`${character.name} - ${EMOTION_STYLES[selectedEmotion]?.label || 'Portrait'}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <User className="w-16 h-16 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        
+        {/* Regenerate Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute bottom-2 right-2 h-8 text-xs"
+          onClick={handleRegeneratePortrait}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3 h-3" />
+          )}
+        </Button>
+      </div>
+
+      {/* Emotion Gallery */}
+      <div>
+        <h4 className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+          <Image className="w-3 h-3" />
+          Emotion Portraits
+        </h4>
+        <div className="flex flex-wrap gap-1.5">
+          {(['neutral', 'happy', 'angry', 'sad', 'fearful', 'surprised', 'flirty', 'suspicious'] as EmotionType[]).map((emotion) => {
+            const cached = cachedEmotions.includes(emotion);
+            const style = EMOTION_STYLES[emotion];
+            
+            return (
+              <button
+                key={emotion}
+                onClick={() => cached ? setSelectedEmotion(emotion) : handleGenerateEmotion(emotion)}
+                disabled={isGenerating}
+                className={`
+                  relative w-10 h-10 rounded-md border overflow-hidden transition-all
+                  ${selectedEmotion === emotion ? 'border-primary ring-2 ring-primary/30' : 'border-border/50'}
+                  ${cached ? 'opacity-100' : 'opacity-50 hover:opacity-75'}
+                  ${isGenerating ? 'cursor-wait' : 'cursor-pointer'}
+                `}
+                title={`${style.label}${cached ? '' : ' (Click to generate)'}`}
+              >
+                {cached ? (
+                  <img 
+                    src={getPortraitForEmotion(emotion) || ''} 
+                    alt={style.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center bg-background/80 ${style.color}`}>
+                    <Plus className="w-4 h-4" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1.5">
+          {cachedEmotions.length > 0 
+            ? `${cachedEmotions.length} emotions cached • Click to view, tap + to generate new`
+            : 'Click + to generate emotion variants'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function CharacterSheet({ character, onClose, onUpdateCharacter }: CharacterSheetProps) {
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const gameContext = useGameOptional();
+  
+  // Get current mood from emotional state
+  const currentMood = gameContext?.emotionalState?.currentMood || 'neutral';
+  const currentEmotion: EmotionType = EMOTION_TO_PORTRAIT[currentMood] || 'neutral';
 
   const formatMod = (stat: number) => {
     const mod = getStatModifier(stat);
@@ -168,36 +388,26 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter }: Charac
     setShowLevelUp(false);
   };
 
+  const handlePortraitUpdate = (url: string) => {
+    onUpdateCharacter({
+      ...character,
+      portraitUrl: url,
+    } as any);
+  };
+
   return (
     <>
       <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-card border border-border rounded-lg w-full max-w-2xl h-[85vh] flex flex-col animate-fade-in">
-          {/* Header with Portrait */}
+          {/* Header */}
           <div className="flex justify-between items-start p-4 md:p-6 border-b border-border flex-shrink-0">
-            <div className="flex items-center gap-4">
-              {/* Portrait */}
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg border-2 border-primary/30 overflow-hidden bg-background/50 flex-shrink-0">
-                {(character as any).portraitUrl ? (
-                  <img 
-                    src={(character as any).portraitUrl} 
-                    alt={character.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="min-w-0 flex-1">
-                <h2 className="text-xl md:text-2xl font-narrative font-bold text-gradient-gold">
-                  {character.name}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
-                </p>
-              </div>
+            <div className="flex-1 min-w-0 pr-4">
+              <h2 className="text-xl md:text-2xl font-narrative font-bold text-gradient-gold">
+                {character.name}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
+              </p>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
               <X className="w-5 h-5" />
@@ -207,6 +417,13 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter }: Charac
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain">
             <div className="p-4 md:p-6 space-y-6">
+              {/* Portrait Gallery */}
+              <PortraitGallery 
+                character={character}
+                currentEmotion={currentEmotion}
+                onUpdatePortrait={handlePortraitUpdate}
+              />
+
               {/* Health & Resources */}
               <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <div className="bg-background/50 rounded-lg p-3 md:p-4 border border-border/30">

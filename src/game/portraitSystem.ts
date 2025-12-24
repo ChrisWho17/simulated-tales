@@ -111,7 +111,7 @@ const EMOTION_PRIORITY: Record<EmotionType, number> = {
 
 // ============= EMOTION DESCRIPTORS =============
 
-const EMOTION_DESCRIPTORS: Record<EmotionType, string> = {
+export const EMOTION_DESCRIPTORS: Record<EmotionType, string> = {
   neutral: 'calm neutral expression, relaxed face, composed demeanor',
   happy: 'warm genuine smile, bright eyes, friendly expression, slight laugh lines',
   angry: 'fierce scowl, furrowed brow, intense glaring eyes, clenched jaw, tense expression',
