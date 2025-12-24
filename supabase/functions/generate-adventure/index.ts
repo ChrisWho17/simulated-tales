@@ -41,6 +41,23 @@ interface MemoryContext {
   fullContext: string;
 }
 
+interface EmotionalContext {
+  currentMood: string;
+  moodIntensity: number;
+  internalDescription: string;
+  physicalDescription: string;
+  dialogueTone: string;
+  actionFlavor: string;
+}
+
+interface ReputationContext {
+  currentLocation?: string;
+  standing?: string;
+  npcGreeting?: string;
+  globalFame: number;
+  globalInfamy: number;
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -56,6 +73,8 @@ interface AdventureRequest {
     criticalFailure?: boolean;
   };
   memoryContext?: MemoryContext;
+  emotionalContext?: EmotionalContext;
+  reputationContext?: ReputationContext;
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -163,7 +182,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -174,6 +193,23 @@ serve(async (req) => {
     let systemContent = SYSTEM_PROMPT;
     if (character) {
       systemContent += '\n\n' + formatCharacterContext(character);
+    }
+    if (emotionalContext) {
+      systemContent += `\n\n=== CHARACTER EMOTIONAL STATE ===
+Current Mood: ${emotionalContext.currentMood} (intensity: ${Math.round(emotionalContext.moodIntensity * 100)}%)
+Internal state: ${emotionalContext.internalDescription}
+Physical signs: ${emotionalContext.physicalDescription}
+Dialogue should be: ${emotionalContext.dialogueTone}
+Actions should be performed: ${emotionalContext.actionFlavor}
+
+Use this emotional context to flavor narrative descriptions and NPC reactions.`;
+    }
+    if (reputationContext?.currentLocation) {
+      systemContent += `\n\n=== REPUTATION ===
+Location: ${reputationContext.currentLocation}
+Standing: ${reputationContext.standing || 'Neutral'}
+${reputationContext.npcGreeting || ''}
+Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}`;
     }
     if (memoryContext?.fullContext) {
       systemContent += '\n\n=== CAMPAIGN MEMORY ===' + memoryContext.fullContext;

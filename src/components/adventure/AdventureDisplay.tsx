@@ -112,12 +112,12 @@ export function AdventureDisplay({
     // Don't allow rollback to the very first entry
     if (index === 0) return;
     
-    // Start visual feedback after 200ms
+    // Start visual feedback after 300ms
     feedbackTimer.current = setTimeout(() => {
       setLongPressActive(index);
-    }, 200);
+    }, 300);
     
-    // Trigger rollback modal after 600ms
+    // Trigger rollback modal after 900ms (longer to prevent accidental triggers)
     longPressTimer.current = setTimeout(() => {
       setLongPressActive(null);
       setRollbackTarget({ index, text });
@@ -126,7 +126,7 @@ export function AdventureDisplay({
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 600);
+    }, 900);
   }, []);
 
   const handleLongPressEnd = useCallback(() => {
