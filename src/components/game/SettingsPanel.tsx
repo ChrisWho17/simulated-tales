@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
-  Save, Moon, Sun, Sparkles, AlertTriangle
+  Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User
 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
-import { COLOR_PRESETS, applyColorTheme } from '@/lib/colorTheme';
+import { COLOR_PRESETS } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onLoadSave?: (save: GameSave) => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, onLoadSave }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'display' | 'audio'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio'>('gameplay');
+  const [saves, setSaves] = useState<GameSave[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  
+  // Load saves when tab changes to saves
+  useEffect(() => {
+    if (activeTab === 'saves') {
+      setSaves(loadAllSaves());
+    }
+  }, [activeTab]);
   
   if (!isOpen) return null;
   
@@ -30,6 +41,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
   };
   
   const textSpeedValues = ['slow', 'normal', 'fast', 'instant'] as const;
+  
+  const handleDeleteSave = (saveId: string) => {
+    if (confirmDelete === saveId) {
+      deleteSave(saveId);
+      setSaves(loadAllSaves());
+      setConfirmDelete(null);
+    } else {
+      setConfirmDelete(saveId);
+      // Reset confirm after 3 seconds
+      setTimeout(() => setConfirmDelete(null), 3000);
+    }
+  };
+  
+  const handleLoadSave = (save: GameSave) => {
+    if (onLoadSave) {
+      onLoadSave(save);
+      onClose();
+    }
+  };
+  
+  const autoSaves = saves.filter(s => s.id.startsWith('auto-')).sort((a, b) => b.timestamp - a.timestamp);
+  const manualSaves = saves.filter(s => s.id.startsWith('manual-')).sort((a, b) => b.timestamp - a.timestamp);
   
   return (
     <div 
@@ -56,7 +89,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
         
         {/* Tabs */}
         <div className="flex border-b border-border/30">
-          {(['gameplay', 'display', 'audio'] as const).map((tab) => (
+          {(['gameplay', 'saves', 'display', 'audio'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -126,7 +159,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
                   <Save className="w-4 h-4 text-[var(--accent-secondary)]" />
                   <div>
                     <span className="text-sm font-medium">Auto Save</span>
-                    <p className="text-xs text-muted-foreground">Save progress automatically</p>
+                    <p className="text-xs text-muted-foreground">Save progress every 5 minutes</p>
                   </div>
                 </div>
                 <Switch 
@@ -149,6 +182,65 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
                   onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
                 />
               </div>
+            </div>
+          )}
+          
+          {/* Saves Tab */}
+          {activeTab === 'saves' && (
+            <div className="space-y-6">
+              {saves.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Save className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No saves yet</p>
+                  <p className="text-xs mt-1">Your adventure saves will appear here</p>
+                </div>
+              ) : (
+                <>
+                  {/* Auto Saves Section */}
+                  {autoSaves.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[var(--accent-secondary)]" />
+                        <h3 className="text-sm font-medium">Auto Saves</h3>
+                        <span className="text-xs text-muted-foreground">({autoSaves.length})</span>
+                      </div>
+                      <div className="space-y-2">
+                        {autoSaves.map((save) => (
+                          <SaveSlot 
+                            key={save.id} 
+                            save={save}
+                            isConfirmingDelete={confirmDelete === save.id}
+                            onLoad={() => handleLoadSave(save)}
+                            onDelete={() => handleDeleteSave(save.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Manual Saves Section */}
+                  {manualSaves.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Save className="w-4 h-4 text-[var(--accent-secondary)]" />
+                        <h3 className="text-sm font-medium">Manual Saves</h3>
+                        <span className="text-xs text-muted-foreground">({manualSaves.length})</span>
+                      </div>
+                      <div className="space-y-2">
+                        {manualSaves.map((save) => (
+                          <SaveSlot 
+                            key={save.id} 
+                            save={save}
+                            isConfirmingDelete={confirmDelete === save.id}
+                            onLoad={() => handleLoadSave(save)}
+                            onDelete={() => handleDeleteSave(save.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
           
@@ -261,6 +353,70 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose })
             Done
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// SAVE SLOT COMPONENT
+// ============================================================================
+
+interface SaveSlotProps {
+  save: GameSave;
+  isConfirmingDelete: boolean;
+  onLoad: () => void;
+  onDelete: () => void;
+}
+
+const SaveSlot: React.FC<SaveSlotProps> = ({ save, isConfirmingDelete, onLoad, onDelete }) => {
+  const isAutoSave = save.id.startsWith('auto-');
+  
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:border-border transition-all group">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className={cn(
+          "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+          isAutoSave ? "bg-muted/50" : "bg-primary/10"
+        )}>
+          {isAutoSave ? (
+            <Clock className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <User className="w-5 h-5 text-primary" />
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm truncate">{save.characterName}</span>
+            {isAutoSave && (
+              <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-muted/50">Auto</span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground truncate">{save.dateFormatted}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onLoad}
+          className="p-2 rounded-md hover:bg-primary/10 text-primary transition-colors"
+          title="Load Save"
+        >
+          <Download size={16} />
+        </button>
+        <button
+          onClick={onDelete}
+          className={cn(
+            "p-2 rounded-md transition-colors",
+            isConfirmingDelete 
+              ? "bg-destructive/20 text-destructive" 
+              : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+          )}
+          title={isConfirmingDelete ? "Click again to confirm" : "Delete Save"}
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
     </div>
   );
