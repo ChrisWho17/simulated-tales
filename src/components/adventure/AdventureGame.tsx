@@ -348,6 +348,18 @@ export function AdventureGame() {
     localStorage.removeItem(GENRE_KEY);
   }, []);
 
+  // Rollback story to a specific entry (discard everything after)
+  const handleRollbackToEntry = useCallback((entryIndex: number) => {
+    if (!character || !scenarioSelection) return;
+    
+    // Keep story up to and including the target entry
+    const rolledBackStory = story.slice(0, entryIndex + 1);
+    setStory(rolledBackStory);
+    saveData(rolledBackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+    
+    console.log(`[Story Rollback] Reverted to entry ${entryIndex}, discarded ${story.length - entryIndex - 1} entries`);
+  }, [story, character, scenarioSelection, saveData]);
+
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {
     const gameData = save.gameData as { story?: StoryEntry[]; character?: RPGCharacter };
@@ -431,6 +443,7 @@ export function AdventureGame() {
         onPlayerAction={handlePlayerAction}
         onRestart={handleRestart}
         onLoadSave={handleLoadSave}
+        onRollbackToEntry={handleRollbackToEntry}
         isLoading={isLoading}
         cheatMode={cheatMode}
         onToggleCheatMode={() => setCheatMode(p => !p)}
