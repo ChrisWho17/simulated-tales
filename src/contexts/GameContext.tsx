@@ -75,6 +75,7 @@ interface GameContextType {
   advanceCampaignTime: (ticks: number) => void;
   endCurrentSession: (tick: number) => void;
   getCampaign: () => Campaign | null;
+  updateCampaignMemory: (updatedStore: CampaignMemoryStore) => void;
 }
 
 // ============================================================================
@@ -289,6 +290,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return campaignMemory?.campaign ?? null;
   }, [campaignMemory]);
   
+  const updateCampaignMemoryFunc = useCallback((updatedStore: CampaignMemoryStore) => {
+    setCampaignMemory(updatedStore);
+  }, []);
+  
   const value: GameContextType = {
     settings,
     updateSettings,
@@ -308,6 +313,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     advanceCampaignTime: advanceCampaignTimeFunc,
     endCurrentSession: endCurrentSessionFunc,
     getCampaign: getCampaignFunc,
+    updateCampaignMemory: updateCampaignMemoryFunc,
   };
   
   return (

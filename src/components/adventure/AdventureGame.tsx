@@ -13,6 +13,7 @@ import { useGame } from '@/contexts/GameContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave } from '@/lib/saveSystem';
+import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 
 interface StoryEntry {
   id: string;
@@ -40,7 +41,7 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
-  const { setDiceMode, initializeCampaign, restoreCampaignFromSave } = useGame();
+  const { setDiceMode, initializeCampaign, restoreCampaignFromSave, campaignMemory, getCampaignContext, advanceCampaignTime, updateCampaignMemory } = useGame();
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -167,6 +168,11 @@ export function AdventureGame() {
     setIsLoading(true);
 
     try {
+      // Get memory context for AI
+      const currentTick = campaignMemory?.campaign.currentTick ?? 0;
+      const memContext = getCampaignContext?.('current_scene', [], currentTick);
+      const formattedMemory = formatMemoryContextForAI(memContext, activeChar.name);
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
@@ -179,6 +185,7 @@ export function AdventureGame() {
             cheatMode,
             character: activeChar,
             diceRoll,
+            memoryContext: formattedMemory.fullContext ? formattedMemory : undefined,
           }),
         }
       );
@@ -202,7 +209,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, cheatMode]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
@@ -281,10 +288,18 @@ export function AdventureGame() {
       setStory(finalStory);
       saveData(finalStory, character, scenarioSelection.scenario, scenarioSelection.genre);
       
+      // Process action for identity anchors and advance time
+      if (campaignMemory) {
+        const currentTick = campaignMemory.campaign.currentTick;
+        const updatedMemory = processActionForIdentity(campaignMemory, action, narrative, currentTick);
+        updateCampaignMemory(updatedMemory);
+        advanceCampaignTime(1); // Each action is 1 tick
+      }
+      
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
