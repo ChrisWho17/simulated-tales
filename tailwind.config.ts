@@ -145,6 +145,10 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0" },
         },
+        "bounce-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -162,6 +166,7 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "typewriter": "typewriter 2s steps(40) forwards",
         "blink": "blink 1s step-end infinite",
+        "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
       },
       transitionTimingFunction: {
         'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
