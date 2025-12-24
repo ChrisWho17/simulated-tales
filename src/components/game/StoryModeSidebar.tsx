@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Heart, User, Package, Users, Sparkles, Activity,
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameState, NPC, Relationship } from '@/types/game';
 import { Wound } from '@/game/diceSystem';
+import { BodyInjury } from '@/types/lifeSim';
 
 // ============================================================================
 // TYPES
@@ -18,7 +19,6 @@ interface StoryModeSidebarProps {
   gameState: GameState;
   isOpen: boolean;
   onToggle: () => void;
-  wounds?: Wound[];
   portrait?: string;
 }
 
@@ -227,14 +227,26 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
   gameState,
   isOpen,
   onToggle,
-  wounds = [],
   portrait
 }) => {
   const player = gameState.player;
   const lifeSim = gameState.lifeSim;
   
-  // Calculate buffs and debuffs from various sources
-  const getBuffsDebuffs = () => {
+  // Convert body injuries to wounds for display
+  const wounds: Wound[] = useMemo(() => {
+    if (!lifeSim?.body?.injuries) return [];
+    return lifeSim.body.injuries.map((injury: BodyInjury, index: number) => ({
+      id: `injury_${index}`,
+      type: injury.description || 'Injury',
+      location: injury.location,
+      severity: Math.ceil(injury.severity / 25), // Convert 0-100 to 1-4
+      treated: injury.age > 24, // Assume treated if more than a day old
+      healingProgress: Math.max(0, 100 - injury.severity),
+    }));
+  }, [lifeSim?.body?.injuries]);
+  
+  // Calculate buffs and debuffs from various sources - memoized for reactivity
+  const buffsDebuffs = useMemo(() => {
     const effects: { type: 'buff' | 'debuff'; name: string; description: string }[] = [];
     
     if (lifeSim) {
@@ -251,10 +263,19 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
       if (lifeSim.needs.physical.hygiene < 30) {
         effects.push({ type: 'debuff', name: 'Dirty', description: 'Poor hygiene affects social interactions' });
       }
+      if (lifeSim.needs.physical.health < 50) {
+        effects.push({ type: 'debuff', name: 'Injured', description: 'Poor health affects all activities' });
+      }
       
       // Psychological effects
       if (lifeSim.needs.psychological.stress > 70) {
         effects.push({ type: 'debuff', name: 'Stressed', description: 'High stress impairs decision making' });
+      }
+      if (lifeSim.needs.psychological.tension > 70) {
+        effects.push({ type: 'debuff', name: 'Tense', description: 'High tension is distracting' });
+      }
+      if (lifeSim.needs.psychological.social < 30) {
+        effects.push({ type: 'debuff', name: 'Lonely', description: 'Lack of social interaction' });
       }
       if (lifeSim.needs.psychological.comfort > 80) {
         effects.push({ type: 'buff', name: 'Comfortable', description: 'Feeling safe and relaxed' });
@@ -270,48 +291,67 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
       if (lifeSim.body?.attractiveness && lifeSim.body.attractiveness > 70) {
         effects.push({ type: 'buff', name: 'Charming', description: 'Natural charm aids social encounters' });
       }
+      if (lifeSim.body?.grooming && lifeSim.body.grooming > 80) {
+        effects.push({ type: 'buff', name: 'Well-groomed', description: 'Good grooming improves impressions' });
+      }
+      if (lifeSim.body?.visibleFatigue) {
+        effects.push({ type: 'debuff', name: 'Visibly Tired', description: 'Others can see you\'re exhausted' });
+      }
+      if (lifeSim.body?.visibleDistress) {
+        effects.push({ type: 'debuff', name: 'Distressed', description: 'Your distress is visible to others' });
+      }
+      
+      // Scars as permanent marks
+      if (lifeSim.body?.scars && lifeSim.body.scars.length > 0) {
+        effects.push({ type: 'debuff', name: `Scarred (${lifeSim.body.scars.length})`, description: lifeSim.body.scars.map(s => s.description).join(', ') });
+      }
     }
     
     // Wound effects
     wounds.forEach(wound => {
       if (!wound.treated) {
-        effects.push({ type: 'debuff', name: `${wound.type} Injury`, description: `Untreated wound on ${wound.location}` });
+        effects.push({ type: 'debuff', name: `${wound.type}`, description: `Untreated wound on ${wound.location}` });
       }
     });
     
     return effects;
-  };
+  }, [lifeSim, wounds]);
   
-  // Get known NPCs with relationships
-  const getKnownNPCs = () => {
-    const knownNPCs: { npc: NPC; relationship: Relationship }[] = [];
+  // Get known NPCs with relationships - memoized
+  const knownNPCs = useMemo(() => {
+    const npcs: { npc: NPC; relationship: Relationship }[] = [];
     
     Object.values(gameState.npcs).forEach(npc => {
       const playerRel = npc.relationships.player;
       if (playerRel && (playerRel.affection !== 0 || playerRel.trust !== 0 || playerRel.respect !== 0 || playerRel.fear !== 0)) {
-        knownNPCs.push({ npc, relationship: playerRel });
+        npcs.push({ npc, relationship: playerRel });
       }
     });
     
     // Sort by total relationship strength
-    return knownNPCs.sort((a, b) => {
+    return npcs.sort((a, b) => {
       const totalA = Math.abs(a.relationship.affection) + Math.abs(a.relationship.trust) + Math.abs(a.relationship.respect);
       const totalB = Math.abs(b.relationship.affection) + Math.abs(b.relationship.trust) + Math.abs(b.relationship.respect);
       return totalB - totalA;
     });
-  };
+  }, [gameState.npcs]);
   
   // Get inventory items
   const inventoryItems = player.inventory || [];
-  const buffsDebuffs = getBuffsDebuffs();
-  const knownNPCs = getKnownNPCs();
   
-  // Calculate stats
+  // Calculate stats - these will update whenever gameState changes
   const health = lifeSim?.needs.physical.health ?? player.stats.health;
   const maxHealth = 100;
   const energy = lifeSim?.needs.physical.energy ?? player.stats.energy;
   const mood = player.stats.mood;
   const gold = player.stats.gold ?? 0;
+  
+  // Location and time info
+  const currentLocation = gameState.locations[player.currentLocation];
+  const locationName = currentLocation?.name ?? 'Unknown Location';
+  const { hour, day, season } = gameState.time;
+  const timeOfDay = hour < 6 ? 'Night' : hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+  const timeDisplay = `Day ${day}, ${String(hour).padStart(2, '0')}:00 (${timeOfDay})`;
   
   return (
     <>
@@ -380,10 +420,23 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
               </div>
             </div>
           </div>
+          
+          {/* Location and Time Bar */}
+          <div className="mt-3 pt-3 border-t border-border/30 space-y-1">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">📍</span>
+              <span className="text-foreground font-medium truncate">{locationName}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>🕐</span>
+              <span>{timeDisplay}</span>
+              <span className="capitalize">• {season}</span>
+            </div>
+          </div>
         </div>
         
         {/* Scrollable Content */}
-        <ScrollArea className="h-[calc(100%-120px)]">
+        <ScrollArea className="h-[calc(100%-180px)]">
           <div className="p-4 space-y-5">
             
             {/* Health & Vitals */}
