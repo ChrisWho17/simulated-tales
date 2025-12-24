@@ -9,6 +9,7 @@ import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, 
 import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
+import { StoryRollbackModal } from './StoryRollbackModal';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
@@ -47,6 +48,7 @@ interface AdventureDisplayProps {
   onPlayerAction: (action: string, diceRoll?: any) => void;
   onRestart: () => void;
   onLoadSave?: (save: GameSave) => void;
+  onRollbackToEntry?: (entryIndex: number) => void;
   isLoading: boolean;
   cheatMode: boolean;
   onToggleCheatMode: () => void;
@@ -66,6 +68,7 @@ export function AdventureDisplay({
   onPlayerAction,
   onRestart,
   onLoadSave,
+  onRollbackToEntry,
   isLoading,
   cheatMode,
   onToggleCheatMode,
@@ -84,13 +87,44 @@ export function AdventureDisplay({
   const [showDiceRoll, setShowDiceRoll] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<{ index: number; text: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
+
+  // Long press handlers for story rollback
+  const handleLongPressStart = useCallback((index: number, text: string) => {
+    // Don't allow rollback to the very first entry
+    if (index === 0) return;
+    
+    longPressTimer.current = setTimeout(() => {
+      setRollbackTarget({ index, text });
+    }, 600); // 600ms long press
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleRollbackConfirm = useCallback(() => {
+    if (rollbackTarget && onRollbackToEntry) {
+      onRollbackToEntry(rollbackTarget.index);
+      toast({
+        title: "Returned to earlier moment",
+        description: "Your story continues from here...",
+        duration: 3000,
+      });
+    }
+    setRollbackTarget(null);
+  }, [rollbackTarget, onRollbackToEntry, toast]);
 
   // Manual save handler
   const handleManualSave = useCallback(() => {
@@ -445,16 +479,22 @@ export function AdventureDisplay({
           {story.map((entry, index) => (
             <div
               key={entry.id}
-              className={`animate-fade-in-up mb-8 ${entry.role === 'user' ? 'text-right' : ''}`}
+              className={`animate-fade-in-up mb-8 ${entry.role === 'user' ? 'text-right' : ''} ${index > 0 ? 'cursor-pointer' : ''}`}
               style={{ animationDelay: `${index * 0.05}s` }}
+              onMouseDown={() => handleLongPressStart(index, entry.content)}
+              onMouseUp={handleLongPressEnd}
+              onMouseLeave={handleLongPressEnd}
+              onTouchStart={() => handleLongPressStart(index, entry.content)}
+              onTouchEnd={handleLongPressEnd}
+              title={index > 0 ? "Hold to return here" : undefined}
             >
               {entry.role === 'user' ? (
-                <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left">
+                <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left hover:border-primary/50 transition-colors">
                   <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
                   <p className="font-narrative text-lg text-foreground">{entry.content}</p>
                 </div>
               ) : (
-                <Card className="border-0 bg-transparent shadow-none">
+                <Card className="border-0 bg-transparent shadow-none hover:bg-primary/5 transition-colors rounded-lg p-2 -m-2">
                   {/* Scene Image */}
                   {entry.imageUrl && (
                     <div className="mb-6 rounded-xl overflow-hidden border border-[rgba(139,92,246,0.3)] shadow-glow">
@@ -475,7 +515,10 @@ export function AdventureDisplay({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onGenerateImage(entry.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGenerateImage(entry.id);
+                      }}
                       disabled={!!generatingImageFor}
                       className="mt-4"
                     >
@@ -587,6 +630,14 @@ export function AdventureDisplay({
         onManualSave={handleManualSave}
         onLoadSave={handleLoadSave}
         currentCharacterName={character.name}
+      />
+
+      {/* Story Rollback Modal */}
+      <StoryRollbackModal
+        isOpen={!!rollbackTarget}
+        previewText={rollbackTarget?.text || ''}
+        onConfirm={handleRollbackConfirm}
+        onCancel={() => setRollbackTarget(null)}
       />
     </div>
   );
