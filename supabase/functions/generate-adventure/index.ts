@@ -300,7 +300,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-adventure:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Unable to generate adventure content at this time',
       narrative: null 
     }), {
       status: 500,

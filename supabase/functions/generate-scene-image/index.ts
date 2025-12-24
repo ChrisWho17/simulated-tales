@@ -96,7 +96,7 @@ Wide aspect ratio suitable for a story header. No text or UI elements.`;
   } catch (error) {
     console.error('Error in generate-scene-image:', error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Unable to generate scene image at this time',
       imageUrl: null 
     }), {
       status: 500,
