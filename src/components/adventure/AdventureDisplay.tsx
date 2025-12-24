@@ -132,7 +132,14 @@ export function AdventureDisplay({
         timestamp: Date.now()
       };
       
-      saveGame(character.name, gameState, true); // true = auto-save (overwrites previous)
+      saveGame(character.name, gameState, true); // true = auto-save (overwrites previous for this campaign)
+      
+      // Subtle toast notification for auto-save
+      toast({
+        title: "Progress saved",
+        description: `${character.name}'s adventure auto-saved`,
+        duration: 2000,
+      });
       
       console.log(`[Auto-Save] ${character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
     };
