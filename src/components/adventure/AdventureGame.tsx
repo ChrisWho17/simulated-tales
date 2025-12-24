@@ -3,6 +3,7 @@ import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllu
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
+import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
@@ -12,7 +13,7 @@ import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
-import { GameSave } from '@/lib/saveSystem';
+import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 
 interface StoryEntry {
@@ -32,7 +33,7 @@ interface GameMechanics {
   heal?: number;
 }
 
-type GamePhase = 'loading' | 'scenario' | 'color' | 'character' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
@@ -56,6 +57,9 @@ export function AdventureGame() {
         if (char && story.length > 0) return 'playing';
       } catch {}
     }
+    // Check if there are any saves - if so, show recovery prompt
+    const recentSave = getMostRecentSave();
+    if (recentSave) return 'recovery';
     return 'scenario';
   });
 
@@ -378,6 +382,16 @@ export function AdventureGame() {
   // Show loading screen on initial load
   if (initialLoading) {
     return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." />;
+  }
+
+  // Phase 0.5: Recovery prompt for returning players
+  if (phase === 'recovery') {
+    return (
+      <CrashRecoveryPrompt
+        onContinue={handleLoadSave}
+        onNewGame={() => setPhase('scenario')}
+      />
+    );
   }
 
   // Phase 1: Scenario selection
