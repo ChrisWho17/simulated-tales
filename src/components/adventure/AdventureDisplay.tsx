@@ -10,6 +10,10 @@ import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
+import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
+import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
+import { useGame } from '@/contexts/GameContext';
+import { DiceRollResult, ACTION_CATEGORIES } from '@/game/diceSystem';
 
 interface StoryEntry {
   id: string;
@@ -72,8 +76,12 @@ export function AdventureDisplay({
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
   const [showDiceRoll, setShowDiceRoll] = useState(false);
+  const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const { diceMode } = useGame();
+  const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -91,10 +99,83 @@ export function AdventureDisplay({
   }, [isLoading]);
 
   useEffect(() => {
-    if (pendingMechanics?.rollRequired) {
+    if (pendingMechanics?.rollRequired && diceMode !== 'story') {
+      handlePendingRoll();
+    } else if (pendingMechanics?.rollRequired) {
+      // Story mode - just pass through without dice
+      onPlayerAction(`[Automatic success for: ${pendingMechanics.rollRequired.reason}]`);
+      onClearMechanics();
+    }
+  }, [pendingMechanics, diceMode]);
+
+  // Map pending roll stat to action type
+  const statToActionType = (stat: string): string => {
+    const mapping: Record<string, string> = {
+      strength: 'COMBAT_ATTACK',
+      dexterity: 'COMBAT_DODGE',
+      agility: 'COMBAT_DODGE',
+      constitution: 'ENDURE',
+      endurance: 'ENDURE',
+      intelligence: 'RECALL',
+      wisdom: 'PERCEPTION_CHECK',
+      perception: 'PERCEPTION_CHECK',
+      charisma: 'PERSUADE_MINOR',
+      // Skill-based mappings
+      lockpicking: 'LOCKPICK',
+      stealth: 'STEALTH',
+      persuasion: 'PERSUADE_MINOR',
+      intimidation: 'INTIMIDATE',
+      athletics: 'CLIMB',
+      combat: 'COMBAT_ATTACK'
+    };
+    return mapping[stat.toLowerCase()] || 'PERCEPTION_CHECK';
+  };
+
+  const handlePendingRoll = async () => {
+    if (!pendingMechanics?.rollRequired) return;
+    
+    const actionType = statToActionType(pendingMechanics.rollRequired.stat);
+    
+    // Check if this action should show dice based on mode
+    if (!shouldShowRoll(actionType)) {
+      // Story mode - auto success
+      onPlayerAction(`[Check passed for: ${pendingMechanics.rollRequired.reason}]`);
+      onClearMechanics();
+      return;
+    }
+    
+    // Convert character stats to player format
+    const player = toDicePlayer({
+      strength: character.stats.strength,
+      agility: character.stats.dexterity,
+      intelligence: character.stats.intelligence,
+      charisma: character.stats.charisma,
+      perception: character.stats.wisdom,
+      endurance: character.stats.constitution
+    });
+    
+    // Determine difficulty
+    const difficulty = pendingMechanics.rollRequired.difficulty;
+    let difficultyTier: 'TRIVIAL' | 'EASY' | 'NORMAL' | 'HARD' | 'VERY_HARD' | 'EXTREME' | 'LEGENDARY' = 'NORMAL';
+    if (difficulty <= 5) difficultyTier = 'TRIVIAL';
+    else if (difficulty <= 8) difficultyTier = 'EASY';
+    else if (difficulty <= 12) difficultyTier = 'NORMAL';
+    else if (difficulty <= 15) difficultyTier = 'HARD';
+    else if (difficulty <= 18) difficultyTier = 'VERY_HARD';
+    else if (difficulty <= 22) difficultyTier = 'EXTREME';
+    else difficultyTier = 'LEGENDARY';
+    
+    const result = await performRoll({
+      actionType,
+      difficulty: difficultyTier,
+      player
+    });
+    
+    if (result.diceRoll) {
+      setCurrentDiceRoll(result.diceRoll);
       setShowDiceRoll(true);
     }
-  }, [pendingMechanics]);
+  };
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
@@ -105,8 +186,20 @@ export function AdventureDisplay({
 
   const handleDiceRollComplete = (roll: any) => {
     setShowDiceRoll(false);
+    setCurrentDiceRoll(null);
     onPlayerAction(`[Dice roll for: ${pendingMechanics?.rollRequired?.reason}]`, roll);
     onClearMechanics();
+    clearRoll();
+  };
+
+  const handleNewDiceRollClose = () => {
+    if (currentDiceRoll && pendingMechanics?.rollRequired) {
+      handleDiceRollComplete(currentDiceRoll);
+    } else {
+      setShowDiceRoll(false);
+      setCurrentDiceRoll(null);
+      clearRoll();
+    }
   };
 
   const formatNarrativeContent = (content: string) => {
@@ -357,8 +450,18 @@ export function AdventureDisplay({
         </div>
       </div>
 
-      {/* Dice Roll Modal */}
-      {showDiceRoll && pendingMechanics?.rollRequired && (
+      {/* New Dice Roll Display - for skill checks with animated modal */}
+      {showDiceRoll && currentDiceRoll && (
+        <DiceRollDisplay
+          roll={currentDiceRoll}
+          onClose={handleNewDiceRollClose}
+          autoClose={true}
+          autoCloseDelay={3500}
+        />
+      )}
+
+      {/* Legacy Dice Roll Modal - fallback for old mechanics */}
+      {showDiceRoll && !currentDiceRoll && pendingMechanics?.rollRequired && diceMode === 'story' && (
         <DiceRollModal
           stat={pendingMechanics.rollRequired.stat as any}
           difficulty={pendingMechanics.rollRequired.difficulty}
