@@ -203,6 +203,7 @@ function PortraitGallery({
     setIsGenerating(true);
     try {
       const emotionDesc = EMOTION_DESCRIPTORS[emotion] || 'neutral expression';
+      const basePortrait = character.portraitUrl || getPortraitForEmotion('neutral');
       
       const response = await supabase.functions.invoke('generate-portrait', {
         body: {
@@ -213,6 +214,9 @@ function PortraitGallery({
           detailLevel: 'detailed',
           portraitHints: charClass?.portraitHints || [],
           clothingStyle: charClass?.clothingStyle,
+          // Pass the main portrait as reference for consistency
+          referenceImageUrl: basePortrait,
+          emotionVariant: emotionDesc,
         }
       });
 

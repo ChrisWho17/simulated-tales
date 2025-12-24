@@ -13,6 +13,8 @@ interface PortraitRequest {
   detailLevel: 'simple' | 'detailed' | 'all';
   portraitHints?: string[];
   clothingStyle?: string;
+  referenceImageUrl?: string; // Base portrait for consistency
+  emotionVariant?: string; // If generating an emotion variant
 }
 
 serve(async (req) => {
@@ -21,7 +23,18 @@ serve(async (req) => {
   }
 
   try {
-    const { appearance, characterClass, genre, name, detailLevel, portraitHints, clothingStyle } = await req.json() as PortraitRequest;
+    const { 
+      appearance, 
+      characterClass, 
+      genre, 
+      name, 
+      detailLevel, 
+      portraitHints, 
+      clothingStyle,
+      referenceImageUrl,
+      emotionVariant
+    } = await req.json() as PortraitRequest;
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -29,6 +42,9 @@ serve(async (req) => {
     }
 
     console.log("Generating character portrait for:", name, "in genre:", genre, "class:", characterClass);
+    if (referenceImageUrl) {
+      console.log("Using reference image for consistency, emotion:", emotionVariant);
+    }
 
     // Genre-specific art styles
     const genreStyles: Record<string, string> = {
@@ -57,18 +73,48 @@ serve(async (req) => {
     };
 
     const style = genreStyles[genre] || genreStyles.custom;
-    // Use provided clothingStyle or fall back to genre default
     const costume = clothingStyle || genreCostumes[genre] || genreCostumes.custom;
-    // Use provided portrait hints or empty
     const roleHints = portraitHints?.length ? portraitHints.join(', ') : '';
 
-    // Build the prompt based on detail level
     let matureContentNote = "";
     if (detailLevel === 'all') {
       matureContentNote = "This is for a mature audience. Include tasteful sensuality appropriate to the character description while maintaining artistic quality.";
     }
 
-    const prompt = `Generate a character portrait for ${name}, an RPG adventure game protagonist.
+    let prompt: string;
+    let messages: any[];
+
+    if (referenceImageUrl && emotionVariant) {
+      // Generate emotion variant based on reference image
+      prompt = `Look at this reference portrait and create a new portrait of THE EXACT SAME CHARACTER with a different expression.
+
+CRITICAL - MAINTAIN CONSISTENCY WITH REFERENCE:
+- SAME person/character identity
+- SAME face shape, features, skin tone
+- SAME hair color, style, and length  
+- SAME clothing, armor, and accessories
+- SAME art style and quality
+- SAME background style and lighting mood
+
+CHANGE ONLY THE EXPRESSION: ${emotionVariant}
+
+The new portrait should look like a different frame of the same character showing this emotion. Keep everything else identical - face, costume, setting. Only the facial expression and subtle body language should change to convey the ${emotionVariant} emotion.
+
+DO NOT: Change the character's appearance, clothes, or setting. This must be recognizably the same person.`;
+
+      messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: referenceImageUrl } }
+          ]
+        }
+      ];
+      
+    } else {
+      // Standard portrait generation (no reference)
+      prompt = `Generate a character portrait for ${name}, an RPG adventure game protagonist.
 
 ROLE: ${characterClass}
 GENRE: ${genre}
@@ -92,7 +138,15 @@ ${matureContentNote}
 
 DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
 
-    console.log("Portrait prompt length:", prompt.length);
+      messages = [
+        {
+          role: "user",
+          content: prompt,
+        }
+      ];
+    }
+
+    console.log("Portrait prompt prepared, using reference:", !!referenceImageUrl);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -102,12 +156,7 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        messages,
         modalities: ["image", "text"],
       }),
     });
@@ -133,7 +182,7 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
     }
 
     const data = await response.json();
-    console.log("Portrait generation response received for:", name);
+    console.log("Portrait generation response received for:", name, emotionVariant ? `(${emotionVariant})` : '');
     
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
@@ -144,7 +193,8 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
 
     return new Response(JSON.stringify({ 
       imageUrl,
-      characterName: name 
+      characterName: name,
+      emotion: emotionVariant || 'neutral'
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
