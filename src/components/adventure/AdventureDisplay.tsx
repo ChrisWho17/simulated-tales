@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders } from 'lucide-react';
-import { RPGCharacter, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
+import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
@@ -230,26 +230,115 @@ export function AdventureDisplay({
     }
   }, [isLoading]);
 
-  // Process mechanics and trigger emotional state changes
+  // Process mechanics and trigger emotional state changes AND update character stats
   useEffect(() => {
     if (!pendingMechanics) return;
+
+    let updatedCharacter = { ...character };
+    let hasStatChanges = false;
+
+    // Apply gold changes
+    if (pendingMechanics.goldGained && pendingMechanics.goldGained > 0) {
+      updatedCharacter.gold = (updatedCharacter.gold || 0) + pendingMechanics.goldGained;
+      hasStatChanges = true;
+      toast({
+        title: `+${pendingMechanics.goldGained} Gold`,
+        description: "Your wealth increases!",
+        duration: 3000,
+      });
+    }
+
+    // Apply damage
+    if (pendingMechanics.damage && pendingMechanics.damage > 0) {
+      updatedCharacter.currentHealth = Math.max(0, updatedCharacter.currentHealth - pendingMechanics.damage);
+      hasStatChanges = true;
+      toast({
+        title: `-${pendingMechanics.damage} Health`,
+        description: "You've taken damage!",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+
+    // Apply healing
+    if (pendingMechanics.heal && pendingMechanics.heal > 0) {
+      updatedCharacter.currentHealth = Math.min(
+        updatedCharacter.maxHealth,
+        updatedCharacter.currentHealth + pendingMechanics.heal
+      );
+      hasStatChanges = true;
+      toast({
+        title: `+${pendingMechanics.heal} Health`,
+        description: "You feel restored!",
+        duration: 3000,
+      });
+    }
+
+    // Apply loot to inventory
+    if (pendingMechanics.lootGained) {
+      const lootName = pendingMechanics.lootGained;
+      const existingItemIndex = updatedCharacter.inventory.findIndex(
+        item => item.name.toLowerCase() === lootName.toLowerCase()
+      );
+      if (existingItemIndex !== -1) {
+        // Update existing item quantity
+        const newInventory = [...updatedCharacter.inventory];
+        newInventory[existingItemIndex] = {
+          ...newInventory[existingItemIndex],
+          quantity: newInventory[existingItemIndex].quantity + 1
+        };
+        updatedCharacter.inventory = newInventory;
+      } else {
+        // Create new inventory item with required fields
+        const newItem: InventoryItem = {
+          id: `loot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: lootName,
+          description: `A ${lootName.toLowerCase()} found during your adventure.`,
+          quantity: 1,
+          type: 'treasure' // Default type for dynamically acquired items
+        };
+        updatedCharacter.inventory = [...updatedCharacter.inventory, newItem];
+      }
+      hasStatChanges = true;
+      toast({
+        title: `Acquired: ${pendingMechanics.lootGained}`,
+        description: "Added to your inventory!",
+        duration: 3000,
+      });
+    }
+
+    // Apply XP
+    if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
+      updatedCharacter.experience = (updatedCharacter.experience || 0) + pendingMechanics.xpGained.amount;
+      hasStatChanges = true;
+      toast({
+        title: `+${pendingMechanics.xpGained.amount} XP`,
+        description: pendingMechanics.xpGained.reason,
+        duration: 3000,
+      });
+    }
+
+    // Update character state if any stats changed
+    if (hasStatChanges) {
+      onUpdateCharacter(updatedCharacter);
+    }
 
     // Trigger emotional events based on mechanics
     if (gameContext?.processGameEvent) {
       if (pendingMechanics.damage && pendingMechanics.damage > 0) {
-        gameContext.processGameEvent('took_damage', character);
+        gameContext.processGameEvent('took_damage', updatedCharacter);
       }
       if (pendingMechanics.heal && pendingMechanics.heal > 0) {
-        gameContext.processGameEvent('received_healing', character);
+        gameContext.processGameEvent('received_healing', updatedCharacter);
       }
       if (pendingMechanics.goldGained && pendingMechanics.goldGained > 0) {
-        gameContext.processGameEvent('found_treasure', character);
+        gameContext.processGameEvent('found_treasure', updatedCharacter);
       }
       if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
-        gameContext.processGameEvent('quest_completed', character);
+        gameContext.processGameEvent('quest_completed', updatedCharacter);
       }
       if (pendingMechanics.lootGained) {
-        gameContext.processGameEvent('found_treasure', character);
+        gameContext.processGameEvent('found_treasure', updatedCharacter);
       }
     }
 
@@ -260,8 +349,11 @@ export function AdventureDisplay({
       // Story mode - just pass through without dice
       onPlayerAction(`[Automatic success for: ${pendingMechanics.rollRequired.reason}]`);
       onClearMechanics();
+    } else {
+      // Clear mechanics after applying non-dice changes
+      onClearMechanics();
     }
-  }, [pendingMechanics, diceMode, gameContext, character]);
+  }, [pendingMechanics, diceMode, gameContext, character, onUpdateCharacter, toast]);
 
   // Map pending roll stat to action type
   const statToActionType = (stat: string): string => {
