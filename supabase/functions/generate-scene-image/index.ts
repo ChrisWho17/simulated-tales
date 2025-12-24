@@ -64,11 +64,12 @@ Wide aspect ratio suitable for a story header. No text or UI elements.`;
       }
       
       if (response.status === 402) {
+        console.log('Usage limit reached, returning null image gracefully');
         return new Response(JSON.stringify({ 
           error: 'Usage limit reached',
           imageUrl: null 
         }), {
-          status: 402,
+          status: 200, // Return 200 so client handles gracefully
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
