@@ -4,7 +4,7 @@ import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { LoadingScreen, EmotionLoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter } from '@/types/rpgCharacter';
@@ -33,7 +33,7 @@ interface GameMechanics {
   heal?: number;
 }
 
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'emotion_gen' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
@@ -234,17 +234,28 @@ export function AdventureGame() {
     setPhase('character');
   }, []);
 
-  // Step 2: Character creation complete
-  const handleCharacterComplete = useCallback(async (char: RPGCharacter, scenario: string) => {
+  // Step 2: Character creation complete - check if portrait exists for emotion gen
+  const handleCharacterComplete = useCallback(async (char: RPGCharacter & { portraitUrl?: string }, scenario: string) => {
     setCharacter(char);
-    setIsLoading(true);
-
+    
     // Initialize campaign memory for new adventure
     const campaignId = `campaign_${char.name}_${Date.now()}`;
     const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
     initializeCampaign(campaignId, char.name, toneProfile);
     console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
 
+    // If character has portrait, show emotion generation screen
+    if (char.portraitUrl) {
+      setPhase('emotion_gen');
+    } else {
+      // No portrait - go straight to playing
+      await startGame(char, scenario);
+    }
+  }, [scenarioSelection, initializeCampaign]);
+
+  // Start the actual game after emotion generation
+  const startGame = useCallback(async (char: RPGCharacter, scenario: string) => {
+    setIsLoading(true);
     const narrative = await generateNarrative(scenario, undefined, [], undefined, char);
     if (narrative) {
       const newStory: StoryEntry[] = [{
@@ -258,7 +269,14 @@ export function AdventureGame() {
       setPhase('playing');
     }
     setIsLoading(false);
-  }, [generateNarrative, saveData, scenarioSelection, initializeCampaign]);
+  }, [generateNarrative, saveData, scenarioSelection]);
+
+  // Emotion generation complete - start the game
+  const handleEmotionGenComplete = useCallback(async () => {
+    if (character && scenarioSelection) {
+      await startGame(character, scenarioSelection.scenario);
+    }
+  }, [character, scenarioSelection, startGame]);
 
   // Back to scenario selection
   const handleBackToScenario = useCallback(() => {
@@ -431,6 +449,25 @@ export function AdventureGame() {
         onComplete={handleCharacterComplete}
         onBack={handleBackToScenario}
         isLoading={isLoading}
+      />
+    );
+  }
+
+  // Phase 2.5: Emotion portrait generation
+  if (phase === 'emotion_gen' && character && scenarioSelection) {
+    const extendedChar = character as RPGCharacter & { portraitUrl?: string };
+    const charClass = GENRE_DATA[scenarioSelection.genre]?.classes.find(c => c.id === character.classId);
+    
+    return (
+      <EmotionLoadingScreen
+        isLoading={true}
+        characterName={character.name}
+        characterId={`player_${character.name}`}
+        basePortraitUrl={extendedChar.portraitUrl || ''}
+        characterClass={charClass?.name || 'Adventurer'}
+        clothingStyle={charClass?.clothingStyle}
+        portraitHints={charClass?.portraitHints}
+        onLoadComplete={handleEmotionGenComplete}
       />
     );
   }
