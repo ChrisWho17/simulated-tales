@@ -1,22 +1,14 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { GameEvent } from '@/types/game';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { User } from 'lucide-react';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
+import { SmartScrollContainer } from '@/components/ui/smart-scroll';
 
 interface NarrativeDisplayProps {
   events: GameEvent[];
 }
 
 export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [events]);
-  
   // Safe text formatting using React components instead of dangerouslySetInnerHTML
   const formatTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
     const result: React.ReactNode[] = [];
@@ -62,7 +54,7 @@ export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
   };
   
   return (
-    <ScrollArea className="h-full" ref={scrollRef}>
+    <SmartScrollContainer className="h-full">
       <div className="p-6 space-y-6 font-narrative text-lg leading-relaxed">
         {events.length === 0 ? (
           <div className="animate-fade-in text-center py-12">
@@ -114,6 +106,6 @@ export function NarrativeDisplay({ events }: NarrativeDisplayProps) {
           ))
         )}
       </div>
-    </ScrollArea>
+    </SmartScrollContainer>
   );
 }
