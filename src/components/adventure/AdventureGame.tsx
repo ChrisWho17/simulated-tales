@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllustration';
-import { AdventureCreator } from './AdventureCreator';
+import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
 import { LoadingScreen } from '@/components/ui/loading-screen';
@@ -8,6 +8,8 @@ import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
+import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
+import { useGame } from '@/contexts/GameContext';
 import { toast } from 'sonner';
 
 interface StoryEntry {
@@ -27,12 +29,6 @@ interface GameMechanics {
   heal?: number;
 }
 
-interface ScenarioSelection {
-  scenario: string;
-  genre: GameGenre;
-  genreTitle: string;
-}
-
 type GamePhase = 'loading' | 'scenario' | 'color' | 'character' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
@@ -42,6 +38,7 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
+  const { setDiceMode } = useGame();
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -65,7 +62,7 @@ export function AdventureGame() {
     const savedScenario = localStorage.getItem(SCENARIO_KEY);
     const savedGenre = localStorage.getItem(GENRE_KEY);
     if (savedScenario && savedGenre) {
-      return { scenario: savedScenario, genre: savedGenre as GameGenre, genreTitle: savedGenre };
+      return { scenario: savedScenario, genre: savedGenre as GameGenre, genreTitle: savedGenre, diceMode: loadDiceMode() };
     }
     return null;
   });
@@ -200,13 +197,15 @@ export function AdventureGame() {
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
     setScenarioSelection(selection);
+    // Set the dice mode in the game context
+    setDiceMode(selection.diceMode);
     // Skip color selection if already chosen before
     if (selectedColorId) {
       setPhase('character');
     } else {
       setPhase('color');
     }
-  }, [selectedColorId]);
+  }, [selectedColorId, setDiceMode]);
 
   // Step 2: Color selection complete
   const handleColorSelect = useCallback((colorId: string) => {

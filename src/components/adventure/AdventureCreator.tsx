@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield, BookOpen, Dices, Swords } from 'lucide-react';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
+import { DiceMode, DICE_MODES, saveDiceMode } from '@/game/diceSystem';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,16 +15,41 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface ScenarioSelection {
+export interface ScenarioSelection {
   scenario: string;
   genre: GameGenre;
   genreTitle: string;
+  diceMode: DiceMode;
 }
 
 interface AdventureCreatorProps {
   onSelect: (selection: ScenarioSelection) => void;
   isLoading: boolean;
 }
+
+const DICE_MODE_OPTIONS = [
+  { 
+    id: 'story' as DiceMode, 
+    name: 'Story Mode', 
+    icon: BookOpen,
+    description: 'Pure narrative - no dice rolls',
+    color: 'text-violet-400'
+  },
+  { 
+    id: 'partial' as DiceMode, 
+    name: 'Normal Mode', 
+    icon: Dices,
+    description: 'Dice for major actions & checks',
+    color: 'text-amber-400'
+  },
+  { 
+    id: 'full' as DiceMode, 
+    name: 'Diced Out', 
+    icon: Swords,
+    description: 'Dice for every action',
+    color: 'text-red-400'
+  }
+];
 
 const PRESET_SCENARIOS = [
   { id: 'fantasy', genre: 'fantasy' as GameGenre, title: 'Fantasy Quest', description: 'Begin a fantasy adventure in a mystical realm where magic flows freely and ancient prophecies unfold.', icon: Castle, gradient: 'genre-fantasy' },
@@ -55,6 +81,7 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
   const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [genreOverride, setGenreOverride] = useState<GameGenre | null>(null);
+  const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
 
   // Real-time genre detection
   const detectedGenre = useMemo(() => {
@@ -79,19 +106,23 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
 
   const handleRandomScenario = () => {
     const random = RANDOM_SCENARIOS[Math.floor(Math.random() * RANDOM_SCENARIOS.length)];
-    onSelect({ scenario: random.text, genre: random.genre, genreTitle: getGenreTitle(random.genre) });
+    saveDiceMode(selectedDiceMode);
+    onSelect({ scenario: random.text, genre: random.genre, genreTitle: getGenreTitle(random.genre), diceMode: selectedDiceMode });
   };
 
   const handlePresetStart = (preset: typeof PRESET_SCENARIOS[0]) => {
-    onSelect({ scenario: preset.description, genre: preset.genre, genreTitle: preset.title });
+    saveDiceMode(selectedDiceMode);
+    onSelect({ scenario: preset.description, genre: preset.genre, genreTitle: preset.title, diceMode: selectedDiceMode });
   };
 
   const handleCustomStart = () => {
     if (customScenario.trim()) {
+      saveDiceMode(selectedDiceMode);
       onSelect({ 
         scenario: customScenario.trim(), 
         genre: activeGenre, 
-        genreTitle: getGenreTitle(activeGenre) 
+        genreTitle: getGenreTitle(activeGenre),
+        diceMode: selectedDiceMode 
       });
     }
   };
@@ -228,6 +259,39 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Dice Mode Selector */}
+          <div className="glass-panel p-5 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <h3 className="text-primary font-display text-lg tracking-wide mb-4">Choose Your Play Style</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {DICE_MODE_OPTIONS.map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setSelectedDiceMode(mode.id)}
+                  className={`relative p-4 rounded-xl border transition-all duration-300 text-left ${
+                    selectedDiceMode === mode.id
+                      ? 'border-primary bg-primary/10 shadow-glow'
+                      : 'border-border/50 bg-background/30 hover:border-primary/50 hover:bg-background/50'
+                  }`}
+                >
+                  <div className="flex flex-col items-center text-center gap-2">
+                    <mode.icon className={`w-6 h-6 ${selectedDiceMode === mode.id ? 'text-primary' : mode.color}`} />
+                    <span className={`font-medium text-sm ${selectedDiceMode === mode.id ? 'text-primary' : 'text-foreground'}`}>
+                      {mode.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground leading-tight">
+                      {mode.description}
+                    </span>
+                  </div>
+                  {selectedDiceMode === mode.id && (
+                    <div className="absolute top-2 right-2">
+                      <Check className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Divider */}
