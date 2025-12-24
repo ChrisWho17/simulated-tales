@@ -23,24 +23,24 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter }: Charac
 
   return (
     <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col animate-fade-in">
+      <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col animate-fade-in overflow-hidden">
         {/* Header */}
-        <div className="flex justify-between items-start p-6 border-b border-border">
-          <div>
+        <div className="flex justify-between items-start p-6 border-b border-border flex-shrink-0">
+          <div className="min-w-0 flex-1 pr-4">
             <h2 className="text-2xl font-narrative font-bold text-gradient-gold">
               {character.name}
             </h2>
             <p className="text-muted-foreground">
-              Level {character.level} {charClass?.name} • {background?.name}
+              Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
             <X className="w-5 h-5" />
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 p-6">
-          <div className="grid gap-6">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-6 grid gap-6">
             {/* Health & Resources */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-background/50 rounded-lg p-4 border border-border/30">
@@ -176,6 +176,9 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter }: Charac
                 ))}
               </div>
             </div>
+
+            {/* Spacer for safe scrolling on mobile */}
+            <div className="h-8 flex-shrink-0" />
           </div>
         </ScrollArea>
       </div>
