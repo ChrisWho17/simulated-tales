@@ -62,6 +62,7 @@ import { GameHeader } from './GameHeader';
 import { WeatherDisplay } from './WeatherDisplay';
 import { QuestJournal } from './QuestJournal';
 import { CombatUI } from './CombatUI';
+import { StoryModeSidebar } from './StoryModeSidebar';
 import { toast } from 'sonner';
 import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
 import { calculateSimulationStats } from '@/game/metaSystems';
@@ -256,6 +257,7 @@ export function GameUI() {
   
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [storyPanelOpen, setStoryPanelOpen] = useState(false);
   
   // RPG System States
   const [weather, setWeather] = useState<WeatherState>(() => initializeWeather('spring'));
@@ -1266,7 +1268,15 @@ export function GameUI() {
         )}
       </button>
       
-      {/* Character Panel - slides out from left */}
+      {/* Story Mode Sidebar - collapsible character panel */}
+      <StoryModeSidebar 
+        gameState={gameState}
+        isOpen={storyPanelOpen}
+        onToggle={() => setStoryPanelOpen(!storyPanelOpen)}
+        wounds={[]}
+      />
+      
+      {/* Character Panel - slides out from left (legacy) */}
       <CharacterPanel 
         gameState={gameState}
         isOpen={leftPanelOpen}
@@ -1285,7 +1295,7 @@ export function GameUI() {
       <div 
         className={cn(
           "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          leftPanelOpen ? "ml-64 sm:ml-72" : "ml-0",
+          (leftPanelOpen || storyPanelOpen) ? "ml-72" : "ml-0",
           rightPanelOpen ? "mr-64 sm:mr-72" : "mr-0"
         )}
       >
