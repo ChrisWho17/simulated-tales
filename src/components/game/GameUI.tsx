@@ -1273,7 +1273,6 @@ export function GameUI() {
         gameState={gameState}
         isOpen={storyPanelOpen}
         onToggle={() => setStoryPanelOpen(!storyPanelOpen)}
-        wounds={[]}
       />
       
       {/* Character Panel - slides out from left (legacy) */}
