@@ -42,41 +42,34 @@ export function saveGame(
 ): GameSave {
   const saves = loadAllSaves();
   const now = Date.now();
+  const normalizedName = (characterName || 'Unknown Hero').toLowerCase().trim();
   
   // Format the date nicely
   const dateFormatted = formatSaveDate(now);
   
+  // Create campaign-specific save ID
+  const saveId = isAutoSave 
+    ? `auto-${normalizedName}` 
+    : `manual-${normalizedName}`;
+  
   const newSave: GameSave = {
-    id: isAutoSave ? `auto-${now}` : `manual-${now}`,
+    id: saveId,
     characterName: characterName || 'Unknown Hero',
     timestamp: now,
     dateFormatted,
-    slotNumber: isAutoSave ? -1 : getNextSlotNumber(saves),
+    slotNumber: isAutoSave ? -1 : 1,
     gameData
   };
   
-  // Handle auto-save rotation
-  if (isAutoSave) {
-    const autoSaves = saves.filter(s => s.id.startsWith('auto-'));
-    const manualSaves = saves.filter(s => s.id.startsWith('manual-'));
-    
-    // Keep only the most recent auto-saves
-    const sortedAutoSaves = [...autoSaves, newSave]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, MAX_AUTO_SAVES);
-    
-    const allSaves = [...manualSaves, ...sortedAutoSaves];
-    savesToStorage(allSaves);
-    return newSave;
-  } else {
-    // Manual save - add to list, enforce max limit
-    const updatedSaves = [...saves, newSave]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, MAX_AUTO_SAVES + MAX_MANUAL_SAVES);
-    
-    savesToStorage(updatedSaves);
-    return newSave;
-  }
+  // Remove existing save for this campaign (character) if it exists
+  const filteredSaves = saves.filter(s => s.id !== saveId);
+  
+  // Add the new save
+  const updatedSaves = [...filteredSaves, newSave]
+    .sort((a, b) => b.timestamp - a.timestamp);
+  
+  savesToStorage(updatedSaves);
+  return newSave;
 }
 
 // ============================================================================
