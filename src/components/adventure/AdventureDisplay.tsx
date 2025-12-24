@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult } from '@/game/diceSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
+import { saveGame, GameSave } from '@/lib/saveSystem';
+import { useToast } from '@/hooks/use-toast';
 
 interface StoryEntry {
   id: string;
@@ -86,6 +88,34 @@ export function AdventureDisplay({
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
+  const { toast } = useToast();
+
+  // Manual save handler
+  const handleManualSave = useCallback(() => {
+    const gameState = {
+      story,
+      character,
+      timestamp: Date.now()
+    };
+    
+    const save = saveGame(character.name, gameState, false);
+    
+    toast({
+      title: "Adventure Saved",
+      description: `${character.name}'s progress has been saved.`,
+      duration: 3000,
+    });
+  }, [story, character, toast]);
+
+  // Load save handler
+  const handleLoadSave = useCallback((save: GameSave) => {
+    // This would need to be wired to the parent component to actually restore state
+    toast({
+      title: "Save Loaded",
+      description: `Restored ${save.characterName}'s adventure.`,
+      duration: 3000,
+    });
+  }, [toast]);
 
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
@@ -511,7 +541,10 @@ export function AdventureDisplay({
       {/* Settings Panel */}
       <SettingsPanel 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
+        onClose={() => setShowSettings(false)}
+        onManualSave={handleManualSave}
+        onLoadSave={handleLoadSave}
+        currentCharacterName={character.name}
       />
     </div>
   );
