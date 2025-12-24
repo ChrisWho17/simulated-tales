@@ -1,6 +1,10 @@
 // ============================================================================
 // SAVE SYSTEM - Auto-save with dated saves and character names
+// Campaign-specific saves (1 auto + 1 manual per campaign/character)
 // ============================================================================
+
+import { CampaignMemoryStore } from '@/types/campaignMemory';
+import { serializeCampaignMemory, deserializeCampaignMemory } from '@/game/campaignMemorySystem';
 
 export interface GameSave {
   id: string;
@@ -9,11 +13,10 @@ export interface GameSave {
   dateFormatted: string;
   slotNumber: number;
   gameData: unknown; // The actual game state - typed loosely for flexibility
+  campaignMemory?: string; // Serialized campaign memory (optional for backward compat)
 }
 
 const SAVES_KEY = 'untold-game-saves';
-const MAX_AUTO_SAVES = 1; // Only keep 1 auto-save to conserve resources (overwrites previous)
-const MAX_MANUAL_SAVES = 10;
 
 // ============================================================================
 // LOAD SAVES
@@ -32,13 +35,28 @@ export function loadAllSaves(): GameSave[] {
 }
 
 // ============================================================================
-// SAVE GAME
+// GET SAVES FOR CHARACTER (campaign-specific)
+// ============================================================================
+
+export function getSavesForCharacter(characterName: string): { autoSave: GameSave | null; manualSave: GameSave | null } {
+  const saves = loadAllSaves();
+  const normalizedName = characterName.toLowerCase().trim();
+  
+  const autoSave = saves.find(s => s.id === `auto-${normalizedName}`) || null;
+  const manualSave = saves.find(s => s.id === `manual-${normalizedName}`) || null;
+  
+  return { autoSave, manualSave };
+}
+
+// ============================================================================
+// SAVE GAME (Campaign-specific: overwrites existing save for same character)
 // ============================================================================
 
 export function saveGame(
   characterName: string, 
   gameData: unknown, 
-  isAutoSave: boolean = false
+  isAutoSave: boolean = false,
+  campaignMemory?: CampaignMemoryStore
 ): GameSave {
   const saves = loadAllSaves();
   const now = Date.now();
@@ -47,7 +65,7 @@ export function saveGame(
   // Format the date nicely
   const dateFormatted = formatSaveDate(now);
   
-  // Create campaign-specific save ID
+  // Create campaign-specific save ID (overwrites previous for same character)
   const saveId = isAutoSave 
     ? `auto-${normalizedName}` 
     : `manual-${normalizedName}`;
@@ -58,7 +76,8 @@ export function saveGame(
     timestamp: now,
     dateFormatted,
     slotNumber: isAutoSave ? -1 : 1,
-    gameData
+    gameData,
+    campaignMemory: campaignMemory ? serializeCampaignMemory(campaignMemory) : undefined,
   };
   
   // Remove existing save for this campaign (character) if it exists
@@ -89,6 +108,15 @@ export function deleteSave(saveId: string): void {
 export function loadSave(saveId: string): GameSave | null {
   const saves = loadAllSaves();
   return saves.find(s => s.id === saveId) || null;
+}
+
+// ============================================================================
+// LOAD CAMPAIGN MEMORY FROM SAVE
+// ============================================================================
+
+export function loadCampaignMemoryFromSave(save: GameSave): CampaignMemoryStore | null {
+  if (!save.campaignMemory) return null;
+  return deserializeCampaignMemory(save.campaignMemory);
 }
 
 // ============================================================================
@@ -125,6 +153,21 @@ export function getManualSaves(): GameSave[] {
 }
 
 // ============================================================================
+// GET ALL CHARACTER CAMPAIGNS
+// ============================================================================
+
+export function getAllCharacterCampaigns(): string[] {
+  const saves = loadAllSaves();
+  const characters = new Set<string>();
+  
+  for (const save of saves) {
+    characters.add(save.characterName);
+  }
+  
+  return Array.from(characters);
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -134,14 +177,6 @@ function savesToStorage(saves: GameSave[]): void {
   } catch (e) {
     console.error('Failed to save games:', e);
   }
-}
-
-function getNextSlotNumber(saves: GameSave[]): number {
-  const manualSaves = saves.filter(s => s.id.startsWith('manual-'));
-  if (manualSaves.length === 0) return 1;
-  
-  const maxSlot = Math.max(...manualSaves.map(s => s.slotNumber));
-  return maxSlot + 1;
 }
 
 function formatSaveDate(timestamp: number): string {

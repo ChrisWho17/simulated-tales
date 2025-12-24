@@ -22,10 +22,10 @@ import {
   MemoryRetrievalContext,
   StateChange,
   KnowledgeClaim,
-  LoopState,
   LoopEscalation,
   LoopResolution,
   InvariantViolation,
+  LoopState,
 } from '@/types/campaignMemory';
 
 // ============================================================================
