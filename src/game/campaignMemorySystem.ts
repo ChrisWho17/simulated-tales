@@ -838,6 +838,260 @@ export function checkInvariants(store: CampaignMemoryStore): InvariantViolation[
 }
 
 // ============================================================================
+// IDENTITY ANCHOR DETECTION FROM ACTIONS
+// ============================================================================
+
+const ALIGNMENT_KEYWORDS = {
+  good: ['help', 'save', 'protect', 'defend', 'heal', 'rescue', 'comfort', 'forgive', 'spare', 'mercy'],
+  evil: ['kill', 'murder', 'betray', 'steal', 'torture', 'deceive', 'destroy', 'corrupt', 'poison', 'curse'],
+  lawful: ['obey', 'follow', 'honor', 'duty', 'oath', 'promise', 'contract', 'law', 'order', 'tradition'],
+  chaotic: ['rebel', 'break', 'defy', 'freedom', 'chaos', 'random', 'impulse', 'wild', 'anarchy', 'revolt'],
+};
+
+const VALUE_KEYWORDS = {
+  protective: ['protect', 'shield', 'defend', 'guard', 'save'],
+  vengeful: ['revenge', 'avenge', 'payback', 'retribution', 'punish'],
+  merciful: ['spare', 'mercy', 'forgive', 'release', 'compassion'],
+  ambitious: ['power', 'rule', 'dominate', 'conquer', 'throne'],
+  loyal: ['loyal', 'faithful', 'devoted', 'ally', 'friend'],
+  independent: ['alone', 'solo', 'independent', 'free', 'self'],
+};
+
+export interface AlignmentScore {
+  good: number;
+  evil: number;
+  lawful: number;
+  chaotic: number;
+}
+
+export interface DetectedTrait {
+  type: IdentityAnchor['type'];
+  anchor: string;
+  description: string;
+  triggers: string[];
+  confidence: number;
+}
+
+export function analyzeActionForTraits(
+  action: string,
+  narrativeResponse: string,
+  existingAnchors: IdentityAnchor[]
+): DetectedTrait[] {
+  const detected: DetectedTrait[] = [];
+  const lowerAction = action.toLowerCase();
+  const lowerNarrative = narrativeResponse.toLowerCase();
+  const combined = `${lowerAction} ${lowerNarrative}`;
+  
+  // Check for alignment traits
+  for (const [alignment, keywords] of Object.entries(ALIGNMENT_KEYWORDS)) {
+    const matches = keywords.filter(k => combined.includes(k));
+    if (matches.length >= 2) {
+      const existingAlignment = existingAnchors.find(
+        a => a.type === 'value' && a.anchor.toLowerCase().includes(alignment)
+      );
+      if (!existingAlignment) {
+        detected.push({
+          type: 'value',
+          anchor: `${alignment.charAt(0).toUpperCase() + alignment.slice(1)} alignment`,
+          description: `Demonstrates ${alignment} tendencies through consistent actions`,
+          triggers: matches,
+          confidence: Math.min(100, matches.length * 25),
+        });
+      }
+    }
+  }
+  
+  // Check for value-based traits
+  for (const [value, keywords] of Object.entries(VALUE_KEYWORDS)) {
+    const matches = keywords.filter(k => combined.includes(k));
+    if (matches.length >= 1) {
+      const existing = existingAnchors.find(
+        a => a.anchor.toLowerCase().includes(value)
+      );
+      if (!existing) {
+        detected.push({
+          type: 'value',
+          anchor: `${value.charAt(0).toUpperCase() + value.slice(1)} nature`,
+          description: `Shows ${value} behavior patterns`,
+          triggers: matches,
+          confidence: Math.min(100, matches.length * 30),
+        });
+      }
+    }
+  }
+  
+  // Detect vows/promises
+  const vowPatterns = [
+    /(?:i\s+)?(?:swear|vow|promise|pledge)\s+(?:to\s+)?(.{10,50})/i,
+    /(?:i\s+will\s+)?never\s+(.{10,40})/i,
+    /(?:i\s+will\s+)?always\s+(.{10,40})/i,
+  ];
+  
+  for (const pattern of vowPatterns) {
+    const match = combined.match(pattern);
+    if (match && match[1]) {
+      const existing = existingAnchors.find(
+        a => a.type === 'vow' && a.anchor.toLowerCase().includes(match[1].toLowerCase().slice(0, 20))
+      );
+      if (!existing) {
+        detected.push({
+          type: 'vow',
+          anchor: match[0].trim(),
+          description: `A solemn oath made during the adventure`,
+          triggers: [match[1].trim()],
+          confidence: 80,
+        });
+      }
+    }
+  }
+  
+  return detected.filter(d => d.confidence >= 50);
+}
+
+export function processActionForIdentity(
+  store: CampaignMemoryStore,
+  action: string,
+  narrativeResponse: string,
+  tick: number
+): CampaignMemoryStore {
+  const detectedTraits = analyzeActionForTraits(action, narrativeResponse, store.identityAnchors);
+  
+  let updatedStore = store;
+  for (const trait of detectedTraits) {
+    if (trait.confidence >= 70) {
+      const anchor = createIdentityAnchor(
+        store.campaign.id,
+        trait.type,
+        trait.anchor,
+        trait.description,
+        trait.triggers,
+        `action_${tick}`,
+        tick
+      );
+      updatedStore = addIdentityAnchor(updatedStore, anchor);
+      console.log(`[Identity] New anchor detected: ${trait.anchor} (confidence: ${trait.confidence})`);
+    }
+  }
+  
+  return updatedStore;
+}
+
+// ============================================================================
+// MEMORY CONTEXT FORMATTING FOR AI
+// ============================================================================
+
+export interface FormattedMemoryContext {
+  identitySection: string;
+  recentEvents: string;
+  activeLoops: string;
+  worldState: string;
+  fullContext: string;
+}
+
+export function formatMemoryContextForAI(
+  context: MemoryRetrievalContext | null,
+  characterName: string
+): FormattedMemoryContext {
+  if (!context) {
+    return {
+      identitySection: '',
+      recentEvents: '',
+      activeLoops: '',
+      worldState: '',
+      fullContext: '',
+    };
+  }
+  
+  // Format identity anchors
+  let identitySection = '';
+  if (context.identityAnchors.length > 0) {
+    identitySection = `\n\n[${characterName.toUpperCase()}'S IDENTITY & VALUES]`;
+    for (const anchor of context.identityAnchors) {
+      const typeLabel = anchor.type.toUpperCase();
+      identitySection += `\n• [${typeLabel}] ${anchor.anchor}: ${anchor.description}`;
+      if (anchor.violationCount > 0) {
+        identitySection += ` (violated ${anchor.violationCount}x)`;
+      }
+    }
+    identitySection += `\n\nIMPORTANT: These define ${characterName}'s core identity. Reference them when relevant to choices and consequences.`;
+  }
+  
+  // Format recent events (STM)
+  let recentEvents = '';
+  if (context.sceneNow.length > 0) {
+    recentEvents = '\n\n[RECENT EVENTS (This Scene)]';
+    for (const mem of context.sceneNow.slice(0, 5)) {
+      recentEvents += `\n• ${mem.summary}`;
+    }
+  }
+  
+  // Format active loops (unresolved tensions)
+  let activeLoops = '';
+  if (context.activeLoops.length > 0) {
+    activeLoops = '\n\n[UNRESOLVED TENSIONS]';
+    for (const loop of context.activeLoops) {
+      const urgencyEmoji = loop.urgency === 'critical' ? '🔴' : 
+                           loop.urgency === 'high' ? '🟠' : 
+                           loop.urgency === 'medium' ? '🟡' : '🟢';
+      activeLoops += `\n• ${urgencyEmoji} ${loop.name}: ${loop.description}`;
+      if (loop.ticksRemaining > 0) {
+        activeLoops += ` (${loop.ticksRemaining} turns remaining)`;
+      }
+    }
+    activeLoops += '\n\nThese tensions should influence the narrative. Remind the player of urgent matters.';
+  }
+  
+  // Format world state
+  let worldState = '';
+  if (context.locationState) {
+    const loc = context.locationState;
+    worldState = '\n\n[LOCATION STATE]';
+    if (loc.structuralDamage > 0) {
+      worldState += `\nDamage: ${loc.damageDescriptions.join(', ')}`;
+    }
+    if (loc.mood !== 'normal') {
+      worldState += `\nAtmosphere: ${loc.mood} (${loc.moodReason})`;
+    }
+    if (context.locationScars.length > 0) {
+      worldState += '\nScars from past events:';
+      for (const scar of context.locationScars.slice(0, 3)) {
+        worldState += `\n  - ${scar.description}`;
+      }
+    }
+  }
+  
+  // Add canon facts and rumors
+  if (context.canonFacts.length > 0) {
+    worldState += '\n\n[ESTABLISHED FACTS]';
+    for (const fact of context.canonFacts.slice(0, 5)) {
+      worldState += `\n• ${fact.summary}`;
+    }
+  }
+  
+  if (context.rumorsAndClaims.length > 0) {
+    worldState += '\n\n[RUMORS & BELIEFS]';
+    for (const rumor of context.rumorsAndClaims.slice(0, 3)) {
+      const reliability = rumor.provenance === 'observed' ? '(witnessed)' : 
+                         rumor.provenance === 'reported' ? '(told)' : '(rumor)';
+      worldState += `\n• ${rumor.summary} ${reliability}`;
+    }
+  }
+  
+  // Combine full context
+  const fullContext = [identitySection, recentEvents, activeLoops, worldState]
+    .filter(s => s.length > 0)
+    .join('');
+  
+  return {
+    identitySection,
+    recentEvents,
+    activeLoops,
+    worldState,
+    fullContext,
+  };
+}
+
+// ============================================================================
 // SERIALIZATION
 // ============================================================================
 

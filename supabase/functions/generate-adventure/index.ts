@@ -33,6 +33,14 @@ interface DiceRollRequest {
   reason: string;
 }
 
+interface MemoryContext {
+  identitySection: string;
+  recentEvents: string;
+  activeLoops: string;
+  worldState: string;
+  fullContext: string;
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -47,6 +55,7 @@ interface AdventureRequest {
     criticalSuccess?: boolean;
     criticalFailure?: boolean;
   };
+  memoryContext?: MemoryContext;
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -84,6 +93,15 @@ When the player's message includes a dice roll result:
 - [ROLL FAILURE] means they failed - narrate complications or consequences  
 - [CRITICAL SUCCESS!] means they rolled a natural 20 - narrate an exceptional outcome
 - [CRITICAL FAILURE!] means they rolled a natural 1 - narrate a dramatic mishap
+
+CAMPAIGN MEMORY INTEGRATION:
+When provided with campaign memory context, you MUST:
+- Reference the player's identity anchors (vows, values, traumas) when they become relevant
+- Acknowledge established world facts and past events
+- Remind players of urgent unresolved tensions/loops
+- Make NPCs react appropriately based on the player's reputation and past actions
+- Create narrative callbacks to previous events for continuity
+- When the player acts against their stated values/vows, note the internal conflict
 
 IMPORTANT RULES:
 - NEVER break character or mention you're an AI
@@ -145,17 +163,20 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build system prompt with character context
+    // Build system prompt with character context and memory
     let systemContent = SYSTEM_PROMPT;
     if (character) {
       systemContent += '\n\n' + formatCharacterContext(character);
+    }
+    if (memoryContext?.fullContext) {
+      systemContent += '\n\n=== CAMPAIGN MEMORY ===' + memoryContext.fullContext;
     }
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
@@ -199,7 +220,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('Calling AI with messages:', messages.length, 'Character:', character?.name || 'none');
+    console.log('Calling AI with messages:', messages.length, 'Character:', character?.name || 'none', 'Has memory:', !!memoryContext?.fullContext);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
