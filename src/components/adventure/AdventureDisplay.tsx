@@ -117,6 +117,33 @@ export function AdventureDisplay({
     });
   }, [toast]);
 
+  // Auto-save every 5 minutes when enabled
+  useEffect(() => {
+    const autoSaveEnabled = gameContext?.settings?.autoSave ?? true;
+    
+    if (!autoSaveEnabled || !character?.name) return;
+    
+    const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    
+    const performAutoSave = () => {
+      const gameState = {
+        story,
+        character,
+        timestamp: Date.now()
+      };
+      
+      saveGame(character.name, gameState, true); // true = auto-save (overwrites previous)
+      
+      console.log(`[Auto-Save] ${character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
+    };
+    
+    // Set up interval
+    const intervalId = setInterval(performAutoSave, AUTO_SAVE_INTERVAL);
+    
+    // Cleanup on unmount or when settings change
+    return () => clearInterval(intervalId);
+  }, [gameContext?.settings?.autoSave, character, story]);
+
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
 

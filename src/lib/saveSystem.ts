@@ -12,7 +12,7 @@ export interface GameSave {
 }
 
 const SAVES_KEY = 'untold-game-saves';
-const MAX_AUTO_SAVES = 5;
+const MAX_AUTO_SAVES = 1; // Only keep 1 auto-save to conserve resources (overwrites previous)
 const MAX_MANUAL_SAVES = 10;
 
 // ============================================================================
