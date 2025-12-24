@@ -88,23 +88,45 @@ export function AdventureDisplay({
   const [showSettings, setShowSettings] = useState(false);
   const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
   const [rollbackTarget, setRollbackTarget] = useState<{ index: number; text: string } | null>(null);
+  const [longPressActive, setLongPressActive] = useState<number | null>(null);
+  const [showRollbackHint, setShowRollbackHint] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
 
+  // Hide hint after first interaction or after a few entries
+  useEffect(() => {
+    if (story.length > 4) {
+      setShowRollbackHint(false);
+    }
+  }, [story.length]);
+
   // Long press handlers for story rollback
   const handleLongPressStart = useCallback((index: number, text: string) => {
     // Don't allow rollback to the very first entry
     if (index === 0) return;
     
+    // Start visual feedback after 200ms
+    feedbackTimer.current = setTimeout(() => {
+      setLongPressActive(index);
+    }, 200);
+    
+    // Trigger rollback modal after 600ms
     longPressTimer.current = setTimeout(() => {
+      setLongPressActive(null);
       setRollbackTarget({ index, text });
-    }, 600); // 600ms long press
+      setShowRollbackHint(false);
+      // Trigger haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 600);
   }, []);
 
   const handleLongPressEnd = useCallback(() => {
@@ -112,6 +134,11 @@ export function AdventureDisplay({
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    if (feedbackTimer.current) {
+      clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = null;
+    }
+    setLongPressActive(null);
   }, []);
 
   const handleRollbackConfirm = useCallback(() => {
@@ -476,25 +503,50 @@ export function AdventureDisplay({
       {/* Story Content */}
       <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+          {/* Rollback hint for new players */}
+          {showRollbackHint && story.length >= 2 && story.length <= 4 && (
+            <div className="mb-6 text-center animate-fade-in">
+              <p className="text-xs text-muted-foreground/70 italic">
+                💡 Tip: Hold any story moment to return to that point
+              </p>
+            </div>
+          )}
+
           {story.map((entry, index) => (
             <div
               key={entry.id}
-              className={`animate-fade-in-up mb-8 ${entry.role === 'user' ? 'text-right' : ''} ${index > 0 ? 'cursor-pointer' : ''}`}
+              className={`
+                animate-fade-in-up mb-8 
+                ${entry.role === 'user' ? 'text-right' : ''} 
+                ${index > 0 ? 'cursor-pointer select-none' : ''}
+                ${longPressActive === index ? 'scale-[0.98] opacity-80' : ''}
+                transition-all duration-150
+              `}
               style={{ animationDelay: `${index * 0.05}s` }}
               onMouseDown={() => handleLongPressStart(index, entry.content)}
               onMouseUp={handleLongPressEnd}
               onMouseLeave={handleLongPressEnd}
               onTouchStart={() => handleLongPressStart(index, entry.content)}
               onTouchEnd={handleLongPressEnd}
+              onTouchCancel={handleLongPressEnd}
               title={index > 0 ? "Hold to return here" : undefined}
             >
               {entry.role === 'user' ? (
-                <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left hover:border-primary/50 transition-colors">
+                <div className={`
+                  inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left 
+                  hover:border-primary/50 transition-all
+                  ${longPressActive === index ? 'border-warning/50 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}
+                `}>
                   <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
                   <p className="font-narrative text-lg text-foreground">{entry.content}</p>
                 </div>
               ) : (
-                <Card className="border-0 bg-transparent shadow-none hover:bg-primary/5 transition-colors rounded-lg p-2 -m-2">
+                <Card className={`
+                  border-0 bg-transparent shadow-none rounded-lg p-2 -m-2 transition-all
+                  ${longPressActive === index 
+                    ? 'bg-warning/10 shadow-[0_0_20px_rgba(234,179,8,0.2)]' 
+                    : 'hover:bg-primary/5'}
+                `}>
                   {/* Scene Image */}
                   {entry.imageUrl && (
                     <div className="mb-6 rounded-xl overflow-hidden border border-[rgba(139,92,246,0.3)] shadow-glow">
