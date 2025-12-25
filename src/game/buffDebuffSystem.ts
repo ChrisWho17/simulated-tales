@@ -727,55 +727,58 @@ export function tickModifiersByTurn(state: ModifierState, turns: number = 1): Mo
   };
 
   for (const modifier of state.activeModifiers) {
-    // All modifiers with 'time' type are now treated as turn-based
-    if (modifier.duration.type === 'time' && modifier.duration.remaining !== Infinity) {
-      const updated = {
-        ...modifier,
-        duration: {
-          ...modifier.duration,
-          remaining: modifier.duration.remaining - turns,
-        },
-      };
-
-      if (updated.duration.remaining <= 0) {
-        // Modifier expired - handle resolution
-        const resolved = resolveModifier(updated, newState);
-        newState.modifierHistory.push(updated);
-        if (resolved.promotedModifier) {
-          newState.promotedModifiers = [
-            ...(newState.promotedModifiers || []),
-            resolved.promotedModifier,
-          ];
-        }
-      } else {
-        // Keep the modifier with reduced duration
-        // Apply severity decay based on progress
-        const progress = 1 - (updated.duration.remaining / updated.duration.total);
-        let decayedModifier = updated;
-        
-        if (modifier.decayModel === 'linear') {
-          // Severity decreases linearly with turns
-          const linearDecay = (turns / modifier.duration.total) * modifier.severity * 0.3;
-          decayedModifier = {
-            ...updated,
-            severity: Math.max(0.05, updated.severity - linearDecay),
-          };
-        } else if (modifier.decayModel === 'staged') {
-          // Decay happens in stages
-          if (progress > 0.75) {
-            decayedModifier = { ...updated, severity: modifier.severity * 0.25 };
-          } else if (progress > 0.5) {
-            decayedModifier = { ...updated, severity: modifier.severity * 0.5 };
-          } else if (progress > 0.25) {
-            decayedModifier = { ...updated, severity: modifier.severity * 0.75 };
-          }
-        }
-        
-        newState.activeModifiers.push(decayedModifier);
-      }
-    } else {
-      // Condition-based or infinite modifiers don't decay
+    // Handle infinite duration modifiers (phobias, chronic conditions)
+    if (modifier.duration.remaining === Infinity) {
       newState.activeModifiers.push(modifier);
+      continue;
+    }
+    
+    // Decrement duration for ALL modifier types with finite remaining
+    // Duration represents "turns remaining" regardless of the original type
+    const updated = {
+      ...modifier,
+      duration: {
+        ...modifier.duration,
+        remaining: modifier.duration.remaining - turns,
+      },
+    };
+
+    if (updated.duration.remaining <= 0) {
+      // Modifier expired - handle resolution
+      const resolved = resolveModifier(updated, newState);
+      newState.modifierHistory.push(updated);
+      if (resolved.promotedModifier) {
+        newState.promotedModifiers = [
+          ...(newState.promotedModifiers || []),
+          resolved.promotedModifier,
+        ];
+      }
+      console.log(`[Modifier] "${modifier.name}" expired after ${modifier.duration.total} turns`);
+    } else {
+      // Keep the modifier with reduced duration
+      // Apply severity decay based on progress
+      const progress = 1 - (updated.duration.remaining / updated.duration.total);
+      let decayedModifier = updated;
+      
+      if (modifier.decayModel === 'linear') {
+        // Severity decreases linearly with turns
+        const linearDecay = (turns / modifier.duration.total) * modifier.severity * 0.3;
+        decayedModifier = {
+          ...updated,
+          severity: Math.max(0.05, updated.severity - linearDecay),
+        };
+      } else if (modifier.decayModel === 'staged') {
+        // Decay happens in stages
+        if (progress > 0.75) {
+          decayedModifier = { ...updated, severity: modifier.severity * 0.25 };
+        } else if (progress > 0.5) {
+          decayedModifier = { ...updated, severity: modifier.severity * 0.5 };
+        } else if (progress > 0.25) {
+          decayedModifier = { ...updated, severity: modifier.severity * 0.75 };
+        }
+      }
+      
+      newState.activeModifiers.push(decayedModifier);
     }
   }
 

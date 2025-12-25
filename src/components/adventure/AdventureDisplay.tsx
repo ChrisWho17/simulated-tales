@@ -711,7 +711,13 @@ export function AdventureDisplay({
       setLastPlayerAction(input.trim());
       // Tick modifiers by 1 turn on each player action
       if (modifierManagerRef.current) {
+        const beforeCount = modifierManagerRef.current.getState().activeModifiers.length;
         modifierManagerRef.current.tickTurn(1);
+        const afterState = modifierManagerRef.current.getState();
+        console.log(`[Modifiers] Ticked 1 turn. Before: ${beforeCount} modifiers, After: ${afterState.activeModifiers.length} modifiers`);
+        afterState.activeModifiers.forEach(m => {
+          console.log(`  - ${m.name}: ${m.duration.remaining}/${m.duration.total} turns remaining`);
+        });
       }
       onPlayerAction(input.trim());
       setInput('');

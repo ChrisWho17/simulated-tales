@@ -66,16 +66,12 @@ export function getModifierInlineColor(modifier: Modifier): string {
   return 'hsl(var(--modifier-neutral))';
 }
 
-// Format remaining duration
+// Format remaining duration (now in turns, where 1 turn = 1 action)
 function formatDuration(remaining: number): string {
   if (remaining === Infinity) return '∞';
-  if (remaining < 1) {
-    return `${Math.round(remaining * 60)}m`;
-  }
-  if (remaining < 24) {
-    return `${Math.round(remaining)}h`;
-  }
-  return `${Math.round(remaining / 24)}d`;
+  if (remaining <= 0) return 'Expired';
+  if (remaining === 1) return '1 turn';
+  return `${Math.round(remaining)} turns`;
 }
 
 // Severity bar component
