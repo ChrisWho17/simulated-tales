@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Modifier, ModifierOccurredAt, ModifierTriggerEvent, ModifierLocation } from '@/game/buffDebuffSystem';
+import { Modifier, ModifierOccurredAt, ModifierTriggerEvent, ModifierLocation, ModifierOriginMessage, ModifierOriginSnapshot } from '@/game/buffDebuffSystem';
 import { Button } from '@/components/ui/button';
 import { 
   X, Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye,
-  MapPin, Clock, AlertTriangle, Sparkles, Calendar, Hash, RotateCcw
+  MapPin, Clock, AlertTriangle, Sparkles, Calendar, Hash, RotateCcw, ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,7 @@ interface ModifierDetailModalProps {
   modifier: Modifier;
   onClose: () => void;
   onRewind?: (anchorId: string, turnId: number) => void;
+  onJumpToMessage?: (messageId: string, turnId: number) => void;
 }
 
 function getCategoryIcon(category: Modifier['category']) {
@@ -182,6 +183,31 @@ function getHowDisplay(modifier: Modifier): {
 } | null {
   const phobiaName = getPhobiaName(modifier);
   
+  // For phobias, always show the phobia name prominently as the source
+  if (modifier.category === 'phobia' || modifier.triggerEvent?.type === 'phobia_trigger') {
+    const te = modifier.triggerEvent;
+    
+    // Build a good source description
+    let source = phobiaName 
+      ? `${phobiaName} Response Triggered`
+      : 'Fear Response Triggered';
+    
+    // Get details from trigger event or incident
+    let details: string | undefined;
+    if (te?.details.stimulus) {
+      details = `Trigger: ${te.details.stimulus}`;
+    } else if (modifier.triggerCause) {
+      details = `Trigger: ${modifier.triggerCause}`;
+    }
+    
+    return {
+      source,
+      details,
+      type: 'Psychological Trigger',
+      phobia: phobiaName || undefined,
+    };
+  }
+  
   // Priority 1: Use structured triggerEvent
   if (modifier.triggerEvent) {
     const te = modifier.triggerEvent;
@@ -190,12 +216,9 @@ function getHowDisplay(modifier: Modifier): {
     // Build details string from trigger event details
     const detailParts: string[] = [];
     if (te.details.stimulus) detailParts.push(te.details.stimulus);
-    if (te.details.bodyPart) detailParts.push(`affected: ${te.details.bodyPart}`);
-    if (te.details.weapon) detailParts.push(`weapon: ${te.details.weapon}`);
+    if (te.details.bodyPart) detailParts.push(`Affected: ${te.details.bodyPart}`);
+    if (te.details.weapon) detailParts.push(`Weapon: ${te.details.weapon}`);
     if (te.details.action) detailParts.push(te.details.action);
-    if (te.details.emotionalContext?.length) {
-      detailParts.push(`emotional context: ${te.details.emotionalContext.join(', ')}`);
-    }
     
     if (detailParts.length > 0) {
       details = detailParts.join(' • ');
@@ -245,33 +268,52 @@ function getLocationDisplay(modifier: Modifier): string | null {
   return null;
 }
 
-// Rewind Preview Splash Component
+// Rewind Preview Splash Component - Shows full incident context
 function RewindPreviewSplash({ 
   modifier, 
   onClose, 
-  onRewind 
+  onRewind,
+  onJumpToMessage
 }: { 
   modifier: Modifier; 
   onClose: () => void;
   onRewind?: () => void;
+  onJumpToMessage?: () => void;
 }) {
   const locationName = getLocationDisplay(modifier);
   const whenDisplay = getWhenDisplay(modifier);
   const phobiaName = getPhobiaName(modifier);
   
-  // Build incident description
-  let incidentText = '';
-  if (modifier.triggerEvent?.details.stimulus) {
-    incidentText = modifier.triggerEvent.details.stimulus;
-  } else if (modifier.incidentDescription) {
-    incidentText = modifier.incidentDescription;
-  } else if (modifier.narrativeExcerpt) {
-    incidentText = modifier.narrativeExcerpt;
-  }
+  // Get the origin snapshot text - this is the primary content
+  const snapshotText = modifier.originSnapshot?.text 
+    || modifier.narrativeExcerpt 
+    || modifier.originNarrative
+    || null;
   
-  if (phobiaName) {
-    incidentText += ` Your ${phobiaName.toLowerCase()} was triggered.`;
-  }
+  // Build incident description from structured data
+  const getIncidentDescription = (): string => {
+    const parts: string[] = [];
+    
+    // Add stimulus/trigger info
+    if (modifier.triggerEvent?.details.stimulus) {
+      parts.push(modifier.triggerEvent.details.stimulus);
+    } else if (modifier.incidentDescription) {
+      parts.push(modifier.incidentDescription);
+    }
+    
+    // Add phobia-specific message
+    if (phobiaName) {
+      parts.push(`Your ${phobiaName.toLowerCase()} was triggered.`);
+    } else if (modifier.category === 'psychological') {
+      parts.push('A psychological response was triggered.');
+    } else if (modifier.category === 'injury' && modifier.bodyPart) {
+      parts.push(`Injury to your ${modifier.bodyPart}.`);
+    }
+    
+    return parts.join(' ') || 'An incident occurred.';
+  };
+  
+  const hasJumpTarget = modifier.originMessage?.messageId;
   
   return (
     <div 
@@ -282,7 +324,7 @@ function RewindPreviewSplash({
         className="bg-gradient-to-b from-card to-background border-2 border-primary/30 rounded-lg w-full max-w-md animate-fade-in shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Location */}
+        {/* Header - Location & Time */}
         <div className="p-6 text-center border-b border-border/30">
           {locationName ? (
             <>
@@ -295,7 +337,7 @@ function RewindPreviewSplash({
             <>
               <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-modifier-injury" />
               <h2 className="text-xl font-narrative font-bold text-foreground">
-                Incident Location
+                Incident Replay
               </h2>
             </>
           )}
@@ -312,13 +354,22 @@ function RewindPreviewSplash({
         </div>
         
         {/* Content - What happened */}
-        <div className="p-6">
+        <div className="p-6 space-y-4">
+          {/* Incident Description (structured) */}
           <p className="text-sm text-foreground leading-relaxed text-center">
-            {incidentText || 'An incident occurred at this location.'}
+            {getIncidentDescription()}
           </p>
           
+          {/* Snapshot Text (the actual narrative excerpt) */}
+          {snapshotText && (
+            <blockquote className="text-sm italic text-muted-foreground leading-relaxed text-center px-4 py-3 bg-background/50 rounded-lg border border-border/30">
+              "{snapshotText}"
+            </blockquote>
+          )}
+          
+          {/* Phobia Badge */}
           {phobiaName && (
-            <div className="mt-4 p-3 bg-modifier-neutral/10 border border-modifier-neutral/30 rounded-lg text-center">
+            <div className="p-3 bg-modifier-neutral/10 border border-modifier-neutral/30 rounded-lg text-center">
               <p className="text-sm font-medium text-modifier-neutral">
                 {phobiaName}
               </p>
@@ -327,20 +378,35 @@ function RewindPreviewSplash({
         </div>
         
         {/* Actions */}
-        <div className="p-4 border-t border-border/30 flex gap-3">
-          {onRewind && modifier.rewindAnchorId && (
+        <div className="p-4 border-t border-border/30 flex flex-col gap-3">
+          {/* Jump to Message (primary action if available) */}
+          {hasJumpTarget && onJumpToMessage && (
             <Button 
               variant="default" 
-              className="flex-1 gap-2"
+              className="w-full gap-2"
+              onClick={onJumpToMessage}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Jump to This Message
+            </Button>
+          )}
+          
+          {/* Rewind to Anchor (if available) */}
+          {onRewind && modifier.rewindAnchorId && (
+            <Button 
+              variant={hasJumpTarget ? "outline" : "default"}
+              className="w-full gap-2"
               onClick={onRewind}
             >
               <RotateCcw className="w-4 h-4" />
               Return to This Moment
             </Button>
           )}
+          
+          {/* Close */}
           <Button 
             variant="outline" 
-            className={cn("gap-2", onRewind && modifier.rewindAnchorId ? "flex-1" : "w-full")}
+            className="w-full gap-2"
             onClick={onClose}
           >
             <X className="w-4 h-4" />
@@ -352,7 +418,7 @@ function RewindPreviewSplash({
   );
 }
 
-export function ModifierDetailModal({ modifier, onClose, onRewind }: ModifierDetailModalProps) {
+export function ModifierDetailModal({ modifier, onClose, onRewind, onJumpToMessage }: ModifierDetailModalProps) {
   const [showRewindPreview, setShowRewindPreview] = useState(false);
   
   const Icon = getCategoryIcon(modifier.category);
@@ -368,6 +434,13 @@ export function ModifierDetailModal({ modifier, onClose, onRewind }: ModifierDet
       onRewind(modifier.rewindAnchorId, modifier.occurredAt.turnId);
     }
   };
+  
+  const handleJumpToMessage = () => {
+    if (onJumpToMessage && modifier.originMessage?.messageId) {
+      onJumpToMessage(modifier.originMessage.messageId, modifier.originMessage.turnId);
+      setShowRewindPreview(false);
+    }
+  };
 
   if (showRewindPreview) {
     return (
@@ -375,6 +448,7 @@ export function ModifierDetailModal({ modifier, onClose, onRewind }: ModifierDet
         modifier={modifier} 
         onClose={() => setShowRewindPreview(false)}
         onRewind={onRewind ? handleRewind : undefined}
+        onJumpToMessage={onJumpToMessage && modifier.originMessage?.messageId ? handleJumpToMessage : undefined}
       />
     );
   }

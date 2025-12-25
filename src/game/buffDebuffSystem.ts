@@ -81,6 +81,20 @@ export interface ModifierLocation {
   name: string;
 }
 
+// Origin message reference for jumping back to incident
+export interface ModifierOriginMessage {
+  messageId: string;
+  turnId: number;
+  campaignId?: string;
+}
+
+// Origin snapshot - immutable text captured at creation time
+export interface ModifierOriginSnapshot {
+  text: string;           // The verbatim narrative excerpt
+  contextBefore?: number; // Lines of context before
+  contextAfter?: number;  // Lines of context after
+}
+
 export interface Modifier {
   id: string;
   campaignId: string;
@@ -110,6 +124,12 @@ export interface Modifier {
   
   // Rewind anchor ID for timeline navigation
   rewindAnchorId?: string;
+  
+  // Origin message reference for jumping back to incident
+  originMessage?: ModifierOriginMessage;
+  
+  // Origin snapshot - immutable text captured at creation time
+  originSnapshot?: ModifierOriginSnapshot;
   
   // LEGACY: Keep for backward compatibility
   originLocation?: string;
