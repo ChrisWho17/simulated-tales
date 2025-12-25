@@ -57,6 +57,13 @@ export default {
           epic: "var(--rarity-epic)",
           legendary: "var(--rarity-legendary)",
         },
+        // Modifier/Buff/Debuff colors
+        modifier: {
+          buff: "hsl(var(--modifier-buff))",
+          neutral: "hsl(var(--modifier-neutral))",
+          injury: "hsl(var(--modifier-injury))",
+          critical: "hsl(var(--modifier-critical))",
+        },
       },
       fontFamily: {
         display: ['Cinzel', 'serif'],

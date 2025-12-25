@@ -140,6 +140,12 @@
     --rarity-rare: #3b82f6;
     --rarity-epic: #a855f7;
     --rarity-legendary: #f59e0b;
+
+    /* Modifier/Buff/Debuff Colors */
+    --modifier-buff: 142 76% 45%;
+    --modifier-neutral: 220 13% 69%;
+    --modifier-injury: 25 95% 53%;
+    --modifier-critical: 0 84% 60%;
   }
 
   .dark {

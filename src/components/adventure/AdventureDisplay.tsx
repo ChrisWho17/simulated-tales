@@ -22,6 +22,8 @@ import { saveGame, GameSave } from '@/lib/saveSystem';
 import { useToast } from '@/hooks/use-toast';
 import { ModifierManager, createEnvironmentContext, parseNarrativeForModifiers } from '@/game/environmentModifierIntegration';
 import { createDefaultCondition } from '@/game/environmentSystem';
+import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
+import { getModifierInlineColor } from './ModifierDisplay';
 
 interface StoryEntry {
   id: string;
@@ -121,6 +123,8 @@ export function AdventureDisplay({
 
   // Parse new narrative entries for modifiers (buff/debuff detection)
   const lastProcessedStoryRef = useRef<number>(0);
+  const [recentModifiers, setRecentModifiers] = useState<Modifier[]>([]);
+  
   useEffect(() => {
     if (!modifierManagerRef.current) return;
     
@@ -128,25 +132,27 @@ export function AdventureDisplay({
     const newEntries = story.slice(lastProcessedStoryRef.current);
     lastProcessedStoryRef.current = story.length;
     
+    const newModifiers: Modifier[] = [];
     for (const entry of newEntries) {
       if (entry.role === 'narrator' && entry.content) {
         const results = modifierManagerRef.current.processNarrative(entry.content);
-        
-        // Show toast for significant modifiers applied
         for (const result of results) {
-          if (result.modifier.severity > 0.3) {
-            const isDebuff = result.modifier.type === 'debuff';
-            toast({
-              title: `${isDebuff ? '⚠️' : '✨'} ${result.modifier.name}`,
-              description: result.modifier.description.slice(0, 60) + '...',
-              variant: isDebuff ? 'destructive' : 'default',
-              duration: 3000,
-            });
+          if (result.modifier.severity > 0.2) {
+            newModifiers.push(result.modifier);
           }
         }
       }
     }
-  }, [story, toast]);
+    
+    if (newModifiers.length > 0) {
+      setRecentModifiers(prev => [...prev.slice(-5), ...newModifiers]);
+    }
+  }, [story]);
+
+  // Get current modifier state for character sheet
+  const getModifierState = useCallback((): ModifierState | undefined => {
+    return modifierManagerRef.current?.getState();
+  }, []);
 
   // Long press handlers for story rollback
   const handleLongPressStart = useCallback((index: number, text: string) => {
@@ -532,11 +538,24 @@ export function AdventureDisplay({
     return result;
   };
 
-  const formatNarrativeContent = (content: string) => {
+  // Get modifier color class based on type
+  const getModifierBadgeClass = (modifier: Modifier): string => {
+    if (modifier.type === 'buff') return 'text-modifier-buff';
+    if (modifier.severity >= 0.7) return 'text-modifier-critical';
+    if (modifier.category === 'injury' || modifier.severity >= 0.4) return 'text-modifier-injury';
+    return 'text-modifier-neutral';
+  };
+
+  const formatNarrativeContent = (content: string, entryIndex: number) => {
     // Clean the content to remove OOC messages and technical talk
     const cleanedContent = cleanNarrativeForDisplay(content);
     
-    return cleanedContent.split('\n').map((paragraph, idx) => {
+    // Check if this is the latest narrator entry and has recent modifiers
+    const isLatestNarratorEntry = story.filter(s => s.role === 'narrator').length - 1 === 
+      story.slice(0, entryIndex + 1).filter(s => s.role === 'narrator').length - 1;
+    const showModifiers = isLatestNarratorEntry && recentModifiers.length > 0;
+    
+    const paragraphs = cleanedContent.split('\n').map((paragraph, idx) => {
       if (!paragraph.trim()) return null;
       
       const dialogueMatch = paragraph.match(/^\*\*(.+?)\*\*:\s*"(.+)"$/);
@@ -555,6 +574,26 @@ export function AdventureDisplay({
         </p>
       );
     });
+
+    // Add inline modifier badges at the end of the narrative
+    if (showModifiers) {
+      paragraphs.push(
+        <div key="modifiers" className="flex flex-wrap gap-1.5 mt-3 mb-4">
+          {recentModifiers.map((mod, i) => (
+            <span 
+              key={`${mod.id}-${i}`}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${getModifierBadgeClass(mod)} border-current/30 bg-current/10`}
+            >
+              {mod.type === 'buff' ? '↑' : '↓'} {mod.name}
+            </span>
+          ))}
+        </div>
+      );
+      // Clear recent modifiers after displaying
+      setTimeout(() => setRecentModifiers([]), 100);
+    }
+
+    return paragraphs;
   };
 
   const charClass = CHARACTER_CLASSES.find(c => c.id === character.classId);
@@ -742,7 +781,7 @@ export function AdventureDisplay({
                   )}
                   
                   <div className="font-narrative text-lg text-foreground leading-relaxed">
-                    {formatNarrativeContent(entry.content)}
+                    {formatNarrativeContent(entry.content, index)}
                   </div>
                   
                   {/* Generate Image Button */}
@@ -855,6 +894,7 @@ export function AdventureDisplay({
           character={character}
           onClose={() => setShowCharacterSheet(false)}
           onUpdateCharacter={onUpdateCharacter}
+          modifierState={getModifierState()}
         />
       )}
 
