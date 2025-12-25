@@ -21,109 +21,109 @@ export type CoreMoodType =
   | 'suspicious' // Cyan - Wary, distrustful, guarded;
 
 // ===== MOOD COLOR MAPPING =====
-// Updated per PDF spec: soft, translucent glows (30-50% opacity)
-// Colors chosen to match dark fantasy palette with desaturated tints
+// Subtle frosted glows at 25-35% opacity per strict design spec
+// Colors desaturated to match dark fantasy palette
 
 export interface MoodColorConfig {
-  primary: string;      // Hex color (slightly desaturated for elegance)
+  primary: string;      // Hex color (desaturated for elegance)
   bg: string;           // Tailwind bg class
-  glow: string;         // RGBA for text-shadow (low opacity for frosted effect)
+  glow: string;         // RGBA for text-shadow (25-35% opacity for subtle frost)
   glowStrong: string;   // RGBA for name frost (slightly more visible)
   border: string;       // Border color
-  opacity: number;      // Base opacity for highlighting (0.3-0.5)
-  glowRadius: number;   // Blur radius in px
+  opacity: number;      // Base opacity (0.25-0.35)
+  glowRadius: number;   // Blur radius in px (subtle, not bold)
 }
 
 export const MOOD_COLORS: Record<CoreMoodType, MoodColorConfig> = {
   lusty: {
-    primary: '#E68AB5',      // Soft pink (desaturated from pure pink)
-    bg: 'bg-pink-400/15',
-    glow: 'rgba(230, 138, 181, 0.35)',
-    glowStrong: 'rgba(230, 138, 181, 0.5)',
+    primary: '#E68AB5',      // Soft pink
+    bg: 'bg-pink-400/10',
+    glow: 'rgba(230, 138, 181, 0.28)',
+    glowStrong: 'rgba(230, 138, 181, 0.4)',
     border: '#E68AB5',
-    opacity: 0.4,
-    glowRadius: 6
+    opacity: 0.3,
+    glowRadius: 5
   },
   mad: {
-    primary: '#BB3333',      // Deep crimson (not bright red)
-    bg: 'bg-red-800/15',
-    glow: 'rgba(187, 51, 51, 0.4)',
-    glowStrong: 'rgba(187, 51, 51, 0.55)',
+    primary: '#BB3333',      // Deep crimson
+    bg: 'bg-red-800/10',
+    glow: 'rgba(187, 51, 51, 0.32)',
+    glowStrong: 'rgba(187, 51, 51, 0.45)',
     border: '#BB3333',
-    opacity: 0.5,
-    glowRadius: 8
+    opacity: 0.35,
+    glowRadius: 6
   },
   annoyed: {
     primary: '#D97706',      // Muted amber
-    bg: 'bg-amber-600/15',
-    glow: 'rgba(217, 119, 6, 0.35)',
-    glowStrong: 'rgba(217, 119, 6, 0.5)',
+    bg: 'bg-amber-600/10',
+    glow: 'rgba(217, 119, 6, 0.28)',
+    glowStrong: 'rgba(217, 119, 6, 0.4)',
     border: '#D97706',
-    opacity: 0.4,
-    glowRadius: 5
-  },
-  neutral: {
-    primary: '#9ca3af',
-    bg: 'bg-gray-400/10',
-    glow: 'rgba(156, 163, 175, 0.2)',
-    glowStrong: 'rgba(156, 163, 175, 0.3)',
-    border: '#9ca3af',
     opacity: 0.3,
     glowRadius: 4
   },
+  neutral: {
+    primary: '#9ca3af',
+    bg: 'bg-gray-400/5',
+    glow: 'rgba(156, 163, 175, 0.15)',
+    glowStrong: 'rgba(156, 163, 175, 0.25)',
+    border: '#9ca3af',
+    opacity: 0.2,
+    glowRadius: 3
+  },
   happy: {
-    primary: '#F4D35E',      // Warm gold (not bright green)
-    bg: 'bg-amber-300/15',
-    glow: 'rgba(244, 211, 94, 0.4)',
-    glowStrong: 'rgba(244, 211, 94, 0.55)',
+    primary: '#F4D35E',      // Warm gold
+    bg: 'bg-amber-300/10',
+    glow: 'rgba(244, 211, 94, 0.3)',
+    glowStrong: 'rgba(244, 211, 94, 0.42)',
     border: '#F4D35E',
-    opacity: 0.5,
-    glowRadius: 6
+    opacity: 0.32,
+    glowRadius: 5
   },
   sad: {
-    primary: '#8899CC',      // Grey-blue (desaturated)
-    bg: 'bg-slate-400/15',
-    glow: 'rgba(136, 153, 204, 0.35)',
-    glowStrong: 'rgba(136, 153, 204, 0.5)',
+    primary: '#8899CC',      // Grey-blue
+    bg: 'bg-slate-400/10',
+    glow: 'rgba(136, 153, 204, 0.28)',
+    glowStrong: 'rgba(136, 153, 204, 0.4)',
     border: '#8899CC',
-    opacity: 0.4,
-    glowRadius: 5
+    opacity: 0.3,
+    glowRadius: 4
   },
   depressed: {
     primary: '#6B5B95',      // Muted purple-grey
-    bg: 'bg-purple-800/15',
-    glow: 'rgba(107, 91, 149, 0.35)',
-    glowStrong: 'rgba(107, 91, 149, 0.5)',
+    bg: 'bg-purple-800/10',
+    glow: 'rgba(107, 91, 149, 0.28)',
+    glowStrong: 'rgba(107, 91, 149, 0.4)',
     border: '#6B5B95',
-    opacity: 0.4,
-    glowRadius: 5
+    opacity: 0.3,
+    glowRadius: 4
   },
   fearful: {
     primary: '#7DAFFF',      // Pale icy blue
-    bg: 'bg-blue-300/15',
-    glow: 'rgba(125, 175, 255, 0.4)',
-    glowStrong: 'rgba(125, 175, 255, 0.55)',
+    bg: 'bg-blue-300/10',
+    glow: 'rgba(125, 175, 255, 0.3)',
+    glowStrong: 'rgba(125, 175, 255, 0.42)',
     border: '#7DAFFF',
-    opacity: 0.45,
-    glowRadius: 6
+    opacity: 0.32,
+    glowRadius: 5
   },
   determined: {
-    primary: '#E8E8E8',      // Bright white-grey
-    bg: 'bg-slate-100/15',
-    glow: 'rgba(232, 232, 232, 0.4)',
-    glowStrong: 'rgba(232, 232, 232, 0.55)',
+    primary: '#E8E8E8',      // White-grey
+    bg: 'bg-slate-100/10',
+    glow: 'rgba(232, 232, 232, 0.3)',
+    glowStrong: 'rgba(232, 232, 232, 0.42)',
     border: '#E8E8E8',
-    opacity: 0.45,
-    glowRadius: 6
+    opacity: 0.32,
+    glowRadius: 5
   },
   suspicious: {
-    primary: '#5EADB0',      // Soft teal (desaturated cyan)
-    bg: 'bg-teal-500/15',
-    glow: 'rgba(94, 173, 176, 0.35)',
-    glowStrong: 'rgba(94, 173, 176, 0.5)',
+    primary: '#5EADB0',      // Soft teal
+    bg: 'bg-teal-500/10',
+    glow: 'rgba(94, 173, 176, 0.28)',
+    glowStrong: 'rgba(94, 173, 176, 0.4)',
     border: '#5EADB0',
-    opacity: 0.4,
-    glowRadius: 5
+    opacity: 0.3,
+    glowRadius: 4
   }
 };
 
@@ -1062,83 +1062,196 @@ export const GENRE_MOOD_DESCRIPTORS: Record<GameGenre, Record<CoreMoodType, Genr
     }
   }
 };
-// ===== MOOD-TINTED KEYWORD SYSTEM =====
-// Words that get subtle color tinting based on active mood (per PDF spec)
+// ===== MOOD ANCHOR KEYWORD SYSTEM =====
+// STRICT WHITELIST: Only true emotional anchors get highlighted
+// NO filler, connective tissue, pronouns, articles, prepositions, or common verbs
 
-export const MOOD_KEYWORDS: Record<CoreMoodType, string[]> = {
-  lusty: [
-    'linger', 'soft', 'press', 'touch', 'warm', 'close', 'lips', 'eyes', 'skin',
-    'breath', 'caress', 'desire', 'pulse', 'heat', 'ache', 'whisper', 'gentle',
-    'intimate', 'tender', 'embrace', 'longing', 'passion', 'drawn', 'magnetic'
-  ],
-  mad: [
-    'snap', 'slam', 'tense', 'snarl', 'fury', 'rage', 'burn', 'clench', 'growl',
-    'seething', 'thunder', 'storm', 'hate', 'kill', 'destroy', 'crush', 'break',
-    'violent', 'harsh', 'bitter', 'strike', 'smash', 'roar', 'wrath'
-  ],
-  annoyed: [
-    'sigh', 'roll', 'impatient', 'bored', 'tired', 'again', 'enough', 'whatever',
-    'fine', 'irritated', 'frustrated', 'tedious', 'pointless', 'wait', 'hurry'
-  ],
-  neutral: [], // No keywords highlighted for neutral
-  happy: [
-    'smile', 'laugh', 'joy', 'bright', 'warm', 'light', 'hope', 'cheer', 'grin',
-    'delight', 'pleased', 'excited', 'wonderful', 'amazing', 'glad', 'happy'
-  ],
-  sad: [
-    'heavy', 'drift', 'quiet', 'sorrow', 'tears', 'loss', 'empty', 'alone',
-    'cold', 'dark', 'weep', 'mourn', 'grief', 'ache', 'hollow', 'fading', 'gone'
-  ],
-  depressed: [
-    'nothing', 'pointless', 'empty', 'void', 'hollow', 'numb', 'dark', 'endless',
-    'hopeless', 'worthless', 'meaningless', 'grey', 'shadow', 'fade', 'disappear'
-  ],
-  fearful: [
-    'shadow', 'dark', 'danger', 'threat', 'lurk', 'creep', 'terror', 'dread',
-    'panic', 'flee', 'hide', 'trembl', 'shak', 'cold', 'frozen', 'paralyz'
-  ],
-  determined: [
-    'will', 'must', 'resolve', 'steel', 'strong', 'unwavering', 'focused',
-    'driven', 'purpose', 'commit', 'stand', 'fight', 'rise', 'push', 'forward'
-  ],
-  suspicious: [
-    'watch', 'doubt', 'lie', 'truth', 'hidden', 'secret', 'trust', 'betray',
-    'careful', 'wary', 'question', 'motiv', 'agenda', 'scheme', 'deceiv'
-  ]
+// Words that should NEVER be highlighted regardless of mood
+export const BANNED_HIGHLIGHT_WORDS = new Set([
+  // Pronouns
+  'i', 'me', 'my', 'mine', 'myself', 'you', 'your', 'yours', 'yourself',
+  'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself',
+  'it', 'its', 'itself', 'we', 'us', 'our', 'ours', 'ourselves',
+  'they', 'them', 'their', 'theirs', 'themselves', 'who', 'whom', 'whose',
+  // Articles
+  'a', 'an', 'the',
+  // Prepositions
+  'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'into', 'onto',
+  'upon', 'of', 'off', 'out', 'over', 'under', 'about', 'above', 'below',
+  'between', 'through', 'during', 'before', 'after', 'behind', 'beside',
+  // Conjunctions
+  'and', 'but', 'or', 'nor', 'yet', 'so', 'as', 'if', 'than', 'because',
+  // Common glue words
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+  'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+  'must', 'shall', 'can', 'this', 'that', 'these', 'those', 'here', 'there',
+  'where', 'when', 'what', 'which', 'how', 'why', 'all', 'each', 'every',
+  'both', 'few', 'more', 'most', 'some', 'any', 'no', 'not', 'only', 'own',
+  'same', 'such', 'too', 'very', 'just', 'also', 'now', 'then', 'still',
+  // Common body parts / generic descriptors that aren't mood-specific
+  'eyes', 'eye', 'look', 'looks', 'face', 'hand', 'hands', 'head', 'body',
+  'back', 'side', 'way', 'time', 'moment', 'place', 'thing', 'things',
+  'one', 'two', 'first', 'last', 'next', 'new', 'old', 'good', 'bad',
+  'like', 'even', 'well', 'much', 'many', 'other', 'another', 'again',
+  'always', 'never', 'often', 'sometimes', 'already', 'enough', 'though'
+]);
+
+// MOOD ANCHOR PACKS - Only explicit emotional anchors
+// Priority: mood nouns > adjectives > iconic verbs > approved phrases
+export const MOOD_ANCHORS: Record<CoreMoodType, {
+  nouns: string[];
+  adjectives: string[];
+  verbs: string[];
+  phrases: string[];
+}> = {
+  lusty: {
+    nouns: ['lover', 'desire', 'craving', 'lust', 'temptation', 'passion', 'yearning', 'hunger', 'longing', 'attraction'],
+    adjectives: ['enamored', 'seductive', 'intimate', 'tender', 'sultry', 'alluring', 'enticing', 'sensual', 'provocative'],
+    verbs: ['caress', 'embrace', 'whisper', 'seduce', 'entwine', 'ravish'],
+    phrases: ['warmth in your chest', 'hungry glance', 'soft heat', 'heated breath', 'magnetic pull']
+  },
+  mad: {
+    nouns: ['rage', 'wrath', 'fury', 'hatred', 'anger', 'vengeance', 'threat', 'insult', 'betrayal', 'contempt'],
+    adjectives: ['furious', 'seething', 'vengeful', 'violent', 'livid', 'enraged', 'wrathful', 'murderous'],
+    verbs: ['snarl', 'seethe', 'scream', 'throttle', 'destroy', 'crush'],
+    phrases: ['blood in your ears', 'knife-edge temper', 'burning contempt', 'cold fury', 'white-hot rage']
+  },
+  annoyed: {
+    nouns: ['irritation', 'annoyance', 'impatience', 'nuisance', 'bother', 'interruption', 'exasperation'],
+    adjectives: ['petty', 'snide', 'grating', 'unbearable', 'tedious', 'insufferable'],
+    verbs: ['scoff', 'sneer', 'dismiss'],
+    phrases: ['thin patience', 'forced smile', 'grinding restraint', 'clipped tone']
+  },
+  neutral: {
+    nouns: ['composure', 'balance', 'calm'],
+    adjectives: ['steady', 'composed', 'measured', 'unmoved', 'even'],
+    verbs: [],
+    phrases: ['even breath', 'level gaze']
+  },
+  happy: {
+    nouns: ['joy', 'relief', 'delight', 'elation', 'bliss', 'gratitude', 'triumph', 'celebration'],
+    adjectives: ['bright', 'radiant', 'grateful', 'elated', 'jubilant', 'gleeful', 'exuberant'],
+    verbs: ['laugh', 'grin', 'rejoice', 'celebrate', 'beam'],
+    phrases: ['light in your chest', 'easy laughter', 'warm glow', 'burst of joy']
+  },
+  sad: {
+    nouns: ['sorrow', 'loss', 'regret', 'grief', 'mourning', 'heartbreak', 'melancholy', 'despair'],
+    adjectives: ['heavy', 'aching', 'mournful', 'sorrowful', 'bereft', 'forlorn', 'wistful'],
+    verbs: ['weep', 'mourn', 'sob', 'grieve'],
+    phrases: ['hollow throat', 'quiet grief', 'weight of loss', 'bitter regret']
+  },
+  depressed: {
+    nouns: ['emptiness', 'numbness', 'despair', 'void', 'hopelessness', 'apathy', 'desolation'],
+    adjectives: ['hollow', 'deadened', 'numb', 'bleak', 'colorless', 'lifeless'],
+    verbs: ['fade', 'wither', 'sink'],
+    phrases: ['lead in your bones', 'mute world', 'grey inside', 'hollow ache', 'nothing matters']
+  },
+  fearful: {
+    nouns: ['terror', 'dread', 'panic', 'horror', 'fright', 'alarm', 'trepidation'],
+    adjectives: ['terrified', 'petrified', 'paralyzed', 'horrified', 'stricken', 'frantic'],
+    verbs: ['tremble', 'cower', 'flee', 'freeze'],
+    phrases: ['cold sweat', 'racing heart', 'blood runs cold', 'spine-chilling', 'frozen in place']
+  },
+  determined: {
+    nouns: ['resolve', 'determination', 'conviction', 'willpower', 'purpose', 'defiance'],
+    adjectives: ['resolute', 'unwavering', 'steadfast', 'unbreakable', 'relentless', 'fierce'],
+    verbs: ['persevere', 'endure', 'stand', 'fight'],
+    phrases: ['iron will', 'steel in your spine', 'burning purpose', 'unshakeable resolve']
+  },
+  suspicious: {
+    nouns: ['doubt', 'distrust', 'suspicion', 'paranoia', 'wariness', 'deception', 'treachery'],
+    adjectives: ['wary', 'guarded', 'distrustful', 'skeptical', 'paranoid', 'vigilant'],
+    verbs: ['scrutinize', 'question', 'probe'],
+    phrases: ['something off', 'hidden agenda', 'false smile', 'watching your back']
+  }
 };
 
-// Max keywords to highlight per paragraph (PDF spec: 3-5 max for readability)
-export const MAX_KEYWORDS_PER_PARAGRAPH = 4;
+// Max anchors to highlight per paragraph (strict: 1-3, not 3-5)
+export const MAX_ANCHORS_PER_PARAGRAPH = 3;
 
-// Check if a word should be tinted for the current mood
-export function shouldTintWord(word: string, mood: CoreMoodType): boolean {
-  if (mood === 'neutral') return false;
-  const keywords = MOOD_KEYWORDS[mood] || [];
-  const lowerWord = word.toLowerCase().replace(/[^a-z]/g, '');
-  return keywords.some(kw => lowerWord.includes(kw) || kw.includes(lowerWord));
+// Build flat keyword set for quick lookup
+function buildAnchorSet(mood: CoreMoodType): Set<string> {
+  const anchors = MOOD_ANCHORS[mood];
+  if (!anchors) return new Set();
+  
+  const set = new Set<string>();
+  [...anchors.nouns, ...anchors.adjectives, ...anchors.verbs].forEach(w => set.add(w.toLowerCase()));
+  return set;
 }
 
-// Get tintable keywords from text with a max count (PDF spec: max 3-5 per paragraph)
-export function getTintableKeywords(
+// Pre-built anchor sets for performance
+const ANCHOR_SETS: Record<CoreMoodType, Set<string>> = {
+  lusty: buildAnchorSet('lusty'),
+  mad: buildAnchorSet('mad'),
+  annoyed: buildAnchorSet('annoyed'),
+  neutral: buildAnchorSet('neutral'),
+  happy: buildAnchorSet('happy'),
+  sad: buildAnchorSet('sad'),
+  depressed: buildAnchorSet('depressed'),
+  fearful: buildAnchorSet('fearful'),
+  determined: buildAnchorSet('determined'),
+  suspicious: buildAnchorSet('suspicious')
+};
+
+// Check if a word is a valid mood anchor (not banned, in whitelist)
+export function isValidMoodAnchor(word: string, mood: CoreMoodType): boolean {
+  if (mood === 'neutral') return false;
+  
+  const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+  
+  // Never highlight banned words
+  if (BANNED_HIGHLIGHT_WORDS.has(cleanWord)) return false;
+  
+  // Must be in the mood's anchor set
+  const anchorSet = ANCHOR_SETS[mood];
+  return anchorSet.has(cleanWord);
+}
+
+// Get anchor words from text with strict limits and deduplication
+export function getAnchorWords(
   text: string, 
   mood: CoreMoodType, 
-  maxCount: number = MAX_KEYWORDS_PER_PARAGRAPH
+  maxCount: number = MAX_ANCHORS_PER_PARAGRAPH,
+  alreadyHighlighted?: Set<string>  // For scene-level deduplication
 ): Set<string> {
   if (mood === 'neutral') return new Set();
   
-  const keywords = MOOD_KEYWORDS[mood] || [];
+  const anchorSet = ANCHOR_SETS[mood];
   const words = text.toLowerCase().split(/\s+/);
   const matches = new Set<string>();
   
   for (const word of words) {
     if (matches.size >= maxCount) break;
+    
     const cleanWord = word.replace(/[^a-z]/g, '');
-    if (keywords.some(kw => cleanWord.includes(kw) || kw.includes(cleanWord))) {
+    
+    // Skip banned words
+    if (BANNED_HIGHLIGHT_WORDS.has(cleanWord)) continue;
+    
+    // Skip already highlighted in this scene (deduplication)
+    if (alreadyHighlighted?.has(cleanWord)) continue;
+    
+    // Must be in anchor set
+    if (anchorSet.has(cleanWord)) {
       matches.add(cleanWord);
     }
   }
   
   return matches;
+}
+
+// Legacy export for backward compatibility
+export const MOOD_KEYWORDS = MOOD_ANCHORS;
+export const MAX_KEYWORDS_PER_PARAGRAPH = MAX_ANCHORS_PER_PARAGRAPH;
+export function shouldTintWord(word: string, mood: CoreMoodType): boolean {
+  return isValidMoodAnchor(word, mood);
+}
+export function getTintableKeywords(
+  text: string, 
+  mood: CoreMoodType, 
+  maxCount: number = MAX_ANCHORS_PER_PARAGRAPH
+): Set<string> {
+  return getAnchorWords(text, mood, maxCount);
 }
 
 // ===== MOOD HISTORY TRACKING =====

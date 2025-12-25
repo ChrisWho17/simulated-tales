@@ -37,7 +37,7 @@ import {
   advanceChapter
 } from '@/game/levelingSystem';
 import { GameGenre } from '@/types/genreData';
-import { MOOD_COLORS, getTintableKeywords, MAX_KEYWORDS_PER_PARAGRAPH } from '@/game/moodSystem';
+import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 
 interface StoryEntry {
@@ -847,9 +847,9 @@ export function AdventureDisplay({
     // Get mood styling for the latest entry (non-neutral moods add subtle frost effect)
     const moodConfig = currentMood !== 'neutral' && isLatestNarratorEntry ? MOOD_COLORS[currentMood] : null;
     
-    // Pre-calculate tintable keywords for this content (max 3-5 per the PDF spec)
+    // Pre-calculate anchor words for this content (strict: max 1-3 per paragraph)
     const tintableWords = moodConfig 
-      ? getTintableKeywords(cleanedContent, currentMood, MAX_KEYWORDS_PER_PARAGRAPH) 
+      ? getAnchorWords(cleanedContent, currentMood, MAX_ANCHORS_PER_PARAGRAPH) 
       : undefined;
     
     // Subtle frosty glow for character names - refined per PDF (translucent, not solid)
