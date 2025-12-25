@@ -103,26 +103,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
         </div>
         
-        {/* Tabs */}
-        <div className="flex border-b border-border/30 overflow-x-auto">
-          {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex-shrink-0 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
-                activeTab === tab 
-                  ? "text-[var(--accent-primary)] border-b-2 border-[var(--accent-primary)]"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        {/* Tabs - horizontal scroll with proper alignment */}
+        <div className="px-4 pt-2 pb-0 overflow-x-auto scrollbar-thin scrollbar-thumb-border/50">
+          <div className="flex gap-1 min-w-max">
+            {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-t-md",
+                  activeTab === tab 
+                    ? "text-[var(--accent-primary)] border-b-2 border-[var(--accent-primary)] bg-[var(--accent-bg)]/30"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
+        <div className="border-b border-border/30" />
         
-        {/* Content */}
-        <ScrollArea className="flex-1 p-4">
+        {/* Content - vertical scroll for settings */}
+        <ScrollArea className="flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4">
           {/* Gameplay Tab */}
           {activeTab === 'gameplay' && (
             <div className="space-y-6">
@@ -549,6 +553,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </p>
             </div>
           )}
+          </div>
         </ScrollArea>
         
         {/* Footer */}
