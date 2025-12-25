@@ -186,19 +186,23 @@ export function NarrativeDisplay({
       </div>
 
       {/* Scroll to Latest Button - appears when not at bottom */}
-      {(hasNewContent || !isAtBottom) && events.length > 0 && (
+      {(!isAtBottom || hasNewContent) && events.length > 0 && (
         <button
           onClick={scrollToBottom}
           className={cn(
-            "absolute bottom-4 right-4 p-3 rounded-full shadow-lg transition-all duration-300",
-            "bg-primary/90 backdrop-blur-sm text-primary-foreground",
-            "hover:bg-primary hover:scale-110",
-            "border border-primary-foreground/20",
-            hasNewContent && "animate-pulse"
+            "absolute bottom-6 left-1/2 -translate-x-1/2 z-10",
+            "flex items-center gap-2 px-4 py-2 rounded-full shadow-xl transition-all duration-300",
+            "bg-card/95 backdrop-blur-md text-foreground",
+            "hover:bg-card hover:scale-105",
+            "border-2 border-primary/40",
+            hasNewContent && "animate-bounce border-primary"
           )}
           aria-label="Scroll to latest message"
         >
-          <ChevronDown className="w-5 h-5" />
+          <ChevronDown className={cn("w-5 h-5", hasNewContent && "text-primary")} />
+          <span className="text-sm font-medium">
+            {hasNewContent ? "New Content" : "Back to Latest"}
+          </span>
         </button>
       )}
     </div>
