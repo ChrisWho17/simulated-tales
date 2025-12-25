@@ -37,6 +37,7 @@ import {
   advanceChapter
 } from '@/game/levelingSystem';
 import { GameGenre } from '@/types/genreData';
+import { MOOD_COLORS } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 
 interface StoryEntry {
@@ -754,15 +755,26 @@ export function AdventureDisplay({
   };
 
   // Safe text formatting using React components instead of dangerouslySetInnerHTML
-  const formatTextSegment = (text: string, keyPrefix: string): React.ReactNode[] => {
+  const formatTextSegment = (text: string, keyPrefix: string, moodConfig?: { primary: string; glow: string } | null): React.ReactNode[] => {
     const result: React.ReactNode[] = [];
     // Split by bold markers first
     const boldParts = text.split(/\*\*(.+?)\*\*/g);
     
     boldParts.forEach((part, i) => {
       if (i % 2 === 1) {
-        // This is bold text
-        result.push(<strong key={`${keyPrefix}-b-${i}`} className="text-primary font-semibold">{part}</strong>);
+        // This is bold text - use mood color if available
+        result.push(
+          <strong 
+            key={`${keyPrefix}-b-${i}`} 
+            className="font-semibold"
+            style={{ 
+              color: moodConfig?.primary || 'hsl(var(--primary))',
+              textShadow: moodConfig ? `0 0 8px ${moodConfig.glow}` : undefined
+            }}
+          >
+            {part}
+          </strong>
+        );
       } else if (part) {
         // Check for italic within non-bold text
         const italicParts = part.split(/\*(.+?)\*/g);
@@ -796,22 +808,53 @@ export function AdventureDisplay({
       story.slice(0, entryIndex + 1).filter(s => s.role === 'narrator').length - 1;
     const showModifiers = isLatestNarratorEntry && recentModifiers.length > 0;
     
+    // Get mood styling for the latest entry (non-neutral moods add color accent)
+    const moodConfig = currentMood !== 'neutral' && isLatestNarratorEntry ? MOOD_COLORS[currentMood] : null;
+    const moodTextStyle = moodConfig ? { 
+      textShadow: `0 0 30px ${moodConfig.glow}`,
+    } : {};
+    const moodBorderStyle = moodConfig ? {
+      borderColor: moodConfig.primary,
+      boxShadow: `0 0 15px ${moodConfig.glow}`,
+    } : {};
+    
     const paragraphs = cleanedContent.split('\n').map((paragraph, idx) => {
       if (!paragraph.trim()) return null;
       
       const dialogueMatch = paragraph.match(/^\*\*(.+?)\*\*:\s*"(.+)"$/);
       if (dialogueMatch) {
         return (
-          <div key={idx} className="my-4 pl-4 border-l-2 border-primary/50 glass-panel-subtle py-3 pr-4 rounded-r-lg">
-            <span className="font-semibold text-primary">{dialogueMatch[1]}:</span>
-            <span className="italic ml-2 text-foreground/90">&ldquo;{dialogueMatch[2]}&rdquo;</span>
+          <div 
+            key={idx} 
+            className="my-4 pl-4 border-l-2 border-primary/50 glass-panel-subtle py-3 pr-4 rounded-r-lg transition-all duration-300"
+            style={moodBorderStyle}
+          >
+            <span 
+              className="font-semibold" 
+              style={{ color: moodConfig?.primary || 'hsl(var(--primary))' }}
+            >
+              {dialogueMatch[1]}:
+            </span>
+            <span 
+              className="italic ml-2" 
+              style={{ 
+                color: moodConfig ? moodConfig.primary : 'hsl(var(--foreground) / 0.9)',
+                ...moodTextStyle
+              }}
+            >
+              &ldquo;{dialogueMatch[2]}&rdquo;
+            </span>
           </div>
         );
       }
 
       return (
-        <p key={idx} className="my-4 leading-relaxed text-foreground/90">
-          {formatTextSegment(paragraph, `p-${idx}`)}
+        <p 
+          key={idx} 
+          className="my-4 leading-relaxed text-foreground/90 transition-all duration-300"
+          style={moodTextStyle}
+        >
+          {formatTextSegment(paragraph, `p-${idx}`, moodConfig)}
         </p>
       );
     });
@@ -832,6 +875,26 @@ export function AdventureDisplay({
       );
       // Clear recent modifiers after displaying
       setTimeout(() => setRecentModifiers([]), 100);
+    }
+    
+    // Add mood indicator badge for non-neutral moods on latest entry
+    if (moodConfig && isLatestNarratorEntry) {
+      const moodDescriptor = currentMood.charAt(0).toUpperCase() + currentMood.slice(1);
+      paragraphs.unshift(
+        <div 
+          key="mood-indicator" 
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-3 animate-fade-in"
+          style={{
+            backgroundColor: `${moodConfig.primary}20`,
+            border: `1px solid ${moodConfig.primary}`,
+            color: moodConfig.primary,
+            boxShadow: `0 0 15px ${moodConfig.glow}`,
+          }}
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: moodConfig.primary }} />
+          {moodDescriptor} State
+        </div>
+      );
     }
 
     return paragraphs;
