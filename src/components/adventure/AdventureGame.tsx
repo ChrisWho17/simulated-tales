@@ -458,6 +458,7 @@ export function AdventureGame() {
         sceneImageUrl={sceneImageUrl}
         isGeneratingScene={isGeneratingScene}
         onCloseSceneImage={() => setSceneImageUrl(null)}
+        genre={scenarioSelection?.genre || 'fantasy'}
       />
     );
   }
