@@ -29,6 +29,27 @@ export const MODIFIER_LIMITS = {
   MIN_SEVERITY_THRESHOLD: 0.25, // Minimum severity to apply new modifier
 };
 
+// SEVERITY SCALING: All modifiers produce small effects (3-6% range)
+// This ensures individual modifiers don't devastate while stacking matters
+export const SEVERITY_SCALE = {
+  MIN_EFFECT: 0.02,  // 2% minimum effect
+  MAX_EFFECT: 0.08,  // 8% maximum effect per modifier
+  BASE_SCALE: 0.06,  // 6% is the "normal" modifier effect
+};
+
+// Scale a raw severity (0-1) to actual gameplay effect percentage
+export function scaleModifierSeverity(rawSeverity: number): number {
+  // rawSeverity 0-1 maps to 2-8% effect
+  const scaled = SEVERITY_SCALE.MIN_EFFECT + 
+    (rawSeverity * (SEVERITY_SCALE.MAX_EFFECT - SEVERITY_SCALE.MIN_EFFECT));
+  return Math.round(scaled * 100) / 100; // Round to 2 decimals
+}
+
+// Get display percentage for UI (shows actual effect, not raw severity)
+export function getModifierEffectPercentage(modifier: Modifier): number {
+  return Math.round(scaleModifierSeverity(modifier.severity) * 100);
+}
+
 export type StackingRule = 'exclusive' | 'additive' | 'diminishing';
 export type DecayModel = 'linear' | 'staged' | 'conditional' | 'threshold' | 'reversible';
 export type DurationType = 'time' | 'condition' | 'treatment' | 'behavior';
