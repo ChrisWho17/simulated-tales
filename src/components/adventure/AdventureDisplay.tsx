@@ -808,14 +808,13 @@ export function AdventureDisplay({
       story.slice(0, entryIndex + 1).filter(s => s.role === 'narrator').length - 1;
     const showModifiers = isLatestNarratorEntry && recentModifiers.length > 0;
     
-    // Get mood styling for the latest entry (non-neutral moods add color accent)
+    // Get mood styling for the latest entry (non-neutral moods add subtle frost effect)
     const moodConfig = currentMood !== 'neutral' && isLatestNarratorEntry ? MOOD_COLORS[currentMood] : null;
-    const moodTextStyle = moodConfig ? { 
-      textShadow: `0 0 30px ${moodConfig.glow}`,
-    } : {};
-    const moodBorderStyle = moodConfig ? {
-      borderColor: moodConfig.primary,
-      boxShadow: `0 0 15px ${moodConfig.glow}`,
+    
+    // Subtle frosty glow for character names - light enough to not be a nuisance
+    const nameFrostStyle = moodConfig ? {
+      textShadow: `0 0 8px ${moodConfig.glow}, 0 0 16px ${moodConfig.glow}`,
+      color: moodConfig.primary,
     } : {};
     
     const paragraphs = cleanedContent.split('\n').map((paragraph, idx) => {
@@ -827,21 +826,14 @@ export function AdventureDisplay({
           <div 
             key={idx} 
             className="my-4 pl-4 border-l-2 border-primary/50 glass-panel-subtle py-3 pr-4 rounded-r-lg transition-all duration-300"
-            style={moodBorderStyle}
           >
             <span 
-              className="font-semibold" 
-              style={{ color: moodConfig?.primary || 'hsl(var(--primary))' }}
+              className="font-semibold transition-all duration-300" 
+              style={moodConfig ? nameFrostStyle : { color: 'hsl(var(--primary))' }}
             >
               {dialogueMatch[1]}:
             </span>
-            <span 
-              className="italic ml-2" 
-              style={{ 
-                color: moodConfig ? moodConfig.primary : 'hsl(var(--foreground) / 0.9)',
-                ...moodTextStyle
-              }}
-            >
+            <span className="italic ml-2 text-foreground/90">
               &ldquo;{dialogueMatch[2]}&rdquo;
             </span>
           </div>
@@ -852,7 +844,6 @@ export function AdventureDisplay({
         <p 
           key={idx} 
           className="my-4 leading-relaxed text-foreground/90 transition-all duration-300"
-          style={moodTextStyle}
         >
           {formatTextSegment(paragraph, `p-${idx}`, moodConfig)}
         </p>
@@ -875,26 +866,6 @@ export function AdventureDisplay({
       );
       // Clear recent modifiers after displaying
       setTimeout(() => setRecentModifiers([]), 100);
-    }
-    
-    // Add mood indicator badge for non-neutral moods on latest entry
-    if (moodConfig && isLatestNarratorEntry) {
-      const moodDescriptor = currentMood.charAt(0).toUpperCase() + currentMood.slice(1);
-      paragraphs.unshift(
-        <div 
-          key="mood-indicator" 
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-3 animate-fade-in"
-          style={{
-            backgroundColor: `${moodConfig.primary}20`,
-            border: `1px solid ${moodConfig.primary}`,
-            color: moodConfig.primary,
-            boxShadow: `0 0 15px ${moodConfig.glow}`,
-          }}
-        >
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: moodConfig.primary }} />
-          {moodDescriptor} State
-        </div>
-      );
     }
 
     return paragraphs;
