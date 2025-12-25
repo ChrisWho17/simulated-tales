@@ -18,7 +18,7 @@ import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
-import { DiceRollResult } from '@/game/diceSystem';
+import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { saveGame, GameSave } from '@/lib/saveSystem';
 import { useToast } from '@/hooks/use-toast';
@@ -637,14 +637,12 @@ export function AdventureDisplay({
     
     // Determine difficulty
     const difficulty = pendingMechanics.rollRequired.difficulty;
-    let difficultyTier: 'TRIVIAL' | 'EASY' | 'NORMAL' | 'HARD' | 'VERY_HARD' | 'EXTREME' | 'LEGENDARY' = 'NORMAL';
-    if (difficulty <= 5) difficultyTier = 'TRIVIAL';
+    let difficultyTier: DifficultyTier = 'NORMAL';
+    if (difficulty <= 5) difficultyTier = 'VERY_EASY';
     else if (difficulty <= 8) difficultyTier = 'EASY';
     else if (difficulty <= 12) difficultyTier = 'NORMAL';
     else if (difficulty <= 15) difficultyTier = 'HARD';
-    else if (difficulty <= 18) difficultyTier = 'VERY_HARD';
-    else if (difficulty <= 22) difficultyTier = 'EXTREME';
-    else difficultyTier = 'LEGENDARY';
+    else difficultyTier = 'VERY_HARD';
     
     const result = await performRoll({
       actionType,

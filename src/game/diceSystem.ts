@@ -83,26 +83,29 @@ export const ACTION_CATEGORIES: Record<string, ActionDefinition> = {
 };
 
 // ============================================================================
-// DIFFICULTY MODIFIERS
+// DIFFICULTY MODIFIERS (applied to roll, not DC)
 // ============================================================================
 
-export type DifficultyTier = 'TRIVIAL' | 'EASY' | 'NORMAL' | 'HARD' | 'VERY_HARD' | 'EXTREME' | 'LEGENDARY';
+export type DifficultyTier = 'VERY_EASY' | 'EASY' | 'NORMAL' | 'HARD' | 'VERY_HARD';
 
 export interface DifficultyInfo {
-  dc: number;
+  modifier: number; // Added to the roll
   label: string;
   color: string;
 }
 
+// Difficulty modifies the ROLL, not the DC. DC is fixed at 10.
+// Formula: d20 + statModifier + difficultyModifier >= 10
 export const DIFFICULTY_MODIFIERS: Record<DifficultyTier, DifficultyInfo> = {
-  TRIVIAL: { dc: -4, label: 'Trivial', color: '#10b981' },
-  EASY: { dc: -2, label: 'Easy', color: '#22c55e' },
-  NORMAL: { dc: 0, label: 'Normal', color: '#64748b' },
-  HARD: { dc: 3, label: 'Hard', color: '#f59e0b' },
-  VERY_HARD: { dc: 5, label: 'Very Hard', color: '#ef4444' },
-  EXTREME: { dc: 8, label: 'Extreme', color: '#dc2626' },
-  LEGENDARY: { dc: 12, label: 'Legendary', color: '#9333ea' }
+  VERY_EASY: { modifier: +3, label: 'Very Easy', color: '#10b981' },
+  EASY: { modifier: +2, label: 'Easy', color: '#22c55e' },
+  NORMAL: { modifier: 0, label: 'Normal', color: '#64748b' },
+  HARD: { modifier: -2, label: 'Hard', color: '#f59e0b' },
+  VERY_HARD: { modifier: -3, label: 'Very Hard', color: '#ef4444' },
 };
+
+// Fixed DC for all checks - difficulty is handled via roll modifiers
+export const BASE_DC = 10;
 
 // ============================================================================
 // ROLL RESULTS
@@ -242,7 +245,9 @@ export const performDiceRoll = (
   if (!action) return null;
   
   const diffMod = DIFFICULTY_MODIFIERS[difficulty] || DIFFICULTY_MODIFIERS.NORMAL;
-  const targetDC = action.baseDC + diffMod.dc;
+  
+  // Fixed DC of 10 - difficulty modifies the roll, not the DC
+  const targetDC = BASE_DC;
   
   // Get stat and calculate modifier
   const effectiveStat = getEffectiveStatWithWounds(player, action.stat);
@@ -251,10 +256,11 @@ export const performDiceRoll = (
   // Roll the d20
   const naturalRoll = rollD20();
   
-  // Calculate total modifiers
-  let totalModifier = statModifier;
+  // Calculate total modifiers: stat + difficulty + context
+  let totalModifier = statModifier + diffMod.modifier;
   const modifierBreakdown: ModifierSource[] = [
-    { source: capitalize(action.stat), value: statModifier }
+    { source: capitalize(action.stat), value: statModifier },
+    { source: `Difficulty (${diffMod.label})`, value: diffMod.modifier }
   ];
   
   // Add context modifiers
@@ -268,6 +274,7 @@ export const performDiceRoll = (
     if (wound.statPenalties?.[action.stat]) {
       const penalty = Math.floor(wound.statPenalties[action.stat]! / 5);
       if (penalty !== 0) {
+        totalModifier += penalty;
         modifierBreakdown.push({ 
           source: `${wound.type} (${wound.location})`, 
           value: penalty,
@@ -279,17 +286,19 @@ export const performDiceRoll = (
   
   const totalRoll = naturalRoll + totalModifier;
   
-  // Determine result
+  // Determine result: roll + modifiers >= DC 10
   let result: RollResultInfo;
   if (naturalRoll === 1) {
     result = ROLL_RESULTS.CRITICAL_FAILURE;
   } else if (naturalRoll === 20) {
     result = ROLL_RESULTS.CRITICAL_SUCCESS;
   } else if (totalRoll >= targetDC + 5) {
+    // Exceptional success (beat DC by 5+)
     result = ROLL_RESULTS.SUCCESS;
   } else if (totalRoll >= targetDC) {
     result = ROLL_RESULTS.SUCCESS;
   } else if (totalRoll >= targetDC - 3) {
+    // Within 3 of DC = partial success
     result = ROLL_RESULTS.PARTIAL;
   } else {
     result = ROLL_RESULTS.FAILURE;

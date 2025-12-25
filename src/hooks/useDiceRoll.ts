@@ -20,12 +20,12 @@ import { PlayerSkills } from '@/types/lifeSim';
 
 // Map skill check difficulties to dice difficulties
 const DIFFICULTY_MAP: Record<DifficultyLevel, DifficultyTier> = {
-  trivial: 'TRIVIAL',
+  trivial: 'VERY_EASY',
   easy: 'EASY',
   moderate: 'NORMAL',
   hard: 'HARD',
   very_hard: 'VERY_HARD',
-  legendary: 'LEGENDARY'
+  legendary: 'VERY_HARD' // Cap at VERY_HARD
 };
 
 // Map action types to skill check categories
