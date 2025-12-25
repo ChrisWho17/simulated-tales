@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Modifier, ModifierState, MODIFIER_LIMITS } from '@/game/buffDebuffSystem';
+import { Modifier, ModifierState, MODIFIER_LIMITS, scaleModifierSeverity, getModifierEffectPercentage } from '@/game/buffDebuffSystem';
 import { Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ModifierDetailModal } from './ModifierDetailModal';
@@ -74,14 +74,27 @@ function formatDuration(remaining: number): string {
   return `${Math.round(remaining)} turns`;
 }
 
-// Severity bar component
-function SeverityBar({ severity, colorClass }: { severity: number; colorClass: string }) {
+// Severity bar component - shows SCALED severity (2-8% actual effect)
+function SeverityBar({ modifier, colorClass }: { modifier: Modifier; colorClass: string }) {
+  // Scale severity to actual gameplay effect (2-8% range)
+  const scaledSeverity = scaleModifierSeverity(modifier.severity);
+  const displayPercentage = getModifierEffectPercentage(modifier);
+  
+  // For visual purposes, scale the bar to show relative intensity within the 2-8% range
+  // Map 2% -> 25% bar width, 8% -> 100% bar width
+  const barWidth = Math.min(100, Math.max(25, ((displayPercentage - 2) / 6) * 75 + 25));
+  
   return (
-    <div className="h-1 w-full bg-background/50 rounded-full overflow-hidden">
-      <div 
-        className={cn("h-full rounded-full transition-all", colorClass.split(' ')[0].replace('text-', 'bg-'))}
-        style={{ width: `${severity * 100}%` }}
-      />
+    <div className="flex items-center gap-2">
+      <div className="h-1 flex-1 bg-background/50 rounded-full overflow-hidden">
+        <div 
+          className={cn("h-full rounded-full transition-all", colorClass.split(' ')[0].replace('text-', 'bg-'))}
+          style={{ width: `${barWidth}%` }}
+        />
+      </div>
+      <span className="text-[9px] opacity-60 min-w-[24px] text-right">
+        {modifier.type === 'buff' ? '+' : '-'}{displayPercentage}%
+      </span>
     </div>
   );
 }
@@ -134,7 +147,7 @@ function ModifierTag({
           {formatDuration(modifier.duration.remaining)}
         </span>
       </div>
-      <SeverityBar severity={modifier.severity} colorClass={colorClass} />
+      <SeverityBar modifier={modifier} colorClass={colorClass} />
       <p className="text-[10px] opacity-70 leading-tight line-clamp-2">
         {modifier.description}
       </p>

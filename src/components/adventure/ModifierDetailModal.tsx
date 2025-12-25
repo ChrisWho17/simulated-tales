@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modifier, ModifierOccurredAt, ModifierTriggerEvent, ModifierLocation, ModifierOriginMessage, ModifierOriginSnapshot } from '@/game/buffDebuffSystem';
+import { Modifier, ModifierOccurredAt, ModifierTriggerEvent, ModifierLocation, ModifierOriginMessage, ModifierOriginSnapshot, getModifierEffectPercentage } from '@/game/buffDebuffSystem';
 import { Button } from '@/components/ui/button';
 import { 
   X, Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye,
@@ -363,6 +363,86 @@ function getInjuryDisplay(modifier: Modifier): {
   };
 }
 
+// Get a short, declarative trigger reason label (e.g., "Shadows Creeping", "Arachnophobia")
+function getTriggerReasonLabel(
+  modifier: Modifier, 
+  phobiaName: string | null,
+  triggerDisplay: { stimulus: string | null; stimulusType: string | null; cause: string | null; context: string | null }
+): string {
+  // For phobias, prioritize the phobia name
+  if (modifier.category === 'phobia' || modifier.category === 'psychological') {
+    if (phobiaName) return phobiaName;
+    
+    // Extract a short label from stimulus
+    if (triggerDisplay.stimulus) {
+      return extractShortTriggerLabel(triggerDisplay.stimulus);
+    }
+    
+    if (modifier.triggerEvent?.source) {
+      return toTitleCase(modifier.triggerEvent.source.replace(/_/g, ' '));
+    }
+    
+    return 'Fear Triggered';
+  }
+  
+  // For injuries, give a short impact description
+  if (modifier.category === 'injury') {
+    if (modifier.triggerEvent?.details.weapon) {
+      return toTitleCase(modifier.triggerEvent.details.weapon);
+    }
+    if (modifier.triggerEvent?.details.action) {
+      return extractShortTriggerLabel(modifier.triggerEvent.details.action);
+    }
+    if (triggerDisplay.cause) {
+      return triggerDisplay.cause;
+    }
+    return toTitleCase(modifier.name);
+  }
+  
+  // For other categories
+  if (triggerDisplay.cause) return triggerDisplay.cause;
+  if (modifier.triggerEvent?.source) {
+    return toTitleCase(modifier.triggerEvent.source.replace(/_/g, ' '));
+  }
+  
+  return toTitleCase(modifier.category);
+}
+
+// Extract a short 2-3 word label from a longer stimulus description
+function extractShortTriggerLabel(stimulus: string): string {
+  if (!stimulus) return 'Unknown';
+  
+  // Common fear trigger patterns -> short labels
+  const triggerLabels: Record<string, string> = {
+    'shadow': 'Shadows Creeping',
+    'dark': 'Darkness Encroaching',
+    'spider': 'Arachnophobia',
+    'height': 'Vertigo',
+    'water': 'Deep Waters',
+    'fire': 'Flames Rising',
+    'blood': 'Blood Sighted',
+    'crowd': 'Crowds Pressing',
+    'enclosed': 'Walls Closing In',
+    'storm': 'Thunder Rolling',
+    'dead': 'Death Nearby',
+    'alone': 'Isolation',
+    'failure': 'Fear of Failure',
+  };
+  
+  const lower = stimulus.toLowerCase();
+  for (const [key, label] of Object.entries(triggerLabels)) {
+    if (lower.includes(key)) return label;
+  }
+  
+  // Extract first 3 meaningful words
+  const words = stimulus.split(' ').filter(w => w.length > 2).slice(0, 3);
+  if (words.length > 0) {
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+  
+  return 'Triggered';
+}
+
 // Rewind Preview Splash Component - Shows full incident context with visual highlighting
 function RewindPreviewSplash({ 
   modifier, 
@@ -489,9 +569,20 @@ function RewindPreviewSplash({
             </div>
           )}
           
+          {/* Trigger Reason - Short declarative label */}
+          <div className="mt-4 pt-4 border-t border-border/20">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Why It Happened</p>
+            <p className={cn(
+              "text-base font-semibold",
+              isInjury ? "text-modifier-injury" : "text-modifier-neutral"
+            )}>
+              {getTriggerReasonLabel(modifier, phobiaName, triggerDisplay)}
+            </p>
+          </div>
+          
           {/* Narrative Excerpt */}
           {snapshotText && (
-            <blockquote className="text-sm italic text-muted-foreground leading-relaxed px-4 py-3 bg-background/50 rounded-lg border border-border/30">
+            <blockquote className="text-sm italic text-muted-foreground leading-relaxed px-4 py-3 bg-background/50 rounded-lg border border-border/30 mt-3">
               "{snapshotText}"
             </blockquote>
           )}
@@ -717,21 +808,24 @@ export function ModifierDetailModal({ modifier, onClose, onRewind, onJumpToMessa
             </Button>
           )}
 
-          {/* Severity */}
+          {/* Severity - shows SCALED effect (2-8% range) */}
           {!isPhobia && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Severity</span>
+                <span className="text-muted-foreground">Effect Strength</span>
                 <span className={cn("font-medium", colors.text)}>
-                  {getSeverityLabel(modifier.severity)} ({Math.round(modifier.severity * 100)}%)
+                  {modifier.type === 'buff' ? '+' : '-'}{getModifierEffectPercentage(modifier)}%
                 </span>
               </div>
               <div className="h-2 bg-background rounded-full overflow-hidden">
                 <div 
                   className={cn("h-full rounded-full transition-all", colors.text.replace('text-', 'bg-'))}
-                  style={{ width: `${modifier.severity * 100}%` }}
+                  style={{ width: `${Math.min(100, Math.max(25, ((getModifierEffectPercentage(modifier) - 2) / 6) * 75 + 25))}%` }}
                 />
               </div>
+              <p className="text-[10px] text-muted-foreground">
+                Individual effects are small (2-8%) but stack with others
+              </p>
             </div>
           )}
 
@@ -744,26 +838,31 @@ export function ModifierDetailModal({ modifier, onClose, onRewind, onJumpToMessa
             </span>
           </div>
 
-          {/* Effects (if any) */}
+          {/* Effects (if any) - show scaled percentages */}
           {modifier.effects.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Effects on Stats
+                Stat Adjustments
               </h3>
               <div className="flex flex-wrap gap-2">
-                {modifier.effects.map((effect, idx) => (
-                  <span 
-                    key={idx}
-                    className={cn(
-                      "text-xs px-2 py-1 rounded border",
-                      effect.value > 0 
-                        ? 'bg-modifier-buff/10 text-modifier-buff border-modifier-buff/30' 
-                        : 'bg-modifier-injury/10 text-modifier-injury border-modifier-injury/30'
-                    )}
-                  >
-                    {effect.stat}: {effect.value > 0 ? '+' : ''}{Math.round(effect.value * 100)}%
-                  </span>
-                ))}
+                {modifier.effects.map((effect, idx) => {
+                  // Scale effect value to 2-8% range based on modifier severity
+                  const scaledValue = effect.value * getModifierEffectPercentage(modifier) / 100;
+                  const displayValue = Math.round(scaledValue * 100);
+                  return (
+                    <span 
+                      key={idx}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded border",
+                        effect.value > 0 
+                          ? 'bg-modifier-buff/10 text-modifier-buff border-modifier-buff/30' 
+                          : 'bg-modifier-injury/10 text-modifier-injury border-modifier-injury/30'
+                      )}
+                    >
+                      {effect.stat}: {effect.value > 0 ? '+' : ''}{displayValue > 0 ? displayValue : Math.abs(displayValue)}%
+                    </span>
+                  );
+                })}
               </div>
             </div>
           )}
