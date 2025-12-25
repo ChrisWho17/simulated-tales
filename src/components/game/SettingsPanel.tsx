@@ -103,8 +103,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
         </div>
         
-        {/* Tabs - horizontal scroll with proper alignment */}
-        <div className="px-4 pt-3 pb-2 overflow-x-auto scrollbar-thin scrollbar-thumb-border/30">
+        {/* Tabs - horizontal scroll only, static row */}
+        <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
             {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
               <button
