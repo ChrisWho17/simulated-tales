@@ -253,6 +253,13 @@ export const CHEMICAL_TEMPLATES: ModifierTemplate[] = [
   { name: 'Overdose Risk', type: 'debuff', category: 'chemical', description: 'Dangerous substance levels', baseSeverity: 0.8, effects: [{ stat: 'consciousness', value: -0.5 }, { stat: 'health_decay', value: 0.15 }], defaultDuration: { type: 'time', remaining: 6 }, stackingRule: 'exclusive', decayModel: 'threshold', resolutionPaths: ['emergency_treatment'], promotionPolicy: 'trauma_flag', visibility: 'hidden' },
   { name: 'Cognitive Impairment', type: 'debuff', category: 'chemical', description: 'Substance affecting thinking', baseSeverity: 0.4, effects: [{ stat: 'focus', value: -0.35 }, { stat: 'decision_making', value: -0.3 }, { stat: 'reaction_time', value: -0.25 }], defaultDuration: { type: 'time', remaining: 8 }, stackingRule: 'exclusive', decayModel: 'linear', resolutionPaths: ['time', 'rest'], promotionPolicy: 'expire', visibility: 'npc_visible' },
   { name: 'Organ Stress', type: 'debuff', category: 'chemical', description: 'Organs working overtime', baseSeverity: 0.45, effects: [{ stat: 'stamina', value: -0.2 }, { stat: 'toxin_buildup', value: 0.3 }], defaultDuration: { type: 'time', remaining: 48 }, stackingRule: 'additive', decayModel: 'linear', resolutionPaths: ['rest', 'hydration', 'abstinence'], promotionPolicy: 'chronic', visibility: 'hidden' },
+  { name: 'Intoxicated', type: 'debuff', category: 'chemical', description: 'Impaired by alcohol or substances', baseSeverity: 0.5, effects: [{ stat: 'coordination', value: -0.4 }, { stat: 'judgment', value: -0.5 }, { stat: 'reaction_time', value: -0.3 }, { stat: 'inhibition', value: -0.4 }], defaultDuration: { type: 'time', remaining: 6 }, stackingRule: 'additive', decayModel: 'linear', resolutionPaths: ['time', 'rest', 'food'], promotionPolicy: 'addiction', visibility: 'npc_visible' },
+  { name: 'Nausea', type: 'debuff', category: 'illness', description: 'Feeling sick to stomach', baseSeverity: 0.35, effects: [{ stat: 'focus', value: -0.2 }, { stat: 'comfort', value: -0.4 }, { stat: 'appetite', value: -0.6 }], defaultDuration: { type: 'time', remaining: 4 }, stackingRule: 'exclusive', decayModel: 'linear', resolutionPaths: ['rest', 'fresh_air', 'medication'], promotionPolicy: 'expire', visibility: 'player_only' },
+  // Mutation result templates (used by interaction matrix)
+  { name: 'Burnout', type: 'debuff', category: 'psychological', description: 'Complete mental and physical exhaustion', baseSeverity: 0.65, effects: [{ stat: 'all_stats', value: -0.3 }, { stat: 'motivation', value: -0.6 }, { stat: 'recovery_rate', value: -0.4 }], defaultDuration: { type: 'condition', remaining: 336 }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['extended_rest', 'lifestyle_change', 'therapy'], promotionPolicy: 'chronic', visibility: 'npc_visible' },
+  { name: 'Complicated Wound', type: 'debuff', category: 'injury', description: 'Wound with secondary infection', baseSeverity: 0.7, effects: [{ stat: 'pain', value: 0.5 }, { stat: 'healing_rate', value: -0.6 }, { stat: 'fever', value: 0.3 }], defaultDuration: { type: 'treatment', remaining: 168 }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['antibiotics', 'surgery', 'wound_care'], promotionPolicy: 'scar', visibility: 'npc_visible' },
+  { name: 'Dependency', type: 'debuff', category: 'chemical', description: 'Physical and psychological need for substance', baseSeverity: 0.6, effects: [{ stat: 'willpower', value: -0.4 }, { stat: 'craving', value: 0.7 }, { stat: 'mood_stability', value: -0.5 }], defaultDuration: { type: 'condition', remaining: 720 }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['detox', 'therapy', 'rehabilitation'], promotionPolicy: 'addiction', visibility: 'hidden' },
+  { name: 'PTSD Flag', type: 'debuff', category: 'psychological', description: 'Lasting psychological mark from trauma', baseSeverity: 0.5, effects: [{ stat: 'stress_vulnerability', value: 0.4 }, { stat: 'sleep_quality', value: -0.3 }, { stat: 'flashback_risk', value: 0.5 }], defaultDuration: { type: 'condition', remaining: 2160 }, stackingRule: 'additive', decayModel: 'conditional', resolutionPaths: ['therapy', 'time', 'support'], promotionPolicy: 'trauma_flag', visibility: 'hidden' },
 ];
 
 // I) ROUTINE / LIFESTYLE
@@ -615,8 +622,13 @@ function resolveModifier(
  * Calculate interaction effects between modifiers
  */
 export function recomputeInteractions(state: ModifierState): ModifierState {
-  const newState = { ...state, activeModifiers: [...state.activeModifiers] };
-  const mutations: Modifier[] = [];
+  try {
+    if (!state || !state.activeModifiers || state.activeModifiers.length === 0) {
+      return state;
+    }
+    
+    const newState = { ...state, activeModifiers: [...state.activeModifiers] };
+    const mutations: Modifier[] = [];
 
   for (let i = 0; i < newState.activeModifiers.length; i++) {
     for (let j = i + 1; j < newState.activeModifiers.length; j++) {
@@ -657,14 +669,18 @@ export function recomputeInteractions(state: ModifierState): ModifierState {
             if (modA.severity > 0.4 && modB.severity > 0.4 && interaction.resultModifier) {
               const template = findTemplateByName(interaction.resultModifier);
               if (template) {
-                mutations.push(createModifierFromTemplate(
-                  template,
-                  modA.campaignId,
-                  modA.entity,
-                  `mutation:${modA.id}+${modB.id}`,
-                  modA.appliedAt,
-                  (modA.severity + modB.severity) / 2
-                ));
+                try {
+                  mutations.push(createModifierFromTemplate(
+                    template,
+                    modA.campaignId,
+                    modA.entity,
+                    `mutation:${modA.id}+${modB.id}`,
+                    modA.appliedAt,
+                    (modA.severity + modB.severity) / 2
+                  ));
+                } catch (e) {
+                  console.warn(`Failed to create mutation modifier: ${interaction.resultModifier}`, e);
+                }
               }
             }
             break;
@@ -688,12 +704,16 @@ export function recomputeInteractions(state: ModifierState): ModifierState {
   }
 
   // Add mutations and remove zeroed modifiers
-  newState.activeModifiers = [
-    ...newState.activeModifiers.filter(m => m.severity > 0),
-    ...mutations,
-  ];
+    newState.activeModifiers = [
+      ...newState.activeModifiers.filter(m => m.severity > 0),
+      ...mutations,
+    ];
 
-  return newState;
+    return newState;
+  } catch (e) {
+    console.warn('Error in recomputeInteractions:', e);
+    return state; // Return original state on error
+  }
 }
 
 /**
