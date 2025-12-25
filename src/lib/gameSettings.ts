@@ -1,14 +1,30 @@
-// Game Settings System - Including 18+ content toggle
+// Game Settings System - Including 18+ content toggle and feature toggles
 
 export interface GameSettings {
+  // Core toggles
   adultContent: boolean;        // 18+ content toggle
   autoSave: boolean;
   soundEnabled: boolean;
   musicVolume: number;
-  textSpeed: 'slow' | 'normal' | 'fast';
+  textSpeed: 'slow' | 'normal' | 'fast' | 'instant';
   showTutorials: boolean;
   colorTheme: string;
   fontSize: 'small' | 'medium' | 'large';
+  showRollDetails: boolean;
+  sceneIllustrations: boolean;
+  
+  // Feature toggles
+  enableMoodSystem: boolean;           // Mood tracking and display
+  manualMoodControl: boolean;          // Allow player to manually set mood
+  enableMoodDialogue: boolean;         // AI dialogue varies by mood
+  enableModifiers: boolean;            // Active conditions/buffs/debuffs
+  enableWoundSystem: boolean;          // Wound tracking
+  enableKnowledgeSystem: boolean;      // Progressive NPC knowledge reveal
+  enableWeatherEffects: boolean;       // Weather influences gameplay
+  enableNPCSchedules: boolean;         // NPCs follow daily routines
+  enableReputationSystem: boolean;     // Faction/NPC reputation tracking
+  enableXPSystem: boolean;             // Experience and leveling
+  enableInventoryWeight: boolean;      // Inventory capacity limits
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -23,6 +39,21 @@ export const DEFAULT_SETTINGS: GameSettings = {
   showTutorials: true,
   colorTheme: 'violet',
   fontSize: 'medium',
+  showRollDetails: true,
+  sceneIllustrations: true,
+  
+  // Feature toggles - all enabled by default
+  enableMoodSystem: true,
+  manualMoodControl: false,
+  enableMoodDialogue: true,
+  enableModifiers: true,
+  enableWoundSystem: true,
+  enableKnowledgeSystem: true,
+  enableWeatherEffects: true,
+  enableNPCSchedules: true,
+  enableReputationSystem: true,
+  enableXPSystem: true,
+  enableInventoryWeight: true,
 };
 
 // Get current settings (alias for loadSettings)
@@ -126,4 +157,10 @@ export function filterContent(text: string, settings: GameSettings): string {
 // Check if specific content type should be shown
 export function shouldShowContent(contentType: 'tension' | 'attraction' | 'intimacy' | 'bodyDetails' | 'orientation'): boolean {
   return isAdultContentEnabled();
+}
+
+// Feature check helpers
+export function isFeatureEnabled(feature: keyof GameSettings): boolean {
+  const settings = loadSettings();
+  return settings[feature] === true;
 }

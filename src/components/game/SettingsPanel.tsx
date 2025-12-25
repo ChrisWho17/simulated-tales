@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
-  Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User
+  Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
+  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity
 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
@@ -28,7 +29,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   currentCharacterName 
 }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   
@@ -103,13 +104,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
         
         {/* Tabs */}
-        <div className="flex border-b border-border/30">
-          {(['gameplay', 'saves', 'display', 'audio'] as const).map((tab) => (
+        <div className="flex border-b border-border/30 overflow-x-auto">
+          {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 py-2.5 text-sm font-medium transition-colors",
+                "flex-shrink-0 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
                 activeTab === tab 
                   ? "text-[var(--accent-primary)] border-b-2 border-[var(--accent-primary)]"
                   : "text-muted-foreground hover:text-foreground"
@@ -196,6 +197,176 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   checked={settings.showRollDetails}
                   onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
                 />
+              </div>
+            </div>
+          )}
+          
+          {/* Features Tab */}
+          {activeTab === 'features' && (
+            <div className="space-y-6">
+              {/* Mood System Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Mood System</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Enable Mood Tracking</span>
+                      <p className="text-xs text-muted-foreground">Track character emotional state</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableMoodSystem ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableMoodSystem: checked })}
+                    />
+                  </div>
+                  
+                  {settings.enableMoodSystem && (
+                    <>
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm">Manual Mood Control</span>
+                          <p className="text-xs text-muted-foreground">Allow manually setting mood</p>
+                        </div>
+                        <Switch 
+                          checked={settings.manualMoodControl ?? false}
+                          onCheckedChange={(checked) => updateSettings({ manualMoodControl: checked })}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm">Mood-Based Dialogue</span>
+                          <p className="text-xs text-muted-foreground">AI adapts tone to mood</p>
+                        </div>
+                        <Switch 
+                          checked={settings.enableMoodDialogue ?? true}
+                          onCheckedChange={(checked) => updateSettings({ enableMoodDialogue: checked })}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Combat & Status Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Swords className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Combat & Status</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Active Conditions</span>
+                      <p className="text-xs text-muted-foreground">Buffs, debuffs, and status effects</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableModifiers ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableModifiers: checked })}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Wound System</span>
+                      <p className="text-xs text-muted-foreground">Track injuries and healing</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableWoundSystem ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableWoundSystem: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* World Systems Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Cloud className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">World Systems</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Weather Effects</span>
+                      <p className="text-xs text-muted-foreground">Weather influences gameplay</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableWeatherEffects ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableWeatherEffects: checked })}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">NPC Schedules</span>
+                      <p className="text-xs text-muted-foreground">NPCs follow daily routines</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableNPCSchedules ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableNPCSchedules: checked })}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Knowledge System</span>
+                      <p className="text-xs text-muted-foreground">Progressive NPC info reveal</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableKnowledgeSystem ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableKnowledgeSystem: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Progression Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Progression</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">XP & Leveling</span>
+                      <p className="text-xs text-muted-foreground">Experience and level-ups</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableXPSystem ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableXPSystem: checked })}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Reputation System</span>
+                      <p className="text-xs text-muted-foreground">Faction and NPC reputation</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableReputationSystem ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableReputationSystem: checked })}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Inventory Weight</span>
+                      <p className="text-xs text-muted-foreground">Capacity limits on items</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableInventoryWeight ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableInventoryWeight: checked })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

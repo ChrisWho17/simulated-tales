@@ -39,6 +39,19 @@ export interface GameSettings {
   colorTheme: string;
   autoSave: boolean;
   showRollDetails: boolean;
+  
+  // Feature toggles
+  enableMoodSystem: boolean;
+  manualMoodControl: boolean;
+  enableMoodDialogue: boolean;
+  enableModifiers: boolean;
+  enableWoundSystem: boolean;
+  enableKnowledgeSystem: boolean;
+  enableWeatherEffects: boolean;
+  enableNPCSchedules: boolean;
+  enableReputationSystem: boolean;
+  enableXPSystem: boolean;
+  enableInventoryWeight: boolean;
 }
 
 const defaultSettings: GameSettings = {
@@ -49,7 +62,20 @@ const defaultSettings: GameSettings = {
   soundEnabled: true,
   colorTheme: 'violet',
   autoSave: true,
-  showRollDetails: true
+  showRollDetails: true,
+  
+  // Feature toggles - all enabled by default
+  enableMoodSystem: true,
+  manualMoodControl: false,
+  enableMoodDialogue: true,
+  enableModifiers: true,
+  enableWoundSystem: true,
+  enableKnowledgeSystem: true,
+  enableWeatherEffects: true,
+  enableNPCSchedules: true,
+  enableReputationSystem: true,
+  enableXPSystem: true,
+  enableInventoryWeight: true,
 };
 
 // ============================================================================
