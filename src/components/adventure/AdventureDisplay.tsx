@@ -37,6 +37,7 @@ import {
   advanceChapter
 } from '@/game/levelingSystem';
 import { GameGenre } from '@/types/genreData';
+import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 
 interface StoryEntry {
   id: string;
@@ -91,6 +92,9 @@ interface AdventureDisplayProps {
   isGeneratingScene?: boolean;
   onCloseSceneImage?: () => void;
   genre?: GameGenre;
+  currentMood?: CoreMoodType;
+  moodHistory?: MoodLogEntry[];
+  onMoodChange?: (mood: CoreMoodType) => void;
 }
 
 export function AdventureDisplay({
@@ -112,6 +116,9 @@ export function AdventureDisplay({
   isGeneratingScene,
   onCloseSceneImage,
   genre = 'fantasy',
+  currentMood = 'neutral',
+  moodHistory = [],
+  onMoodChange,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -1159,6 +1166,9 @@ export function AdventureDisplay({
           onClose={() => setShowCharacterSheet(false)}
           onUpdateCharacter={onUpdateCharacter}
           modifierState={getModifierState()}
+          moodState={{ currentMood, moodIntensity: 0.6, moodHistory, lastChangeTimestamp: Date.now() }}
+          genre={genre}
+          onMoodChange={onMoodChange}
         />
       )}
 
