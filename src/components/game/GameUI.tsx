@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameState, GameEvent, NPC } from '@/types/game';
 import { CharacterData, SPAWN_POINTS } from '@/types/characterCreation';
+import { useMessageNavigation } from '@/hooks/useMessageNavigation';
 import { 
   createInitialGameState, 
   processAction, 
@@ -307,6 +308,9 @@ export function GameUI() {
   
   // Active conversation session (for 'say' command)
   const [conversationSession, setConversationSession] = useState<ConversationSession | null>(null);
+  
+  // Message navigation for scroll-to-message functionality
+  const messageNav = useMessageNavigation();
   
   // Save memories when they change
   useEffect(() => {
@@ -1299,7 +1303,12 @@ export function GameUI() {
         )}
       >
         <div className="flex-1 overflow-hidden bg-parchment">
-          <NarrativeDisplay events={displayEvents} />
+          <NarrativeDisplay 
+            events={displayEvents}
+            highlightedMessageId={messageNav.highlightedMessageId}
+            onRegisterMessage={messageNav.registerMessage}
+            onContainerRef={messageNav.setContainer}
+          />
         </div>
         <PlayerInput onSubmit={handleCommand} disabled={isProcessing || !!activeCombat} />
       </div>

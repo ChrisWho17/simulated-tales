@@ -7,6 +7,7 @@ import { ModifierDetailModal } from './ModifierDetailModal';
 interface ModifierDisplayProps {
   modifierState: ModifierState;
   compact?: boolean;
+  onJumpToMessage?: (messageId: string, turnId: number) => void;
 }
 
 // Get icon based on modifier category
@@ -145,7 +146,7 @@ function ModifierTag({
   );
 }
 
-export function ModifierDisplay({ modifierState, compact = false }: ModifierDisplayProps) {
+export function ModifierDisplay({ modifierState, compact = false, onJumpToMessage }: ModifierDisplayProps) {
   const [selectedModifier, setSelectedModifier] = useState<Modifier | null>(null);
 
   const { buffs, debuffs, phobias, limitInfo } = useMemo(() => {
@@ -196,7 +197,8 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
         {selectedModifier && (
           <ModifierDetailModal 
             modifier={selectedModifier} 
-            onClose={() => setSelectedModifier(null)} 
+            onClose={() => setSelectedModifier(null)}
+            onJumpToMessage={onJumpToMessage}
           />
         )}
       </>
@@ -278,7 +280,8 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
       {selectedModifier && (
         <ModifierDetailModal 
           modifier={selectedModifier} 
-          onClose={() => setSelectedModifier(null)} 
+          onClose={() => setSelectedModifier(null)}
+          onJumpToMessage={onJumpToMessage}
         />
       )}
     </>

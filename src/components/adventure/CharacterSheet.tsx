@@ -16,6 +16,7 @@ interface CharacterSheetProps {
   onClose: () => void;
   onUpdateCharacter: (character: RPGCharacter & { portraitUrl?: string }) => void;
   modifierState?: ModifierState;
+  onJumpToMessage?: (messageId: string, turnId: number) => void;
 }
 
 // Helper to find class/background across all genres
@@ -226,7 +227,7 @@ function PortraitDisplay({
   );
 }
 
-export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState }: CharacterSheetProps) {
+export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState, onJumpToMessage }: CharacterSheetProps) {
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -487,7 +488,7 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                       <Activity className="w-3 h-3" />
                       Active Conditions
                     </h4>
-                    <ModifierDisplay modifierState={modifierState} />
+                    <ModifierDisplay modifierState={modifierState} onJumpToMessage={onJumpToMessage} />
                   </div>
                 )}
               </div>
