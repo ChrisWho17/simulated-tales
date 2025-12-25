@@ -9,12 +9,6 @@ import {
   GENRE_MOOD_DESCRIPTORS 
 } from '@/game/moodSystem';
 import { GameGenre } from '@/types/genreData';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 const ALL_MOODS: CoreMoodType[] = [
   'lusty', 'mad', 'annoyed', 'neutral', 'happy', 
@@ -81,97 +75,28 @@ export function MoodHistoryDropdown({
       {/* Header - Always visible */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-3 flex-1">
-          {/* Mood indicator with optional selector */}
-          {manualMoodEnabled && onMoodChange ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button 
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div 
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-sm relative transition-all duration-300",
-                      isGlowing && "scale-110"
-                    )}
-                    style={{ 
-                      backgroundColor: `${currentConfig.primary}20`,
-                      border: `2px solid ${currentConfig.primary}`,
-                      ...glowStyle
-                    }}
-                  >
-                    {currentDescriptor.emoji}
-                    <Edit3 className="w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5 text-primary bg-background rounded-full p-0.5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                      <History className="w-3 h-3" />
-                      Current Mood
-                    </div>
-                    <div className="font-semibold flex items-center gap-1" style={{ color: currentConfig.primary }}>
-                      {currentDescriptor.label}
-                      <ChevronDown className="w-3 h-3" />
-                    </div>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="start" 
-                className="w-56 bg-card/95 backdrop-blur-md border-border/50 z-[100]"
-              >
-                {ALL_MOODS.map((mood) => {
-                  const moodConfig = MOOD_COLORS[mood];
-                  const moodDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[mood] || GENRE_MOOD_DESCRIPTORS.custom[mood];
-                  const isSelected = mood === currentMood;
-                  return (
-                    <DropdownMenuItem
-                      key={mood}
-                      onClick={() => onMoodChange(mood)}
-                      className={cn("flex items-center gap-2 cursor-pointer", isSelected && "bg-primary/10")}
-                    >
-                      <div 
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
-                        style={{ 
-                          backgroundColor: `${moodConfig.primary}20`,
-                          border: `2px solid ${moodConfig.primary}`
-                        }}
-                      >
-                        {moodDescriptor.emoji}
-                      </div>
-                      <span style={{ color: moodConfig.primary }}>
-                        {moodDescriptor.label}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div 
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-300",
-                  isGlowing && "scale-110"
-                )}
-                style={{ 
-                  backgroundColor: `${currentConfig.primary}20`,
-                  border: `2px solid ${currentConfig.primary}`,
-                  ...glowStyle
-                }}
-              >
-                {currentDescriptor.emoji}
-              </div>
-              <div className="text-left">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <History className="w-3 h-3" />
-                  Current Mood
-                </div>
-                <div className="font-semibold" style={{ color: currentConfig.primary }}>
-                  {currentDescriptor.label}
-                </div>
-              </div>
+          <div 
+            className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-300",
+              isGlowing && "scale-110"
+            )}
+            style={{ 
+              backgroundColor: `${currentConfig.primary}20`,
+              border: `2px solid ${currentConfig.primary}`,
+              ...glowStyle
+            }}
+          >
+            {currentDescriptor.emoji}
+          </div>
+          <div className="text-left">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <History className="w-3 h-3" />
+              Current Mood
             </div>
-          )}
+            <div className="font-semibold" style={{ color: currentConfig.primary }}>
+              {currentDescriptor.label}
+            </div>
+          </div>
         </div>
         
         {/* History toggle button */}
@@ -187,6 +112,56 @@ export function MoodHistoryDropdown({
           {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
+
+      {/* Manual Mood Selection Grid - Shows when manual control is enabled */}
+      {manualMoodEnabled && onMoodChange && (
+        <div className="border-t border-border/20 p-3">
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+            <Edit3 className="w-3 h-3" />
+            Select Mood
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {ALL_MOODS.map((mood) => {
+              const moodConfig = MOOD_COLORS[mood];
+              const moodDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[mood] || GENRE_MOOD_DESCRIPTORS.custom[mood];
+              const isSelected = mood === currentMood;
+              return (
+                <button
+                  key={mood}
+                  onClick={() => onMoodChange(mood)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-all hover:scale-105",
+                    isSelected 
+                      ? "bg-primary/20 ring-2 ring-primary/50" 
+                      : "bg-background/30 hover:bg-background/50"
+                  )}
+                  style={{
+                    boxShadow: isSelected ? `0 0 12px ${moodConfig.glow}` : undefined
+                  }}
+                  title={moodDescriptor.label}
+                >
+                  <div 
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-sm"
+                    style={{ 
+                      backgroundColor: `${moodConfig.primary}20`,
+                      border: `2px solid ${moodConfig.primary}`,
+                      boxShadow: `0 0 8px ${moodConfig.glow}`
+                    }}
+                  >
+                    {moodDescriptor.emoji}
+                  </div>
+                  <span 
+                    className="text-[10px] font-medium truncate w-full text-center"
+                    style={{ color: moodConfig.primary }}
+                  >
+                    {moodDescriptor.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Expanded History */}
       {isOpen && (
