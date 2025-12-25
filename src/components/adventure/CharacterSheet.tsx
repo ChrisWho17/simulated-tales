@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { RPGCharacter, getStatModifier, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
-  Plus, Minus, Sparkles, User, RefreshCw, Loader2
+  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ModifierDisplay, calculateEffectiveStats } from './ModifierDisplay';
+import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
   onClose: () => void;
   onUpdateCharacter: (character: RPGCharacter & { portraitUrl?: string }) => void;
+  modifierState?: ModifierState;
 }
 
 // Helper to find class/background across all genres
@@ -223,14 +226,31 @@ function PortraitDisplay({
   );
 }
 
-export function CharacterSheet({ character, onClose, onUpdateCharacter }: CharacterSheetProps) {
+export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState }: CharacterSheetProps) {
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
 
-  const formatMod = (stat: number) => {
+  // Calculate effective stats with modifier effects
+  const { effectiveStats, statChanges } = useMemo(() => {
+    if (!modifierState || modifierState.activeModifiers.length === 0) {
+      return { effectiveStats: character.stats, statChanges: {} };
+    }
+    const result = calculateEffectiveStats(
+      character.stats as unknown as Record<string, number>,
+      modifierState.activeModifiers
+    );
+    return { 
+      effectiveStats: result.stats as unknown as CharacterStats, 
+      statChanges: result.changes 
+    };
+  }, [character.stats, modifierState]);
+
+  const formatMod = (stat: number, statKey?: string) => {
     const mod = getStatModifier(stat);
-    return mod >= 0 ? `+${mod}` : `${mod}`;
+    const change = statKey ? (statChanges[statKey] || 0) : 0;
+    const baseStr = mod >= 0 ? `+${mod}` : `${mod}`;
+    return { baseStr, change };
   };
 
   const xpToNextLevel = character.level * 100;
@@ -346,20 +366,42 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter }: Charac
                   Attributes
                 </h3>
                 <div className="grid grid-cols-3 gap-2 md:gap-3">
-                  {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => (
-                    <div 
-                      key={stat} 
-                      className="bg-background/50 rounded-lg p-2 md:p-3 border border-border/30 text-center"
-                    >
-                      <div className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">
-                        {stat.slice(0, 3)}
+                  {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
+                    const { baseStr, change } = formatMod(effectiveStats[stat], stat);
+                    const hasChange = change !== 0;
+                    return (
+                      <div 
+                        key={stat} 
+                        className="bg-background/50 rounded-lg p-2 md:p-3 border border-border/30 text-center"
+                      >
+                        <div className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">
+                          {stat.slice(0, 3)}
+                        </div>
+                        <div className="text-lg md:text-xl font-bold mt-0.5 flex items-center justify-center gap-1">
+                          <span>{effectiveStats[stat]}</span>
+                          {hasChange && (
+                            <span className={`text-xs ${change > 0 ? 'text-modifier-buff' : 'text-modifier-critical'}`}>
+                              ({change > 0 ? '+' : ''}{change})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs md:text-sm text-primary">{baseStr}</div>
                       </div>
-                      <div className="text-lg md:text-xl font-bold mt-0.5">{character.stats[stat]}</div>
-                      <div className="text-xs md:text-sm text-primary">{formatMod(character.stats[stat])}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Active Effects (Buffs/Debuffs) */}
+              {modifierState && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 text-sm md:text-base">
+                    <Activity className="w-4 h-4" />
+                    Active Effects
+                  </h3>
+                  <ModifierDisplay modifierState={modifierState} />
+                </div>
+              )}
 
               {/* Traits */}
               {character.traits.length > 0 && (
