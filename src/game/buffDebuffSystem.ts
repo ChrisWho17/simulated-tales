@@ -63,15 +63,20 @@ export interface ModifierTriggerEvent {
   eventId: string;
   type: 'physical_injury' | 'psychological_trigger' | 'environmental' | 'combat' | 'social' | 'narrative' | 'phobia_trigger';
   source: string;       // What caused it: "overheard_conversation", "combat_damage", etc.
-  phobia?: string;      // Named phobia if applicable: "arachnophobia", "claustrophobia", etc.
+  phobia?: string;      // Named phobia if applicable: "Fear of the Dark"
+  phobiaId?: string;    // Technical ID: "nyctophobia"
   details: {
-    stimulus?: string;  // The specific thing that triggered it
+    stimulus?: string;           // The specific thing that triggered it: "A shadow shifting in the darkness"
+    stimulusType?: 'visual' | 'auditory' | 'tactile' | 'olfactory' | 'situational';
+    environmentalContext?: string; // "Low light, enclosed space"
     emotionalContext?: string[];
     perceivedThreat?: boolean;
     bodyPart?: string;
     damageType?: string;
     weapon?: string;
     action?: string;
+    impactZone?: string;         // For injuries: "Left Shoulder"
+    impactDescription?: string;  // "A rifle round struck your left shoulder"
   };
 }
 

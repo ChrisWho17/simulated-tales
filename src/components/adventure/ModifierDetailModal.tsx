@@ -174,6 +174,24 @@ function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Title Case utility - enforces consistent capitalization for all labels
+function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Format stimulus for display with proper capitalization
+function formatStimulus(stimulus: string): string {
+  if (!stimulus) return '';
+  // Capitalize first letter and ensure proper sentence case
+  const formatted = stimulus.charAt(0).toUpperCase() + stimulus.slice(1);
+  return formatted;
+}
+
 // Get the "How" display string from trigger event
 function getHowDisplay(modifier: Modifier): { 
   source: string; 
@@ -268,7 +286,84 @@ function getLocationDisplay(modifier: Modifier): string | null {
   return null;
 }
 
-// Rewind Preview Splash Component - Shows full incident context
+// Get incident type label based on modifier category
+function getIncidentTypeLabel(modifier: Modifier): string {
+  if (modifier.category === 'phobia' || modifier.category === 'psychological') {
+    return 'Fear Triggered';
+  }
+  if (modifier.category === 'injury') {
+    return 'Injury Sustained';
+  }
+  return toTitleCase(modifier.category) + ' Effect';
+}
+
+// Get trigger display for the splash - THE THING THAT SCARED/HURT THEM
+function getTriggerDisplay(modifier: Modifier): { 
+  stimulus: string | null; 
+  stimulusType: string | null;
+  cause: string | null;
+  context: string | null;
+} {
+  const te = modifier.triggerEvent;
+  
+  // Priority 1: Structured trigger event stimulus
+  if (te?.details.stimulus) {
+    return {
+      stimulus: formatStimulus(te.details.stimulus),
+      stimulusType: te.details.stimulusType ? toTitleCase(te.details.stimulusType) : null,
+      cause: te.details.weapon || te.source ? toTitleCase(te.details.weapon || te.source.replace(/_/g, ' ')) : null,
+      context: te.details.environmentalContext || null,
+    };
+  }
+  
+  // Priority 2: Impact description for injuries
+  if (te?.details.impactDescription) {
+    return {
+      stimulus: formatStimulus(te.details.impactDescription),
+      stimulusType: null,
+      cause: te.details.impactZone ? `${toTitleCase(te.details.impactZone)}` : null,
+      context: te.details.environmentalContext || null,
+    };
+  }
+  
+  // Priority 3: Legacy trigger cause
+  if (modifier.triggerCause) {
+    return {
+      stimulus: formatStimulus(modifier.triggerCause),
+      stimulusType: null,
+      cause: null,
+      context: null,
+    };
+  }
+  
+  // Priority 4: Incident description
+  if (modifier.incidentDescription) {
+    return {
+      stimulus: formatStimulus(modifier.incidentDescription),
+      stimulusType: null,
+      cause: null,
+      context: null,
+    };
+  }
+  
+  return { stimulus: null, stimulusType: null, cause: null, context: null };
+}
+
+// Get injury-specific display info
+function getInjuryDisplay(modifier: Modifier): {
+  injuryType: string | null;
+  impactZone: string | null;
+} {
+  if (modifier.category !== 'injury') return { injuryType: null, impactZone: null };
+  
+  const te = modifier.triggerEvent;
+  return {
+    injuryType: te?.details.damageType ? toTitleCase(te.details.damageType) : toTitleCase(modifier.name),
+    impactZone: te?.details.impactZone || modifier.bodyPart ? toTitleCase(te?.details.impactZone || modifier.bodyPart || '') : null,
+  };
+}
+
+// Rewind Preview Splash Component - Shows full incident context with visual highlighting
 function RewindPreviewSplash({ 
   modifier, 
   onClose, 
@@ -283,6 +378,9 @@ function RewindPreviewSplash({
   const locationName = getLocationDisplay(modifier);
   const whenDisplay = getWhenDisplay(modifier);
   const phobiaName = getPhobiaName(modifier);
+  const triggerDisplay = getTriggerDisplay(modifier);
+  const injuryDisplay = getInjuryDisplay(modifier);
+  const incidentType = getIncidentTypeLabel(modifier);
   
   // Get the origin snapshot text - this is the primary content
   const snapshotText = modifier.originSnapshot?.text 
@@ -290,30 +388,14 @@ function RewindPreviewSplash({
     || modifier.originNarrative
     || null;
   
-  // Build incident description from structured data
-  const getIncidentDescription = (): string => {
-    const parts: string[] = [];
-    
-    // Add stimulus/trigger info
-    if (modifier.triggerEvent?.details.stimulus) {
-      parts.push(modifier.triggerEvent.details.stimulus);
-    } else if (modifier.incidentDescription) {
-      parts.push(modifier.incidentDescription);
-    }
-    
-    // Add phobia-specific message
-    if (phobiaName) {
-      parts.push(`Your ${phobiaName.toLowerCase()} was triggered.`);
-    } else if (modifier.category === 'psychological') {
-      parts.push('A psychological response was triggered.');
-    } else if (modifier.category === 'injury' && modifier.bodyPart) {
-      parts.push(`Injury to your ${modifier.bodyPart}.`);
-    }
-    
-    return parts.join(' ') || 'An incident occurred.';
-  };
-  
+  const isInjury = modifier.category === 'injury';
+  const isFear = modifier.category === 'phobia' || modifier.category === 'psychological';
   const hasJumpTarget = modifier.originMessage?.messageId;
+  
+  // Determine highlight color based on type
+  const highlightColor = isInjury 
+    ? 'text-modifier-injury border-modifier-injury/50 bg-modifier-injury/10' 
+    : 'text-modifier-neutral border-modifier-neutral/50 bg-modifier-neutral/10';
   
   return (
     <div 
@@ -321,29 +403,30 @@ function RewindPreviewSplash({
       onClick={onClose}
     >
       <div 
-        className="bg-gradient-to-b from-card to-background border-2 border-primary/30 rounded-lg w-full max-w-md animate-fade-in shadow-2xl"
+        className="bg-gradient-to-b from-card to-background border-2 border-primary/30 rounded-lg w-full max-w-md animate-fade-in shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Location & Time */}
-        <div className="p-6 text-center border-b border-border/30">
-          {locationName ? (
-            <>
-              <MapPin className="w-8 h-8 mx-auto mb-3 text-primary" />
-              <h2 className="text-xl font-narrative font-bold text-foreground">
+        {/* Header - Incident Type Badge */}
+        <div className="p-4 text-center border-b border-border/30 bg-background/50">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <AlertTriangle className={cn("w-5 h-5", isInjury ? "text-modifier-injury" : "text-modifier-neutral")} />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Incident Replay
+            </span>
+          </div>
+          
+          {/* Location */}
+          {locationName && (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              <h2 className="text-lg font-narrative font-bold text-foreground">
                 {locationName}
               </h2>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-modifier-injury" />
-              <h2 className="text-xl font-narrative font-bold text-foreground">
-                Incident Replay
-              </h2>
-            </>
+            </div>
           )}
           
-          {/* Timestamp */}
-          <p className="text-sm text-muted-foreground mt-2">
+          {/* Timestamp & Turn */}
+          <p className="text-sm text-muted-foreground">
             {whenDisplay.primary}
           </p>
           {modifier.occurredAt?.turnId !== undefined && (
@@ -353,32 +436,69 @@ function RewindPreviewSplash({
           )}
         </div>
         
-        {/* Content - What happened */}
-        <div className="p-6 space-y-4">
-          {/* Incident Description (structured) */}
-          <p className="text-sm text-foreground leading-relaxed text-center">
-            {getIncidentDescription()}
-          </p>
-          
-          {/* Snapshot Text (the actual narrative excerpt) */}
-          {snapshotText && (
-            <blockquote className="text-sm italic text-muted-foreground leading-relaxed text-center px-4 py-3 bg-background/50 rounded-lg border border-border/30">
-              "{snapshotText}"
-            </blockquote>
-          )}
-          
-          {/* Phobia Badge */}
-          {phobiaName && (
-            <div className="p-3 bg-modifier-neutral/10 border border-modifier-neutral/30 rounded-lg text-center">
-              <p className="text-sm font-medium text-modifier-neutral">
-                {phobiaName}
+        {/* Content - Structured Incident Info */}
+        <div className="p-5 space-y-4">
+          {/* TRIGGER STIMULUS - The main highlighted element */}
+          {triggerDisplay.stimulus && (
+            <div className={cn("p-4 rounded-lg border-2", highlightColor)}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">
+                {isInjury ? 'Injury' : 'Trigger'}
+              </p>
+              <p className={cn("text-base font-medium", isInjury ? "text-modifier-injury" : "text-modifier-neutral")}>
+                {triggerDisplay.stimulus}
               </p>
             </div>
+          )}
+          
+          {/* Injury Impact Zone */}
+          {isInjury && injuryDisplay.impactZone && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Impact Zone:</span>
+              <span className="font-medium text-modifier-injury">{injuryDisplay.impactZone}</span>
+            </div>
+          )}
+          
+          {/* Cause / Source */}
+          {triggerDisplay.cause && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Cause:</span>
+              <span className="font-medium text-foreground">{triggerDisplay.cause}</span>
+            </div>
+          )}
+          
+          {/* Phobia Name (for fear incidents) */}
+          {isFear && phobiaName && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Phobia:</span>
+              <span className="font-medium text-modifier-neutral">
+                {phobiaName}
+                {modifier.triggerEvent?.phobiaId && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({toTitleCase(modifier.triggerEvent.phobiaId)})
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+          
+          {/* Environmental Context */}
+          {triggerDisplay.context && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Context:</span>
+              <span className="text-foreground">{triggerDisplay.context}</span>
+            </div>
+          )}
+          
+          {/* Narrative Excerpt */}
+          {snapshotText && (
+            <blockquote className="text-sm italic text-muted-foreground leading-relaxed px-4 py-3 bg-background/50 rounded-lg border border-border/30">
+              "{snapshotText}"
+            </blockquote>
           )}
         </div>
         
         {/* Actions */}
-        <div className="p-4 border-t border-border/30 flex flex-col gap-3">
+        <div className="p-4 border-t border-border/30 flex flex-col gap-3 bg-background/30">
           {/* Jump to Message (primary action if available) */}
           {hasJumpTarget && onJumpToMessage && (
             <Button 
@@ -543,7 +663,7 @@ export function ModifierDetailModal({ modifier, onClose, onRewind, onJumpToMessa
             )}
           </div>
 
-          {/* HOW - What happened (with phobia name) */}
+          {/* HOW - What happened (with phobia name) - Title Case enforced */}
           {howDisplay && (
             <div className={cn(
               "p-3 rounded-lg border-2",
@@ -554,16 +674,16 @@ export function ModifierDetailModal({ modifier, onClose, onRewind, onJumpToMessa
                 How It Happened
               </h3>
               <p className={cn("text-sm font-medium", colors.text)}>
-                {howDisplay.source}
+                {toTitleCase(howDisplay.source)}
               </p>
               {howDisplay.type && (
-                <p className="text-xs text-muted-foreground mt-1 capitalize">
-                  Type: {howDisplay.type}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Type: {toTitleCase(howDisplay.type)}
                 </p>
               )}
               {howDisplay.phobia && (
                 <p className="text-xs font-medium text-modifier-neutral mt-1">
-                  Phobia: {howDisplay.phobia}
+                  Phobia: {toTitleCase(howDisplay.phobia)}
                 </p>
               )}
               {howDisplay.details && (

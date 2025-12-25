@@ -332,15 +332,27 @@ const NARRATIVE_MODIFIER_PATTERNS: Array<{
   { patterns: [/\b(satisf(ied|ying) meal|ate well|full (stomach|belly))\b/i], modifierName: 'Well Fed', incidentGenerator: () => ({ incident: 'Ate a satisfying, filling meal' }) },
   
   // Psychological
-  { patterns: [/\b(panic(k?(ed|ing))?|terror(ized)?)\b/i], modifierName: 'Panic', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'panic') }) },
-  { patterns: [/\b(fear(ful)?|afraid|scared|frightened)\b/i], modifierName: 'Fear Triggered', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'fear') }) },
+  { patterns: [/\b(panic(k?(ed|ing))?|terror(ized)?)\b/i], modifierName: 'Panic', incidentGenerator: (match, text) => {
+    const result = extractPsychologicalCause(text, 'panic');
+    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+  }},
+  { patterns: [/\b(fear(ful)?|afraid|scared|frightened)\b/i], modifierName: 'Fear Triggered', incidentGenerator: (match, text) => {
+    const result = extractPsychologicalCause(text, 'fear');
+    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+  }},
   { patterns: [/\b(calm(ed|ing)?|peaceful|serene|tranquil)\b/i], modifierName: 'Calm', incidentGenerator: () => ({ incident: 'Found moment of peace and tranquility' }) },
   { patterns: [/\b(focus(ed)?|concentrate[ds]?|sharp mind)\b/i], modifierName: 'Focused', incidentGenerator: () => ({ incident: 'Mind locked into complete concentration' }) },
   { patterns: [/\b(determin(ed|ation)|resolv(ed)?|steely resolve)\b/i], modifierName: 'Determined', incidentGenerator: () => ({ incident: 'Steeled resolve to push forward' }) },
   { patterns: [/\b(inspir(ed|ation|ing))\b/i], modifierName: 'Inspired', incidentGenerator: () => ({ incident: 'Found sudden inspiration or motivation' }) },
-  { patterns: [/\b(guilt(y)?|remorse(ful)?|ashamed)\b/i], modifierName: 'Guilt', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'guilt') }) },
+  { patterns: [/\b(guilt(y)?|remorse(ful)?|ashamed)\b/i], modifierName: 'Guilt', incidentGenerator: (match, text) => {
+    const result = extractPsychologicalCause(text, 'guilt');
+    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+  }},
   { patterns: [/\b(stress(ed)?|overwhelm(ed)?|burden(ed)?)\b/i], modifierName: 'Stress Overload', incidentGenerator: () => ({ incident: 'Overwhelmed by mounting pressures' }) },
-  { patterns: [/\b(flashback|ptsd|trauma trigger)\b/i], modifierName: 'PTSD Response', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'trauma') }) },
+  { patterns: [/\b(flashback|ptsd|trauma trigger)\b/i], modifierName: 'PTSD Response', incidentGenerator: (match, text) => {
+    const result = extractPsychologicalCause(text, 'trauma');
+    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+  }},
   
   // Illness
   { patterns: [/\b(fever(ish)?|burning up|high temperature)\b/i], modifierName: 'Fever', incidentGenerator: () => ({ incident: 'Body temperature elevated from illness' }) },
@@ -357,7 +369,12 @@ const NARRATIVE_MODIFIER_PATTERNS: Array<{
 // Body parts for injury detection
 const BODY_PARTS = ['arm', 'leg', 'hand', 'foot', 'head', 'face', 'chest', 'back', 'shoulder', 'stomach', 'side', 'knee', 'elbow', 'ankle', 'wrist', 'finger', 'toe', 'neck', 'hip', 'thigh', 'calf', 'forearm', 'shin', 'ribs'];
 
-function extractInjuryIncident(matchedWord: string, narrativeText: string, actionWord: string): { incident: string; bodyPart?: string } {
+function extractInjuryIncident(matchedWord: string, narrativeText: string, actionWord: string): { 
+  incident: string; 
+  bodyPart?: string;
+  stimulus?: string;
+  impactDescription?: string;
+} {
   // Try to find a body part near the matched word
   const lowerText = narrativeText.toLowerCase();
   const matchIndex = lowerText.indexOf(matchedWord.toLowerCase());
@@ -365,17 +382,30 @@ function extractInjuryIncident(matchedWord: string, narrativeText: string, actio
   
   for (const part of BODY_PARTS) {
     if (nearbyText.includes(part)) {
+      const formattedPart = part.charAt(0).toUpperCase() + part.slice(1);
+      const formattedAction = actionWord.charAt(0).toUpperCase() + actionWord.slice(1);
       return { 
-        incident: `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} ${part}`,
-        bodyPart: part 
+        incident: `${formattedAction} ${part}`,
+        bodyPart: part,
+        stimulus: `${formattedAction} — ${formattedPart}`,
+        impactDescription: `${formattedAction} injury to the ${part}`,
       };
     }
   }
   
-  return { incident: `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} from incident` };
+  const formattedAction = actionWord.charAt(0).toUpperCase() + actionWord.slice(1);
+  return { 
+    incident: `${formattedAction} from incident`,
+    stimulus: formattedAction,
+    impactDescription: `${formattedAction} from trauma`,
+  };
 }
 
-function extractPsychologicalCause(narrativeText: string, emotionType: string): string {
+function extractPsychologicalCause(narrativeText: string, emotionType: string): { 
+  incident: string; 
+  stimulus?: string;
+  environmentalContext?: string;
+} {
   // Try to extract what caused the psychological state
   const causePatterns = [
     /because of (.+?)[.,!]/i,
@@ -385,15 +415,118 @@ function extractPsychologicalCause(narrativeText: string, emotionType: string): 
     /due to (.+?)[.,!]/i,
   ];
   
+  // Look for environmental context
+  const environmentPatterns = [
+    /in (the )?(dark(ness)?|shadows?|dim light)/i,
+    /in (a )?(small|tight|cramped|enclosed) (space|room|area)/i,
+    /at (great )?height[s]?/i,
+    /near (the )?(water|ocean|sea|lake|river)/i,
+    /surrounded by (people|crowds?|masses)/i,
+  ];
+  
+  let environmentalContext: string | undefined;
+  for (const pattern of environmentPatterns) {
+    const match = narrativeText.match(pattern);
+    if (match) {
+      environmentalContext = match[0].charAt(0).toUpperCase() + match[0].slice(1);
+      break;
+    }
+  }
+  
   for (const pattern of causePatterns) {
     const match = narrativeText.match(pattern);
     if (match && match[1]) {
       const cause = match[1].trim().slice(0, 50); // Limit length
-      return `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} triggered by: ${cause}`;
+      const formattedCause = cause.charAt(0).toUpperCase() + cause.slice(1);
+      return {
+        incident: `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} triggered by: ${cause}`,
+        stimulus: formattedCause,
+        environmentalContext,
+      };
     }
   }
   
-  return `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} response triggered`;
+  return {
+    incident: `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} response triggered`,
+    stimulus: undefined,
+    environmentalContext,
+  };
+}
+
+// Helper functions for enhanced trigger event creation
+
+// Format stimulus text from match - capitalizes properly
+function formatStimulusFromMatch(matchText: string): string {
+  if (!matchText) return '';
+  return matchText.charAt(0).toUpperCase() + matchText.slice(1);
+}
+
+// Determine stimulus type based on narrative context
+function determineStrimulusType(narrativeText: string, eventType: string): 'visual' | 'auditory' | 'tactile' | 'olfactory' | 'situational' {
+  const lower = narrativeText.toLowerCase();
+  
+  // Visual cues
+  if (/\b(see|saw|seen|look|watch|glimpse|spot|notice|eye|sight|vision|shadow|light|dark)\b/.test(lower)) {
+    return 'visual';
+  }
+  
+  // Auditory cues
+  if (/\b(hear|heard|sound|noise|voice|whisper|scream|shout|bang|crash|thunder|echo)\b/.test(lower)) {
+    return 'auditory';
+  }
+  
+  // Tactile cues
+  if (/\b(feel|felt|touch|grab|hit|strike|burn|cold|hot|pain|sting|cut|pierce)\b/.test(lower)) {
+    return 'tactile';
+  }
+  
+  // Olfactory cues
+  if (/\b(smell|scent|odor|stench|aroma|stink|foul|rotten)\b/.test(lower)) {
+    return 'olfactory';
+  }
+  
+  // Default to situational for psychological triggers
+  if (eventType === 'psychological_trigger' || eventType === 'phobia_trigger') {
+    return 'situational';
+  }
+  
+  return 'situational';
+}
+
+// Extract environmental context from narrative
+function extractEnvironmentalContext(narrativeText: string): string | undefined {
+  const lower = narrativeText.toLowerCase();
+  
+  const contextPatterns = [
+    { pattern: /\b(dark(ness)?|shadows?|dim light|unlit|pitch[- ]?black)\b/, context: 'Low light conditions' },
+    { pattern: /\b(small|tight|cramped|enclosed|narrow) (space|room|area|corridor)\b/, context: 'Enclosed space' },
+    { pattern: /\b(high|great) (height|altitude|up|place)\b/, context: 'Elevated position' },
+    { pattern: /\b(water|ocean|sea|lake|river|pool)\b/, context: 'Near water' },
+    { pattern: /\b(crowd|masses|people|group|mob)\b/, context: 'Crowded area' },
+    { pattern: /\b(alone|isolated|solitary|empty|abandoned)\b/, context: 'Isolated location' },
+    { pattern: /\b(storm|thunder|lightning|rain|wind)\b/, context: 'Stormy conditions' },
+    { pattern: /\b(fire|flame|burning|blaze|smoke)\b/, context: 'Near fire' },
+    { pattern: /\b(blood|gore|corpse|dead|body|wound)\b/, context: 'Disturbing scene' },
+  ];
+  
+  for (const { pattern, context } of contextPatterns) {
+    if (pattern.test(lower)) {
+      return context;
+    }
+  }
+  
+  return undefined;
+}
+
+// Format impact zone with proper capitalization
+function formatImpactZone(bodyPart: string): string {
+  if (!bodyPart) return '';
+  
+  // Title case the body part
+  const words = bodyPart.split(/[\s-]+/);
+  return words
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 export interface NarrativeModifierResult {
@@ -475,8 +608,14 @@ export function parseNarrativeForModifiers(
             else if (template.category === 'environment') eventType = 'environmental';
             else if (template.category === 'phobia') eventType = 'phobia_trigger';
             
-            // Generate specific incident description
-            let incidentInfo: { incident: string; bodyPart?: string } | undefined;
+            // Generate specific incident description with enhanced stimulus info
+            let incidentInfo: { 
+              incident: string; 
+              bodyPart?: string; 
+              stimulus?: string;
+              impactDescription?: string;
+              environmentalContext?: string;
+            } | undefined;
             if (incidentGenerator) {
               incidentInfo = incidentGenerator(match, narrativeText);
               modifier.incidentDescription = incidentInfo.incident;
@@ -485,16 +624,20 @@ export function parseNarrativeForModifiers(
               }
             }
             
-            // NEW: Add structured trigger event
-            modifier.triggerEvent = createModifierTriggerEvent(
-              `event_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-              eventType,
-              incidentInfo?.incident || match[0],
-              {
-                stimulus: match[0],
+            // NEW: Add structured trigger event with enhanced stimulus details
+            modifier.triggerEvent = {
+              eventId: `event_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+              type: eventType,
+              source: incidentInfo?.incident || match[0],
+              details: {
+                stimulus: incidentInfo?.stimulus || formatStimulusFromMatch(match[0]),
+                stimulusType: determineStrimulusType(narrativeText, eventType),
+                environmentalContext: incidentInfo?.environmentalContext || extractEnvironmentalContext(narrativeText),
                 bodyPart: incidentInfo?.bodyPart,
-              }
-            );
+                impactZone: incidentInfo?.bodyPart ? formatImpactZone(incidentInfo.bodyPart) : undefined,
+                impactDescription: incidentInfo?.impactDescription,
+              },
+            };
             
             // NEW: Add structured location
             if (context?.locationName) {
