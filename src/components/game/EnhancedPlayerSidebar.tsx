@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Heart, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   User, Swords, Shield, Eye, Brain, Zap, Activity,
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useGameOptional } from '@/contexts/GameContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Wound } from '@/game/diceSystem';
+import { MoodBadge, derivePlayerMood, PlayerMoodIndicator } from './PlayerMoodIndicator';
 
 // ============================================================================
 // TYPES
@@ -265,6 +266,15 @@ export const EnhancedPlayerSidebar: React.FC<EnhancedPlayerSidebarProps> = ({
   const gameContext = useGameOptional();
   const adultContent = gameContext?.adultContent ?? false;
   
+  // Derive player mood from current stats
+  const playerMood = useMemo(() => derivePlayerMood({
+    stress: player.vitals.stress,
+    health: player.vitals.health,
+    energy: player.vitals.energy,
+    tension: player.needs.tension,
+    hunger: player.needs.hunger
+  }), [player.vitals, player.needs]);
+  
   const getEffectiveStat = (statName: keyof PlayerStats): number => {
     let base = player.stats[statName];
     let modifier = 0;
@@ -317,6 +327,9 @@ export const EnhancedPlayerSidebar: React.FC<EnhancedPlayerSidebarProps> = ({
               }}
             />
             
+            {/* Mood indicator badge */}
+            <MoodBadge mood={playerMood} />
+            
             {/* Wound indicator */}
             {player.wounds && player.wounds.length > 0 && (
               <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 border border-background flex items-center justify-center">
@@ -326,10 +339,13 @@ export const EnhancedPlayerSidebar: React.FC<EnhancedPlayerSidebarProps> = ({
           </div>
           
           {isExpanded && (
-            <div className="min-w-0">
-              <h2 className="font-display text-sm font-semibold text-foreground truncate">
-                {player.name}
-              </h2>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-sm font-semibold text-foreground truncate">
+                  {player.name}
+                </h2>
+                <PlayerMoodIndicator mood={playerMood} size="sm" />
+              </div>
               <span className="text-xs text-[var(--accent-secondary)]">{player.role}</span>
             </div>
           )}
