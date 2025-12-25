@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, useMemo } from 'react';
 import { GameState, NPC } from '@/types/game';
 import { formatTime, getNPCsAtLocation } from '@/game/gameEngine';
 import { 
@@ -37,6 +37,7 @@ import {
 import { WoundDisplay } from './WoundDisplay';
 import { Wound } from '@/lib/woundSystem';
 import { getGameSettings } from '@/lib/gameSettings';
+import { PlayerMoodIndicator, derivePlayerMood } from './PlayerMoodIndicator';
 
 interface CharacterPanelProps {
   gameState: GameState;
@@ -110,6 +111,15 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
   const settings = getGameSettings();
   const showTension = settings.adultContent;
   
+  // Derive player mood from current stats
+  const playerMood = useMemo(() => derivePlayerMood({
+    stress: lifeSim?.needs.psychological.stress ?? 20,
+    health: lifeSim?.needs.physical.health ?? player.stats.health,
+    energy: lifeSim?.needs.physical.energy ?? player.stats.energy,
+    tension: lifeSim?.needs.psychological.tension ?? 0,
+    hunger: lifeSim?.needs.physical.hunger ?? player.stats.hunger
+  }), [lifeSim, player.stats]);
+  
   return (
     <>
       {/* Toggle button - always visible */}
@@ -136,9 +146,12 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
         <div className="h-full overflow-y-auto">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-border bg-parchment-dark">
-            <h2 className="text-lg sm:text-xl font-narrative text-gradient-gold glow-text">
-              {player.name}
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-narrative text-gradient-gold glow-text">
+                {player.name}
+              </h2>
+              <PlayerMoodIndicator mood={playerMood} size="md" showLabel />
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Adventurer</p>
           </div>
           
