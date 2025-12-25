@@ -1,6 +1,6 @@
 // Mood History Dropdown - Collapsible timeline of emotional journey
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, History, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, History, Clock, Edit3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   CoreMoodType, 
@@ -9,19 +9,34 @@ import {
   GENRE_MOOD_DESCRIPTORS 
 } from '@/game/moodSystem';
 import { GameGenre } from '@/types/genreData';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+const ALL_MOODS: CoreMoodType[] = [
+  'lusty', 'mad', 'annoyed', 'neutral', 'happy', 
+  'sad', 'depressed', 'fearful', 'determined', 'suspicious'
+];
 
 interface MoodHistoryDropdownProps {
   currentMood: CoreMoodType;
   moodHistory: MoodLogEntry[];
   genre: GameGenre;
   className?: string;
+  manualMoodEnabled?: boolean;
+  onMoodChange?: (mood: CoreMoodType) => void;
 }
 
 export function MoodHistoryDropdown({ 
   currentMood, 
   moodHistory, 
   genre, 
-  className 
+  className,
+  manualMoodEnabled = false,
+  onMoodChange
 }: MoodHistoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   
@@ -44,40 +59,108 @@ export function MoodHistoryDropdown({
   return (
     <div className={cn("bg-background/30 rounded-lg border border-border/20", className)}>
       {/* Header - Always visible */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 hover:bg-background/50 transition-colors rounded-lg"
-      >
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-            style={{ 
-              backgroundColor: `${currentConfig.primary}20`,
-              border: `2px solid ${currentConfig.primary}`,
-              boxShadow: `0 0 8px ${currentConfig.glow}`
-            }}
-          >
-            {currentDescriptor.emoji}
-          </div>
-          <div className="text-left">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <History className="w-3 h-3" />
-              Current Mood
+      <div className="flex items-center justify-between p-3">
+        <div className="flex items-center gap-3 flex-1">
+          {/* Mood indicator with optional selector */}
+          {manualMoodEnabled && onMoodChange ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm relative"
+                    style={{ 
+                      backgroundColor: `${currentConfig.primary}20`,
+                      border: `2px solid ${currentConfig.primary}`,
+                      boxShadow: `0 0 8px ${currentConfig.glow}`
+                    }}
+                  >
+                    {currentDescriptor.emoji}
+                    <Edit3 className="w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5 text-primary bg-background rounded-full p-0.5" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                      <History className="w-3 h-3" />
+                      Current Mood
+                    </div>
+                    <div className="font-semibold flex items-center gap-1" style={{ color: currentConfig.primary }}>
+                      {currentDescriptor.label}
+                      <ChevronDown className="w-3 h-3" />
+                    </div>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-56 bg-card/95 backdrop-blur-md border-border/50 z-[100]"
+              >
+                {ALL_MOODS.map((mood) => {
+                  const moodConfig = MOOD_COLORS[mood];
+                  const moodDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[mood] || GENRE_MOOD_DESCRIPTORS.custom[mood];
+                  const isSelected = mood === currentMood;
+                  return (
+                    <DropdownMenuItem
+                      key={mood}
+                      onClick={() => onMoodChange(mood)}
+                      className={cn("flex items-center gap-2 cursor-pointer", isSelected && "bg-primary/10")}
+                    >
+                      <div 
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                        style={{ 
+                          backgroundColor: `${moodConfig.primary}20`,
+                          border: `2px solid ${moodConfig.primary}`
+                        }}
+                      >
+                        {moodDescriptor.emoji}
+                      </div>
+                      <span style={{ color: moodConfig.primary }}>
+                        {moodDescriptor.label}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                style={{ 
+                  backgroundColor: `${currentConfig.primary}20`,
+                  border: `2px solid ${currentConfig.primary}`,
+                  boxShadow: `0 0 8px ${currentConfig.glow}`
+                }}
+              >
+                {currentDescriptor.emoji}
+              </div>
+              <div className="text-left">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <History className="w-3 h-3" />
+                  Current Mood
+                </div>
+                <div className="font-semibold" style={{ color: currentConfig.primary }}>
+                  {currentDescriptor.label}
+                </div>
+              </div>
             </div>
-            <div className="font-semibold" style={{ color: currentConfig.primary }}>
-              {currentDescriptor.label}
-            </div>
-          </div>
+          )}
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
+        
+        {/* History toggle button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+        >
           {moodHistory.length > 0 && (
             <span className="text-xs bg-background/50 px-2 py-0.5 rounded-full">
               {moodHistory.length} changes
             </span>
           )}
           {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </div>
-      </button>
+        </button>
+      </div>
 
       {/* Expanded History */}
       {isOpen && (
