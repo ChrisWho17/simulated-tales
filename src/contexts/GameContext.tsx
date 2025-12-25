@@ -143,6 +143,7 @@ export const useGameOptional = (): GameContextType | null => {
 
 const SETTINGS_STORAGE_KEY = 'untold-game-settings';
 const CAMPAIGN_MEMORY_KEY = 'untold-campaign-memory';
+const EMOTIONAL_STATE_KEY = 'untold-emotional-state';
 
 const loadSettings = (): GameSettings => {
   try {
@@ -162,6 +163,26 @@ const saveSettings = (settings: GameSettings): void => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
     console.error('Failed to save game settings:', e);
+  }
+};
+
+const loadEmotionalState = (): EmotionalState | null => {
+  try {
+    const saved = localStorage.getItem(EMOTIONAL_STATE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load emotional state:', e);
+  }
+  return null;
+};
+
+const saveEmotionalState = (state: EmotionalState): void => {
+  try {
+    localStorage.setItem(EMOTIONAL_STATE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save emotional state:', e);
   }
 };
 
@@ -216,9 +237,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return loadCampaignMemoryFromStorage();
   });
   
-  // Emotional State
+  // Emotional State - load from storage or create new
   const [emotionalState, setEmotionalState] = useState<EmotionalState>(() => {
-    return createInitialEmotionalState();
+    const saved = loadEmotionalState();
+    return saved || createInitialEmotionalState();
   });
   
   // Apply color theme on mount
@@ -237,6 +259,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       saveCampaignMemoryToStorage(campaignMemory);
     }
   }, [campaignMemory]);
+  
+  // Auto-save emotional state when it changes
+  useEffect(() => {
+    saveEmotionalState(emotionalState);
+  }, [emotionalState]);
   
   const updateSettings = useCallback((partial: Partial<GameSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));

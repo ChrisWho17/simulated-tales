@@ -1,5 +1,5 @@
 // Mood History Dropdown - Collapsible timeline of emotional journey
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, History, Clock, Edit3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -39,9 +39,21 @@ export function MoodHistoryDropdown({
   onMoodChange
 }: MoodHistoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isGlowing, setIsGlowing] = useState(false);
+  const prevMoodRef = useRef(currentMood);
   
   const currentConfig = MOOD_COLORS[currentMood] || MOOD_COLORS.neutral;
   const currentDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[currentMood] || GENRE_MOOD_DESCRIPTORS.custom[currentMood];
+  
+  // Trigger glow animation when mood changes
+  useEffect(() => {
+    if (prevMoodRef.current !== currentMood) {
+      setIsGlowing(true);
+      const timer = setTimeout(() => setIsGlowing(false), 600);
+      prevMoodRef.current = currentMood;
+      return () => clearTimeout(timer);
+    }
+  }, [currentMood]);
   
   // Group history by chapter
   const groupedHistory = moodHistory.reduce((acc, entry) => {
@@ -54,6 +66,14 @@ export function MoodHistoryDropdown({
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Dynamic glow style for animation
+  const glowStyle = isGlowing ? {
+    animation: 'mood-glow 0.6s ease-out',
+    boxShadow: `0 0 20px ${currentConfig.glow}, 0 0 40px ${currentConfig.glow}`
+  } : {
+    boxShadow: `0 0 8px ${currentConfig.glow}`
   };
 
   return (
@@ -70,11 +90,14 @@ export function MoodHistoryDropdown({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm relative"
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm relative transition-all duration-300",
+                      isGlowing && "scale-110"
+                    )}
                     style={{ 
                       backgroundColor: `${currentConfig.primary}20`,
                       border: `2px solid ${currentConfig.primary}`,
-                      boxShadow: `0 0 8px ${currentConfig.glow}`
+                      ...glowStyle
                     }}
                   >
                     {currentDescriptor.emoji}
@@ -126,11 +149,14 @@ export function MoodHistoryDropdown({
           ) : (
             <div className="flex items-center gap-3">
               <div 
-                className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-300",
+                  isGlowing && "scale-110"
+                )}
                 style={{ 
                   backgroundColor: `${currentConfig.primary}20`,
                   border: `2px solid ${currentConfig.primary}`,
-                  boxShadow: `0 0 8px ${currentConfig.glow}`
+                  ...glowStyle
                 }}
               >
                 {currentDescriptor.emoji}
