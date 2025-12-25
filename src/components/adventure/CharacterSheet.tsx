@@ -4,21 +4,15 @@ import { RPGCharacter, getStatModifier, CharacterStats, calculateMaxHealth } fro
 import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
-  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity, ChevronDown
+  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ModifierDisplay, calculateEffectiveStats } from './ModifierDisplay';
 import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
 import { MoodHistoryDropdown } from '@/components/game/MoodHistoryDropdown';
-import { MoodState, deriveMoodFromStats, CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
+import { MoodState, deriveMoodFromStats, CoreMoodType } from '@/game/moodSystem';
 import { useGame } from '@/contexts/GameContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
@@ -250,10 +244,6 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
     health: character.currentHealth,
     energy: 100
   });
-  const currentMoodConfig = MOOD_COLORS[currentMood];
-  const currentMoodDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[currentMood] || GENRE_MOOD_DESCRIPTORS.custom[currentMood];
-  
-  const allMoods: CoreMoodType[] = ['happy', 'neutral', 'sad', 'mad', 'annoyed', 'fearful', 'determined', 'suspicious', 'depressed', 'lusty'];
 
   // Calculate effective stats with modifier effects
   const { effectiveStats, statChanges } = useMemo(() => {
@@ -436,71 +426,12 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
 
               {/* Mood Section */}
               <div className="space-y-3">
-                {/* Manual Mood Selector - only when enabled */}
-                {settings.manualMoodControl && onMoodChange && (
-                  <div className="bg-background/30 rounded-lg border border-border/20 p-3">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                      Set Mood Manually
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="w-full flex items-center justify-between p-2 rounded-md border border-border/30 hover:bg-background/50 transition-colors">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-                              style={{ 
-                                backgroundColor: `${currentMoodConfig.primary}20`,
-                                border: `2px solid ${currentMoodConfig.primary}`,
-                                boxShadow: `0 0 6px ${currentMoodConfig.glow}`
-                              }}
-                            >
-                              {currentMoodDescriptor.emoji}
-                            </div>
-                            <span className="font-medium" style={{ color: currentMoodConfig.primary }}>
-                              {currentMoodDescriptor.label}
-                            </span>
-                          </div>
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent 
-                        align="start" 
-                        className="w-56 bg-card/95 backdrop-blur-md border-border/50 z-[100]"
-                      >
-                        {allMoods.map((mood) => {
-                          const moodConfig = MOOD_COLORS[mood];
-                          const moodDescriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[mood] || GENRE_MOOD_DESCRIPTORS.custom[mood];
-                          return (
-                            <DropdownMenuItem
-                              key={mood}
-                              onClick={() => onMoodChange(mood)}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <div 
-                                className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
-                                style={{ 
-                                  backgroundColor: `${moodConfig.primary}20`,
-                                  border: `2px solid ${moodConfig.primary}`
-                                }}
-                              >
-                                {moodDescriptor.emoji}
-                              </div>
-                              <span style={{ color: moodConfig.primary }}>
-                                {moodDescriptor.label}
-                              </span>
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-
-                {/* Mood History */}
                 <MoodHistoryDropdown
                   currentMood={currentMood}
                   moodHistory={moodState?.moodHistory || []}
                   genre={genre}
+                  manualMoodEnabled={settings.manualMoodControl}
+                  onMoodChange={onMoodChange}
                 />
               </div>
 
