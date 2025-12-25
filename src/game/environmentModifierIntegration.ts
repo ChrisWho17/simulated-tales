@@ -491,9 +491,16 @@ export function parseNarrativeForModifiers(
               {
                 stimulus: match[0],
                 bodyPart: incidentInfo?.bodyPart,
-                location: context?.locationName,
               }
             );
+            
+            // NEW: Add structured location
+            if (context?.locationName) {
+              modifier.location = {
+                locationId: context.locationName.toLowerCase().replace(/\s+/g, '_'),
+                name: context.locationName,
+              };
+            }
             
             // LEGACY: Keep for backward compatibility
             modifier.originLocation = context?.locationName || 'Unknown Location';
