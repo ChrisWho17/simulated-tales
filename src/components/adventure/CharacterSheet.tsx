@@ -10,12 +10,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ModifierDisplay, calculateEffectiveStats } from './ModifierDisplay';
 import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
+import { MoodHistoryDropdown } from '@/components/game/MoodHistoryDropdown';
+import { MoodState, deriveMoodFromStats } from '@/game/moodSystem';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
   onClose: () => void;
   onUpdateCharacter: (character: RPGCharacter & { portraitUrl?: string }) => void;
   modifierState?: ModifierState;
+  moodState?: MoodState;
+  genre?: GameGenre;
   onJumpToMessage?: (messageId: string, turnId: number) => void;
 }
 
@@ -227,7 +231,7 @@ function PortraitDisplay({
   );
 }
 
-export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState, onJumpToMessage }: CharacterSheetProps) {
+export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState, moodState, genre = 'fantasy', onJumpToMessage }: CharacterSheetProps) {
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -410,6 +414,17 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                   </div>
                 </div>
               )}
+
+              {/* Mood History */}
+              <MoodHistoryDropdown
+                currentMood={moodState?.currentMood || deriveMoodFromStats({
+                  stress: 20,
+                  health: character.currentHealth,
+                  energy: 100
+                })}
+                moodHistory={moodState?.moodHistory || []}
+                genre={genre}
+              />
 
               {/* Abilities & Skills */}
               <div className="grid md:grid-cols-2 gap-4">
