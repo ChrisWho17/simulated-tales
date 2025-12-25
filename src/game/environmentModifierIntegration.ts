@@ -256,115 +256,288 @@ export function detectEnvironmentalModifiers(
 // NARRATIVE EVENT PARSER
 // ============================================================================
 
-// Keywords that suggest specific modifiers in narrative text
+// STRICT narrative modifier patterns - only match when context clearly indicates the condition
+// Key principle: modifiers should be STORY-ACCURATE, not triggered by casual word use
 const NARRATIVE_MODIFIER_PATTERNS: Array<{
   patterns: RegExp[];
   modifierName: string;
   severityMultiplier?: number;
   incidentGenerator?: (match: RegExpMatchArray, narrativeText: string) => { incident: string; bodyPart?: string; };
 }> = [
-  // Injuries with specific body part detection
+  // === INJURIES - Only match when actual physical harm is described ===
   { 
-    patterns: [/\b(bruise[ds]?|bruising)\b/i], 
+    // Bruising requires actual physical impact
+    patterns: [/\b(left|leaving|with) (a )?bruise[s]?\b/i, /\b(badly )?bruised (your |the )?\w+\b/i], 
     modifierName: 'Bruising',
+    severityMultiplier: 0.4,
     incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'bruised')
   },
   { 
-    patterns: [/\b(strain(ed)?|pull(ed)? (a )?muscle)\b/i], 
+    // Muscle strain requires overexertion context
+    patterns: [/\bpull(ed)? a muscle\b/i, /\bstrained (your |the )?\w+\b/i, /\bmuscle strain\b/i], 
     modifierName: 'Muscle Strain',
+    severityMultiplier: 0.3,
     incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'strained')
   },
   { 
-    patterns: [/\b(cut[s]?|slice[ds]?|nick(ed)?)\b/i, /\bshallow (wound|cut)\b/i], 
+    // Cuts need actual cutting action, not metaphorical
+    patterns: [/\b(blade|knife|sword|glass|shard) (cut|slice)[sd]?\b/i, /\bcut (open|into|through) (your |the )?\w+\b/i, /\bbleeding from (a |the )?cut\b/i], 
     modifierName: 'Shallow Cut',
+    severityMultiplier: 0.3,
     incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'cut')
   },
   { 
-    patterns: [/\b(burn(ed|s)?|scorch(ed)?)\b/i, /\bminor burn\b/i], 
+    // Burns require actual fire/heat contact
+    patterns: [/\b(fire|flame|heat) burn[sd]?\b/i, /\bburn(ed|s)? (your |the )?(hand|arm|leg|face|skin)\b/i, /\bsuffer(ed|s)? (a |minor )?burns?\b/i], 
     modifierName: 'Minor Burn',
+    severityMultiplier: 0.4,
     incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'burned')
   },
-  { patterns: [/\b(scrape[ds]?|abrasion)\b/i], modifierName: 'Abrasion', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'scraped') },
-  { patterns: [/\bsprain(ed|s)? (your |the )?ankle\b/i, /\btwist(ed)? (your |the )?ankle\b/i], modifierName: 'Sprained Ankle', incidentGenerator: () => ({ incident: 'Twisted or overstretched ankle', bodyPart: 'ankle' }) },
-  { patterns: [/\bsprain(ed|s)? (your |the )?wrist\b/i, /\btwist(ed)? (your |the )?wrist\b/i], modifierName: 'Sprained Wrist', incidentGenerator: () => ({ incident: 'Twisted or overstretched wrist', bodyPart: 'wrist' }) },
   { 
-    patterns: [/\b(break|broke|broken|fracture[ds]?) (your |the )?(leg|arm|limb|bone)\b/i], 
+    // Sprains require specific twisting/falling context
+    patterns: [/\bsprain(ed)? (your |the )?ankle\b/i, /\btwist(ed)? (your |the )?ankle (badly|painfully)\b/i, /\bankle gives? (out|way)\b/i], 
+    modifierName: 'Sprained Ankle', 
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Twisted ankle from fall or misstep', bodyPart: 'ankle' }) 
+  },
+  { 
+    patterns: [/\bsprain(ed)? (your |the )?wrist\b/i, /\btwist(ed)? (your |the )?wrist (badly|painfully)\b/i], 
+    modifierName: 'Sprained Wrist', 
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Twisted wrist from impact', bodyPart: 'wrist' }) 
+  },
+  { 
+    // Broken bones require explicit fracture description
+    patterns: [/\b(hear|heard|feels?) (a |the )?(bone )?snap\b/i, /\bbone (is |was )?broken\b/i, /\bfracture[sd]? (your |the )?(leg|arm|rib|bone)\b/i, /\bbroke (your |the )?(leg|arm|rib)\b/i], 
     modifierName: 'Broken Limb', 
-    severityMultiplier: 0.9,
+    severityMultiplier: 0.7,
     incidentGenerator: (match, text) => {
-      const part = match[3] || 'limb';
-      return { incident: `Bone fracture from trauma`, bodyPart: part };
+      const partMatch = text.match(/\b(leg|arm|rib|hand|foot|finger|collarbone)\b/i);
+      const part = partMatch ? partMatch[1] : 'limb';
+      return { incident: `Bone fracture from severe impact`, bodyPart: part };
     }
   },
-  { patterns: [/\b(concuss(ed|ion)?|head (injury|trauma))\b/i], modifierName: 'Mild Concussion', incidentGenerator: () => ({ incident: 'Blow to the head causing concussion', bodyPart: 'head' }) },
   { 
-    patterns: [/\b(stab(bed)?|pierce[ds]?|impale[ds]?)\b/i], 
-    modifierName: 'Laceration', 
-    severityMultiplier: 0.7,
-    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'stabbed/pierced')
+    // Concussion requires head impact
+    patterns: [/\bhead (slams?|hit|struck|crashes?)\b/i, /\b(skull|head) (cracks?|impacts?)\b/i, /\bsuffer(ed|s)? (a )?concussion\b/i, /\bknocked (out|unconscious)\b/i], 
+    modifierName: 'Mild Concussion', 
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Blow to the head causing concussion', bodyPart: 'head' }) 
   },
   { 
-    patterns: [/\bshot (in |through )?(the )?(arm|leg|shoulder|chest|side|stomach|hand|foot)\b/i, /\b(shot|bullet|gunshot)\b/i], 
+    // Deep wounds require piercing/stabbing context
+    patterns: [/\b(blade|knife|sword|spear) (stabs?|pierces?|runs through)\b/i, /\bstab(bed)? (in|through) (the )?\w+\b/i, /\bdeep (wound|gash|laceration)\b/i], 
+    modifierName: 'Laceration', 
+    severityMultiplier: 0.6,
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'stabbed')
+  },
+  { 
+    // Gunshots require actual shooting
+    patterns: [/\bbullet (hits?|strikes?|tears? through)\b/i, /\bshot (in|through) (the )?(arm|leg|shoulder|chest|side|stomach)\b/i, /\bgunshot wound\b/i], 
     modifierName: 'Bullet Wound', 
     severityMultiplier: 0.8,
     incidentGenerator: (match, text) => {
-      const bodyPartMatch = text.match(/shot (in |through )?(the )?(arm|leg|shoulder|chest|side|stomach|hand|foot)/i);
+      const bodyPartMatch = text.match(/shot (in|through) (the )?(arm|leg|shoulder|chest|side|stomach|hand|foot)/i);
       const part = bodyPartMatch ? bodyPartMatch[3] : undefined;
-      return { incident: part ? `Shot in the ${part}` : 'Gunshot wound from projectile', bodyPart: part };
+      return { incident: part ? `Shot in the ${part}` : 'Gunshot wound', bodyPart: part };
     }
   },
-  { patterns: [/\b(shrapnel|fragment[s]?)\b/i], modifierName: 'Shrapnel Embedded', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'embedded shrapnel') },
-  { patterns: [/\b(infect(ed|ion)?|fester(ing)?)\b/i], modifierName: 'Infection', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'infected') },
-  { patterns: [/\b(shock|traumatic shock)\b/i, /\bgo(es|ing)? into shock\b/i], modifierName: 'Shock', incidentGenerator: () => ({ incident: 'Body went into shock from trauma' }) },
+  { 
+    // Shrapnel requires explosion context
+    patterns: [/\bshrapnel (embeds?|lodges?|tears?)\b/i, /\bfragment[s]? (of |from )?(metal|debris) (in|embedded)\b/i], 
+    modifierName: 'Shrapnel Embedded', 
+    severityMultiplier: 0.6,
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'embedded shrapnel') 
+  },
+  { 
+    // Infection requires wound progression
+    patterns: [/\bwound (is |becomes? |looks? )infected\b/i, /\binfection (sets? in|spreads?)\b/i, /\b(red|swollen) and infected\b/i], 
+    modifierName: 'Infection', 
+    severityMultiplier: 0.5,
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'infected') 
+  },
+  { 
+    // MEDICAL SHOCK - only from severe trauma, NOT emotional surprise
+    patterns: [/\b(going|goes?|went) into (medical |circulatory )?shock\b/i, /\b(body|system) (is )?shutting down\b/i, /\bblood loss causing shock\b/i, /\bshock from (blood loss|severe (injury|trauma|wounds?))\b/i], 
+    modifierName: 'Shock', 
+    severityMultiplier: 0.8,
+    incidentGenerator: () => ({ incident: 'Body went into shock from severe trauma' }) 
+  },
   
-  // Fatigue
-  { patterns: [/\b(winded|out of breath|gasping)\b/i], modifierName: 'Winded', incidentGenerator: () => ({ incident: 'Overexertion causing shortness of breath' }) },
-  { patterns: [/\b(tired|fatigue[ds]?|weary)\b/i], modifierName: 'Fatigued', incidentGenerator: () => ({ incident: 'Physical exhaustion from activity' }) },
-  { patterns: [/\b(exhaust(ed|ion)?|completely drained)\b/i], modifierName: 'Exhausted', incidentGenerator: () => ({ incident: 'Complete physical and mental exhaustion' }) },
-  { patterns: [/\b(overexert(ed)?|push(ed)? (too|yourself) (hard|far))\b/i], modifierName: 'Overexerted', incidentGenerator: () => ({ incident: 'Pushed body beyond safe limits' }) },
-  { patterns: [/\b(sleep deprive[ds]?|haven't slept|no sleep)\b/i], modifierName: 'Sleep Deprived', incidentGenerator: () => ({ incident: 'Extended period without proper sleep' }) },
-  { patterns: [/\b(second wind|renewed energy|surge of energy)\b/i], modifierName: 'Second Wind', incidentGenerator: () => ({ incident: 'Sudden burst of renewed energy' }) },
-  { patterns: [/\b(well[- ]?rested|fully rested|good night'?s? sleep)\b/i], modifierName: 'Well Rested', incidentGenerator: () => ({ incident: 'Fully recovered after quality rest' }) },
+  // === FATIGUE - Only when explicitly describing physical state ===
+  { 
+    patterns: [/\bcompletely? (out of|gasping for) breath\b/i, /\blungs? (burning|screaming)\b/i, /\bcan('t| barely) breathe\b/i], 
+    modifierName: 'Winded',
+    severityMultiplier: 0.3,
+    incidentGenerator: () => ({ incident: 'Overexertion causing shortness of breath' }) 
+  },
+  { 
+    // General tiredness - only when it's a plot point
+    patterns: [/\b(bone[- ]?tired|exhaustion weighs?|fatigue (sets in|overwhelming))\b/i, /\bbody (aches?|screams?) (from|with) (fatigue|exhaustion)\b/i], 
+    modifierName: 'Fatigued',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Physical exhaustion from prolonged activity' }) 
+  },
+  { 
+    patterns: [/\bcollapse[sd]? from exhaustion\b/i, /\bcompletely (exhausted|drained)\b/i, /\bcan('t| barely) (stand|move|keep going)\b/i], 
+    modifierName: 'Exhausted',
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Complete physical and mental exhaustion' }) 
+  },
+  { 
+    patterns: [/\bhaven'?t slept (in|for) (days?|hours)\b/i, /\bsleep[- ]?deprived\b/i, /\bdays? without (proper )?sleep\b/i], 
+    modifierName: 'Sleep Deprived',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Extended period without proper sleep' }) 
+  },
+  { 
+    patterns: [/\bsecond wind (kicks? in|hits?|surges?)\b/i, /\bsudden burst of (renewed )?energy\b/i, /\brenewed (strength|vigor)\b/i], 
+    modifierName: 'Second Wind',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Sudden burst of renewed energy' }) 
+  },
+  { 
+    patterns: [/\bwell[- ]?rested (and|feeling)\b/i, /\bfeel(ing)? (fully )?refreshed\b/i, /\bgood night'?s? sleep\b/i], 
+    modifierName: 'Well Rested',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Fully recovered after quality rest' }) 
+  },
   
-  // Nutrition
-  { patterns: [/\b(hungry|hunger|stomach (growl|rumbl))\b/i], modifierName: 'Hungry', incidentGenerator: () => ({ incident: 'Stomach growling from lack of food' }) },
-  { patterns: [/\b(starv(ing|ed)?|famish(ed)?)\b/i], modifierName: 'Starving', incidentGenerator: () => ({ incident: 'Severe hunger from prolonged lack of food' }) },
-  { patterns: [/\b(dehydrat(ed|ion)?|parched|thirst(y)?)\b/i], modifierName: 'Dehydrated', incidentGenerator: () => ({ incident: 'Lack of water intake' }) },
-  { patterns: [/\b(satisf(ied|ying) meal|ate well|full (stomach|belly))\b/i], modifierName: 'Well Fed', incidentGenerator: () => ({ incident: 'Ate a satisfying, filling meal' }) },
+  // === NUTRITION - Only when hunger/thirst is a plot element ===
+  { 
+    patterns: [/\bstomach (growl|rumbl)(s|ing)\b/i, /\bpangs? of hunger\b/i, /\bhunger gnaw(s|ing)\b/i], 
+    modifierName: 'Hungry',
+    severityMultiplier: 0.3,
+    incidentGenerator: () => ({ incident: 'Stomach growling from lack of food' }) 
+  },
+  { 
+    patterns: [/\bstarving (and|from)\b/i, /\bfamished\b/i, /\bdays? without (food|eating)\b/i, /\bweak (from|with) hunger\b/i], 
+    modifierName: 'Starving',
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Severe hunger from prolonged lack of food' }) 
+  },
+  { 
+    patterns: [/\bseverely dehydrated\b/i, /\blips? (are )?cracked (from|and dry)\b/i, /\bdesperately? need(s|ing)? water\b/i], 
+    modifierName: 'Dehydrated',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Dangerous lack of water intake' }) 
+  },
+  { 
+    patterns: [/\b(satisfying|hearty|filling) meal\b/i, /\bstomach (is )?full\b/i, /\bwell[- ]?fed (and|feeling)\b/i], 
+    modifierName: 'Well Fed',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Ate a satisfying, filling meal' }) 
+  },
   
-  // Psychological
-  { patterns: [/\b(panic(k?(ed|ing))?|terror(ized)?)\b/i], modifierName: 'Panic', incidentGenerator: (match, text) => {
-    const result = extractPsychologicalCause(text, 'panic');
-    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
-  }},
-  { patterns: [/\b(fear(ful)?|afraid|scared|frightened)\b/i], modifierName: 'Fear Triggered', incidentGenerator: (match, text) => {
-    const result = extractPsychologicalCause(text, 'fear');
-    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
-  }},
-  { patterns: [/\b(calm(ed|ing)?|peaceful|serene|tranquil)\b/i], modifierName: 'Calm', incidentGenerator: () => ({ incident: 'Found moment of peace and tranquility' }) },
-  { patterns: [/\b(focus(ed)?|concentrate[ds]?|sharp mind)\b/i], modifierName: 'Focused', incidentGenerator: () => ({ incident: 'Mind locked into complete concentration' }) },
-  { patterns: [/\b(determin(ed|ation)|resolv(ed)?|steely resolve)\b/i], modifierName: 'Determined', incidentGenerator: () => ({ incident: 'Steeled resolve to push forward' }) },
-  { patterns: [/\b(inspir(ed|ation|ing))\b/i], modifierName: 'Inspired', incidentGenerator: () => ({ incident: 'Found sudden inspiration or motivation' }) },
-  { patterns: [/\b(guilt(y)?|remorse(ful)?|ashamed)\b/i], modifierName: 'Guilt', incidentGenerator: (match, text) => {
-    const result = extractPsychologicalCause(text, 'guilt');
-    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
-  }},
-  { patterns: [/\b(stress(ed)?|overwhelm(ed)?|burden(ed)?)\b/i], modifierName: 'Stress Overload', incidentGenerator: () => ({ incident: 'Overwhelmed by mounting pressures' }) },
-  { patterns: [/\b(flashback|ptsd|trauma trigger)\b/i], modifierName: 'PTSD Response', incidentGenerator: (match, text) => {
-    const result = extractPsychologicalCause(text, 'trauma');
-    return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
-  }},
+  // === PSYCHOLOGICAL - Only intense emotional states, not casual mentions ===
+  { 
+    // Panic requires actual panic attack or overwhelming fear
+    patterns: [/\bpanic (attack|sets in|overwhelms?)\b/i, /\b(heart|pulse) (pounding|racing) (with|from) (fear|panic)\b/i, /\bfrozen (with|in) (terror|panic)\b/i], 
+    modifierName: 'Panic',
+    severityMultiplier: 0.4,
+    incidentGenerator: (match, text) => {
+      const result = extractPsychologicalCause(text, 'panic');
+      return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+    }
+  },
+  { 
+    // Fear only when it's debilitating, not casual "you feel afraid"
+    patterns: [/\bparalyz(ed|ing) (with|by) fear\b/i, /\bterror grip(s|ping)\b/i, /\bfear (overwhelms?|consumes?)\b/i, /\bshaking (with|from) fear\b/i], 
+    modifierName: 'Fear Triggered',
+    severityMultiplier: 0.4,
+    incidentGenerator: (match, text) => {
+      const result = extractPsychologicalCause(text, 'fear');
+      return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+    }
+  },
+  { 
+    patterns: [/\b(deep |inner )?(calm|peace) (washes?|settles?|comes?) over\b/i, /\bfind(s|ing)? (inner )?peace\b/i, /\bmind (is |becomes? )?clear\b/i], 
+    modifierName: 'Calm',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Found moment of peace and tranquility' }) 
+  },
+  { 
+    patterns: [/\blaser[- ]?focused\b/i, /\b(mind|focus) sharpen(s|ed)\b/i, /\bcomplete(ly)? focused\b/i], 
+    modifierName: 'Focused',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Mind locked into complete concentration' }) 
+  },
+  { 
+    patterns: [/\bsteel(s|ed|ing)? (your |the )?resolve\b/i, /\bdetermination (burns?|hardens?)\b/i, /\bunwavering (resolve|determination)\b/i], 
+    modifierName: 'Determined',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Steeled resolve to push forward' }) 
+  },
+  { 
+    patterns: [/\b(guilt|shame) (overwhelms?|consumes?|weighs?)\b/i, /\bcrushing (guilt|shame)\b/i, /\bhaunt(ed|ing) by guilt\b/i], 
+    modifierName: 'Guilt',
+    severityMultiplier: 0.4,
+    incidentGenerator: (match, text) => {
+      const result = extractPsychologicalCause(text, 'guilt');
+      return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+    }
+  },
+  { 
+    patterns: [/\bstress (is |becomes? )?overwhelming\b/i, /\bcrack(ing|s)? under (the )?(pressure|stress)\b/i], 
+    modifierName: 'Stress Overload',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Overwhelmed by mounting pressures' }) 
+  },
+  { 
+    patterns: [/\b(flashback|ptsd) (hits?|strikes?|triggers?)\b/i, /\btraumatic memor(y|ies) (flood|surge)\b/i, /\breliving (the )?trauma\b/i], 
+    modifierName: 'PTSD Response',
+    severityMultiplier: 0.5,
+    incidentGenerator: (match, text) => {
+      const result = extractPsychologicalCause(text, 'trauma');
+      return { incident: result.incident, stimulus: result.stimulus, environmentalContext: result.environmentalContext };
+    }
+  },
   
-  // Illness
-  { patterns: [/\b(fever(ish)?|burning up|high temperature)\b/i], modifierName: 'Fever', incidentGenerator: () => ({ incident: 'Body temperature elevated from illness' }) },
-  { patterns: [/\b(food poison(ing|ed)?|sick from (the )?food)\b/i], modifierName: 'Food Poisoning', incidentGenerator: () => ({ incident: 'Ate contaminated or spoiled food' }) },
-  { patterns: [/\b(nause(a|ous)|sick to (your |the )?stomach|queasy)\b/i], modifierName: 'Nausea', incidentGenerator: () => ({ incident: 'Stomach upset causing nausea' }) },
+  // === ILLNESS - Only actual sickness, not metaphorical ===
+  { 
+    patterns: [/\b(running |have |has )?(a )?high fever\b/i, /\bburning (up )?with fever\b/i, /\bfever spikes?\b/i], 
+    modifierName: 'Fever',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Body temperature elevated from illness' }) 
+  },
+  { 
+    patterns: [/\b(food )?poison(ed|ing)\b/i, /\bate (something )?bad\b/i, /\b(spoiled|rotten|tainted) food\b/i], 
+    modifierName: 'Food Poisoning',
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Ate contaminated or spoiled food' }) 
+  },
+  { 
+    patterns: [/\b(nausea |sick(ness)? )(overwhelms?|hits?|waves?)\b/i, /\bvomit(s|ing|ed)\b/i, /\babout to (be )?sick\b/i], 
+    modifierName: 'Nausea',
+    severityMultiplier: 0.3,
+    incidentGenerator: () => ({ incident: 'Stomach upset causing nausea' }) 
+  },
   
-  // Chemical/Medical
-  { patterns: [/\b(painkiller|pain (med(ication)?|relief)|(took|take) (some )?medicine)\b/i], modifierName: 'Pain Suppression', incidentGenerator: () => ({ incident: 'Took pain medication for relief' }) },
-  { patterns: [/\b(stimulant|caffeine|energy (drink|boost)|adrenaline (shot|rush))\b/i], modifierName: 'Stimulant Effect', incidentGenerator: () => ({ incident: 'Consumed stimulant for energy boost' }) },
-  { patterns: [/\b(drunk|intoxicat(ed)?|inebriat(ed)?)\b/i], modifierName: 'Intoxicated', incidentGenerator: () => ({ incident: 'Consumed too much alcohol' }) },
-  { patterns: [/\b(withdraw(al|ing)?|craving|need (a|the) (fix|hit|dose))\b/i], modifierName: 'Withdrawal', incidentGenerator: () => ({ incident: 'Body craving absent substance' }) },
+  // === CHEMICAL/MEDICAL - Only explicit substance use ===
+  { 
+    patterns: [/\b(inject|take|swallow)(s|ed)? (a )?painkiller\b/i, /\bpain (meds?|medication|relief) (kicks? in|helps?)\b/i], 
+    modifierName: 'Pain Suppression',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Took pain medication for relief' }) 
+  },
+  { 
+    patterns: [/\b(caffeine|stimulant) (kicks? in|hits?|surges?)\b/i, /\badrenaline (shot|surge|rush)\b/i, /\benergy (drink|boost) (kicks? in|helps?)\b/i], 
+    modifierName: 'Stimulant Effect',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Consumed stimulant for energy boost' }) 
+  },
+  { 
+    patterns: [/\bstumbl(es?|ing) drunkenly\b/i, /\btoo (much )?(drunk|intoxicated)\b/i, /\bslurred (speech|words)\b/i], 
+    modifierName: 'Intoxicated',
+    severityMultiplier: 0.4,
+    incidentGenerator: () => ({ incident: 'Consumed too much alcohol' }) 
+  },
+  { 
+    patterns: [/\bwithdrawal (symptoms?|hits?|begins?)\b/i, /\b(craving|need)(s|ing)? (a|the) (fix|hit|dose)\b/i, /\bbody (shak|trembl)(es?|ing) (from|with) withdrawal\b/i], 
+    modifierName: 'Withdrawal',
+    severityMultiplier: 0.5,
+    incidentGenerator: () => ({ incident: 'Body craving absent substance' }) 
+  },
 ];
 
 // Body parts for injury detection
@@ -536,9 +709,10 @@ export interface NarrativeModifierResult {
   confidence: number;
 }
 
-// Minimum confidence threshold for narrative parsing
-const NARRATIVE_CONFIDENCE_THRESHOLD = 0.6;
-const MAX_NARRATIVE_MODIFIERS_PER_PARSE = 2; // Only apply top 2 most confident modifiers per narrative
+// Minimum confidence threshold for narrative parsing - raised for story accuracy
+const NARRATIVE_CONFIDENCE_THRESHOLD = 0.75;
+// Only apply 1 modifier per narrative turn to prevent condition spam
+const MAX_NARRATIVE_MODIFIERS_PER_PARSE = 1;
 
 export interface NarrativeContext {
   locationName?: string;
@@ -680,8 +854,19 @@ export function parseNarrativeForModifiers(
               };
             }
             
-            // Calculate confidence based on pattern specificity
-            const confidence = pattern.source.length > 20 ? 0.9 : 0.7;
+            // Calculate confidence based on pattern specificity and severity
+            // More specific patterns (longer regex) get higher confidence
+            // Severe conditions require higher confidence to prevent false positives
+            let confidence = pattern.source.length > 30 ? 0.9 : pattern.source.length > 20 ? 0.85 : 0.75;
+            
+            // Severe modifiers (like shock, broken limb) need extra confirmation
+            if (contextSeverity >= 0.6) {
+              // For severe conditions, require the pattern to be very specific
+              confidence = pattern.source.length > 25 ? 0.85 : 0.65;
+            }
+            
+            // Log what we're considering
+            console.log(`[Modifier Parser] Considering "${modifierName}" (severity: ${contextSeverity.toFixed(2)}, confidence: ${confidence.toFixed(2)}) from: "${match[0]}"`);
             
             if (confidence >= NARRATIVE_CONFIDENCE_THRESHOLD) {
               results.push({
