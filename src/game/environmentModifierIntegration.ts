@@ -19,6 +19,7 @@ import {
   PSYCHOLOGICAL_TEMPLATES,
   ILLNESS_TEMPLATES,
   CHEMICAL_TEMPLATES,
+  PHOBIA_TEMPLATES,
 } from './buffDebuffSystem';
 import {
   PlayerCondition,
@@ -320,13 +321,19 @@ export interface NarrativeModifierResult {
 const NARRATIVE_CONFIDENCE_THRESHOLD = 0.6;
 const MAX_NARRATIVE_MODIFIERS_PER_PARSE = 2; // Only apply top 2 most confident modifiers per narrative
 
+export interface NarrativeContext {
+  locationName?: string;
+  narrativeTime?: string;
+}
+
 /**
  * Parse narrative text for implied modifiers (with strict limits)
  */
 export function parseNarrativeForModifiers(
   narrativeText: string,
   campaignId: string,
-  currentTick: number
+  currentTick: number,
+  context?: NarrativeContext
 ): NarrativeModifierResult[] {
   const results: NarrativeModifierResult[] = [];
   const foundModifiers = new Set<string>(); // Prevent duplicates
@@ -365,6 +372,17 @@ export function parseNarrativeForModifiers(
             );
             
             modifier.severity = contextSeverity;
+            
+            // Add origin information for detail modal
+            modifier.originLocation = context?.locationName || 'Unknown Location';
+            modifier.originTimestamp = context?.narrativeTime || 'Recently';
+            // Extract a snippet around the match for narrative context
+            const matchIndex = narrativeText.indexOf(match[0]);
+            const snippetStart = Math.max(0, matchIndex - 30);
+            const snippetEnd = Math.min(narrativeText.length, matchIndex + match[0].length + 50);
+            modifier.originNarrative = narrativeText.slice(snippetStart, snippetEnd).trim();
+            if (snippetStart > 0) modifier.originNarrative = '...' + modifier.originNarrative;
+            if (snippetEnd < narrativeText.length) modifier.originNarrative += '...';
             
             // Calculate confidence based on pattern specificity
             const confidence = pattern.source.length > 20 ? 0.9 : 0.7;
@@ -667,14 +685,15 @@ export class ModifierManager {
   /**
    * Process narrative text for modifiers
    */
-  processNarrative(narrativeText: string): NarrativeModifierResult[] {
+  processNarrative(narrativeText: string, context?: NarrativeContext): NarrativeModifierResult[] {
     try {
       if (!this.config.narrativeParsingEnabled || !narrativeText) return [];
 
       const results = parseNarrativeForModifiers(
         narrativeText,
         this.campaignId,
-        this.currentTick
+        this.currentTick,
+        context
       );
 
       for (const result of results) {
@@ -789,5 +808,125 @@ export function createEnvironmentContext(
     },
     indoors,
     shelterQuality,
+  };
+}
+
+// ============================================================================
+// PHOBIA CREATION HELPERS
+// ============================================================================
+
+// Map phobia IDs from character creation to modifier template names
+const PHOBIA_ID_TO_TEMPLATE: Record<string, string> = {
+  'fear_heights': 'Fear of Heights',
+  'fear_darkness': 'Fear of Darkness',
+  'fear_water': 'Fear of Water',
+  'fear_crowds': 'Fear of Crowds',
+  'fear_enclosed': 'Fear of Enclosed Spaces',
+  'fear_spiders': 'Fear of Spiders',
+  'fear_blood': 'Fear of Blood',
+  'fear_fire': 'Fear of Fire',
+  'fear_storms': 'Fear of Storms',
+  'fear_dead': 'Fear of the Dead',
+  'fear_isolation': 'Fear of Isolation',
+  'fear_failure': 'Fear of Failure',
+};
+
+/**
+ * Create phobia modifiers from character creation selections
+ */
+export function createPhobiasFromSelection(
+  phobiaIds: string[],
+  campaignId: string,
+  currentTick: number
+): Modifier[] {
+  const phobias: Modifier[] = [];
+  
+  for (const phobiaId of phobiaIds) {
+    const templateName = PHOBIA_ID_TO_TEMPLATE[phobiaId];
+    if (!templateName) continue;
+    
+    const template = PHOBIA_TEMPLATES.find(t => t.name === templateName);
+    if (!template) {
+      // Create a generic phobia if template not found
+      const phobia: Modifier = {
+        id: `phobia_${phobiaId}_${Date.now()}`,
+        campaignId,
+        entity: 'player',
+        type: 'debuff',
+        category: 'phobia',
+        name: phobiaId.replace('fear_', 'Fear of ').replace(/_/g, ' '),
+        description: 'A persistent fear that affects behavior',
+        severity: 0.5,
+        effects: [], // Phobias don't affect stats
+        duration: { type: 'condition', remaining: Infinity, total: Infinity },
+        stackingRule: 'exclusive',
+        decayModel: 'conditional',
+        originEvent: 'character_creation',
+        originLocation: 'Character Background',
+        originNarrative: 'A fear that has always been part of who you are.',
+        provenance: 'reported',
+        confidence: 1,
+        visibility: 'player_only',
+        resolutionPaths: ['therapy', 'overcoming_fear'],
+        promotionPolicy: 'expire',
+        recurrence: 0,
+        emotionalWeight: 0.5,
+        appliedAt: currentTick,
+        stacks: 1,
+      };
+      phobias.push(phobia);
+    } else {
+      const modifier = createModifierFromTemplate(
+        template,
+        campaignId,
+        'player',
+        'character_creation',
+        currentTick
+      );
+      modifier.originLocation = 'Character Background';
+      modifier.originNarrative = 'A fear that has always been part of who you are.';
+      phobias.push(modifier);
+    }
+  }
+  
+  return phobias;
+}
+
+/**
+ * Create a trauma-induced phobia from narrative events
+ */
+export function createTraumaPhobia(
+  phobiaName: string,
+  description: string,
+  campaignId: string,
+  currentTick: number,
+  context?: NarrativeContext
+): Modifier {
+  return {
+    id: `trauma_phobia_${Date.now()}`,
+    campaignId,
+    entity: 'player',
+    type: 'debuff',
+    category: 'phobia',
+    name: phobiaName,
+    description,
+    severity: 0.6,
+    effects: [], // Phobias don't affect stats
+    duration: { type: 'condition', remaining: Infinity, total: Infinity },
+    stackingRule: 'exclusive',
+    decayModel: 'conditional',
+    originEvent: 'trauma',
+    originLocation: context?.locationName || 'Unknown Location',
+    originTimestamp: context?.narrativeTime,
+    originNarrative: `A traumatic experience has left you with this lasting fear.`,
+    provenance: 'observed',
+    confidence: 1,
+    visibility: 'player_only',
+    resolutionPaths: ['therapy', 'overcoming_fear', 'time'],
+    promotionPolicy: 'expire',
+    recurrence: 0,
+    emotionalWeight: 0.7,
+    appliedAt: currentTick,
+    stacks: 1,
   };
 }

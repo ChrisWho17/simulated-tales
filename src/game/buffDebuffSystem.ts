@@ -63,6 +63,9 @@ export interface Modifier {
   stackingRule: StackingRule;
   decayModel: DecayModel;
   originEvent: string;
+  originLocation?: string; // Where this modifier was acquired
+  originTimestamp?: string; // When this modifier was acquired (narrative time)
+  originNarrative?: string; // Brief description of what caused it
   provenance: 'observed' | 'inferred' | 'reported';
   confidence: number;
   visibility: Visibility;
@@ -298,6 +301,10 @@ export const PHOBIA_TEMPLATES: ModifierTemplate[] = [
   { name: 'Fear of Spiders', type: 'debuff', category: 'phobia', description: 'Intense fear of arachnids', baseSeverity: 0.4, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy'], promotionPolicy: 'expire', visibility: 'player_only' },
   { name: 'Fear of Blood', type: 'debuff', category: 'phobia', description: 'Intense reaction to blood', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'desensitization'], promotionPolicy: 'expire', visibility: 'player_only' },
   { name: 'Fear of Fire', type: 'debuff', category: 'phobia', description: 'Intense fear of flames', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Storms', type: 'debuff', category: 'phobia', description: 'Anxious during thunderstorms', baseSeverity: 0.4, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'shelter'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of the Dead', type: 'debuff', category: 'phobia', description: 'Uncomfortable around corpses', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'exposure'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Isolation', type: 'debuff', category: 'phobia', description: 'Afraid of being alone', baseSeverity: 0.45, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'companionship'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Failure', type: 'debuff', category: 'phobia', description: 'Paralyzed by fear of failing', baseSeverity: 0.4, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'small_victories'], promotionPolicy: 'expire', visibility: 'player_only' },
 ];
 
 // Combine all templates
