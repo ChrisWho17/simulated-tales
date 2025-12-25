@@ -21,74 +21,109 @@ export type CoreMoodType =
   | 'suspicious' // Cyan - Wary, distrustful, guarded;
 
 // ===== MOOD COLOR MAPPING =====
+// Updated per PDF spec: soft, translucent glows (30-50% opacity)
+// Colors chosen to match dark fantasy palette with desaturated tints
 
 export interface MoodColorConfig {
-  primary: string;      // Hex color
+  primary: string;      // Hex color (slightly desaturated for elegance)
   bg: string;           // Tailwind bg class
-  glow: string;         // RGBA for shadows
+  glow: string;         // RGBA for text-shadow (low opacity for frosted effect)
+  glowStrong: string;   // RGBA for name frost (slightly more visible)
   border: string;       // Border color
+  opacity: number;      // Base opacity for highlighting (0.3-0.5)
+  glowRadius: number;   // Blur radius in px
 }
 
 export const MOOD_COLORS: Record<CoreMoodType, MoodColorConfig> = {
   lusty: {
-    primary: '#ec4899',
-    bg: 'bg-pink-500/20',
-    glow: 'rgba(236, 72, 153, 0.5)',
-    border: '#ec4899'
+    primary: '#E68AB5',      // Soft pink (desaturated from pure pink)
+    bg: 'bg-pink-400/15',
+    glow: 'rgba(230, 138, 181, 0.35)',
+    glowStrong: 'rgba(230, 138, 181, 0.5)',
+    border: '#E68AB5',
+    opacity: 0.4,
+    glowRadius: 6
   },
   mad: {
-    primary: '#ef4444',
-    bg: 'bg-red-500/20',
-    glow: 'rgba(239, 68, 68, 0.5)',
-    border: '#ef4444'
+    primary: '#BB3333',      // Deep crimson (not bright red)
+    bg: 'bg-red-800/15',
+    glow: 'rgba(187, 51, 51, 0.4)',
+    glowStrong: 'rgba(187, 51, 51, 0.55)',
+    border: '#BB3333',
+    opacity: 0.5,
+    glowRadius: 8
   },
   annoyed: {
-    primary: '#f97316',
-    bg: 'bg-orange-500/20',
-    glow: 'rgba(249, 115, 22, 0.5)',
-    border: '#f97316'
+    primary: '#D97706',      // Muted amber
+    bg: 'bg-amber-600/15',
+    glow: 'rgba(217, 119, 6, 0.35)',
+    glowStrong: 'rgba(217, 119, 6, 0.5)',
+    border: '#D97706',
+    opacity: 0.4,
+    glowRadius: 5
   },
   neutral: {
     primary: '#9ca3af',
-    bg: 'bg-gray-400/20',
-    glow: 'rgba(156, 163, 175, 0.3)',
-    border: '#9ca3af'
+    bg: 'bg-gray-400/10',
+    glow: 'rgba(156, 163, 175, 0.2)',
+    glowStrong: 'rgba(156, 163, 175, 0.3)',
+    border: '#9ca3af',
+    opacity: 0.3,
+    glowRadius: 4
   },
   happy: {
-    primary: '#22c55e',
-    bg: 'bg-green-500/20',
-    glow: 'rgba(34, 197, 94, 0.5)',
-    border: '#22c55e'
+    primary: '#F4D35E',      // Warm gold (not bright green)
+    bg: 'bg-amber-300/15',
+    glow: 'rgba(244, 211, 94, 0.4)',
+    glowStrong: 'rgba(244, 211, 94, 0.55)',
+    border: '#F4D35E',
+    opacity: 0.5,
+    glowRadius: 6
   },
   sad: {
-    primary: '#3b82f6',
-    bg: 'bg-blue-500/20',
-    glow: 'rgba(59, 130, 246, 0.5)',
-    border: '#3b82f6'
+    primary: '#8899CC',      // Grey-blue (desaturated)
+    bg: 'bg-slate-400/15',
+    glow: 'rgba(136, 153, 204, 0.35)',
+    glowStrong: 'rgba(136, 153, 204, 0.5)',
+    border: '#8899CC',
+    opacity: 0.4,
+    glowRadius: 5
   },
   depressed: {
-    primary: '#8b5cf6',
-    bg: 'bg-purple-500/20',
-    glow: 'rgba(139, 92, 246, 0.5)',
-    border: '#8b5cf6'
+    primary: '#6B5B95',      // Muted purple-grey
+    bg: 'bg-purple-800/15',
+    glow: 'rgba(107, 91, 149, 0.35)',
+    glowStrong: 'rgba(107, 91, 149, 0.5)',
+    border: '#6B5B95',
+    opacity: 0.4,
+    glowRadius: 5
   },
   fearful: {
-    primary: '#eab308',
-    bg: 'bg-yellow-500/20',
-    glow: 'rgba(234, 179, 8, 0.5)',
-    border: '#eab308'
+    primary: '#7DAFFF',      // Pale icy blue
+    bg: 'bg-blue-300/15',
+    glow: 'rgba(125, 175, 255, 0.4)',
+    glowStrong: 'rgba(125, 175, 255, 0.55)',
+    border: '#7DAFFF',
+    opacity: 0.45,
+    glowRadius: 6
   },
   determined: {
-    primary: '#f1f5f9',
-    bg: 'bg-slate-200/20',
-    glow: 'rgba(241, 245, 249, 0.5)',
-    border: '#f1f5f9'
+    primary: '#E8E8E8',      // Bright white-grey
+    bg: 'bg-slate-100/15',
+    glow: 'rgba(232, 232, 232, 0.4)',
+    glowStrong: 'rgba(232, 232, 232, 0.55)',
+    border: '#E8E8E8',
+    opacity: 0.45,
+    glowRadius: 6
   },
   suspicious: {
-    primary: '#06b6d4',
-    bg: 'bg-cyan-500/20',
-    glow: 'rgba(6, 182, 212, 0.5)',
-    border: '#06b6d4'
+    primary: '#5EADB0',      // Soft teal (desaturated cyan)
+    bg: 'bg-teal-500/15',
+    glow: 'rgba(94, 173, 176, 0.35)',
+    glowStrong: 'rgba(94, 173, 176, 0.5)',
+    border: '#5EADB0',
+    opacity: 0.4,
+    glowRadius: 5
   }
 };
 
@@ -1072,12 +1107,38 @@ export const MOOD_KEYWORDS: Record<CoreMoodType, string[]> = {
   ]
 };
 
+// Max keywords to highlight per paragraph (PDF spec: 3-5 max for readability)
+export const MAX_KEYWORDS_PER_PARAGRAPH = 4;
+
 // Check if a word should be tinted for the current mood
 export function shouldTintWord(word: string, mood: CoreMoodType): boolean {
   if (mood === 'neutral') return false;
   const keywords = MOOD_KEYWORDS[mood] || [];
   const lowerWord = word.toLowerCase().replace(/[^a-z]/g, '');
   return keywords.some(kw => lowerWord.includes(kw) || kw.includes(lowerWord));
+}
+
+// Get tintable keywords from text with a max count (PDF spec: max 3-5 per paragraph)
+export function getTintableKeywords(
+  text: string, 
+  mood: CoreMoodType, 
+  maxCount: number = MAX_KEYWORDS_PER_PARAGRAPH
+): Set<string> {
+  if (mood === 'neutral') return new Set();
+  
+  const keywords = MOOD_KEYWORDS[mood] || [];
+  const words = text.toLowerCase().split(/\s+/);
+  const matches = new Set<string>();
+  
+  for (const word of words) {
+    if (matches.size >= maxCount) break;
+    const cleanWord = word.replace(/[^a-z]/g, '');
+    if (keywords.some(kw => cleanWord.includes(kw) || kw.includes(cleanWord))) {
+      matches.add(cleanWord);
+    }
+  }
+  
+  return matches;
 }
 
 // ===== MOOD HISTORY TRACKING =====
