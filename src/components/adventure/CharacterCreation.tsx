@@ -32,7 +32,23 @@ interface CharacterCreationProps {
   isLoading: boolean;
 }
 
-type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | 'traits' | 'portrait';
+type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | 'traits' | 'phobias' | 'portrait';
+
+// Available phobias for character creation
+const AVAILABLE_PHOBIAS = [
+  { id: 'fear_heights', name: 'Fear of Heights', description: 'Intense fear when in high places' },
+  { id: 'fear_darkness', name: 'Fear of Darkness', description: 'Uncomfortable in dark environments' },
+  { id: 'fear_water', name: 'Fear of Water', description: 'Afraid of deep water or swimming' },
+  { id: 'fear_crowds', name: 'Fear of Crowds', description: 'Anxious in crowded spaces' },
+  { id: 'fear_enclosed', name: 'Fear of Enclosed Spaces', description: 'Claustrophobic in tight areas' },
+  { id: 'fear_spiders', name: 'Fear of Spiders', description: 'Terrified of arachnids' },
+  { id: 'fear_blood', name: 'Fear of Blood', description: 'Uneasy at the sight of blood' },
+  { id: 'fear_fire', name: 'Fear of Fire', description: 'Afraid of flames and burning' },
+  { id: 'fear_storms', name: 'Fear of Storms', description: 'Anxious during thunderstorms' },
+  { id: 'fear_dead', name: 'Fear of the Dead', description: 'Uncomfortable around corpses' },
+  { id: 'fear_isolation', name: 'Fear of Isolation', description: 'Afraid of being alone' },
+  { id: 'fear_failure', name: 'Fear of Failure', description: 'Paralyzed by fear of failing' },
+];
 
 const STAT_POINT_POOL = 15;
 
@@ -44,6 +60,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedBackground, setSelectedBackground] = useState<string>('');
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
+  const [selectedPhobias, setSelectedPhobias] = useState<string[]>([]);
   const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
@@ -77,6 +94,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       setSelectedTraits(prev => prev.filter(t => t !== trait));
     } else if (selectedTraits.length < 3) {
       setSelectedTraits(prev => [...prev, trait]);
+    }
+  };
+
+  const togglePhobia = (phobiaId: string) => {
+    if (selectedPhobias.includes(phobiaId)) {
+      setSelectedPhobias(prev => prev.filter(p => p !== phobiaId));
+    } else if (selectedPhobias.length < 5) {
+      setSelectedPhobias(prev => [...prev, phobiaId]);
     }
   };
 
@@ -152,6 +177,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
 
   const handleComplete = () => {
     const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined);
+    // Add phobias to character data
+    (character as any).phobias = selectedPhobias;
     onComplete(character, scenario);
   };
 
@@ -163,11 +190,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       case 'background': return selectedBackground !== '';
       case 'stats': return true;
       case 'traits': return selectedTraits.length >= 1;
+      case 'phobias': return true; // Phobias are optional
       case 'portrait': return true;
     }
   };
 
-  const steps: CreationStep[] = ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'portrait'];
+  const steps: CreationStep[] = ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
   
   const nextStep = () => {
     const currentIndex = steps.indexOf(step);
@@ -654,6 +682,66 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 ))}
               </div>
               <p className="text-sm text-muted-foreground">Selected: {selectedTraits.length}/3</p>
+            </div>
+          )}
+
+          {/* Phobias Step */}
+          {step === 'phobias' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-primary">Character Fears (Optional)</h2>
+              <p className="text-sm text-muted-foreground">
+                Select up to 5 phobias that shape how your character reacts. These affect roleplay and dialogue, 
+                not stats. You can skip this step if you prefer.
+              </p>
+              <p className="text-xs text-primary/70 italic">
+                Note: Additional phobias can develop during gameplay from traumatic events.
+              </p>
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="grid gap-2">
+                  {AVAILABLE_PHOBIAS.map((phobia) => (
+                    <button
+                      key={phobia.id}
+                      onClick={() => togglePhobia(phobia.id)}
+                      className={`w-full p-3 rounded-lg text-left transition-all flex items-center gap-3 ${
+                        selectedPhobias.includes(phobia.id)
+                          ? 'bg-modifier-neutral/20 border-2 border-modifier-neutral'
+                          : 'bg-background/50 border border-border/30 hover:border-modifier-neutral/50'
+                      }`}
+                      disabled={!selectedPhobias.includes(phobia.id) && selectedPhobias.length >= 5}
+                    >
+                      <Eye className={`w-5 h-5 shrink-0 ${
+                        selectedPhobias.includes(phobia.id) ? 'text-modifier-neutral' : 'text-muted-foreground'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-medium text-sm ${
+                          selectedPhobias.includes(phobia.id) ? 'text-modifier-neutral' : 'text-foreground'
+                        }`}>
+                          {phobia.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground truncate">{phobia.description}</p>
+                      </div>
+                      {selectedPhobias.includes(phobia.id) && (
+                        <div className="w-5 h-5 rounded-full bg-modifier-neutral flex items-center justify-center shrink-0">
+                          <span className="text-xs text-background font-bold">✓</span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedPhobias.length}/5
+                </p>
+                {selectedPhobias.length > 0 && (
+                  <button 
+                    onClick={() => setSelectedPhobias([])}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

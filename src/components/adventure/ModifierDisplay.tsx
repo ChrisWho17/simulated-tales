@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Modifier, ModifierState, MODIFIER_LIMITS } from '@/game/buffDebuffSystem';
 import { Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ModifierDetailModal } from './ModifierDetailModal';
 
 interface ModifierDisplayProps {
   modifierState: ModifierState;
@@ -88,31 +89,45 @@ function SeverityBar({ severity, colorClass }: { severity: number; colorClass: s
   );
 }
 
-// Individual modifier tag
-function ModifierTag({ modifier, compact }: { modifier: Modifier; compact?: boolean }) {
+// Individual modifier tag (clickable)
+function ModifierTag({ 
+  modifier, 
+  compact,
+  onClick 
+}: { 
+  modifier: Modifier; 
+  compact?: boolean;
+  onClick: () => void;
+}) {
   const Icon = getCategoryIcon(modifier.category);
   const colorClass = getModifierColorClass(modifier);
   
   if (compact) {
     return (
-      <div 
+      <button 
+        onClick={onClick}
         className={cn(
-          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border",
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border cursor-pointer",
+          "hover:scale-105 hover:shadow-md transition-all",
           colorClass
         )}
-        title={`${modifier.name}: ${modifier.description}`}
+        title={`Click for details: ${modifier.name}`}
       >
         <Icon className="w-3 h-3" />
         <span className="font-medium">{modifier.name}</span>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className={cn(
-      "flex flex-col gap-1 p-2 rounded-lg border",
-      colorClass
-    )}>
+    <button 
+      onClick={onClick}
+      className={cn(
+        "flex flex-col gap-1 p-2 rounded-lg border text-left w-full cursor-pointer",
+        "hover:scale-[1.02] hover:shadow-md transition-all",
+        colorClass
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Icon className="w-3.5 h-3.5" />
@@ -126,11 +141,13 @@ function ModifierTag({ modifier, compact }: { modifier: Modifier; compact?: bool
       <p className="text-[10px] opacity-70 leading-tight line-clamp-2">
         {modifier.description}
       </p>
-    </div>
+    </button>
   );
 }
 
 export function ModifierDisplay({ modifierState, compact = false }: ModifierDisplayProps) {
+  const [selectedModifier, setSelectedModifier] = useState<Modifier | null>(null);
+
   const { buffs, debuffs, phobias, limitInfo } = useMemo(() => {
     const active = modifierState.activeModifiers.filter(m => m.visibility !== 'hidden');
     const phobiaList = active.filter(m => m.category === 'phobia');
@@ -157,68 +174,114 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
 
   if (compact) {
     return (
-      <div className="flex flex-wrap gap-1.5">
-        {buffs.map(m => <ModifierTag key={m.id} modifier={m} compact />)}
-        {debuffs.map(m => <ModifierTag key={m.id} modifier={m} compact />)}
-      </div>
+      <>
+        <div className="flex flex-wrap gap-1.5">
+          {buffs.map(m => (
+            <ModifierTag 
+              key={m.id} 
+              modifier={m} 
+              compact 
+              onClick={() => setSelectedModifier(m)}
+            />
+          ))}
+          {debuffs.map(m => (
+            <ModifierTag 
+              key={m.id} 
+              modifier={m} 
+              compact 
+              onClick={() => setSelectedModifier(m)}
+            />
+          ))}
+        </div>
+        {selectedModifier && (
+          <ModifierDetailModal 
+            modifier={selectedModifier} 
+            onClose={() => setSelectedModifier(null)} 
+          />
+        )}
+      </>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Capacity indicator */}
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-        <span>Conditions: {limitInfo.total}/{limitInfo.maxTotal}</span>
-      </div>
-      
-      {buffs.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-modifier-buff uppercase tracking-wider flex items-center gap-1.5">
-            <Zap className="w-3 h-3" />
-            Buffs ({buffs.length})
-          </h4>
-          <div className="grid grid-cols-2 gap-2">
-            {buffs.map(m => <ModifierTag key={m.id} modifier={m} />)}
-          </div>
+    <>
+      <div className="space-y-3">
+        {/* Capacity indicator */}
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>Conditions: {limitInfo.total}/{limitInfo.maxTotal}</span>
+          <span className="italic">Click any effect for details</span>
         </div>
-      )}
-      
-      {debuffs.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-modifier-injury uppercase tracking-wider flex items-center gap-1.5">
-            <Shield className="w-3 h-3" />
-            Debuffs ({debuffs.length})
-          </h4>
-          <div className="grid grid-cols-2 gap-2">
-            {debuffs.map(m => <ModifierTag key={m.id} modifier={m} />)}
+        
+        {buffs.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-modifier-buff uppercase tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3 h-3" />
+              Buffs ({buffs.length})
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {buffs.map(m => (
+                <ModifierTag 
+                  key={m.id} 
+                  modifier={m} 
+                  onClick={() => setSelectedModifier(m)}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {debuffs.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-modifier-injury uppercase tracking-wider flex items-center gap-1.5">
+              <Shield className="w-3 h-3" />
+              Debuffs ({debuffs.length})
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {debuffs.map(m => (
+                <ModifierTag 
+                  key={m.id} 
+                  modifier={m} 
+                  onClick={() => setSelectedModifier(m)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-      {/* Phobias - separate section, behavioral only */}
-      {phobias.length > 0 && (
-        <div className="space-y-2 border-t border-border/30 pt-3">
-          <h4 className="text-xs font-semibold text-modifier-neutral uppercase tracking-wider flex items-center gap-1.5">
-            <Eye className="w-3 h-3" />
-            Phobias (Behavioral)
-          </h4>
-          <p className="text-[10px] text-muted-foreground italic">
-            Affects speech and reactions only, not stats
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {phobias.map(m => (
-              <div 
-                key={m.id}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border text-modifier-neutral bg-modifier-neutral/10 border-modifier-neutral/30"
-              >
-                <Eye className="w-3 h-3" />
-                <span>{m.name}</span>
-              </div>
-            ))}
+        {/* Phobias - separate section, behavioral only */}
+        {phobias.length > 0 && (
+          <div className="space-y-2 border-t border-border/30 pt-3">
+            <h4 className="text-xs font-semibold text-modifier-neutral uppercase tracking-wider flex items-center gap-1.5">
+              <Eye className="w-3 h-3" />
+              Phobias (Behavioral)
+            </h4>
+            <p className="text-[10px] text-muted-foreground italic">
+              Affects speech and reactions only, not stats
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {phobias.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setSelectedModifier(m)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border cursor-pointer hover:scale-105 hover:shadow-md transition-all text-modifier-neutral bg-modifier-neutral/10 border-modifier-neutral/30"
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>{m.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedModifier && (
+        <ModifierDetailModal 
+          modifier={selectedModifier} 
+          onClose={() => setSelectedModifier(null)} 
+        />
       )}
-    </div>
+    </>
   );
 }
 
