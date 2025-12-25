@@ -179,11 +179,37 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             <span className="font-medium">{formatDuration(modifier.duration.remaining)}</span>
           </div>
 
+          {/* Incident Details - What Happened */}
+          {modifier.incidentDescription && (
+            <div className={cn(
+              "p-3 rounded-lg border-2",
+              colors.bg, colors.border
+            )}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{ color: 'inherit' }}>
+                <AlertTriangle className="w-3 h-3" />
+                What Happened
+              </h3>
+              <p className={cn("text-sm font-medium", colors.text)}>
+                {modifier.incidentDescription}
+              </p>
+              {modifier.bodyPart && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Affected area: <span className="font-medium text-foreground">{modifier.bodyPart}</span>
+                </p>
+              )}
+              {modifier.triggerCause && isPhobia && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Trigger: <span className="font-medium text-foreground">{modifier.triggerCause}</span>
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Origin Information */}
           <div className="p-3 bg-background/50 rounded-lg border border-border/30 space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className="w-3 h-3" />
-              How This Happened
+              <MapPin className="w-3 h-3" />
+              Where & When
             </h3>
             
             {modifier.originLocation && (
@@ -214,7 +240,7 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
               </div>
             )}
 
-            {!modifier.originLocation && !modifier.originNarrative && (
+            {!modifier.originLocation && !modifier.originNarrative && !modifier.incidentDescription && (
               <p className="text-sm text-muted-foreground italic">
                 {modifier.originEvent || 'Origin unknown'}
               </p>

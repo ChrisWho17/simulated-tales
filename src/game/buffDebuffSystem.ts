@@ -66,6 +66,9 @@ export interface Modifier {
   originLocation?: string; // Where this modifier was acquired
   originTimestamp?: string; // When this modifier was acquired (narrative time)
   originNarrative?: string; // Brief description of what caused it
+  incidentDescription?: string; // Specific description of what happened (e.g., "shot in the arm", "spider crawled on my shirt")
+  bodyPart?: string; // Body part affected if applicable
+  triggerCause?: string; // What caused the trigger (for phobias)
   provenance: 'observed' | 'inferred' | 'reported';
   confidence: number;
   visibility: Visibility;
