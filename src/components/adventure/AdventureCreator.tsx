@@ -106,14 +106,15 @@ const getBlendLabel = (value: number): string => {
   return 'Strong';
 };
 
-// Contract badge component
+// Contract badge component - vertical card layout for multiple genres
 function ContractBadge({ config }: { config: GenreContractConfig }) {
   const allGenres = getAllGenres();
   const primaryName = allGenres.find(g => g.id === config.primaryGenre)?.name || config.primaryGenre;
   
+  // Simple badge for primary-only
   if (config.secondaryGenres.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-sm">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 border border-primary/30 text-sm">
         <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
         <span className="text-primary font-medium">{primaryName}</span>
         {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400" />}
@@ -121,23 +122,26 @@ function ContractBadge({ config }: { config: GenreContractConfig }) {
     );
   }
 
-  const secondaryParts = config.secondaryGenres.map(s => {
-    const name = allGenres.find(g => g.id === s.genreId)?.name || s.genreId;
-    return `${name} (${s.blendStrength}%)`;
-  });
-
+  // Vertical card layout for multiple genres
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-sm flex-wrap">
-      <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
-      <span className="text-primary font-medium">{primaryName}</span>
-      {config.secondaryGenres.map((s, i) => (
-        <span key={s.genreId} className="flex items-center gap-1 text-muted-foreground">
+    <div className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-primary/20 border border-primary/30 text-sm min-w-[140px]">
+      {/* Primary genre */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
+        <span className="text-primary font-medium">{primaryName}</span>
+      </div>
+      
+      {/* Secondary genres */}
+      {config.secondaryGenres.map((s) => (
+        <div key={s.genreId} className="flex items-center gap-1 text-muted-foreground text-xs">
           <span>+</span>
-          <span className="text-lg">{GENRE_ICONS[s.genreId]}</span>
+          <span className="text-base">{GENRE_ICONS[s.genreId]}</span>
           <span>{allGenres.find(g => g.id === s.genreId)?.name} ({s.blendStrength}%)</span>
-        </span>
+        </div>
       ))}
-      {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+      
+      {/* Hard lock indicator */}
+      {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400 mt-1" />}
     </div>
   );
 }
@@ -414,7 +418,7 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
                 onChange={(e) => setCustomScenario(e.target.value)}
                 placeholder="Describe your scenario... (e.g., 'A hacker in a neon-lit city')"
                 className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
-                onKeyDown={(e) => e.key === 'Enter' && handleCustomStart()}
+                onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
                 disabled={isLoading}
               />
               <Button 
@@ -426,6 +430,34 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
                 Begin
               </Button>
             </div>
+            
+            {/* Quick Start - use genre contract without custom scenario */}
+            <div className="mt-4 flex items-center gap-3">
+              <div className="flex-1 h-px bg-border/30" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+              <div className="flex-1 h-px bg-border/30" />
+            </div>
+            <Button
+              onClick={() => {
+                const genreName = allGenres.find(g => g.id === primaryGenre)?.name || primaryGenre;
+                const defaultScenario = `Begin a ${genreName.toLowerCase()} adventure.`;
+                saveDiceMode(selectedDiceMode);
+                onSelect({
+                  scenario: defaultScenario,
+                  genre: primaryGenre,
+                  genreTitle: getGenreTitle(primaryGenre),
+                  diceMode: selectedDiceMode,
+                  genreContract
+                });
+              }}
+              disabled={isLoading}
+              variant="outline"
+              className="w-full mt-3 bg-background/30 border-primary/30 hover:bg-primary/10"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Quick Start with {allGenres.find(g => g.id === primaryGenre)?.name}
+              {secondaryGenres.length > 0 && ` + ${secondaryGenres.length} blend${secondaryGenres.length > 1 ? 's' : ''}`}
+            </Button>
 
             {/* Role Preview */}
             {customScenario.trim() && (
