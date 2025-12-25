@@ -311,40 +311,44 @@ export function parseNarrativeForModifiers(
 
   for (const { patterns, modifierName, severityMultiplier = 1 } of NARRATIVE_MODIFIER_PATTERNS) {
     for (const pattern of patterns) {
-      const match = narrativeText.match(pattern);
-      if (match && !foundModifiers.has(modifierName)) {
-        foundModifiers.add(modifierName);
-        
-        const template = findTemplateByName(modifierName);
-        if (template) {
-          const modifier = createModifierFromTemplate(
-            template,
-            campaignId,
-            'player',
-            `narrative_${match[0].toLowerCase().replace(/\s+/g, '_')}`,
-            currentTick
-          );
+      try {
+        const match = narrativeText.match(pattern);
+        if (match && !foundModifiers.has(modifierName)) {
+          foundModifiers.add(modifierName);
           
-          // Adjust severity based on context words
-          let contextSeverity = template.baseSeverity * severityMultiplier;
-          
-          // Intensity modifiers in text
-          if (/\b(severe(ly)?|serious(ly)?|bad(ly)?|terrible|horrible)\b/i.test(narrativeText)) {
-            contextSeverity = Math.min(1, contextSeverity * 1.5);
+          const template = findTemplateByName(modifierName);
+          if (template) {
+            const modifier = createModifierFromTemplate(
+              template,
+              campaignId,
+              'player',
+              `narrative_${match[0].toLowerCase().replace(/\s+/g, '_')}`,
+              currentTick
+            );
+            
+            // Adjust severity based on context words
+            let contextSeverity = template.baseSeverity * severityMultiplier;
+            
+            // Intensity modifiers in text
+            if (/\b(severe(ly)?|serious(ly)?|bad(ly)?|terrible|horrible)\b/i.test(narrativeText)) {
+              contextSeverity = Math.min(1, contextSeverity * 1.5);
+            }
+            if (/\b(slight(ly)?|minor|mild(ly)?|barely|little)\b/i.test(narrativeText)) {
+              contextSeverity = contextSeverity * 0.5;
+            }
+            
+            modifier.severity = contextSeverity;
+            
+            results.push({
+              modifier,
+              matchedText: match[0],
+              confidence: 0.8, // High confidence for explicit matches
+            });
           }
-          if (/\b(slight(ly)?|minor|mild(ly)?|barely|little)\b/i.test(narrativeText)) {
-            contextSeverity = contextSeverity * 0.5;
-          }
-          
-          modifier.severity = contextSeverity;
-          
-          results.push({
-            modifier,
-            matchedText: match[0],
-            confidence: 0.8, // High confidence for explicit matches
-          });
+          break; // Only match first pattern for each modifier
         }
-        break; // Only match first pattern for each modifier
+      } catch (e) {
+        console.warn(`Failed to parse narrative for modifier: ${modifierName}`, e);
       }
     }
   }
@@ -373,7 +377,9 @@ export function applyMechanicsModifiers(
   campaignId: string,
   currentTick: number
 ): ModifierState {
-  let newState = { ...state };
+  try {
+    if (!state || !event) return state;
+    let newState = { ...state };
 
   switch (event.type) {
     case 'damage':
@@ -534,9 +540,13 @@ export function applyMechanicsModifiers(
   }
 
   // Always recompute interactions after applying modifiers
-  newState = recomputeInteractions(newState);
+    newState = recomputeInteractions(newState);
 
-  return newState;
+    return newState;
+  } catch (e) {
+    console.warn('Error in applyMechanicsModifiers:', e);
+    return state; // Return original state on error
+  }
 }
 
 // ============================================================================
@@ -623,20 +633,27 @@ export class ModifierManager {
    * Process narrative text for modifiers
    */
   processNarrative(narrativeText: string): NarrativeModifierResult[] {
-    if (!this.config.narrativeParsingEnabled) return [];
+    try {
+      if (!this.config.narrativeParsingEnabled || !narrativeText) return [];
 
-    const results = parseNarrativeForModifiers(
-      narrativeText,
-      this.campaignId,
-      this.currentTick
-    );
+      const results = parseNarrativeForModifiers(
+        narrativeText,
+        this.campaignId,
+        this.currentTick
+      );
 
-    for (const result of results) {
-      this.state = applyModifier(this.state, result.modifier);
+      for (const result of results) {
+        if (result && result.modifier) {
+          this.state = applyModifier(this.state, result.modifier);
+        }
+      }
+
+      this.state = recomputeInteractions(this.state);
+      return results;
+    } catch (e) {
+      console.warn('Error in processNarrative:', e);
+      return [];
     }
-
-    this.state = recomputeInteractions(this.state);
-    return results;
   }
 
   /**
