@@ -1704,3 +1704,19 @@
   text-align: center;
   margin: 0;
 }
+
+/* Mood glow animation */
+@keyframes mood-glow {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 8px currentColor;
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px currentColor;
+  }
+}
