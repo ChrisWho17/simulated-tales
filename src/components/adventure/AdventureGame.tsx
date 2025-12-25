@@ -28,9 +28,10 @@ interface GameMechanics {
   rollRequired?: { stat: string; difficulty: number; reason: string };
   xpGained?: { amount: number; reason: string };
   goldGained?: number;
-  lootGained?: string;
+  lootGained?: string | string[]; // Now supports array for multiple items
   damage?: number;
   heal?: number;
+  skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
 }
 
 type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
