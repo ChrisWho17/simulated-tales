@@ -37,7 +37,7 @@ import {
   advanceChapter
 } from '@/game/levelingSystem';
 import { GameGenre } from '@/types/genreData';
-import { MOOD_COLORS, MOOD_KEYWORDS, shouldTintWord } from '@/game/moodSystem';
+import { MOOD_COLORS, getTintableKeywords, MAX_KEYWORDS_PER_PARAGRAPH } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 
 interface StoryEntry {
@@ -754,22 +754,29 @@ export function AdventureDisplay({
     }
   };
 
-  // Safe text formatting with mood-tinted keywords
-  const formatTextSegment = (text: string, keyPrefix: string, moodConfig?: { primary: string; glow: string } | null): React.ReactNode[] => {
+  // Safe text formatting with mood-tinted keywords (PDF spec: max 3-5 per paragraph, subtle frost)
+  const formatTextSegment = (
+    text: string, 
+    keyPrefix: string, 
+    moodConfig: typeof MOOD_COLORS[CoreMoodType] | null,
+    tintableWords?: Set<string>
+  ): React.ReactNode[] => {
     const result: React.ReactNode[] = [];
     // Split by bold markers first
     const boldParts = text.split(/\*\*(.+?)\*\*/g);
     
     boldParts.forEach((part, i) => {
       if (i % 2 === 1) {
-        // This is bold text - use mood color if available
+        // Bold text - use mood color if available with subtle glow
         result.push(
           <strong 
             key={`${keyPrefix}-b-${i}`} 
             className="font-semibold"
             style={{ 
               color: moodConfig?.primary || 'hsl(var(--primary))',
-              textShadow: moodConfig ? `0 0 8px ${moodConfig.glow}` : undefined
+              textShadow: moodConfig 
+                ? `0 0 ${moodConfig.glowRadius}px ${moodConfig.glow}` 
+                : undefined
             }}
           >
             {part}
@@ -781,30 +788,33 @@ export function AdventureDisplay({
         italicParts.forEach((iPart, j) => {
           if (j % 2 === 1) {
             result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{iPart}</em>);
-          } else if (iPart && moodConfig) {
-            // For non-italic text with active mood, check for tintable keywords
+          } else if (iPart && moodConfig && tintableWords && tintableWords.size > 0) {
+            // For non-italic text with active mood, check for tintable keywords (limited set)
             const words = iPart.split(/(\s+)/);
             words.forEach((word, wIdx) => {
               if (/^\s+$/.test(word)) {
                 // Whitespace - just add it
                 result.push(<span key={`${keyPrefix}-ws-${i}-${j}-${wIdx}`}>{word}</span>);
-              } else if (shouldTintWord(word, currentMood)) {
-                // Tint this word with a subtle frost effect
-                result.push(
-                  <span 
-                    key={`${keyPrefix}-tw-${i}-${j}-${wIdx}`}
-                    className="transition-all duration-300"
-                    style={{ 
-                      color: moodConfig.primary,
-                      textShadow: `0 0 6px ${moodConfig.glow}`,
-                      fontWeight: 500
-                    }}
-                  >
-                    {word}
-                  </span>
-                );
               } else {
-                result.push(<span key={`${keyPrefix}-w-${i}-${j}-${wIdx}`}>{word}</span>);
+                const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+                if (tintableWords.has(cleanWord)) {
+                  // Tint this word with a subtle frosted glow (PDF spec: translucent, not solid)
+                  result.push(
+                    <span 
+                      key={`${keyPrefix}-tw-${i}-${j}-${wIdx}`}
+                      className="transition-all duration-300"
+                      style={{ 
+                        color: moodConfig.primary,
+                        textShadow: `0 0 ${moodConfig.glowRadius}px ${moodConfig.glow}, 0 0 ${moodConfig.glowRadius * 1.5}px ${moodConfig.glow}`,
+                        fontWeight: 500
+                      }}
+                    >
+                      {word}
+                    </span>
+                  );
+                } else {
+                  result.push(<span key={`${keyPrefix}-w-${i}-${j}-${wIdx}`}>{word}</span>);
+                }
               }
             });
           } else if (iPart) {
@@ -837,9 +847,14 @@ export function AdventureDisplay({
     // Get mood styling for the latest entry (non-neutral moods add subtle frost effect)
     const moodConfig = currentMood !== 'neutral' && isLatestNarratorEntry ? MOOD_COLORS[currentMood] : null;
     
-    // Subtle frosty glow for character names - light enough to not be a nuisance
+    // Pre-calculate tintable keywords for this content (max 3-5 per the PDF spec)
+    const tintableWords = moodConfig 
+      ? getTintableKeywords(cleanedContent, currentMood, MAX_KEYWORDS_PER_PARAGRAPH) 
+      : undefined;
+    
+    // Subtle frosty glow for character names - refined per PDF (translucent, not solid)
     const nameFrostStyle = moodConfig ? {
-      textShadow: `0 0 8px ${moodConfig.glow}, 0 0 16px ${moodConfig.glow}`,
+      textShadow: `0 0 ${moodConfig.glowRadius}px ${moodConfig.glowStrong}, 0 0 ${moodConfig.glowRadius * 2}px ${moodConfig.glow}`,
       color: moodConfig.primary,
     } : {};
     
@@ -871,7 +886,7 @@ export function AdventureDisplay({
           key={idx} 
           className="my-4 leading-relaxed text-foreground/90 transition-all duration-300"
         >
-          {formatTextSegment(paragraph, `p-${idx}`, moodConfig)}
+          {formatTextSegment(paragraph, `p-${idx}`, moodConfig, tintableWords)}
         </p>
       );
     });
