@@ -256,60 +256,141 @@ const NARRATIVE_MODIFIER_PATTERNS: Array<{
   patterns: RegExp[];
   modifierName: string;
   severityMultiplier?: number;
+  incidentGenerator?: (match: RegExpMatchArray, narrativeText: string) => { incident: string; bodyPart?: string; };
 }> = [
-  // Injuries
-  { patterns: [/\b(bruise[ds]?|bruising)\b/i], modifierName: 'Bruising' },
-  { patterns: [/\b(strain(ed)?|pull(ed)? (a )?muscle)\b/i], modifierName: 'Muscle Strain' },
-  { patterns: [/\b(cut[s]?|slice[ds]?|nick(ed)?)\b/i, /\bshallow (wound|cut)\b/i], modifierName: 'Shallow Cut' },
-  { patterns: [/\b(burn(ed|s)?|scorch(ed)?)\b/i, /\bminor burn\b/i], modifierName: 'Minor Burn' },
-  { patterns: [/\b(scrape[ds]?|abrasion)\b/i], modifierName: 'Abrasion' },
-  { patterns: [/\bsprain(ed|s)? (your |the )?ankle\b/i, /\btwist(ed)? (your |the )?ankle\b/i], modifierName: 'Sprained Ankle' },
-  { patterns: [/\bsprain(ed|s)? (your |the )?wrist\b/i, /\btwist(ed)? (your |the )?wrist\b/i], modifierName: 'Sprained Wrist' },
-  { patterns: [/\b(break|broke|broken|fracture[ds]?) (your |the )?(leg|arm|limb|bone)\b/i], modifierName: 'Broken Limb', severityMultiplier: 0.9 },
-  { patterns: [/\b(concuss(ed|ion)?|head (injury|trauma))\b/i], modifierName: 'Mild Concussion' },
-  { patterns: [/\b(stab(bed)?|pierce[ds]?|impale[ds]?)\b/i], modifierName: 'Laceration', severityMultiplier: 0.7 },
-  { patterns: [/\b(shot|bullet|gunshot)\b/i], modifierName: 'Bullet Wound', severityMultiplier: 0.8 },
-  { patterns: [/\b(shrapnel|fragment[s]?)\b/i], modifierName: 'Shrapnel Embedded' },
-  { patterns: [/\b(infect(ed|ion)?|fester(ing)?)\b/i], modifierName: 'Infection' },
-  { patterns: [/\b(shock|traumatic shock)\b/i, /\bgo(es|ing)? into shock\b/i], modifierName: 'Shock' },
+  // Injuries with specific body part detection
+  { 
+    patterns: [/\b(bruise[ds]?|bruising)\b/i], 
+    modifierName: 'Bruising',
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'bruised')
+  },
+  { 
+    patterns: [/\b(strain(ed)?|pull(ed)? (a )?muscle)\b/i], 
+    modifierName: 'Muscle Strain',
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'strained')
+  },
+  { 
+    patterns: [/\b(cut[s]?|slice[ds]?|nick(ed)?)\b/i, /\bshallow (wound|cut)\b/i], 
+    modifierName: 'Shallow Cut',
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'cut')
+  },
+  { 
+    patterns: [/\b(burn(ed|s)?|scorch(ed)?)\b/i, /\bminor burn\b/i], 
+    modifierName: 'Minor Burn',
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'burned')
+  },
+  { patterns: [/\b(scrape[ds]?|abrasion)\b/i], modifierName: 'Abrasion', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'scraped') },
+  { patterns: [/\bsprain(ed|s)? (your |the )?ankle\b/i, /\btwist(ed)? (your |the )?ankle\b/i], modifierName: 'Sprained Ankle', incidentGenerator: () => ({ incident: 'Twisted or overstretched ankle', bodyPart: 'ankle' }) },
+  { patterns: [/\bsprain(ed|s)? (your |the )?wrist\b/i, /\btwist(ed)? (your |the )?wrist\b/i], modifierName: 'Sprained Wrist', incidentGenerator: () => ({ incident: 'Twisted or overstretched wrist', bodyPart: 'wrist' }) },
+  { 
+    patterns: [/\b(break|broke|broken|fracture[ds]?) (your |the )?(leg|arm|limb|bone)\b/i], 
+    modifierName: 'Broken Limb', 
+    severityMultiplier: 0.9,
+    incidentGenerator: (match, text) => {
+      const part = match[3] || 'limb';
+      return { incident: `Bone fracture from trauma`, bodyPart: part };
+    }
+  },
+  { patterns: [/\b(concuss(ed|ion)?|head (injury|trauma))\b/i], modifierName: 'Mild Concussion', incidentGenerator: () => ({ incident: 'Blow to the head causing concussion', bodyPart: 'head' }) },
+  { 
+    patterns: [/\b(stab(bed)?|pierce[ds]?|impale[ds]?)\b/i], 
+    modifierName: 'Laceration', 
+    severityMultiplier: 0.7,
+    incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'stabbed/pierced')
+  },
+  { 
+    patterns: [/\bshot (in |through )?(the )?(arm|leg|shoulder|chest|side|stomach|hand|foot)\b/i, /\b(shot|bullet|gunshot)\b/i], 
+    modifierName: 'Bullet Wound', 
+    severityMultiplier: 0.8,
+    incidentGenerator: (match, text) => {
+      const bodyPartMatch = text.match(/shot (in |through )?(the )?(arm|leg|shoulder|chest|side|stomach|hand|foot)/i);
+      const part = bodyPartMatch ? bodyPartMatch[3] : undefined;
+      return { incident: part ? `Shot in the ${part}` : 'Gunshot wound from projectile', bodyPart: part };
+    }
+  },
+  { patterns: [/\b(shrapnel|fragment[s]?)\b/i], modifierName: 'Shrapnel Embedded', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'embedded shrapnel') },
+  { patterns: [/\b(infect(ed|ion)?|fester(ing)?)\b/i], modifierName: 'Infection', incidentGenerator: (match, text) => extractInjuryIncident(match[0], text, 'infected') },
+  { patterns: [/\b(shock|traumatic shock)\b/i, /\bgo(es|ing)? into shock\b/i], modifierName: 'Shock', incidentGenerator: () => ({ incident: 'Body went into shock from trauma' }) },
   
   // Fatigue
-  { patterns: [/\b(winded|out of breath|gasping)\b/i], modifierName: 'Winded' },
-  { patterns: [/\b(tired|fatigue[ds]?|weary)\b/i], modifierName: 'Fatigued' },
-  { patterns: [/\b(exhaust(ed|ion)?|completely drained)\b/i], modifierName: 'Exhausted' },
-  { patterns: [/\b(overexert(ed)?|push(ed)? (too|yourself) (hard|far))\b/i], modifierName: 'Overexerted' },
-  { patterns: [/\b(sleep deprive[ds]?|haven't slept|no sleep)\b/i], modifierName: 'Sleep Deprived' },
-  { patterns: [/\b(second wind|renewed energy|surge of energy)\b/i], modifierName: 'Second Wind' },
-  { patterns: [/\b(well[- ]?rested|fully rested|good night'?s? sleep)\b/i], modifierName: 'Well Rested' },
+  { patterns: [/\b(winded|out of breath|gasping)\b/i], modifierName: 'Winded', incidentGenerator: () => ({ incident: 'Overexertion causing shortness of breath' }) },
+  { patterns: [/\b(tired|fatigue[ds]?|weary)\b/i], modifierName: 'Fatigued', incidentGenerator: () => ({ incident: 'Physical exhaustion from activity' }) },
+  { patterns: [/\b(exhaust(ed|ion)?|completely drained)\b/i], modifierName: 'Exhausted', incidentGenerator: () => ({ incident: 'Complete physical and mental exhaustion' }) },
+  { patterns: [/\b(overexert(ed)?|push(ed)? (too|yourself) (hard|far))\b/i], modifierName: 'Overexerted', incidentGenerator: () => ({ incident: 'Pushed body beyond safe limits' }) },
+  { patterns: [/\b(sleep deprive[ds]?|haven't slept|no sleep)\b/i], modifierName: 'Sleep Deprived', incidentGenerator: () => ({ incident: 'Extended period without proper sleep' }) },
+  { patterns: [/\b(second wind|renewed energy|surge of energy)\b/i], modifierName: 'Second Wind', incidentGenerator: () => ({ incident: 'Sudden burst of renewed energy' }) },
+  { patterns: [/\b(well[- ]?rested|fully rested|good night'?s? sleep)\b/i], modifierName: 'Well Rested', incidentGenerator: () => ({ incident: 'Fully recovered after quality rest' }) },
   
   // Nutrition
-  { patterns: [/\b(hungry|hunger|stomach (growl|rumbl))\b/i], modifierName: 'Hungry' },
-  { patterns: [/\b(starv(ing|ed)?|famish(ed)?)\b/i], modifierName: 'Starving' },
-  { patterns: [/\b(dehydrat(ed|ion)?|parched|thirst(y)?)\b/i], modifierName: 'Dehydrated' },
-  { patterns: [/\b(satisf(ied|ying) meal|ate well|full (stomach|belly))\b/i], modifierName: 'Well Fed' },
+  { patterns: [/\b(hungry|hunger|stomach (growl|rumbl))\b/i], modifierName: 'Hungry', incidentGenerator: () => ({ incident: 'Stomach growling from lack of food' }) },
+  { patterns: [/\b(starv(ing|ed)?|famish(ed)?)\b/i], modifierName: 'Starving', incidentGenerator: () => ({ incident: 'Severe hunger from prolonged lack of food' }) },
+  { patterns: [/\b(dehydrat(ed|ion)?|parched|thirst(y)?)\b/i], modifierName: 'Dehydrated', incidentGenerator: () => ({ incident: 'Lack of water intake' }) },
+  { patterns: [/\b(satisf(ied|ying) meal|ate well|full (stomach|belly))\b/i], modifierName: 'Well Fed', incidentGenerator: () => ({ incident: 'Ate a satisfying, filling meal' }) },
   
   // Psychological
-  { patterns: [/\b(panic(k?(ed|ing))?|terror(ized)?)\b/i], modifierName: 'Panic' },
-  { patterns: [/\b(fear(ful)?|afraid|scared|frightened)\b/i], modifierName: 'Fear Triggered' },
-  { patterns: [/\b(calm(ed|ing)?|peaceful|serene|tranquil)\b/i], modifierName: 'Calm' },
-  { patterns: [/\b(focus(ed)?|concentrate[ds]?|sharp mind)\b/i], modifierName: 'Focused' },
-  { patterns: [/\b(determin(ed|ation)|resolv(ed)?|steely resolve)\b/i], modifierName: 'Determined' },
-  { patterns: [/\b(inspir(ed|ation|ing))\b/i], modifierName: 'Inspired' },
-  { patterns: [/\b(guilt(y)?|remorse(ful)?|ashamed)\b/i], modifierName: 'Guilt' },
-  { patterns: [/\b(stress(ed)?|overwhelm(ed)?|burden(ed)?)\b/i], modifierName: 'Stress Overload' },
-  { patterns: [/\b(flashback|ptsd|trauma trigger)\b/i], modifierName: 'PTSD Response' },
+  { patterns: [/\b(panic(k?(ed|ing))?|terror(ized)?)\b/i], modifierName: 'Panic', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'panic') }) },
+  { patterns: [/\b(fear(ful)?|afraid|scared|frightened)\b/i], modifierName: 'Fear Triggered', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'fear') }) },
+  { patterns: [/\b(calm(ed|ing)?|peaceful|serene|tranquil)\b/i], modifierName: 'Calm', incidentGenerator: () => ({ incident: 'Found moment of peace and tranquility' }) },
+  { patterns: [/\b(focus(ed)?|concentrate[ds]?|sharp mind)\b/i], modifierName: 'Focused', incidentGenerator: () => ({ incident: 'Mind locked into complete concentration' }) },
+  { patterns: [/\b(determin(ed|ation)|resolv(ed)?|steely resolve)\b/i], modifierName: 'Determined', incidentGenerator: () => ({ incident: 'Steeled resolve to push forward' }) },
+  { patterns: [/\b(inspir(ed|ation|ing))\b/i], modifierName: 'Inspired', incidentGenerator: () => ({ incident: 'Found sudden inspiration or motivation' }) },
+  { patterns: [/\b(guilt(y)?|remorse(ful)?|ashamed)\b/i], modifierName: 'Guilt', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'guilt') }) },
+  { patterns: [/\b(stress(ed)?|overwhelm(ed)?|burden(ed)?)\b/i], modifierName: 'Stress Overload', incidentGenerator: () => ({ incident: 'Overwhelmed by mounting pressures' }) },
+  { patterns: [/\b(flashback|ptsd|trauma trigger)\b/i], modifierName: 'PTSD Response', incidentGenerator: (match, text) => ({ incident: extractPsychologicalCause(text, 'trauma') }) },
   
   // Illness
-  { patterns: [/\b(fever(ish)?|burning up|high temperature)\b/i], modifierName: 'Fever' },
-  { patterns: [/\b(food poison(ing|ed)?|sick from (the )?food)\b/i], modifierName: 'Food Poisoning' },
-  { patterns: [/\b(nause(a|ous)|sick to (your |the )?stomach|queasy)\b/i], modifierName: 'Nausea' },
+  { patterns: [/\b(fever(ish)?|burning up|high temperature)\b/i], modifierName: 'Fever', incidentGenerator: () => ({ incident: 'Body temperature elevated from illness' }) },
+  { patterns: [/\b(food poison(ing|ed)?|sick from (the )?food)\b/i], modifierName: 'Food Poisoning', incidentGenerator: () => ({ incident: 'Ate contaminated or spoiled food' }) },
+  { patterns: [/\b(nause(a|ous)|sick to (your |the )?stomach|queasy)\b/i], modifierName: 'Nausea', incidentGenerator: () => ({ incident: 'Stomach upset causing nausea' }) },
   
   // Chemical/Medical
-  { patterns: [/\b(painkiller|pain (med(ication)?|relief)|(took|take) (some )?medicine)\b/i], modifierName: 'Pain Suppression' },
-  { patterns: [/\b(stimulant|caffeine|energy (drink|boost)|adrenaline (shot|rush))\b/i], modifierName: 'Stimulant Effect' },
-  { patterns: [/\b(drunk|intoxicat(ed)?|inebriat(ed)?)\b/i], modifierName: 'Intoxicated' },
-  { patterns: [/\b(withdraw(al|ing)?|craving|need (a|the) (fix|hit|dose))\b/i], modifierName: 'Withdrawal' },
+  { patterns: [/\b(painkiller|pain (med(ication)?|relief)|(took|take) (some )?medicine)\b/i], modifierName: 'Pain Suppression', incidentGenerator: () => ({ incident: 'Took pain medication for relief' }) },
+  { patterns: [/\b(stimulant|caffeine|energy (drink|boost)|adrenaline (shot|rush))\b/i], modifierName: 'Stimulant Effect', incidentGenerator: () => ({ incident: 'Consumed stimulant for energy boost' }) },
+  { patterns: [/\b(drunk|intoxicat(ed)?|inebriat(ed)?)\b/i], modifierName: 'Intoxicated', incidentGenerator: () => ({ incident: 'Consumed too much alcohol' }) },
+  { patterns: [/\b(withdraw(al|ing)?|craving|need (a|the) (fix|hit|dose))\b/i], modifierName: 'Withdrawal', incidentGenerator: () => ({ incident: 'Body craving absent substance' }) },
 ];
+
+// Body parts for injury detection
+const BODY_PARTS = ['arm', 'leg', 'hand', 'foot', 'head', 'face', 'chest', 'back', 'shoulder', 'stomach', 'side', 'knee', 'elbow', 'ankle', 'wrist', 'finger', 'toe', 'neck', 'hip', 'thigh', 'calf', 'forearm', 'shin', 'ribs'];
+
+function extractInjuryIncident(matchedWord: string, narrativeText: string, actionWord: string): { incident: string; bodyPart?: string } {
+  // Try to find a body part near the matched word
+  const lowerText = narrativeText.toLowerCase();
+  const matchIndex = lowerText.indexOf(matchedWord.toLowerCase());
+  const nearbyText = lowerText.slice(Math.max(0, matchIndex - 40), matchIndex + matchedWord.length + 40);
+  
+  for (const part of BODY_PARTS) {
+    if (nearbyText.includes(part)) {
+      return { 
+        incident: `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} ${part}`,
+        bodyPart: part 
+      };
+    }
+  }
+  
+  return { incident: `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} from incident` };
+}
+
+function extractPsychologicalCause(narrativeText: string, emotionType: string): string {
+  // Try to extract what caused the psychological state
+  const causePatterns = [
+    /because of (.+?)[.,!]/i,
+    /from seeing (.+?)[.,!]/i,
+    /after (.+?)[.,!]/i,
+    /when (.+?)[.,!]/i,
+    /due to (.+?)[.,!]/i,
+  ];
+  
+  for (const pattern of causePatterns) {
+    const match = narrativeText.match(pattern);
+    if (match && match[1]) {
+      const cause = match[1].trim().slice(0, 50); // Limit length
+      return `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} triggered by: ${cause}`;
+    }
+  }
+  
+  return `${emotionType.charAt(0).toUpperCase() + emotionType.slice(1)} response triggered`;
+}
 
 export interface NarrativeModifierResult {
   modifier: Modifier;
@@ -338,7 +419,7 @@ export function parseNarrativeForModifiers(
   const results: NarrativeModifierResult[] = [];
   const foundModifiers = new Set<string>(); // Prevent duplicates
 
-  for (const { patterns, modifierName, severityMultiplier = 1 } of NARRATIVE_MODIFIER_PATTERNS) {
+  for (const { patterns, modifierName, severityMultiplier = 1, incidentGenerator } of NARRATIVE_MODIFIER_PATTERNS) {
     for (const pattern of patterns) {
       try {
         const match = narrativeText.match(pattern);
@@ -376,6 +457,16 @@ export function parseNarrativeForModifiers(
             // Add origin information for detail modal
             modifier.originLocation = context?.locationName || 'Unknown Location';
             modifier.originTimestamp = context?.narrativeTime || 'Recently';
+            
+            // Generate specific incident description
+            if (incidentGenerator) {
+              const incidentInfo = incidentGenerator(match, narrativeText);
+              modifier.incidentDescription = incidentInfo.incident;
+              if (incidentInfo.bodyPart) {
+                modifier.bodyPart = incidentInfo.bodyPart;
+              }
+            }
+            
             // Extract a snippet around the match for narrative context
             const matchIndex = narrativeText.indexOf(match[0]);
             const snippetStart = Math.max(0, matchIndex - 30);
@@ -841,8 +932,25 @@ export function createPhobiasFromSelection(
 ): Modifier[] {
   const phobias: Modifier[] = [];
   
+  // Backstory descriptions for each phobia
+  const PHOBIA_BACKSTORIES: Record<string, { incident: string; trigger: string }> = {
+    'fear_heights': { incident: 'A childhood fall from a high place', trigger: 'Being near edges or looking down from heights' },
+    'fear_darkness': { incident: 'Got lost in the dark as a child', trigger: 'Complete darkness or when lights go out' },
+    'fear_water': { incident: 'Nearly drowned once', trigger: 'Deep water or being submerged' },
+    'fear_crowds': { incident: 'Traumatic experience in a crowd', trigger: 'Large groups of people or crowded spaces' },
+    'fear_enclosed': { incident: 'Got trapped in a small space', trigger: 'Small rooms, closets, or being confined' },
+    'fear_spiders': { incident: 'Terrifying spider encounter as a child', trigger: 'Seeing spiders or webs' },
+    'fear_blood': { incident: 'Witnessed a bloody accident', trigger: 'Sight of blood or gore' },
+    'fear_fire': { incident: 'Survived a fire or got burned', trigger: 'Open flames or fire' },
+    'fear_storms': { incident: 'Caught in a dangerous storm', trigger: 'Thunder, lightning, or severe weather' },
+    'fear_dead': { incident: 'Encountered a corpse unexpectedly', trigger: 'Dead bodies or talk of death' },
+    'fear_isolation': { incident: 'Abandoned or left alone for too long', trigger: 'Being completely alone' },
+    'fear_failure': { incident: 'Devastating public failure', trigger: 'High-stakes situations where failure is possible' },
+  };
+  
   for (const phobiaId of phobiaIds) {
     const templateName = PHOBIA_ID_TO_TEMPLATE[phobiaId];
+    const backstory = PHOBIA_BACKSTORIES[phobiaId];
     if (!templateName) continue;
     
     const template = PHOBIA_TEMPLATES.find(t => t.name === templateName);
@@ -864,6 +972,8 @@ export function createPhobiasFromSelection(
         originEvent: 'character_creation',
         originLocation: 'Character Background',
         originNarrative: 'A fear that has always been part of who you are.',
+        incidentDescription: backstory?.incident || 'A fear from your past',
+        triggerCause: backstory?.trigger || 'Unknown triggers',
         provenance: 'reported',
         confidence: 1,
         visibility: 'player_only',
@@ -885,6 +995,8 @@ export function createPhobiasFromSelection(
       );
       modifier.originLocation = 'Character Background';
       modifier.originNarrative = 'A fear that has always been part of who you are.';
+      modifier.incidentDescription = backstory?.incident || 'A deep-seated fear from your past';
+      modifier.triggerCause = backstory?.trigger || 'Specific situations related to this fear';
       phobias.push(modifier);
     }
   }
@@ -900,7 +1012,8 @@ export function createTraumaPhobia(
   description: string,
   campaignId: string,
   currentTick: number,
-  context?: NarrativeContext
+  context?: NarrativeContext,
+  incidentDetails?: { incident: string; triggerCause?: string; }
 ): Modifier {
   return {
     id: `trauma_phobia_${Date.now()}`,
@@ -919,6 +1032,8 @@ export function createTraumaPhobia(
     originLocation: context?.locationName || 'Unknown Location',
     originTimestamp: context?.narrativeTime,
     originNarrative: `A traumatic experience has left you with this lasting fear.`,
+    incidentDescription: incidentDetails?.incident || 'A traumatic experience',
+    triggerCause: incidentDetails?.triggerCause,
     provenance: 'observed',
     confidence: 1,
     visibility: 'player_only',
@@ -929,4 +1044,141 @@ export function createTraumaPhobia(
     appliedAt: currentTick,
     stacks: 1,
   };
+}
+
+// Phobia trigger patterns for narrative detection
+const PHOBIA_TRIGGER_PATTERNS: Array<{
+  phobiaName: string;
+  triggers: RegExp[];
+  incidentGenerator: (match: RegExpMatchArray, text: string) => { incident: string; triggerCause: string };
+}> = [
+  {
+    phobiaName: 'Fear of Spiders',
+    triggers: [/\b(spider[s]?|tarantula|arachnid)\b/i, /\bcrawl(ed|ing|s)? (on|over|across) (your|the|my)/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'A spider encounter',
+      triggerCause: text.match(/spider crawl(ed|ing|s)? (on|in|over) (my |your )?(\w+)/i)?.[0] || 'Spider appeared nearby'
+    })
+  },
+  {
+    phobiaName: 'Fear of Heights',
+    triggers: [/\b(cliff|ledge|precipice|rooftop|balcony)\b/i, /\blook(ed|ing)? down/i, /\b(vertigo|dizzy from height)/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Looking down from a height',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Darkness',
+    triggers: [/\b(pitch black|total darkness|can'?t see anything)\b/i, /\blight[s]? (went out|died|failed)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Plunged into darkness',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Water',
+    triggers: [/\b(drown(ed|ing)?|underwater|submerge[ds]?)\b/i, /\b(deep water|ocean|river|lake)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Confronted with deep water',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Crowds',
+    triggers: [/\b(crowd(ed)?|throng|mob|packed|swarm of people)\b/i, /\btoo many people\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Surrounded by too many people',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Enclosed Spaces',
+    triggers: [/\b(trap(ped)?|confine[ds]?|small (room|space)|closet|coffin)\b/i, /\bwalls closing in\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Trapped in an enclosed space',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Blood',
+    triggers: [/\b(blood|bleeding|bloody|gore)\b/i, /\b(crimson|scarlet) (pool|puddle)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Sight of blood',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Fire',
+    triggers: [/\b(fire|flame[s]?|blaze|inferno|burning)\b/i, /\bengulf(ed)? in (fire|flame)/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Confronted with fire',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Storms',
+    triggers: [/\b(thunder|lightning|storm)\b/i, /\b(crash of thunder|bolt of lightning)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Storm overhead',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of the Dead',
+    triggers: [/\b(corpse[s]?|dead bod(y|ies)|cadaver|zombie|undead)\b/i, /\b(decay(ing|ed)?|rot(ting|ted)?)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Encountered the dead',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Isolation',
+    triggers: [/\b(alone|isolated|abandon(ed)?|solitary|no one around)\b/i, /\b(completely alone|all alone)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Left completely alone',
+      triggerCause: match[0]
+    })
+  },
+  {
+    phobiaName: 'Fear of Failure',
+    triggers: [/\b(fail(ed|ure)?|mess(ed)? up|ruin(ed)?|disappoint(ed)?)\b/i],
+    incidentGenerator: (match, text) => ({
+      incident: 'Faced with potential failure',
+      triggerCause: match[0]
+    })
+  },
+];
+
+/**
+ * Check narrative for phobia triggers and return triggered phobias
+ */
+export function checkPhobiaTriggers(
+  narrativeText: string,
+  activePhobias: Modifier[],
+  context?: NarrativeContext
+): { phobia: Modifier; triggerCause: string; incidentDescription: string }[] {
+  const triggered: { phobia: Modifier; triggerCause: string; incidentDescription: string }[] = [];
+  
+  for (const phobia of activePhobias) {
+    if (phobia.category !== 'phobia') continue;
+    
+    const triggerConfig = PHOBIA_TRIGGER_PATTERNS.find(p => p.phobiaName === phobia.name);
+    if (!triggerConfig) continue;
+    
+    for (const trigger of triggerConfig.triggers) {
+      const match = narrativeText.match(trigger);
+      if (match) {
+        const { incident, triggerCause } = triggerConfig.incidentGenerator(match, narrativeText);
+        triggered.push({
+          phobia,
+          triggerCause,
+          incidentDescription: incident
+        });
+        break;
+      }
+    }
+  }
+  
+  return triggered;
 }
