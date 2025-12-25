@@ -12,7 +12,7 @@ import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
 import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
-import { useRevertGesture } from '@/hooks/useRevertGesture';
+
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
@@ -128,24 +128,21 @@ export function AdventureDisplay({
   const [showSettings, setShowSettings] = useState(false);
   const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
   const [rollbackTarget, setRollbackTarget] = useState<{ index: number; text: string } | null>(null);
+  const [longPressActive, setLongPressActive] = useState<number | null>(null);
   const [showRollbackHint, setShowRollbackHint] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [hasNewContent, setHasNewContent] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousStoryLength = useRef(story.length);
   
-  // Double-tap-and-hold revert gesture
-  const handleRevertGesture = useCallback((index: number) => {
-    setRollbackTarget({ index, text: story[index]?.content || '' });
-    setShowRollbackHint(false);
-  }, [story]);
-  
-  const { state: revertState, registerEntry, handlePointerDown: handleRevertPointerDown } = useRevertGesture({
-    onRevert: handleRevertGesture,
-    itemCount: story.length,
-    minIndex: 1,
-  });
+  // Triple-tap detection refs
+  const tapCountRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(0);
+  const lastTapIndexRef = useRef<number | null>(null);
+  const tripleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Leveling system state
   const [levelingState, setLevelingState] = useState<LevelingState>(() => 
@@ -255,16 +252,77 @@ export function AdventureDisplay({
     return modifierManagerRef.current?.getState();
   }, []);
 
-  // Double-tap entry handler
-  const handleEntryInteraction = useCallback((index: number, e: React.PointerEvent | React.TouchEvent) => {
-    if (index < 1) return; // Don't allow rollback to first entry
+  // Long press handlers for story rollback
+  const handleLongPressStart = useCallback((index: number, text: string) => {
+    // Don't allow rollback to the very first entry
+    if (index === 0) return;
     
-    const y = 'touches' in e.nativeEvent 
-      ? (e.nativeEvent as TouchEvent).touches[0].clientY 
-      : (e.nativeEvent as PointerEvent).clientY;
+    // Start visual feedback after 300ms
+    feedbackTimer.current = setTimeout(() => {
+      setLongPressActive(index);
+    }, 300);
     
-    handleRevertPointerDown(index, y);
-  }, [handleRevertPointerDown]);
+    // Trigger rollback modal after 900ms
+    longPressTimer.current = setTimeout(() => {
+      setLongPressActive(null);
+      setRollbackTarget({ index, text });
+      setShowRollbackHint(false);
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 900);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (feedbackTimer.current) {
+      clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = null;
+    }
+    setLongPressActive(null);
+  }, []);
+
+  // Triple-tap handler for rollback
+  const handleTripleTap = useCallback((index: number, text: string) => {
+    if (index === 0) return;
+    
+    const now = Date.now();
+    const TRIPLE_TAP_THRESHOLD = 400; // ms between taps
+    
+    // Check if this tap is on the same entry and within time threshold
+    if (lastTapIndexRef.current === index && now - lastTapTimeRef.current < TRIPLE_TAP_THRESHOLD) {
+      tapCountRef.current += 1;
+    } else {
+      // Reset tap count for new entry or timeout
+      tapCountRef.current = 1;
+    }
+    
+    lastTapTimeRef.current = now;
+    lastTapIndexRef.current = index;
+    
+    // Clear any existing timer
+    if (tripleTapTimer.current) {
+      clearTimeout(tripleTapTimer.current);
+    }
+    
+    // Check for triple tap
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      setRollbackTarget({ index, text });
+      setShowRollbackHint(false);
+      if (navigator.vibrate) {
+        navigator.vibrate([30, 50, 30]);
+      }
+    } else {
+      // Reset tap count after threshold
+      tripleTapTimer.current = setTimeout(() => {
+        tapCountRef.current = 0;
+      }, TRIPLE_TAP_THRESHOLD);
+    }
+  }, []);
 
   const handleRollbackConfirm = useCallback(() => {
     if (rollbackTarget && onRollbackToEntry) {
@@ -1058,42 +1116,36 @@ export function AdventureDisplay({
           {showRollbackHint && story.length >= 2 && story.length <= 4 && (
             <div className="mb-6 text-center animate-fade-in">
               <p className="text-xs text-muted-foreground/70 italic">
-                💡 Tip: Double-tap and hold any story moment, then drag to select where to return
+                💡 Tip: Hold or triple-tap any story moment to return to that point
               </p>
-            </div>
-          )}
-          
-          {/* Revert gesture active overlay */}
-          {revertState.isDragging && (
-            <div className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm pointer-events-none flex items-center justify-center">
-              <div className="glass-panel border-warning/50 px-6 py-4 text-center animate-fade-in">
-                <p className="text-warning font-medium">Drag to select moment</p>
-                <p className="text-sm text-muted-foreground mt-1">Release to revert</p>
-              </div>
             </div>
           )}
 
           {story.map((entry, index) => (
             <div
               key={entry.id}
-              ref={(el) => registerEntry(index, el)}
               className={`
                 animate-fade-in-up mb-8 
                 ${entry.role === 'user' ? 'text-right' : ''} 
                 ${index > 0 ? 'cursor-pointer select-none' : ''}
-                ${revertState.isDragging && revertState.selectedIndex === index ? 'scale-[0.98] opacity-80 ring-2 ring-warning/50' : ''}
+                ${longPressActive === index ? 'scale-[0.98] opacity-80' : ''}
                 transition-all duration-150
               `}
               style={{ animationDelay: `${index * 0.05}s` }}
-              onPointerDown={(e) => handleEntryInteraction(index, e)}
-              onTouchStart={(e) => handleEntryInteraction(index, e)}
-              title={index > 0 ? "Double-tap and hold to revert here" : undefined}
+              onMouseDown={() => handleLongPressStart(index, entry.content)}
+              onMouseUp={handleLongPressEnd}
+              onMouseLeave={handleLongPressEnd}
+              onTouchStart={() => handleLongPressStart(index, entry.content)}
+              onTouchEnd={handleLongPressEnd}
+              onTouchCancel={handleLongPressEnd}
+              onClick={() => handleTripleTap(index, entry.content)}
+              title={index > 0 ? "Hold or triple-tap to return here" : undefined}
             >
               {entry.role === 'user' ? (
                 <div className={`
                   inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left 
                   hover:border-primary/50 transition-all
-                  ${revertState.isDragging && revertState.selectedIndex === index ? 'border-warning/50 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}
+                  ${longPressActive === index ? 'border-warning/50 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : ''}
                 `}>
                   <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
                   <p className="font-narrative text-lg text-foreground">{entry.content}</p>
@@ -1101,7 +1153,7 @@ export function AdventureDisplay({
               ) : (
                 <Card className={`
                   border-0 bg-transparent shadow-none rounded-lg p-2 -m-2 transition-all
-                  ${revertState.isDragging && revertState.selectedIndex === index 
+                  ${longPressActive === index 
                     ? 'bg-warning/10 shadow-[0_0_20px_rgba(234,179,8,0.2)]' 
                     : 'hover:bg-primary/5'}
                 `}>
