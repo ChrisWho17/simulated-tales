@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllustration';
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
@@ -15,6 +15,31 @@ import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
+import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
+
+// Helper to format emotional context for AI
+function formatEmotionalContext(
+  mood: CoreMoodType,
+  moodIntensity: number,
+  genre: GameGenre
+): { currentMood: string; moodIntensity: number; internalDescription: string; physicalDescription: string; dialogueTone: string; actionFlavor: string } | null {
+  // If mood is neutral with low intensity, return null to skip mood injection
+  if (mood === 'neutral' && moodIntensity < 0.3) {
+    return null;
+  }
+  
+  const descriptor = GENRE_MOOD_DESCRIPTORS[genre]?.[mood] || GENRE_MOOD_DESCRIPTORS.custom?.[mood] || GENRE_MOOD_DESCRIPTORS.fantasy[mood];
+  if (!descriptor) return null;
+  
+  return {
+    currentMood: descriptor.label,
+    moodIntensity,
+    internalDescription: descriptor.internalState[Math.floor(Math.random() * descriptor.internalState.length)],
+    physicalDescription: descriptor.physicalSigns.join(', '),
+    dialogueTone: descriptor.dialogueTone,
+    actionFlavor: descriptor.actionFlavor
+  };
+}
 
 interface StoryEntry {
   id: string;
@@ -43,7 +68,7 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
-  const { setDiceMode, initializeCampaign, restoreCampaignFromSave, campaignMemory, getCampaignContext, advanceCampaignTime, updateCampaignMemory } = useGame();
+  const { setDiceMode, initializeCampaign, restoreCampaignFromSave, campaignMemory, getCampaignContext, advanceCampaignTime, updateCampaignMemory, emotionalState, settings } = useGame();
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -94,6 +119,35 @@ export function AdventureGame() {
   const lastIllustrationTick = useRef<number>(0);
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
+  
+  // Mood state for narrative integration
+  const [currentMood, setCurrentMood] = useState<CoreMoodType>(() => {
+    try {
+      const saved = localStorage.getItem('untold-player-mood');
+      if (saved) return JSON.parse(saved) as CoreMoodType;
+    } catch {}
+    return 'neutral';
+  });
+  const [moodHistory, setMoodHistory] = useState<Array<{ mood: CoreMoodType; timestamp: number; chapter: number; trigger: string }>>([]);
+  
+  // Persist mood changes
+  useEffect(() => {
+    localStorage.setItem('untold-player-mood', JSON.stringify(currentMood));
+  }, [currentMood]);
+  
+  const handleMoodChange = useCallback((mood: CoreMoodType) => {
+    const prevMood = currentMood;
+    setCurrentMood(mood);
+    setMoodHistory(prev => [...prev.slice(-19), {
+      mood,
+      timestamp: Date.now(),
+      chapter: campaignMemory?.campaign.currentTick || 1,
+      trigger: 'manual_selection'
+    }]);
+    if (mood !== prevMood) {
+      toast.success(`Mood changed to ${mood}`);
+    }
+  }, [currentMood, campaignMemory]);
 
   // Handle initial loading complete and load color
   useEffect(() => {
@@ -177,6 +231,12 @@ export function AdventureGame() {
       const currentTick = campaignMemory?.campaign.currentTick ?? 0;
       const memContext = getCampaignContext?.('current_scene', [], currentTick);
       const formattedMemory = formatMemoryContextForAI(memContext, activeChar.name);
+      
+      // Get emotional context for AI (only if mood system is enabled and not neutral)
+      const genre = scenarioSelection?.genre || 'fantasy';
+      const emotionalContext = settings.enableMoodSystem 
+        ? formatEmotionalContext(currentMood, 0.6, genre)
+        : null;
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -191,6 +251,7 @@ export function AdventureGame() {
             character: activeChar,
             diceRoll,
             memoryContext: formattedMemory.fullContext ? formattedMemory : undefined,
+            emotionalContext,
           }),
         }
       );
@@ -214,7 +275,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, scenarioSelection?.genre]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
@@ -459,6 +520,9 @@ export function AdventureGame() {
         isGeneratingScene={isGeneratingScene}
         onCloseSceneImage={() => setSceneImageUrl(null)}
         genre={scenarioSelection?.genre || 'fantasy'}
+        currentMood={currentMood}
+        moodHistory={moodHistory}
+        onMoodChange={handleMoodChange}
       />
     );
   }
