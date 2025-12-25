@@ -2,24 +2,46 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield, BookOpen, Dices, Swords } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield, BookOpen, Dices, Swords, Lock, Plus, X } from 'lucide-react';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
 import { DiceMode, DICE_MODES, saveDiceMode } from '@/game/diceSystem';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Genre Contract state shape
+export interface SecondaryGenre {
+  genreId: GameGenre;
+  blendStrength: number; // 0-30
+}
+
+export interface GenreContractConfig {
+  primaryGenre: GameGenre;
+  secondaryGenres: SecondaryGenre[];
+  hardLock: boolean;
+}
 
 export interface ScenarioSelection {
   scenario: string;
   genre: GameGenre;
   genreTitle: string;
   diceMode: DiceMode;
+  genreContract?: GenreContractConfig;
 }
 
 interface AdventureCreatorProps {
@@ -77,42 +99,132 @@ const RANDOM_SCENARIOS: Array<{ text: string; genre: GameGenre }> = [
   { text: "You're a detective investigating a murder at a party where everyone is a suspect—including you.", genre: 'mystery' },
 ];
 
+// Helper to get blend strength label
+const getBlendLabel = (value: number): string => {
+  if (value <= 10) return 'Light';
+  if (value <= 20) return 'Moderate';
+  return 'Strong';
+};
+
+// Contract badge component
+function ContractBadge({ config }: { config: GenreContractConfig }) {
+  const allGenres = getAllGenres();
+  const primaryName = allGenres.find(g => g.id === config.primaryGenre)?.name || config.primaryGenre;
+  
+  if (config.secondaryGenres.length === 0) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-sm">
+        <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
+        <span className="text-primary font-medium">{primaryName}</span>
+        {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+      </div>
+    );
+  }
+
+  const secondaryParts = config.secondaryGenres.map(s => {
+    const name = allGenres.find(g => g.id === s.genreId)?.name || s.genreId;
+    return `${name} (${s.blendStrength}%)`;
+  });
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-sm flex-wrap">
+      <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
+      <span className="text-primary font-medium">{primaryName}</span>
+      {config.secondaryGenres.map((s, i) => (
+        <span key={s.genreId} className="flex items-center gap-1 text-muted-foreground">
+          <span>+</span>
+          <span className="text-lg">{GENRE_ICONS[s.genreId]}</span>
+          <span>{allGenres.find(g => g.id === s.genreId)?.name} ({s.blendStrength}%)</span>
+        </span>
+      ))}
+      {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+    </div>
+  );
+}
+
 export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps) {
   const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [genreOverride, setGenreOverride] = useState<GameGenre | null>(null);
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
+  
+  // Genre Contract state
+  const [primaryGenre, setPrimaryGenre] = useState<GameGenre>('fantasy');
+  const [secondaryGenres, setSecondaryGenres] = useState<SecondaryGenre[]>([]);
+  const [hardLock, setHardLock] = useState(false);
 
-  // Real-time genre detection
-  const detectedGenre = useMemo(() => {
-    return detectGenreFromText(customScenario);
-  }, [customScenario]);
+  const allGenres = getAllGenres();
+
+  // Available genres for secondary selection (exclude primary and already selected)
+  const availableSecondaryGenres = useMemo(() => {
+    const selectedIds = [primaryGenre, ...secondaryGenres.map(s => s.genreId)];
+    return allGenres.filter(g => !selectedIds.includes(g.id));
+  }, [allGenres, primaryGenre, secondaryGenres]);
+
+  // Build genre contract config
+  const genreContract: GenreContractConfig = useMemo(() => ({
+    primaryGenre,
+    secondaryGenres,
+    hardLock
+  }), [primaryGenre, secondaryGenres, hardLock]);
 
   // Detect war era from text when war genre is active
   const detectedWarEra = useMemo(() => {
     return detectWarEra(customScenario);
   }, [customScenario]);
 
-  // Active genre is override or detected
-  const activeGenre = genreOverride || detectedGenre.genre;
-  
   // Get genre data - for war, use era-specific data
   const activeGenreData = useMemo(() => {
-    if (activeGenre === 'war') {
+    if (primaryGenre === 'war') {
       return getWarGenreData(detectedWarEra);
     }
-    return GENRE_DATA[activeGenre];
-  }, [activeGenre, detectedWarEra]);
+    return GENRE_DATA[primaryGenre];
+  }, [primaryGenre, detectedWarEra]);
+
+  const handleAddSecondaryGenre = () => {
+    if (secondaryGenres.length >= 2 || availableSecondaryGenres.length === 0) return;
+    setSecondaryGenres([...secondaryGenres, { 
+      genreId: availableSecondaryGenres[0].id, 
+      blendStrength: 15 
+    }]);
+  };
+
+  const handleRemoveSecondaryGenre = (index: number) => {
+    setSecondaryGenres(secondaryGenres.filter((_, i) => i !== index));
+  };
+
+  const handleSecondaryGenreChange = (index: number, genreId: GameGenre) => {
+    const updated = [...secondaryGenres];
+    updated[index] = { ...updated[index], genreId };
+    setSecondaryGenres(updated);
+  };
+
+  const handleBlendStrengthChange = (index: number, value: number[]) => {
+    const updated = [...secondaryGenres];
+    updated[index] = { ...updated[index], blendStrength: value[0] };
+    setSecondaryGenres(updated);
+  };
 
   const handleRandomScenario = () => {
     const random = RANDOM_SCENARIOS[Math.floor(Math.random() * RANDOM_SCENARIOS.length)];
     saveDiceMode(selectedDiceMode);
-    onSelect({ scenario: random.text, genre: random.genre, genreTitle: getGenreTitle(random.genre), diceMode: selectedDiceMode });
+    onSelect({ 
+      scenario: random.text, 
+      genre: random.genre, 
+      genreTitle: getGenreTitle(random.genre), 
+      diceMode: selectedDiceMode,
+      genreContract: { primaryGenre: random.genre, secondaryGenres: [], hardLock: false }
+    });
   };
 
   const handlePresetStart = (preset: typeof PRESET_SCENARIOS[0]) => {
     saveDiceMode(selectedDiceMode);
-    onSelect({ scenario: preset.description, genre: preset.genre, genreTitle: preset.title, diceMode: selectedDiceMode });
+    onSelect({ 
+      scenario: preset.description, 
+      genre: preset.genre, 
+      genreTitle: preset.title, 
+      diceMode: selectedDiceMode,
+      genreContract: { primaryGenre: preset.genre, secondaryGenres: [], hardLock: false }
+    });
   };
 
   const handleCustomStart = () => {
@@ -120,14 +232,13 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
       saveDiceMode(selectedDiceMode);
       onSelect({ 
         scenario: customScenario.trim(), 
-        genre: activeGenre, 
-        genreTitle: getGenreTitle(activeGenre),
-        diceMode: selectedDiceMode 
+        genre: primaryGenre, 
+        genreTitle: getGenreTitle(primaryGenre),
+        diceMode: selectedDiceMode,
+        genreContract
       });
     }
   };
-
-  const allGenres = getAllGenres();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -152,44 +263,150 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
 
         {/* Main Content */}
         <div className="w-full max-w-3xl space-y-8">
-          {/* Custom Scenario - Glass Panel */}
+          {/* Genre Contract Setup - Glass Panel */}
           <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-primary font-display text-xl tracking-wide">Create Your Own Story</h2>
-              
-              {/* Genre Override Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-background/50">
-                    <span className="text-lg">{GENRE_ICONS[activeGenre]}</span>
-                    <span className="hidden sm:inline">{genreOverride ? 'Override: ' : ''}{activeGenreData.name}</span>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem 
-                    onClick={() => setGenreOverride(null)}
-                    className="gap-2"
-                  >
-                    <span className="text-lg">✨</span>
-                    <span className="flex-1">Auto-detect</span>
-                    {!genreOverride && <Check className="h-4 w-4" />}
-                  </DropdownMenuItem>
-                  <div className="h-px bg-border my-1" />
-                  {allGenres.map((g) => (
-                    <DropdownMenuItem 
-                      key={g.id}
-                      onClick={() => setGenreOverride(g.id)}
-                      className="gap-2"
-                    >
-                      <span className="text-lg">{g.icon}</span>
-                      <span className="flex-1">{g.name}</span>
-                      {genreOverride === g.id && <Check className="h-4 w-4" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-primary font-display text-xl tracking-wide">Genre Contract Setup</h2>
+              <ContractBadge config={genreContract} />
             </div>
+
+            {/* Primary Genre Section */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-primary" />
+                  Primary Genre (locked)
+                </label>
+                <Select value={primaryGenre} onValueChange={(v) => setPrimaryGenre(v as GameGenre)}>
+                  <SelectTrigger className="w-full bg-background/50 border-primary/30">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{GENRE_ICONS[primaryGenre]}</span>
+                        <span>{allGenres.find(g => g.id === primaryGenre)?.name}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allGenres.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{g.icon}</span>
+                          <span>{g.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Secondary Genres Section */}
+              <div className="space-y-3 pt-2">
+                <label className="text-sm font-medium text-foreground">
+                  Secondary Genres (optional, max 2)
+                </label>
+                
+                {/* Secondary genre rows */}
+                {secondaryGenres.map((secondary, index) => {
+                  const availableForThis = allGenres.filter(
+                    g => g.id !== primaryGenre && 
+                    !secondaryGenres.some((s, i) => i !== index && s.genreId === g.id)
+                  );
+                  
+                  return (
+                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30">
+                      {/* Genre Select */}
+                      <Select 
+                        value={secondary.genreId} 
+                        onValueChange={(v) => handleSecondaryGenreChange(index, v as GameGenre)}
+                      >
+                        <SelectTrigger className="w-40 bg-background/50 border-border/50">
+                          <SelectValue>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{GENRE_ICONS[secondary.genreId]}</span>
+                              <span className="text-sm">{allGenres.find(g => g.id === secondary.genreId)?.name}</span>
+                            </div>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableForThis.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{g.icon}</span>
+                                <span>{g.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Blend Strength Slider */}
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Blend: {secondary.blendStrength}%</span>
+                          <span className={`font-medium ${
+                            secondary.blendStrength <= 10 ? 'text-green-400' :
+                            secondary.blendStrength <= 20 ? 'text-yellow-400' : 'text-orange-400'
+                          }`}>
+                            {getBlendLabel(secondary.blendStrength)}
+                          </span>
+                        </div>
+                        <Slider
+                          value={[secondary.blendStrength]}
+                          onValueChange={(v) => handleBlendStrengthChange(index, v)}
+                          min={0}
+                          max={30}
+                          step={5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Remove Button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveSecondaryGenre(index)}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+
+                {/* Add Secondary Button */}
+                {secondaryGenres.length < 2 && availableSecondaryGenres.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddSecondaryGenre}
+                    className="gap-2 bg-background/30 border-dashed border-primary/30 hover:border-primary/50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Secondary Genre
+                  </Button>
+                )}
+              </div>
+
+              {/* Hard Lock Toggle */}
+              <div className="flex items-center justify-between pt-3 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  {hardLock && <Lock className="w-4 h-4 text-amber-400" />}
+                  <label htmlFor="hard-lock" className="text-sm font-medium text-foreground">
+                    Hard Lock: No outside elements allowed
+                  </label>
+                </div>
+                <Switch
+                  id="hard-lock"
+                  checked={hardLock}
+                  onCheckedChange={setHardLock}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Scenario - Glass Panel */}
+          <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <h2 className="text-primary font-display text-xl tracking-wide mb-4">Create Your Own Story</h2>
             
             <div className="flex gap-3">
               <Input
@@ -210,37 +427,12 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
               </Button>
             </div>
 
-            {/* Real-time Genre Indicator */}
-            {customScenario.trim() && (
-              <div className="mt-3 flex items-center gap-2 animate-fade-in">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
-                  detectedGenre.confidence === 'high' 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                    : detectedGenre.confidence === 'medium'
-                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                    : 'bg-muted/50 text-muted-foreground border border-border/30'
-                }`}>
-                  <span>{GENRE_ICONS[detectedGenre.genre]}</span>
-                  <span>Detected: {detectedGenre.title}</span>
-                  {genreOverride && (
-                    <span className="text-xs opacity-70">(overridden)</span>
-                  )}
-                </div>
-                {detectedGenre.matchedKeywords.length > 0 && !genreOverride && (
-                  <span className="text-xs text-muted-foreground">
-                    Keywords: {detectedGenre.matchedKeywords.slice(0, 3).join(', ')}
-                    {detectedGenre.matchedKeywords.length > 3 && '...'}
-                  </span>
-                )}
-              </div>
-            )}
-
             {/* Role Preview */}
             {customScenario.trim() && (
               <div className="mt-3 p-3 rounded-lg bg-background/30 border border-border/30">
                 <p className="text-xs text-muted-foreground mb-2">
                   Available roles for {activeGenreData.name}
-                  {activeGenre === 'war' && ` (${detectedWarEra} era detected)`}:
+                  {primaryGenre === 'war' && ` (${detectedWarEra} era detected)`}:
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {activeGenreData.classes.slice(0, 6).map((cls) => (
