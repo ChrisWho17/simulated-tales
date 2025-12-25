@@ -43,9 +43,10 @@ interface GameMechanics {
   rollRequired?: PendingRoll;
   xpGained?: { amount: number; reason: string };
   goldGained?: number;
-  lootGained?: string;
+  lootGained?: string | string[]; // Now supports array for multiple items
   damage?: number;
   heal?: number;
+  skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
 }
 
 interface AdventureDisplayProps {
@@ -369,48 +370,80 @@ export function AdventureDisplay({
       });
     }
 
-    // Apply loot to inventory
+    // Apply loot to inventory (now supports multiple items)
     if (pendingMechanics.lootGained) {
-      const lootName = pendingMechanics.lootGained;
-      const existingItemIndex = updatedCharacter.inventory.findIndex(
-        item => item.name.toLowerCase() === lootName.toLowerCase()
-      );
-      if (existingItemIndex !== -1) {
-        // Update existing item quantity
-        const newInventory = [...updatedCharacter.inventory];
-        newInventory[existingItemIndex] = {
-          ...newInventory[existingItemIndex],
-          quantity: newInventory[existingItemIndex].quantity + 1
-        };
-        updatedCharacter.inventory = newInventory;
-      } else {
-        // Create new inventory item with required fields
-        const newItem: InventoryItem = {
-          id: `loot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: lootName,
-          description: `A ${lootName.toLowerCase()} found during your adventure.`,
-          quantity: 1,
-          type: 'treasure' // Default type for dynamically acquired items
-        };
-        updatedCharacter.inventory = [...updatedCharacter.inventory, newItem];
+      const lootItems = Array.isArray(pendingMechanics.lootGained) 
+        ? pendingMechanics.lootGained 
+        : [pendingMechanics.lootGained];
+      
+      for (const lootName of lootItems) {
+        const existingItemIndex = updatedCharacter.inventory.findIndex(
+          item => item.name.toLowerCase() === lootName.toLowerCase()
+        );
+        if (existingItemIndex !== -1) {
+          // Update existing item quantity
+          const newInventory = [...updatedCharacter.inventory];
+          newInventory[existingItemIndex] = {
+            ...newInventory[existingItemIndex],
+            quantity: newInventory[existingItemIndex].quantity + 1
+          };
+          updatedCharacter.inventory = newInventory;
+        } else {
+          // Create new inventory item with required fields
+          const newItem: InventoryItem = {
+            id: `loot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: lootName,
+            description: `A ${lootName.toLowerCase()} found during your adventure.`,
+            quantity: 1,
+            type: 'treasure' // Default type for dynamically acquired items
+          };
+          updatedCharacter.inventory = [...updatedCharacter.inventory, newItem];
+        }
+        toast({
+          title: `Acquired: ${lootName}`,
+          description: "Added to your inventory!",
+          duration: 3000,
+        });
       }
       hasStatChanges = true;
-      toast({
-        title: `Acquired: ${pendingMechanics.lootGained}`,
-        description: "Added to your inventory!",
-        duration: 3000,
-      });
     }
 
     // Apply XP
     if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
       updatedCharacter.experience = (updatedCharacter.experience || 0) + pendingMechanics.xpGained.amount;
       hasStatChanges = true;
-      toast({
-        title: `+${pendingMechanics.xpGained.amount} XP`,
-        description: pendingMechanics.xpGained.reason,
-        duration: 3000,
-      });
+      
+      // Check for automatic level up
+      const xpToNextLevel = updatedCharacter.level * 100;
+      if (updatedCharacter.experience >= xpToNextLevel) {
+        toast({
+          title: `+${pendingMechanics.xpGained.amount} XP`,
+          description: `${pendingMechanics.xpGained.reason} - Ready to Level Up!`,
+          duration: 4000,
+        });
+      } else {
+        toast({
+          title: `+${pendingMechanics.xpGained.amount} XP`,
+          description: pendingMechanics.xpGained.reason,
+          duration: 3000,
+        });
+      }
+    }
+
+    // Apply skill improvements
+    if (pendingMechanics.skillImprovements && pendingMechanics.skillImprovements.length > 0) {
+      for (const improvement of pendingMechanics.skillImprovements) {
+        // Add skill to character's skills array if not present, or note the improvement
+        if (!updatedCharacter.skills.includes(improvement.skill)) {
+          updatedCharacter.skills = [...updatedCharacter.skills, improvement.skill];
+        }
+        toast({
+          title: `Skill Improved: ${improvement.skill}`,
+          description: `+${improvement.amount} - ${improvement.reason}`,
+          duration: 3000,
+        });
+      }
+      hasStatChanges = true;
     }
 
     // Update character state if any stats changed

@@ -95,9 +95,11 @@ GAME MASTER MECHANICS:
 - Create meaningful consequences for player choices
 - Introduce NPCs with distinct personalities
 - Build tension, mystery, and emotional stakes
-- Award experience points for significant achievements: [XP:amount:reason]
-- Gold/loot rewards: [GOLD:amount] or [LOOT:item name]
+- Award experience points for significant achievements: [XP:amount:reason] (can include multiple)
+- Gold/loot rewards: [GOLD:amount] or [LOOT:item name] (can include multiple)
 - Health changes: [DAMAGE:amount] or [HEAL:amount]
+- Skill improvements: [SKILL:skillName:amount:reason] for rewarding skill progress
+- Level ups: When awarding significant XP (50+), also include a level milestone if appropriate
 
 RESPONSE FORMAT:
 - Open with narrative description of what happens
@@ -306,11 +308,43 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
       throw new Error('No narrative generated');
     }
 
-    // Parse out any game mechanics from the narrative
+    // Parse out any game mechanics from the narrative - capture ALL matches, not just first
     const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
-    const xpMatch = narrative.match(/\[XP:(\d+):([^\]]+)\]/);
-    const goldMatch = narrative.match(/\[GOLD:(\d+)\]/);
-    const lootMatch = narrative.match(/\[LOOT:([^\]]+)\]/);
+    
+    // Parse ALL XP awards (there can be multiple at chapter ends)
+    const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
+    let totalXp = 0;
+    const xpReasons: string[] = [];
+    for (const match of xpMatches) {
+      totalXp += parseInt(match[1]);
+      xpReasons.push(match[2]);
+    }
+    
+    // Parse ALL gold awards
+    const goldMatches = [...narrative.matchAll(/\[GOLD:(\d+)\]/g)];
+    let totalGold = 0;
+    for (const match of goldMatches) {
+      totalGold += parseInt(match[1]);
+    }
+    
+    // Parse ALL loot items
+    const lootMatches = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)];
+    const allLoot: string[] = [];
+    for (const match of lootMatches) {
+      allLoot.push(match[1]);
+    }
+    
+    // Parse ALL skill improvements [SKILL:skillName:amount:reason]
+    const skillMatches = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)];
+    const skillImprovements: Array<{ skill: string; amount: number; reason: string }> = [];
+    for (const match of skillMatches) {
+      skillImprovements.push({
+        skill: match[1],
+        amount: parseInt(match[2]),
+        reason: match[3]
+      });
+    }
+    
     const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
     const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
 
@@ -320,6 +354,7 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
       .replace(/\[XP:[^\]]+\]/g, '')
       .replace(/\[GOLD:\d+\]/g, '')
       .replace(/\[LOOT:[^\]]+\]/g, '')
+      .replace(/\[SKILL:[^\]]+\]/g, '')
       .replace(/\[DAMAGE:\d+\]/g, '')
       .replace(/\[HEAL:\d+\]/g, '')
       .trim();
@@ -333,14 +368,17 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
         reason: rollMatch[3]
       };
     }
-    if (xpMatch) {
-      mechanics.xpGained = { amount: parseInt(xpMatch[1]), reason: xpMatch[2] };
+    if (totalXp > 0) {
+      mechanics.xpGained = { amount: totalXp, reason: xpReasons.join(', ') };
     }
-    if (goldMatch) {
-      mechanics.goldGained = parseInt(goldMatch[1]);
+    if (totalGold > 0) {
+      mechanics.goldGained = totalGold;
     }
-    if (lootMatch) {
-      mechanics.lootGained = lootMatch[1];
+    if (allLoot.length > 0) {
+      mechanics.lootGained = allLoot; // Now an array
+    }
+    if (skillImprovements.length > 0) {
+      mechanics.skillImprovements = skillImprovements;
     }
     if (damageMatch) {
       mechanics.damage = parseInt(damageMatch[1]);
