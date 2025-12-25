@@ -20,6 +20,8 @@ import { DiceRollResult } from '@/game/diceSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { saveGame, GameSave } from '@/lib/saveSystem';
 import { useToast } from '@/hooks/use-toast';
+import { ModifierManager, createEnvironmentContext, parseNarrativeForModifiers } from '@/game/environmentModifierIntegration';
+import { createDefaultCondition } from '@/game/environmentSystem';
 
 interface StoryEntry {
   id: string;
@@ -101,12 +103,50 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
 
+  // Initialize modifier manager for buff/debuff tracking
+  const modifierManagerRef = useRef<ModifierManager | null>(null);
+  if (!modifierManagerRef.current) {
+    modifierManagerRef.current = new ModifierManager(
+      gameContext?.campaignMemory?.campaign?.id || 'default_campaign',
+      { narrativeParsingEnabled: true, autoApplyEnvironmental: true }
+    );
+  }
+
   // Hide hint after first interaction or after a few entries
   useEffect(() => {
     if (story.length > 4) {
       setShowRollbackHint(false);
     }
   }, [story.length]);
+
+  // Parse new narrative entries for modifiers (buff/debuff detection)
+  const lastProcessedStoryRef = useRef<number>(0);
+  useEffect(() => {
+    if (!modifierManagerRef.current) return;
+    
+    // Process only new story entries from the narrator
+    const newEntries = story.slice(lastProcessedStoryRef.current);
+    lastProcessedStoryRef.current = story.length;
+    
+    for (const entry of newEntries) {
+      if (entry.role === 'narrator' && entry.content) {
+        const results = modifierManagerRef.current.processNarrative(entry.content);
+        
+        // Show toast for significant modifiers applied
+        for (const result of results) {
+          if (result.modifier.severity > 0.3) {
+            const isDebuff = result.modifier.type === 'debuff';
+            toast({
+              title: `${isDebuff ? '⚠️' : '✨'} ${result.modifier.name}`,
+              description: result.modifier.description.slice(0, 60) + '...',
+              variant: isDebuff ? 'destructive' : 'default',
+              duration: 3000,
+            });
+          }
+        }
+      }
+    }
+  }, [story, toast]);
 
   // Long press handlers for story rollback
   const handleLongPressStart = useCallback((index: number, text: string) => {
@@ -339,6 +379,23 @@ export function AdventureDisplay({
       }
       if (pendingMechanics.lootGained) {
         gameContext.processGameEvent('found_treasure', updatedCharacter);
+      }
+    }
+
+    // Apply game mechanics to modifier system (buff/debuff integration)
+    if (modifierManagerRef.current) {
+      if (pendingMechanics.damage && pendingMechanics.damage > 0) {
+        modifierManagerRef.current.processMechanicsEvent({
+          type: 'damage',
+          amount: pendingMechanics.damage,
+          source: 'combat_damage'
+        });
+      }
+      if (pendingMechanics.heal && pendingMechanics.heal > 0) {
+        modifierManagerRef.current.processMechanicsEvent({
+          type: 'heal',
+          amount: pendingMechanics.heal
+        });
       }
     }
 
