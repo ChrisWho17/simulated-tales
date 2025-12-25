@@ -191,15 +191,26 @@ export function NarrativeDisplay({
           onClick={scrollToBottom}
           className={cn(
             "absolute bottom-4 right-4 z-10",
-            "p-3 rounded-full shadow-xl transition-all duration-300",
-            "bg-card/90 backdrop-blur-md text-foreground",
-            "hover:bg-primary hover:text-primary-foreground hover:scale-110",
-            "border-2 border-primary/50",
-            hasNewContent && "animate-bounce border-primary bg-primary/20"
+            "p-3 rounded-full transition-all duration-300",
+            "bg-primary/80 text-primary-foreground",
+            "hover:bg-primary hover:scale-110",
+            "border-2 border-primary-foreground/30",
+            // Glow effect
+            "shadow-[0_0_15px_rgba(var(--primary-rgb),0.5),0_0_30px_rgba(var(--primary-rgb),0.3)]",
+            hasNewContent && [
+              "animate-bounce",
+              "shadow-[0_0_20px_rgba(var(--primary-rgb),0.7),0_0_40px_rgba(var(--primary-rgb),0.4)]"
+            ]
           )}
+          style={{
+            // Fallback glow using primary color
+            boxShadow: hasNewContent 
+              ? '0 0 20px hsl(var(--primary) / 0.7), 0 0 40px hsl(var(--primary) / 0.4), 0 4px 12px rgba(0,0,0,0.3)'
+              : '0 0 15px hsl(var(--primary) / 0.5), 0 0 30px hsl(var(--primary) / 0.3), 0 4px 12px rgba(0,0,0,0.3)'
+          }}
           aria-label="Scroll to latest message"
         >
-          <ChevronDown className={cn("w-6 h-6", hasNewContent && "text-primary")} />
+          <ChevronDown className="w-6 h-6" />
         </button>
       )}
     </div>

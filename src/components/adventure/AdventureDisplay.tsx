@@ -489,12 +489,20 @@ export function AdventureDisplay({
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
+      // Tick modifiers by 1 turn on each player action
+      if (modifierManagerRef.current) {
+        modifierManagerRef.current.tickTurn(1);
+      }
       onPlayerAction(input.trim());
       setInput('');
     }
   };
 
   const handleDiceRollComplete = (roll: any) => {
+    // Tick modifiers by 1 turn for dice roll actions too
+    if (modifierManagerRef.current) {
+      modifierManagerRef.current.tickTurn(1);
+    }
     setShowDiceRoll(false);
     setCurrentDiceRoll(null);
     onPlayerAction(`[Dice roll for: ${pendingMechanics?.rollRequired?.reason}]`, roll);
