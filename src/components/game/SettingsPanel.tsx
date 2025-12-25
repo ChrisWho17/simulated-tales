@@ -104,17 +104,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
         
         {/* Tabs - horizontal scroll with proper alignment */}
-        <div className="px-4 pt-2 pb-0 overflow-x-auto scrollbar-thin scrollbar-thumb-border/50">
+        <div className="px-4 pt-3 pb-2 overflow-x-auto scrollbar-thin scrollbar-thumb-border/30">
           <div className="flex gap-1 min-w-max">
             {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-t-md",
+                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-md",
                   activeTab === tab 
-                    ? "text-[var(--accent-primary)] border-b-2 border-[var(--accent-primary)] bg-[var(--accent-bg)]/30"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-[var(--accent-primary)] bg-[var(--accent-bg)]/40 border border-[var(--accent-primary)]/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/30"
                 )}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -122,7 +122,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             ))}
           </div>
         </div>
-        <div className="border-b border-border/30" />
+        
+        {/* Subtle frosted divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-border/20 to-transparent mx-4" />
         
         {/* Content - vertical scroll for settings */}
         <ScrollArea className="flex-1 min-h-0 overflow-y-auto">
