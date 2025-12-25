@@ -14,6 +14,7 @@ import {
   createModifierTriggerEvent,
   findTemplateByName,
   tickModifiers,
+  tickModifiersByTurn,
   recomputeInteractions,
   createDefaultModifierState,
   ENVIRONMENT_TEMPLATES,
@@ -945,11 +946,21 @@ export class ModifierManager {
   }
 
   /**
-   * Process a game tick
+   * Process a game tick (LEGACY - time-based)
    */
   tick(hours: number = 1): void {
     this.currentTick += hours;
     this.state = tickModifiers(this.state, hours);
+    this.state = recomputeInteractions(this.state);
+  }
+
+  /**
+   * Process a turn tick (PRIMARY - use this for turn-based games)
+   * Call this after each player action/message
+   */
+  tickTurn(turns: number = 1): void {
+    this.currentTick += turns;
+    this.state = tickModifiersByTurn(this.state, turns);
     this.state = recomputeInteractions(this.state);
   }
 

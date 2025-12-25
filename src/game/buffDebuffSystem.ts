@@ -673,7 +673,7 @@ export function applyModifier(state: ModifierState, modifier: Modifier): Modifie
 }
 
 /**
- * Process modifier decay over time
+ * Process modifier decay over time (LEGACY - use tickModifiersByTurn for turn-based games)
  */
 export function tickModifiers(state: ModifierState, deltaHours: number): ModifierState {
   const newState = { 
@@ -708,6 +708,73 @@ export function tickModifiers(state: ModifierState, deltaHours: number): Modifie
       }
     } else {
       // Condition-based modifiers don't decay with time
+      newState.activeModifiers.push(modifier);
+    }
+  }
+
+  return newState;
+}
+
+/**
+ * Process modifier duration by turns (PRIMARY - use this for turn-based games)
+ * Each action/message = 1 turn, modifiers decrement their remaining turns
+ */
+export function tickModifiersByTurn(state: ModifierState, turns: number = 1): ModifierState {
+  const newState = { 
+    ...state, 
+    activeModifiers: [],
+    modifierHistory: [...state.modifierHistory],
+  };
+
+  for (const modifier of state.activeModifiers) {
+    // All modifiers with 'time' type are now treated as turn-based
+    if (modifier.duration.type === 'time' && modifier.duration.remaining !== Infinity) {
+      const updated = {
+        ...modifier,
+        duration: {
+          ...modifier.duration,
+          remaining: modifier.duration.remaining - turns,
+        },
+      };
+
+      if (updated.duration.remaining <= 0) {
+        // Modifier expired - handle resolution
+        const resolved = resolveModifier(updated, newState);
+        newState.modifierHistory.push(updated);
+        if (resolved.promotedModifier) {
+          newState.promotedModifiers = [
+            ...(newState.promotedModifiers || []),
+            resolved.promotedModifier,
+          ];
+        }
+      } else {
+        // Keep the modifier with reduced duration
+        // Apply severity decay based on progress
+        const progress = 1 - (updated.duration.remaining / updated.duration.total);
+        let decayedModifier = updated;
+        
+        if (modifier.decayModel === 'linear') {
+          // Severity decreases linearly with turns
+          const linearDecay = (turns / modifier.duration.total) * modifier.severity * 0.3;
+          decayedModifier = {
+            ...updated,
+            severity: Math.max(0.05, updated.severity - linearDecay),
+          };
+        } else if (modifier.decayModel === 'staged') {
+          // Decay happens in stages
+          if (progress > 0.75) {
+            decayedModifier = { ...updated, severity: modifier.severity * 0.25 };
+          } else if (progress > 0.5) {
+            decayedModifier = { ...updated, severity: modifier.severity * 0.5 };
+          } else if (progress > 0.25) {
+            decayedModifier = { ...updated, severity: modifier.severity * 0.75 };
+          }
+        }
+        
+        newState.activeModifiers.push(decayedModifier);
+      }
+    } else {
+      // Condition-based or infinite modifiers don't decay
       newState.activeModifiers.push(modifier);
     }
   }
