@@ -1,8 +1,8 @@
-import { Modifier } from '@/game/buffDebuffSystem';
+import { Modifier, ModifierOccurredAt, ModifierTriggerEvent } from '@/game/buffDebuffSystem';
 import { Button } from '@/components/ui/button';
 import { 
   X, Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye,
-  MapPin, Clock, AlertTriangle, Sparkles
+  MapPin, Clock, AlertTriangle, Sparkles, Calendar, Hash
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -84,10 +84,105 @@ function getSeverityLabel(severity: number): string {
   return 'Minor';
 }
 
+// Format device time to human-readable string
+function formatDeviceTime(deviceTime: string): string {
+  try {
+    const date = new Date(deviceTime);
+    if (isNaN(date.getTime())) return 'Time Unknown';
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }) + ' — ' + date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return 'Time Unknown';
+  }
+}
+
+// Get the "When" display string - NEVER show "Recently" if we have real data
+function getWhenDisplay(modifier: Modifier): { primary: string; secondary?: string } {
+  // Priority 1: Use structured occurredAt
+  if (modifier.occurredAt?.deviceTime) {
+    return {
+      primary: formatDeviceTime(modifier.occurredAt.deviceTime),
+      secondary: modifier.occurredAt.worldTime !== 'Unknown' 
+        ? `In-game: ${modifier.occurredAt.worldTime}` 
+        : undefined,
+    };
+  }
+  
+  // Priority 2: Use legacy originTimestamp if it looks like a real time
+  if (modifier.originTimestamp && modifier.originTimestamp !== 'Recently') {
+    return { primary: modifier.originTimestamp };
+  }
+  
+  // Priority 3: Show "Time Unknown" - never "Recently"
+  return { primary: 'Time Unknown' };
+}
+
+// Get the "How" display string from trigger event
+function getHowDisplay(modifier: Modifier): { 
+  source: string; 
+  details?: string;
+  type?: string;
+} | null {
+  // Priority 1: Use structured triggerEvent
+  if (modifier.triggerEvent) {
+    const te = modifier.triggerEvent;
+    let details: string | undefined;
+    
+    // Build details string from trigger event details
+    const detailParts: string[] = [];
+    if (te.details.stimulus) detailParts.push(te.details.stimulus);
+    if (te.details.bodyPart) detailParts.push(`affected: ${te.details.bodyPart}`);
+    if (te.details.weapon) detailParts.push(`weapon: ${te.details.weapon}`);
+    if (te.details.action) detailParts.push(te.details.action);
+    if (te.details.emotionalContext?.length) {
+      detailParts.push(`emotional context: ${te.details.emotionalContext.join(', ')}`);
+    }
+    
+    if (detailParts.length > 0) {
+      details = detailParts.join(' • ');
+    }
+    
+    return {
+      source: te.source.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      details,
+      type: te.type.replace(/_/g, ' '),
+    };
+  }
+  
+  // Priority 2: Use legacy incidentDescription
+  if (modifier.incidentDescription) {
+    return {
+      source: modifier.incidentDescription,
+      details: modifier.bodyPart ? `Affected area: ${modifier.bodyPart}` : undefined,
+    };
+  }
+  
+  // Priority 3: Use triggerCause for phobias
+  if (modifier.triggerCause) {
+    return {
+      source: modifier.triggerCause,
+      type: 'phobia trigger',
+    };
+  }
+  
+  return null;
+}
+
 export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalProps) {
   const Icon = getCategoryIcon(modifier.category);
   const colors = getModifierColors(modifier);
   const isPhobia = modifier.category === 'phobia';
+  
+  const whenDisplay = getWhenDisplay(modifier);
+  const howDisplay = getHowDisplay(modifier);
 
   return (
     <div 
@@ -96,7 +191,7 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
     >
       <div 
         className={cn(
-          "bg-card border-2 rounded-lg w-full max-w-md animate-fade-in shadow-lg",
+          "bg-card border-2 rounded-lg w-full max-w-md animate-fade-in shadow-lg max-h-[90vh] overflow-y-auto",
           colors.border,
           colors.glow
         )}
@@ -154,6 +249,79 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             </div>
           )}
 
+          {/* WHEN - Precise timestamp */}
+          <div className={cn(
+            "p-3 rounded-lg border-2",
+            "bg-primary/5 border-primary/20"
+          )}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2 text-primary">
+              <Calendar className="w-3 h-3" />
+              When
+            </h3>
+            <p className="text-sm font-medium text-foreground">
+              {whenDisplay.primary}
+            </p>
+            {whenDisplay.secondary && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {whenDisplay.secondary}
+              </p>
+            )}
+            {modifier.occurredAt?.turnId !== undefined && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <Hash className="w-3 h-3" />
+                Turn #{modifier.occurredAt.turnId}
+              </p>
+            )}
+          </div>
+
+          {/* HOW - What happened */}
+          {howDisplay && (
+            <div className={cn(
+              "p-3 rounded-lg border-2",
+              colors.bg, colors.border
+            )}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{ color: 'inherit' }}>
+                <AlertTriangle className="w-3 h-3" />
+                How It Happened
+              </h3>
+              <p className={cn("text-sm font-medium", colors.text)}>
+                {howDisplay.source}
+              </p>
+              {howDisplay.type && (
+                <p className="text-xs text-muted-foreground mt-1 capitalize">
+                  Type: {howDisplay.type}
+                </p>
+              )}
+              {howDisplay.details && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {howDisplay.details}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* WHERE - Location */}
+          {(modifier.originLocation || modifier.triggerEvent?.details.location) && (
+            <div className="flex items-start gap-2 text-sm p-2 bg-background/50 rounded border border-border/30">
+              <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <span className="text-muted-foreground">Location: </span>
+                <span className="text-foreground">
+                  {modifier.triggerEvent?.details.location || modifier.originLocation}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Narrative Excerpt (flavor text - italicized) */}
+          {(modifier.narrativeExcerpt || modifier.originNarrative) && (
+            <div className="p-3 bg-card rounded border border-border/30">
+              <p className="text-sm text-muted-foreground italic leading-relaxed">
+                "{modifier.narrativeExcerpt || modifier.originNarrative}"
+              </p>
+            </div>
+          )}
+
           {/* Severity */}
           {!isPhobia && (
             <div className="space-y-2">
@@ -177,74 +345,6 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Duration:</span>
             <span className="font-medium">{formatDuration(modifier.duration.remaining)}</span>
-          </div>
-
-          {/* Incident Details - What Happened */}
-          {modifier.incidentDescription && (
-            <div className={cn(
-              "p-3 rounded-lg border-2",
-              colors.bg, colors.border
-            )}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{ color: 'inherit' }}>
-                <AlertTriangle className="w-3 h-3" />
-                What Happened
-              </h3>
-              <p className={cn("text-sm font-medium", colors.text)}>
-                {modifier.incidentDescription}
-              </p>
-              {modifier.bodyPart && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Affected area: <span className="font-medium text-foreground">{modifier.bodyPart}</span>
-                </p>
-              )}
-              {modifier.triggerCause && isPhobia && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Trigger: <span className="font-medium text-foreground">{modifier.triggerCause}</span>
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Origin Information */}
-          <div className="p-3 bg-background/50 rounded-lg border border-border/30 space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin className="w-3 h-3" />
-              Where & When
-            </h3>
-            
-            {modifier.originLocation && (
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-muted-foreground">Location: </span>
-                  <span className="text-foreground">{modifier.originLocation}</span>
-                </div>
-              </div>
-            )}
-
-            {modifier.originTimestamp && (
-              <div className="flex items-start gap-2 text-sm">
-                <Clock className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <span className="text-muted-foreground">When: </span>
-                  <span className="text-foreground">{modifier.originTimestamp}</span>
-                </div>
-              </div>
-            )}
-
-            {modifier.originNarrative && (
-              <div className="mt-2 p-2 bg-card rounded border border-border/30">
-                <p className="text-sm text-foreground italic">
-                  "{modifier.originNarrative}"
-                </p>
-              </div>
-            )}
-
-            {!modifier.originLocation && !modifier.originNarrative && !modifier.incidentDescription && (
-              <p className="text-sm text-muted-foreground italic">
-                {modifier.originEvent || 'Origin unknown'}
-              </p>
-            )}
           </div>
 
           {/* Effects (if any) */}
