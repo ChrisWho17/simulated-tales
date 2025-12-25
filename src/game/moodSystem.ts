@@ -1027,6 +1027,58 @@ export const GENRE_MOOD_DESCRIPTORS: Record<GameGenre, Record<CoreMoodType, Genr
     }
   }
 };
+// ===== MOOD-TINTED KEYWORD SYSTEM =====
+// Words that get subtle color tinting based on active mood (per PDF spec)
+
+export const MOOD_KEYWORDS: Record<CoreMoodType, string[]> = {
+  lusty: [
+    'linger', 'soft', 'press', 'touch', 'warm', 'close', 'lips', 'eyes', 'skin',
+    'breath', 'caress', 'desire', 'pulse', 'heat', 'ache', 'whisper', 'gentle',
+    'intimate', 'tender', 'embrace', 'longing', 'passion', 'drawn', 'magnetic'
+  ],
+  mad: [
+    'snap', 'slam', 'tense', 'snarl', 'fury', 'rage', 'burn', 'clench', 'growl',
+    'seething', 'thunder', 'storm', 'hate', 'kill', 'destroy', 'crush', 'break',
+    'violent', 'harsh', 'bitter', 'strike', 'smash', 'roar', 'wrath'
+  ],
+  annoyed: [
+    'sigh', 'roll', 'impatient', 'bored', 'tired', 'again', 'enough', 'whatever',
+    'fine', 'irritated', 'frustrated', 'tedious', 'pointless', 'wait', 'hurry'
+  ],
+  neutral: [], // No keywords highlighted for neutral
+  happy: [
+    'smile', 'laugh', 'joy', 'bright', 'warm', 'light', 'hope', 'cheer', 'grin',
+    'delight', 'pleased', 'excited', 'wonderful', 'amazing', 'glad', 'happy'
+  ],
+  sad: [
+    'heavy', 'drift', 'quiet', 'sorrow', 'tears', 'loss', 'empty', 'alone',
+    'cold', 'dark', 'weep', 'mourn', 'grief', 'ache', 'hollow', 'fading', 'gone'
+  ],
+  depressed: [
+    'nothing', 'pointless', 'empty', 'void', 'hollow', 'numb', 'dark', 'endless',
+    'hopeless', 'worthless', 'meaningless', 'grey', 'shadow', 'fade', 'disappear'
+  ],
+  fearful: [
+    'shadow', 'dark', 'danger', 'threat', 'lurk', 'creep', 'terror', 'dread',
+    'panic', 'flee', 'hide', 'trembl', 'shak', 'cold', 'frozen', 'paralyz'
+  ],
+  determined: [
+    'will', 'must', 'resolve', 'steel', 'strong', 'unwavering', 'focused',
+    'driven', 'purpose', 'commit', 'stand', 'fight', 'rise', 'push', 'forward'
+  ],
+  suspicious: [
+    'watch', 'doubt', 'lie', 'truth', 'hidden', 'secret', 'trust', 'betray',
+    'careful', 'wary', 'question', 'motiv', 'agenda', 'scheme', 'deceiv'
+  ]
+};
+
+// Check if a word should be tinted for the current mood
+export function shouldTintWord(word: string, mood: CoreMoodType): boolean {
+  if (mood === 'neutral') return false;
+  const keywords = MOOD_KEYWORDS[mood] || [];
+  const lowerWord = word.toLowerCase().replace(/[^a-z]/g, '');
+  return keywords.some(kw => lowerWord.includes(kw) || kw.includes(lowerWord));
+}
 
 // ===== MOOD HISTORY TRACKING =====
 
