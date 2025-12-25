@@ -95,11 +95,26 @@ GAME MASTER MECHANICS:
 - Create meaningful consequences for player choices
 - Introduce NPCs with distinct personalities
 - Build tension, mystery, and emotional stakes
-- Award experience points for significant achievements: [XP:amount:reason] (can include multiple)
+
+XP AND PROGRESSION SYSTEM (CRITICAL):
+- Award XP ONLY for successful player actions, never passively
+- Use this format: [XP:amount:stat1=weight,stat2=weight:difficulty:risk:reason]
+  - amount: Base XP value (10-50 typical, 50+ for major achievements)
+  - stats: Contributing stats with weights that sum to 1.0 (e.g., strength=0.6,dexterity=0.4)
+  - difficulty: trivial|standard|high|extreme
+  - risk: low|moderate|high|lethal
+  - reason: Brief narrative reason
+  - Example: [XP:25:charisma=0.6,wisdom=0.4:high:moderate:Convinced the guard captain despite suspicion]
+- For minor scene progression without success/failure, use: [NEUTRAL_XP:Scene progressed]
 - Gold/loot rewards: [GOLD:amount] or [LOOT:item name] (can include multiple)
 - Health changes: [DAMAGE:amount] or [HEAL:amount]
-- Skill improvements: [SKILL:skillName:amount:reason] for rewarding skill progress
-- Level ups: When awarding significant XP (50+), also include a level milestone if appropriate
+- Skill improvements: [SKILL:skillName:amount:reason]
+
+CHAPTER SYSTEM:
+- Mark chapter endings with [CHAPTER_END] when a major story arc concludes
+- Chapter endings should feel earned - after boss defeats, major revelations, completing significant quests
+- At chapter endings, award bonus XP reflecting the entire chapter's accomplishments
+- Never use [CHAPTER_END] for minor scene transitions
 
 RESPONSE FORMAT:
 - Open with narrative description of what happens
@@ -308,17 +323,57 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
       throw new Error('No narrative generated');
     }
 
-    // Parse out any game mechanics from the narrative - capture ALL matches, not just first
+    // Parse out any game mechanics from the narrative
     const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
     
-    // Parse ALL XP awards (there can be multiple at chapter ends)
+    // Parse XP with new format: [XP:amount:stat1=weight,stat2=weight:difficulty:risk:reason]
+    // Also support legacy format: [XP:amount:reason]
     const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
     let totalXp = 0;
     const xpReasons: string[] = [];
+    const xpEvents: any[] = [];
+    
     for (const match of xpMatches) {
-      totalXp += parseInt(match[1]);
-      xpReasons.push(match[2]);
+      const amount = parseInt(match[1]);
+      const rest = match[2];
+      
+      // Check if it's the new format with stat weights
+      const newFormatMatch = rest.match(/^([^:]+):(\w+):(\w+):(.+)$/);
+      if (newFormatMatch) {
+        const statsStr = newFormatMatch[1];
+        const difficulty = newFormatMatch[2];
+        const risk = newFormatMatch[3];
+        const reason = newFormatMatch[4];
+        
+        // Parse stat weights
+        const contributingStats: Record<string, number> = {};
+        const statParts = statsStr.split(',');
+        for (const part of statParts) {
+          const [stat, weight] = part.split('=');
+          if (stat && weight) {
+            contributingStats[stat.trim()] = parseFloat(weight);
+          }
+        }
+        
+        xpEvents.push({ amount, contributingStats, difficulty, risk, reason });
+        totalXp += amount;
+        xpReasons.push(reason);
+      } else {
+        // Legacy format
+        totalXp += amount;
+        xpReasons.push(rest);
+        xpEvents.push({ amount, reason: rest });
+      }
     }
+    
+    // Parse neutral XP
+    const neutralXpMatch = narrative.match(/\[NEUTRAL_XP:([^\]]+)\]/);
+    if (neutralXpMatch) {
+      xpEvents.push({ amount: Math.floor(Math.random() * 3) + 1, isNeutral: true, reason: neutralXpMatch[1] });
+    }
+    
+    // Check for chapter end
+    const isChapterEnd = narrative.includes('[CHAPTER_END]');
     
     // Parse ALL gold awards
     const goldMatches = [...narrative.matchAll(/\[GOLD:(\d+)\]/g)];
@@ -334,7 +389,7 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
       allLoot.push(match[1]);
     }
     
-    // Parse ALL skill improvements [SKILL:skillName:amount:reason]
+    // Parse ALL skill improvements
     const skillMatches = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)];
     const skillImprovements: Array<{ skill: string; amount: number; reason: string }> = [];
     for (const match of skillMatches) {
@@ -352,6 +407,8 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     let cleanNarrative = narrative
       .replace(/\[ROLL:[^\]]+\]/g, '')
       .replace(/\[XP:[^\]]+\]/g, '')
+      .replace(/\[NEUTRAL_XP:[^\]]+\]/g, '')
+      .replace(/\[CHAPTER_END\]/g, '')
       .replace(/\[GOLD:\d+\]/g, '')
       .replace(/\[LOOT:[^\]]+\]/g, '')
       .replace(/\[SKILL:[^\]]+\]/g, '')
@@ -368,14 +425,17 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
         reason: rollMatch[3]
       };
     }
-    if (totalXp > 0) {
-      mechanics.xpGained = { amount: totalXp, reason: xpReasons.join(', ') };
+    if (totalXp > 0 || xpEvents.length > 0) {
+      mechanics.xpGained = { amount: totalXp, reason: xpReasons.join(', '), events: xpEvents };
+    }
+    if (isChapterEnd) {
+      mechanics.chapterEnd = true;
     }
     if (totalGold > 0) {
       mechanics.goldGained = totalGold;
     }
     if (allLoot.length > 0) {
-      mechanics.lootGained = allLoot; // Now an array
+      mechanics.lootGained = allLoot;
     }
     if (skillImprovements.length > 0) {
       mechanics.skillImprovements = skillImprovements;
