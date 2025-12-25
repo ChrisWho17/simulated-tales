@@ -411,6 +411,8 @@ export interface NarrativeContext {
   narrativeTime?: string;
   turnId?: number;
   worldTime?: { day: number; hour: number };
+  messageId?: string;     // For jumping back to the original message
+  campaignId?: string;    // Campaign context for message reference
 }
 
 /**
@@ -517,6 +519,22 @@ export function parseNarrativeForModifiers(
             // NEW: Use narrativeExcerpt for flavor text
             modifier.narrativeExcerpt = narrativeSnippet;
             modifier.originNarrative = narrativeSnippet; // Keep for backward compat
+            
+            // NEW: Add origin snapshot for immutable text reference
+            modifier.originSnapshot = {
+              text: narrativeSnippet,
+              contextBefore: 1,
+              contextAfter: 1,
+            };
+            
+            // NEW: Add origin message reference if available
+            if (context?.messageId && context?.turnId !== undefined) {
+              modifier.originMessage = {
+                messageId: context.messageId,
+                turnId: context.turnId,
+                campaignId: context.campaignId,
+              };
+            }
             
             // Calculate confidence based on pattern specificity
             const confidence = pattern.source.length > 20 ? 0.9 : 0.7;
