@@ -25,6 +25,16 @@ import {
   decayMoodTowardsNeutral,
 } from '@/game/emotionalStateSystem';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { 
+  WorldBible, 
+  WorldBibleOptions,
+  createWorldBible,
+  serializeWorldBible,
+  deserializeWorldBible,
+  validateAndProcess,
+  startNewChapter,
+  getEnhancedPrompt,
+} from '@/game/worldBible';
 
 // ============================================================================
 // GAME SETTINGS
@@ -105,6 +115,15 @@ interface GameContextType {
   setMood: (mood: MoodState, intensity?: number) => void;
   decayMood: () => void;
   
+  // World Bible (Genre Contract System)
+  worldBible: WorldBible | null;
+  initializeWorldBible: (options: WorldBibleOptions) => WorldBible;
+  validateContent: (content: string) => { success: boolean; content: string; log: string[] };
+  getEnhancedPromptWithContract: (basePrompt: string) => string;
+  advanceChapter: () => void;
+  restoreWorldBible: (serialized: string) => boolean;
+  getSerializedWorldBible: () => string | null;
+  
   // Campaign Memory System
   campaignMemory: CampaignMemoryStore | null;
   initializeCampaign: (name: string, characterName: string, toneProfile?: string[]) => void;
@@ -144,6 +163,27 @@ export const useGameOptional = (): GameContextType | null => {
 const SETTINGS_STORAGE_KEY = 'untold-game-settings';
 const CAMPAIGN_MEMORY_KEY = 'untold-campaign-memory';
 const EMOTIONAL_STATE_KEY = 'untold-emotional-state';
+const WORLD_BIBLE_KEY = 'untold-world-bible';
+
+const loadWorldBibleFromStorage = (): WorldBible | null => {
+  try {
+    const saved = localStorage.getItem(WORLD_BIBLE_KEY);
+    if (saved) {
+      return deserializeWorldBible(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load world bible:', e);
+  }
+  return null;
+};
+
+const saveWorldBibleToStorage = (bible: WorldBible): void => {
+  try {
+    localStorage.setItem(WORLD_BIBLE_KEY, serializeWorldBible(bible));
+  } catch (e) {
+    console.error('Failed to save world bible:', e);
+  }
+};
 
 const loadSettings = (): GameSettings => {
   try {
@@ -243,6 +283,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return saved || createInitialEmotionalState();
   });
   
+  // World Bible State (Genre Contract System)
+  const [worldBible, setWorldBible] = useState<WorldBible | null>(() => {
+    return loadWorldBibleFromStorage();
+  });
+  
   // Apply color theme on mount
   useEffect(() => {
     applyColorTheme(colorTheme);
@@ -264,6 +309,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   useEffect(() => {
     saveEmotionalState(emotionalState);
   }, [emotionalState]);
+  
+  // Auto-save world bible when it changes
+  useEffect(() => {
+    if (worldBible) {
+      saveWorldBibleToStorage(worldBible);
+    }
+  }, [worldBible]);
   
   const updateSettings = useCallback((partial: Partial<GameSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));
@@ -389,6 +441,52 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setCampaignMemory(updatedStore);
   }, []);
   
+  // World Bible Functions (Genre Contract System)
+  const initializeWorldBibleFunc = useCallback((options: WorldBibleOptions): WorldBible => {
+    const bible = createWorldBible(options);
+    setWorldBible(bible);
+    console.log(`[World Bible] Initialized: ${bible.campaignName} (${bible.primaryGenre})`);
+    return bible;
+  }, []);
+  
+  const validateContentFunc = useCallback((content: string): { success: boolean; content: string; log: string[] } => {
+    if (!worldBible) {
+      return { success: true, content, log: ['No world bible active - content passed without validation'] };
+    }
+    const result = validateAndProcess(content, worldBible);
+    if (result.log.length > 0) {
+      console.log(`[World Bible] Validation:`, result.log.join('\n'));
+    }
+    return result;
+  }, [worldBible]);
+  
+  const getEnhancedPromptWithContractFunc = useCallback((basePrompt: string): string => {
+    if (!worldBible) return basePrompt;
+    return getEnhancedPrompt(worldBible, basePrompt);
+  }, [worldBible]);
+  
+  const advanceChapterFunc = useCallback(() => {
+    if (!worldBible) return;
+    startNewChapter(worldBible);
+    setWorldBible({ ...worldBible });
+    console.log(`[World Bible] Advanced to chapter ${worldBible.currentChapter}`);
+  }, [worldBible]);
+  
+  const restoreWorldBibleFunc = useCallback((serialized: string): boolean => {
+    const restored = deserializeWorldBible(serialized);
+    if (restored) {
+      setWorldBible(restored);
+      console.log(`[World Bible] Restored: ${restored.campaignName}`);
+      return true;
+    }
+    return false;
+  }, []);
+  
+  const getSerializedWorldBibleFunc = useCallback((): string | null => {
+    if (!worldBible) return null;
+    return serializeWorldBible(worldBible);
+  }, [worldBible]);
+  
   const value: GameContextType = {
     settings,
     updateSettings,
@@ -414,6 +512,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     endCurrentSession: endCurrentSessionFunc,
     getCampaign: getCampaignFunc,
     updateCampaignMemory: updateCampaignMemoryFunc,
+    // World Bible (Genre Contract System)
+    worldBible,
+    initializeWorldBible: initializeWorldBibleFunc,
+    validateContent: validateContentFunc,
+    getEnhancedPromptWithContract: getEnhancedPromptWithContractFunc,
+    advanceChapter: advanceChapterFunc,
+    restoreWorldBible: restoreWorldBibleFunc,
+    getSerializedWorldBible: getSerializedWorldBibleFunc,
   };
   
   return (

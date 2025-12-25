@@ -75,6 +75,7 @@ interface AdventureRequest {
   memoryContext?: MemoryContext;
   emotionalContext?: EmotionalContext;
   reputationContext?: ReputationContext;
+  genreContract?: string; // World Bible genre contract summary
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -199,7 +200,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -208,6 +209,19 @@ serve(async (req) => {
 
     // Build system prompt with character context and memory
     let systemContent = SYSTEM_PROMPT;
+    
+    // Add genre contract if provided (World Bible enforcement)
+    if (genreContract) {
+      systemContent += `\n\n=== GENRE CONTRACT (ENFORCE STRICTLY) ===
+${genreContract}
+
+CRITICAL: You MUST stay within this genre contract. 
+- Never introduce elements from the BANNED ELEMENTS list
+- Use the ESCALATION MENU to raise stakes appropriately
+- Adapt your vocabulary, tone, and elements to match the genre
+- If you need to increase drama, choose from the escalation options, NOT from other genres`;
+    }
+    
     if (character) {
       systemContent += '\n\n' + formatCharacterContext(character);
     }

@@ -68,7 +68,23 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
-  const { setDiceMode, initializeCampaign, restoreCampaignFromSave, campaignMemory, getCampaignContext, advanceCampaignTime, updateCampaignMemory, emotionalState, settings } = useGame();
+  const { 
+    setDiceMode, 
+    initializeCampaign, 
+    restoreCampaignFromSave, 
+    campaignMemory, 
+    getCampaignContext, 
+    advanceCampaignTime, 
+    updateCampaignMemory, 
+    emotionalState, 
+    settings,
+    // World Bible
+    initializeWorldBible,
+    validateContent,
+    getEnhancedPromptWithContract,
+    worldBible,
+    restoreWorldBible,
+  } = useGame();
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -237,6 +253,9 @@ export function AdventureGame() {
       const emotionalContext = settings.enableMoodSystem 
         ? formatEmotionalContext(currentMood, 0.6, genre)
         : null;
+      
+      // Enhance scenario with genre contract if world bible exists
+      const enhancedScenario = getEnhancedPromptWithContract(scenario);
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -244,7 +263,7 @@ export function AdventureGame() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            scenario,
+            scenario: enhancedScenario,
             playerAction,
             conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
             cheatMode,
@@ -252,6 +271,8 @@ export function AdventureGame() {
             diceRoll,
             memoryContext: formattedMemory.fullContext ? formattedMemory : undefined,
             emotionalContext,
+            // Pass genre contract summary for AI awareness
+            genreContract: worldBible?.contractSummary || null,
           }),
         }
       );
@@ -261,9 +282,16 @@ export function AdventureGame() {
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
       if (data.mechanics) setPendingMechanics(data.mechanics);
       
-      // If we have a narrative, use it (even if it's a fallback)
+      // If we have a narrative, validate it through World Bible
       if (data.narrative) {
-        return data.narrative;
+        const validation = validateContent(data.narrative);
+        if (!validation.success) {
+          console.warn('[World Bible] Narrative blocked, using fallback:', validation.log);
+          // Use modified content or fallback
+          return validation.content || generateNeutralContinuation({ lastAction: playerAction });
+        }
+        // Return validated (possibly reskinned) content
+        return validation.content;
       }
       
       // If no narrative at all, generate a local neutral continuation
@@ -275,20 +303,32 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, scenarioSelection?.genre]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
     setScenarioSelection(selection);
     // Set the dice mode in the game context
     setDiceMode(selection.diceMode);
+    
+    // Initialize World Bible (Genre Contract System)
+    initializeWorldBible({
+      campaignName: selection.genreTitle || selection.scenario.slice(0, 50),
+      primaryGenre: selection.genre,
+      secondaryGenres: [],
+      hardLock: false,
+      tabooList: [],
+      intrusionBudget: 2,
+    });
+    console.log(`[World Bible] Created for genre: ${selection.genre}`);
+    
     // Skip color selection if already chosen before
     if (selectedColorId) {
       setPhase('character');
     } else {
       setPhase('color');
     }
-  }, [selectedColorId, setDiceMode]);
+  }, [selectedColorId, setDiceMode, initializeWorldBible]);
 
   // Step 2: Color selection complete
   const handleColorSelect = useCallback((colorId: string) => {
@@ -448,10 +488,29 @@ export function AdventureGame() {
         console.log(`[Campaign Memory] Initialized campaign for legacy save: ${campaignId}`);
       }
       
+      // World Bible is auto-loaded from localStorage by GameContext
+      // If it doesn't exist, we'll create a default one based on saved genre
+      if (!worldBible) {
+        const savedGenre = localStorage.getItem(GENRE_KEY) as GameGenre | null;
+        if (savedGenre) {
+          initializeWorldBible({
+            campaignName: `${save.characterName}'s Adventure`,
+            primaryGenre: savedGenre,
+            secondaryGenres: [],
+            hardLock: false,
+            tabooList: [],
+            intrusionBudget: 2,
+          });
+          console.log(`[World Bible] Initialized for restored save: ${savedGenre}`);
+        }
+      } else {
+        console.log(`[World Bible] Using existing: ${worldBible.primaryGenre}`);
+      }
+      
       setPhase('playing');
       toast.success(`Loaded ${save.characterName}'s adventure`);
     }
-  }, [restoreCampaignFromSave, initializeCampaign]);
+  }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible]);
 
   // Show loading screen on initial load
   if (initialLoading) {
