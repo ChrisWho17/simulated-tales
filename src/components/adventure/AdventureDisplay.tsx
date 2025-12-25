@@ -37,7 +37,7 @@ import {
   advanceChapter
 } from '@/game/levelingSystem';
 import { GameGenre } from '@/types/genreData';
-import { MOOD_COLORS } from '@/game/moodSystem';
+import { MOOD_COLORS, MOOD_KEYWORDS, shouldTintWord } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 
 interface StoryEntry {
@@ -754,7 +754,7 @@ export function AdventureDisplay({
     }
   };
 
-  // Safe text formatting using React components instead of dangerouslySetInnerHTML
+  // Safe text formatting with mood-tinted keywords
   const formatTextSegment = (text: string, keyPrefix: string, moodConfig?: { primary: string; glow: string } | null): React.ReactNode[] => {
     const result: React.ReactNode[] = [];
     // Split by bold markers first
@@ -781,6 +781,32 @@ export function AdventureDisplay({
         italicParts.forEach((iPart, j) => {
           if (j % 2 === 1) {
             result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{iPart}</em>);
+          } else if (iPart && moodConfig) {
+            // For non-italic text with active mood, check for tintable keywords
+            const words = iPart.split(/(\s+)/);
+            words.forEach((word, wIdx) => {
+              if (/^\s+$/.test(word)) {
+                // Whitespace - just add it
+                result.push(<span key={`${keyPrefix}-ws-${i}-${j}-${wIdx}`}>{word}</span>);
+              } else if (shouldTintWord(word, currentMood)) {
+                // Tint this word with a subtle frost effect
+                result.push(
+                  <span 
+                    key={`${keyPrefix}-tw-${i}-${j}-${wIdx}`}
+                    className="transition-all duration-300"
+                    style={{ 
+                      color: moodConfig.primary,
+                      textShadow: `0 0 6px ${moodConfig.glow}`,
+                      fontWeight: 500
+                    }}
+                  >
+                    {word}
+                  </span>
+                );
+              } else {
+                result.push(<span key={`${keyPrefix}-w-${i}-${j}-${wIdx}`}>{word}</span>);
+              }
+            });
           } else if (iPart) {
             result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{iPart}</span>);
           }
@@ -892,8 +918,23 @@ export function AdventureDisplay({
           {/* Character Quick Stats */}
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-6">
-              {/* Health */}
-              <div className="flex items-center gap-2">
+              {/* Health with Mood Aura - Soft pulsing glow based on emotional state */}
+              <div 
+                className="flex items-center gap-2 relative"
+                style={currentMood !== 'neutral' ? {
+                  // Soft mood aura behind health indicator
+                  filter: `drop-shadow(0 0 12px ${MOOD_COLORS[currentMood]?.glow || 'transparent'})`,
+                } : undefined}
+              >
+                {/* Faint pulsing halo behind portrait/health */}
+                {currentMood !== 'neutral' && (
+                  <div 
+                    className="absolute inset-0 -m-2 rounded-full opacity-40 animate-pulse pointer-events-none"
+                    style={{
+                      background: `radial-gradient(circle, ${MOOD_COLORS[currentMood]?.glow || 'transparent'} 0%, transparent 70%)`,
+                    }}
+                  />
+                )}
                 <CircularStat 
                   value={character.currentHealth} 
                   max={character.maxHealth} 
@@ -910,14 +951,20 @@ export function AdventureDisplay({
                 </div>
               </div>
 
-              {/* Mood Indicator */}
-              {gameContext?.emotionalState && (
-                <PlayerMoodIndicator
-                  currentMood={gameContext.emotionalState.currentMood}
-                  moodIntensity={gameContext.emotionalState.moodIntensity}
-                  characterName={character.name}
-                  size="sm"
-                />
+              {/* Mood Indicator - Compact label with glow */}
+              {currentMood !== 'neutral' && (
+                <div 
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300"
+                  style={{
+                    backgroundColor: `${MOOD_COLORS[currentMood]?.primary}20`,
+                    color: MOOD_COLORS[currentMood]?.primary,
+                    boxShadow: `0 0 10px ${MOOD_COLORS[currentMood]?.glow}`,
+                    border: `1px solid ${MOOD_COLORS[currentMood]?.primary}40`,
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: MOOD_COLORS[currentMood]?.primary }} />
+                  {currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
+                </div>
               )}
 
               {/* Gold */}
