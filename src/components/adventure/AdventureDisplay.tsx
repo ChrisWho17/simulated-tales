@@ -6,11 +6,12 @@ import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown } from 'lucide-react';
-import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
+import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
 import { PlayerMoodIndicator } from './PlayerMoodIndicator';
+import { LevelUpModal } from './LevelUpModal';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
@@ -24,6 +25,18 @@ import { ModifierManager, createEnvironmentContext, parseNarrativeForModifiers }
 import { createDefaultCondition } from '@/game/environmentSystem';
 import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
 import { getModifierInlineColor } from './ModifierDisplay';
+import { 
+  LevelingState, 
+  LevelUpChoice,
+  createLevelingState, 
+  processXPEvent, 
+  checkLevelUp, 
+  generateLevelUpChoices, 
+  applyLevelUp,
+  createXPEvent,
+  advanceChapter
+} from '@/game/levelingSystem';
+import { GameGenre } from '@/types/genreData';
 
 interface StoryEntry {
   id: string;
@@ -39,14 +52,24 @@ interface PendingRoll {
   reason: string;
 }
 
+interface XPEventData {
+  amount: number;
+  contributingStats?: Record<string, number>;
+  difficulty?: string;
+  risk?: string;
+  reason?: string;
+  isNeutral?: boolean;
+}
+
 interface GameMechanics {
   rollRequired?: PendingRoll;
-  xpGained?: { amount: number; reason: string };
+  xpGained?: { amount: number; reason: string; events?: XPEventData[] };
   goldGained?: number;
-  lootGained?: string | string[]; // Now supports array for multiple items
+  lootGained?: string | string[];
   damage?: number;
   heal?: number;
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
+  chapterEnd?: boolean;
 }
 
 interface AdventureDisplayProps {
@@ -67,6 +90,7 @@ interface AdventureDisplayProps {
   sceneImageUrl?: string | null;
   isGeneratingScene?: boolean;
   onCloseSceneImage?: () => void;
+  genre?: GameGenre;
 }
 
 export function AdventureDisplay({
@@ -87,6 +111,7 @@ export function AdventureDisplay({
   sceneImageUrl,
   isGeneratingScene,
   onCloseSceneImage,
+  genre = 'fantasy',
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -103,6 +128,14 @@ export function AdventureDisplay({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousStoryLength = useRef(story.length);
+  
+  // Leveling system state
+  const [levelingState, setLevelingState] = useState<LevelingState>(() => 
+    createLevelingState(character.level)
+  );
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+  const [levelUpChoices, setLevelUpChoices] = useState<LevelUpChoice[]>([]);
+  const [lastPlayerAction, setLastPlayerAction] = useState('');
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
@@ -408,26 +441,87 @@ export function AdventureDisplay({
       hasStatChanges = true;
     }
 
-    // Apply XP
+    // Apply XP through leveling system
     if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
       updatedCharacter.experience = (updatedCharacter.experience || 0) + pendingMechanics.xpGained.amount;
       hasStatChanges = true;
       
-      // Check for automatic level up
-      const xpToNextLevel = updatedCharacter.level * 100;
-      if (updatedCharacter.experience >= xpToNextLevel) {
-        toast({
-          title: `+${pendingMechanics.xpGained.amount} XP`,
-          description: `${pendingMechanics.xpGained.reason} - Ready to Level Up!`,
-          duration: 4000,
-        });
+      // Process XP events through leveling system with stat weighting
+      let newLevelingState = { ...levelingState };
+      
+      if (pendingMechanics.xpGained.events && pendingMechanics.xpGained.events.length > 0) {
+        // New format with stat weights
+        for (const event of pendingMechanics.xpGained.events) {
+          const xpEvent = createXPEvent(
+            event.amount,
+            event.reason || pendingMechanics.xpGained.reason,
+            lastPlayerAction,
+            genre,
+            newLevelingState.currentChapter,
+            (event.difficulty as any) || 'standard',
+            (event.risk as any) || 'moderate'
+          );
+          // Override with AI-provided stat weights if available
+          if (event.contributingStats) {
+            xpEvent.contributingStats = event.contributingStats as any;
+          }
+          xpEvent.isNeutral = event.isNeutral;
+          newLevelingState = processXPEvent(newLevelingState, xpEvent);
+        }
       } else {
-        toast({
-          title: `+${pendingMechanics.xpGained.amount} XP`,
-          description: pendingMechanics.xpGained.reason,
-          duration: 3000,
-        });
+        // Legacy format - infer stats from action
+        const xpEvent = createXPEvent(
+          pendingMechanics.xpGained.amount,
+          pendingMechanics.xpGained.reason,
+          lastPlayerAction,
+          genre,
+          newLevelingState.currentChapter
+        );
+        newLevelingState = processXPEvent(newLevelingState, xpEvent);
       }
+      
+      // Check for level-up at chapter end
+      if (pendingMechanics.chapterEnd) {
+        newLevelingState = checkLevelUp(newLevelingState, true);
+        
+        if (newLevelingState.pendingLevelUp) {
+          // Generate level-up choices
+          const isChapterReward = newLevelingState.levelUpType === 'chapter_reward';
+          const choices = generateLevelUpChoices(newLevelingState, genre, character.classId, isChapterReward);
+          setLevelUpChoices(choices);
+          setShowLevelUpModal(true);
+        } else {
+          // No level-up, just advance chapter
+          newLevelingState = advanceChapter(newLevelingState);
+        }
+      }
+      
+      setLevelingState(newLevelingState);
+      
+      // Show XP toast
+      const xpToNextLevel = newLevelingState.xpThreshold;
+      const progress = Math.round((newLevelingState.currentXP / xpToNextLevel) * 100);
+      toast({
+        title: `+${pendingMechanics.xpGained.amount} XP`,
+        description: `${pendingMechanics.xpGained.reason} (${progress}% to next level)`,
+        duration: 3000,
+      });
+    }
+    
+    // Handle chapter end without XP
+    if (pendingMechanics.chapterEnd && !pendingMechanics.xpGained) {
+      let newLevelingState = checkLevelUp(levelingState, true);
+      
+      if (newLevelingState.pendingLevelUp) {
+        const isChapterReward = newLevelingState.levelUpType === 'chapter_reward';
+        const choices = generateLevelUpChoices(newLevelingState, genre, character.classId, isChapterReward);
+        setLevelUpChoices(choices);
+        setShowLevelUpModal(true);
+      } else {
+        newLevelingState = advanceChapter(newLevelingState);
+      }
+      
+      setLevelingState(newLevelingState);
     }
 
     // Apply skill improvements
@@ -569,8 +663,52 @@ export function AdventureDisplay({
     }
   };
 
+  // Handle level-up choice selection
+  const handleLevelUpChoice = useCallback((choice: LevelUpChoice) => {
+    const { newState, statChanges, newLevel } = applyLevelUp(levelingState, choice, character.level);
+    
+    // Apply stat changes to character
+    const updatedStats = { ...character.stats };
+    for (const [stat, value] of Object.entries(statChanges)) {
+      if (value && value > 0) {
+        updatedStats[stat as keyof CharacterStats] = (updatedStats[stat as keyof CharacterStats] || 0) + value;
+      }
+    }
+    
+    // Calculate new max health based on updated stats
+    const newMaxHealth = calculateMaxHealth(updatedStats, newLevel);
+    const healthIncrease = newMaxHealth - character.maxHealth;
+    
+    const updatedCharacter: RPGCharacter = {
+      ...character,
+      level: newLevel,
+      stats: updatedStats,
+      maxHealth: newMaxHealth,
+      currentHealth: character.currentHealth + healthIncrease, // Heal by the health increase
+    };
+    
+    onUpdateCharacter(updatedCharacter);
+    setLevelingState(advanceChapter(newState)); // Advance chapter after level-up
+    setShowLevelUpModal(false);
+    setLevelUpChoices([]);
+    
+    // Show level-up toast
+    const statNames = Object.entries(statChanges)
+      .filter(([_, v]) => v && v > 0)
+      .map(([s, v]) => `+${v} ${s.slice(0, 3).toUpperCase()}`)
+      .join(', ');
+    
+    toast({
+      title: `Level Up! Now Level ${newLevel}`,
+      description: `${choice.name}: ${statNames}`,
+      duration: 5000,
+    });
+  }, [levelingState, character, onUpdateCharacter, toast]);
+
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
+      // Track last action for XP stat inference
+      setLastPlayerAction(input.trim());
       // Tick modifiers by 1 turn on each player action
       if (modifierManagerRef.current) {
         modifierManagerRef.current.tickTurn(1);
@@ -741,12 +879,19 @@ export function AdventureDisplay({
                 <span className="font-mono font-semibold text-warning">{character.gold}</span>
               </div>
 
-              {/* Class & Level */}
-              <div className="px-3 py-1.5 glass-panel-subtle rounded-full">
-                <span className="text-xs text-muted-foreground">Lv.</span>
-                <span className="font-mono font-bold text-primary ml-1">{character.level}</span>
-                <span className="text-muted-foreground mx-1.5">•</span>
-                <span className="text-sm text-foreground">{charClass?.name}</span>
+              {/* Class & Level with XP Progress */}
+              <div className="flex items-center gap-2 px-3 py-1.5 glass-panel-subtle rounded-full">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Lv.</span>
+                  <span className="font-mono font-bold text-primary">{character.level}</span>
+                </div>
+                <div className="w-16 h-1.5 bg-muted/50 rounded-full overflow-hidden" title={`${levelingState.currentXP}/${levelingState.xpThreshold} XP`}>
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500"
+                    style={{ width: `${Math.min(100, (levelingState.currentXP / levelingState.xpThreshold) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground">{charClass?.name}</span>
               </div>
             </div>
 
@@ -1026,6 +1171,16 @@ export function AdventureDisplay({
         previewText={rollbackTarget?.text || ''}
         onConfirm={handleRollbackConfirm}
         onCancel={() => setRollbackTarget(null)}
+      />
+
+      {/* Level-Up Modal - unskippable */}
+      <LevelUpModal
+        isOpen={showLevelUpModal}
+        choices={levelUpChoices}
+        currentLevel={character.level}
+        isChapterReward={levelingState.levelUpType === 'chapter_reward'}
+        characterName={character.name}
+        onSelectChoice={handleLevelUpChoice}
       />
     </div>
   );
