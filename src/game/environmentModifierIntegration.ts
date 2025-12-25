@@ -52,6 +52,19 @@ export interface EnvironmentContext {
   shelterQuality: number; // 0-100
 }
 
+// Trigger thresholds - make modifiers harder to get
+const TRIGGER_THRESHOLDS = {
+  WEATHER_SEVERITY_MIN: 0.5,    // Weather must be at least 50% severe
+  TEMPERATURE_LOW: 25,          // Warmth below this for cold effects
+  TEMPERATURE_DANGER: 15,       // Warmth below this for hypothermia
+  FATIGUE_THRESHOLD: 75,        // Fatigue must exceed this for late night effects
+  HUNGER_THRESHOLD: 20,         // Satiation below this for hunger
+  HUNGER_DANGER: 5,             // Satiation below this for starving
+  THIRST_THRESHOLD: 25,         // Hydration below this for dehydration
+  BUFF_SATIATION_MIN: 80,       // Satiation above this for Well Fed
+  BUFF_HYDRATION_MIN: 80,       // Hydration above this for Hydrated
+};
+
 // Map weather types to environmental modifier templates
 const WEATHER_TO_MODIFIER: Record<string, string[]> = {
   rain: ['Rain Soaked'],
@@ -85,17 +98,19 @@ export function detectEnvironmentalModifiers(
     infrastructure: 50,
   };
 
-  // Weather-based modifiers (only if outdoors or poor shelter)
-  if (!context.indoors || context.shelterQuality < 50) {
+  // Weather-based modifiers (only if outdoors or poor shelter AND severe weather)
+  const weatherSeverityNormalized = context.weather.severity / 100;
+  if ((!context.indoors || context.shelterQuality < 30) && weatherSeverityNormalized >= TRIGGER_THRESHOLDS.WEATHER_SEVERITY_MIN) {
     const weatherModifiers = WEATHER_TO_MODIFIER[context.weather.type] || [];
     for (const modName of weatherModifiers) {
       const template = findTemplateByName(modName);
       if (template) {
         // Scale severity by weather severity and shelter
         const shelterReduction = context.indoors ? context.shelterQuality / 100 : 0;
-        const effectiveSeverity = (context.weather.severity / 100) * (1 - shelterReduction * 0.8);
+        const effectiveSeverity = weatherSeverityNormalized * (1 - shelterReduction * 0.8);
         
-        if (effectiveSeverity > 0.2) {
+        // Require significant severity to apply
+        if (effectiveSeverity >= 0.35) {
           const modifier = createModifierFromTemplate(
             template,
             campaignId,
@@ -110,14 +125,14 @@ export function detectEnvironmentalModifiers(
     }
   }
 
-  // Temperature-based modifiers
-  if (playerCondition.warmth < 40) {
-    const coldSeverity = (40 - playerCondition.warmth) / 40;
-    const template = coldSeverity > 0.5 
+  // Temperature-based modifiers (stricter thresholds)
+  if (playerCondition.warmth < TRIGGER_THRESHOLDS.TEMPERATURE_LOW) {
+    const coldSeverity = (TRIGGER_THRESHOLDS.TEMPERATURE_LOW - playerCondition.warmth) / TRIGGER_THRESHOLDS.TEMPERATURE_LOW;
+    const template = playerCondition.warmth < TRIGGER_THRESHOLDS.TEMPERATURE_DANGER
       ? findTemplateByName('Hypothermia Risk')
       : findTemplateByName('Chilled');
     
-    if (template) {
+    if (template && coldSeverity >= 0.3) {
       const modifier = createModifierFromTemplate(
         template,
         campaignId,
@@ -148,10 +163,11 @@ export function detectEnvironmentalModifiers(
     }
   }
 
-  // Fatigue from time of day
-  if (context.timeOfDay.period === 'late_night' && playerCondition.fatigue > 60) {
+  // Fatigue from time of day (stricter threshold)
+  if (context.timeOfDay.period === 'late_night' && playerCondition.fatigue > TRIGGER_THRESHOLDS.FATIGUE_THRESHOLD) {
     const template = findTemplateByName('Sleep Deprived');
-    if (template) {
+    const severityCalc = (playerCondition.fatigue - TRIGGER_THRESHOLDS.FATIGUE_THRESHOLD) / (100 - TRIGGER_THRESHOLDS.FATIGUE_THRESHOLD);
+    if (template && severityCalc >= 0.3) {
       const modifier = createModifierFromTemplate(
         template,
         campaignId,
@@ -159,18 +175,19 @@ export function detectEnvironmentalModifiers(
         'late_night_fatigue',
         currentTick
       );
-      modifier.severity = Math.min(1, playerCondition.fatigue / 100);
+      modifier.severity = Math.min(1, severityCalc);
       detectedModifiers.push(modifier);
     }
   }
 
-  // Hunger/nutrition modifiers
-  if (playerCondition.satiation < 30) {
-    const template = playerCondition.satiation < 10 
+  // Hunger/nutrition modifiers (stricter thresholds)
+  if (playerCondition.satiation < TRIGGER_THRESHOLDS.HUNGER_THRESHOLD) {
+    const template = playerCondition.satiation < TRIGGER_THRESHOLDS.HUNGER_DANGER
       ? findTemplateByName('Starving')
       : findTemplateByName('Hungry');
     
-    if (template) {
+    const hungerSeverity = (TRIGGER_THRESHOLDS.HUNGER_THRESHOLD - playerCondition.satiation) / TRIGGER_THRESHOLDS.HUNGER_THRESHOLD;
+    if (template && hungerSeverity >= 0.3) {
       const modifier = createModifierFromTemplate(
         template,
         campaignId,
@@ -178,10 +195,10 @@ export function detectEnvironmentalModifiers(
         'low_satiation',
         currentTick
       );
-      modifier.severity = (30 - playerCondition.satiation) / 30;
+      modifier.severity = hungerSeverity;
       detectedModifiers.push(modifier);
     }
-  } else if (playerCondition.satiation > 70) {
+  } else if (playerCondition.satiation >= TRIGGER_THRESHOLDS.BUFF_SATIATION_MIN) {
     const template = findTemplateByName('Well Fed');
     if (template) {
       const modifier = createModifierFromTemplate(
@@ -191,15 +208,16 @@ export function detectEnvironmentalModifiers(
         'good_satiation',
         currentTick
       );
-      modifier.severity = 0.3;
+      modifier.severity = 0.35;
       detectedModifiers.push(modifier);
     }
   }
 
-  // Hydration modifiers
-  if (playerCondition.hydration < 40) {
+  // Hydration modifiers (stricter thresholds)
+  if (playerCondition.hydration < TRIGGER_THRESHOLDS.THIRST_THRESHOLD) {
     const template = findTemplateByName('Dehydrated');
-    if (template) {
+    const thirstSeverity = (TRIGGER_THRESHOLDS.THIRST_THRESHOLD - playerCondition.hydration) / TRIGGER_THRESHOLDS.THIRST_THRESHOLD;
+    if (template && thirstSeverity >= 0.3) {
       const modifier = createModifierFromTemplate(
         template,
         campaignId,
@@ -207,10 +225,10 @@ export function detectEnvironmentalModifiers(
         'low_hydration',
         currentTick
       );
-      modifier.severity = (40 - playerCondition.hydration) / 40;
+      modifier.severity = thirstSeverity;
       detectedModifiers.push(modifier);
     }
-  } else if (playerCondition.hydration > 70) {
+  } else if (playerCondition.hydration >= TRIGGER_THRESHOLDS.BUFF_HYDRATION_MIN) {
     const template = findTemplateByName('Hydrated');
     if (template) {
       const modifier = createModifierFromTemplate(
@@ -220,7 +238,7 @@ export function detectEnvironmentalModifiers(
         'good_hydration',
         currentTick
       );
-      modifier.severity = 0.2;
+      modifier.severity = 0.3;
       detectedModifiers.push(modifier);
     }
   }
@@ -298,8 +316,12 @@ export interface NarrativeModifierResult {
   confidence: number;
 }
 
+// Minimum confidence threshold for narrative parsing
+const NARRATIVE_CONFIDENCE_THRESHOLD = 0.6;
+const MAX_NARRATIVE_MODIFIERS_PER_PARSE = 2; // Only apply top 2 most confident modifiers per narrative
+
 /**
- * Parse narrative text for implied modifiers
+ * Parse narrative text for implied modifiers (with strict limits)
  */
 export function parseNarrativeForModifiers(
   narrativeText: string,
@@ -318,6 +340,22 @@ export function parseNarrativeForModifiers(
           
           const template = findTemplateByName(modifierName);
           if (template) {
+            // Adjust severity based on context words
+            let contextSeverity = template.baseSeverity * severityMultiplier;
+            
+            // Intensity modifiers in text
+            if (/\b(severe(ly)?|serious(ly)?|bad(ly)?|terrible|horrible|critical|extreme)\b/i.test(narrativeText)) {
+              contextSeverity = Math.min(1, contextSeverity * 1.5);
+            }
+            if (/\b(slight(ly)?|minor|mild(ly)?|barely|little|small)\b/i.test(narrativeText)) {
+              contextSeverity = contextSeverity * 0.5;
+            }
+            
+            // Only proceed if severity meets minimum threshold
+            if (contextSeverity < 0.25) {
+              continue;
+            }
+            
             const modifier = createModifierFromTemplate(
               template,
               campaignId,
@@ -326,24 +364,18 @@ export function parseNarrativeForModifiers(
               currentTick
             );
             
-            // Adjust severity based on context words
-            let contextSeverity = template.baseSeverity * severityMultiplier;
-            
-            // Intensity modifiers in text
-            if (/\b(severe(ly)?|serious(ly)?|bad(ly)?|terrible|horrible)\b/i.test(narrativeText)) {
-              contextSeverity = Math.min(1, contextSeverity * 1.5);
-            }
-            if (/\b(slight(ly)?|minor|mild(ly)?|barely|little)\b/i.test(narrativeText)) {
-              contextSeverity = contextSeverity * 0.5;
-            }
-            
             modifier.severity = contextSeverity;
             
-            results.push({
-              modifier,
-              matchedText: match[0],
-              confidence: 0.8, // High confidence for explicit matches
-            });
+            // Calculate confidence based on pattern specificity
+            const confidence = pattern.source.length > 20 ? 0.9 : 0.7;
+            
+            if (confidence >= NARRATIVE_CONFIDENCE_THRESHOLD) {
+              results.push({
+                modifier,
+                matchedText: match[0],
+                confidence,
+              });
+            }
           }
           break; // Only match first pattern for each modifier
         }
@@ -353,7 +385,10 @@ export function parseNarrativeForModifiers(
     }
   }
 
-  return results;
+  // Limit to top N most confident/severe modifiers
+  return results
+    .sort((a, b) => (b.confidence * b.modifier.severity) - (a.confidence * a.modifier.severity))
+    .slice(0, MAX_NARRATIVE_MODIFIERS_PER_PARSE);
 }
 
 // ============================================================================

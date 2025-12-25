@@ -392,16 +392,6 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                 </div>
               </div>
 
-              {/* Active Effects (Buffs/Debuffs) */}
-              {modifierState && (
-                <div>
-                  <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 text-sm md:text-base">
-                    <Activity className="w-4 h-4" />
-                    Active Effects
-                  </h3>
-                  <ModifierDisplay modifierState={modifierState} />
-                </div>
-              )}
 
               {/* Traits */}
               {character.traits.length > 0 && (
@@ -461,28 +451,46 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                 )}
               </div>
 
-              {/* Inventory */}
-              {character.inventory.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 text-sm md:text-base">
-                    <Backpack className="w-4 h-4" />
-                    Inventory ({character.inventory.length} items)
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {character.inventory.map((item) => (
-                      <div 
-                        key={item.id}
-                        className="px-3 py-2 bg-background/50 rounded border border-border/30 text-xs md:text-sm"
-                      >
-                        {item.name}
-                        {item.quantity > 1 && (
-                          <span className="text-muted-foreground ml-1">x{item.quantity}</span>
-                        )}
-                      </div>
-                    ))}
+              {/* Inventory Section - includes items and active effects */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
+                  <Backpack className="w-4 h-4" />
+                  Inventory & Status
+                </h3>
+                
+                {/* Items */}
+                {character.inventory.length > 0 && (
+                  <div className="bg-background/30 rounded-lg p-3 border border-border/20">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                      Items ({character.inventory.length})
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {character.inventory.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="px-3 py-2 bg-background/50 rounded border border-border/30 text-xs md:text-sm"
+                        >
+                          {item.name}
+                          {item.quantity > 1 && (
+                            <span className="text-muted-foreground ml-1">x{item.quantity}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Active Effects (Buffs/Debuffs) */}
+                {modifierState && (
+                  <div className="bg-background/30 rounded-lg p-3 border border-border/20">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Activity className="w-3 h-3" />
+                      Active Conditions
+                    </h4>
+                    <ModifierDisplay modifierState={modifierState} />
+                  </div>
+                )}
+              </div>
 
               {/* Bottom padding for mobile safe area */}
               <div className="h-6 md:h-4" />

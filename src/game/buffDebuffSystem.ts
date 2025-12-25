@@ -17,7 +17,17 @@ export type ModifierCategory =
   | 'illness' 
   | 'chemical'
   | 'psychological'
-  | 'routine';
+  | 'routine'
+  | 'phobia'; // Phobias only affect behavior/speech, not stats
+
+// Modifier system limits to prevent overwhelming state
+export const MODIFIER_LIMITS = {
+  MAX_TOTAL_MODIFIERS: 12, // Max total active modifiers
+  MAX_PER_CATEGORY: 3,     // Max per category
+  MAX_BUFFS: 5,            // Max active buffs
+  MAX_DEBUFFS: 8,          // Max active debuffs
+  MIN_SEVERITY_THRESHOLD: 0.25, // Minimum severity to apply new modifier
+};
 
 export type StackingRule = 'exclusive' | 'additive' | 'diminishing';
 export type DecayModel = 'linear' | 'staged' | 'conditional' | 'threshold' | 'reversible';
@@ -277,6 +287,19 @@ export const ROUTINE_TEMPLATES: ModifierTemplate[] = [
   { name: 'Poor Hygiene', type: 'debuff', category: 'routine', description: 'Neglected personal care', baseSeverity: 0.3, effects: [{ stat: 'social', value: -0.3 }, { stat: 'infection_risk', value: 0.2 }, { stat: 'self_worth', value: -0.15 }], defaultDuration: { type: 'condition', remaining: 72 }, stackingRule: 'exclusive', decayModel: 'reversible', resolutionPaths: ['hygiene_routine'], promotionPolicy: 'expire', visibility: 'npc_visible' },
 ];
 
+// J) PHOBIAS - Behavioral only, do NOT affect stats
+// These modifiers only influence character speech, reactions, and roleplay
+export const PHOBIA_TEMPLATES: ModifierTemplate[] = [
+  { name: 'Fear of Heights', type: 'debuff', category: 'phobia', description: 'Intense fear of high places', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'exposure_therapy'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Darkness', type: 'debuff', category: 'phobia', description: 'Intense fear of dark places', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'light_source'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Water', type: 'debuff', category: 'phobia', description: 'Intense fear of bodies of water', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'swimming_lessons'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Crowds', type: 'debuff', category: 'phobia', description: 'Intense discomfort in crowded spaces', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'avoidance'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Enclosed Spaces', type: 'debuff', category: 'phobia', description: 'Claustrophobia', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'breathing_exercises'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Spiders', type: 'debuff', category: 'phobia', description: 'Intense fear of arachnids', baseSeverity: 0.4, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Blood', type: 'debuff', category: 'phobia', description: 'Intense reaction to blood', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy', 'desensitization'], promotionPolicy: 'expire', visibility: 'player_only' },
+  { name: 'Fear of Fire', type: 'debuff', category: 'phobia', description: 'Intense fear of flames', baseSeverity: 0.5, effects: [], defaultDuration: { type: 'condition', remaining: Infinity, total: Infinity }, stackingRule: 'exclusive', decayModel: 'conditional', resolutionPaths: ['therapy'], promotionPolicy: 'expire', visibility: 'player_only' },
+];
+
 // Combine all templates
 export const ALL_MODIFIER_TEMPLATES: ModifierTemplate[] = [
   ...INJURY_TEMPLATES,
@@ -288,6 +311,7 @@ export const ALL_MODIFIER_TEMPLATES: ModifierTemplate[] = [
   ...ENVIRONMENT_TEMPLATES,
   ...CHEMICAL_TEMPLATES,
   ...ROUTINE_TEMPLATES,
+  ...PHOBIA_TEMPLATES,
 ];
 
 // ============================================================================
@@ -397,6 +421,61 @@ export function findTemplateByName(name: string): ModifierTemplate | undefined {
 /**
  * Apply a modifier to an entity's state
  */
+/**
+ * Check if we can add a new modifier based on limits
+ */
+function canAddModifier(state: ModifierState, modifier: Modifier): boolean {
+  const { MAX_TOTAL_MODIFIERS, MAX_PER_CATEGORY, MAX_BUFFS, MAX_DEBUFFS, MIN_SEVERITY_THRESHOLD } = MODIFIER_LIMITS;
+  
+  // Check severity threshold - too weak modifiers are ignored
+  if (modifier.severity < MIN_SEVERITY_THRESHOLD) {
+    return false;
+  }
+  
+  // Check total limit
+  if (state.activeModifiers.length >= MAX_TOTAL_MODIFIERS) {
+    return false;
+  }
+  
+  // Check buff/debuff limits
+  const currentBuffs = state.activeModifiers.filter(m => m.type === 'buff').length;
+  const currentDebuffs = state.activeModifiers.filter(m => m.type === 'debuff').length;
+  
+  if (modifier.type === 'buff' && currentBuffs >= MAX_BUFFS) {
+    return false;
+  }
+  if (modifier.type === 'debuff' && currentDebuffs >= MAX_DEBUFFS) {
+    return false;
+  }
+  
+  // Check per-category limit (phobias are exempt - behavioral only)
+  if (modifier.category !== 'phobia') {
+    const categoryCount = state.activeModifiers.filter(m => m.category === modifier.category).length;
+    if (categoryCount >= MAX_PER_CATEGORY) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Find if there's a weaker modifier of same type that can be replaced
+ */
+function findReplaceable(state: ModifierState, modifier: Modifier): number {
+  // Severity takes over: find weaker modifier of same category to replace
+  const candidates = state.activeModifiers
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => 
+      m.category === modifier.category && 
+      m.type === modifier.type &&
+      m.severity < modifier.severity
+    )
+    .sort((a, b) => a.m.severity - b.m.severity);
+  
+  return candidates.length > 0 ? candidates[0].idx : -1;
+}
+
 export function applyModifier(state: ModifierState, modifier: Modifier): ModifierState {
   // Validate modifier has required fields
   if (!modifier.originEvent) {
@@ -408,7 +487,7 @@ export function applyModifier(state: ModifierState, modifier: Modifier): Modifie
 
   const newState = { ...state, activeModifiers: [...state.activeModifiers] };
   
-  // Handle stacking rules
+  // Handle stacking rules - check for existing modifier of same name
   const existingIndex = newState.activeModifiers.findIndex(
     m => m.category === modifier.category && m.name === modifier.name
   );
@@ -418,7 +497,7 @@ export function applyModifier(state: ModifierState, modifier: Modifier): Modifie
     
     switch (modifier.stackingRule) {
       case 'exclusive':
-        // Keep only the stronger one
+        // Keep only the stronger one (severity takes over)
         if (modifier.severity > existing.severity) {
           newState.activeModifiers[existingIndex] = modifier;
         }
@@ -429,7 +508,7 @@ export function applyModifier(state: ModifierState, modifier: Modifier): Modifie
         newState.activeModifiers[existingIndex] = {
           ...existing,
           severity: Math.min(1.0, existing.severity + modifier.severity),
-          stacks: existing.stacks + 1,
+          stacks: Math.min(existing.stacks + 1, 3), // Cap stacks at 3
           duration: {
             ...existing.duration,
             remaining: Math.max(existing.duration.remaining, modifier.duration.remaining),
@@ -443,12 +522,23 @@ export function applyModifier(state: ModifierState, modifier: Modifier): Modifie
         newState.activeModifiers[existingIndex] = {
           ...existing,
           severity: Math.min(1.0, existing.severity + diminishedSeverity),
-          stacks: existing.stacks + 1,
+          stacks: Math.min(existing.stacks + 1, 3),
         };
         break;
     }
-  } else {
+    return newState;
+  }
+  
+  // Check if we can add this new modifier
+  if (canAddModifier(newState, modifier)) {
     newState.activeModifiers.push(modifier);
+  } else {
+    // Try to find a weaker modifier to replace (severity takes over)
+    const replaceableIdx = findReplaceable(newState, modifier);
+    if (replaceableIdx >= 0) {
+      newState.activeModifiers[replaceableIdx] = modifier;
+    }
+    // Otherwise, modifier is not applied - limits exceeded
   }
 
   return newState;

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { Modifier, ModifierState } from '@/game/buffDebuffSystem';
-import { Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity } from 'lucide-react';
+import { Modifier, ModifierState, MODIFIER_LIMITS } from '@/game/buffDebuffSystem';
+import { Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ModifierDisplayProps {
@@ -20,6 +20,7 @@ function getCategoryIcon(category: Modifier['category']) {
     case 'illness': return Pill;
     case 'chemical': return Pill;
     case 'psychological': return Brain;
+    case 'phobia': return Eye;
     case 'routine': return Activity;
     default: return Shield;
   }
@@ -27,6 +28,11 @@ function getCategoryIcon(category: Modifier['category']) {
 
 // Get color class based on modifier type and severity
 function getModifierColorClass(modifier: Modifier): string {
+  // Phobias are always neutral - they only affect behavior
+  if (modifier.category === 'phobia') {
+    return 'text-modifier-neutral bg-modifier-neutral/10 border-modifier-neutral/30';
+  }
+  
   if (modifier.type === 'buff') {
     return 'text-modifier-buff bg-modifier-buff/10 border-modifier-buff/30';
   }
@@ -43,6 +49,9 @@ function getModifierColorClass(modifier: Modifier): string {
 
 // Get inline color for narrative display
 export function getModifierInlineColor(modifier: Modifier): string {
+  if (modifier.category === 'phobia') {
+    return 'hsl(var(--modifier-neutral))';
+  }
   if (modifier.type === 'buff') {
     return 'hsl(var(--modifier-buff))';
   }
@@ -57,6 +66,7 @@ export function getModifierInlineColor(modifier: Modifier): string {
 
 // Format remaining duration
 function formatDuration(remaining: number): string {
+  if (remaining === Infinity) return '∞';
   if (remaining < 1) {
     return `${Math.round(remaining * 60)}m`;
   }
@@ -121,15 +131,23 @@ function ModifierTag({ modifier, compact }: { modifier: Modifier; compact?: bool
 }
 
 export function ModifierDisplay({ modifierState, compact = false }: ModifierDisplayProps) {
-  const { buffs, debuffs } = useMemo(() => {
+  const { buffs, debuffs, phobias, limitInfo } = useMemo(() => {
     const active = modifierState.activeModifiers.filter(m => m.visibility !== 'hidden');
+    const phobiaList = active.filter(m => m.category === 'phobia');
+    const nonPhobias = active.filter(m => m.category !== 'phobia');
+    
     return {
-      buffs: active.filter(m => m.type === 'buff'),
-      debuffs: active.filter(m => m.type === 'debuff')
+      buffs: nonPhobias.filter(m => m.type === 'buff'),
+      debuffs: nonPhobias.filter(m => m.type === 'debuff'),
+      phobias: phobiaList,
+      limitInfo: {
+        total: modifierState.activeModifiers.length,
+        maxTotal: MODIFIER_LIMITS.MAX_TOTAL_MODIFIERS,
+      }
     };
   }, [modifierState.activeModifiers]);
 
-  if (buffs.length === 0 && debuffs.length === 0) {
+  if (buffs.length === 0 && debuffs.length === 0 && phobias.length === 0) {
     return (
       <div className="text-xs text-muted-foreground italic text-center py-2">
         No active effects
@@ -148,11 +166,16 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
 
   return (
     <div className="space-y-3">
+      {/* Capacity indicator */}
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>Conditions: {limitInfo.total}/{limitInfo.maxTotal}</span>
+      </div>
+      
       {buffs.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-xs font-semibold text-modifier-buff uppercase tracking-wider flex items-center gap-1.5">
             <Zap className="w-3 h-3" />
-            Active Buffs
+            Buffs ({buffs.length})
           </h4>
           <div className="grid grid-cols-2 gap-2">
             {buffs.map(m => <ModifierTag key={m.id} modifier={m} />)}
@@ -164,10 +187,34 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
         <div className="space-y-2">
           <h4 className="text-xs font-semibold text-modifier-injury uppercase tracking-wider flex items-center gap-1.5">
             <Shield className="w-3 h-3" />
-            Active Debuffs
+            Debuffs ({debuffs.length})
           </h4>
           <div className="grid grid-cols-2 gap-2">
             {debuffs.map(m => <ModifierTag key={m.id} modifier={m} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Phobias - separate section, behavioral only */}
+      {phobias.length > 0 && (
+        <div className="space-y-2 border-t border-border/30 pt-3">
+          <h4 className="text-xs font-semibold text-modifier-neutral uppercase tracking-wider flex items-center gap-1.5">
+            <Eye className="w-3 h-3" />
+            Phobias (Behavioral)
+          </h4>
+          <p className="text-[10px] text-muted-foreground italic">
+            Affects speech and reactions only, not stats
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {phobias.map(m => (
+              <div 
+                key={m.id}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border text-modifier-neutral bg-modifier-neutral/10 border-modifier-neutral/30"
+              >
+                <Eye className="w-3 h-3" />
+                <span>{m.name}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -175,7 +222,7 @@ export function ModifierDisplay({ modifierState, compact = false }: ModifierDisp
   );
 }
 
-// Calculate effective stats considering modifiers
+// Calculate effective stats considering modifiers (phobias excluded from stat calculation)
 export function calculateEffectiveStats(
   baseStats: Record<string, number>,
   modifiers: Modifier[]
@@ -183,7 +230,10 @@ export function calculateEffectiveStats(
   const stats = { ...baseStats };
   const changes: Record<string, number> = {};
   
-  for (const modifier of modifiers) {
+  // Filter out phobias - they don't affect stats
+  const statModifiers = modifiers.filter(m => m.category !== 'phobia');
+  
+  for (const modifier of statModifiers) {
     for (const effect of modifier.effects) {
       const statKey = effect.stat.toLowerCase();
       
