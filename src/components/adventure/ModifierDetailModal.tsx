@@ -1,14 +1,16 @@
-import { Modifier, ModifierOccurredAt, ModifierTriggerEvent } from '@/game/buffDebuffSystem';
+import { useState } from 'react';
+import { Modifier, ModifierOccurredAt, ModifierTriggerEvent, ModifierLocation } from '@/game/buffDebuffSystem';
 import { Button } from '@/components/ui/button';
 import { 
   X, Shield, Zap, Heart, Brain, Thermometer, Dumbbell, Pill, Activity, Eye,
-  MapPin, Clock, AlertTriangle, Sparkles, Calendar, Hash
+  MapPin, Clock, AlertTriangle, Sparkles, Calendar, Hash, RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ModifierDetailModalProps {
   modifier: Modifier;
   onClose: () => void;
+  onRewind?: (anchorId: string, turnId: number) => void;
 }
 
 function getCategoryIcon(category: Modifier['category']) {
@@ -69,11 +71,12 @@ function getModifierColors(modifier: Modifier) {
   };
 }
 
-function formatDuration(remaining: number): string {
+// Format duration as turns
+function formatDuration(remaining: number, appliedAtTurn?: number): string {
   if (remaining === Infinity) return 'Permanent';
-  if (remaining < 1) return `${Math.round(remaining * 60)} minutes`;
-  if (remaining < 24) return `${Math.round(remaining)} hours`;
-  return `${Math.round(remaining / 24)} days`;
+  if (remaining <= 0) return 'Expired';
+  if (remaining === 1) return '1 turn remaining';
+  return `${Math.round(remaining)} turns remaining`;
 }
 
 function getSeverityLabel(severity: number): string {
@@ -125,12 +128,60 @@ function getWhenDisplay(modifier: Modifier): { primary: string; secondary?: stri
   return { primary: 'Time Unknown' };
 }
 
+// Get phobia display name (e.g., "Arachnophobia", "Claustrophobia")
+function getPhobiaName(modifier: Modifier): string | null {
+  // Priority 1: Check trigger event phobia field
+  if (modifier.triggerEvent?.phobia) {
+    return capitalizeFirst(modifier.triggerEvent.phobia);
+  }
+  
+  // Priority 2: Extract from modifier name
+  if (modifier.category === 'phobia') {
+    const name = modifier.name.toLowerCase();
+    // Common phobia patterns
+    const phobiaMap: Record<string, string> = {
+      'fear of fire': 'Pyrophobia',
+      'fear of storms': 'Astraphobia', 
+      'fear of the dead': 'Necrophobia',
+      'fear of isolation': 'Autophobia',
+      'fear of failure': 'Atychiphobia',
+      'fear of heights': 'Acrophobia',
+      'fear of spiders': 'Arachnophobia',
+      'fear of darkness': 'Nyctophobia',
+      'fear of water': 'Aquaphobia',
+      'fear of enclosed spaces': 'Claustrophobia',
+      'fear of crowds': 'Agoraphobia',
+      'fear of blood': 'Hemophobia',
+    };
+    
+    for (const [key, phobiaName] of Object.entries(phobiaMap)) {
+      if (name.includes(key)) return phobiaName;
+    }
+    
+    // If already ends in "phobia", use it
+    if (name.endsWith('phobia')) {
+      return capitalizeFirst(name);
+    }
+    
+    return null;
+  }
+  
+  return null;
+}
+
+function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 // Get the "How" display string from trigger event
 function getHowDisplay(modifier: Modifier): { 
   source: string; 
   details?: string;
   type?: string;
+  phobia?: string;
 } | null {
+  const phobiaName = getPhobiaName(modifier);
+  
   // Priority 1: Use structured triggerEvent
   if (modifier.triggerEvent) {
     const te = modifier.triggerEvent;
@@ -154,6 +205,7 @@ function getHowDisplay(modifier: Modifier): {
       source: te.source.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
       details,
       type: te.type.replace(/_/g, ' '),
+      phobia: phobiaName || te.phobia,
     };
   }
   
@@ -162,6 +214,7 @@ function getHowDisplay(modifier: Modifier): {
     return {
       source: modifier.incidentDescription,
       details: modifier.bodyPart ? `Affected area: ${modifier.bodyPart}` : undefined,
+      phobia: phobiaName || undefined,
     };
   }
   
@@ -170,19 +223,161 @@ function getHowDisplay(modifier: Modifier): {
     return {
       source: modifier.triggerCause,
       type: 'phobia trigger',
+      phobia: phobiaName || undefined,
     };
   }
   
   return null;
 }
 
-export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalProps) {
+// Get location display - NEVER show "Unknown Location"
+function getLocationDisplay(modifier: Modifier): string | null {
+  // Priority 1: Structured location
+  if (modifier.location?.name) {
+    return modifier.location.name;
+  }
+  
+  // Priority 2: Legacy originLocation (but not "Unknown Location")
+  if (modifier.originLocation && modifier.originLocation !== 'Unknown Location') {
+    return modifier.originLocation;
+  }
+  
+  return null;
+}
+
+// Rewind Preview Splash Component
+function RewindPreviewSplash({ 
+  modifier, 
+  onClose, 
+  onRewind 
+}: { 
+  modifier: Modifier; 
+  onClose: () => void;
+  onRewind?: () => void;
+}) {
+  const locationName = getLocationDisplay(modifier);
+  const whenDisplay = getWhenDisplay(modifier);
+  const phobiaName = getPhobiaName(modifier);
+  
+  // Build incident description
+  let incidentText = '';
+  if (modifier.triggerEvent?.details.stimulus) {
+    incidentText = modifier.triggerEvent.details.stimulus;
+  } else if (modifier.incidentDescription) {
+    incidentText = modifier.incidentDescription;
+  } else if (modifier.narrativeExcerpt) {
+    incidentText = modifier.narrativeExcerpt;
+  }
+  
+  if (phobiaName) {
+    incidentText += ` Your ${phobiaName.toLowerCase()} was triggered.`;
+  }
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center z-[70] p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gradient-to-b from-card to-background border-2 border-primary/30 rounded-lg w-full max-w-md animate-fade-in shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Location */}
+        <div className="p-6 text-center border-b border-border/30">
+          {locationName ? (
+            <>
+              <MapPin className="w-8 h-8 mx-auto mb-3 text-primary" />
+              <h2 className="text-xl font-narrative font-bold text-foreground">
+                {locationName}
+              </h2>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-modifier-injury" />
+              <h2 className="text-xl font-narrative font-bold text-foreground">
+                Incident Location
+              </h2>
+            </>
+          )}
+          
+          {/* Timestamp */}
+          <p className="text-sm text-muted-foreground mt-2">
+            {whenDisplay.primary}
+          </p>
+          {modifier.occurredAt?.turnId !== undefined && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Turn #{modifier.occurredAt.turnId}
+            </p>
+          )}
+        </div>
+        
+        {/* Content - What happened */}
+        <div className="p-6">
+          <p className="text-sm text-foreground leading-relaxed text-center">
+            {incidentText || 'An incident occurred at this location.'}
+          </p>
+          
+          {phobiaName && (
+            <div className="mt-4 p-3 bg-modifier-neutral/10 border border-modifier-neutral/30 rounded-lg text-center">
+              <p className="text-sm font-medium text-modifier-neutral">
+                {phobiaName}
+              </p>
+            </div>
+          )}
+        </div>
+        
+        {/* Actions */}
+        <div className="p-4 border-t border-border/30 flex gap-3">
+          {onRewind && modifier.rewindAnchorId && (
+            <Button 
+              variant="default" 
+              className="flex-1 gap-2"
+              onClick={onRewind}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Return to This Moment
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            className={cn("gap-2", onRewind && modifier.rewindAnchorId ? "flex-1" : "w-full")}
+            onClick={onClose}
+          >
+            <X className="w-4 h-4" />
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ModifierDetailModal({ modifier, onClose, onRewind }: ModifierDetailModalProps) {
+  const [showRewindPreview, setShowRewindPreview] = useState(false);
+  
   const Icon = getCategoryIcon(modifier.category);
   const colors = getModifierColors(modifier);
   const isPhobia = modifier.category === 'phobia';
   
   const whenDisplay = getWhenDisplay(modifier);
   const howDisplay = getHowDisplay(modifier);
+  const locationName = getLocationDisplay(modifier);
+
+  const handleRewind = () => {
+    if (onRewind && modifier.rewindAnchorId && modifier.occurredAt?.turnId !== undefined) {
+      onRewind(modifier.rewindAnchorId, modifier.occurredAt.turnId);
+    }
+  };
+
+  if (showRewindPreview) {
+    return (
+      <RewindPreviewSplash 
+        modifier={modifier} 
+        onClose={() => setShowRewindPreview(false)}
+        onRewind={onRewind ? handleRewind : undefined}
+      />
+    );
+  }
 
   return (
     <div 
@@ -236,13 +431,13 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             </p>
           </div>
 
-          {/* Phobia notice */}
+          {/* Phobia notice with phobia name */}
           {isPhobia && (
             <div className="p-3 bg-modifier-neutral/10 border border-modifier-neutral/30 rounded-lg">
               <p className="text-xs text-modifier-neutral flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 <span>
-                  <strong>Behavioral Only:</strong> This phobia affects how your character speaks, 
+                  <strong>{getPhobiaName(modifier) || 'Phobia'}:</strong> This affects how your character speaks, 
                   reacts, and behaves but does not reduce any stats.
                 </span>
               </p>
@@ -274,7 +469,7 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             )}
           </div>
 
-          {/* HOW - What happened */}
+          {/* HOW - What happened (with phobia name) */}
           {howDisplay && (
             <div className={cn(
               "p-3 rounded-lg border-2",
@@ -292,6 +487,11 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
                   Type: {howDisplay.type}
                 </p>
               )}
+              {howDisplay.phobia && (
+                <p className="text-xs font-medium text-modifier-neutral mt-1">
+                  Phobia: {howDisplay.phobia}
+                </p>
+              )}
               {howDisplay.details && (
                 <p className="text-xs text-muted-foreground mt-1">
                   {howDisplay.details}
@@ -300,26 +500,27 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             </div>
           )}
 
-          {/* WHERE - Location */}
-          {(modifier.originLocation || modifier.triggerEvent?.details.location) && (
+          {/* WHERE - Location (only show if we have a real location) */}
+          {locationName && (
             <div className="flex items-start gap-2 text-sm p-2 bg-background/50 rounded border border-border/30">
               <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <span className="text-muted-foreground">Location: </span>
-                <span className="text-foreground">
-                  {modifier.triggerEvent?.details.location || modifier.originLocation}
-                </span>
+                <span className="text-foreground">{locationName}</span>
               </div>
             </div>
           )}
 
-          {/* Narrative Excerpt (flavor text - italicized) */}
-          {(modifier.narrativeExcerpt || modifier.originNarrative) && (
-            <div className="p-3 bg-card rounded border border-border/30">
-              <p className="text-sm text-muted-foreground italic leading-relaxed">
-                "{modifier.narrativeExcerpt || modifier.originNarrative}"
-              </p>
-            </div>
+          {/* Rewind Preview Button (replaces narrative excerpt) */}
+          {(modifier.narrativeExcerpt || modifier.originNarrative || locationName) && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-primary/30 hover:bg-primary/10"
+              onClick={() => setShowRewindPreview(true)}
+            >
+              <RotateCcw className="w-4 h-4" />
+              View Incident
+            </Button>
           )}
 
           {/* Severity */}
@@ -340,11 +541,13 @@ export function ModifierDetailModal({ modifier, onClose }: ModifierDetailModalPr
             </div>
           )}
 
-          {/* Duration */}
+          {/* Duration (in turns) */}
           <div className="flex items-center gap-2 text-sm">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">Duration:</span>
-            <span className="font-medium">{formatDuration(modifier.duration.remaining)}</span>
+            <span className="font-medium">
+              {formatDuration(modifier.duration.remaining, modifier.duration.appliedAtTurn)}
+            </span>
           </div>
 
           {/* Effects (if any) */}

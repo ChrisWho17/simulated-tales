@@ -44,8 +44,9 @@ export interface ModifierEffect {
 
 export interface ModifierDuration {
   type: DurationType;
-  remaining: number; // in hours
+  remaining: number; // in turns (message-based)
   total: number;
+  appliedAtTurn?: number; // turn when modifier was applied
   condition?: string; // for condition-based
 }
 
@@ -62,16 +63,22 @@ export interface ModifierTriggerEvent {
   eventId: string;
   type: 'physical_injury' | 'psychological_trigger' | 'environmental' | 'combat' | 'social' | 'narrative' | 'phobia_trigger';
   source: string;       // What caused it: "overheard_conversation", "combat_damage", etc.
+  phobia?: string;      // Named phobia if applicable: "arachnophobia", "claustrophobia", etc.
   details: {
     stimulus?: string;  // The specific thing that triggered it
     emotionalContext?: string[];
     perceivedThreat?: boolean;
     bodyPart?: string;
     damageType?: string;
-    location?: string;
     weapon?: string;
     action?: string;
   };
+}
+
+// Structured location for precise tracking
+export interface ModifierLocation {
+  locationId: string;
+  name: string;
 }
 
 export interface Modifier {
@@ -95,8 +102,14 @@ export interface Modifier {
   // NEW: Structured trigger event (separates data from narrative)
   triggerEvent?: ModifierTriggerEvent;
   
+  // NEW: Structured location (required for proper tracking)
+  location?: ModifierLocation;
+  
   // Narrative excerpt (flavor text only)
   narrativeExcerpt?: string;
+  
+  // Rewind anchor ID for timeline navigation
+  rewindAnchorId?: string;
   
   // LEGACY: Keep for backward compatibility
   originLocation?: string;
