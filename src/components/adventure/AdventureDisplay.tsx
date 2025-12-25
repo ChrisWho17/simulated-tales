@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -95,10 +95,13 @@ export function AdventureDisplay({
   const [rollbackTarget, setRollbackTarget] = useState<{ index: number; text: string } | null>(null);
   const [longPressActive, setLongPressActive] = useState<number | null>(null);
   const [showRollbackHint, setShowRollbackHint] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [hasNewContent, setHasNewContent] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousStoryLength = useRef(story.length);
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
@@ -120,6 +123,52 @@ export function AdventureDisplay({
       setShowRollbackHint(false);
     }
   }, [story.length]);
+
+  // Track scroll position to show/hide scroll-to-bottom button
+  const checkIfAtBottom = useCallback(() => {
+    if (!scrollRef.current) return true;
+    const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return true;
+    const { scrollTop, scrollHeight, clientHeight } = viewport as HTMLElement;
+    return scrollHeight - scrollTop - clientHeight <= 100;
+  }, []);
+
+  // Scroll event tracking
+  useEffect(() => {
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      const atBottom = checkIfAtBottom();
+      setIsAtBottom(atBottom);
+      if (atBottom) {
+        setHasNewContent(false);
+      }
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [checkIfAtBottom]);
+
+  // Detect new content when story updates
+  useEffect(() => {
+    if (story.length > previousStoryLength.current && !isAtBottom) {
+      setHasNewContent(true);
+    }
+    previousStoryLength.current = story.length;
+  }, [story.length, isAtBottom]);
+
+  // Scroll to bottom handler
+  const scrollToBottom = useCallback(() => {
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+    (viewport as HTMLElement).scrollTo({
+      top: (viewport as HTMLElement).scrollHeight,
+      behavior: 'smooth',
+    });
+    setHasNewContent(false);
+    setIsAtBottom(true);
+  }, []);
 
   // Parse new narrative entries for modifiers (buff/debuff detection)
   const lastProcessedStoryRef = useRef<number>(0);
@@ -830,6 +879,29 @@ export function AdventureDisplay({
           )}
         </div>
       </ScrollArea>
+
+      {/* Scroll to Latest Button - appears when scrolled above the last message */}
+      {(!isAtBottom || hasNewContent) && story.length > 0 && (
+        <button
+          onClick={scrollToBottom}
+          className={`
+            absolute bottom-28 right-6 z-30
+            p-3 rounded-full transition-all duration-300
+            bg-primary/90 text-primary-foreground
+            hover:bg-primary hover:scale-110
+            border-2 border-primary-foreground/30
+            ${hasNewContent ? 'animate-bounce' : ''}
+          `}
+          style={{
+            boxShadow: hasNewContent 
+              ? '0 0 20px hsl(var(--primary) / 0.7), 0 0 40px hsl(var(--primary) / 0.4), 0 4px 12px rgba(0,0,0,0.3)'
+              : '0 0 15px hsl(var(--primary) / 0.5), 0 0 30px hsl(var(--primary) / 0.3), 0 4px 12px rgba(0,0,0,0.3)'
+          }}
+          aria-label="Scroll to latest message"
+        >
+          <ChevronDown className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Input Area */}
       <div className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6">
