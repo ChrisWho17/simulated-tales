@@ -6,8 +6,12 @@ import {
   ModifierState,
   ModifierCategory,
   ModifierTemplate,
+  ModifierOccurredAt,
+  ModifierTriggerEvent,
   applyModifier,
   createModifierFromTemplate,
+  createModifierOccurredAt,
+  createModifierTriggerEvent,
   findTemplateByName,
   tickModifiers,
   recomputeInteractions,
@@ -405,6 +409,8 @@ const MAX_NARRATIVE_MODIFIERS_PER_PARSE = 2; // Only apply top 2 most confident 
 export interface NarrativeContext {
   locationName?: string;
   narrativeTime?: string;
+  turnId?: number;
+  worldTime?: { day: number; hour: number };
 }
 
 /**
@@ -454,26 +460,56 @@ export function parseNarrativeForModifiers(
             
             modifier.severity = contextSeverity;
             
-            // Add origin information for detail modal
-            modifier.originLocation = context?.locationName || 'Unknown Location';
-            modifier.originTimestamp = context?.narrativeTime || 'Recently';
+            // NEW: Add structured timestamp
+            modifier.occurredAt = createModifierOccurredAt(
+              context?.turnId ?? currentTick,
+              context?.worldTime
+            );
+            
+            // Determine trigger event type based on category
+            let eventType: ModifierTriggerEvent['type'] = 'narrative';
+            if (template.category === 'injury') eventType = 'physical_injury';
+            else if (template.category === 'psychological') eventType = 'psychological_trigger';
+            else if (template.category === 'environment') eventType = 'environmental';
+            else if (template.category === 'phobia') eventType = 'phobia_trigger';
             
             // Generate specific incident description
+            let incidentInfo: { incident: string; bodyPart?: string } | undefined;
             if (incidentGenerator) {
-              const incidentInfo = incidentGenerator(match, narrativeText);
+              incidentInfo = incidentGenerator(match, narrativeText);
               modifier.incidentDescription = incidentInfo.incident;
               if (incidentInfo.bodyPart) {
                 modifier.bodyPart = incidentInfo.bodyPart;
               }
             }
             
+            // NEW: Add structured trigger event
+            modifier.triggerEvent = createModifierTriggerEvent(
+              `event_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+              eventType,
+              incidentInfo?.incident || match[0],
+              {
+                stimulus: match[0],
+                bodyPart: incidentInfo?.bodyPart,
+                location: context?.locationName,
+              }
+            );
+            
+            // LEGACY: Keep for backward compatibility
+            modifier.originLocation = context?.locationName || 'Unknown Location';
+            modifier.originTimestamp = context?.narrativeTime || undefined; // Never set to "Recently"
+            
             // Extract a snippet around the match for narrative context
             const matchIndex = narrativeText.indexOf(match[0]);
             const snippetStart = Math.max(0, matchIndex - 30);
             const snippetEnd = Math.min(narrativeText.length, matchIndex + match[0].length + 50);
-            modifier.originNarrative = narrativeText.slice(snippetStart, snippetEnd).trim();
-            if (snippetStart > 0) modifier.originNarrative = '...' + modifier.originNarrative;
-            if (snippetEnd < narrativeText.length) modifier.originNarrative += '...';
+            let narrativeSnippet = narrativeText.slice(snippetStart, snippetEnd).trim();
+            if (snippetStart > 0) narrativeSnippet = '...' + narrativeSnippet;
+            if (snippetEnd < narrativeText.length) narrativeSnippet += '...';
+            
+            // NEW: Use narrativeExcerpt for flavor text
+            modifier.narrativeExcerpt = narrativeSnippet;
+            modifier.originNarrative = narrativeSnippet; // Keep for backward compat
             
             // Calculate confidence based on pattern specificity
             const confidence = pattern.source.length > 20 ? 0.9 : 0.7;

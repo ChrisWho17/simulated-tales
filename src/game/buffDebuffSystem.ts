@@ -49,6 +49,31 @@ export interface ModifierDuration {
   condition?: string; // for condition-based
 }
 
+// Structured timestamp for precise tracking
+export interface ModifierOccurredAt {
+  deviceTime: string;   // ISO 8601 format: "2025-01-14T21:47:32-05:00"
+  unix: number;         // Unix timestamp for sorting
+  worldTime: string;    // In-game time: "Day 18, 21:47"
+  turnId: number;       // For replay/debug
+}
+
+// Trigger event structure - separates data from narrative
+export interface ModifierTriggerEvent {
+  eventId: string;
+  type: 'physical_injury' | 'psychological_trigger' | 'environmental' | 'combat' | 'social' | 'narrative' | 'phobia_trigger';
+  source: string;       // What caused it: "overheard_conversation", "combat_damage", etc.
+  details: {
+    stimulus?: string;  // The specific thing that triggered it
+    emotionalContext?: string[];
+    perceivedThreat?: boolean;
+    bodyPart?: string;
+    damageType?: string;
+    location?: string;
+    weapon?: string;
+    action?: string;
+  };
+}
+
 export interface Modifier {
   id: string;
   campaignId: string;
@@ -63,12 +88,24 @@ export interface Modifier {
   stackingRule: StackingRule;
   decayModel: DecayModel;
   originEvent: string;
-  originLocation?: string; // Where this modifier was acquired
-  originTimestamp?: string; // When this modifier was acquired (narrative time)
-  originNarrative?: string; // Brief description of what caused it
-  incidentDescription?: string; // Specific description of what happened (e.g., "shot in the arm", "spider crawled on my shirt")
-  bodyPart?: string; // Body part affected if applicable
-  triggerCause?: string; // What caused the trigger (for phobias)
+  
+  // NEW: Structured timestamp (required for proper tracking)
+  occurredAt?: ModifierOccurredAt;
+  
+  // NEW: Structured trigger event (separates data from narrative)
+  triggerEvent?: ModifierTriggerEvent;
+  
+  // Narrative excerpt (flavor text only)
+  narrativeExcerpt?: string;
+  
+  // LEGACY: Keep for backward compatibility
+  originLocation?: string;
+  originTimestamp?: string;
+  originNarrative?: string;
+  incidentDescription?: string;
+  bodyPart?: string;
+  triggerCause?: string;
+  
   provenance: 'observed' | 'inferred' | 'reported';
   confidence: number;
   visibility: Visibility;
@@ -78,6 +115,49 @@ export interface Modifier {
   emotionalWeight: number;
   appliedAt: number; // tick
   stacks: number;
+}
+
+// Helper to create structured timestamp
+export function createModifierOccurredAt(
+  turnId: number,
+  worldTime?: { day: number; hour: number }
+): ModifierOccurredAt {
+  const now = new Date();
+  return {
+    deviceTime: now.toISOString(),
+    unix: now.getTime(),
+    worldTime: worldTime 
+      ? `Day ${worldTime.day}, ${String(worldTime.hour).padStart(2, '0')}:00`
+      : 'Unknown',
+    turnId,
+  };
+}
+
+// Helper to create trigger event
+export function createModifierTriggerEvent(
+  eventId: string,
+  type: ModifierTriggerEvent['type'],
+  source: string,
+  details: ModifierTriggerEvent['details'] = {}
+): ModifierTriggerEvent {
+  return { eventId, type, source, details };
+}
+
+// Validation - ensure required fields exist before creation
+export function validateModifierData(occurredAt?: ModifierOccurredAt, triggerEvent?: ModifierTriggerEvent): { valid: boolean; reason?: string } {
+  if (!occurredAt) {
+    return { valid: false, reason: 'Missing occurredAt timestamp' };
+  }
+  if (!occurredAt.deviceTime || !occurredAt.unix) {
+    return { valid: false, reason: 'Incomplete timestamp data' };
+  }
+  if (!triggerEvent) {
+    return { valid: false, reason: 'Missing trigger event' };
+  }
+  if (!triggerEvent.type || !triggerEvent.source) {
+    return { valid: false, reason: 'Incomplete trigger event data' };
+  }
+  return { valid: true };
 }
 
 export interface ModifierInteraction {
