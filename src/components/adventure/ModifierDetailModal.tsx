@@ -443,7 +443,154 @@ function extractShortTriggerLabel(stimulus: string): string {
   return 'Triggered';
 }
 
-// Rewind Preview Splash Component - Shows full incident context with visual highlighting
+// Get the cause label - what specifically triggered this (people, crowds, enclosed spaces, etc.)
+function getCauseLabel(modifier: Modifier, phobiaName: string | null): string {
+  // For phobias, identify the fear category
+  if (modifier.category === 'phobia' || modifier.category === 'psychological') {
+    // Check trigger event for specific cause
+    const te = modifier.triggerEvent;
+    
+    // Map common triggers to cause labels
+    const causeMappings: Record<string, string> = {
+      'crowd': 'Crowds & People',
+      'people': 'Crowds & People',
+      'enclosed': 'Enclosed Spaces',
+      'claustro': 'Enclosed Spaces',
+      'tight': 'Confined Areas',
+      'dark': 'Darkness',
+      'shadow': 'Shadows & Darkness',
+      'height': 'Heights',
+      'fall': 'Heights & Falling',
+      'spider': 'Spiders',
+      'insect': 'Insects',
+      'water': 'Water & Drowning',
+      'drown': 'Water & Drowning',
+      'fire': 'Fire & Flames',
+      'burn': 'Fire & Burns',
+      'blood': 'Blood & Gore',
+      'dead': 'Death & The Dead',
+      'corpse': 'Death & The Dead',
+      'alone': 'Isolation & Loneliness',
+      'abandon': 'Abandonment',
+      'failure': 'Failure & Inadequacy',
+      'reject': 'Rejection',
+      'storm': 'Storms & Thunder',
+      'thunder': 'Storms & Thunder',
+      'snake': 'Snakes',
+      'animal': 'Animals',
+      'open': 'Open Spaces',
+      'outside': 'Open Spaces',
+    };
+    
+    // Check stimulus, source, and context for matches
+    const searchTexts = [
+      te?.details.stimulus || '',
+      te?.source || '',
+      te?.details.environmentalContext || '',
+      modifier.triggerCause || '',
+      modifier.description || '',
+    ].join(' ').toLowerCase();
+    
+    for (const [key, label] of Object.entries(causeMappings)) {
+      if (searchTexts.includes(key)) return label;
+    }
+    
+    // Return phobia name if available
+    if (phobiaName) return phobiaName;
+    
+    return 'Environmental Trigger';
+  }
+  
+  // For injuries
+  if (modifier.category === 'injury') {
+    const te = modifier.triggerEvent;
+    if (te?.details.weapon) return toTitleCase(te.details.weapon);
+    if (te?.details.damageType) return toTitleCase(te.details.damageType);
+    if (te?.details.action) return toTitleCase(te.details.action.split(' ').slice(0, 3).join(' '));
+    return toTitleCase(modifier.name);
+  }
+  
+  // For other types
+  if (modifier.triggerEvent?.source) {
+    return toTitleCase(modifier.triggerEvent.source.replace(/_/g, ' '));
+  }
+  
+  return toTitleCase(modifier.category);
+}
+
+// Generate a cliff note summary from the context without copy-pasting the narrative
+function getCliffNoteSummary(
+  modifier: Modifier,
+  triggerDisplay: { stimulus: string | null; stimulusType: string | null; cause: string | null; context: string | null },
+  snapshotText: string | null
+): string {
+  const te = modifier.triggerEvent;
+  const parts: string[] = [];
+  
+  // What happened
+  if (triggerDisplay.stimulus) {
+    // Summarize the stimulus into a brief action
+    const summarized = summarizeNarrative(triggerDisplay.stimulus);
+    if (summarized) parts.push(summarized);
+  }
+  
+  // Where/when context
+  if (triggerDisplay.context) {
+    parts.push(triggerDisplay.context);
+  } else if (te?.details.environmentalContext) {
+    parts.push(te.details.environmentalContext);
+  }
+  
+  // For phobias, add the reaction
+  if (modifier.category === 'phobia' || modifier.category === 'psychological') {
+    if (parts.length === 0 && snapshotText) {
+      // Extract key action from snapshot
+      const summarized = summarizeNarrative(snapshotText);
+      if (summarized) parts.push(summarized);
+    }
+    if (parts.length > 0) {
+      parts.push('This triggered an instinctive fear response.');
+    }
+  }
+  
+  // For injuries, describe impact
+  if (modifier.category === 'injury') {
+    const impactZone = te?.details.impactZone || modifier.bodyPart;
+    if (impactZone && parts.length === 0) {
+      parts.push(`Sustained damage to the ${impactZone.toLowerCase()}.`);
+    }
+  }
+  
+  if (parts.length === 0) {
+    return 'An unexpected event caused this condition.';
+  }
+  
+  return parts.join(' ');
+}
+
+// Summarize a narrative into a brief cliff note (1-2 sentences max)
+function summarizeNarrative(text: string): string {
+  if (!text) return '';
+  
+  // Remove quotes if present
+  let clean = text.replace(/^["']|["']$/g, '').trim();
+  
+  // If already short, use as-is
+  if (clean.length <= 60) return clean;
+  
+  // Extract key phrases
+  const sentences = clean.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  
+  if (sentences.length === 0) return clean.slice(0, 60) + '...';
+  
+  // Take first sentence, truncate if needed
+  const first = sentences[0].trim();
+  if (first.length <= 80) return first + '.';
+  
+  // Extract key words and rebuild
+  const words = first.split(' ').slice(0, 12);
+  return words.join(' ') + '...';
+}
 function RewindPreviewSplash({ 
   modifier, 
   onClose, 
@@ -569,23 +716,26 @@ function RewindPreviewSplash({
             </div>
           )}
           
-          {/* Trigger Reason - Short declarative label */}
+          {/* Why It Happened - Cause explanation with cliff note summary */}
           <div className="mt-4 pt-4 border-t border-border/20">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Why It Happened</p>
-            <p className={cn(
-              "text-base font-semibold",
-              isInjury ? "text-modifier-injury" : "text-modifier-neutral"
-            )}>
-              {getTriggerReasonLabel(modifier, phobiaName, triggerDisplay)}
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Why It Happened</p>
+            
+            {/* Primary Cause */}
+            <div className="mb-3">
+              <span className="text-xs text-muted-foreground">Cause: </span>
+              <span className={cn(
+                "text-sm font-semibold",
+                isInjury ? "text-modifier-injury" : "text-modifier-neutral"
+              )}>
+                {getCauseLabel(modifier, phobiaName)}
+              </span>
+            </div>
+            
+            {/* Cliff Note Summary */}
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              {getCliffNoteSummary(modifier, triggerDisplay, snapshotText)}
             </p>
           </div>
-          
-          {/* Narrative Excerpt */}
-          {snapshotText && (
-            <blockquote className="text-sm italic text-muted-foreground leading-relaxed px-4 py-3 bg-background/50 rounded-lg border border-border/30 mt-3">
-              "{snapshotText}"
-            </blockquote>
-          )}
         </div>
         
         {/* Actions */}
