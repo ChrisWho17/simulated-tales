@@ -149,6 +149,14 @@ interface AdventureRequest {
     npcIdentity: string;       // Locked NPC identities
     playerCorrections: string; // Player meta-corrections
   };
+  // Life Sim context (Modern Life genre)
+  lifeSimContext?: {
+    needsStatus: string;       // Current needs summary
+    careerStatus: string;      // Job and career info
+    socialStatus: string;      // Relationships and social standing
+    housingStatus: string;     // Living situation
+    moodModifiers: string[];   // Active mood effects from needs
+  };
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -382,7 +390,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -571,6 +579,54 @@ Weave these effects into your environmental descriptions naturally.`;
         systemContent += `\n\n=== RECENT TRAVELS ===
 ${locationContext.locationHistory}`;
       }
+    }
+    
+    // ============= LIFE SIM INTEGRATION (Modern Life Genre) =============
+    if (lifeSimContext) {
+      systemContent += `\n\n=== LIFE SIMULATION MODE ===
+This is a MODERN LIFE scenario. The player is living a realistic contemporary life with needs, career, and social dynamics.
+
+PLAYER'S CURRENT STATE:
+${lifeSimContext.needsStatus}
+
+${lifeSimContext.careerStatus}
+
+${lifeSimContext.socialStatus}
+
+${lifeSimContext.housingStatus}
+
+${lifeSimContext.moodModifiers.length > 0 ? `ACTIVE MOOD EFFECTS:\n${lifeSimContext.moodModifiers.map(m => `- ${m}`).join('\n')}` : ''}
+
+LIFE SIM NARRATIVE RULES:
+- Focus on everyday challenges, relationships, and personal growth
+- Make needs and their effects feel real and urgent when low
+- Career progression should feel earned through skill and relationship building
+- Social dynamics matter - popularity, reputation, and networking affect opportunities
+- Money is a constant concern - track expenses, income, and financial decisions
+- Time management is key - activities take time and have trade-offs
+- Consequences are realistic but dramatic - this is a story, not a spreadsheet
+- Romance and relationships develop naturally through interaction quality
+- Personal goals and aspirations drive the narrative forward
+
+NEEDS-BASED NARRATIVE:
+When needs are low, incorporate physical and emotional effects naturally:
+- Low hunger: distraction, irritability, stomach growling during important moments
+- Low energy: yawning, difficulty concentrating, temptation to skip obligations
+- Low social: loneliness, checking phone constantly, craving connection
+- Low fun: boredom, restlessness, impulsive decisions seeking stimulation
+- Low hygiene: self-consciousness, others noticing, avoiding close contact
+- Low bladder: urgency, distraction, awkward excuses to leave
+- Low comfort: fidgeting, back pain, longing for home
+
+TIME AND ACTIVITY TRACKING:
+Include time passage naturally in your narration. When the player does activities, note:
+[TIME:hours] - Hours passed during this activity
+[NEED:needType:change] - Need changes from activities (positive for increase, negative for decrease)
+[MONEY:amount] - Money spent or earned
+[SKILL:skillName:amount] - Skill improvement from practice
+
+Example:
+[TIME:2][NEED:hunger:-20][NEED:fun:+30][MONEY:-25] You spent a couple hours at the arcade, hungry but having a blast.`;
     }
     
     if (cheatMode) {

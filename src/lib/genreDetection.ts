@@ -167,6 +167,7 @@ export function getAllGenres(): { id: GameGenre; name: string; icon: string }[] 
     { id: 'cyberpunk', name: 'Cyberpunk', icon: GENRE_ICONS.cyberpunk },
     { id: 'postapoc', name: 'Post-Apocalyptic', icon: GENRE_ICONS.postapoc },
     { id: 'war', name: 'War', icon: GENRE_ICONS.war },
+    { id: 'modern_life', name: 'Modern Life', icon: GENRE_ICONS.modern_life },
   ];
 }
 
