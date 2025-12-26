@@ -262,3 +262,90 @@ export function generateLifeSimStatusProse(state: LifeSimPlayerState): string[] 
   
   return prose;
 }
+
+// ============= AI CONTEXT BUILDER =============
+
+export interface LifeSimAIContext {
+  needsStatus: string;
+  careerStatus: string;
+  socialStatus: string;
+  housingStatus: string;
+  moodModifiers: string[];
+}
+
+export function buildLifeSimContext(state: LifeSimPlayerState): LifeSimAIContext {
+  // Build needs status
+  const needDescriptions: string[] = [];
+  
+  // Physical needs
+  const physical = state.needs.physical;
+  if (physical.hunger <= 30) needDescriptions.push(`Hunger: ${physical.hunger}% (${physical.hunger <= 15 ? 'STARVING' : 'very hungry'})`);
+  if (physical.energy <= 30) needDescriptions.push(`Energy: ${physical.energy}% (${physical.energy <= 15 ? 'EXHAUSTED' : 'tired'})`);
+  if (physical.hygiene <= 40) needDescriptions.push(`Hygiene: ${physical.hygiene}% (${physical.hygiene <= 20 ? 'FILTHY' : 'unkempt'})`);
+  if (physical.bladder <= 30) needDescriptions.push(`Bladder: ${physical.bladder}% (${physical.bladder <= 15 ? 'DESPERATE' : 'uncomfortable'})`);
+  
+  // Psychological needs
+  const psych = state.needs.psychological;
+  if (psych.social <= 40) needDescriptions.push(`Social: ${psych.social}% (${psych.social <= 20 ? 'LONELY' : 'isolated'})`);
+  if (psych.fulfillment <= 40) needDescriptions.push(`Fulfillment: ${psych.fulfillment}% (${psych.fulfillment <= 20 ? 'BORED OUT OF MIND' : 'restless'})`);
+  if (psych.stress >= 60) needDescriptions.push(`Stress: ${psych.stress}% (${psych.stress >= 80 ? 'OVERWHELMED' : 'anxious'})`);
+  if (psych.comfort <= 40) needDescriptions.push(`Comfort: ${psych.comfort}% (${psych.comfort <= 20 ? 'MISERABLE' : 'uncomfortable'})`);
+  
+  const needsStatus = needDescriptions.length > 0 
+    ? `NEEDS REQUIRING ATTENTION:\n${needDescriptions.join('\n')}`
+    : 'All needs are currently satisfied.';
+  
+  // Build career status
+  let careerStatus = 'CAREER: Unemployed - looking for opportunities';
+  if (state.job) {
+    const scheduleType = state.job.schedule?.days?.length && state.job.schedule.days.length < 5 ? 'Part-time' : 'Full-time';
+    careerStatus = `CAREER: ${state.job.title} at ${state.job.employer || 'company'}
+Performance: ${state.job.performance}/100
+Schedule: ${scheduleType}`;
+  }
+  
+  // Build social status
+  const reputationEntries = Object.entries(state.reputation);
+  let socialStatus = 'SOCIAL STANDING: Unknown in all areas';
+  if (reputationEntries.length > 0) {
+    const socialDescriptions = reputationEntries.map(([locationId, rep]) => 
+      `${locationId}: ${rep.tier} (Social: ${rep.axes.social}, Romantic: ${rep.axes.romantic})`
+    );
+    socialStatus = `SOCIAL STANDING:\n${socialDescriptions.join('\n')}`;
+  }
+  
+  // Build housing status
+  let housingStatus = 'HOUSING: Homeless';
+  const housing = state.economy.housing;
+  if (housing === 'owns_home') {
+    housingStatus = 'HOUSING: Owns home - stable living situation';
+  } else if (housing === 'renting_apartment' || housing === 'renting_room') {
+    housingStatus = `HOUSING: ${housing === 'renting_apartment' ? 'Renting apartment' : 'Renting room'} - $${state.economy.rent}/month, $${state.economy.money} available`;
+  } else if (housing === 'shelter') {
+    housingStatus = 'HOUSING: Living in a shelter - temporary situation';
+  }
+  
+  // Build mood modifiers based on needs
+  const moodModifiers: string[] = [];
+  
+  if (physical.hunger <= 20) moodModifiers.push('Irritable from hunger - snappy responses, difficulty concentrating');
+  if (physical.energy <= 20) moodModifiers.push('Sluggish and unfocused - yawning, making mistakes');
+  if (psych.social <= 25) moodModifiers.push('Craving connection - eager to talk, maybe too eager');
+  if (psych.fulfillment <= 25) moodModifiers.push('Desperate for entertainment - easily distracted, impulsive');
+  if (psych.stress >= 75) moodModifiers.push('Anxiety-ridden - nervous habits, overthinking everything');
+  if (physical.hygiene <= 25) moodModifiers.push('Self-conscious about appearance - avoiding close contact');
+  if (physical.bladder <= 20) moodModifiers.push('Urgent bathroom need - distracted, fidgeting');
+  
+  // Positive modifiers
+  if (physical.hunger >= 80 && physical.energy >= 80) moodModifiers.push('Well-rested and fed - sharp and energetic');
+  if (psych.social >= 80) moodModifiers.push('Socially fulfilled - confident in interactions');
+  if (psych.fulfillment >= 80 && psych.stress <= 30) moodModifiers.push('Relaxed and content - easygoing demeanor');
+  
+  return {
+    needsStatus,
+    careerStatus,
+    socialStatus,
+    housingStatus,
+    moodModifiers,
+  };
+}
