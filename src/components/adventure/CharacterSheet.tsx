@@ -16,10 +16,12 @@ import { MoodState, deriveMoodFromStats, CoreMoodType } from '@/game/moodSystem'
 import { useGame } from '@/contexts/GameContext';
 import { 
   getRomanticJournals, 
+  getAllJournals,
   getMomentTypeInfo, 
   getMilestoneInfo,
   NPCRelationshipJournal,
-  RelationshipMoment
+  RelationshipMoment,
+  MilestoneType
 } from '@/lib/relationshipJournal';
 import {
   Collapsible,
@@ -552,10 +554,11 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
   );
 }
 
-// Relationship Journal Section Component
+// Relationship Journal Section Component - Enhanced with color coding and detail modal
 function RelationshipJournalSection() {
   const [isOpen, setIsOpen] = useState(true);
-  const journals = useMemo(() => getRomanticJournals(), []);
+  const [selectedJournal, setSelectedJournal] = useState<NPCRelationshipJournal | null>(null);
+  const journals = useMemo(() => getAllJournals(), []);
   
   if (journals.length === 0) {
     return (
@@ -565,48 +568,215 @@ function RelationshipJournalSection() {
           Relationship Journal
         </h3>
         <p className="text-xs text-muted-foreground italic px-3 py-4 bg-background/30 rounded-lg border border-border/20">
-          Your romantic journey has yet to begin. Meet characters and build meaningful connections to fill this journal.
+          Your journey has yet to begin. Meet characters and build meaningful connections to fill this journal.
         </p>
       </div>
     );
   }
   
   return (
-    <div className="space-y-3 border-t border-border/30 pt-4 mt-4">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="w-full flex items-center justify-between hover:text-primary transition-colors">
-          <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
-            <BookHeart className="w-4 h-4" />
-            Relationship Journal
-            <span className="text-xs text-muted-foreground font-normal">
-              ({journals.length} {journals.length === 1 ? 'connection' : 'connections'})
+    <>
+      <div className="space-y-3 border-t border-border/30 pt-4 mt-4">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger className="w-full flex items-center justify-between hover:text-primary transition-colors">
+            <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
+              <BookHeart className="w-4 h-4" />
+              Relationship Journal
+              <span className="text-xs text-muted-foreground font-normal">
+                ({journals.length} {journals.length === 1 ? 'connection' : 'connections'})
+              </span>
+            </h3>
+            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent className="pt-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {journals.map(journal => (
+                <JournalCard 
+                  key={journal.npcId} 
+                  journal={journal} 
+                  onClick={() => setSelectedJournal(journal)}
+                />
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+      
+      {/* Detail Modal */}
+      {selectedJournal && (
+        <JournalDetailModal 
+          journal={selectedJournal} 
+          onClose={() => setSelectedJournal(null)} 
+        />
+      )}
+    </>
+  );
+}
+
+// Color-coded clickable card for each NPC
+function JournalCard({ journal, onClick }: { journal: NPCRelationshipJournal; onClick: () => void }) {
+  const milestoneInfo = getMilestoneInfo(journal.currentMilestone);
+  
+  return (
+    <button
+      onClick={onClick}
+      className={`p-3 rounded-lg border ${milestoneInfo.borderColor} ${milestoneInfo.bgColor} 
+        hover:scale-[1.02] hover:shadow-lg transition-all text-left group`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-lg">{milestoneInfo.icon}</span>
+        <span className="font-medium text-sm truncate">{journal.npcName}</span>
+      </div>
+      <p className={`text-xs ${milestoneInfo.color} font-medium`}>
+        {milestoneInfo.label}
+      </p>
+      <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+        {journal.romanticMoments > 0 && (
+          <span className="text-pink-400">💕 {journal.romanticMoments}</span>
+        )}
+        <span>📝 {journal.totalMoments}</span>
+      </div>
+    </button>
+  );
+}
+
+// Detailed modal for viewing full relationship history
+function JournalDetailModal({ journal, onClose }: { journal: NPCRelationshipJournal; onClose: () => void }) {
+  const milestoneInfo = getMilestoneInfo(journal.currentMilestone);
+  const [filter, setFilter] = useState<'all' | 'romantic' | 'milestone'>('all');
+  
+  const filteredMoments = useMemo(() => {
+    switch (filter) {
+      case 'romantic':
+        return journal.moments.filter(m => m.isRomantic);
+      case 'milestone':
+        return journal.moments.filter(m => m.isMilestone);
+      default:
+        return journal.moments;
+    }
+  }, [journal.moments, filter]);
+  
+  return (
+    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className={`bg-card border-2 ${milestoneInfo.borderColor} rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col animate-fade-in overflow-hidden`}>
+        {/* Header */}
+        <div className={`p-4 ${milestoneInfo.bgColor} border-b ${milestoneInfo.borderColor}`}>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{milestoneInfo.icon}</span>
+              <div>
+                <h3 className="text-xl font-narrative font-bold">{journal.npcName}</h3>
+                <p className={`text-sm ${milestoneInfo.color} font-medium`}>{milestoneInfo.label}</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          {/* Stats */}
+          <div className="flex gap-4 mt-3 text-sm">
+            <span className="text-muted-foreground">
+              📝 {journal.totalMoments} moments
             </span>
-          </h3>
-          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </CollapsibleTrigger>
+            {journal.romanticMoments > 0 && (
+              <span className="text-pink-400">
+                💕 {journal.romanticMoments} romantic
+              </span>
+            )}
+          </div>
+        </div>
         
-        <CollapsibleContent className="space-y-3 pt-3">
-          {journals.map(journal => (
-            <JournalEntry key={journal.npcId} journal={journal} />
+        {/* Filter Tabs */}
+        <div className="flex gap-1 p-2 border-b border-border/30 bg-background/50">
+          {(['all', 'romantic', 'milestone'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                filter === tab 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'hover:bg-muted text-muted-foreground'
+              }`}
+            >
+              {tab === 'all' && '📖 All'}
+              {tab === 'romantic' && '💕 Romantic'}
+              {tab === 'milestone' && '⭐ Milestones'}
+            </button>
           ))}
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+        
+        {/* Moments List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {filteredMoments.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm py-8">
+              No {filter === 'all' ? '' : filter} moments recorded yet.
+            </p>
+          ) : (
+            filteredMoments.map(moment => (
+              <DetailedMomentEntry key={moment.id} moment={moment} />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// Individual Journal Entry Component
+// Detailed moment entry for the modal
+function DetailedMomentEntry({ moment }: { moment: RelationshipMoment }) {
+  const typeInfo = getMomentTypeInfo(moment.type);
+  const milestoneInfo = moment.milestoneType ? getMilestoneInfo(moment.milestoneType) : null;
+  
+  return (
+    <div className={`p-3 rounded-lg bg-background/40 border-l-4 ${
+      moment.isMilestone 
+        ? milestoneInfo?.borderColor || 'border-l-amber-500' 
+        : moment.isRomantic 
+          ? 'border-l-pink-500' 
+          : 'border-l-border'
+    }`}>
+      <div className="flex items-start gap-3">
+        <span className="text-xl flex-shrink-0">{typeInfo.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs font-medium ${typeInfo.color}`}>
+              {typeInfo.label}
+            </span>
+            {moment.isMilestone && milestoneInfo && (
+              <span className={`text-xs px-1.5 py-0.5 rounded ${milestoneInfo.bgColor} ${milestoneInfo.color}`}>
+                → {milestoneInfo.label}
+              </span>
+            )}
+          </div>
+          <p className="text-sm leading-relaxed">{moment.description}</p>
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+            <span>{moment.dateString}</span>
+            {moment.emotionalImpact !== 0 && (
+              <span className={moment.emotionalImpact > 0 ? 'text-green-400' : 'text-red-400'}>
+                {moment.emotionalImpact > 0 ? '❤️' : '💔'} {moment.emotionalImpact > 0 ? '+' : ''}{moment.emotionalImpact}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Legacy components for backward compatibility
 function JournalEntry({ journal }: { journal: NPCRelationshipJournal }) {
   const [expanded, setExpanded] = useState(false);
   const milestoneInfo = getMilestoneInfo(journal.currentMilestone);
   const recentMoments = journal.moments.slice(0, expanded ? 10 : 3);
   
   return (
-    <div className="bg-background/30 rounded-lg border border-border/20 overflow-hidden">
+    <div className={`rounded-lg border ${milestoneInfo.borderColor} ${milestoneInfo.bgColor} overflow-hidden`}>
       {/* NPC Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-3 flex items-center justify-between hover:bg-background/50 transition-colors"
+        className="w-full p-3 flex items-center justify-between hover:bg-background/20 transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-lg">{milestoneInfo.icon}</span>

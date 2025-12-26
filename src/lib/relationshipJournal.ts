@@ -20,14 +20,37 @@ export type MomentType =
   | 'memory';
 
 export type MilestoneType =
+  | 'stranger'
   | 'acquaintance'
   | 'friend'
   | 'close_friend'
+  | 'crush'
   | 'romantic_interest'
   | 'dating'
+  | 'partner'
   | 'lover'
   | 'committed'
-  | 'soulmate';
+  | 'soulmate'
+  | 'rival'
+  | 'enemy';
+
+// Trigger types from dialogue system
+export type ProgressionTriggerType = 
+  | 'confession' 
+  | 'intimacy' 
+  | 'trust_built' 
+  | 'shared_moment' 
+  | 'romantic_gesture' 
+  | 'commitment' 
+  | 'deep_connection';
+
+export interface MilestoneProgression {
+  shouldProgress: boolean;
+  currentMilestone: MilestoneType;
+  suggestedMilestone?: MilestoneType;
+  triggerType?: ProgressionTriggerType;
+  triggerDescription?: string;
+}
 
 export interface RelationshipMoment {
   id: string;
@@ -83,19 +106,24 @@ export function getMomentTypeInfo(type: MomentType): { icon: string; label: stri
   return info[type] || { icon: '📝', label: 'Moment', color: 'text-slate-400' };
 }
 
-// Get milestone display info
-export function getMilestoneInfo(milestone: MilestoneType): { icon: string; label: string; color: string } {
-  const info: Record<MilestoneType, { icon: string; label: string; color: string }> = {
-    acquaintance: { icon: '👤', label: 'Acquaintance', color: 'text-slate-400' },
-    friend: { icon: '🙂', label: 'Friend', color: 'text-green-400' },
-    close_friend: { icon: '😊', label: 'Close Friend', color: 'text-emerald-400' },
-    romantic_interest: { icon: '💓', label: 'Romantic Interest', color: 'text-pink-400' },
-    dating: { icon: '💖', label: 'Dating', color: 'text-rose-400' },
-    lover: { icon: '💗', label: 'Lover', color: 'text-red-400' },
-    committed: { icon: '💕', label: 'Committed', color: 'text-pink-500' },
-    soulmate: { icon: '💞', label: 'Soulmate', color: 'text-pink-600' },
+// Get milestone display info with color coding
+export function getMilestoneInfo(milestone: MilestoneType): { icon: string; label: string; color: string; bgColor: string; borderColor: string } {
+  const info: Record<MilestoneType, { icon: string; label: string; color: string; bgColor: string; borderColor: string }> = {
+    stranger: { icon: '👤', label: 'Stranger', color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' },
+    acquaintance: { icon: '🤝', label: 'Acquaintance', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30' },
+    friend: { icon: '😊', label: 'Friend', color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30' },
+    close_friend: { icon: '🫂', label: 'Close Friend', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
+    crush: { icon: '😳', label: 'Crush', color: 'text-pink-300', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/30' },
+    romantic_interest: { icon: '💓', label: 'Romantic Interest', color: 'text-pink-400', bgColor: 'bg-pink-500/15', borderColor: 'border-pink-500/40' },
+    dating: { icon: '💖', label: 'Dating', color: 'text-rose-400', bgColor: 'bg-rose-500/15', borderColor: 'border-rose-500/40' },
+    partner: { icon: '💑', label: 'Partner', color: 'text-rose-500', bgColor: 'bg-rose-500/20', borderColor: 'border-rose-500/50' },
+    lover: { icon: '💗', label: 'Lover', color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/50' },
+    committed: { icon: '💕', label: 'Committed', color: 'text-pink-500', bgColor: 'bg-pink-500/25', borderColor: 'border-pink-500/60' },
+    soulmate: { icon: '💞', label: 'Soulmate', color: 'text-fuchsia-400', bgColor: 'bg-fuchsia-500/25', borderColor: 'border-fuchsia-500/60' },
+    rival: { icon: '⚔️', label: 'Rival', color: 'text-orange-400', bgColor: 'bg-orange-500/15', borderColor: 'border-orange-500/40' },
+    enemy: { icon: '💢', label: 'Enemy', color: 'text-red-500', bgColor: 'bg-red-500/15', borderColor: 'border-red-500/40' },
   };
-  return info[milestone] || { icon: '👤', label: 'Unknown', color: 'text-slate-400' };
+  return info[milestone] || { icon: '👤', label: 'Unknown', color: 'text-slate-400', bgColor: 'bg-slate-500/10', borderColor: 'border-slate-500/30' };
 }
 
 // Load journal from storage
@@ -220,14 +248,28 @@ export function getNPCJournal(npcId: string): NPCRelationshipJournal | null {
   return data.journals[npcId] || null;
 }
 
+// Get all journals (with any content)
+export function getAllJournals(): NPCRelationshipJournal[] {
+  const data = loadRelationshipJournal();
+  return Object.values(data.journals)
+    .sort((a, b) => {
+      // Sort by milestone level, then by total moments
+      const milestoneOrder: MilestoneType[] = ['soulmate', 'committed', 'lover', 'partner', 'dating', 'crush', 'romantic_interest', 'close_friend', 'friend', 'acquaintance', 'stranger', 'rival', 'enemy'];
+      const aOrder = milestoneOrder.indexOf(a.currentMilestone);
+      const bOrder = milestoneOrder.indexOf(b.currentMilestone);
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return b.totalMoments - a.totalMoments;
+    });
+}
+
 // Get all journals with romantic content
 export function getRomanticJournals(): NPCRelationshipJournal[] {
   const data = loadRelationshipJournal();
   return Object.values(data.journals)
-    .filter(j => j.romanticMoments > 0 || j.currentMilestone !== 'acquaintance')
+    .filter(j => j.romanticMoments > 0 || !['stranger', 'acquaintance', 'friend', 'rival', 'enemy'].includes(j.currentMilestone))
     .sort((a, b) => {
       // Sort by milestone level, then by romantic moments
-      const milestoneOrder: MilestoneType[] = ['soulmate', 'committed', 'lover', 'dating', 'romantic_interest', 'close_friend', 'friend', 'acquaintance'];
+      const milestoneOrder: MilestoneType[] = ['soulmate', 'committed', 'lover', 'partner', 'dating', 'crush', 'romantic_interest', 'close_friend', 'friend', 'acquaintance', 'stranger'];
       const aOrder = milestoneOrder.indexOf(a.currentMilestone);
       const bOrder = milestoneOrder.indexOf(b.currentMilestone);
       if (aOrder !== bOrder) return aOrder - bOrder;
@@ -238,4 +280,76 @@ export function getRomanticJournals(): NPCRelationshipJournal[] {
 // Clear all journal data
 export function clearRelationshipJournal(): void {
   localStorage.removeItem(JOURNAL_STORAGE_KEY);
+}
+
+// Update milestone from dialogue progression
+export function updateMilestoneFromProgression(
+  npcId: string,
+  npcName: string,
+  progression: MilestoneProgression
+): void {
+  if (!progression.shouldProgress || !progression.suggestedMilestone) return;
+  
+  const data = loadRelationshipJournal();
+  
+  // Ensure NPC journal exists
+  if (!data.journals[npcId]) {
+    data.journals[npcId] = {
+      npcId,
+      npcName,
+      moments: [],
+      currentMilestone: 'stranger',
+      totalMoments: 0,
+      romanticMoments: 0,
+    };
+  }
+  
+  const journal = data.journals[npcId];
+  const oldMilestone = journal.currentMilestone;
+  const newMilestone = progression.suggestedMilestone;
+  
+  // Only update if it's an actual progression
+  if (oldMilestone === newMilestone) return;
+  
+  journal.currentMilestone = newMilestone;
+  
+  // Create a milestone moment
+  const triggerLabels: Record<ProgressionTriggerType, string> = {
+    confession: 'A heartfelt confession',
+    intimacy: 'A moment of intimacy',
+    trust_built: 'Trust was established',
+    shared_moment: 'A meaningful shared experience',
+    romantic_gesture: 'A romantic gesture',
+    commitment: 'A commitment was made',
+    deep_connection: 'Souls connected deeply',
+  };
+  
+  const milestoneInfo = getMilestoneInfo(newMilestone);
+  const description = progression.triggerDescription || 
+    (progression.triggerType ? triggerLabels[progression.triggerType] : 'The relationship evolved');
+  
+  const moment: RelationshipMoment = {
+    id: `${npcId}-milestone-${Date.now()}`,
+    npcId,
+    npcName,
+    type: 'milestone',
+    description: `${milestoneInfo.icon} ${description} - Now ${milestoneInfo.label}`,
+    timestamp: Date.now(),
+    dateString: new Date().toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }),
+    emotionalImpact: 50,
+    isRomantic: ['crush', 'romantic_interest', 'dating', 'partner', 'lover', 'committed', 'soulmate'].includes(newMilestone),
+    isMilestone: true,
+    milestoneType: newMilestone,
+  };
+  
+  journal.moments.unshift(moment);
+  journal.totalMoments++;
+  if (moment.isRomantic) journal.romanticMoments++;
+  
+  saveRelationshipJournal(data);
 }
