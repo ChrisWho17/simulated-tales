@@ -289,11 +289,16 @@ export function AdventureGame() {
     playerAction?: string,
     history: StoryEntry[] = [],
     diceRoll?: any,
-    char?: RPGCharacter
+    char?: RPGCharacter,
+    skipLoadingState?: boolean
   ) => {
     const activeChar = char || character;
     if (!activeChar) return null;
-    setIsLoading(true);
+    
+    // Only manage loading state if not handled by caller
+    if (!skipLoadingState) {
+      setIsLoading(true);
+    }
 
     try {
       // Get memory context for AI
@@ -356,7 +361,9 @@ export function AdventureGame() {
       console.error('Error generating narrative:', error);
       return generateNeutralContinuation({ lastAction: playerAction });
     } finally {
-      setIsLoading(false);
+      if (!skipLoadingState) {
+        setIsLoading(false);
+      }
     }
   }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
 
@@ -408,7 +415,8 @@ export function AdventureGame() {
       console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
     }
 
-    const narrative = await generateNarrative(scenario, undefined, [], undefined, char);
+    // Pass skipLoadingState=true since we manage loading ourselves
+    const narrative = await generateNarrative(scenario, undefined, [], undefined, char, true);
     if (narrative) {
       const newStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
@@ -423,9 +431,10 @@ export function AdventureGame() {
       if (campaignContext) {
         campaignContext.addNarrativeEntry(newStory[0]);
       }
-      
-      setPhase('playing');
     }
+    
+    // Set playing BEFORE clearing loading so the transition happens while loading overlay is still visible
+    setPhase('playing');
     setIsLoading(false);
   }, [generateNarrative, saveData, scenarioSelection, initializeCampaign, campaignContext, worldBible]);
 
