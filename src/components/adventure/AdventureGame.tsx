@@ -35,22 +35,16 @@ import {
 } from '@/game/languageSystem';
 import {
   NPCGrudgeContext,
-  buildNPCGrudgeContext,
   buildSceneNPCContext,
-  createDefaultRelationshipMetrics,
-  calculateBehaviorModifiers,
 } from '@/game/npcGrudgeSystem';
 import {
   buildRumorContext,
-  buildInformationContext,
-  Rumor,
 } from '@/game/unreliableInformationSystem';
 import {
   buildConsequenceContext,
   buildWorldStateContext,
-  WorldStateChanges,
-  createDefaultWorldState,
 } from '@/game/rippleEffectSystem';
+import { useGameLoop } from '@/hooks/useGameLoop';
 import { StoryEntry } from './types';
 import { 
   validateGenerationState, 
@@ -335,35 +329,12 @@ export function AdventureGame() {
     return createLanguageSystemState();
   });
   
-  // === NEW SYSTEMS STATE: Grudges, Ripples, Unreliable Information ===
+  // === GAME LOOP: Manages ripples, world state, rumors, NPCs ===
+  const [gameLoopState, gameLoopActions] = useGameLoop(campaignMemory?.campaign.currentTick || 0);
   
-  // NPC Psychology state (grudges, debts, relationships for NPCs in scene)
-  const [sceneNPCs, setSceneNPCs] = useState<NPCGrudgeContext[]>([]);
-  
-  // Ripple Effect state (consequences cascading through world)
-  const [worldState, setWorldState] = useState<WorldStateChanges>(() => {
-    try {
-      const saved = localStorage.getItem('untold-world-state');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return createDefaultWorldState();
-  });
-  const [narrativeQueue, setNarrativeQueue] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('untold-narrative-queue');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
-  
-  // Rumor system state
-  const [activeRumors, setActiveRumors] = useState<Rumor[]>(() => {
-    try {
-      const saved = localStorage.getItem('untold-active-rumors');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
+  // Destructure for easier access
+  const { worldState, narrativeQueue, activeRumors, sceneNPCs } = gameLoopState;
+  const { processPlayerAction: processActionForRipples, advanceTurn, setSceneNPCs } = gameLoopActions;
   
   // Persist mood changes
   useEffect(() => {
@@ -379,21 +350,6 @@ export function AdventureGame() {
   useEffect(() => {
     localStorage.setItem('untold-language-state', JSON.stringify(languageState));
   }, [languageState]);
-  
-  // Persist world state
-  useEffect(() => {
-    localStorage.setItem('untold-world-state', JSON.stringify(worldState));
-  }, [worldState]);
-  
-  // Persist narrative queue
-  useEffect(() => {
-    localStorage.setItem('untold-narrative-queue', JSON.stringify(narrativeQueue));
-  }, [narrativeQueue]);
-  
-  // Persist active rumors
-  useEffect(() => {
-    localStorage.setItem('untold-active-rumors', JSON.stringify(activeRumors));
-  }, [activeRumors]);
   
   // Sync language settings from GameContext
   useEffect(() => {
@@ -984,6 +940,15 @@ export function AdventureGame() {
     if (campaignContext) {
       campaignContext.addNarrativeEntry(playerEntry);
     }
+    
+    // === RIPPLE EFFECT: Process player action for consequences ===
+    // Detect if this action should trigger world consequences
+    const currentLocation = 'current_location'; // TODO: Get from actual location system
+    const isPublicAction = worldState.securityLevel !== 'normal' || action.toLowerCase().includes('public');
+    processActionForRipples(action, currentLocation, isPublicAction, 5);
+    
+    // Advance game loop turn (processes pending ripples, decays grudges, spreads rumors)
+    advanceTurn(1);
 
     const narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
     if (narrative) {
@@ -1013,7 +978,7 @@ export function AdventureGame() {
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
