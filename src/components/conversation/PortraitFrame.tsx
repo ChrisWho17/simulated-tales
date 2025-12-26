@@ -44,6 +44,12 @@ export function PortraitFrame({
         return 'portrait-frame-horror';
       case 'mystery':
         return 'portrait-frame-noir';
+      case 'modern_life':
+        return 'portrait-frame-modern';
+      case 'pirate':
+        return 'portrait-frame-nautical';
+      case 'war':
+        return 'portrait-frame-military';
       default:
         return 'portrait-frame-default';
     }

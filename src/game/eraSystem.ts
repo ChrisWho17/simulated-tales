@@ -391,8 +391,11 @@ export const GENRE_TO_DEFAULT_ERA: Record<string, EraId> = {
   mystery: 'earlymodern',
   western: 'wildwest',
   modern: 'modern',
+  modern_life: 'modern',
   cyberpunk: 'cyberpunk',
   steampunk: 'steampunk',
   postapoc: 'postapocalyptic',
-  historical: 'renaissance'
+  historical: 'renaissance',
+  pirate: 'renaissance',
+  war: 'modern'
 };

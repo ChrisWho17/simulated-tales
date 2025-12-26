@@ -130,6 +130,7 @@ const GENRE_FLAVORS: Record<string, { tone: string; element: string; atmosphere:
   postapoc: { tone: 'desolate', element: 'ruins of the old world stood silent', atmosphere: 'every day was a fight' },
   war: { tone: 'tense', element: 'the calm before battle hung heavy', atmosphere: 'duty called without mercy' },
   cosmic_horror: { tone: 'insignificant', element: 'vast incomprehensible forces stirred', atmosphere: 'sanity was a fragile thing' },
+  modern_life: { tone: 'relatable', element: 'the hum of city life surrounded everything', atmosphere: 'dreams and reality intertwined' },
 };
 
 function buildBlendedFallbackOpening(
