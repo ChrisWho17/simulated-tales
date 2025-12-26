@@ -445,6 +445,376 @@ const POSTAPOC_LOADOUT: GenreLoadout = {
 };
 
 // ============================================================================
+// WESTERN LOADOUT
+// ============================================================================
+
+const WESTERN_LOADOUT: GenreLoadout = {
+  name: 'Western',
+  currency: 'dollars',
+  currencyIcon: '$',
+  startingCurrency: 75,
+  categories: {
+    weapons: {
+      label: 'Iron',
+      required: false,
+      maxSlots: 2,
+      icon: '🔫',
+      portraitTag: 'hand',
+      options: [
+        { id: 'wes_revolver', name: 'Six-Shooter', description: 'Classic Colt revolver', icon: '🔫', category: 'weapons', stats: { damage: 20, accuracy: 70, ammo: 6 }, cost: 0, portraitPrompt: 'with a revolver in leather holster' },
+        { id: 'wes_rifle', name: 'Lever-Action Rifle', description: 'Winchester repeater for long range', icon: '🔫', category: 'weapons', stats: { damage: 30, accuracy: 80, range: 'long', ammo: 12 }, cost: 25, portraitPrompt: 'holding a lever-action rifle' },
+        { id: 'wes_shotgun', name: 'Double-Barrel Shotgun', description: 'Devastating up close', icon: '🔫', category: 'weapons', stats: { damage: 40, accuracy: 50, range: 'short', ammo: 2 }, cost: 20, portraitPrompt: 'with a double-barrel shotgun' },
+        { id: 'wes_knife', name: 'Bowie Knife', description: 'Large hunting knife', icon: '🔪', category: 'weapons', stats: { damage: 15, accuracy: 75, silent: true }, cost: 0, portraitPrompt: 'with a bowie knife at belt' },
+      ],
+    },
+    clothing: {
+      label: 'Attire',
+      required: true,
+      maxSlots: 1,
+      icon: '🤠',
+      portraitTag: 'body',
+      options: [
+        { id: 'wes_rancher', name: 'Rancher Clothes', description: 'Practical work wear', icon: '👕', category: 'clothing', stats: { style: 10, durability: 20 }, cost: 0, portraitPrompt: 'wearing dusty rancher work clothes' },
+        { id: 'wes_duster', name: 'Long Duster', description: 'Protects from dust and weather', icon: '🧥', category: 'clothing', stats: { style: 20, weather: true, concealment: 15 }, cost: 15, portraitPrompt: 'wearing a long leather duster coat' },
+        { id: 'wes_fancy', name: 'Gambler\'s Suit', description: 'Fine clothes for the saloon', icon: '🎩', category: 'clothing', stats: { style: 40, social: 20 }, cost: 30, portraitPrompt: 'wearing a fancy gambler\'s suit with vest' },
+      ],
+    },
+    accessories: {
+      label: 'Accessories',
+      required: false,
+      maxSlots: 2,
+      icon: '🤠',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'wes_hat', name: 'Cowboy Hat', description: 'Essential frontier headwear', icon: '🤠', category: 'accessories', stats: { style: 10, sunProtection: true }, cost: 0, portraitPrompt: 'wearing a weathered cowboy hat' },
+        { id: 'wes_boots', name: 'Spurred Boots', description: 'Leather boots with silver spurs', icon: '👢', category: 'accessories', stats: { riding: 15, style: 10 }, cost: 10, portraitPrompt: 'with spurred cowboy boots' },
+        { id: 'wes_bandana', name: 'Bandana', description: 'Protects from dust, hides identity', icon: '🧣', category: 'accessories', stats: { dustProtection: true, anonymity: 20 }, cost: 2, portraitPrompt: 'with a bandana around neck' },
+        { id: 'wes_tobacco', name: 'Tobacco Pouch', description: 'For rolling smokes', icon: '🚬', category: 'accessories', stats: { stress: -5, social: 5 }, cost: 3, portraitPrompt: '' },
+      ],
+    },
+    supplies: {
+      label: 'Supplies',
+      required: false,
+      maxSlots: 3,
+      icon: '🎒',
+      portraitTag: 'none',
+      options: [
+        { id: 'wes_ammo', name: 'Box of Ammo', description: '50 rounds for your iron', icon: '🔩', category: 'supplies', stats: { ammo: 50 }, cost: 10, portraitPrompt: '' },
+        { id: 'wes_whiskey', name: 'Bottle of Whiskey', description: 'Liquid courage and pain relief', icon: '🥃', category: 'supplies', stats: { stress: -15, healing: 10, social: 10 }, cost: 5, portraitPrompt: '' },
+        { id: 'wes_rope', name: 'Lasso', description: 'For wrangling and restraining', icon: '🪢', category: 'supplies', stats: { utility: true, capture: true }, cost: 5, portraitPrompt: 'with lasso coiled at saddle' },
+        { id: 'wes_bedroll', name: 'Bedroll', description: 'Sleep under the stars', icon: '🛏️', category: 'supplies', stats: { rest: true, camping: true }, cost: 5, portraitPrompt: '' },
+      ],
+    },
+    transport: {
+      label: 'Horse',
+      required: false,
+      maxSlots: 1,
+      icon: '🐴',
+      portraitTag: 'none',
+      options: [
+        { id: 'wes_nag', name: 'Old Nag', description: 'Slow but reliable', icon: '🐴', category: 'misc', stats: { speed: 30, stamina: 50, loyalty: 60 }, cost: 0, portraitPrompt: '' },
+        { id: 'wes_mustang', name: 'Mustang', description: 'Wild spirit, fast and tough', icon: '🐎', category: 'misc', stats: { speed: 70, stamina: 80, loyalty: 40 }, cost: 30, portraitPrompt: 'mounted on a spirited mustang' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'gunslinger', name: 'Gunslinger', description: 'Quick on the draw', items: ['wes_revolver', 'wes_knife', 'wes_duster', 'wes_hat', 'wes_boots', 'wes_ammo', 'wes_mustang'], cost: 62 },
+    { id: 'drifter', name: 'Drifter', description: 'Traveling light', items: ['wes_revolver', 'wes_rancher', 'wes_hat', 'wes_bandana', 'wes_bedroll', 'wes_nag'], cost: 7 },
+    { id: 'outlaw', name: 'Outlaw', description: 'Ready for trouble', items: ['wes_shotgun', 'wes_revolver', 'wes_duster', 'wes_hat', 'wes_bandana', 'wes_ammo', 'wes_whiskey'], cost: 55 },
+  ],
+};
+
+// ============================================================================
+// SCI-FI LOADOUT
+// ============================================================================
+
+const SCIFI_LOADOUT: GenreLoadout = {
+  name: 'Sci-Fi',
+  currency: 'credits',
+  currencyIcon: '₵',
+  startingCurrency: 400,
+  categories: {
+    weapons: {
+      label: 'Armament',
+      required: false,
+      maxSlots: 2,
+      icon: '🔫',
+      portraitTag: 'hand',
+      options: [
+        { id: 'sf_pistol', name: 'Pulse Pistol', description: 'Standard energy sidearm', icon: '🔫', category: 'weapons', stats: { damage: 18, accuracy: 75, energyCell: 20 }, cost: 0, portraitPrompt: 'with a sleek pulse pistol holstered' },
+        { id: 'sf_rifle', name: 'Plasma Rifle', description: 'Military-grade energy weapon', icon: '🔫', category: 'weapons', stats: { damage: 35, accuracy: 70, energyCell: 30 }, cost: 100, portraitPrompt: 'carrying a glowing plasma rifle' },
+        { id: 'sf_blade', name: 'Vibro-Blade', description: 'High-frequency cutting weapon', icon: '⚔️', category: 'weapons', stats: { damage: 25, accuracy: 80, silent: true }, cost: 50, portraitPrompt: 'with a humming vibro-blade' },
+        { id: 'sf_stun', name: 'Stun Baton', description: 'Non-lethal incapacitation', icon: '⚡', category: 'weapons', stats: { damage: 8, stun: true, accuracy: 85 }, cost: 25, portraitPrompt: 'with a crackling stun baton' },
+      ],
+    },
+    armor: {
+      label: 'Protection',
+      required: false,
+      maxSlots: 1,
+      icon: '🛡️',
+      portraitTag: 'body',
+      options: [
+        { id: 'sf_flightsuit', name: 'Flight Suit', description: 'Standard pilot attire with light plating', icon: '👕', category: 'armor', stats: { defense: 10, mobility: 'full', void: true }, cost: 0, portraitPrompt: 'wearing a sleek flight suit with patches' },
+        { id: 'sf_combat', name: 'Combat Armor', description: 'Marine-grade protection', icon: '🛡️', category: 'armor', stats: { defense: 25, mobility: 'reduced', sealed: true }, cost: 100, portraitPrompt: 'clad in futuristic combat armor' },
+        { id: 'sf_shield', name: 'Personal Shield', description: 'Energy barrier generator', icon: '💠', category: 'armor', stats: { defense: 15, shieldStrength: 50, recharge: true }, cost: 150, portraitPrompt: 'with a faint energy shield shimmer' },
+      ],
+    },
+    clothing: {
+      label: 'Attire',
+      required: true,
+      maxSlots: 1,
+      icon: '👕',
+      portraitTag: 'body',
+      options: [
+        { id: 'sf_utility', name: 'Utility Jumpsuit', description: 'Practical shipboard wear', icon: '👕', category: 'clothing', stats: { style: 10, pockets: 6 }, cost: 0, portraitPrompt: 'wearing a practical utility jumpsuit' },
+        { id: 'sf_civilian', name: 'Civilian Clothes', description: 'Blend in on any station', icon: '👔', category: 'clothing', stats: { style: 20, blend: 'civilian' }, cost: 20, portraitPrompt: 'in futuristic civilian fashion' },
+        { id: 'sf_formal', name: 'Diplomatic Attire', description: 'For official functions', icon: '🎩', category: 'clothing', stats: { style: 40, social: 25 }, cost: 75, portraitPrompt: 'wearing elegant diplomatic robes' },
+      ],
+    },
+    tech: {
+      label: 'Technology',
+      required: false,
+      maxSlots: 3,
+      icon: '📡',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'sf_comm', name: 'Wrist Communicator', description: 'Long-range comms device', icon: '📡', category: 'tech', stats: { communication: true, range: 'planetary' }, cost: 0, portraitPrompt: 'with wrist-mounted communicator' },
+        { id: 'sf_scanner', name: 'Tricorder', description: 'Multi-purpose scanner', icon: '📱', category: 'tech', stats: { scan: true, analysis: 30, medical: 15 }, cost: 50, portraitPrompt: 'with handheld scanner' },
+        { id: 'sf_holo', name: 'Holo-Projector', description: 'Creates holographic displays', icon: '🌀', category: 'tech', stats: { holo: true, distraction: true }, cost: 75, portraitPrompt: 'with holographic display active' },
+        { id: 'sf_medkit', name: 'Medic Kit', description: 'Advanced medical supplies', icon: '🩹', category: 'tech', stats: { healing: 60, uses: 3 }, cost: 40, portraitPrompt: '' },
+      ],
+    },
+    supplies: {
+      label: 'Supplies',
+      required: false,
+      maxSlots: 3,
+      icon: '🎒',
+      portraitTag: 'none',
+      options: [
+        { id: 'sf_rations', name: 'Nutrient Packs', description: 'Compact sustenance for a week', icon: '🍱', category: 'supplies', stats: { food: 7 }, cost: 10, portraitPrompt: '' },
+        { id: 'sf_cells', name: 'Energy Cells', description: 'Universal power source', icon: '🔋', category: 'supplies', stats: { energy: 100, uses: 5 }, cost: 25, portraitPrompt: '' },
+        { id: 'sf_toolkit', name: 'Engineering Kit', description: 'Repair and modify tech', icon: '🔧', category: 'supplies', stats: { repair: 40, modify: true }, cost: 50, portraitPrompt: '' },
+        { id: 'sf_credits', name: 'Credit Chip', description: 'Extra starting funds', icon: '💳', category: 'supplies', stats: { bonus: 100 }, cost: 0, portraitPrompt: '' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'explorer', name: 'Explorer', description: 'Ready for the unknown', items: ['sf_pistol', 'sf_flightsuit', 'sf_utility', 'sf_scanner', 'sf_comm', 'sf_rations', 'sf_toolkit'], cost: 110 },
+    { id: 'soldier', name: 'Space Marine', description: 'Combat ready', items: ['sf_rifle', 'sf_combat', 'sf_utility', 'sf_comm', 'sf_medkit', 'sf_cells'], cost: 215 },
+    { id: 'diplomat', name: 'Diplomat', description: 'Words over weapons', items: ['sf_stun', 'sf_shield', 'sf_formal', 'sf_comm', 'sf_holo', 'sf_scanner'], cost: 325 },
+  ],
+};
+
+// ============================================================================
+// MYSTERY LOADOUT
+// ============================================================================
+
+const MYSTERY_LOADOUT: GenreLoadout = {
+  name: 'Mystery',
+  currency: 'dollars',
+  currencyIcon: '$',
+  startingCurrency: 200,
+  categories: {
+    tools: {
+      label: 'Investigation Tools',
+      required: false,
+      maxSlots: 4,
+      icon: '🔍',
+      portraitTag: 'hand',
+      options: [
+        { id: 'mys_glass', name: 'Magnifying Glass', description: 'Examine clues closely', icon: '🔍', category: 'tools', stats: { investigation: 20, detail: true }, cost: 0, portraitPrompt: 'holding a magnifying glass' },
+        { id: 'mys_camera', name: 'Digital Camera', description: 'Document evidence', icon: '📷', category: 'tools', stats: { evidence: true, memory: true }, cost: 25, portraitPrompt: 'with a camera around neck' },
+        { id: 'mys_recorder', name: 'Voice Recorder', description: 'Record conversations and notes', icon: '🎙️', category: 'tools', stats: { audio: true, interview: 15 }, cost: 20, portraitPrompt: '' },
+        { id: 'mys_forensic', name: 'Forensic Kit', description: 'Fingerprints, samples, analysis', icon: '🧪', category: 'tools', stats: { forensics: 30, dna: true }, cost: 75, portraitPrompt: 'with forensic evidence kit' },
+        { id: 'mys_lockpicks', name: 'Lock Picks', description: 'For when you need access', icon: '🔐', category: 'tools', stats: { lockpicking: 25 }, cost: 30, portraitPrompt: '' },
+      ],
+    },
+    clothing: {
+      label: 'Attire',
+      required: true,
+      maxSlots: 1,
+      icon: '🕵️',
+      portraitTag: 'body',
+      options: [
+        { id: 'mys_casual', name: 'Casual Clothes', description: 'Blend in anywhere', icon: '👕', category: 'clothing', stats: { style: 10, blend: 'casual' }, cost: 0, portraitPrompt: 'wearing casual investigator clothes' },
+        { id: 'mys_professional', name: 'Professional Attire', description: 'Look the part', icon: '👔', category: 'clothing', stats: { style: 25, authority: 15 }, cost: 30, portraitPrompt: 'in sharp professional attire' },
+        { id: 'mys_disguise', name: 'Disguise Kit', description: 'Multiple identities', icon: '🎭', category: 'clothing', stats: { disguise: 40, identity: true }, cost: 50, portraitPrompt: 'with subtle disguise elements' },
+      ],
+    },
+    tech: {
+      label: 'Technology',
+      required: false,
+      maxSlots: 2,
+      icon: '📱',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'mys_phone', name: 'Smartphone', description: 'Research, calls, photos', icon: '📱', category: 'tech', stats: { research: 20, communication: true, camera: true }, cost: 0, portraitPrompt: '' },
+        { id: 'mys_laptop', name: 'Laptop', description: 'Deep research and databases', icon: '💻', category: 'tech', stats: { research: 40, databases: true, hacking: 10 }, cost: 50, portraitPrompt: '' },
+        { id: 'mys_bug', name: 'Listening Device', description: 'Covert surveillance', icon: '🔊', category: 'tech', stats: { surveillance: 30, covert: true }, cost: 40, portraitPrompt: '' },
+      ],
+    },
+    accessories: {
+      label: 'Accessories',
+      required: false,
+      maxSlots: 2,
+      icon: '🕶️',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'mys_notebook', name: 'Notebook & Pen', description: 'Record your findings', icon: '📝', category: 'accessories', stats: { notes: true, memory: 10 }, cost: 0, portraitPrompt: 'with notebook in hand' },
+        { id: 'mys_glasses', name: 'Reading Glasses', description: 'For fine print', icon: '👓', category: 'accessories', stats: { reading: true, perception: 5 }, cost: 0, portraitPrompt: 'wearing reading glasses' },
+        { id: 'mys_badge', name: 'Private Investigator License', description: 'Official credentials', icon: '🪪', category: 'accessories', stats: { authority: 20, access: true }, cost: 50, portraitPrompt: 'with PI badge visible' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'pi', name: 'Private Investigator', description: 'Licensed and equipped', items: ['mys_glass', 'mys_camera', 'mys_recorder', 'mys_professional', 'mys_phone', 'mys_laptop', 'mys_notebook', 'mys_badge'], cost: 175 },
+    { id: 'amateur', name: 'Amateur Sleuth', description: 'Curiosity and wit', items: ['mys_glass', 'mys_casual', 'mys_phone', 'mys_notebook', 'mys_glasses'], cost: 0 },
+  ],
+};
+
+// ============================================================================
+// PIRATE LOADOUT
+// ============================================================================
+
+const PIRATE_LOADOUT: GenreLoadout = {
+  name: 'Pirate',
+  currency: 'doubloons',
+  currencyIcon: '🪙',
+  startingCurrency: 80,
+  categories: {
+    weapons: {
+      label: 'Armament',
+      required: false,
+      maxSlots: 2,
+      icon: '⚔️',
+      portraitTag: 'hand',
+      options: [
+        { id: 'pir_cutlass', name: 'Cutlass', description: 'Classic pirate blade', icon: '⚔️', category: 'weapons', stats: { damage: 20, accuracy: 75 }, cost: 0, portraitPrompt: 'wielding a curved cutlass' },
+        { id: 'pir_pistol', name: 'Flintlock Pistol', description: 'One shot, make it count', icon: '🔫', category: 'weapons', stats: { damage: 30, accuracy: 50, ammo: 1 }, cost: 10, portraitPrompt: 'with a flintlock pistol tucked in belt' },
+        { id: 'pir_dagger', name: 'Boarding Dagger', description: 'For close quarters combat', icon: '🗡️', category: 'weapons', stats: { damage: 12, accuracy: 85, quick: true }, cost: 0, portraitPrompt: 'with a dagger strapped to thigh' },
+        { id: 'pir_axe', name: 'Boarding Axe', description: 'Chop through doors and foes', icon: '🪓', category: 'weapons', stats: { damage: 25, accuracy: 65, breach: true }, cost: 10, portraitPrompt: 'with a boarding axe on back' },
+      ],
+    },
+    clothing: {
+      label: 'Attire',
+      required: true,
+      maxSlots: 1,
+      icon: '👕',
+      portraitTag: 'body',
+      options: [
+        { id: 'pir_sailor', name: 'Sailor\'s Clothes', description: 'Practical seafaring wear', icon: '👕', category: 'clothing', stats: { style: 5, sailing: 10 }, cost: 0, portraitPrompt: 'wearing weathered sailor clothes' },
+        { id: 'pir_captain', name: 'Captain\'s Coat', description: 'Command respect', icon: '🧥', category: 'clothing', stats: { style: 30, authority: 25 }, cost: 30, portraitPrompt: 'wearing an ornate captain\'s coat' },
+        { id: 'pir_rogue', name: 'Rogue\'s Outfit', description: 'Light and agile', icon: '👕', category: 'clothing', stats: { style: 15, agility: 15 }, cost: 15, portraitPrompt: 'in a dashing rogue\'s outfit' },
+      ],
+    },
+    accessories: {
+      label: 'Accessories',
+      required: false,
+      maxSlots: 3,
+      icon: '🏴‍☠️',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'pir_hat', name: 'Tricorn Hat', description: 'The pirate look', icon: '🎩', category: 'accessories', stats: { style: 15, recognition: 10 }, cost: 5, portraitPrompt: 'wearing a feathered tricorn hat' },
+        { id: 'pir_eyepatch', name: 'Eyepatch', description: 'Lost an eye, gained a story', icon: '🏴‍☠️', category: 'accessories', stats: { style: 10, intimidate: 10, perception: -5 }, cost: 0, portraitPrompt: 'with a leather eyepatch' },
+        { id: 'pir_compass', name: 'Compass', description: 'Never lose your way', icon: '🧭', category: 'accessories', stats: { navigation: 30 }, cost: 10, portraitPrompt: 'with brass compass in hand' },
+        { id: 'pir_spyglass', name: 'Spyglass', description: 'See ships on the horizon', icon: '🔭', category: 'accessories', stats: { perception: 25, range: 'far' }, cost: 15, portraitPrompt: 'with spyglass at belt' },
+        { id: 'pir_parrot', name: 'Pet Parrot', description: 'Colorful companion', icon: '🦜', category: 'accessories', stats: { style: 15, morale: 10 }, cost: 20, portraitPrompt: 'with a colorful parrot on shoulder' },
+      ],
+    },
+    supplies: {
+      label: 'Supplies',
+      required: false,
+      maxSlots: 3,
+      icon: '🎒',
+      portraitTag: 'none',
+      options: [
+        { id: 'pir_rum', name: 'Bottle of Rum', description: 'A pirate\'s best friend', icon: '🍾', category: 'supplies', stats: { morale: 20, social: 10 }, cost: 5, portraitPrompt: '' },
+        { id: 'pir_map', name: 'Treasure Map', description: 'X marks the spot...maybe', icon: '🗺️', category: 'supplies', stats: { quest: true, mystery: true }, cost: 25, portraitPrompt: 'clutching a weathered map' },
+        { id: 'pir_rope', name: 'Rope & Grappling Hook', description: 'For boarding and climbing', icon: '🪢', category: 'supplies', stats: { climbing: 25, boarding: 20 }, cost: 10, portraitPrompt: '' },
+        { id: 'pir_bandages', name: 'Bandages & Rum', description: 'Pirate first aid', icon: '🩹', category: 'supplies', stats: { healing: 20, uses: 3 }, cost: 5, portraitPrompt: '' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'buccaneer', name: 'Buccaneer', description: 'Classic sea raider', items: ['pir_cutlass', 'pir_pistol', 'pir_sailor', 'pir_hat', 'pir_compass', 'pir_rum', 'pir_rope'], cost: 45 },
+    { id: 'captain', name: 'Captain', description: 'Command your crew', items: ['pir_cutlass', 'pir_pistol', 'pir_captain', 'pir_hat', 'pir_spyglass', 'pir_compass'], cost: 70 },
+    { id: 'treasure_hunter', name: 'Treasure Hunter', description: 'Seeking fortune', items: ['pir_dagger', 'pir_rogue', 'pir_compass', 'pir_spyglass', 'pir_map', 'pir_rope'], cost: 75 },
+  ],
+};
+
+// ============================================================================
+// WAR LOADOUT
+// ============================================================================
+
+const WAR_LOADOUT: GenreLoadout = {
+  name: 'War',
+  currency: 'requisition',
+  currencyIcon: '⭐',
+  startingCurrency: 100,
+  categories: {
+    weapons: {
+      label: 'Weapons',
+      required: false,
+      maxSlots: 2,
+      icon: '🔫',
+      portraitTag: 'hand',
+      options: [
+        { id: 'war_rifle', name: 'Service Rifle', description: 'Standard-issue infantry weapon', icon: '🔫', category: 'weapons', stats: { damage: 25, accuracy: 70, ammo: 30 }, cost: 0, portraitPrompt: 'carrying a military rifle' },
+        { id: 'war_smg', name: 'Submachine Gun', description: 'High rate of fire, close range', icon: '🔫', category: 'weapons', stats: { damage: 18, accuracy: 55, ammo: 40 }, cost: 15, portraitPrompt: 'with a compact submachine gun' },
+        { id: 'war_pistol', name: 'Sidearm', description: 'Backup weapon', icon: '🔫', category: 'weapons', stats: { damage: 15, accuracy: 65, ammo: 12 }, cost: 0, portraitPrompt: 'with sidearm in holster' },
+        { id: 'war_bayonet', name: 'Combat Knife', description: 'Silent and reliable', icon: '🔪', category: 'weapons', stats: { damage: 12, accuracy: 80, silent: true }, cost: 0, portraitPrompt: 'with combat knife sheathed' },
+        { id: 'war_grenades', name: 'Grenades (x3)', description: 'Fragmentation grenades', icon: '💣', category: 'weapons', stats: { damage: 50, area: true, uses: 3 }, cost: 20, portraitPrompt: 'with grenades on vest' },
+      ],
+    },
+    armor: {
+      label: 'Protection',
+      required: true,
+      maxSlots: 1,
+      icon: '🪖',
+      portraitTag: 'body',
+      options: [
+        { id: 'war_uniform', name: 'Standard Uniform', description: 'Basic military fatigues', icon: '👕', category: 'armor', stats: { defense: 5, camouflage: 20 }, cost: 0, portraitPrompt: 'wearing military combat fatigues' },
+        { id: 'war_vest', name: 'Flak Vest', description: 'Fragmentation protection', icon: '🦺', category: 'armor', stats: { defense: 20, mobility: -5 }, cost: 20, portraitPrompt: 'wearing a flak vest over uniform' },
+        { id: 'war_heavy', name: 'Combat Armor', description: 'Full battle rattle', icon: '🛡️', category: 'armor', stats: { defense: 35, mobility: -15, intimidating: true }, cost: 40, portraitPrompt: 'in full combat armor with helmet' },
+      ],
+    },
+    supplies: {
+      label: 'Field Gear',
+      required: false,
+      maxSlots: 4,
+      icon: '🎒',
+      portraitTag: 'none',
+      options: [
+        { id: 'war_medkit', name: 'First Aid Kit', description: 'Treat wounds in the field', icon: '🩹', category: 'supplies', stats: { healing: 40, uses: 3 }, cost: 10, portraitPrompt: 'with medkit pouch' },
+        { id: 'war_rations', name: 'Combat Rations', description: 'Three days of MREs', icon: '🍱', category: 'supplies', stats: { food: 3 }, cost: 5, portraitPrompt: '' },
+        { id: 'war_radio', name: 'Field Radio', description: 'Call for support', icon: '📻', category: 'supplies', stats: { communication: true, support: true }, cost: 25, portraitPrompt: 'with radio pack' },
+        { id: 'war_ammo', name: 'Extra Ammunition', description: 'Never run dry', icon: '🔩', category: 'supplies', stats: { ammo: 60 }, cost: 10, portraitPrompt: '' },
+        { id: 'war_map', name: 'Tactical Map', description: 'Know the terrain', icon: '🗺️', category: 'supplies', stats: { navigation: 25, tactics: 15 }, cost: 5, portraitPrompt: '' },
+        { id: 'war_binoculars', name: 'Binoculars', description: 'Scout ahead', icon: '🔭', category: 'supplies', stats: { perception: 30, range: 'far' }, cost: 10, portraitPrompt: 'with binoculars around neck' },
+      ],
+    },
+    accessories: {
+      label: 'Accessories',
+      required: false,
+      maxSlots: 2,
+      icon: '🪖',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'war_helmet', name: 'Combat Helmet', description: 'Protect your head', icon: '🪖', category: 'accessories', stats: { defense: 10 }, cost: 0, portraitPrompt: 'wearing a military helmet' },
+        { id: 'war_tags', name: 'Dog Tags', description: 'Your identity', icon: '🏷️', category: 'accessories', stats: { identity: true }, cost: 0, portraitPrompt: 'with dog tags visible' },
+        { id: 'war_watch', name: 'Field Watch', description: 'Synchronize', icon: '⌚', category: 'accessories', stats: { timing: true }, cost: 5, portraitPrompt: 'with military watch' },
+        { id: 'war_lucky', name: 'Lucky Charm', description: 'Keep you safe', icon: '🍀', category: 'accessories', stats: { morale: 15 }, cost: 0, portraitPrompt: '' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'infantry', name: 'Infantry', description: 'Front line soldier', items: ['war_rifle', 'war_pistol', 'war_vest', 'war_helmet', 'war_medkit', 'war_rations', 'war_ammo'], cost: 45 },
+    { id: 'scout', name: 'Scout', description: 'Eyes and ears', items: ['war_smg', 'war_bayonet', 'war_uniform', 'war_binoculars', 'war_radio', 'war_map'], cost: 60 },
+    { id: 'medic', name: 'Medic', description: 'Save lives', items: ['war_pistol', 'war_vest', 'war_helmet', 'war_medkit', 'war_medkit', 'war_rations', 'war_tags'], cost: 35 },
+  ],
+};
+
+// ============================================================================
 // MODERN LIFE LOADOUT
 // ============================================================================
 
@@ -560,17 +930,22 @@ const MODERN_LIFE_LOADOUT: GenreLoadout = {
 // ============================================================================
 
 export const GENRE_LOADOUTS: Record<string, GenreLoadout> = {
+  // Core genres with unique loadouts
   cyberpunk: CYBERPUNK_LOADOUT,
   fantasy: FANTASY_LOADOUT,
   noir: NOIR_LOADOUT,
   horror: HORROR_LOADOUT,
   postapoc: POSTAPOC_LOADOUT,
   'post-apocalyptic': POSTAPOC_LOADOUT,
-  scifi: CYBERPUNK_LOADOUT, // Fallback to cyberpunk for sci-fi
-  western: FANTASY_LOADOUT, // Fallback to fantasy for western (similar item types)
-  modern: NOIR_LOADOUT, // Fallback to noir for modern
+  western: WESTERN_LOADOUT,
+  scifi: SCIFI_LOADOUT,
+  'sci-fi': SCIFI_LOADOUT,
+  mystery: MYSTERY_LOADOUT,
+  pirate: PIRATE_LOADOUT,
+  war: WAR_LOADOUT,
   modern_life: MODERN_LIFE_LOADOUT,
   'modern-life': MODERN_LIFE_LOADOUT,
+  modern: MODERN_LIFE_LOADOUT,
 };
 
 // ============================================================================
