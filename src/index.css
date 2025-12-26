@@ -233,6 +233,22 @@
       font-size: inherit !important;
     }
   }
+  
+  /* Language/Translation styling */
+  .foreign-text {
+    color: hsl(var(--primary) / 0.8);
+    font-style: italic;
+  }
+  
+  .translation {
+    color: hsl(270 70% 60%);
+    font-style: italic;
+    opacity: 0.9;
+  }
+  
+  .translation::before {
+    content: ' ';
+  }
 }
 
 @layer components {

@@ -49,6 +49,11 @@ export interface NarratorConfig {
   emotionalLeakage: boolean;
 }
 
+export interface LanguageSettings {
+  translateEnabled: boolean;
+  playerKnownLanguages: string[];
+}
+
 export interface GameSettings {
   diceMode: DiceMode;
   adultContent: boolean;
@@ -61,6 +66,9 @@ export interface GameSettings {
   
   // Narrator customization
   narratorConfig: NarratorConfig;
+  
+  // Language settings
+  languageSettings: LanguageSettings;
   
   // Feature toggles
   enableMoodSystem: boolean;
@@ -82,6 +90,11 @@ const defaultNarratorConfig: NarratorConfig = {
   emotionalLeakage: true,
 };
 
+const defaultLanguageSettings: LanguageSettings = {
+  translateEnabled: false,
+  playerKnownLanguages: ['en', 'common'],
+};
+
 const defaultSettings: GameSettings = {
   diceMode: 'story',
   adultContent: false,
@@ -94,6 +107,9 @@ const defaultSettings: GameSettings = {
   
   // Narrator customization
   narratorConfig: defaultNarratorConfig,
+  
+  // Language settings
+  languageSettings: defaultLanguageSettings,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,

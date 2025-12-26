@@ -10,6 +10,12 @@ export interface NarratorConfig {
   emotionalLeakage: boolean;
 }
 
+// Language settings
+export interface LanguageSettings {
+  translateEnabled: boolean;        // Show translations for foreign languages
+  playerKnownLanguages: string[];   // Languages the player character knows
+}
+
 export interface GameSettings {
   // Core toggles
   adultContent: boolean;        // 18+ content toggle
@@ -25,6 +31,9 @@ export interface GameSettings {
   
   // Narrator customization
   narratorConfig: NarratorConfig;
+  
+  // Language settings
+  languageSettings: LanguageSettings;
   
   // Feature toggles
   enableMoodSystem: boolean;           // Mood tracking and display
@@ -48,6 +57,11 @@ export const DEFAULT_NARRATOR_CONFIG: NarratorConfig = {
   emotionalLeakage: true,
 };
 
+export const DEFAULT_LANGUAGE_SETTINGS: LanguageSettings = {
+  translateEnabled: false,
+  playerKnownLanguages: ['en', 'common'],
+};
+
 // Default settings
 export const DEFAULT_SETTINGS: GameSettings = {
   adultContent: false,
@@ -63,6 +77,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Narrator customization
   narratorConfig: DEFAULT_NARRATOR_CONFIG,
+  
+  // Language settings
+  languageSettings: DEFAULT_LANGUAGE_SETTINGS,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,
