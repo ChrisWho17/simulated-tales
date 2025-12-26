@@ -105,24 +105,22 @@ export function generateNeutralContinuation(context?: {
   characterName?: string;
   location?: string;
 }): string {
+  // CRITICAL: Never echo player input verbatim - this was causing the "You attempt to i do it" bug
+  // Instead, provide atmospheric continuation that doesn't repeat what the player typed
+  
   const neutralOutcomes = [
-    "The moment passes without incident. You steel yourself and consider your next move.",
-    "A brief pause settles over the scene. The tension eases, and you find yourself with a moment to think.",
-    "The situation resolves itself in an unremarkable fashion. You take a breath and assess your surroundings.",
-    "Time seems to slow for a heartbeat before the world continues on. What will you do next?",
-    "The outcome is neither triumph nor disaster—simply the way of things. You carry on.",
-    "A quiet moment descends. Whatever was about to happen has passed, leaving you to choose your path.",
-    "The universe grants you a respite. The immediate danger fades, at least for now.",
-    "Nothing dramatic occurs. Life continues, as it always does, waiting for your next decision.",
+    "The moment stretches, pregnant with possibility. Around you, the world holds its breath.",
+    "Shadows shift and settle. The silence carries weight—anticipation, perhaps, or warning.",
+    "A stillness descends, broken only by the rhythm of your own heartbeat.",
+    "The scene before you remains unchanged, waiting for your next move with infinite patience.",
+    "Time flows like honey, thick and slow. The path ahead lies open.",
+    "Nothing stirs. The world seems to pause, granting you space to think, to plan.",
+    "Dust motes drift through ambient light. The tension of the moment gives way to quiet.",
+    "Your surroundings hold steady, neither yielding nor opposing. Choice remains yours.",
   ];
   
-  // Pick a random neutral outcome
+  // Pick a random neutral outcome - NEVER prefix with player's raw input
   const outcome = neutralOutcomes[Math.floor(Math.random() * neutralOutcomes.length)];
-  
-  // Add context if available
-  if (context?.lastAction) {
-    return `You attempt to ${context.lastAction.toLowerCase()}. ${outcome}`;
-  }
   
   return outcome;
 }

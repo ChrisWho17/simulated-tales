@@ -424,7 +424,33 @@ export function AdventureGame() {
         }
       );
 
+      // CRITICAL: Surface rate limit and payment errors to user with toast
+      if (response.status === 429) {
+        console.error('[AI] Rate limit exceeded (429)');
+        toast.error('AI is busy. Please wait a moment and try again.', {
+          duration: 5000,
+          description: 'Rate limit exceeded'
+        });
+        return generateNeutralContinuation();
+      }
+      
+      if (response.status === 402) {
+        console.error('[AI] Payment required (402)');
+        toast.error('AI credits depleted. Please add credits to continue.', {
+          duration: 8000,
+          description: 'Usage limit reached'
+        });
+        return generateNeutralContinuation();
+      }
+
       const data = await response.json();
+      
+      // Check for error in response body (edge function may return 200 with error)
+      if (data.error) {
+        console.error('[AI] API returned error:', data.error);
+        toast.error(data.error, { duration: 5000 });
+        return generateNeutralContinuation();
+      }
       
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
       if (data.mechanics) setPendingMechanics(data.mechanics);
@@ -435,18 +461,19 @@ export function AdventureGame() {
         if (!validation.success) {
           console.warn('[World Bible] Narrative blocked, using fallback:', validation.log);
           // Use modified content or fallback
-          return validation.content || generateNeutralContinuation({ lastAction: playerAction });
+          return validation.content || generateNeutralContinuation();
         }
         // Return validated (possibly reskinned) content
         return validation.content;
       }
       
       // If no narrative at all, generate a local neutral continuation
-      return generateNeutralContinuation({ lastAction: playerAction });
+      return generateNeutralContinuation();
     } catch (error) {
       // Network or parsing error - generate local fallback to maintain immersion
       console.error('Error generating narrative:', error);
-      return generateNeutralContinuation({ lastAction: playerAction });
+      toast.error('Failed to reach AI. Using fallback narrative.');
+      return generateNeutralContinuation();
     } finally {
       if (!skipLoadingState) {
         setIsLoading(false);
