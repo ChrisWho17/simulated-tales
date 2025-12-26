@@ -12,6 +12,7 @@ import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
 import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
+import { SavesDropdown } from '@/components/campaign';
 
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
@@ -1110,6 +1111,10 @@ export function AdventureDisplay({
                   DEV
                 </span>
               )}
+              
+              {/* Saves Dropdown */}
+              <SavesDropdown />
+              
               <Button
                 variant="ghost"
                 size="icon"
