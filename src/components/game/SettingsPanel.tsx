@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
-  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity
+  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages
 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
@@ -371,6 +371,48 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       checked={settings.enableInventoryWeight ?? true}
                       onCheckedChange={(checked) => updateSettings({ enableInventoryWeight: checked })}
                     />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Language & Translation Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Language & Translation</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Show Translations</span>
+                      <p className="text-xs text-muted-foreground">Display translations for foreign languages in purple italics</p>
+                    </div>
+                    <Switch 
+                      checked={settings.languageSettings?.translateEnabled ?? false}
+                      onCheckedChange={(checked) => updateSettings({ 
+                        languageSettings: {
+                          ...settings.languageSettings,
+                          translateEnabled: checked
+                        }
+                      })}
+                    />
+                  </div>
+                  
+                  <div className="py-2">
+                    <span className="text-sm">Character's Languages</span>
+                    <p className="text-xs text-muted-foreground mb-2">Languages your character understands</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(settings.languageSettings?.playerKnownLanguages || ['en', 'common']).map(lang => (
+                        <span 
+                          key={lang} 
+                          className="px-2 py-1 text-xs rounded-full bg-primary/20 text-primary border border-primary/30"
+                        >
+                          {lang === 'en' ? 'English' : lang === 'common' ? 'Common Tongue' : lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 italic">Learn new languages through gameplay</p>
                   </div>
                 </div>
               </div>
