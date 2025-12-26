@@ -471,16 +471,23 @@ export function AdventureGame() {
     // Set the dice mode in the game context
     setDiceMode(selection.diceMode);
     
-    // Initialize World Bible (Genre Contract System)
+    // Convert secondary genres from percentage (0-30) to decimal (0-0.30) for World Bible
+    const secondaryGenreBlends = (selection.genreContract?.secondaryGenres || []).map(sg => ({
+      genreId: sg.genreId,
+      blendStrength: sg.blendStrength / 100, // Convert percentage to decimal
+      blendBehavior: 'additive' as const,
+    }));
+    
+    // Initialize World Bible (Genre Contract System) with full genre contract
     initializeWorldBible({
       campaignName: selection.genreTitle || selection.scenario.slice(0, 50),
-      primaryGenre: selection.genre,
-      secondaryGenres: [],
-      hardLock: false,
+      primaryGenre: selection.genreContract?.primaryGenre || selection.genre,
+      secondaryGenres: secondaryGenreBlends,
+      hardLock: selection.genreContract?.hardLock || false,
       tabooList: [],
       intrusionBudget: 2,
     });
-    console.log(`[World Bible] Created for genre: ${selection.genre}`);
+    console.log(`[World Bible] Created for genre: ${selection.genreContract?.primaryGenre || selection.genre} with ${secondaryGenreBlends.length} secondary genres`);
     
     // Skip color selection if already chosen before
     if (selectedColorId) {
