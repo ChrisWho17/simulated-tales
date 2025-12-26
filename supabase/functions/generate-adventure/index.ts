@@ -277,7 +277,30 @@ LOVER TAG ENABLED:
 - Show the emotional aftermath of physical intimacy
 - Develop relationship dynamics that include physical and emotional bonds
 
-Write mature content naturally when the story calls for it. Romance and intimacy should feel authentic, emotionally resonant, and immersive.`;
+Write mature content naturally when the story calls for it. Romance and intimacy should feel authentic, emotionally resonant, and immersive.
+
+RELATIONSHIP MOMENT TRACKING:
+When significant romantic or relationship moments occur, include a tag in your response:
+[RELATIONSHIP:npcName:momentType:description]
+- npcName: The name of the NPC involved
+- momentType: One of: first_meeting, first_conversation, shared_adventure, gift_given, gift_received, first_flirt, first_kiss, confession, rejection, first_date, intimate_moment, argument, reconciliation, heartbreak, commitment, milestone, memory
+- description: A brief (10-20 word) description of the moment
+
+Examples:
+[RELATIONSHIP:Elena:first_flirt:She laughed at your witty remark, a faint blush coloring her cheeks]
+[RELATIONSHIP:Marcus:first_kiss:Under the moonlit garden, your lips finally met in a tender embrace]
+[RELATIONSHIP:Lyra:confession:You finally told her how you truly feel, heart pounding with vulnerability]
+
+MILESTONE TRACKING:
+When relationship status changes significantly, include:
+[MILESTONE:npcName:milestoneType]
+- milestoneType: One of: acquaintance, friend, close_friend, romantic_interest, dating, lover, committed, soulmate
+
+Examples:
+[MILESTONE:Elena:romantic_interest]
+[MILESTONE:Marcus:lover]
+
+Track these moments naturally as the story progresses. Include them whenever meaningful romantic interactions occur.`;
     } else {
       systemContent += `
 
@@ -461,6 +484,27 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
     
     const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
     const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
+    
+    // Parse relationship moments (for 18+ romance tracking)
+    const relationshipMatches = [...narrative.matchAll(/\[RELATIONSHIP:([^:]+):([^:]+):([^\]]+)\]/g)];
+    const relationshipMoments: Array<{ npcName: string; momentType: string; description: string }> = [];
+    for (const match of relationshipMatches) {
+      relationshipMoments.push({
+        npcName: match[1].trim(),
+        momentType: match[2].trim(),
+        description: match[3].trim()
+      });
+    }
+    
+    // Parse milestone changes
+    const milestoneMatches = [...narrative.matchAll(/\[MILESTONE:([^:]+):([^\]]+)\]/g)];
+    const milestoneChanges: Array<{ npcName: string; milestoneType: string }> = [];
+    for (const match of milestoneMatches) {
+      milestoneChanges.push({
+        npcName: match[1].trim(),
+        milestoneType: match[2].trim()
+      });
+    }
 
     // Clean the narrative of mechanic tags for display
     let cleanNarrative = narrative
@@ -473,6 +517,8 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       .replace(/\[SKILL:[^\]]+\]/g, '')
       .replace(/\[DAMAGE:\d+\]/g, '')
       .replace(/\[HEAL:\d+\]/g, '')
+      .replace(/\[RELATIONSHIP:[^\]]+\]/g, '')
+      .replace(/\[MILESTONE:[^\]]+\]/g, '')
       .trim();
 
     const mechanics: any = {};
@@ -504,6 +550,12 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
     }
     if (healMatch) {
       mechanics.heal = parseInt(healMatch[1]);
+    }
+    if (relationshipMoments.length > 0) {
+      mechanics.relationshipMoments = relationshipMoments;
+    }
+    if (milestoneChanges.length > 0) {
+      mechanics.milestoneChanges = milestoneChanges;
     }
 
     console.log('Generated narrative length:', cleanNarrative.length, 'Mechanics:', Object.keys(mechanics));
