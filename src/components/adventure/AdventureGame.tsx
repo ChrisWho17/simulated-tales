@@ -7,6 +7,8 @@ import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
+import { LoadoutScreen, LoadoutResult } from '@/components/game/LoadoutScreen';
+import { loadoutToInventory, buildPortraitDataFromLoadout } from '@/game/loadoutSystem';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
@@ -160,7 +162,7 @@ function buildBlendedFallbackOpening(
   return opening;
 }
 
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'loadout' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
@@ -202,6 +204,8 @@ export function AdventureGame() {
   
   // Character and story - will be initialized from campaign or localStorage
   const [character, setCharacter] = useState<RPGCharacter | null>(null);
+  const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
+  const [equipmentPortraitPrompts, setEquipmentPortraitPrompts] = useState<string[]>([]);
   const [story, setStory] = useState<StoryEntry[]>([]);
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
@@ -1048,24 +1052,47 @@ export function AdventureGame() {
     setPhase('character');
   }, []);
 
-  // Step 2: Character creation complete
-  const handleCharacterComplete = useCallback(async (char: RPGCharacter & { portraitUrl?: string }, scenario: string) => {
-    setCharacter(char);
+  // Step 2: Character creation complete -> go to loadout selection
+  const handleCharacterComplete = useCallback((char: RPGCharacter & { portraitUrl?: string }, scenario: string) => {
+    // Store pending character and move to loadout phase
+    setPendingCharacter(char);
+    console.log('[AdventureGame] Character created, transitioning to loadout phase');
+    setPhase('loadout');
+  }, []);
+
+  // Step 3: Loadout selection complete -> finalize character and start game
+  const handleLoadoutComplete = useCallback(async (result: LoadoutResult) => {
+    if (!pendingCharacter || !scenarioSelection) return;
+    
+    // Merge loadout items into character inventory
+    const inventoryItems = loadoutToInventory(result.selectedItems);
+    const finalCharacter: RPGCharacter = {
+      ...pendingCharacter,
+      inventory: [...pendingCharacter.inventory, ...inventoryItems],
+      gold: result.remainingCurrency,
+    };
+    
+    // Store equipment portrait prompts for portrait generation
+    const equipPrompts = result.portraitData.map(p => p.prompt).filter(Boolean);
+    setEquipmentPortraitPrompts(equipPrompts);
+    
+    setCharacter(finalCharacter);
+    setPendingCharacter(null);
     setIsLoading(true);
     
     try {
       // Initialize campaign memory for new adventure
-      const campaignId = `campaign_${char.name}_${Date.now()}`;
-      const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
-      initializeCampaign(campaignId, char.name, toneProfile);
-      console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+      const campaignId = `campaign_${finalCharacter.name}_${Date.now()}`;
+      const toneProfile = scenarioSelection.genre ? [scenarioSelection.genre] : [];
+      initializeCampaign(campaignId, finalCharacter.name, toneProfile);
+      console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${finalCharacter.name}`);
       
       // Set relationship journal context for this new campaign + character
-      setJournalContext(campaignId, char.name);
+      setJournalContext(campaignId, finalCharacter.name);
       
       // Create campaign in new campaign system if available
       if (campaignContext && worldBible) {
-        const newCampaign = campaignContext.createCampaign(worldBible, char, scenario);
+        const newCampaign = campaignContext.createCampaign(worldBible, finalCharacter, scenarioSelection.scenario);
         console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
       }
 
@@ -1076,7 +1103,7 @@ export function AdventureGame() {
           setTimeout(() => reject(new Error('Narrative generation timeout')), 30000)
         );
         narrative = await Promise.race([
-          generateNarrative(scenario, undefined, [], undefined, char, true),
+          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, finalCharacter, true),
           timeoutPromise
         ]);
       } catch (genError) {
@@ -1085,9 +1112,9 @@ export function AdventureGame() {
       
       // Create story entry (use blended fallback if narrative generation failed)
       const narrativeContent = narrative || buildBlendedFallbackOpening(
-        scenarioSelection?.genre || 'fantasy',
-        char.name,
-        scenario,
+        scenarioSelection.genre || 'fantasy',
+        finalCharacter.name,
+        scenarioSelection.scenario,
         worldBible?.secondaryGenres || []
       );
       const newStory: StoryEntry[] = [{
@@ -1097,36 +1124,42 @@ export function AdventureGame() {
         timestamp: Date.now(),
       }];
       setStory(newStory);
-      saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+      saveData(newStory, finalCharacter, scenarioSelection.scenario, scenarioSelection.genre || 'fantasy');
       
       // Add to campaign narrative history
       if (campaignContext) {
         campaignContext.addNarrativeEntry(newStory[0]);
       }
       
-      console.log('[AdventureGame] Character complete, transitioning to playing phase');
+      console.log('[AdventureGame] Loadout complete, transitioning to playing phase');
       setPhase('playing');
     } catch (error) {
-      console.error('[AdventureGame] Character complete failed:', error);
+      console.error('[AdventureGame] Loadout complete failed:', error);
       // Still transition to playing with blended fallback story
       const fallbackStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
         content: buildBlendedFallbackOpening(
-          scenarioSelection?.genre || 'fantasy',
-          char.name,
-          scenario,
+          scenarioSelection.genre || 'fantasy',
+          finalCharacter.name,
+          scenarioSelection.scenario,
           worldBible?.secondaryGenres || []
         ),
         timestamp: Date.now(),
       }];
       setStory(fallbackStory);
-      saveData(fallbackStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+      saveData(fallbackStory, finalCharacter, scenarioSelection.scenario, scenarioSelection.genre || 'fantasy');
       setPhase('playing');
     } finally {
       setIsLoading(false);
     }
-  }, [generateNarrative, saveData, scenarioSelection, initializeCampaign, campaignContext, worldBible]);
+  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+
+  // Back from loadout to character creation
+  const handleBackFromLoadout = useCallback(() => {
+    setPhase('character');
+    setPendingCharacter(null);
+  }, []);
 
   // Back to scenario selection
   const handleBackToScenario = useCallback(() => {
@@ -1403,6 +1436,23 @@ export function AdventureGame() {
     );
   }
 
+  // Phase 2.5: Loadout selection
+  if (phase === 'loadout' && pendingCharacter && scenarioSelection) {
+    // Get genres for loadout - primary + secondary if applicable
+    const loadoutGenres: string[] = [scenarioSelection.genre];
+    if (worldBible?.secondaryGenres) {
+      loadoutGenres.push(...worldBible.secondaryGenres.map(sg => sg.genreId));
+    }
+    
+    return (
+      <LoadoutScreen
+        selectedGenres={loadoutGenres}
+        character={pendingCharacter}
+        onComplete={handleLoadoutComplete}
+        onBack={handleBackFromLoadout}
+      />
+    );
+  }
 
   // Phase 3: Playing
   if (phase === 'playing' && character) {

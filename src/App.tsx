@@ -8,6 +8,7 @@ import { CampaignProvider } from "@/contexts/CampaignContext";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
+import LoadoutTest from "./pages/LoadoutTest";
 import "@/styles/living-world-engine.css";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
               <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/campaigns/new" element={<Index />} />
               <Route path="/play" element={<Index />} />
+              <Route path="/loadout-test" element={<LoadoutTest />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

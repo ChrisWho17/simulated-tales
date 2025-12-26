@@ -15,6 +15,7 @@ interface PortraitRequest {
   clothingStyle?: string;
   referenceImageUrl?: string; // Base portrait for consistency
   emotionVariant?: string; // If generating an emotion variant
+  equipmentPrompts?: string[]; // Equipment/loadout prompts to include in portrait
 }
 
 serve(async (req) => {
@@ -32,7 +33,8 @@ serve(async (req) => {
       portraitHints, 
       clothingStyle,
       referenceImageUrl,
-      emotionVariant
+      emotionVariant,
+      equipmentPrompts
     } = await req.json() as PortraitRequest;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -75,6 +77,11 @@ serve(async (req) => {
     const style = genreStyles[genre] || genreStyles.custom;
     const costume = clothingStyle || genreCostumes[genre] || genreCostumes.custom;
     const roleHints = portraitHints?.length ? portraitHints.join(', ') : '';
+    
+    // Build equipment description from loadout
+    const equipmentDesc = equipmentPrompts?.length 
+      ? `\nEQUIPMENT: The character is ${equipmentPrompts.join(', ')}.`
+      : '';
 
     let matureContentNote = "";
     if (detailLevel === 'all') {
@@ -121,7 +128,7 @@ GENRE: ${genre}
 
 PHYSICAL APPEARANCE: ${appearance}
 
-COSTUME/ATTIRE: ${costume}
+COSTUME/ATTIRE: ${costume}${equipmentDesc}
 ${roleHints ? `\nROLE-SPECIFIC DETAILS: ${roleHints}` : ''}
 
 ART STYLE: ${style}
