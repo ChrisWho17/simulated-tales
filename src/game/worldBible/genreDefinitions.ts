@@ -518,6 +518,59 @@ export const COSMIC_HORROR_DEFINITION: GenreDefinition = {
 };
 
 // ============================================
+// MODERN LIFE - Sims-like life simulation
+// ============================================
+export const MODERN_LIFE_DEFINITION: GenreDefinition = {
+  id: 'modern_life',
+  name: 'Modern Life',
+  
+  techTier: 'modern',
+  magicDefault: 'none',
+  speciesDefault: ['human'],
+  
+  coreElements: [
+    'careers', 'relationships', 'apartments', 'dating', 'money', 'bills',
+    'neighbors', 'commute', 'coffee', 'smartphones', 'social media', 'gym',
+    'groceries', 'cooking', 'parties', 'weddings', 'promotions', 'layoffs',
+    'roommates', 'landlords', 'pets', 'hobbies', 'self-improvement', 'drama'
+  ],
+  
+  escalationLadder: [
+    { tier: 1, beats: ['late for work', 'awkward encounter', 'small argument', 'minor inconvenience'] },
+    { tier: 2, beats: ['relationship tension', 'money problems', 'work conflict', 'roommate drama'] },
+    { tier: 3, beats: ['job loss', 'breakup', 'eviction notice', 'family crisis', 'betrayal'] },
+    { tier: 4, beats: ['financial ruin', 'divorce', 'health crisis', 'scandal exposed', 'lawsuit'] },
+    { tier: 5, beats: ['rock bottom', 'complete reinvention', 'life-changing decision', 'major success'] },
+    { tier: 6, beats: ['legacy defining', 'generational impact', 'ultimate fulfillment or tragedy'] }
+  ],
+  
+  hardBanned: [
+    'magic', 'dragons', 'spaceships', 'zombies', 'superpowers', 'time travel',
+    'aliens', 'wizards', 'demons', 'fantasy creatures', 'lasers', 'teleportation'
+  ],
+  
+  reskinRules: {
+    'magic': 'luck / coincidence / hard work',
+    'monster': 'difficult boss / toxic person',
+    'supernatural': 'psychological / coincidental',
+    'fantasy_creature': 'eccentric neighbor / memorable stranger',
+    'weapon': 'harsh words / legal action / clever manipulation'
+  },
+  
+  blendBehavior: 'additive',
+  
+  toneKeywords: ['realistic', 'slice-of-life', 'relatable', 'dramatic', 'emotional', 'everyday'],
+  
+  vocabulary: {
+    greetings: ['Hey!', 'What\'s up?', 'Morning!', 'Good to see you'],
+    exclamations: ['Oh my god!', 'Seriously?', 'No way!', 'That\'s crazy!'],
+    titles: ['Boss', 'Neighbor', 'Babe', 'Dude', 'Ma\'am', 'Sir'],
+    locations: ['apartment', 'office', 'coffee shop', 'gym', 'bar', 'park'],
+    items: ['phone', 'keys', 'wallet', 'laptop', 'coffee', 'groceries']
+  }
+};
+
+// ============================================
 // GENRE REGISTRY
 // ============================================
 export const GENRE_DEFINITIONS: Record<string, GenreDefinition> = {
@@ -531,6 +584,7 @@ export const GENRE_DEFINITIONS: Record<string, GenreDefinition> = {
   'postapoc': POSTAPOC_DEFINITION,
   'war': WAR_DEFINITION,
   'cosmic_horror': COSMIC_HORROR_DEFINITION,
+  'modern_life': MODERN_LIFE_DEFINITION,
 };
 
 // Get definition with fallback

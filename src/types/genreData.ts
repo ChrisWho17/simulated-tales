@@ -1,7 +1,7 @@
 // Genre-specific RPG Character Types and Data
 import { CharacterClass, CharacterBackground, CharacterStats, InventoryItem, RPGCharacter, getStatModifier, calculateMaxHealth } from './rpgCharacter';
 
-export type GameGenre = 'fantasy' | 'scifi' | 'horror' | 'mystery' | 'pirate' | 'western' | 'cyberpunk' | 'postapoc' | 'war' | 'custom';
+export type GameGenre = 'fantasy' | 'scifi' | 'horror' | 'mystery' | 'pirate' | 'western' | 'cyberpunk' | 'postapoc' | 'war' | 'modern_life' | 'custom';
 
 // War Era type for era-specific roles
 export type WarEra = 'past' | 'modern' | 'future';
@@ -287,6 +287,35 @@ const WESTERN_TRAITS = ['Stoic', 'Hot-headed', 'Honorable', 'Vengeful', 'Mercifu
 const CYBERPUNK_TRAITS = ['Paranoid', 'Reckless', 'Cynical', 'Idealistic', 'Corporate', 'Anti-establishment', 'Augmented', 'Purist', 'Connected', 'Isolated', 'Street smart', 'Cold', 'Passionate', 'Calculating', 'Impulsive'];
 const POSTAPOC_TRAITS = ['Hopeful', 'Nihilistic', 'Tribal', 'Isolationist', 'Trader', 'Raider mentality', 'Pacifist', 'Violent', 'Resourceful', 'Wasteful', 'Trusting', 'Paranoid', 'Mutant-friendly', 'Purist', 'Survivor'];
 
+// MODERN LIFE Classes & Backgrounds - SIMS-LIKE LIFE SIMULATION
+const MODERN_LIFE_CLASSES: CharacterClass[] = [
+  { id: 'business_pro', name: 'Business Professional', description: 'Climbing the corporate ladder, one spreadsheet at a time.', statBonuses: { charisma: 2, intelligence: 1 }, startingItems: ['Business Cards', 'Laptop Bag', 'Corporate Badge'], abilities: ['Negotiate', 'Network', 'Power Presentation'], portraitHints: ['professional suit', 'confident posture', 'office environment', 'polished', 'ambitious'], clothingStyle: 'tailored business suit with tie or blouse' },
+  { id: 'tech_worker', name: 'Tech Worker', description: 'Coding, debugging, and caffeinating. Living the startup dream.', statBonuses: { intelligence: 2, dexterity: 1 }, startingItems: ['MacBook Pro', 'Noise-Canceling Headphones', 'Energy Drinks'], abilities: ['Debug Life', 'Automate Task', 'Remote Work'], portraitHints: ['casual tech wear', 'headphones', 'laptop', 'coffee cup', 'focused'], clothingStyle: 'casual hoodie or t-shirt with jeans' },
+  { id: 'creative_artist', name: 'Creative Artist', description: 'Pursuing passion over paychecks. Your art is your identity.', statBonuses: { wisdom: 1, charisma: 1, dexterity: 1 }, startingItems: ['Art Supplies', 'Portfolio', 'Vintage Camera'], abilities: ['Inspire Others', 'Creative Vision', 'Sell Art'], portraitHints: ['artistic attire', 'paint stains', 'creative accessories', 'unique style', 'expressive'], clothingStyle: 'eclectic bohemian clothing with artistic flair' },
+  { id: 'healthcare_worker', name: 'Healthcare Worker', description: 'Saving lives and pulling double shifts. Exhausted but essential.', statBonuses: { wisdom: 2, constitution: 1 }, startingItems: ['Scrubs', 'Stethoscope', 'First Aid Kit'], abilities: ['Emergency Response', 'Diagnose', 'Calm Patients'], portraitHints: ['medical scrubs', 'stethoscope', 'caring expression', 'hospital badge', 'tired but determined'], clothingStyle: 'clean medical scrubs with comfortable shoes' },
+  { id: 'fitness_influencer', name: 'Fitness Influencer', description: 'Gains, followers, and protein shakes. Your body is your brand.', statBonuses: { constitution: 2, charisma: 1 }, startingItems: ['Gym Bag', 'Protein Powder', 'Ring Light'], abilities: ['Motivate', 'Personal Training', 'Content Creation'], portraitHints: ['athletic wear', 'muscular or fit', 'gym background', 'confident', 'energetic'], clothingStyle: 'stylish athletic wear with branded accessories' },
+  { id: 'service_worker', name: 'Service Industry', description: 'Smiling through the chaos. Tips pay the bills (barely).', statBonuses: { charisma: 2, dexterity: 1 }, startingItems: ['Uniform', 'Order Pad', 'Comfortable Shoes'], abilities: ['Customer Service', 'Multitask', 'Hustle'], portraitHints: ['service uniform', 'name tag', 'friendly smile', 'working class', 'resilient'], clothingStyle: 'work uniform appropriate for restaurant or retail' },
+  { id: 'student', name: 'Student', description: 'Balancing studies, social life, and existential dread.', statBonuses: { intelligence: 2, charisma: 1 }, startingItems: ['Textbooks', 'Student ID', 'Energy Drinks'], abilities: ['All-Nighter', 'Study Group', 'Procrastinate'], portraitHints: ['casual student clothes', 'backpack', 'youthful', 'tired eyes', 'hopeful'], clothingStyle: 'comfortable casual student attire with backpack' },
+  { id: 'entrepreneur', name: 'Entrepreneur', description: 'Building empires from coffee shop tables. Risk is your middle name.', statBonuses: { intelligence: 1, charisma: 2 }, startingItems: ['Business Plan', 'Investor Contacts', 'Pitch Deck'], abilities: ['Pitch Perfect', 'Pivot', 'Hustle Culture'], portraitHints: ['smart casual', 'startup vibe', 'laptop', 'coffee shop', 'visionary'], clothingStyle: 'smart casual startup founder aesthetic' },
+  { id: 'content_creator', name: 'Content Creator', description: 'Your life is content. Likes pay the rent.', statBonuses: { charisma: 3 }, startingItems: ['Camera Equipment', 'Ring Light', 'Editing Software'], abilities: ['Go Viral', 'Brand Deal', 'Trend Surf'], portraitHints: ['trendy outfit', 'perfect lighting', 'camera', 'selfie pose', 'influencer aesthetic'], clothingStyle: 'trendy influencer fashion perfect for content' },
+  { id: 'freelancer', name: 'Freelancer', description: 'No boss, no schedule, no stability. Living the dream?', statBonuses: { wisdom: 1, intelligence: 1, charisma: 1 }, startingItems: ['Home Office Setup', 'Client List', 'Invoice Templates'], abilities: ['Self-Discipline', 'Network', 'Negotiate Rate'], portraitHints: ['work from home casual', 'home office', 'laptop', 'coffee', 'independent'], clothingStyle: 'comfortable work-from-home casual attire' },
+];
+
+const MODERN_LIFE_BACKGROUNDS: CharacterBackground[] = [
+  { id: 'suburban', name: 'Suburban Upbringing', description: 'Grew up in cookie-cutter comfort. Now seeking something more.', statBonuses: { constitution: 1 }, startingItems: ['Family Photos', 'Old Yearbook'], skills: ['Driving', 'Yard Work', 'Neighbor Relations'] },
+  { id: 'city_kid', name: 'City Kid', description: 'Raised on concrete and subway schedules. Street smart from day one.', statBonuses: { dexterity: 1 }, startingItems: ['Metro Card', 'Streetwear'], skills: ['Navigation', 'Hustle', 'Nightlife'] },
+  { id: 'small_town', name: 'Small Town Roots', description: 'Everyone knew your name. You left for bigger dreams.', statBonuses: { wisdom: 1 }, startingItems: ['Handwritten Letters', 'Hometown Memories'], skills: ['Community', 'Sincerity', 'Hard Work'] },
+  { id: 'immigrant', name: 'First Generation', description: 'Your family sacrificed everything. You carry their dreams.', statBonuses: { wisdom: 1 }, startingItems: ['Family Heirloom', 'Language Skills'], skills: ['Resilience', 'Bilingual', 'Family Values'] },
+  { id: 'wealthy', name: 'Trust Fund', description: 'Money was never a problem. Finding purpose is.', statBonuses: { charisma: 1 }, startingItems: ['Credit Cards', 'Country Club Membership'], skills: ['Etiquette', 'Connections', 'Spending'] },
+  { id: 'working_class', name: 'Working Class', description: 'You learned the value of a dollar by earning every one.', statBonuses: { strength: 1 }, startingItems: ['Work Boots', 'Tool Set'], skills: ['Manual Labor', 'Budgeting', 'Practical Skills'] },
+  { id: 'military_brat', name: 'Military Brat', description: 'Moved every few years. Adaptable but never quite belonging.', statBonuses: { constitution: 1 }, startingItems: ['Dog Tags', 'World Map'], skills: ['Adaptability', 'Discipline', 'Making Friends'] },
+  { id: 'foster_kid', name: 'Foster Care', description: 'Survived a chaotic childhood. Fiercely independent now.', statBonuses: { wisdom: 1 }, startingItems: ['Worn Backpack', 'Emergency Cash'], skills: ['Self-Reliance', 'Street Smarts', 'Resilience'] },
+  { id: 'academic', name: 'Academic Family', description: 'Raised by professors. Knowledge is your inheritance.', statBonuses: { intelligence: 1 }, startingItems: ['Library Card', 'Scholarly Texts'], skills: ['Research', 'Critical Thinking', 'Academia'] },
+  { id: 'artsy_family', name: 'Creative Household', description: 'Grew up surrounded by art and expression. Normal was never the goal.', statBonuses: { charisma: 1 }, startingItems: ['Art Collection', 'Creative Tools'], skills: ['Creativity', 'Unconventional Thinking', 'Expression'] },
+];
+
+const MODERN_LIFE_TRAITS = ['Ambitious', 'Laid-back', 'Social Butterfly', 'Introvert', 'Romantic', 'Workaholic', 'Family-oriented', 'Independent', 'Perfectionist', 'Go-with-the-flow', 'Health-conscious', 'Foodie', 'Tech-savvy', 'Old-fashioned', 'Adventurous'];
+
 // Genre Data Map - War defaults to modern era, use getWarGenreData() for era-specific
 export const GENRE_DATA: Record<GameGenre, GenreData> = {
   fantasy: { id: 'fantasy', name: 'Fantasy', classes: FANTASY_CLASSES, backgrounds: FANTASY_BACKGROUNDS, traits: FANTASY_TRAITS, currency: 'Gold', startingCurrency: 15 },
@@ -298,6 +327,7 @@ export const GENRE_DATA: Record<GameGenre, GenreData> = {
   cyberpunk: { id: 'cyberpunk', name: 'Cyberpunk', classes: CYBERPUNK_CLASSES, backgrounds: CYBERPUNK_BACKGROUNDS, traits: CYBERPUNK_TRAITS, currency: 'Eddies', startingCurrency: 1000 },
   postapoc: { id: 'postapoc', name: 'Post-Apocalyptic', classes: POSTAPOC_CLASSES, backgrounds: POSTAPOC_BACKGROUNDS, traits: POSTAPOC_TRAITS, currency: 'Caps', startingCurrency: 30 },
   war: { id: 'war', name: 'War', classes: WAR_CLASSES_MODERN, backgrounds: WAR_BACKGROUNDS, traits: WAR_TRAITS, currency: 'Rations', startingCurrency: 10 },
+  modern_life: { id: 'modern_life', name: 'Modern Life', classes: MODERN_LIFE_CLASSES, backgrounds: MODERN_LIFE_BACKGROUNDS, traits: MODERN_LIFE_TRAITS, currency: 'Simoleons', startingCurrency: 1000 },
   custom: { id: 'custom', name: 'Custom', classes: FANTASY_CLASSES, backgrounds: FANTASY_BACKGROUNDS, traits: FANTASY_TRAITS, currency: 'Gold', startingCurrency: 15 },
 };
 

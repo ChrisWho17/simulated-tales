@@ -131,6 +131,7 @@ export const GENRE_ROLES: Record<GameGenre, GenreRole[]> = {
   postapoc: POSTAPOC_ROLES,
   pirate: PIRATE_ROLES,
   war: WAR_ROLES,
+  modern_life: MYSTERY_ROLES, // Modern life uses similar civilian roles
   custom: FANTASY_ROLES, // Default to fantasy for custom
 };
 

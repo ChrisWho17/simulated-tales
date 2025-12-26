@@ -55,6 +55,11 @@ const GENRE_KEYWORDS: Record<GameGenre, { keywords: string[]; weight: number }[]
     { keywords: ['trench', 'tank', 'sniper', 'marine', 'battalion', 'regiment', 'commander', 'general'], weight: 2 },
     { keywords: ['front', 'artillery', 'medic', 'bunker', 'invasion', 'occupation', 'resistance', 'veteran'], weight: 1 },
   ],
+  modern_life: [
+    { keywords: ['apartment', 'job', 'career', 'dating', 'roommate', 'office', 'commute', 'bills'], weight: 3 },
+    { keywords: ['relationship', 'promotion', 'rent', 'coffee', 'gym', 'party', 'social', 'modern'], weight: 2 },
+    { keywords: ['everyday', 'realistic', 'life', 'work', 'home', 'family', 'friends', 'drama'], weight: 1 },
+  ],
   custom: [], // Fallback, no keywords
 };
 
@@ -68,6 +73,7 @@ const GENRE_TITLES: Record<GameGenre, string> = {
   cyberpunk: 'Cyberpunk Adventure',
   postapoc: 'Post-Apocalyptic Adventure',
   war: 'War Adventure',
+  modern_life: 'Modern Life',
   custom: 'Custom Adventure',
 };
 
@@ -81,6 +87,7 @@ export const GENRE_ICONS: Record<GameGenre, string> = {
   cyberpunk: '⚡',
   postapoc: '☢️',
   war: '⚔️',
+  modern_life: '🏠',
   custom: '✨',
 };
 
@@ -98,6 +105,16 @@ export function detectGenreFromText(text: string): GenreDetectionResult {
   const scores: Record<GameGenre, { score: number; matches: string[] }> = {
     fantasy: { score: 0, matches: [] },
     scifi: { score: 0, matches: [] },
+    horror: { score: 0, matches: [] },
+    mystery: { score: 0, matches: [] },
+    pirate: { score: 0, matches: [] },
+    western: { score: 0, matches: [] },
+    cyberpunk: { score: 0, matches: [] },
+    postapoc: { score: 0, matches: [] },
+    war: { score: 0, matches: [] },
+    modern_life: { score: 0, matches: [] },
+    custom: { score: 0, matches: [] },
+  };
     horror: { score: 0, matches: [] },
     mystery: { score: 0, matches: [] },
     pirate: { score: 0, matches: [] },

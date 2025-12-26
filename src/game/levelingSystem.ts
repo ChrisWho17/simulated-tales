@@ -95,6 +95,7 @@ const GENRE_STAT_BIASES: Record<GameGenre, (keyof CharacterStats)[]> = {
   cyberpunk: ['intelligence', 'dexterity', 'charisma', 'constitution', 'wisdom', 'strength'],
   postapoc: ['constitution', 'dexterity', 'wisdom', 'strength', 'intelligence', 'charisma'],
   war: ['constitution', 'strength', 'dexterity', 'wisdom', 'charisma', 'intelligence'],
+  modern_life: ['charisma', 'intelligence', 'wisdom', 'constitution', 'dexterity', 'strength'],
   custom: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
 };
 
