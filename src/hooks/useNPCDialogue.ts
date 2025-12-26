@@ -5,12 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { NPC, Relationship } from '@/types/game';
 import { DialogueEntry, ConversationResponse } from '@/components/conversation/ConversationUI';
 import { toast } from 'sonner';
+import { 
+  updateMilestoneFromProgression, 
+  addRelationshipMoment,
+  MilestoneProgression,
+  MilestoneType 
+} from '@/lib/relationshipJournal';
 
 interface UseNPCDialogueProps {
   npc: NPC;
   genre: string;
   era: string;
   playerRelationship?: Relationship;
+  relationshipMilestone?: MilestoneType;
 }
 
 interface DialogueIndicators {
@@ -20,7 +27,15 @@ interface DialogueIndicators {
   emotionalShift?: string;
 }
 
-export function useNPCDialogue({ npc, genre, era, playerRelationship }: UseNPCDialogueProps) {
+interface DialogueResponse {
+  dialogue: string;
+  npcId: string;
+  importantTopics?: string[];
+  indicators?: DialogueIndicators;
+  milestoneProgression?: MilestoneProgression;
+}
+
+export function useNPCDialogue({ npc, genre, era, playerRelationship, relationshipMilestone }: UseNPCDialogueProps) {
   const [dialogueHistory, setDialogueHistory] = useState<DialogueEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentIndicators, setCurrentIndicators] = useState<DialogueIndicators | null>(null);
@@ -35,7 +50,7 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship }: UseNPCDi
   const generateDialogue = useCallback(async (
     playerMessage?: string,
     isFirstMessage = false
-  ): Promise<string | null> => {
+  ): Promise<DialogueResponse | null> => {
     setIsLoading(true);
 
     try {
@@ -95,7 +110,25 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship }: UseNPCDi
         setCurrentIndicators(data.indicators);
       }
 
-      return data.dialogue;
+      // Handle milestone progression if present
+      if (data.milestoneProgression?.shouldProgress) {
+        updateMilestoneFromProgression(
+          npc.id,
+          npc.meta.name,
+          data.milestoneProgression
+        );
+        
+        // Show a subtle toast for milestone progression (only shown in journal, not story)
+        const newMilestone = data.milestoneProgression.suggestedMilestone;
+        if (newMilestone) {
+          toast.success(`Relationship with ${npc.meta.name} evolved!`, {
+            description: `Now: ${newMilestone.replace('_', ' ')}`,
+            duration: 3000,
+          });
+        }
+      }
+
+      return data as DialogueResponse;
     } catch (err) {
       console.error('Error generating dialogue:', err);
       toast.error('Failed to connect to dialogue service');
@@ -106,18 +139,27 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship }: UseNPCDi
   }, [npc, relationship, dialogueHistory, genre, era]);
 
   const startConversation = useCallback(async () => {
-    const greeting = await generateDialogue(undefined, true);
-    if (greeting) {
+    const result = await generateDialogue(undefined, true);
+    if (result) {
       const entry: DialogueEntry = {
         id: `npc-${Date.now()}`,
         speaker: 'npc',
-        content: greeting,
+        content: result.dialogue,
         timestamp: Date.now(),
         emotion: npc.emotionalState.current as any
       };
       setDialogueHistory([entry]);
+      
+      // Record first conversation moment
+      addRelationshipMoment(
+        npc.id,
+        npc.meta.name,
+        'first_conversation',
+        `First conversation with ${npc.meta.name}`,
+        { emotionalImpact: 10 }
+      );
     }
-  }, [generateDialogue, npc.emotionalState.current]);
+  }, [generateDialogue, npc.emotionalState.current, npc.id, npc.meta.name]);
 
   const sendPlayerMessage = useCallback(async (message: string, responseType?: string) => {
     // Add player message to history
@@ -130,12 +172,12 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship }: UseNPCDi
     setDialogueHistory(prev => [...prev, playerEntry]);
 
     // Generate NPC response
-    const response = await generateDialogue(message, false);
-    if (response) {
+    const result = await generateDialogue(message, false);
+    if (result) {
       const npcEntry: DialogueEntry = {
         id: `npc-${Date.now()}`,
         speaker: 'npc',
-        content: response,
+        content: result.dialogue,
         timestamp: Date.now(),
         emotion: currentIndicators?.emotionalShift as any || npc.emotionalState.current as any
       };
