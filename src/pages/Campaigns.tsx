@@ -7,7 +7,7 @@ const Campaigns = () => {
   return (
     <CampaignManager
       onCreateNew={() => navigate('/campaigns/new')}
-      onSelectCampaign={() => navigate('/play')}
+      onSelectCampaign={() => navigate('/')}
     />
   );
 };
