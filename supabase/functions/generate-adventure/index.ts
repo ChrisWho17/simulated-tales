@@ -157,6 +157,15 @@ interface AdventureRequest {
     housingStatus: string;     // Living situation
     moodModifiers: string[];   // Active mood effects from needs
   };
+  // Background NPC actions (things that happened without player involvement)
+  backgroundNPCActionsContext?: {
+    actions: Array<{
+      description: string;
+      involvedNPCs: string[];
+      location: string;
+      hoursAgo: number;
+    }>;
+  };
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -390,7 +399,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -627,6 +636,33 @@ Include time passage naturally in your narration. When the player does activitie
 
 Example:
 [TIME:2][NEED:hunger:-20][NEED:fun:+30][MONEY:-25] You spent a couple hours at the arcade, hungry but having a blast.`;
+    }
+    
+    // ============= BACKGROUND NPC ACTIONS (Living World) =============
+    if (backgroundNPCActionsContext?.actions && backgroundNPCActionsContext.actions.length > 0) {
+      const recentActions = backgroundNPCActionsContext.actions
+        .slice(0, 8) // Limit to 8 most relevant
+        .map(a => `- ${a.description} (at ${a.location}, ${a.hoursAgo > 0 ? `${a.hoursAgo}h ago` : 'recently'})`)
+        .join('\n');
+      
+      systemContent += `\n\n=== BACKGROUND WORLD EVENTS (LIVING WORLD) ===
+The following events happened in the world WITHOUT player involvement:
+${recentActions}
+
+CRITICAL - LIVING WORLD INTEGRATION:
+These events HAPPENED and are now part of the world's reality. You MUST:
+1. ACKNOWLEDGE these events naturally when relevant (NPCs discussing them, visible aftermath)
+2. Have NPCs REFERENCE events they witnessed or heard about
+3. Show CONSEQUENCES - if someone moved somewhere, they're now there
+4. Create NARRATIVE CONTINUITY - these events inform the current state of the world
+5. Let players DISCOVER what happened through environmental clues or NPC dialogue
+
+EXAMPLES OF PROPER INTEGRATION:
+- If "Elena moved to the market" → When player visits market, Elena is there
+- If "Thomas and Marie had a pleasant conversation" → Marie might mention "I was just talking to Thomas about..."
+- If "Guard patrols increased" → Describe more guards visible, checkpoints, tension
+
+DO NOT ignore these events. They are the foundation of a living, breathing world where things happen even when the player isn't watching.`;
     }
     
     if (cheatMode) {

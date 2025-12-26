@@ -46,6 +46,15 @@ export interface AIContextPackage {
   pendingConsequences: string[];
   activeRumors: string[];
   
+  // Background NPC actions (things that happened without player involvement)
+  backgroundNPCActions: {
+    description: string;
+    involvedNPCs: string[];
+    location: string;
+    tick: number;
+    visibility: string;
+  }[];
+  
   // Player context
   playerStats: {
     health: number;
@@ -82,6 +91,23 @@ export function buildAIContext(state: GameState, narratorContract?: NarratorCont
     .slice(-5)
     .map(we => we.description);
   
+  // Extract background NPC actions (things that happened without player involvement)
+  // Include npc_action and npc_interaction events from the last few ticks
+  const recentTick = state.time.tick;
+  const backgroundNPCActions = (state.worldEvents || [])
+    .filter(we => 
+      (we.type === 'npc_action' || we.type === 'npc_interaction') &&
+      we.tick >= recentTick - 12 // Last 12 ticks (~12 hours of game time)
+    )
+    .slice(-10) // Limit to 10 most recent
+    .map(we => ({
+      description: we.description,
+      involvedNPCs: we.involvedEntities || [],
+      location: we.location,
+      tick: we.tick,
+      visibility: 'public', // Default visibility for logged events
+    }));
+  
   const defaultContract: NarratorContract = narratorContract || {
     voice: 'LITERARY',
     maxDetail: 'MODERATE',
@@ -99,6 +125,7 @@ export function buildAIContext(state: GameState, narratorContract?: NarratorCont
     recentEvents,
     pendingConsequences: [], // Filled by consequence system
     activeRumors,
+    backgroundNPCActions,
     playerStats: state.player.stats,
     playerReputation: state.player.reputation,
     playerKnowledge: state.player.knownInformation,
