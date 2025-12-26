@@ -135,11 +135,13 @@ export function AdventureDisplay({
   const inputRef = useRef<HTMLInputElement>(null);
   const previousStoryLength = useRef(story.length);
   
-  // Triple-tap detection refs
+  // Triple-tap detection refs and visual state
   const tapCountRef = useRef<number>(0);
   const lastTapTimeRef = useRef<number>(0);
   const lastTapIndexRef = useRef<number | null>(null);
   const tripleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tapFeedback, setTapFeedback] = useState<{ index: number; count: number } | null>(null);
+  const [rollbackSplash, setRollbackSplash] = useState<{ index: number } | null>(null);
   
   // Leveling system state
   const [levelingState, setLevelingState] = useState<LevelingState>(() => 
@@ -249,7 +251,7 @@ export function AdventureDisplay({
     return modifierManagerRef.current?.getState();
   }, []);
 
-  // Triple-tap handler for rollback
+  // Triple-tap handler for rollback with visual feedback
   const handleTripleTap = useCallback((index: number, text: string) => {
     if (index === 0) return;
     
@@ -267,6 +269,9 @@ export function AdventureDisplay({
     lastTapTimeRef.current = now;
     lastTapIndexRef.current = index;
     
+    // Update visual feedback
+    setTapFeedback({ index, count: tapCountRef.current });
+    
     // Clear any existing timer
     if (tripleTapTimer.current) {
       clearTimeout(tripleTapTimer.current);
@@ -275,15 +280,25 @@ export function AdventureDisplay({
     // Check for triple tap
     if (tapCountRef.current >= 3) {
       tapCountRef.current = 0;
-      setRollbackTarget({ index, text });
-      setShowRollbackHint(false);
+      setTapFeedback(null);
+      
+      // Show rollback splash
+      setRollbackSplash({ index });
       if (navigator.vibrate) {
         navigator.vibrate([30, 50, 30]);
       }
+      
+      // After splash animation, show the rollback modal
+      setTimeout(() => {
+        setRollbackSplash(null);
+        setRollbackTarget({ index, text });
+        setShowRollbackHint(false);
+      }, 600);
     } else {
-      // Reset tap count after threshold
+      // Reset tap count and feedback after threshold
       tripleTapTimer.current = setTimeout(() => {
         tapCountRef.current = 0;
+        setTapFeedback(null);
       }, TRIPLE_TAP_THRESHOLD);
     }
   }, []);
@@ -1089,7 +1104,7 @@ export function AdventureDisplay({
             <div
               key={entry.id}
               className={`
-                animate-fade-in-up mb-8 
+                animate-fade-in-up mb-8 relative
                 ${entry.role === 'user' ? 'text-right' : ''} 
                 ${index > 0 ? 'cursor-pointer select-none' : ''}
                 transition-all duration-150
@@ -1098,6 +1113,37 @@ export function AdventureDisplay({
               onClick={() => handleTripleTap(index, entry.content)}
               title={index > 0 ? "Triple-tap to return here" : undefined}
             >
+              {/* Triple-tap feedback dots */}
+              {tapFeedback?.index === index && tapFeedback.count > 0 && (
+                <div className="absolute -left-8 top-1/2 -translate-y-1/2 flex gap-1.5 animate-fade-in z-20">
+                  {[1, 2, 3].map((dot) => (
+                    <div
+                      key={dot}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-150 ${
+                        dot <= tapFeedback.count
+                          ? 'bg-warning scale-110 shadow-[0_0_8px_rgba(234,179,8,0.6)]'
+                          : 'bg-muted-foreground/30'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Rollback splash overlay */}
+              {rollbackSplash?.index === index && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                  <div className="glass-panel border-warning/60 px-6 py-3 rounded-full animate-pulse shadow-[0_0_30px_rgba(234,179,8,0.4)]">
+                    <span className="text-warning font-medium flex items-center gap-2">
+                      <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                      </svg>
+                      Rewinding...
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               {entry.role === 'user' ? (
                 <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left hover:border-primary/50 transition-all">
                   <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
