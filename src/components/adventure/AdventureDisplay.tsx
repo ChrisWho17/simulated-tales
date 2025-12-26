@@ -1120,10 +1120,10 @@ export function AdventureDisplay({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-1">
+            {/* Action Buttons - Compact on mobile */}
+            <div className="flex items-center gap-0.5 sm:gap-1">
               {cheatMode && (
-                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full border border-primary/30 animate-glow-pulse">
+                <span className="text-[10px] sm:text-xs bg-primary/20 text-primary px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-primary/30 animate-glow-pulse">
                   DEV
                 </span>
               )}
@@ -1136,10 +1136,10 @@ export function AdventureDisplay({
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowInventory(true)}
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
                 title="Inventory (Ctrl+I)"
               >
-                <Package className="w-5 h-5" />
+                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               
               {/* Character Sheet */}
@@ -1147,37 +1147,38 @@ export function AdventureDisplay({
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowCharacterSheet(true)}
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
                 title="Character Sheet"
               >
-                <Backpack className="w-5 h-5" />
+                <Backpack className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowSettings(true)}
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
                 title="Settings"
               >
-                <Sliders className="w-5 h-5" />
+                <Sliders className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
+              {/* Dev Mode toggle - hidden on very small screens */}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onToggleCheatMode}
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                className="hidden xs:flex h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
                 title="Toggle Dev Mode"
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onRestart}
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 title="New Adventure"
               >
-                <RotateCcw className="w-5 h-5" />
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
           </div>

@@ -66,6 +66,10 @@ import {
   buildConsequenceContext,
   buildWorldStateContext,
 } from '@/game/rippleEffectSystem';
+import {
+  setJournalContext,
+  clearJournalContext,
+} from '@/lib/relationshipJournal';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { UrbanZone, UrbanLocation } from '@/types/urbanZone';
 import { StoryEntry } from './types';
@@ -217,6 +221,9 @@ export function AdventureGame() {
     if (campaignContext?.activeCampaign) {
       const campaign = campaignContext.activeCampaign;
       console.log('[AdventureGame] Restoring active campaign:', campaign.meta.name);
+      
+      // Set relationship journal context for this campaign + character
+      setJournalContext(campaign.id, campaign.player.name);
       
       setCharacter(campaign.player);
       setStory(campaign.narrativeHistory);
@@ -1052,6 +1059,9 @@ export function AdventureGame() {
       const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
       initializeCampaign(campaignId, char.name, toneProfile);
       console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+      
+      // Set relationship journal context for this new campaign + character
+      setJournalContext(campaignId, char.name);
       
       // Create campaign in new campaign system if available
       if (campaignContext && worldBible) {
