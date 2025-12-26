@@ -426,15 +426,25 @@ export class ValidationEngine {
     const lines: string[] = [
       `GENRE CONTRACT: ${worldBible.campaignName}`,
       ``,
-      `PRIMARY GENRE: ${worldBible.primaryGenre}`,
+      `PRIMARY GENRE: ${worldBible.primaryGenre} (dominant tone and setting)`,
     ];
     
     if (worldBible.secondaryGenres.length > 0) {
-      const blends = worldBible.secondaryGenres
-        .map(g => `${g.genreId} (${Math.round(g.blendStrength * 100)}% influence)`)
-        .join(', ');
-      lines.push(`BLENDED WITH: ${blends}`);
-      lines.push(`GENRE LOCK: ${worldBible.hardLock ? 'HARD (strict adherence to selected genres only)' : 'SOFT (allows creative adaptation)'}`);
+      lines.push(``);
+      lines.push(`GENRE BLEND:`);
+      for (const sg of worldBible.secondaryGenres) {
+        const pct = Math.round(sg.blendStrength * 100);
+        lines.push(`- ${sg.genreId}: ${pct}% influence (${pct >= 20 ? 'strong presence' : pct >= 10 ? 'moderate presence' : 'subtle touches'})`);
+      }
+      lines.push(``);
+      lines.push(`BLENDING INSTRUCTIONS:`);
+      lines.push(`- The PRIMARY genre (${worldBible.primaryGenre}) sets the main narrative tone, world rules, and atmosphere.`);
+      lines.push(`- Secondary genres add flavoring elements proportional to their percentages.`);
+      lines.push(`- A 30% blend means roughly 1 in 3 scenes/elements should reflect that genre.`);
+      lines.push(`- A 10% blend means occasional subtle references or background elements.`);
+      lines.push(`- Blend naturally - don't force jarring combinations.`);
+      lines.push(``);
+      lines.push(`GENRE LOCK: ${worldBible.hardLock ? 'HARD (strict adherence to selected genres ONLY)' : 'SOFT (allows creative adaptation beyond selected genres)'}`);
     } else {
       lines.push(`GENRE MODE: ${worldBible.hardLock ? 'PURE (single genre, strict adherence)' : 'FLEXIBLE (allows creative elements)'}`);
     }
@@ -468,8 +478,7 @@ export class ValidationEngine {
     
     lines.push(``);
     if (worldBible.secondaryGenres.length > 0) {
-      lines.push(`When crafting narrative, blend elements from selected genres proportionally.`);
-      lines.push(`Higher blend percentages mean more prominent secondary genre elements.`);
+      lines.push(`FOR OPENING NARRATIVE: Establish the primary ${worldBible.primaryGenre} atmosphere first, then naturally weave in ${worldBible.secondaryGenres.map(sg => sg.genreId).join(' and ')} elements.`);
     }
     lines.push(`Choose escalation beats from the menu above to raise tension.`);
     
