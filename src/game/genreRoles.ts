@@ -164,6 +164,7 @@ export function getRolePortraitPrompt(role: GenreRole, genre: GameGenre): string
     postapoc: 'post-apocalyptic, wasteland, gritty',
     pirate: 'golden age of piracy, nautical, adventure',
     war: 'military, wartime, dramatic lighting, battlefield',
+    modern_life: 'contemporary, urban, lifestyle photography style',
     custom: 'detailed portrait',
   };
 

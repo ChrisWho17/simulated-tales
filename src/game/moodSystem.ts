@@ -969,6 +969,98 @@ export const GENRE_MOOD_DESCRIPTORS: Record<GameGenre, Record<CoreMoodType, Genr
       npcReaction: 'Others prove their allegiance or fall under suspicion'
     }
   },
+  modern_life: {
+    lusty: {
+      label: 'Smitten',
+      emoji: '💕',
+      internalState: ['butterflies flutter in your stomach', 'can\'t stop thinking about them', 'checking your phone constantly'],
+      physicalSigns: ['blushing cheeks', 'nervous laughter', 'fixing your hair'],
+      dialogueTone: 'flirty and hopeful',
+      actionFlavor: 'with romantic energy',
+      npcReaction: 'Others notice your distracted, love-struck behavior'
+    },
+    mad: {
+      label: 'Furious',
+      emoji: '😡',
+      internalState: ['blood pressure rising', 'this is completely unacceptable', 'someone needs to hear about this'],
+      physicalSigns: ['raised voice', 'aggressive texting', 'pacing around'],
+      dialogueTone: 'heated and confrontational',
+      actionFlavor: 'with pent-up frustration',
+      npcReaction: 'Others try to calm you down or avoid the situation'
+    },
+    annoyed: {
+      label: 'Irritated',
+      emoji: '🙄',
+      internalState: ['this is so tedious', 'people are testing your patience', 'just want this to be over'],
+      physicalSigns: ['eye rolling', 'checking the time', 'short responses'],
+      dialogueTone: 'snappy and dismissive',
+      actionFlavor: 'with visible annoyance',
+      npcReaction: 'Others pick up on your mood and give you space'
+    },
+    neutral: {
+      label: 'Chill',
+      emoji: '😌',
+      internalState: ['just going about your day', 'no complaints', 'life is manageable'],
+      physicalSigns: ['relaxed posture', 'easy breathing', 'calm expression'],
+      dialogueTone: 'casual and easygoing',
+      actionFlavor: 'with everyday calm',
+      npcReaction: 'Normal social interactions, nothing out of the ordinary'
+    },
+    happy: {
+      label: 'Thriving',
+      emoji: '🎉',
+      internalState: ['things are really going well', 'grateful for the good vibes', 'life is good right now'],
+      physicalSigns: ['genuine smile', 'energetic movements', 'laughing easily'],
+      dialogueTone: 'upbeat and enthusiastic',
+      actionFlavor: 'with genuine positivity',
+      npcReaction: 'Others feed off your good energy and smile back'
+    },
+    sad: {
+      label: 'Down',
+      emoji: '😔',
+      internalState: ['feeling really low today', 'things just aren\'t working out', 'need some comfort'],
+      physicalSigns: ['slumped shoulders', 'quiet voice', 'avoiding eye contact'],
+      dialogueTone: 'subdued and vulnerable',
+      actionFlavor: 'with heavy heart',
+      npcReaction: 'Close friends check in on you; others give sympathetic looks'
+    },
+    depressed: {
+      label: 'Burnt Out',
+      emoji: '😶',
+      internalState: ['can\'t find motivation for anything', 'everything feels pointless', 'just existing, not living'],
+      physicalSigns: ['neglecting self-care', 'staying in bed', 'ignoring messages'],
+      dialogueTone: 'flat and disconnected',
+      actionFlavor: 'with exhausted detachment',
+      npcReaction: 'Loved ones express concern; others might not notice'
+    },
+    fearful: {
+      label: 'Anxious',
+      emoji: '😰',
+      internalState: ['heart racing', 'what if everything goes wrong', 'catastrophizing everything'],
+      physicalSigns: ['fidgeting', 'checking everything twice', 'shallow breathing'],
+      dialogueTone: 'nervous and uncertain',
+      actionFlavor: 'with anxious energy',
+      npcReaction: 'Others try to reassure you or get impatient with your worrying'
+    },
+    determined: {
+      label: 'Motivated',
+      emoji: '💪',
+      internalState: ['going to make this happen', 'focused on your goals', 'nothing can stop you today'],
+      physicalSigns: ['purposeful stride', 'organized workspace', 'making lists'],
+      dialogueTone: 'confident and driven',
+      actionFlavor: 'with focused determination',
+      npcReaction: 'Others are inspired by your drive or feel pressured to keep up'
+    },
+    suspicious: {
+      label: 'Skeptical',
+      emoji: '🤔',
+      internalState: ['something doesn\'t add up', 'not buying this story', 'need to verify before trusting'],
+      physicalSigns: ['raised eyebrow', 'crossed arms', 'fact-checking on phone'],
+      dialogueTone: 'questioning and doubtful',
+      actionFlavor: 'with careful scrutiny',
+      npcReaction: 'Others feel the need to prove themselves or get defensive'
+    }
+  },
   custom: {
     lusty: {
       label: 'Attracted',

@@ -115,15 +115,6 @@ export function detectGenreFromText(text: string): GenreDetectionResult {
     modern_life: { score: 0, matches: [] },
     custom: { score: 0, matches: [] },
   };
-    horror: { score: 0, matches: [] },
-    mystery: { score: 0, matches: [] },
-    pirate: { score: 0, matches: [] },
-    western: { score: 0, matches: [] },
-    cyberpunk: { score: 0, matches: [] },
-    postapoc: { score: 0, matches: [] },
-    war: { score: 0, matches: [] },
-    custom: { score: 0, matches: [] },
-  };
 
   // Calculate scores for each genre
   for (const [genre, keywordGroups] of Object.entries(GENRE_KEYWORDS)) {
