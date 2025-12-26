@@ -5,6 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Relationship milestone types for romance progression
+type MilestoneType = 
+  | 'stranger' | 'acquaintance' | 'friend' | 'close_friend' 
+  | 'crush' | 'dating' | 'partner' | 'lover' | 'soulmate' 
+  | 'rival' | 'enemy';
+
 interface NPCContext {
   name: string;
   age: number;
@@ -40,6 +46,8 @@ interface NPCContext {
   activeTrauma?: boolean;
   recentMemories?: string[];
   patterns?: string[];
+  // Relationship milestone for romance system
+  relationshipMilestone?: MilestoneType;
 }
 
 interface ConversationExchange {
@@ -87,7 +95,8 @@ serve(async (req) => {
     // Build personality description
     const traitsStr = npc.traits?.join(', ') || 'ordinary';
     const moodStr = npc.currentMood || 'neutral';
-    const relationshipDesc = getRelationshipDescription(npc.relationship);
+    const relationshipDesc = getRelationshipDescription(npc.relationship, npc.relationshipMilestone);
+    const milestoneModifiers = getMilestoneDialogueModifiers(npc.relationshipMilestone);
     
     // Build appearance context if available
     let appearanceContext = '';
@@ -149,6 +158,9 @@ ${appearanceContext}
 
 RELATIONSHIP WITH PLAYER:
 ${relationshipDesc}
+
+RELATIONSHIP BEHAVIOR GUIDE:
+${milestoneModifiers}
 ${npc.isGeneric ? '\nYou are a random person the player has just encountered. You have your own life and concerns.' : '\nYou are a recurring character in this world.'}
 ${memorySection}
 
@@ -308,18 +320,57 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
   }
 });
 
-function getRelationshipDescription(rel: { affection: number; trust: number; fear: number; respect: number }): string {
+function getMilestoneDialogueModifiers(milestone: MilestoneType | undefined): string {
+  const modifiers: Record<MilestoneType, string> = {
+    stranger: `You don't know this person. Be appropriately distant and polite but not overly friendly.`,
+    acquaintance: `You've met briefly before. Be friendly but not too familiar. Keep some professional distance.`,
+    friend: `This is a friend. Be warm, use casual language, share some personal thoughts. You care about them.`,
+    close_friend: `This is a close friend. Be very open, use inside jokes if appropriate, share concerns and personal matters freely.`,
+    crush: `You have romantic feelings for this person but haven't expressed them. Be slightly nervous, extra attentive, maybe blush or stumble over words. Try to impress them subtly.`,
+    dating: `You're romantically involved. Use pet names occasionally, be affectionate, reference shared experiences. Show comfort and intimacy in conversation.`,
+    partner: `This is your committed partner. Deep intimacy and comfort. Use terms of endearment naturally, reference your relationship, show protectiveness and devotion.`,
+    lover: `This is your lover. Be openly affectionate, use intimate language, reference physical and emotional closeness. Show passion and desire alongside emotional connection.`,
+    soulmate: `This is your soulmate - the deepest connection possible. Finish each other's thoughts, show profound understanding, express eternal devotion. Every interaction reflects your unbreakable bond.`,
+    rival: `This is a rival. Be competitive, slightly antagonistic, but with underlying respect. Try to one-up them.`,
+    enemy: `This is an enemy. Be hostile, guarded, or dismissive. Show active dislike and distrust.`,
+  };
+  
+  return milestone ? modifiers[milestone] : modifiers.stranger;
+}
+
+function getRelationshipDescription(rel: { affection: number; trust: number; fear: number; respect: number }, milestone?: MilestoneType): string {
   const parts: string[] = [];
   
-  if (rel.affection > 50) parts.push('You like this person');
-  else if (rel.affection < -20) parts.push('You dislike this person');
+  // Add milestone context first
+  if (milestone && milestone !== 'stranger') {
+    const milestoneLabels: Record<MilestoneType, string> = {
+      stranger: 'stranger',
+      acquaintance: 'an acquaintance',
+      friend: 'a friend',
+      close_friend: 'a close friend',
+      crush: 'someone you have a crush on',
+      dating: 'someone you\'re dating',
+      partner: 'your committed partner',
+      lover: 'your lover',
+      soulmate: 'your soulmate',
+      rival: 'your rival',
+      enemy: 'your enemy',
+    };
+    parts.push(`This person is ${milestoneLabels[milestone]}`);
+  }
   
-  if (rel.trust > 50) parts.push('you trust them');
+  if (rel.affection > 50) parts.push('you like them deeply');
+  else if (rel.affection > 20) parts.push('you like them');
+  else if (rel.affection < -20) parts.push('you dislike them');
+  
+  if (rel.trust > 50) parts.push('you trust them completely');
+  else if (rel.trust > 20) parts.push('you trust them');
   else if (rel.trust < -20) parts.push('you don\'t trust them');
-  else parts.push('you\'re wary of strangers');
+  else if (!milestone || milestone === 'stranger') parts.push('you\'re wary of strangers');
   
   if (rel.fear > 30) parts.push('they make you nervous');
-  if (rel.respect > 30) parts.push('you respect them');
+  if (rel.respect > 50) parts.push('you deeply respect them');
+  else if (rel.respect > 20) parts.push('you respect them');
   else if (rel.respect < -20) parts.push('you don\'t respect them');
   
   return parts.length > 0 ? parts.join(', ') + '.' : 'This is a stranger to you.';
