@@ -88,9 +88,42 @@ export interface RelationshipJournalData {
   // Index mapping normalized names to npcIds for deduplication
   nameIndex: Record<string, string>;
   lastUpdated: number;
+  // Isolation keys - journal is scoped to campaign + character
+  campaignId?: string;
+  characterId?: string;
 }
 
-const JOURNAL_STORAGE_KEY = 'relationship-journal';
+const JOURNAL_STORAGE_KEY_PREFIX = 'relationship-journal';
+
+// Current active context for journal isolation
+let activeJournalContext: { campaignId: string; characterId: string } | null = null;
+
+/**
+ * Set the active journal context (call when campaign/character changes).
+ * This scopes all journal operations to that specific campaign + character.
+ */
+export function setJournalContext(campaignId: string, characterId: string): void {
+  activeJournalContext = { campaignId, characterId };
+  console.log(`[RelationshipJournal] Context set: campaign=${campaignId}, character=${characterId}`);
+}
+
+/**
+ * Clear the journal context (call on logout or return to main menu).
+ */
+export function clearJournalContext(): void {
+  activeJournalContext = null;
+}
+
+/**
+ * Get the storage key for the current context.
+ * Falls back to legacy key if no context is set.
+ */
+function getStorageKey(): string {
+  if (activeJournalContext) {
+    return `${JOURNAL_STORAGE_KEY_PREFIX}-${activeJournalContext.campaignId}-${activeJournalContext.characterId}`;
+  }
+  return JOURNAL_STORAGE_KEY_PREFIX; // Legacy fallback
+}
 
 // ============= NPC ID ANCHORING SYSTEM =============
 
@@ -231,7 +264,7 @@ export function getMilestoneInfo(milestone: MilestoneType): { icon: string; labe
 // Load journal from storage
 export function loadRelationshipJournal(): RelationshipJournalData {
   try {
-    const saved = localStorage.getItem(JOURNAL_STORAGE_KEY);
+    const saved = localStorage.getItem(getStorageKey());
     if (saved) {
       const parsed = JSON.parse(saved);
       // Ensure nameIndex exists (migration from old format)
@@ -251,14 +284,22 @@ export function loadRelationshipJournal(): RelationshipJournalData {
   } catch (e) {
     console.error('Failed to load relationship journal:', e);
   }
-  return { journals: {}, nameIndex: {}, lastUpdated: Date.now() };
+  return { 
+    journals: {}, 
+    nameIndex: {}, 
+    lastUpdated: Date.now(),
+    campaignId: activeJournalContext?.campaignId,
+    characterId: activeJournalContext?.characterId
+  };
 }
 
 // Save journal to storage
 export function saveRelationshipJournal(data: RelationshipJournalData): void {
   try {
     data.lastUpdated = Date.now();
-    localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(data));
+    data.campaignId = activeJournalContext?.campaignId;
+    data.characterId = activeJournalContext?.characterId;
+    localStorage.setItem(getStorageKey(), JSON.stringify(data));
   } catch (e) {
     console.error('Failed to save relationship journal:', e);
   }
@@ -404,9 +445,9 @@ export function getRomanticJournals(): NPCRelationshipJournal[] {
     });
 }
 
-// Clear all journal data
+// Clear all journal data for current context
 export function clearRelationshipJournal(): void {
-  localStorage.removeItem(JOURNAL_STORAGE_KEY);
+  localStorage.removeItem(getStorageKey());
 }
 
 // Update milestone from dialogue progression
