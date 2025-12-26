@@ -1,5 +1,5 @@
 // Game Loop Hook - Processes ripple effects, world state changes, and time-based systems
-// Integrates consequence cascades from player actions
+// Integrates consequence cascades from player actions with location-aware scoping
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
@@ -14,6 +14,22 @@ import {
 } from '@/game/rippleEffectSystem';
 import { Rumor, processRumorSpread, createRumor } from '@/game/unreliableInformationSystem';
 import { NPCGrudgeContext, processGrudgeDecay, processDebtDecay } from '@/game/npcGrudgeSystem';
+import {
+  PlayerLocation,
+  LocationHistory,
+  ScopedRipple,
+  LocationConsequence,
+  createDefaultLocation,
+  createLocationHistory,
+  updatePlayerLocation,
+  addLocationHistoryEntry,
+  createScopedRipple,
+  filterRipplesByLocation,
+  getActiveConsequencesForLocation,
+  buildLocationContext,
+  buildRippleScopeContext,
+} from '@/game/locationTrackingSystem';
+import { UrbanZone, UrbanLocation } from '@/types/urbanZone';
 
 // ============= STORAGE KEYS =============
 const RIPPLES_KEY = 'untold-active-ripples';
@@ -21,24 +37,34 @@ const WORLD_STATE_KEY = 'untold-world-state';
 const NARRATIVE_QUEUE_KEY = 'untold-narrative-queue';
 const RUMORS_KEY = 'untold-active-rumors';
 const NPC_CONTEXTS_KEY = 'untold-scene-npcs';
+const LOCATION_KEY = 'untold-player-location';
+const LOCATION_HISTORY_KEY = 'untold-location-history';
 
 // ============= TYPES =============
 export interface GameLoopState {
-  activeRipples: ActiveRipple[];
+  activeRipples: ScopedRipple[];
   worldState: WorldStateChanges;
   narrativeQueue: string[];
   activeRumors: Rumor[];
   sceneNPCs: NPCGrudgeContext[];
   currentTurn: number;
+  playerLocation: PlayerLocation;
+  locationHistory: LocationHistory;
+  activeConsequences: LocationConsequence[];
 }
 
 export interface GameLoopActions {
   // Core processing
   advanceTurn: (turns?: number) => void;
-  processPlayerAction: (action: string, location: string, isPublic?: boolean, crowdSize?: number) => void;
+  processPlayerAction: (action: string, isPublic?: boolean, crowdSize?: number) => void;
+  
+  // Location tracking
+  moveToZone: (zone: UrbanZone, location?: UrbanLocation | null, significantEvents?: string[]) => void;
+  getLocationContext: () => string;
+  getRippleScopeContext: () => string;
   
   // Ripple management
-  addRipple: (ripple: ActiveRipple) => void;
+  addRipple: (ripple: ActiveRipple, connectedZones?: string[]) => void;
   cancelRipple: (rippleId: string, reason: string) => void;
   
   // World state
@@ -83,7 +109,7 @@ function saveToStorage<T>(key: string, value: T): void {
 // ============= HOOK =============
 export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopActions] {
   // State
-  const [activeRipples, setActiveRipples] = useState<ActiveRipple[]>(() => 
+  const [activeRipples, setActiveRipples] = useState<ScopedRipple[]>(() => 
     loadFromStorage(RIPPLES_KEY, [])
   );
   
@@ -103,10 +129,25 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     loadFromStorage(NPC_CONTEXTS_KEY, [])
   );
   
+  const [playerLocation, setPlayerLocation] = useState<PlayerLocation>(() =>
+    loadFromStorage(LOCATION_KEY, createDefaultLocation())
+  );
+  
+  const [locationHistory, setLocationHistory] = useState<LocationHistory>(() =>
+    loadFromStorage(LOCATION_HISTORY_KEY, createLocationHistory())
+  );
+  
   const [currentTurn, setCurrentTurn] = useState(initialTurn);
   
   // Track for debounced saves
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Calculate active consequences for current location
+  const activeConsequences = getActiveConsequencesForLocation(
+    activeRipples,
+    playerLocation,
+    currentTurn
+  );
   
   // Debounced save effect
   useEffect(() => {
@@ -120,6 +161,8 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       saveToStorage(NARRATIVE_QUEUE_KEY, narrativeQueue);
       saveToStorage(RUMORS_KEY, activeRumors);
       saveToStorage(NPC_CONTEXTS_KEY, sceneNPCs);
+      saveToStorage(LOCATION_KEY, playerLocation);
+      saveToStorage(LOCATION_HISTORY_KEY, locationHistory);
     }, 500);
     
     return () => {
@@ -127,7 +170,35 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs]);
+  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, locationHistory]);
+  
+  // ============= LOCATION TRACKING =============
+  
+  const moveToZone = useCallback((
+    zone: UrbanZone,
+    location: UrbanLocation | null = null,
+    significantEvents: string[] = []
+  ) => {
+    // Add current location to history before moving
+    if (playerLocation.zoneId !== zone.id || playerLocation.locationId !== location?.id) {
+      setLocationHistory(prev => 
+        addLocationHistoryEntry(prev, playerLocation, currentTurn, significantEvents)
+      );
+    }
+    
+    // Update to new location
+    setPlayerLocation(prev => updatePlayerLocation(prev, zone, location, currentTurn));
+    
+    console.log(`[GameLoop] Moved to ${zone.name}${location ? ` / ${location.name}` : ''}`);
+  }, [playerLocation, currentTurn]);
+  
+  const getLocationContext = useCallback(() => {
+    return buildLocationContext(playerLocation, locationHistory, activeConsequences);
+  }, [playerLocation, locationHistory, activeConsequences]);
+  
+  const getRippleScopeContext = useCallback(() => {
+    return buildRippleScopeContext(activeRipples, playerLocation, currentTurn);
+  }, [activeRipples, playerLocation, currentTurn]);
   
   // ============= CORE PROCESSING =============
   
@@ -135,11 +206,14 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     const newTurn = currentTurn + turns;
     setCurrentTurn(newTurn);
     
+    // Filter ripples relevant to current location before processing
+    const relevantRipples = filterRipplesByLocation(activeRipples, playerLocation, newTurn);
+    
     // Process ripples for this turn
-    const rippleResult = processRipples(activeRipples, newTurn);
+    const rippleResult = processRipples(relevantRipples, newTurn);
     
     if (rippleResult.triggeredEffects.length > 0) {
-      console.log(`[GameLoop] Turn ${newTurn}: ${rippleResult.triggeredEffects.length} ripple effects triggered`);
+      console.log(`[GameLoop] Turn ${newTurn}: ${rippleResult.triggeredEffects.length} ripple effects triggered at ${playerLocation.zoneName}`);
       
       // Apply world state changes from triggered effects
       let updatedWorldState = { ...worldState };
@@ -152,13 +226,12 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       setNarrativeQueue(prev => [...prev, ...rippleResult.narrativeQueue]);
     }
     
-    // Update ripples
-    setActiveRipples(rippleResult.updatedRipples);
+    // Update ripples (merge back with non-relevant ones)
+    const nonRelevantRipples = activeRipples.filter(r => !relevantRipples.includes(r));
+    setActiveRipples([...nonRelevantRipples, ...rippleResult.updatedRipples] as ScopedRipple[]);
     
     // Process rumor spread (every 6 turns = roughly every 6 hours in-game)
     if (newTurn % 6 === 0 && activeRumors.length > 0) {
-      // For now, use empty NPC profiles - rumors will naturally age out
-      // Full integration would pull NPC profiles from scene
       const npcProfiles: Record<string, any> = {};
       const updatedRumors = processRumorSpread(activeRumors, npcProfiles, 6);
       setActiveRumors(updatedRumors);
@@ -174,7 +247,7 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     }
     
     // Decay world state over time
-    if (newTurn % 24 === 0) { // Daily decay
+    if (newTurn % 24 === 0) {
       setWorldState(prev => ({
         ...prev,
         guardAlertLevel: Math.max(0, prev.guardAlertLevel - 5),
@@ -184,55 +257,61 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
         securityLevel: prev.securityLevel === 'lockdown' && prev.guardAlertLevel < 50 ? 'high' :
                        prev.securityLevel === 'high' && prev.guardAlertLevel < 30 ? 'elevated' :
                        prev.securityLevel === 'elevated' && prev.guardAlertLevel < 15 ? 'normal' : prev.securityLevel,
-        // Decay investigations
         activeInvestigations: prev.activeInvestigations
           .map(inv => ({ ...inv, hoursRemaining: inv.hoursRemaining - 24 }))
           .filter(inv => inv.hoursRemaining > 0),
       }));
     }
-  }, [currentTurn, activeRipples, worldState, activeRumors, sceneNPCs]);
+  }, [currentTurn, activeRipples, worldState, activeRumors, sceneNPCs, playerLocation]);
   
   const processPlayerAction = useCallback((
     action: string,
-    location: string,
     isPublic: boolean = false,
     crowdSize: number = 1
   ) => {
     const detection = detectActionCategory(action, { isPublic, crowdSize });
     
     if (detection) {
-      console.log(`[GameLoop] Detected action: ${detection.category}/${detection.templateKey} (${detection.witnesses} witnesses)`);
+      console.log(`[GameLoop] Detected action at ${playerLocation.zoneName}: ${detection.category}/${detection.templateKey} (${detection.witnesses} witnesses)`);
       
-      const ripple = createRipple(
+      const baseRipple = createRipple(
         action,
         detection.category,
         detection.templateKey,
-        location,
+        playerLocation.zoneName,
         currentTurn,
         'player',
         detection.witnesses
       );
       
-      if (ripple) {
-        setActiveRipples(prev => [...prev, ripple]);
-        console.log(`[GameLoop] Created ripple: ${ripple.id} with ${ripple.effects.length} phases`);
+      if (baseRipple) {
+        // Scope the ripple to the current location
+        const scopedRipple = createScopedRipple(
+          baseRipple,
+          playerLocation,
+          [] // Connected zones would come from zone data
+        );
+        
+        setActiveRipples(prev => [...prev, scopedRipple]);
+        console.log(`[GameLoop] Created scoped ripple: ${scopedRipple.id} with scope ${scopedRipple.scope.level}`);
         
         // Major actions might also start rumors
-        if (ripple.severity === 'major' || ripple.severity === 'severe' || ripple.severity === 'catastrophic') {
-          const rumorContent = `Someone ${action.slice(0, 50)}... in ${location}`;
-          const emotionalCharge = ripple.severity === 'catastrophic' ? 9 : ripple.severity === 'severe' ? 7 : 5;
+        if (scopedRipple.severity === 'major' || scopedRipple.severity === 'severe' || scopedRipple.severity === 'catastrophic') {
+          const rumorContent = `Someone ${action.slice(0, 50)}... in ${playerLocation.zoneName}`;
+          const emotionalCharge = scopedRipple.severity === 'catastrophic' ? 9 : scopedRipple.severity === 'severe' ? 7 : 5;
           const newRumor = createRumor(rumorContent, 'witness', 85, emotionalCharge);
           setActiveRumors(prev => [...prev, newRumor]);
         }
       }
     }
-  }, [currentTurn]);
+  }, [currentTurn, playerLocation]);
   
   // ============= RIPPLE MANAGEMENT =============
   
-  const addRipple = useCallback((ripple: ActiveRipple) => {
-    setActiveRipples(prev => [...prev, ripple]);
-  }, []);
+  const addRipple = useCallback((ripple: ActiveRipple, connectedZones: string[] = []) => {
+    const scopedRipple = createScopedRipple(ripple, playerLocation, connectedZones);
+    setActiveRipples(prev => [...prev, scopedRipple]);
+  }, [playerLocation]);
   
   const cancelRipple = useCallback((rippleId: string, reason: string) => {
     setActiveRipples(prev => prev.map(r => 
@@ -289,8 +368,10 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       activeRumors,
       sceneNPCs,
       currentTurn,
+      playerLocation,
+      locationHistory,
     });
-  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs, currentTurn]);
+  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs, currentTurn, playerLocation, locationHistory]);
   
   const restoreState = useCallback((serialized: string): boolean => {
     try {
@@ -301,6 +382,8 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       if (parsed.activeRumors) setActiveRumors(parsed.activeRumors);
       if (parsed.sceneNPCs) setSceneNPCs(parsed.sceneNPCs);
       if (typeof parsed.currentTurn === 'number') setCurrentTurn(parsed.currentTurn);
+      if (parsed.playerLocation) setPlayerLocation(parsed.playerLocation);
+      if (parsed.locationHistory) setLocationHistory(parsed.locationHistory);
       return true;
     } catch (e) {
       console.error('Failed to restore game loop state:', e);
@@ -317,11 +400,17 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     activeRumors,
     sceneNPCs,
     currentTurn,
+    playerLocation,
+    locationHistory,
+    activeConsequences,
   };
   
   const actions: GameLoopActions = {
     advanceTurn,
     processPlayerAction,
+    moveToZone,
+    getLocationContext,
+    getRippleScopeContext,
     addRipple,
     cancelRipple,
     updateWorldState,

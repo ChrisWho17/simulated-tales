@@ -943,9 +943,8 @@ export function AdventureGame() {
     
     // === RIPPLE EFFECT: Process player action for consequences ===
     // Detect if this action should trigger world consequences
-    const currentLocation = 'current_location'; // TODO: Get from actual location system
     const isPublicAction = worldState.securityLevel !== 'normal' || action.toLowerCase().includes('public');
-    processActionForRipples(action, currentLocation, isPublicAction, 5);
+    processActionForRipples(action, isPublicAction, 5);
     
     // Advance game loop turn (processes pending ripples, decays grudges, spreads rumors)
     advanceTurn(1);
