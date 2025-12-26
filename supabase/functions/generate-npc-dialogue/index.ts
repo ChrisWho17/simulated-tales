@@ -75,6 +75,14 @@ interface DialogueIndicators {
   emotionalState?: string;
 }
 
+interface MilestoneProgression {
+  shouldProgress: boolean;
+  currentMilestone: MilestoneType;
+  suggestedMilestone?: MilestoneType;
+  triggerType?: 'confession' | 'intimacy' | 'trust_built' | 'shared_moment' | 'romantic_gesture' | 'commitment' | 'deep_connection';
+  triggerDescription?: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -191,6 +199,18 @@ IMPORTANT - SPECIAL MARKERS:
 When your dialogue references a memory, start that sentence with [MEMORY].
 When you detect a contradiction with something you know, include [CONTRADICTION] at the start.
 When trauma is affecting your response, include [TRAUMA] at the start.
+
+RELATIONSHIP PROGRESSION MARKERS (use when appropriate emotional moments occur):
+[MILESTONE_TRIGGER:type:description] - Use when a significant relationship moment happens:
+- confession: When feelings are confessed or revealed
+- intimacy: When physical or emotional intimacy deepens
+- trust_built: When deep trust is established through actions
+- shared_moment: When a meaningful bonding experience occurs
+- romantic_gesture: When romantic interest is shown or reciprocated
+- commitment: When promises or commitments are made
+- deep_connection: When souls connect on a profound level
+
+Only include this marker when the conversation genuinely reaches such a moment.
 These markers help the game system display appropriate visual cues.
 
 SETTING:
@@ -284,11 +304,35 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
       }
     }
 
+    // Parse milestone trigger marker
+    const milestoneProgression: MilestoneProgression = {
+      shouldProgress: false,
+      currentMilestone: npc.relationshipMilestone || 'stranger',
+    };
+
+    const milestoneTriggerMatch = dialogue.match(/\[MILESTONE_TRIGGER:(\w+):([^\]]+)\]/);
+    if (milestoneTriggerMatch) {
+      const triggerType = milestoneTriggerMatch[1] as MilestoneProgression['triggerType'];
+      const triggerDescription = milestoneTriggerMatch[2].trim();
+      
+      milestoneProgression.shouldProgress = true;
+      milestoneProgression.triggerType = triggerType;
+      milestoneProgression.triggerDescription = triggerDescription;
+      milestoneProgression.suggestedMilestone = calculateNextMilestone(
+        npc.relationshipMilestone || 'stranger',
+        triggerType,
+        npc.relationship
+      );
+      
+      console.log(`Milestone progression detected: ${triggerType} - ${triggerDescription}`);
+    }
+
     // Clean markers from final dialogue
     dialogue = dialogue
       .replace(/\[MEMORY\]\s*/g, '')
       .replace(/\[TRAUMA\]\s*/g, '')
       .replace(/\[CONTRADICTION\]\s*/g, '')
+      .replace(/\[MILESTONE_TRIGGER:[^\]]+\]\s*/g, '')
       .trim();
 
     // Detect important topics mentioned in the response
@@ -308,6 +352,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
       npcId: npc.name,
       importantTopics,
       indicators,
+      milestoneProgression,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -374,6 +419,90 @@ function getRelationshipDescription(rel: { affection: number; trust: number; fea
   else if (rel.respect < -20) parts.push('you don\'t respect them');
   
   return parts.length > 0 ? parts.join(', ') + '.' : 'This is a stranger to you.';
+}
+
+// Calculate the next milestone based on trigger type and current relationship stats
+function calculateNextMilestone(
+  currentMilestone: MilestoneType,
+  triggerType: MilestoneProgression['triggerType'],
+  relationship: { affection: number; trust: number; fear: number; respect: number }
+): MilestoneType {
+  // Define the romantic progression path
+  const romanticPath: MilestoneType[] = [
+    'stranger', 'acquaintance', 'friend', 'close_friend', 'crush', 'dating', 'partner', 'lover', 'soulmate'
+  ];
+  
+  const currentIndex = romanticPath.indexOf(currentMilestone);
+  
+  // If not on romantic path (rival/enemy), handle separately
+  if (currentIndex === -1) {
+    // Rivals can become friends with enough positive interaction
+    if (currentMilestone === 'rival' && relationship.affection > 30) {
+      return 'acquaintance';
+    }
+    // Enemies can become rivals with reduced hostility
+    if (currentMilestone === 'enemy' && relationship.affection > 0) {
+      return 'rival';
+    }
+    return currentMilestone;
+  }
+  
+  // Determine progression based on trigger type
+  let progressionSteps = 1;
+  
+  switch (triggerType) {
+    case 'confession':
+      // Confessions can jump from friend/close_friend to crush, or crush to dating
+      if (currentMilestone === 'friend' || currentMilestone === 'close_friend') {
+        return 'crush';
+      }
+      if (currentMilestone === 'crush') {
+        return 'dating';
+      }
+      break;
+    case 'commitment':
+      // Commitments advance dating to partner
+      if (currentMilestone === 'dating') {
+        return 'partner';
+      }
+      break;
+    case 'deep_connection':
+      // Deep connections can advance partner to lover or lover to soulmate
+      if (currentMilestone === 'partner') {
+        return 'lover';
+      }
+      if (currentMilestone === 'lover') {
+        return 'soulmate';
+      }
+      break;
+    case 'intimacy':
+      // Intimacy advances dating to partner or partner to lover
+      if (currentMilestone === 'dating' && relationship.trust > 40) {
+        return 'partner';
+      }
+      if (currentMilestone === 'partner') {
+        return 'lover';
+      }
+      break;
+    case 'romantic_gesture':
+      // Romantic gestures help with early progression
+      if (currentMilestone === 'friend' && relationship.affection > 30) {
+        return 'crush';
+      }
+      if (currentMilestone === 'crush') {
+        return 'dating';
+      }
+      break;
+    case 'trust_built':
+    case 'shared_moment':
+      // These generally advance by one step
+      progressionSteps = 1;
+      break;
+  }
+  
+  // Default: advance by one step on the romantic path
+  const nextIndex = Math.min(currentIndex + progressionSteps, romanticPath.length - 1);
+  return romanticPath[nextIndex];
 }
 
 function generateFallbackDialogue(npc: NPCContext, isFirst: boolean): string {
