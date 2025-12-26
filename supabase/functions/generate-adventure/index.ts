@@ -254,8 +254,8 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     if (adultContent) {
       systemContent += `
 
-=== MATURE CONTENT MODE (18+) ===
-Adult content is ENABLED. You may:
+=== MATURE CONTENT MODE (18+) - ROMANCE & LOVER TAGS ENABLED ===
+Adult content is ENABLED with full Romance and Lover relationship depth. You may:
 - Include explicit romantic and sexual content when narratively appropriate
 - Describe intimate encounters with tasteful but detailed prose
 - Include mature themes: violence, sexuality, substance use, dark psychological content
@@ -263,7 +263,21 @@ Adult content is ENABLED. You may:
 - Describe physical attraction and desire explicitly
 - Include adult language and explicit descriptions
 
-Write mature content naturally when the story calls for it. Don't shy away from explicit detail when it serves the narrative. Romance and intimacy should feel authentic and immersive.`;
+ROMANCE TAG ENABLED:
+- Develop deep romantic subplots with emotional complexity
+- Allow characters to fall in love, experience jealousy, heartbreak, passion
+- Create tension between romantic interests
+- Include flirtation, courtship, and romantic gestures
+- Build chemistry through meaningful interactions and shared vulnerability
+
+LOVER TAG ENABLED:
+- Allow intimate physical relationships to develop naturally
+- Describe physical affection, kissing, embracing with sensory detail
+- When appropriate, include tasteful but explicit intimate scenes
+- Show the emotional aftermath of physical intimacy
+- Develop relationship dynamics that include physical and emotional bonds
+
+Write mature content naturally when the story calls for it. Romance and intimacy should feel authentic, emotionally resonant, and immersive.`;
     } else {
       systemContent += `
 
