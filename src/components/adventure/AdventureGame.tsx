@@ -46,6 +46,55 @@ function formatEmotionalContext(
 
 import { GameMechanics } from './types';
 
+// Genre-specific fallback openings with blend support - moved outside component for reuse
+interface SecondaryGenreBlend {
+  genreId: string;
+  blendStrength: number;
+}
+
+const GENRE_FLAVORS: Record<string, { tone: string; element: string; atmosphere: string }> = {
+  fantasy: { tone: 'mystical', element: 'ancient magic hummed in the air', atmosphere: 'wonder and destiny' },
+  scifi: { tone: 'technological', element: 'systems hummed with data', atmosphere: 'vast unknowns awaited' },
+  horror: { tone: 'dread-filled', element: 'shadows seemed to watch', atmosphere: 'unease crept through every moment' },
+  mystery: { tone: 'enigmatic', element: 'secrets lurked beneath the surface', atmosphere: 'truth waited to be uncovered' },
+  pirate: { tone: 'adventurous', element: 'salt spray and distant horizons called', atmosphere: 'fortune and danger intertwined' },
+  western: { tone: 'rugged', element: 'dust and determination defined the land', atmosphere: 'survival demanded grit' },
+  cyberpunk: { tone: 'neon-drenched', element: 'data streams and chrome glinted', atmosphere: 'the megacorps controlled everything' },
+  postapoc: { tone: 'desolate', element: 'ruins of the old world stood silent', atmosphere: 'every day was a fight' },
+  war: { tone: 'tense', element: 'the calm before battle hung heavy', atmosphere: 'duty called without mercy' },
+  cosmic_horror: { tone: 'insignificant', element: 'vast incomprehensible forces stirred', atmosphere: 'sanity was a fragile thing' },
+};
+
+function buildBlendedFallbackOpening(
+  primaryGenre: string, 
+  charName: string, 
+  scenario: string,
+  secondaryGenres: SecondaryGenreBlend[]
+): string {
+  const primaryFlavor = GENRE_FLAVORS[primaryGenre] || { tone: 'uncertain', element: 'possibilities unfolded', atmosphere: 'adventure awaited' };
+  
+  // Build base opening with primary genre
+  let opening = `${charName} stood at a crossroads where ${primaryFlavor.element}. `;
+  
+  // Blend in secondary genres proportionally
+  if (secondaryGenres.length > 0) {
+    const blendedElements: string[] = [];
+    for (const sg of secondaryGenres) {
+      const flavor = GENRE_FLAVORS[sg.genreId];
+      if (flavor && sg.blendStrength > 0.1) { // Only include if >10% blend
+        blendedElements.push(flavor.element);
+      }
+    }
+    if (blendedElements.length > 0) {
+      opening += `Here, ${blendedElements.slice(0, 2).join(' and ')}. `;
+    }
+  }
+  
+  opening += `In this ${primaryFlavor.tone} world, ${primaryFlavor.atmosphere}. The path ahead was uncertain, but the first step waited to be taken.`;
+  
+  return opening;
+}
+
 type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
@@ -399,47 +448,8 @@ export function AdventureGame() {
     
     console.log('[AdventureGame] Generating initial narrative for campaign:', currentCampaignId);
     
-    // Genre-specific fallback openings with blend support
-    const buildFallbackOpening = (primaryGenre: string, charName: string, scenario: string): string => {
-      // Genre flavor elements for blending
-      const genreFlavors: Record<string, { tone: string; element: string; atmosphere: string }> = {
-        fantasy: { tone: 'mystical', element: 'ancient magic hummed in the air', atmosphere: 'wonder and destiny' },
-        scifi: { tone: 'technological', element: 'systems hummed with data', atmosphere: 'vast unknowns awaited' },
-        horror: { tone: 'dread-filled', element: 'shadows seemed to watch', atmosphere: 'unease crept through every moment' },
-        mystery: { tone: 'enigmatic', element: 'secrets lurked beneath the surface', atmosphere: 'truth waited to be uncovered' },
-        pirate: { tone: 'adventurous', element: 'salt spray and distant horizons called', atmosphere: 'fortune and danger intertwined' },
-        western: { tone: 'rugged', element: 'dust and determination defined the land', atmosphere: 'survival demanded grit' },
-        cyberpunk: { tone: 'neon-drenched', element: 'data streams and chrome glinted', atmosphere: 'the megacorps controlled everything' },
-        postapoc: { tone: 'desolate', element: 'ruins of the old world stood silent', atmosphere: 'every day was a fight' },
-        war: { tone: 'tense', element: 'the calm before battle hung heavy', atmosphere: 'duty called without mercy' },
-        cosmic_horror: { tone: 'insignificant', element: 'vast incomprehensible forces stirred', atmosphere: 'sanity was a fragile thing' },
-      };
-      
-      // Get secondary genres from world bible if available
-      const secondaryGenres = worldBible?.secondaryGenres || [];
-      const primaryFlavor = genreFlavors[primaryGenre] || { tone: 'uncertain', element: 'possibilities unfolded', atmosphere: 'adventure awaited' };
-      
-      // Build base opening with primary genre
-      let opening = `${charName} stood at a crossroads where ${primaryFlavor.element}. `;
-      
-      // Blend in secondary genres proportionally
-      if (secondaryGenres.length > 0) {
-        const blendedElements: string[] = [];
-        for (const sg of secondaryGenres) {
-          const flavor = genreFlavors[sg.genreId];
-          if (flavor && sg.blendStrength > 0.1) { // Only include if >10% blend
-            blendedElements.push(flavor.element);
-          }
-        }
-        if (blendedElements.length > 0) {
-          opening += `Here, ${blendedElements.slice(0, 2).join(' and ')}. `;
-        }
-      }
-      
-      opening += `In this ${primaryFlavor.tone} world, ${primaryFlavor.atmosphere}. The path ahead was uncertain, but the first step waited to be taken.`;
-      
-      return opening;
-    };
+    // Get secondary genres from world bible for fallback
+    const secondaryGenres = worldBible?.secondaryGenres || [];
     
     // Use an IIFE with timeout protection
     (async () => {
@@ -475,10 +485,11 @@ export function AdventureGame() {
         const data = await response.json();
         console.log('[AdventureGame] Received narrative response:', !!data.narrative);
         
-        const narrativeContent = data.narrative || buildFallbackOpening(
+        const narrativeContent = data.narrative || buildBlendedFallbackOpening(
           scenarioSelection.genre, 
           character.name, 
-          scenarioSelection.scenario
+          scenarioSelection.scenario,
+          secondaryGenres
         );
         
         const newStory: StoryEntry[] = [{
@@ -500,10 +511,11 @@ export function AdventureGame() {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
         
         // Use genre-specific fallback (always works, never blocks)
-        const fallbackContent = buildFallbackOpening(
+        const fallbackContent = buildBlendedFallbackOpening(
           scenarioSelection.genre,
           character.name,
-          scenarioSelection.scenario
+          scenarioSelection.scenario,
+          secondaryGenres
         );
         
         const fallbackStory: StoryEntry[] = [{
@@ -596,8 +608,13 @@ export function AdventureGame() {
         console.error('[AdventureGame] Narrative generation failed:', genError);
       }
       
-      // Create story entry (use fallback if narrative generation failed)
-      const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+      // Create story entry (use blended fallback if narrative generation failed)
+      const narrativeContent = narrative || buildBlendedFallbackOpening(
+        scenarioSelection?.genre || 'fantasy',
+        char.name,
+        scenario,
+        worldBible?.secondaryGenres || []
+      );
       const newStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
@@ -616,11 +633,16 @@ export function AdventureGame() {
       setPhase('playing');
     } catch (error) {
       console.error('[AdventureGame] Character complete failed:', error);
-      // Still transition to playing with fallback story
+      // Still transition to playing with blended fallback story
       const fallbackStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
-        content: `You find yourself at the beginning of a new adventure. The world awaits your first move.`,
+        content: buildBlendedFallbackOpening(
+          scenarioSelection?.genre || 'fantasy',
+          char.name,
+          scenario,
+          worldBible?.secondaryGenres || []
+        ),
         timestamp: Date.now(),
       }];
       setStory(fallbackStory);
