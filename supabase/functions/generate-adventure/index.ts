@@ -328,6 +328,10 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       if (character) {
         startMessage += `\n\nRemember, the player is ${character.name}, a level ${character.level} ${character.classId} with a ${character.backgroundId} background.`;
       }
+      // If genre contract exists with blending, emphasize it for opening
+      if (genreContract) {
+        startMessage += `\n\nIMPORTANT FOR OPENING: Use the genre contract to blend elements proportionally. The primary genre should dominate the narrative tone, but weave in secondary genre elements according to their blend percentages. Create an opening that feels cohesive while incorporating all selected genres.`;
+      }
       messages.push({ role: 'user', content: startMessage });
     } else {
       // Add conversation history
