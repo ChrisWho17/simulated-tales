@@ -76,6 +76,7 @@ interface AdventureRequest {
   emotionalContext?: EmotionalContext;
   reputationContext?: ReputationContext;
   genreContract?: string; // World Bible genre contract summary
+  adultContent?: boolean; // 18+ content toggle
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -200,7 +201,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -247,6 +248,36 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     }
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
+    }
+
+    // Add content rating instructions based on adult content setting
+    if (adultContent) {
+      systemContent += `
+
+=== MATURE CONTENT MODE (18+) ===
+Adult content is ENABLED. You may:
+- Include explicit romantic and sexual content when narratively appropriate
+- Describe intimate encounters with tasteful but detailed prose
+- Include mature themes: violence, sexuality, substance use, dark psychological content
+- Write sensual and erotic scenes with appropriate buildup and consent
+- Describe physical attraction and desire explicitly
+- Include adult language and explicit descriptions
+
+Write mature content naturally when the story calls for it. Don't shy away from explicit detail when it serves the narrative. Romance and intimacy should feel authentic and immersive.`;
+    } else {
+      systemContent += `
+
+=== CONTENT RESTRICTIONS (SAFE MODE) ===
+Adult content is DISABLED. You MUST:
+- Keep all content PG-13 or below
+- Fade to black for any romantic/intimate scenes
+- Avoid explicit sexual content, nudity descriptions, or erotic detail
+- Keep violence non-gratuitous (action is fine, gore is not)
+- No explicit language or vulgar content
+- Romance can be present but must remain tasteful and non-explicit
+- Suggest intimacy through implication, not description
+
+This is a family-friendly mode. Keep content appropriate for all audiences while still telling compelling stories with drama and tension.`;
     }
 
     // Build messages array

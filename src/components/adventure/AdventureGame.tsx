@@ -276,6 +276,8 @@ export function AdventureGame() {
             emotionalContext,
             // Pass genre contract summary for AI awareness
             genreContract: worldBible?.contractSummary || null,
+            // Pass adult content setting for NSFW control
+            adultContent: settings.adultContent,
           }),
         }
       );
