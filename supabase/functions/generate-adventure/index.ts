@@ -64,6 +64,19 @@ interface NarratorConfig {
   emotionalLeakage: boolean;
 }
 
+interface ToneContext {
+  currentTone: string;
+  intensity: number;
+  playerChaosLevel: number;
+  toneInstructions: string;
+}
+
+interface LanguageContext {
+  playerKnownLanguages: string[];
+  translateEnabled: boolean;
+  languageInstructions: string;
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -84,6 +97,8 @@ interface AdventureRequest {
   genreContract?: string; // World Bible genre contract summary
   adultContent?: boolean; // 18+ content toggle
   narratorConfig?: NarratorConfig; // Customizable narrator style
+  toneContext?: ToneContext; // Tone adaptation system
+  languageContext?: LanguageContext; // Language barrier system
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -317,7 +332,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -367,6 +382,28 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     if (memoryContext?.fullContext) {
       systemContent += '\n\n=== CAMPAIGN MEMORY ===' + memoryContext.fullContext;
     }
+    
+    // Add tone adaptation context
+    if (toneContext?.toneInstructions) {
+      systemContent += '\n\n' + toneContext.toneInstructions;
+    }
+    
+    // Add language barrier context
+    if (languageContext?.languageInstructions) {
+      systemContent += '\n\n' + languageContext.languageInstructions;
+      
+      // Add language learning trigger instructions
+      systemContent += `
+
+LANGUAGE LEARNING (use sparingly - most players don't think about languages):
+If an NPC naturally offers to teach the player a phrase or word, or if the player attempts extended communication in a foreign language through gestures/context, you MAY include:
+[LEARN_LANGUAGE:languageCode:reason]
+- Only trigger when it makes narrative sense (studying with a teacher, NPC patiently explaining, extended immersion)
+- This should be rare and feel like a natural story moment, not a gamified mechanic
+- Example: [LEARN_LANGUAGE:elvish:The elven scholar spent hours teaching you the basics of her tongue]
+- Do NOT force this - it's a minor detail that adds flavor when appropriate`;
+    }
+    
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
     }
@@ -641,6 +678,16 @@ Write what happens as a result of this action. Transform it into evocative prose
         milestoneType: match[2].trim()
       });
     }
+    
+    // Parse language learning events
+    const languageLearnMatches = [...narrative.matchAll(/\[LEARN_LANGUAGE:([^:]+):([^\]]+)\]/g)];
+    const languagesLearned: Array<{ language: string; reason: string }> = [];
+    for (const match of languageLearnMatches) {
+      languagesLearned.push({
+        language: match[1].trim().toLowerCase(),
+        reason: match[2].trim()
+      });
+    }
 
     // Clean the narrative of mechanic tags for display
     let cleanNarrative = narrative
@@ -655,6 +702,8 @@ Write what happens as a result of this action. Transform it into evocative prose
       .replace(/\[HEAL:\d+\]/g, '')
       .replace(/\[RELATIONSHIP:[^\]]+\]/g, '')
       .replace(/\[MILESTONE:[^\]]+\]/g, '')
+      .replace(/\[LEARN_LANGUAGE:[^\]]+\]/g, '')
+      .replace(/\[LANGUAGE:[^\]]+\]/g, '') // Keep language tags for client-side processing
       .trim();
 
     const mechanics: any = {};
@@ -692,6 +741,9 @@ Write what happens as a result of this action. Transform it into evocative prose
     }
     if (milestoneChanges.length > 0) {
       mechanics.milestoneChanges = milestoneChanges;
+    }
+    if (languagesLearned.length > 0) {
+      mechanics.languagesLearned = languagesLearned;
     }
 
     console.log('Generated narrative length:', cleanNarrative.length, 'Mechanics:', Object.keys(mechanics));
