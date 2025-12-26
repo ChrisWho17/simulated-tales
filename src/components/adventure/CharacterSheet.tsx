@@ -5,8 +5,9 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown
+  BookHeart, ChevronDown, Search, Pencil, Check
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ModifierDisplay, calculateEffectiveStats } from './ModifierDisplay';
@@ -24,7 +25,8 @@ import {
   MilestoneType,
   PersonalNote,
   addPersonalNote,
-  deletePersonalNote
+  deletePersonalNote,
+  updatePersonalNote
 } from '@/lib/relationshipJournal';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -558,11 +560,50 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
   );
 }
 
-// Relationship Journal Section Component - Enhanced with color coding and detail modal
+// Relationship Journal Section Component - Enhanced with color coding, search, and detail modal
 function RelationshipJournalSection() {
   const [isOpen, setIsOpen] = useState(true);
   const [selectedJournal, setSelectedJournal] = useState<NPCRelationshipJournal | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const journals = useMemo(() => getAllJournals(), []);
+  
+  // Search results across all journals
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    
+    const query = searchQuery.toLowerCase();
+    const results: {
+      npcName: string;
+      npcId: string;
+      milestone: MilestoneType;
+      moments: RelationshipMoment[];
+      notes: PersonalNote[];
+    }[] = [];
+    
+    for (const journal of journals) {
+      const matchingMoments = journal.moments.filter(m => 
+        m.description.toLowerCase().includes(query) ||
+        m.type.toLowerCase().includes(query)
+      );
+      const matchingNotes = (journal.personalNotes || []).filter(n =>
+        n.content.toLowerCase().includes(query)
+      );
+      const nameMatches = journal.npcName.toLowerCase().includes(query);
+      
+      if (matchingMoments.length > 0 || matchingNotes.length > 0 || nameMatches) {
+        results.push({
+          npcName: journal.npcName,
+          npcId: journal.npcId,
+          milestone: journal.currentMilestone,
+          moments: matchingMoments,
+          notes: matchingNotes,
+        });
+      }
+    }
+    
+    return results;
+  }, [journals, searchQuery]);
   
   if (journals.length === 0) {
     return (
@@ -582,27 +623,91 @@ function RelationshipJournalSection() {
     <>
       <div className="space-y-3 border-t border-border/30 pt-4 mt-4">
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger className="w-full flex items-center justify-between hover:text-primary transition-colors">
-            <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
-              <BookHeart className="w-4 h-4" />
-              Relationship Journal
-              <span className="text-xs text-muted-foreground font-normal">
-                ({journals.length} {journals.length === 1 ? 'connection' : 'connections'})
-              </span>
-            </h3>
-            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          </CollapsibleTrigger>
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger className="flex-1 flex items-center justify-between hover:text-primary transition-colors">
+              <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
+                <BookHeart className="w-4 h-4" />
+                Relationship Journal
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({journals.length} {journals.length === 1 ? 'connection' : 'connections'})
+                </span>
+              </h3>
+              <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            {isOpen && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSearch(!showSearch); }}
+                className={`ml-2 p-1.5 rounded-md transition-colors ${
+                  showSearch ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
+                }`}
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
+          </div>
           
-          <CollapsibleContent className="pt-3">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {journals.map(journal => (
-                <JournalCard 
-                  key={journal.npcId} 
-                  journal={journal} 
-                  onClick={() => setSelectedJournal(journal)}
+          <CollapsibleContent className="pt-3 space-y-3">
+            {/* Search Bar */}
+            {showSearch && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search moments, notes, or names..."
+                  className="pl-9 text-sm h-9 bg-background/50"
+                  autoFocus
                 />
-              ))}
-            </div>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* Search Results */}
+            {searchResults ? (
+              <div className="space-y-3">
+                {searchResults.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    No results found for "{searchQuery}"
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Found {searchResults.reduce((acc, r) => acc + r.moments.length + r.notes.length, 0)} results 
+                      in {searchResults.length} {searchResults.length === 1 ? 'journal' : 'journals'}
+                    </p>
+                    {searchResults.map(result => (
+                      <SearchResultCard 
+                        key={result.npcId}
+                        result={result}
+                        searchQuery={searchQuery}
+                        onClick={() => {
+                          const fullJournal = journals.find(j => j.npcId === result.npcId);
+                          if (fullJournal) setSelectedJournal(fullJournal);
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </div>
+            ) : (
+              /* Normal Journal Grid */
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {journals.map(journal => (
+                  <JournalCard 
+                    key={journal.npcId} 
+                    journal={journal} 
+                    onClick={() => setSelectedJournal(journal)}
+                  />
+                ))}
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
       </div>
@@ -615,6 +720,63 @@ function RelationshipJournalSection() {
         />
       )}
     </>
+  );
+}
+
+// Search result card component
+function SearchResultCard({ 
+  result, 
+  searchQuery, 
+  onClick 
+}: { 
+  result: { npcName: string; npcId: string; milestone: MilestoneType; moments: RelationshipMoment[]; notes: PersonalNote[] };
+  searchQuery: string;
+  onClick: () => void;
+}) {
+  const milestoneInfo = getMilestoneInfo(result.milestone);
+  
+  // Highlight matching text
+  const highlightText = (text: string) => {
+    if (!searchQuery.trim()) return text;
+    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, i) => 
+      regex.test(part) ? <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{part}</mark> : part
+    );
+  };
+  
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full p-3 rounded-lg border ${milestoneInfo.borderColor} ${milestoneInfo.bgColor} 
+        hover:scale-[1.01] transition-all text-left`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">{milestoneInfo.icon}</span>
+        <span className="font-medium text-sm">{highlightText(result.npcName)}</span>
+        <span className={`text-xs ${milestoneInfo.color}`}>({milestoneInfo.label})</span>
+      </div>
+      
+      {/* Show first matching moment */}
+      {result.moments.length > 0 && (
+        <div className="text-xs text-muted-foreground mb-1 line-clamp-2">
+          📖 {highlightText(result.moments[0].description)}
+          {result.moments.length > 1 && (
+            <span className="text-primary ml-1">+{result.moments.length - 1} more</span>
+          )}
+        </div>
+      )}
+      
+      {/* Show first matching note */}
+      {result.notes.length > 0 && (
+        <div className="text-xs text-amber-400/80 line-clamp-2">
+          ✏️ {highlightText(result.notes[0].content)}
+          {result.notes.length > 1 && (
+            <span className="text-primary ml-1">+{result.notes.length - 1} more</span>
+          )}
+        </div>
+      )}
+    </button>
   );
 }
 
@@ -846,8 +1008,27 @@ function JournalDetailModal({ journal: initialJournal, onClose }: { journal: NPC
               notes.map(note => (
                 <PersonalNoteEntry 
                   key={note.id} 
-                  note={note} 
+                  note={note}
+                  npcId={journal.npcId}
                   onDelete={() => handleDeleteNote(note.id)}
+                  onUpdate={(newContent) => {
+                    if (updatePersonalNote(journal.npcId, note.id, newContent)) {
+                      setJournal(prev => ({
+                        ...prev,
+                        personalNotes: (prev.personalNotes || []).map(n => 
+                          n.id === note.id 
+                            ? { ...n, content: newContent, dateString: new Date().toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              }) + ' (edited)' }
+                            : n
+                        )
+                      }));
+                      toast.success('Note updated');
+                    }
+                  }}
                 />
               ))
             )}
@@ -858,9 +1039,68 @@ function JournalDetailModal({ journal: initialJournal, onClose }: { journal: NPC
   );
 }
 
-// Personal note entry component
-function PersonalNoteEntry({ note, onDelete }: { note: PersonalNote; onDelete: () => void }) {
+// Personal note entry component with edit capability
+function PersonalNoteEntry({ 
+  note, 
+  npcId,
+  onDelete, 
+  onUpdate 
+}: { 
+  note: PersonalNote; 
+  npcId: string;
+  onDelete: () => void;
+  onUpdate: (newContent: string) => void;
+}) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(note.content);
+  
+  const handleSaveEdit = () => {
+    if (editContent.trim() && editContent !== note.content) {
+      onUpdate(editContent.trim());
+    }
+    setIsEditing(false);
+  };
+  
+  const handleCancelEdit = () => {
+    setEditContent(note.content);
+    setIsEditing(false);
+  };
+  
+  if (isEditing) {
+    return (
+      <div className="p-3 rounded-lg bg-background/50 border border-primary/30 space-y-2">
+        <Textarea
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value.slice(0, 500))}
+          className="min-h-[80px] text-sm resize-none bg-background/50"
+          autoFocus
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {editContent.length}/500 characters
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveEdit}
+              disabled={!editContent.trim()}
+            >
+              <Check className="w-3 h-3 mr-1" />
+              Save
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="p-3 rounded-lg bg-background/40 border-l-4 border-l-amber-500/50 group">
@@ -891,13 +1131,20 @@ function PersonalNoteEntry({ note, onDelete }: { note: PersonalNote; onDelete: (
                 </Button>
               </div>
             ) : (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="opacity-0 group-hover:opacity-100 text-xs text-muted-foreground 
-                  hover:text-destructive transition-all"
-              >
-                Delete
-              </button>
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-xs text-muted-foreground hover:text-primary"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-xs text-muted-foreground hover:text-destructive"
+                >
+                  Delete
+                </button>
+              </div>
             )}
           </div>
         </div>
