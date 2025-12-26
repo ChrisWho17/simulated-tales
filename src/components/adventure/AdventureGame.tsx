@@ -91,6 +91,9 @@ export function AdventureGame() {
   const [story, setStory] = useState<StoryEntry[]>([]);
   
   // Initialize from active campaign or localStorage after initial loading completes
+  // Track if we need to generate initial narrative for a campaign with empty history
+  const needsInitialNarrative = useRef<boolean>(false);
+  
   useEffect(() => {
     // Wait for initial loading to complete
     if (initialLoading) return;
@@ -112,6 +115,12 @@ export function AdventureGame() {
       // Restore world bible if available
       if (campaign.worldBible) {
         restoreWorldBible(JSON.stringify(campaign.worldBible));
+      }
+      
+      // Check if we need to generate initial narrative
+      if (campaign.narrativeHistory.length === 0) {
+        needsInitialNarrative.current = true;
+        setIsLoading(true);
       }
       
       setPhase('playing');
@@ -154,6 +163,7 @@ export function AdventureGame() {
     
     setPhase('scenario');
   }, [initialLoading, phase, campaignContext?.activeCampaign, restoreWorldBible]);
+  
   
   // Sync local state when campaign data changes (e.g., after checkpoint restore)
   const lastSyncedTick = useRef<number>(-1);
@@ -366,6 +376,47 @@ export function AdventureGame() {
       }
     }
   }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
+
+  // Generate initial narrative for campaigns with empty history
+  useEffect(() => {
+    if (phase !== 'playing' || !needsInitialNarrative.current) return;
+    if (!character || !scenarioSelection) return;
+    
+    needsInitialNarrative.current = false;
+    
+    const generateInitialStory = async () => {
+      console.log('[AdventureGame] Generating initial narrative for campaign with empty history');
+      
+      const narrative = await generateNarrative(
+        scenarioSelection.scenario,
+        undefined,
+        [],
+        undefined,
+        character,
+        true // skipLoadingState - we manage it here
+      );
+      
+      const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+      const newStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: narrativeContent,
+        timestamp: Date.now(),
+      }];
+      
+      setStory(newStory);
+      saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+      
+      // Add to campaign narrative history
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(newStory[0]);
+      }
+      
+      setIsLoading(false);
+    };
+    
+    generateInitialStory();
+  }, [phase, character, scenarioSelection, generateNarrative, saveData, campaignContext]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
