@@ -41,6 +41,24 @@ import {
   buildRumorContext,
 } from '@/game/unreliableInformationSystem';
 import {
+  buildObjectOwnershipContext,
+  validateObjectRegistry,
+  repairObjectRegistry,
+} from '@/game/objectRegistrySystem';
+import {
+  buildNPCIdentityContext,
+  validateNPCRelationships,
+  repairNPCRelationships,
+} from '@/game/npcIdentityRegistry';
+import {
+  isPlayerCorrection,
+  parsePlayerCorrection,
+  applyPlayerCorrection,
+  recordCorrection,
+  generateCorrectionAcknowledgment,
+  buildPlayerCorrectionsContext,
+} from '@/game/playerCorrectionSystem';
+import {
   buildConsequenceContext,
   buildWorldStateContext,
 } from '@/game/rippleEffectSystem';
@@ -373,6 +391,38 @@ export function AdventureGame() {
     }
   }, [settings.languageSettings]);
   
+  // === PERIODIC VALIDATION: Run every 5 turns to catch drift ===
+  const lastValidationTurn = useRef<number>(0);
+  useEffect(() => {
+    const currentTurn = campaignMemory?.campaign.currentTick || 0;
+    
+    // Only run validation every 5 turns
+    if (currentTurn - lastValidationTurn.current < 5) return;
+    lastValidationTurn.current = currentTurn;
+    
+    console.log(`[Consistency Validation] Running at turn ${currentTurn}...`);
+    
+    // Validate object registry
+    const objectErrors = validateObjectRegistry();
+    if (objectErrors.length > 0) {
+      console.warn('[Consistency] Object registry errors detected:', objectErrors);
+      repairObjectRegistry(objectErrors);
+      toast.info(`Fixed ${objectErrors.length} object consistency issue(s)`, { duration: 3000 });
+    }
+    
+    // Validate NPC relationships
+    const npcErrors = validateNPCRelationships();
+    if (npcErrors.length > 0) {
+      console.warn('[Consistency] NPC relationship errors detected:', npcErrors);
+      repairNPCRelationships(npcErrors);
+      toast.info(`Fixed ${npcErrors.length} NPC consistency issue(s)`, { duration: 3000 });
+    }
+    
+    if (objectErrors.length === 0 && npcErrors.length === 0) {
+      console.log('[Consistency Validation] No issues found.');
+    }
+  }, [campaignMemory?.campaign.currentTick]);
+  
   const handleMoodChange = useCallback((mood: CoreMoodType) => {
     const prevMood = currentMood;
     setCurrentMood(mood);
@@ -629,6 +679,12 @@ export function AdventureGame() {
             unreliableInfoContext: unreliableInfoPayload,
             // Location and zone context
             locationContext: locationContextPayload,
+            // === CONSISTENCY SYSTEMS ===
+            consistencyContext: {
+              objectOwnership: buildObjectOwnershipContext(),
+              npcIdentity: buildNPCIdentityContext(),
+              playerCorrections: buildPlayerCorrectionsContext(),
+            },
           }),
         }
       );
@@ -775,6 +831,12 @@ export function AdventureGame() {
             genreContract: worldBible?.contractSummary || null,
             narratorConfig: settings.narratorConfig,
             locationContext: locationTransitionContext,
+            // Include consistency context for zone transitions too
+            consistencyContext: {
+              objectOwnership: buildObjectOwnershipContext(),
+              npcIdentity: buildNPCIdentityContext(),
+              playerCorrections: buildPlayerCorrectionsContext(),
+            },
           }),
         }
       );
@@ -1061,6 +1123,45 @@ export function AdventureGame() {
   // Player action during game
   const handlePlayerAction = useCallback(async (action: string, diceRoll?: any) => {
     if (!character || !scenarioSelection) return;
+    
+    const currentTurn = campaignMemory?.campaign.currentTick || 0;
+    
+    // === PLAYER CORRECTION HANDLING ===
+    // Check if this is a meta-correction command (e.g., "AI correct: X and Y are siblings")
+    if (isPlayerCorrection(action)) {
+      const correction = parsePlayerCorrection(action);
+      if (correction) {
+        const result = applyPlayerCorrection(correction, currentTurn);
+        recordCorrection(correction, result, currentTurn);
+        
+        // Generate acknowledgment response
+        const acknowledgment = generateCorrectionAcknowledgment(correction, result);
+        
+        // Add correction as a system entry
+        const correctionEntry: StoryEntry = {
+          id: `narrator_${Date.now()}`,
+          role: 'narrator',
+          content: acknowledgment,
+          timestamp: Date.now(),
+        };
+        
+        const updatedStory = [...story, correctionEntry];
+        setStory(updatedStory);
+        saveData(updatedStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+        
+        if (campaignContext) {
+          campaignContext.addNarrativeEntry(correctionEntry);
+        }
+        
+        if (result.success) {
+          toast.success('Correction applied');
+        } else {
+          toast.error(result.message);
+        }
+        
+        return; // Don't process as regular narrative
+      }
+    }
 
     const playerEntry: StoryEntry = {
       id: `user_${Date.now()}`,
@@ -1104,8 +1205,7 @@ export function AdventureGame() {
       
       // Process action for identity anchors and advance time
       if (campaignMemory) {
-        const currentTick = campaignMemory.campaign.currentTick;
-        const updatedMemory = processActionForIdentity(campaignMemory, action, narrative, currentTick);
+        const updatedMemory = processActionForIdentity(campaignMemory, action, narrative, currentTurn);
         updateCampaignMemory(updatedMemory);
         advanceCampaignTime(1); // Each action is 1 tick
       }
