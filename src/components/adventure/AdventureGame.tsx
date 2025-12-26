@@ -126,7 +126,7 @@ export function AdventureGame() {
   // Campaign context (optional - may not be available)
   const campaignContext = useCampaignOptional();
   
-  // Initial loading state
+  // Initial loading state - quick initialization
   const [initialLoading, setInitialLoading] = useState(true);
 
   // Load saved state - also check campaign system
@@ -139,19 +139,24 @@ export function AdventureGame() {
   const [character, setCharacter] = useState<RPGCharacter | null>(null);
   const [story, setStory] = useState<StoryEntry[]>([]);
   
-  // Initialize from active campaign or localStorage after initial loading completes
-  // Track if we need to generate initial narrative for a campaign with empty history
+  // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
+  const hasInitialized = useRef<boolean>(false);
   
+  // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
-    // Wait for initial loading to complete
-    if (initialLoading) return;
-    // Skip if already initialized (not in loading phase)
+    // Skip if not done loading or already initialized
+    if (initialLoading || hasInitialized.current) return;
+    // Skip if not in loading phase
     if (phase !== 'loading') return;
+    
+    hasInitialized.current = true;
     
     // First check if there's an active campaign in the new system
     if (campaignContext?.activeCampaign) {
       const campaign = campaignContext.activeCampaign;
+      console.log('[AdventureGame] Restoring active campaign:', campaign.meta.name);
+      
       setCharacter(campaign.player);
       setStory(campaign.narrativeHistory);
       setScenarioSelection({
@@ -166,8 +171,9 @@ export function AdventureGame() {
         restoreWorldBible(JSON.stringify(campaign.worldBible));
       }
       
-      // Check if we need to generate initial narrative
+      // Check if we need to generate initial narrative (restored campaign with no history)
       if (campaign.narrativeHistory.length === 0) {
+        console.log('[AdventureGame] Campaign has empty history, will generate initial narrative');
         needsInitialNarrative.current = true;
         setIsLoading(true);
       }
@@ -187,6 +193,7 @@ export function AdventureGame() {
         const char = JSON.parse(savedChar);
         const storyData = JSON.parse(savedStory);
         if (char && storyData.length > 0) {
+          console.log('[AdventureGame] Restoring from localStorage');
           setCharacter(char);
           setStory(storyData);
           if (savedScenario && savedGenre) {
@@ -200,16 +207,20 @@ export function AdventureGame() {
           setPhase('playing');
           return;
         }
-      } catch {}
+      } catch (e) {
+        console.error('[AdventureGame] Failed to parse localStorage save:', e);
+      }
     }
     
     // Check if there are any saves - if so, show recovery prompt
     const recentSave = getMostRecentSave();
     if (recentSave) {
+      console.log('[AdventureGame] Found recent save, showing recovery prompt');
       setPhase('recovery');
       return;
     }
     
+    console.log('[AdventureGame] No saved state, starting fresh');
     setPhase('scenario');
   }, [initialLoading, phase, campaignContext?.activeCampaign, restoreWorldBible]);
   
@@ -267,12 +278,13 @@ export function AdventureGame() {
     }
   }, [currentMood, campaignMemory]);
 
-  // Handle initial loading complete and load color
+  // Quick initial loading - just apply color theme
   useEffect(() => {
     loadColorPreference();
+    // Minimal loading time - just enough for visual polish
     const timer = setTimeout(() => {
       setInitialLoading(false);
-    }, 2500);
+    }, 800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -815,7 +827,7 @@ export function AdventureGame() {
 
   // Show loading screen on initial load
   if (initialLoading) {
-    return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." />;
+    return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." minDuration={500} />;
   }
 
   // Phase 0.5: Recovery prompt for returning players

@@ -13,7 +13,7 @@ export function LoadingScreen({
   isLoading, 
   message = 'Preparing your adventure...', 
   onLoadComplete,
-  minDuration = 2000 
+  minDuration = 500 
 }: LoadingScreenProps) {
   const [visible, setVisible] = useState(isLoading);
   const [fadeOut, setFadeOut] = useState(false);
