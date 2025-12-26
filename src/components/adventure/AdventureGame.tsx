@@ -417,20 +417,21 @@ export function AdventureGame() {
 
     // Pass skipLoadingState=true since we manage loading ourselves
     const narrative = await generateNarrative(scenario, undefined, [], undefined, char, true);
-    if (narrative) {
-      const newStory: StoryEntry[] = [{
-        id: `narrator_${Date.now()}`,
-        role: 'narrator',
-        content: narrative,
-        timestamp: Date.now(),
-      }];
-      setStory(newStory);
-      saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
-      
-      // Add to campaign narrative history
-      if (campaignContext) {
-        campaignContext.addNarrativeEntry(newStory[0]);
-      }
+    
+    // Create story entry (use fallback if narrative generation failed)
+    const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+    const newStory: StoryEntry[] = [{
+      id: `narrator_${Date.now()}`,
+      role: 'narrator',
+      content: narrativeContent,
+      timestamp: Date.now(),
+    }];
+    setStory(newStory);
+    saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+    
+    // Add to campaign narrative history
+    if (campaignContext) {
+      campaignContext.addNarrativeEntry(newStory[0]);
     }
     
     // Set playing BEFORE clearing loading so the transition happens while loading overlay is still visible

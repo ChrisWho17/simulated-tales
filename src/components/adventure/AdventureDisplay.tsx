@@ -1173,6 +1173,21 @@ export function AdventureDisplay({
       {/* Story Content */}
       <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+          {/* Initial loading state when story is empty */}
+          {story.length === 0 && isLoading && (
+            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground font-narrative text-lg">Your story is being written...</p>
+            </div>
+          )}
+
+          {/* Empty state when no story and not loading */}
+          {story.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+              <p className="text-muted-foreground font-narrative text-lg">Begin your adventure below...</p>
+            </div>
+          )}
+
           {/* Rollback hint for new players */}
           {showRollbackHint && story.length >= 2 && story.length <= 4 && (
             <div className="mb-6 text-center animate-fade-in">
@@ -1278,7 +1293,8 @@ export function AdventureDisplay({
             </div>
           ))}
 
-          {isLoading && (
+          {/* Loading indicator for ongoing narrative generation (only when story has content) */}
+          {isLoading && story.length > 0 && (
             <div className="flex items-center gap-3 text-primary animate-pulse glass-panel-subtle px-4 py-3 rounded-xl inline-flex">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span className="font-narrative italic">The story unfolds...</span>
