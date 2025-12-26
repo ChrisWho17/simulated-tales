@@ -464,8 +464,19 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       }
       
       // Add current player action with dice roll result if present
+      // CRITICAL: Structure player action as context, NOT as literal text to echo
       if (playerAction) {
-        let actionContent = playerAction;
+        // Clean player input: remove leading "I" patterns that cause echo
+        const cleanedAction = playerAction.trim()
+          .replace(/^i\s+/i, '')  // Remove leading "I " 
+          .replace(/^i$/i, 'pause');  // Handle bare "I" input
+        
+        // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
+        let actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
+"${cleanedAction}"
+
+Write what happens as a result of this action. Transform it into evocative prose.`;
+        
         if (diceRoll) {
           const rollResult = diceRoll.criticalSuccess 
             ? '[CRITICAL SUCCESS!]' 
