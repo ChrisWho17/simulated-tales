@@ -18,6 +18,21 @@ import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
+import { 
+  ToneState, 
+  createInitialToneState, 
+  analyzePlayerTone, 
+  updateToneState, 
+  buildToneContext 
+} from '@/game/toneSystem';
+import { 
+  LanguageSystemState, 
+  createLanguageSystemState, 
+  buildLanguageContext,
+  postProcessLanguageInResponse,
+  learnLanguage,
+  getLanguageDisplayName
+} from '@/game/languageSystem';
 import { StoryEntry } from './types';
 import { 
   validateGenerationState, 
@@ -284,10 +299,49 @@ export function AdventureGame() {
   });
   const [moodHistory, setMoodHistory] = useState<Array<{ mood: CoreMoodType; timestamp: number; chapter: number; trigger: string }>>([]);
   
+  // Tone adaptation system state
+  const [toneState, setToneState] = useState<ToneState>(() => {
+    try {
+      const saved = localStorage.getItem('untold-tone-state');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return createInitialToneState();
+  });
+  
+  // Language barrier system state
+  const [languageState, setLanguageState] = useState<LanguageSystemState>(() => {
+    try {
+      const saved = localStorage.getItem('untold-language-state');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return createLanguageSystemState();
+  });
+  
   // Persist mood changes
   useEffect(() => {
     localStorage.setItem('untold-player-mood', JSON.stringify(currentMood));
   }, [currentMood]);
+  
+  // Persist tone state
+  useEffect(() => {
+    localStorage.setItem('untold-tone-state', JSON.stringify(toneState));
+  }, [toneState]);
+  
+  // Persist language state
+  useEffect(() => {
+    localStorage.setItem('untold-language-state', JSON.stringify(languageState));
+  }, [languageState]);
+  
+  // Sync language settings from GameContext
+  useEffect(() => {
+    if (settings.languageSettings) {
+      setLanguageState(prev => ({
+        ...prev,
+        translateEnabled: settings.languageSettings.translateEnabled,
+        playerKnownLanguages: settings.languageSettings.playerKnownLanguages || prev.playerKnownLanguages,
+      }));
+    }
+  }, [settings.languageSettings]);
   
   const handleMoodChange = useCallback((mood: CoreMoodType) => {
     const prevMood = currentMood;
@@ -444,6 +498,29 @@ export function AdventureGame() {
       
       // === RACE CONDITION FIX: Clean player input to prevent echo ===
       const cleanedPlayerAction = playerAction ? cleanPlayerInputForPrompt(playerAction) : undefined;
+      
+      // === TONE ADAPTATION: Analyze player input and build context ===
+      let toneContextPayload = undefined;
+      if (cleanedPlayerAction) {
+        const playerTone = analyzePlayerTone(cleanedPlayerAction);
+        const toneInstructions = buildToneContext(toneState, playerTone);
+        toneContextPayload = {
+          currentTone: playerTone.tone,
+          intensity: playerTone.intensity,
+          playerChaosLevel: toneState.playerChaosLevel,
+          toneInstructions,
+        };
+        // Update tone state after building context
+        setToneState(prev => updateToneState(prev, playerTone));
+      }
+      
+      // === LANGUAGE BARRIER: Build language context ===
+      const languageInstructions = buildLanguageContext(languageState);
+      const languageContextPayload = {
+        playerKnownLanguages: languageState.playerKnownLanguages,
+        translateEnabled: languageState.translateEnabled,
+        languageInstructions,
+      };
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -465,6 +542,10 @@ export function AdventureGame() {
             adultContent: settings.adultContent,
             // Pass narrator style configuration
             narratorConfig: settings.narratorConfig,
+            // Pass tone adaptation context
+            toneContext: toneContextPayload,
+            // Pass language barrier context
+            languageContext: languageContextPayload,
           }),
         }
       );
@@ -498,7 +579,22 @@ export function AdventureGame() {
       }
       
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
-      if (data.mechanics) setPendingMechanics(data.mechanics);
+      if (data.mechanics) {
+        setPendingMechanics(data.mechanics);
+        
+        // Handle language learning from backend
+        if (data.mechanics.languagesLearned && data.mechanics.languagesLearned.length > 0) {
+          for (const learned of data.mechanics.languagesLearned) {
+            if (!languageState.playerKnownLanguages.includes(learned.language)) {
+              setLanguageState(prev => learnLanguage(prev, learned.language));
+              toast.success(`You've learned ${getLanguageDisplayName(learned.language)}!`, {
+                description: learned.reason,
+                duration: 5000,
+              });
+            }
+          }
+        }
+      }
       
       // If we have a narrative, validate it through World Bible
       if (data.narrative) {
@@ -514,8 +610,12 @@ export function AdventureGame() {
           // Use modified content or fallback
           return validation.content || getContextualFallback(genre);
         }
-        // Return validated (possibly reskinned) content
-        return validation.content;
+        
+        // Post-process for language formatting (client-side)
+        const processedContent = postProcessLanguageInResponse(validation.content, languageState);
+        
+        // Return validated and language-processed content
+        return processedContent;
       }
       
       // If no narrative at all, generate a local neutral continuation
@@ -533,7 +633,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState]);
 
   // Generate initial narrative for campaigns with empty history
   // Track the campaign ID we're generating for to prevent duplicate calls
