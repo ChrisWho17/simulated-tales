@@ -354,6 +354,8 @@ export function detectGenreFromScenario(scenario: string): GameGenre {
   if (lower.includes('cyberpunk') || lower.includes('neon') || lower.includes('hacker') || lower.includes('corporation') || lower.includes('dystopia') || lower.includes('chrome')) return 'cyberpunk';
   if (lower.includes('western') || lower.includes('cowboy') || lower.includes('frontier') || lower.includes('outlaw') || lower.includes('saloon') || lower.includes('sheriff')) return 'western';
   if (lower.includes('apocalypse') || lower.includes('wasteland') || lower.includes('survivor') || lower.includes('ruins') || lower.includes('fallout') || lower.includes('radiation')) return 'postapoc';
+  if (lower.includes('war') || lower.includes('battle') || lower.includes('soldier') || lower.includes('military') || lower.includes('combat') || lower.includes('army')) return 'war';
+  if (lower.includes('modern life') || lower.includes('city life') || lower.includes('career') || lower.includes('apartment') || lower.includes('everyday') || lower.includes('slice of life') || lower.includes('relationships') || lower.includes('dating') || lower.includes('job') || lower.includes('office') || lower.includes('simoleons')) return 'modern_life';
   if (lower.includes('magic') || lower.includes('dragon') || lower.includes('wizard') || lower.includes('kingdom') || lower.includes('quest') || lower.includes('fantasy')) return 'fantasy';
   return 'fantasy';
 }

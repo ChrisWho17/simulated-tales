@@ -167,6 +167,15 @@ const ART_STYLES: Record<string, Partial<Record<EraId, string>> & { default: str
   },
   postapoc: {
     default: "gritty post-apocalyptic art, muted earth tones"
+  },
+  war: {
+    default: "dramatic military portrait, realistic oil painting style"
+  },
+  pirate: {
+    default: "golden age of piracy illustration, nautical adventure art"
+  },
+  modern_life: {
+    default: "contemporary lifestyle photography style, warm natural lighting, modern portrait"
   }
 };
 
