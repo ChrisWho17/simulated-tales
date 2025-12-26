@@ -228,32 +228,52 @@ export class ValidationEngine {
       const { banned, reason } = this.isBanned(entity, worldBible);
       
       if (banned) {
-        // Check intrusion budget
-        const budgetRemaining = worldBible.intrusionBudget - worldBible.intrusionsThisChapter - intrusionsUsed;
-        
-        if (budgetRemaining > 0 && !worldBible.hardLock) {
-          // Use intrusion budget
-          intrusionsUsed++;
-          warnings.push({
-            entity,
-            reason: `Allowed via intrusion budget (${budgetRemaining - 1} remaining)`,
-          });
-        } else {
-          // Try to reskin
-          const reskin = this.findReskin(entity, worldBible);
+        if (worldBible.hardLock) {
+          // HARD LOCK MODE: No intrusions, no reskins - just block or allow based on genre
+          // Check if entity is from an allowed genre's vocabulary
+          const isAllowedByGenre = this.isAllowedBySelectedGenres(entity, worldBible);
           
-          if (reskin && !worldBible.hardLock) {
-            reskins.push({
-              original: entity.text,
-              replacement: reskin,
-              rule: `${entity.category} reskin`,
+          if (isAllowedByGenre) {
+            // Entity is from one of the selected genres - allow with warning
+            warnings.push({
+              entity,
+              reason: `Allowed: matches selected genre blend`,
             });
           } else {
-            // Block
+            // Block completely - hard lock means strict adherence
             violations.push({
               entity,
               reason: reason as ValidationResult['violations'][0]['reason'],
             });
+          }
+        } else {
+          // Normal mode: Use intrusion budget and reskins
+          const budgetRemaining = worldBible.intrusionBudget - worldBible.intrusionsThisChapter - intrusionsUsed;
+          
+          if (budgetRemaining > 0) {
+            // Use intrusion budget
+            intrusionsUsed++;
+            warnings.push({
+              entity,
+              reason: `Allowed via intrusion budget (${budgetRemaining - 1} remaining)`,
+            });
+          } else {
+            // Try to reskin
+            const reskin = this.findReskin(entity, worldBible);
+            
+            if (reskin) {
+              reskins.push({
+                original: entity.text,
+                replacement: reskin,
+                rule: `${entity.category} reskin`,
+              });
+            } else {
+              // Block
+              violations.push({
+                entity,
+                reason: reason as ValidationResult['violations'][0]['reason'],
+              });
+            }
           }
         }
       }
@@ -275,6 +295,42 @@ export class ValidationEngine {
       modifiedContent,
       originalContent: content,
     };
+  }
+  
+  /**
+   * Check if an entity is allowed by one of the selected genres
+   */
+  static isAllowedBySelectedGenres(entity: ExtractedEntity, worldBible: WorldBible): boolean {
+    const text = entity.text.toLowerCase();
+    
+    // Import genre definitions lazily to avoid circular imports
+    const { getGenreDefinition } = require('./genreDefinitions');
+    
+    // Check primary genre
+    const primaryDef = getGenreDefinition(worldBible.primaryGenre);
+    if (primaryDef) {
+      for (const elem of primaryDef.coreElements) {
+        if (text.includes(elem.toLowerCase()) || elem.toLowerCase().includes(text)) {
+          return true;
+        }
+      }
+    }
+    
+    // Check secondary genres
+    for (const blend of worldBible.secondaryGenres) {
+      const secDef = getGenreDefinition(blend.genreId);
+      if (secDef) {
+        // Check proportional to blend strength
+        const elementsToCheck = Math.ceil(secDef.coreElements.length * (blend.blendStrength * 3));
+        for (const elem of secDef.coreElements.slice(0, elementsToCheck)) {
+          if (text.includes(elem.toLowerCase()) || elem.toLowerCase().includes(text)) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    return false;
   }
   
   /**
@@ -375,9 +431,12 @@ export class ValidationEngine {
     
     if (worldBible.secondaryGenres.length > 0) {
       const blends = worldBible.secondaryGenres
-        .map(g => `${g.genreId} (${Math.round(g.blendStrength * 100)}%)`)
+        .map(g => `${g.genreId} (${Math.round(g.blendStrength * 100)}% influence)`)
         .join(', ');
-      lines.push(`SECONDARY GENRES: ${blends}`);
+      lines.push(`BLENDED WITH: ${blends}`);
+      lines.push(`GENRE LOCK: ${worldBible.hardLock ? 'HARD (strict adherence to selected genres only)' : 'SOFT (allows creative adaptation)'}`);
+    } else {
+      lines.push(`GENRE MODE: ${worldBible.hardLock ? 'PURE (single genre, strict adherence)' : 'FLEXIBLE (allows creative elements)'}`);
     }
     
     lines.push(``);
@@ -387,24 +446,32 @@ export class ValidationEngine {
     lines.push(`- Allowed Species: ${worldBible.speciesAllowed.join(', ')}`);
     
     lines.push(``);
-    lines.push(`BANNED ELEMENTS (never include):`);
-    lines.push(worldBible.bannedElements.slice(0, 15).join(', '));
+    if (worldBible.hardLock) {
+      lines.push(`STRICT MODE ACTIVE: Only include elements from the selected genre(s).`);
+      lines.push(`Do NOT introduce elements from other genres or settings.`);
+    } else {
+      lines.push(`BANNED ELEMENTS (avoid unless dramatically necessary):`);
+      lines.push(worldBible.bannedElements.slice(0, 15).join(', '));
+    }
     
     if (worldBible.tabooList.length > 0) {
       lines.push(``);
-      lines.push(`CONTENT RESTRICTIONS:`);
+      lines.push(`CONTENT RESTRICTIONS (never include):`);
       lines.push(worldBible.tabooList.join(', '));
     }
     
     lines.push(``);
     lines.push(`ESCALATION MENU (use these to raise stakes):`);
     for (const tier of worldBible.escalationMenu.slice(0, 4)) {
-      lines.push(`Tier ${tier.tier}: ${tier.beats.slice(0, 3).join(', ')}`);
+      lines.push(`Tier ${tier.tier}: ${tier.beats.slice(0, 4).join(', ')}`);
     }
     
     lines.push(``);
-    lines.push(`When raising tension, choose from the escalation menu above.`);
-    lines.push(`Do NOT import elements from other genres.`);
+    if (worldBible.secondaryGenres.length > 0) {
+      lines.push(`When crafting narrative, blend elements from selected genres proportionally.`);
+      lines.push(`Higher blend percentages mean more prominent secondary genre elements.`);
+    }
+    lines.push(`Choose escalation beats from the menu above to raise tension.`);
     
     return lines.join('\n');
   }
