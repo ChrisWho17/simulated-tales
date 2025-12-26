@@ -241,6 +241,20 @@ export function AdventureGame() {
     }
   }, [phase, campaignContext?.activeCampaign?.currentTick]);
 
+  // CRITICAL: Sync local story state to campaign before auto-save triggers
+  // This ensures narrator responses are properly persisted
+  const lastSyncedStoryLength = useRef<number>(0);
+  useEffect(() => {
+    if (phase !== 'playing' || !campaignContext?.syncNarrativeHistory) return;
+    
+    // Only sync if story has changed since last sync
+    if (story.length !== lastSyncedStoryLength.current && story.length > 0) {
+      lastSyncedStoryLength.current = story.length;
+      campaignContext.syncNarrativeHistory(story);
+      console.log(`[Story Sync] Synced ${story.length} entries to campaign`);
+    }
+  }, [phase, story, campaignContext]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
@@ -764,16 +778,28 @@ export function AdventureGame() {
   }, []);
 
   // Rollback story to a specific entry (discard everything after)
+  // IMPORTANT: Block rollback while AI is generating to prevent flickering
   const handleRollbackToEntry = useCallback((entryIndex: number) => {
     if (!character || !scenarioSelection) return;
+    
+    // Block rollback during AI generation to prevent flickering/race conditions
+    if (isLoading) {
+      toast.error('Cannot rewind while AI is generating. Please wait...');
+      return;
+    }
     
     // Keep story up to and including the target entry
     const rolledBackStory = story.slice(0, entryIndex + 1);
     setStory(rolledBackStory);
     saveData(rolledBackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
     
+    // Also sync to campaign immediately
+    if (campaignContext?.syncNarrativeHistory) {
+      campaignContext.syncNarrativeHistory(rolledBackStory);
+    }
+    
     console.log(`[Story Rollback] Reverted to entry ${entryIndex}, discarded ${story.length - entryIndex - 1} entries`);
-  }, [story, character, scenarioSelection, saveData]);
+  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext]);
 
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {

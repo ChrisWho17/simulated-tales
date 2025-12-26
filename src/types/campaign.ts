@@ -159,6 +159,7 @@ export interface CampaignContextType {
   updateCampaign: (updates: Partial<CampaignData>) => void;
   updatePlayer: (player: RPGCharacter) => void;
   addNarrativeEntry: (entry: StoryEntry) => void;
+  syncNarrativeHistory: (entries: StoryEntry[]) => void;
   advanceChapter: (title?: string) => void;
   
   // Checkpoints
