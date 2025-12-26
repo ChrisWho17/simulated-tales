@@ -378,45 +378,78 @@ export function AdventureGame() {
   }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
 
   // Generate initial narrative for campaigns with empty history
+  // Use a separate ref to track if generation is in progress to prevent duplicate calls
+  const isGeneratingInitial = useRef<boolean>(false);
+  
   useEffect(() => {
+    // Must be in playing phase with the flag set
     if (phase !== 'playing' || !needsInitialNarrative.current) return;
+    // Must have required data
     if (!character || !scenarioSelection) return;
+    // Prevent duplicate calls
+    if (isGeneratingInitial.current) return;
     
+    // Mark as generating and clear the flag
+    isGeneratingInitial.current = true;
     needsInitialNarrative.current = false;
     
     const generateInitialStory = async () => {
       console.log('[AdventureGame] Generating initial narrative for campaign with empty history');
       
-      const narrative = await generateNarrative(
-        scenarioSelection.scenario,
-        undefined,
-        [],
-        undefined,
-        character,
-        true // skipLoadingState - we manage it here
-      );
-      
-      const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
-      const newStory: StoryEntry[] = [{
-        id: `narrator_${Date.now()}`,
-        role: 'narrator',
-        content: narrativeContent,
-        timestamp: Date.now(),
-      }];
-      
-      setStory(newStory);
-      saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
-      
-      // Add to campaign narrative history
-      if (campaignContext) {
-        campaignContext.addNarrativeEntry(newStory[0]);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              scenario: scenarioSelection.scenario,
+              conversationHistory: [],
+              character: character,
+              adultContent: settings.adultContent,
+            }),
+          }
+        );
+        
+        const data = await response.json();
+        const narrativeContent = data.narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+        
+        const newStory: StoryEntry[] = [{
+          id: `narrator_${Date.now()}`,
+          role: 'narrator',
+          content: narrativeContent,
+          timestamp: Date.now(),
+        }];
+        
+        setStory(newStory);
+        saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+        
+        // Add to campaign narrative history
+        if (campaignContext) {
+          campaignContext.addNarrativeEntry(newStory[0]);
+        }
+      } catch (error) {
+        console.error('[AdventureGame] Failed to generate initial narrative:', error);
+        // Create fallback story entry
+        const fallbackStory: StoryEntry[] = [{
+          id: `narrator_${Date.now()}`,
+          role: 'narrator',
+          content: `You find yourself at the beginning of a new adventure. The world awaits your first move.`,
+          timestamp: Date.now(),
+        }];
+        setStory(fallbackStory);
+        saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+        if (campaignContext) {
+          campaignContext.addNarrativeEntry(fallbackStory[0]);
+        }
+      } finally {
+        isGeneratingInitial.current = false;
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     generateInitialStory();
-  }, [phase, character, scenarioSelection, generateNarrative, saveData, campaignContext]);
+  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
