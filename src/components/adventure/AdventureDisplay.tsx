@@ -1172,7 +1172,7 @@ export function AdventureDisplay({
 
       {/* Story Content */}
       <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 overflow-x-hidden">
           {/* Initial loading state when story is empty */}
           {story.length === 0 && isLoading && (
             <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
@@ -1242,9 +1242,9 @@ export function AdventureDisplay({
               )}
               
               {entry.role === 'user' ? (
-                <div className="inline-block max-w-[85%] glass-panel border-primary/30 px-5 py-4 text-left hover:border-primary/50 transition-all">
+                <div className="inline-block max-w-[90%] sm:max-w-[85%] glass-panel border-primary/30 px-4 sm:px-5 py-3 sm:py-4 text-left hover:border-primary/50 transition-all">
                   <p className="text-xs text-primary/70 mb-2 font-body uppercase tracking-wider">Your Action</p>
-                  <p className="font-narrative text-lg text-foreground">{entry.content}</p>
+                  <p className="font-narrative text-base sm:text-lg text-foreground break-words">{entry.content}</p>
                 </div>
               ) : (
                 <Card className="border-0 bg-transparent shadow-none rounded-lg p-2 -m-2 transition-all hover:bg-primary/5">
@@ -1259,7 +1259,7 @@ export function AdventureDisplay({
                     </div>
                   )}
                   
-                  <div className="font-narrative text-lg text-foreground leading-relaxed">
+                  <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
                     {formatNarrativeContent(entry.content, index)}
                   </div>
                   
@@ -1335,7 +1335,8 @@ export function AdventureDisplay({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="What do you do?"
-              className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-lg py-6 focus:border-primary focus:shadow-glow"
+              className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
+              style={{ fontSize: '16px' }}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
               disabled={isLoading || showDiceRoll}
             />
