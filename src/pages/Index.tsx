@@ -1,7 +1,7 @@
-import { AdventureGame } from '@/components/adventure/AdventureGame';
+import { CampaignGameWrapper } from '@/components/adventure/CampaignGameWrapper';
 
 const Index = () => {
-  return <AdventureGame />;
+  return <CampaignGameWrapper />;
 };
 
 export default Index;

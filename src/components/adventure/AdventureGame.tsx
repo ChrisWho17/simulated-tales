@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllustration';
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
@@ -11,11 +12,13 @@ import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
+import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
+import { StoryEntry } from './types';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -41,25 +44,7 @@ function formatEmotionalContext(
   };
 }
 
-interface StoryEntry {
-  id: string;
-  role: 'user' | 'narrator';
-  content: string;
-  timestamp: number;
-  imageUrl?: string;
-}
-
-interface GameMechanics {
-  rollRequired?: { stat: string; difficulty: number; reason: string };
-  xpGained?: { amount: number; reason: string };
-  goldGained?: number;
-  lootGained?: string | string[];
-  damage?: number;
-  heal?: number;
-  skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
-  relationshipMoments?: Array<{ npcName: string; momentType: string; description: string }>;
-  milestoneChanges?: Array<{ npcName: string; milestoneType: string }>;
-}
+import { GameMechanics } from './types';
 
 type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
 
@@ -70,6 +55,7 @@ const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
 export function AdventureGame() {
+  const navigate = useNavigate();
   const { 
     setDiceMode, 
     initializeCampaign, 
@@ -87,11 +73,21 @@ export function AdventureGame() {
     worldBible,
     restoreWorldBible,
   } = useGame();
+  
+  // Campaign context (optional - may not be available)
+  const campaignContext = useCampaignOptional();
+  
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Load saved state
+  // Load saved state - also check campaign system
   const [phase, setPhase] = useState<GamePhase>(() => {
+    // First check if there's an active campaign in the new system
+    if (campaignContext?.activeCampaign) {
+      return 'playing';
+    }
+    
+    // Fall back to legacy localStorage check
     const savedChar = localStorage.getItem(CHARACTER_KEY);
     const savedStory = localStorage.getItem(STORY_KEY);
     if (savedChar && savedStory) {
@@ -177,11 +173,18 @@ export function AdventureGame() {
   }, []);
 
   const saveData = useCallback((newStory: StoryEntry[], newCharacter: RPGCharacter, scenario: string, genre: GameGenre) => {
+    // Save to legacy localStorage (backward compatibility)
     localStorage.setItem(STORY_KEY, JSON.stringify(newStory));
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(newCharacter));
     localStorage.setItem(SCENARIO_KEY, scenario);
     localStorage.setItem(GENRE_KEY, genre);
-  }, []);
+    
+    // Also sync to campaign system if available
+    if (campaignContext?.activeCampaign) {
+      campaignContext.updatePlayer(newCharacter);
+      // Note: narrative entries are added individually via addNarrativeEntry
+    }
+  }, [campaignContext]);
 
   // Generate scene illustration based on triggers
   const generateSceneIllustration = useCallback(async (
@@ -353,6 +356,12 @@ export function AdventureGame() {
     const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
     initializeCampaign(campaignId, char.name, toneProfile);
     console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+    
+    // Create campaign in new campaign system if available
+    if (campaignContext && worldBible) {
+      const newCampaign = campaignContext.createCampaign(worldBible, char, scenario);
+      console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
+    }
 
     const narrative = await generateNarrative(scenario, undefined, [], undefined, char);
     if (narrative) {
@@ -364,10 +373,16 @@ export function AdventureGame() {
       }];
       setStory(newStory);
       saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+      
+      // Add to campaign narrative history
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(newStory[0]);
+      }
+      
       setPhase('playing');
     }
     setIsLoading(false);
-  }, [generateNarrative, saveData, scenarioSelection, initializeCampaign]);
+  }, [generateNarrative, saveData, scenarioSelection, initializeCampaign, campaignContext, worldBible]);
 
   // Back to scenario selection
   const handleBackToScenario = useCallback(() => {
@@ -388,6 +403,11 @@ export function AdventureGame() {
     
     const updatedStory = [...story, playerEntry];
     setStory(updatedStory);
+    
+    // Add player action to campaign narrative
+    if (campaignContext) {
+      campaignContext.addNarrativeEntry(playerEntry);
+    }
 
     const narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
     if (narrative) {
@@ -401,6 +421,11 @@ export function AdventureGame() {
       setStory(finalStory);
       saveData(finalStory, character, scenarioSelection.scenario, scenarioSelection.genre);
       
+      // Add narrator response to campaign narrative
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(narratorEntry);
+      }
+      
       // Process action for identity anchors and advance time
       if (campaignMemory) {
         const currentTick = campaignMemory.campaign.currentTick;
@@ -412,7 +437,7 @@ export function AdventureGame() {
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
