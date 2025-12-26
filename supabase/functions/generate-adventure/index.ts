@@ -143,6 +143,12 @@ interface AdventureRequest {
   rippleContext?: RippleContext; // Consequence ripples and world state
   unreliableInfoContext?: UnreliableInfoContext; // Rumors and NPC reliability
   locationContext?: LocationTransitionContext; // Zone and location context
+  // World consistency systems
+  consistencyContext?: {
+    objectOwnership: string;   // Item ownership context
+    npcIdentity: string;       // Locked NPC identities
+    playerCorrections: string; // Player meta-corrections
+  };
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -376,7 +382,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -425,6 +431,19 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     }
     if (memoryContext?.fullContext) {
       systemContent += '\n\n=== CAMPAIGN MEMORY ===' + memoryContext.fullContext;
+    }
+    
+    // === WORLD CONSISTENCY CONTEXT ===
+    if (consistencyContext) {
+      if (consistencyContext.objectOwnership) {
+        systemContent += '\n\n' + consistencyContext.objectOwnership;
+      }
+      if (consistencyContext.npcIdentity) {
+        systemContent += '\n\n' + consistencyContext.npcIdentity;
+      }
+      if (consistencyContext.playerCorrections) {
+        systemContent += '\n\n' + consistencyContext.playerCorrections;
+      }
     }
     
     // Add tone adaptation context
