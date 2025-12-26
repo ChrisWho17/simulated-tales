@@ -218,6 +218,9 @@ export function AdventureGame() {
 
   // Check for scene illustration triggers
   const checkSceneTriggers = useCallback((eventType: string, content: string) => {
+    // Respect the scene illustrations setting
+    if (!settings.sceneIllustrations) return;
+    
     const trigger = shouldIllustrateScene(
       eventType,
       content,
@@ -229,7 +232,7 @@ export function AdventureGame() {
     if (trigger) {
       generateSceneIllustration(content, trigger);
     }
-  }, [generateSceneIllustration]);
+  }, [generateSceneIllustration, settings.sceneIllustrations]);
 
   const generateNarrative = useCallback(async (
     scenario: string,
