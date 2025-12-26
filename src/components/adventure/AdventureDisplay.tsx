@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -41,8 +41,9 @@ import {
 import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
+import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
 import { 
-  addRelationshipMoment, 
+  addRelationshipMoment,
   MomentType, 
   MilestoneType 
 } from '@/lib/relationshipJournal';
@@ -145,6 +146,7 @@ export function AdventureDisplay({
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
   const [showDiceRoll, setShowDiceRoll] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
   const [currentDiceRoll, setCurrentDiceRoll] = useState<DiceRollResult | null>(null);
   const [rollbackTarget, setRollbackTarget] = useState<{ index: number; text: string } | null>(null);
   const [showRollbackHint, setShowRollbackHint] = useState(true);
@@ -190,6 +192,20 @@ export function AdventureDisplay({
       setShowRollbackHint(false);
     }
   }, [story.length]);
+  
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+I or Cmd+I to open inventory
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        setShowInventory(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Track scroll position to show/hide scroll-to-bottom button
   const checkIfAtBottom = useCallback(() => {
@@ -1115,6 +1131,18 @@ export function AdventureDisplay({
               {/* Saves Dropdown */}
               <SavesDropdown />
               
+              {/* Inventory */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowInventory(true)}
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Inventory (Ctrl+I)"
+              >
+                <Package className="w-5 h-5" />
+              </Button>
+              
+              {/* Character Sheet */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -1430,6 +1458,12 @@ export function AdventureDisplay({
         isChapterReward={levelingState.levelUpType === 'chapter_reward'}
         characterName={character.name}
         onSelectChoice={handleLevelUpChoice}
+      />
+      
+      {/* Inventory Command Palette */}
+      <InventoryCommandPalette
+        open={showInventory}
+        onOpenChange={setShowInventory}
       />
     </div>
   );
