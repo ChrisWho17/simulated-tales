@@ -81,50 +81,93 @@ export function AdventureGame() {
   const [initialLoading, setInitialLoading] = useState(true);
 
   // Load saved state - also check campaign system
-  const [phase, setPhase] = useState<GamePhase>(() => {
+  const [phase, setPhase] = useState<GamePhase>('loading');
+  
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(() => getSavedColorId());
+  const [scenarioSelection, setScenarioSelection] = useState<ScenarioSelection | null>(null);
+  
+  // Character and story - will be initialized from campaign or localStorage
+  const [character, setCharacter] = useState<RPGCharacter | null>(null);
+  const [story, setStory] = useState<StoryEntry[]>([]);
+  
+  // Initialize from active campaign or localStorage on first load
+  useEffect(() => {
+    // Skip if not in loading phase (already initialized)
+    if (phase !== 'loading' || initialLoading) return;
+    
     // First check if there's an active campaign in the new system
     if (campaignContext?.activeCampaign) {
-      return 'playing';
+      const campaign = campaignContext.activeCampaign;
+      setCharacter(campaign.player);
+      setStory(campaign.narrativeHistory);
+      setScenarioSelection({
+        scenario: campaign.scenario,
+        genre: campaign.meta.primaryGenre,
+        genreTitle: campaign.meta.name,
+        diceMode: loadDiceMode(),
+      });
+      
+      // Restore world bible if available
+      if (campaign.worldBible) {
+        restoreWorldBible(JSON.stringify(campaign.worldBible));
+      }
+      
+      setPhase('playing');
+      return;
     }
     
     // Fall back to legacy localStorage check
     const savedChar = localStorage.getItem(CHARACTER_KEY);
     const savedStory = localStorage.getItem(STORY_KEY);
+    const savedScenario = localStorage.getItem(SCENARIO_KEY);
+    const savedGenre = localStorage.getItem(GENRE_KEY);
+    
     if (savedChar && savedStory) {
       try {
         const char = JSON.parse(savedChar);
-        const story = JSON.parse(savedStory);
-        if (char && story.length > 0) return 'playing';
+        const storyData = JSON.parse(savedStory);
+        if (char && storyData.length > 0) {
+          setCharacter(char);
+          setStory(storyData);
+          if (savedScenario && savedGenre) {
+            setScenarioSelection({
+              scenario: savedScenario,
+              genre: savedGenre as GameGenre,
+              genreTitle: savedGenre,
+              diceMode: loadDiceMode(),
+            });
+          }
+          setPhase('playing');
+          return;
+        }
       } catch {}
     }
+    
     // Check if there are any saves - if so, show recovery prompt
     const recentSave = getMostRecentSave();
-    if (recentSave) return 'recovery';
-    return 'scenario';
-  });
-
-  const [selectedColorId, setSelectedColorId] = useState<string | null>(() => getSavedColorId());
-
-  const [scenarioSelection, setScenarioSelection] = useState<ScenarioSelection | null>(() => {
-    const savedScenario = localStorage.getItem(SCENARIO_KEY);
-    const savedGenre = localStorage.getItem(GENRE_KEY);
-    if (savedScenario && savedGenre) {
-      return { scenario: savedScenario, genre: savedGenre as GameGenre, genreTitle: savedGenre, diceMode: loadDiceMode() };
+    if (recentSave) {
+      setPhase('recovery');
+      return;
     }
-    return null;
-  });
-
-  const [character, setCharacter] = useState<RPGCharacter | null>(() => {
-    const saved = localStorage.getItem(CHARACTER_KEY);
-    if (saved) try { return JSON.parse(saved); } catch { return null; }
-    return null;
-  });
-
-  const [story, setStory] = useState<StoryEntry[]>(() => {
-    const saved = localStorage.getItem(STORY_KEY);
-    if (saved) try { return JSON.parse(saved); } catch { return []; }
-    return [];
-  });
+    
+    setPhase('scenario');
+  }, [phase, initialLoading, campaignContext?.activeCampaign, restoreWorldBible]);
+  
+  // Sync local state when campaign data changes (e.g., after checkpoint restore)
+  useEffect(() => {
+    if (phase !== 'playing' || !campaignContext?.activeCampaign) return;
+    
+    const campaign = campaignContext.activeCampaign;
+    
+    // Sync story and character from campaign
+    setStory(campaign.narrativeHistory);
+    setCharacter(campaign.player);
+  }, [
+    phase,
+    // Use length and last entry ID as change indicators
+    campaignContext?.activeCampaign?.narrativeHistory?.length,
+    campaignContext?.activeCampaign?.currentTick,
+  ]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);

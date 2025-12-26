@@ -11,12 +11,11 @@ import { AdventureGame } from './AdventureGame';
 import { MigrationPrompt } from '@/components/campaign';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { needsMigration, MigrationResult } from '@/lib/campaignMigration';
-import { loadCampaignIndex } from '@/lib/campaignStorage';
 
 export function CampaignGameWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeCampaign, loadCampaign, campaigns } = useCampaign();
+  const { activeCampaign } = useCampaign();
   const { restoreWorldBible } = useGame();
   
   const [showMigration, setShowMigration] = useState(() => needsMigration());
@@ -38,26 +37,17 @@ export function CampaignGameWrapper() {
         return;
       }
       
-      if (path === '/play') {
-        // User wants to play - check if there's an active campaign
-        if (!activeCampaign) {
-          // No active campaign - redirect to campaign manager
-          navigate('/campaigns');
-          return;
-        }
-        
-        // Restore world bible from campaign
-        if (activeCampaign.worldBible) {
-          const serialized = JSON.stringify(activeCampaign.worldBible);
-          restoreWorldBible(serialized);
-        }
+      if (path === '/play' && !activeCampaign) {
+        // User wants to play but no active campaign - redirect to campaign manager
+        navigate('/campaigns');
+        return;
       }
       
       setIsInitializing(false);
     };
     
     init();
-  }, [location.pathname, activeCampaign, navigate, restoreWorldBible]);
+  }, [location.pathname, activeCampaign, navigate]);
   
   // Handle migration complete
   const handleMigrationComplete = useCallback((result: MigrationResult) => {

@@ -104,44 +104,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     return () => clearInterval(interval);
   }, [activeCampaign?.id]);
   
-  // Auto-save effect
-  useEffect(() => {
-    if (!activeCampaign || !isDirty) return;
-    
-    const timer = setTimeout(() => {
-      saveNow();
-    }, AUTO_SAVE_INTERVAL);
-    
-    return () => clearTimeout(timer);
-  }, [activeCampaign, isDirty]);
-  
-  // Save on visibility change
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && activeCampaign && isDirty) {
-        saveNow();
-      }
-    };
-    
-    const handleBeforeUnload = () => {
-      if (activeCampaign && isDirty) {
-        saveNow();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [activeCampaign, isDirty]);
-  
-  // Mark dirty
-  const markDirty = useCallback(() => {
-    setIsDirty(true);
-  }, []);
+  // Save function ref to avoid stale closures
+  const saveNowRef = useRef<() => void>(() => {});
   
   // Save now
   const saveNow = useCallback(() => {
@@ -164,7 +128,52 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     
     // Refresh campaign list
     setCampaigns(loadCampaignIndex());
+    console.log('[Campaign] Saved');
   }, [activeCampaign]);
+  
+  // Keep ref updated
+  useEffect(() => {
+    saveNowRef.current = saveNow;
+  }, [saveNow]);
+  
+  // Auto-save effect
+  useEffect(() => {
+    if (!activeCampaign || !isDirty) return;
+    
+    const timer = setTimeout(() => {
+      saveNowRef.current();
+    }, AUTO_SAVE_INTERVAL);
+    
+    return () => clearTimeout(timer);
+  }, [activeCampaign, isDirty]);
+  
+  // Save on visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && activeCampaign && isDirty) {
+        saveNowRef.current();
+      }
+    };
+    
+    const handleBeforeUnload = () => {
+      if (activeCampaign && isDirty) {
+        saveNowRef.current();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [activeCampaign, isDirty]);
+  
+  // Mark dirty
+  const markDirty = useCallback(() => {
+    setIsDirty(true);
+  }, []);
   
   // Refresh campaigns list
   const refreshCampaigns = useCallback(() => {

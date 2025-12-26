@@ -32,8 +32,7 @@ interface MigrationPromptProps {
 export function MigrationPrompt({ onComplete, onSkip }: MigrationPromptProps) {
   const [isMigrating, setIsMigrating] = useState(false);
   const [result, setResult] = useState<MigrationResult | null>(null);
-  
-  const status = getMigrationStatus();
+  const [status, setStatus] = useState(() => getMigrationStatus());
   
   const handleMigrate = useCallback(async () => {
     setIsMigrating(true);

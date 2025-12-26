@@ -231,7 +231,7 @@ export function createCheckpoint(
     label,
     createdAt: Date.now(),
     player: { ...campaign.player },
-    narrativeHistory: campaign.narrativeHistory.slice(-10),
+    narrativeHistory: [...campaign.narrativeHistory], // Save full history
     escalationTier: campaign.escalationTier,
     currentTick: campaign.currentTick,
   };
