@@ -163,6 +163,52 @@ function buildBlendedFallbackOpening(
   return opening;
 }
 
+// Helper to build background NPC actions context for AI
+function buildBackgroundNPCActionsContext(
+  memContext: any,
+  currentTick: number
+): { actions: Array<{ description: string; involvedNPCs: string[]; location: string; hoursAgo: number }> } | undefined {
+  const actions: Array<{ description: string; involvedNPCs: string[]; location: string; hoursAgo: number }> = [];
+  
+  // Extract from STM and MTM memories that are NOT player-initiated
+  if (memContext?.sceneNow) {
+    for (const mem of memContext.sceneNow) {
+      if (mem.type === 'event' && mem.provenance !== 'observed') {
+        // This is a background event (not player-observed)
+        const hoursAgo = Math.max(0, Math.floor((currentTick - mem.timestamp?.worldTime) || 0));
+        actions.push({
+          description: mem.summary || mem.details || 'Something happened in the world',
+          involvedNPCs: mem.entities?.filter((e: string) => e.startsWith('npc_')) || [],
+          location: mem.location || 'unknown',
+          hoursAgo,
+        });
+      }
+    }
+  }
+  
+  // Also check recent MTM events for important background happenings
+  if (memContext?.relevantMtmEvents) {
+    for (const mem of memContext.relevantMtmEvents.slice(0, 5)) {
+      if (mem.type === 'event' && mem.provenance !== 'observed') {
+        const hoursAgo = Math.max(0, Math.floor((currentTick - mem.timestamp?.worldTime) || 0));
+        actions.push({
+          description: mem.summary || mem.details || 'A past event',
+          involvedNPCs: mem.entities?.filter((e: string) => e.startsWith('npc_')) || [],
+          location: mem.location || 'unknown',
+          hoursAgo,
+        });
+      }
+    }
+  }
+  
+  // Deduplicate and limit
+  const uniqueActions = actions.filter((action, index, self) =>
+    index === self.findIndex(a => a.description === action.description)
+  ).slice(0, 10);
+  
+  return uniqueActions.length > 0 ? { actions: uniqueActions } : undefined;
+}
+
 type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'loadout' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
@@ -645,6 +691,9 @@ export function AdventureGame() {
         };
       }
       
+      // Background NPC Actions Context (living world - things that happened without player)
+      const backgroundNPCActionsPayload = buildBackgroundNPCActionsContext(memContext, currentTick);
+      
       // Location Context - always include for spatial awareness
       const locationContextPayload = {
         currentZone: {
@@ -701,6 +750,8 @@ export function AdventureGame() {
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
+            // === LIVING WORLD: Background NPC actions ===
+            backgroundNPCActionsContext: backgroundNPCActionsPayload,
           }),
         }
       );
