@@ -45,6 +45,7 @@ import {
   buildWorldStateContext,
 } from '@/game/rippleEffectSystem';
 import { useGameLoop } from '@/hooks/useGameLoop';
+import { UrbanZone, UrbanLocation } from '@/types/urbanZone';
 import { StoryEntry } from './types';
 import { 
   validateGenerationState, 
@@ -333,8 +334,18 @@ export function AdventureGame() {
   const [gameLoopState, gameLoopActions] = useGameLoop(campaignMemory?.campaign.currentTick || 0);
   
   // Destructure for easier access
-  const { worldState, narrativeQueue, activeRumors, sceneNPCs } = gameLoopState;
-  const { processPlayerAction: processActionForRipples, advanceTurn, setSceneNPCs } = gameLoopActions;
+  const { worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, activeConsequences } = gameLoopState;
+  const { processPlayerAction: processActionForRipples, advanceTurn, setSceneNPCs, moveToZone, getLocationContext } = gameLoopActions;
+  
+  // Helper to get time of day based on system time (can be enhanced with in-game time)
+  const getTimeOfDay = (): 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night' => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    if (hour >= 21 || hour < 2) return 'night';
+    return 'late_night';
+  };
   
   // Persist mood changes
   useEffect(() => {
@@ -567,6 +578,23 @@ export function AdventureGame() {
           rumorContext: buildRumorContext(activeRumors),
         };
       }
+      
+      // Location Context - always include for spatial awareness
+      const locationContextPayload = {
+        currentZone: {
+          name: playerLocation.zoneName,
+          type: playerLocation.zoneType,
+          description: `The ${playerLocation.zoneName} area`,
+          atmosphere: 'urban',
+          crowdDensity: 'moderate',
+          lighting: 'well_lit',
+          socialTone: 'neutral',
+          surveillanceLevel: 30,
+        },
+        timeOfDay: getTimeOfDay() as 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night',
+        isNewArrival: false,
+        activeConsequences: activeConsequences.map(c => c.description),
+      };
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -599,6 +627,8 @@ export function AdventureGame() {
             rippleContext: ripplePayload,
             // Unreliable information and rumors
             unreliableInfoContext: unreliableInfoPayload,
+            // Location and zone context
+            locationContext: locationContextPayload,
           }),
         }
       );
@@ -686,7 +716,113 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState, sceneNPCs, worldState, narrativeQueue, activeRumors]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState, sceneNPCs, worldState, narrativeQueue, activeRumors, playerLocation, activeConsequences]);
+
+  // === ZONE TRANSITION HANDLER ===
+  // Generates narrative description when player moves to a new zone
+  const handleZoneTransition = useCallback(async (
+    newZone: UrbanZone,
+    newLocation?: UrbanLocation | null,
+    travelTime?: number
+  ) => {
+    if (!character || !scenarioSelection) return;
+    
+    // Store previous location for transition context
+    const previousZone = {
+      name: playerLocation.zoneName,
+      type: playerLocation.zoneType,
+      atmosphere: 'urban',
+    };
+    
+    // Move to new zone (updates game loop state)
+    moveToZone(newZone, newLocation);
+    
+    // Build zone transition context for AI
+    const locationTransitionContext = {
+      previousZone: previousZone.name !== newZone.name ? previousZone : undefined,
+      currentZone: {
+        name: newZone.name,
+        type: newZone.type,
+        description: newZone.description,
+        atmosphere: newZone.atmosphere?.socialTone || 'neutral',
+        crowdDensity: newZone.atmosphere?.crowdDensity || 'moderate',
+        lighting: newZone.atmosphere?.lighting || 'well_lit',
+        socialTone: newZone.atmosphere?.socialTone || 'neutral',
+        surveillanceLevel: newZone.surveillance?.level || 30,
+      },
+      travelTime: travelTime || (newZone.travelTime ? Object.values(newZone.travelTime)[0] : 15),
+      timeOfDay: getTimeOfDay() as 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night',
+      isNewArrival: true,
+      activeConsequences: activeConsequences.map(c => c.description),
+      locationHistory: getLocationContext(),
+    };
+    
+    setIsLoading(true);
+    
+    try {
+      // Call AI to describe the transition
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario: scenarioSelection.scenario,
+            playerAction: `travel to ${newZone.name}`,
+            conversationHistory: story.slice(-10).map(e => ({ role: e.role, content: e.content })),
+            character: character,
+            adultContent: settings.adultContent,
+            genreContract: worldBible?.contractSummary || null,
+            narratorConfig: settings.narratorConfig,
+            locationContext: locationTransitionContext,
+          }),
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.narrative) {
+        // Add transition narrative to story
+        const transitionEntry: StoryEntry = {
+          id: `narrator_${Date.now()}`,
+          role: 'narrator',
+          content: data.narrative,
+          timestamp: Date.now(),
+        };
+        
+        setStory(prev => [...prev, transitionEntry]);
+        
+        // Add to campaign if available
+        if (campaignContext) {
+          campaignContext.addNarrativeEntry(transitionEntry);
+        }
+        
+        // Advance turn
+        advanceTurn(travelTime || 15);
+        
+        toast.success(`Arrived at ${newZone.name}`);
+      }
+    } catch (error) {
+      console.error('[Zone Transition] Error generating narrative:', error);
+      
+      // Fallback narrative
+      const fallbackEntry: StoryEntry = {
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: `You make your way to ${newZone.name}. ${newZone.description || 'The area stretches before you, full of new possibilities.'}`,
+        timestamp: Date.now(),
+      };
+      
+      setStory(prev => [...prev, fallbackEntry]);
+      advanceTurn(travelTime || 15);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [character, scenarioSelection, playerLocation, moveToZone, activeConsequences, getLocationContext, story, settings.adultContent, worldBible, campaignContext, advanceTurn]);
 
   // Generate initial narrative for campaigns with empty history
   // Track the campaign ID we're generating for to prevent duplicate calls

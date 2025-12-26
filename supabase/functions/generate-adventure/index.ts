@@ -93,6 +93,29 @@ interface UnreliableInfoContext {
   rumorContext: string;        // Pre-built from buildRumorContext
 }
 
+interface LocationTransitionContext {
+  previousZone?: {
+    name: string;
+    type: string;
+    atmosphere: string;
+  };
+  currentZone: {
+    name: string;
+    type: string;
+    description: string;
+    atmosphere: string;
+    crowdDensity: string;
+    lighting: string;
+    socialTone: string;
+    surveillanceLevel: number;
+  };
+  travelTime?: number; // minutes
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night';
+  isNewArrival: boolean; // True if just arrived at this zone
+  activeConsequences: string[]; // Active effects in this location
+  locationHistory?: string; // Brief recent location history
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -119,6 +142,7 @@ interface AdventureRequest {
   npcPsychologyContext?: NPCPsychologyContext; // NPC grudges, debts, relationships
   rippleContext?: RippleContext; // Consequence ripples and world state
   unreliableInfoContext?: UnreliableInfoContext; // Rumors and NPC reliability
+  locationContext?: LocationTransitionContext; // Zone and location context
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -352,7 +376,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -475,6 +499,59 @@ UNRELIABLE INFORMATION GUIDELINES:
 - Multiple NPCs repeating the same wrong information makes it seem more credible
 - Never tell the player directly that information is false - let them discover it
 - Contradictory information from different sources creates investigation opportunities`;
+    }
+    
+    // Add Location and Zone Context
+    if (locationContext) {
+      systemContent += `\n\n=== CURRENT LOCATION ===
+Zone: ${locationContext.currentZone.name} (${locationContext.currentZone.type})
+Time of Day: ${locationContext.timeOfDay}
+Atmosphere: ${locationContext.currentZone.atmosphere}
+Crowd Density: ${locationContext.currentZone.crowdDensity}
+Lighting: ${locationContext.currentZone.lighting}
+Social Tone: ${locationContext.currentZone.socialTone}
+Surveillance: ${locationContext.currentZone.surveillanceLevel > 70 ? 'Heavy' : locationContext.currentZone.surveillanceLevel > 40 ? 'Moderate' : 'Light'}
+
+${locationContext.currentZone.description}`;
+
+      // Add zone transition context if just arrived
+      if (locationContext.isNewArrival) {
+        systemContent += `\n\n=== ZONE TRANSITION - DESCRIBE THE ARRIVAL ===
+${locationContext.previousZone ? `Traveling from: ${locationContext.previousZone.name} (${locationContext.previousZone.type})
+Travel Time: ${locationContext.travelTime || 15} minutes` : 'This is the starting location.'}
+
+ZONE TRANSITION INSTRUCTIONS:
+Since the player just arrived at ${locationContext.currentZone.name}, your response MUST:
+1. Describe the transition/journey briefly if coming from another zone
+2. Paint the new environment vividly - sights, sounds, smells, atmosphere
+3. Show how this zone FEELS different from where they came from
+4. Include appropriate environmental details based on:
+   - Crowd density: ${locationContext.currentZone.crowdDensity}
+   - Lighting: ${locationContext.currentZone.lighting}
+   - Social atmosphere: ${locationContext.currentZone.socialTone}
+   - Surveillance level: ${locationContext.currentZone.surveillanceLevel > 70 ? 'cameras everywhere, guards patrol' : locationContext.currentZone.surveillanceLevel > 40 ? 'some security presence' : 'minimal oversight'}
+5. Hint at opportunities or dangers specific to this zone type
+
+ATMOSPHERE TRANSFORMATION:
+${locationContext.previousZone ? `FROM: ${locationContext.previousZone.atmosphere}
+TO: ${locationContext.currentZone.atmosphere}
+Show this contrast in your description.` : `Establish the ${locationContext.currentZone.atmosphere} atmosphere clearly.`}`;
+      }
+
+      // Add active consequences in this location
+      if (locationContext.activeConsequences && locationContext.activeConsequences.length > 0) {
+        systemContent += `\n\n=== ACTIVE EFFECTS IN THIS AREA ===
+The following consequences are currently affecting this location:
+${locationContext.activeConsequences.map(c => `- ${c}`).join('\n')}
+
+Weave these effects into your environmental descriptions naturally.`;
+      }
+
+      // Add location history for context
+      if (locationContext.locationHistory) {
+        systemContent += `\n\n=== RECENT TRAVELS ===
+${locationContext.locationHistory}`;
+      }
     }
     
     if (cheatMode) {
