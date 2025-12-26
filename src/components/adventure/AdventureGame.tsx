@@ -308,7 +308,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
