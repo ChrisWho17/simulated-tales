@@ -175,7 +175,47 @@ function savesToStorage(saves: GameSave[]): void {
   try {
     localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
   } catch (e) {
-    console.error('Failed to save games:', e);
+    // Handle quota exceeded by trying to clean up old saves
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      console.warn('Storage quota exceeded, attempting cleanup...');
+      
+      // Keep only the most recent 5 saves and try again
+      const trimmedSaves = saves
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5);
+      
+      try {
+        localStorage.setItem(SAVES_KEY, JSON.stringify(trimmedSaves));
+        console.log('Successfully saved after trimming old saves');
+      } catch (e2) {
+        // If still failing, clear other non-critical localStorage items
+        console.error('Still cannot save after trimming, clearing old localStorage...');
+        
+        // Clear potentially large legacy keys
+        const keysToTry = [
+          'untold-adventure-story',
+          'simtales_campaign_index', 
+        ];
+        for (const key of keysToTry) {
+          try {
+            const item = localStorage.getItem(key);
+            if (item && item.length > 10000) {
+              localStorage.removeItem(key);
+              console.log(`Cleared large item: ${key}`);
+            }
+          } catch {}
+        }
+        
+        // One last attempt
+        try {
+          localStorage.setItem(SAVES_KEY, JSON.stringify(trimmedSaves.slice(0, 3)));
+        } catch (e3) {
+          console.error('Failed to save games even after cleanup:', e3);
+        }
+      }
+    } else {
+      console.error('Failed to save games:', e);
+    }
   }
 }
 

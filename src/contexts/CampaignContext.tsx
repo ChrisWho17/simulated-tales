@@ -285,6 +285,20 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     markDirty();
   }, [activeCampaign, markDirty]);
   
+  // Sync full narrative history (for ensuring local story state matches campaign)
+  const syncNarrativeHistory = useCallback((entries: StoryEntry[]) => {
+    if (!activeCampaign) return;
+    
+    setActiveCampaign(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        narrativeHistory: entries,
+      };
+    });
+    markDirty();
+  }, [activeCampaign, markDirty]);
+  
   // Advance chapter
   const advanceChapter = useCallback((title?: string) => {
     if (!activeCampaign) return;
@@ -389,6 +403,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     updateCampaign: updateCampaignFunc,
     updatePlayer,
     addNarrativeEntry,
+    syncNarrativeHistory,
     advanceChapter,
     createCheckpoint: createCheckpointFunc,
     restoreCheckpoint: restoreCheckpointFunc,
