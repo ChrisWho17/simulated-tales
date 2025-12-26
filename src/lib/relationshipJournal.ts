@@ -66,10 +66,18 @@ export interface RelationshipMoment {
   milestoneType?: MilestoneType;
 }
 
+export interface PersonalNote {
+  id: string;
+  content: string;
+  timestamp: number;
+  dateString: string;
+}
+
 export interface NPCRelationshipJournal {
   npcId: string;
   npcName: string;
   moments: RelationshipMoment[];
+  personalNotes: PersonalNote[];
   currentMilestone: MilestoneType;
   totalMoments: number;
   romanticMoments: number;
@@ -171,6 +179,7 @@ export function addRelationshipMoment(
       npcId,
       npcName,
       moments: [],
+      personalNotes: [],
       currentMilestone: 'acquaintance',
       totalMoments: 0,
       romanticMoments: 0,
@@ -298,6 +307,7 @@ export function updateMilestoneFromProgression(
       npcId,
       npcName,
       moments: [],
+      personalNotes: [],
       currentMilestone: 'stranger',
       totalMoments: 0,
       romanticMoments: 0,
@@ -352,4 +362,96 @@ export function updateMilestoneFromProgression(
   if (moment.isRomantic) journal.romanticMoments++;
   
   saveRelationshipJournal(data);
+}
+
+// Add a personal note to an NPC's journal
+export function addPersonalNote(
+  npcId: string,
+  npcName: string,
+  content: string
+): PersonalNote | null {
+  if (!content.trim()) return null;
+  
+  const data = loadRelationshipJournal();
+  
+  // Ensure NPC journal exists
+  if (!data.journals[npcId]) {
+    data.journals[npcId] = {
+      npcId,
+      npcName,
+      moments: [],
+      personalNotes: [],
+      currentMilestone: 'stranger',
+      totalMoments: 0,
+      romanticMoments: 0,
+    };
+  }
+  
+  const journal = data.journals[npcId];
+  
+  // Ensure personalNotes array exists (for backward compatibility)
+  if (!journal.personalNotes) {
+    journal.personalNotes = [];
+  }
+  
+  const note: PersonalNote = {
+    id: `note-${npcId}-${Date.now()}`,
+    content: content.trim().slice(0, 500), // Limit to 500 characters
+    timestamp: Date.now(),
+    dateString: new Date().toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }),
+  };
+  
+  journal.personalNotes.unshift(note);
+  
+  // Keep only last 20 notes per NPC
+  if (journal.personalNotes.length > 20) {
+    journal.personalNotes = journal.personalNotes.slice(0, 20);
+  }
+  
+  saveRelationshipJournal(data);
+  return note;
+}
+
+// Delete a personal note
+export function deletePersonalNote(npcId: string, noteId: string): boolean {
+  const data = loadRelationshipJournal();
+  const journal = data.journals[npcId];
+  
+  if (!journal || !journal.personalNotes) return false;
+  
+  const index = journal.personalNotes.findIndex(n => n.id === noteId);
+  if (index === -1) return false;
+  
+  journal.personalNotes.splice(index, 1);
+  saveRelationshipJournal(data);
+  return true;
+}
+
+// Update a personal note
+export function updatePersonalNote(npcId: string, noteId: string, newContent: string): boolean {
+  if (!newContent.trim()) return false;
+  
+  const data = loadRelationshipJournal();
+  const journal = data.journals[npcId];
+  
+  if (!journal || !journal.personalNotes) return false;
+  
+  const note = journal.personalNotes.find(n => n.id === noteId);
+  if (!note) return false;
+  
+  note.content = newContent.trim().slice(0, 500);
+  note.dateString = new Date().toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }) + ' (edited)';
+  
+  saveRelationshipJournal(data);
+  return true;
 }

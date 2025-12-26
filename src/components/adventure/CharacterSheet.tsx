@@ -21,8 +21,12 @@ import {
   getMilestoneInfo,
   NPCRelationshipJournal,
   RelationshipMoment,
-  MilestoneType
+  MilestoneType,
+  PersonalNote,
+  addPersonalNote,
+  deletePersonalNote
 } from '@/lib/relationshipJournal';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Collapsible,
   CollapsibleContent,
@@ -642,9 +646,13 @@ function JournalCard({ journal, onClick }: { journal: NPCRelationshipJournal; on
 }
 
 // Detailed modal for viewing full relationship history
-function JournalDetailModal({ journal, onClose }: { journal: NPCRelationshipJournal; onClose: () => void }) {
+function JournalDetailModal({ journal: initialJournal, onClose }: { journal: NPCRelationshipJournal; onClose: () => void }) {
+  const [journal, setJournal] = useState(initialJournal);
   const milestoneInfo = getMilestoneInfo(journal.currentMilestone);
+  const [activeTab, setActiveTab] = useState<'moments' | 'notes'>('moments');
   const [filter, setFilter] = useState<'all' | 'romantic' | 'milestone'>('all');
+  const [newNote, setNewNote] = useState('');
+  const [isAddingNote, setIsAddingNote] = useState(false);
   
   const filteredMoments = useMemo(() => {
     switch (filter) {
@@ -656,6 +664,33 @@ function JournalDetailModal({ journal, onClose }: { journal: NPCRelationshipJour
         return journal.moments;
     }
   }, [journal.moments, filter]);
+  
+  const handleAddNote = () => {
+    if (!newNote.trim()) return;
+    
+    const note = addPersonalNote(journal.npcId, journal.npcName, newNote);
+    if (note) {
+      setJournal(prev => ({
+        ...prev,
+        personalNotes: [note, ...(prev.personalNotes || [])]
+      }));
+      setNewNote('');
+      setIsAddingNote(false);
+      toast.success('Note added to journal');
+    }
+  };
+  
+  const handleDeleteNote = (noteId: string) => {
+    if (deletePersonalNote(journal.npcId, noteId)) {
+      setJournal(prev => ({
+        ...prev,
+        personalNotes: (prev.personalNotes || []).filter(n => n.id !== noteId)
+      }));
+      toast.success('Note deleted');
+    }
+  };
+  
+  const notes = journal.personalNotes || [];
   
   return (
     <div className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
@@ -685,39 +720,186 @@ function JournalDetailModal({ journal, onClose }: { journal: NPCRelationshipJour
                 💕 {journal.romanticMoments} romantic
               </span>
             )}
+            {notes.length > 0 && (
+              <span className="text-amber-400">
+                ✏️ {notes.length} notes
+              </span>
+            )}
           </div>
         </div>
         
-        {/* Filter Tabs */}
-        <div className="flex gap-1 p-2 border-b border-border/30 bg-background/50">
-          {(['all', 'romantic', 'milestone'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                filter === tab 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'hover:bg-muted text-muted-foreground'
-              }`}
-            >
-              {tab === 'all' && '📖 All'}
-              {tab === 'romantic' && '💕 Romantic'}
-              {tab === 'milestone' && '⭐ Milestones'}
-            </button>
-          ))}
+        {/* Main Tabs */}
+        <div className="flex border-b border-border/30 bg-background/50">
+          <button
+            onClick={() => setActiveTab('moments')}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'moments' 
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            📖 Story Moments
+          </button>
+          <button
+            onClick={() => setActiveTab('notes')}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activeTab === 'notes' 
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            ✏️ Personal Notes
+            {notes.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-primary/20 rounded-full">
+                {notes.length}
+              </span>
+            )}
+          </button>
         </div>
         
-        {/* Moments List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredMoments.length === 0 ? (
-            <p className="text-center text-muted-foreground text-sm py-8">
-              No {filter === 'all' ? '' : filter} moments recorded yet.
-            </p>
-          ) : (
-            filteredMoments.map(moment => (
-              <DetailedMomentEntry key={moment.id} moment={moment} />
-            ))
-          )}
+        {activeTab === 'moments' ? (
+          <>
+            {/* Filter Tabs */}
+            <div className="flex gap-1 p-2 border-b border-border/30 bg-background/30">
+              {(['all', 'romantic', 'milestone'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setFilter(tab)}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                    filter === tab 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {tab === 'all' && '📖 All'}
+                  {tab === 'romantic' && '💕 Romantic'}
+                  {tab === 'milestone' && '⭐ Milestones'}
+                </button>
+              ))}
+            </div>
+            
+            {/* Moments List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {filteredMoments.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-8">
+                  No {filter === 'all' ? '' : filter} moments recorded yet.
+                </p>
+              ) : (
+                filteredMoments.map(moment => (
+                  <DetailedMomentEntry key={moment.id} moment={moment} />
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          /* Notes Tab */
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* Add Note Button/Form */}
+            {isAddingNote ? (
+              <div className="p-3 rounded-lg bg-background/50 border border-border/30 space-y-2">
+                <Textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value.slice(0, 500))}
+                  placeholder={`Write your personal thoughts about ${journal.npcName}...`}
+                  className="min-h-[80px] text-sm resize-none bg-background/50"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {newNote.length}/500 characters
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setIsAddingNote(false); setNewNote(''); }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddNote}
+                      disabled={!newNote.trim()}
+                    >
+                      Save Note
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAddingNote(true)}
+                className="w-full p-3 rounded-lg border border-dashed border-border/50 text-muted-foreground 
+                  hover:border-primary/50 hover:text-primary transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Personal Note
+              </button>
+            )}
+            
+            {/* Notes List */}
+            {notes.length === 0 && !isAddingNote ? (
+              <p className="text-center text-muted-foreground text-sm py-8">
+                No personal notes yet. Add your thoughts, observations, or plans about {journal.npcName}.
+              </p>
+            ) : (
+              notes.map(note => (
+                <PersonalNoteEntry 
+                  key={note.id} 
+                  note={note} 
+                  onDelete={() => handleDeleteNote(note.id)}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Personal note entry component
+function PersonalNoteEntry({ note, onDelete }: { note: PersonalNote; onDelete: () => void }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  return (
+    <div className="p-3 rounded-lg bg-background/40 border-l-4 border-l-amber-500/50 group">
+      <div className="flex items-start gap-2">
+        <span className="text-lg flex-shrink-0">✏️</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{note.content}</p>
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-muted-foreground">{note.dateString}</span>
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground mr-1">Delete?</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  No
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={onDelete}
+                >
+                  Yes
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="opacity-0 group-hover:opacity-100 text-xs text-muted-foreground 
+                  hover:text-destructive transition-all"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
