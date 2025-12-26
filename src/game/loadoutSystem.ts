@@ -445,6 +445,117 @@ const POSTAPOC_LOADOUT: GenreLoadout = {
 };
 
 // ============================================================================
+// MODERN LIFE LOADOUT
+// ============================================================================
+
+const MODERN_LIFE_LOADOUT: GenreLoadout = {
+  name: 'Modern Life',
+  currency: 'dollars',
+  currencyIcon: '$',
+  startingCurrency: 500,
+  categories: {
+    housing: {
+      label: 'Housing',
+      required: true,
+      maxSlots: 1,
+      icon: '🏠',
+      portraitTag: 'none',
+      options: [
+        { id: 'ml_studio', name: 'Studio Apartment', description: 'Compact city living, affordable but cramped', icon: '🏢', category: 'misc', stats: { comfort: 30, space: 20, rent: 800 }, cost: 0, portraitPrompt: '' },
+        { id: 'ml_1br', name: '1-Bedroom Apartment', description: 'Decent space in a mid-rise building', icon: '🏠', category: 'misc', stats: { comfort: 50, space: 40, rent: 1200 }, cost: 100, portraitPrompt: '' },
+        { id: 'ml_shared', name: 'Shared House', description: 'Room in a house with roommates', icon: '🏡', category: 'misc', stats: { comfort: 40, space: 30, social: 15, rent: 600 }, cost: 0, portraitPrompt: '' },
+        { id: 'ml_loft', name: 'Downtown Loft', description: 'Trendy open-plan living in the city center', icon: '🌆', category: 'misc', stats: { comfort: 70, space: 60, style: 20, rent: 2000 }, cost: 200, portraitPrompt: '' },
+      ],
+    },
+    clothing: {
+      label: 'Wardrobe',
+      required: true,
+      maxSlots: 1,
+      icon: '👔',
+      portraitTag: 'body',
+      options: [
+        { id: 'ml_casual', name: 'Casual Basics', description: 'Jeans, t-shirts, comfortable everyday wear', icon: '👕', category: 'clothing', stats: { style: 20, comfort: 30 }, cost: 0, portraitPrompt: 'wearing casual modern clothes like jeans and a comfortable t-shirt' },
+        { id: 'ml_business', name: 'Business Casual', description: 'Smart clothes suitable for office work', icon: '👔', category: 'clothing', stats: { style: 40, professional: 30 }, cost: 50, portraitPrompt: 'wearing smart business casual attire' },
+        { id: 'ml_trendy', name: 'Trendy Fashion', description: 'Current season styles, Instagram-worthy', icon: '✨', category: 'clothing', stats: { style: 60, social: 20 }, cost: 100, portraitPrompt: 'wearing trendy, fashionable modern clothing' },
+        { id: 'ml_athletic', name: 'Athleisure', description: 'Sporty and comfortable activewear', icon: '🏃', category: 'clothing', stats: { style: 30, fitness: 20, comfort: 40 }, cost: 50, portraitPrompt: 'wearing stylish athleisure activewear' },
+      ],
+    },
+    tech: {
+      label: 'Tech & Gadgets',
+      required: false,
+      maxSlots: 3,
+      icon: '📱',
+      portraitTag: 'hand',
+      options: [
+        { id: 'ml_phone', name: 'Smartphone', description: 'Your lifeline to the world', icon: '📱', category: 'tech', stats: { social: 30, productivity: 20, entertainment: 30 }, cost: 0, portraitPrompt: 'with smartphone in hand' },
+        { id: 'ml_laptop', name: 'Laptop', description: 'Essential for work and entertainment', icon: '💻', category: 'tech', stats: { productivity: 50, entertainment: 40, workFromHome: true }, cost: 50, portraitPrompt: 'with laptop bag' },
+        { id: 'ml_earbuds', name: 'Wireless Earbuds', description: 'Music on the go, calls in privacy', icon: '🎧', category: 'tech', stats: { entertainment: 20, social: 10 }, cost: 25, portraitPrompt: 'wearing wireless earbuds' },
+        { id: 'ml_watch', name: 'Smart Watch', description: 'Fitness tracking and notifications', icon: '⌚', category: 'tech', stats: { fitness: 15, productivity: 10, style: 10 }, cost: 50, portraitPrompt: 'wearing a smart watch' },
+      ],
+    },
+    transport: {
+      label: 'Transportation',
+      required: false,
+      maxSlots: 1,
+      icon: '🚗',
+      portraitTag: 'none',
+      options: [
+        { id: 'ml_transit', name: 'Transit Pass', description: 'Monthly public transportation pass', icon: '🚇', category: 'misc', stats: { mobility: 60, cost: 100 }, cost: 0, portraitPrompt: '' },
+        { id: 'ml_bike', name: 'City Bike', description: 'Eco-friendly and good exercise', icon: '🚲', category: 'misc', stats: { mobility: 50, fitness: 20, eco: 30 }, cost: 50, portraitPrompt: '' },
+        { id: 'ml_scooter', name: 'Electric Scooter', description: 'Quick urban transportation', icon: '🛴', category: 'misc', stats: { mobility: 55, style: 15 }, cost: 75, portraitPrompt: '' },
+        { id: 'ml_car', name: 'Used Car', description: 'Freedom to go anywhere, parking not included', icon: '🚗', category: 'misc', stats: { mobility: 90, maintenance: 200, insurance: 150 }, cost: 200, portraitPrompt: '' },
+      ],
+    },
+    lifestyle: {
+      label: 'Lifestyle Items',
+      required: false,
+      maxSlots: 4,
+      icon: '☕',
+      portraitTag: 'accessory',
+      options: [
+        { id: 'ml_coffee', name: 'Coffee Maker', description: 'Essential morning fuel station', icon: '☕', category: 'misc', stats: { energy: 20, savings: 30 }, cost: 25, portraitPrompt: 'holding a coffee cup' },
+        { id: 'ml_gym', name: 'Gym Membership', description: 'Monthly access to fitness facilities', icon: '💪', category: 'misc', stats: { fitness: 40, social: 15 }, cost: 50, portraitPrompt: '' },
+        { id: 'ml_streaming', name: 'Streaming Subscriptions', description: 'Netflix, Spotify, all the essentials', icon: '📺', category: 'misc', stats: { entertainment: 50, social: 10 }, cost: 25, portraitPrompt: '' },
+        { id: 'ml_pet', name: 'Pet (Cat or Dog)', description: 'Furry companion for emotional support', icon: '🐕', category: 'misc', stats: { happiness: 40, social: 20, responsibility: 30 }, cost: 100, portraitPrompt: 'with a cute pet companion' },
+        { id: 'ml_plants', name: 'Houseplants Collection', description: 'Bring life and color to your space', icon: '🌿', category: 'misc', stats: { comfort: 15, style: 10, happiness: 10 }, cost: 25, portraitPrompt: '' },
+      ],
+    },
+    career: {
+      label: 'Career Starter',
+      required: false,
+      maxSlots: 1,
+      icon: '💼',
+      portraitTag: 'none',
+      options: [
+        { id: 'ml_resume', name: 'Professional Resume', description: 'Polished CV ready to impress', icon: '📄', category: 'misc', stats: { jobSearch: 30 }, cost: 0, portraitPrompt: '' },
+        { id: 'ml_portfolio', name: 'Online Portfolio', description: 'Showcase your work and skills', icon: '🌐', category: 'misc', stats: { jobSearch: 40, creativity: 20 }, cost: 50, portraitPrompt: '' },
+        { id: 'ml_network', name: 'Professional Network', description: 'Connections in your industry', icon: '🤝', category: 'misc', stats: { jobSearch: 50, social: 30 }, cost: 75, portraitPrompt: '' },
+        { id: 'ml_savings', name: 'Emergency Savings', description: 'Three months of expenses saved up', icon: '💰', category: 'misc', stats: { security: 50, stress: -20 }, cost: 150, portraitPrompt: '' },
+      ],
+    },
+    social: {
+      label: 'Social Life',
+      required: false,
+      maxSlots: 2,
+      icon: '👥',
+      portraitTag: 'none',
+      options: [
+        { id: 'ml_hobby', name: 'Active Hobby', description: 'Sports team, dance class, or outdoor activity', icon: '⚽', category: 'misc', stats: { social: 30, fitness: 20, fun: 40 }, cost: 50, portraitPrompt: '' },
+        { id: 'ml_creative', name: 'Creative Hobby', description: 'Art, music, writing, or crafting', icon: '🎨', category: 'misc', stats: { creativity: 40, stress: -20, fun: 30 }, cost: 50, portraitPrompt: '' },
+        { id: 'ml_dating', name: 'Dating App Premium', description: 'Boost your romantic prospects', icon: '❤️', category: 'misc', stats: { romance: 30, social: 20 }, cost: 25, portraitPrompt: '' },
+        { id: 'ml_club', name: 'Club Membership', description: 'Book club, gaming group, or social club', icon: '📚', category: 'misc', stats: { social: 40, fun: 25, networking: 20 }, cost: 25, portraitPrompt: '' },
+      ],
+    },
+  },
+  presets: [
+    { id: 'fresh_grad', name: 'Fresh Graduate', description: 'Just starting out with basics', items: ['ml_shared', 'ml_casual', 'ml_phone', 'ml_laptop', 'ml_transit', 'ml_resume', 'ml_coffee'], cost: 75 },
+    { id: 'young_pro', name: 'Young Professional', description: 'Career-focused with comfort', items: ['ml_1br', 'ml_business', 'ml_phone', 'ml_laptop', 'ml_watch', 'ml_gym', 'ml_network'], cost: 325 },
+    { id: 'creative', name: 'Creative Type', description: 'Artistic lifestyle with flexibility', items: ['ml_studio', 'ml_trendy', 'ml_phone', 'ml_laptop', 'ml_earbuds', 'ml_creative', 'ml_plants', 'ml_streaming'], cost: 275 },
+    { id: 'social_butterfly', name: 'Social Butterfly', description: 'All about connections and experiences', items: ['ml_shared', 'ml_trendy', 'ml_phone', 'ml_earbuds', 'ml_hobby', 'ml_dating', 'ml_club', 'ml_streaming'], cost: 225 },
+  ],
+};
+
+// ============================================================================
 // GENRE LOADOUT MAP
 // ============================================================================
 
@@ -458,6 +569,8 @@ export const GENRE_LOADOUTS: Record<string, GenreLoadout> = {
   scifi: CYBERPUNK_LOADOUT, // Fallback to cyberpunk for sci-fi
   western: FANTASY_LOADOUT, // Fallback to fantasy for western (similar item types)
   modern: NOIR_LOADOUT, // Fallback to noir for modern
+  modern_life: MODERN_LIFE_LOADOUT,
+  'modern-life': MODERN_LIFE_LOADOUT,
 };
 
 // ============================================================================
