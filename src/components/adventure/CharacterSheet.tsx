@@ -4,7 +4,8 @@ import { RPGCharacter, getStatModifier, CharacterStats, calculateMaxHealth } fro
 import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
-  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity
+  Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
+  BookHeart, ChevronDown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,6 +14,18 @@ import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
 import { MoodHistoryDropdown } from '@/components/game/MoodHistoryDropdown';
 import { MoodState, deriveMoodFromStats, CoreMoodType } from '@/game/moodSystem';
 import { useGame } from '@/contexts/GameContext';
+import { 
+  getRomanticJournals, 
+  getMomentTypeInfo, 
+  getMilestoneInfo,
+  NPCRelationshipJournal,
+  RelationshipMoment
+} from '@/lib/relationshipJournal';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
@@ -517,6 +530,9 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                 )}
               </div>
 
+              {/* Relationship Journal Section - Only shown when 18+ is enabled */}
+              {settings.adultContent && <RelationshipJournalSection />}
+
               {/* Bottom padding for mobile safe area */}
               <div className="h-6 md:h-4" />
             </div>
@@ -533,5 +549,117 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
         />
       )}
     </>
+  );
+}
+
+// Relationship Journal Section Component
+function RelationshipJournalSection() {
+  const [isOpen, setIsOpen] = useState(true);
+  const journals = useMemo(() => getRomanticJournals(), []);
+  
+  if (journals.length === 0) {
+    return (
+      <div className="space-y-3 border-t border-border/30 pt-4 mt-4">
+        <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
+          <BookHeart className="w-4 h-4" />
+          Relationship Journal
+        </h3>
+        <p className="text-xs text-muted-foreground italic px-3 py-4 bg-background/30 rounded-lg border border-border/20">
+          Your romantic journey has yet to begin. Meet characters and build meaningful connections to fill this journal.
+        </p>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-3 border-t border-border/30 pt-4 mt-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger className="w-full flex items-center justify-between hover:text-primary transition-colors">
+          <h3 className="font-semibold text-primary flex items-center gap-2 text-sm md:text-base">
+            <BookHeart className="w-4 h-4" />
+            Relationship Journal
+            <span className="text-xs text-muted-foreground font-normal">
+              ({journals.length} {journals.length === 1 ? 'connection' : 'connections'})
+            </span>
+          </h3>
+          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="space-y-3 pt-3">
+          {journals.map(journal => (
+            <JournalEntry key={journal.npcId} journal={journal} />
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
+// Individual Journal Entry Component
+function JournalEntry({ journal }: { journal: NPCRelationshipJournal }) {
+  const [expanded, setExpanded] = useState(false);
+  const milestoneInfo = getMilestoneInfo(journal.currentMilestone);
+  const recentMoments = journal.moments.slice(0, expanded ? 10 : 3);
+  
+  return (
+    <div className="bg-background/30 rounded-lg border border-border/20 overflow-hidden">
+      {/* NPC Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-3 flex items-center justify-between hover:bg-background/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg">{milestoneInfo.icon}</span>
+          <div className="text-left">
+            <p className="font-medium text-sm">{journal.npcName}</p>
+            <p className={`text-xs ${milestoneInfo.color}`}>{milestoneInfo.label}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {journal.romanticMoments > 0 && (
+            <span className="text-xs text-pink-400">
+              💕 {journal.romanticMoments}
+            </span>
+          )}
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      
+      {/* Moments */}
+      <div className="px-3 pb-3 space-y-2">
+        {recentMoments.map(moment => (
+          <MomentEntry key={moment.id} moment={moment} />
+        ))}
+        
+        {journal.moments.length > 3 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-full text-xs text-muted-foreground hover:text-primary transition-colors py-1"
+          >
+            {expanded 
+              ? `Show less` 
+              : `+ ${journal.moments.length - 3} more moments`
+            }
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Individual Moment Entry
+function MomentEntry({ moment }: { moment: RelationshipMoment }) {
+  const typeInfo = getMomentTypeInfo(moment.type);
+  
+  return (
+    <div className={`flex items-start gap-2 p-2 rounded bg-background/40 border-l-2 ${
+      moment.isRomantic ? 'border-l-pink-500' : moment.isMilestone ? 'border-l-amber-500' : 'border-l-border'
+    }`}>
+      <span className="text-sm flex-shrink-0">{typeInfo.icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs leading-relaxed">{moment.description}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">{moment.dateString}</p>
+      </div>
+    </div>
   );
 }
