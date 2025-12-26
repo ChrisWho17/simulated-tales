@@ -77,6 +77,22 @@ interface LanguageContext {
   languageInstructions: string;
 }
 
+// ============= NEW SYSTEMS: GRUDGES, RIPPLES, UNRELIABLE INFORMATION =============
+
+interface NPCPsychologyContext {
+  npcContexts: string; // Pre-built context from buildNPCGrudgeContext/buildSceneNPCContext
+}
+
+interface RippleContext {
+  consequenceContext: string;  // Pre-built from buildConsequenceContext
+  worldStateContext: string;   // Pre-built from buildWorldStateContext
+}
+
+interface UnreliableInfoContext {
+  informationContext?: string; // Pre-built from buildInformationContext for active NPC
+  rumorContext: string;        // Pre-built from buildRumorContext
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -99,6 +115,10 @@ interface AdventureRequest {
   narratorConfig?: NarratorConfig; // Customizable narrator style
   toneContext?: ToneContext; // Tone adaptation system
   languageContext?: LanguageContext; // Language barrier system
+  // New systems - Grudges and Memory Overhaul
+  npcPsychologyContext?: NPCPsychologyContext; // NPC grudges, debts, relationships
+  rippleContext?: RippleContext; // Consequence ripples and world state
+  unreliableInfoContext?: UnreliableInfoContext; // Rumors and NPC reliability
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -332,7 +352,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -402,6 +422,59 @@ If an NPC naturally offers to teach the player a phrase or word, or if the playe
 - This should be rare and feel like a natural story moment, not a gamified mechanic
 - Example: [LEARN_LANGUAGE:elvish:The elven scholar spent hours teaching you the basics of her tongue]
 - Do NOT force this - it's a minor detail that adds flavor when appropriate`;
+    }
+    
+    // ============= NEW SYSTEMS INTEGRATION =============
+    
+    // Add NPC Psychology Context (Grudges, Debts, Relationships)
+    if (npcPsychologyContext?.npcContexts) {
+      systemContent += `\n\n=== NPC PSYCHOLOGY & RELATIONSHIPS ===
+${npcPsychologyContext.npcContexts}
+
+ROLEPLAY THESE RELATIONSHIPS:
+- NPCs with grudges should behave according to their resentment level
+- NPCs with debts should be more helpful and accommodating
+- Trust levels affect what information NPCs share
+- Fear affects whether NPCs flee, submit, or fight
+- Let relationship dynamics emerge naturally through dialogue and behavior`;
+    }
+    
+    // Add Ripple Effect Context (Consequences and World State)
+    if (rippleContext) {
+      if (rippleContext.consequenceContext) {
+        systemContent += `\n\n${rippleContext.consequenceContext}`;
+      }
+      if (rippleContext.worldStateContext) {
+        systemContent += `\n\n${rippleContext.worldStateContext}
+
+WORLD STATE INSTRUCTIONS:
+- Describe heightened security through environmental details (more guards, checkpoints)
+- Show public mood through NPC behavior (hushed conversations, empty streets, vigilance)
+- Price changes manifest when player shops or trades
+- Active manhunts mean guards look more closely at strangers
+- These are background elements - weave them naturally, don't announce them`;
+      }
+    }
+    
+    // Add Unreliable Information Context (Rumors, Lies, Biased Information)
+    if (unreliableInfoContext) {
+      if (unreliableInfoContext.informationContext) {
+        systemContent += `\n\n${unreliableInfoContext.informationContext}`;
+      }
+      if (unreliableInfoContext.rumorContext) {
+        systemContent += `\n\n${unreliableInfoContext.rumorContext}`;
+      }
+      
+      // Add general unreliable information instructions
+      systemContent += `
+
+UNRELIABLE INFORMATION GUIDELINES:
+- NPCs may be wrong due to poor memory, bias, or limited knowledge - not just lying
+- When an NPC lies, show subtle behavioral tells based on their detection difficulty
+- Rumors should be shared as if they're fact - NPCs believe what they heard
+- Multiple NPCs repeating the same wrong information makes it seem more credible
+- Never tell the player directly that information is false - let them discover it
+- Contradictory information from different sources creates investigation opportunities`;
     }
     
     if (cheatMode) {
