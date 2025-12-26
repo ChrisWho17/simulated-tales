@@ -33,6 +33,24 @@ import {
   learnLanguage,
   getLanguageDisplayName
 } from '@/game/languageSystem';
+import {
+  NPCGrudgeContext,
+  buildNPCGrudgeContext,
+  buildSceneNPCContext,
+  createDefaultRelationshipMetrics,
+  calculateBehaviorModifiers,
+} from '@/game/npcGrudgeSystem';
+import {
+  buildRumorContext,
+  buildInformationContext,
+  Rumor,
+} from '@/game/unreliableInformationSystem';
+import {
+  buildConsequenceContext,
+  buildWorldStateContext,
+  WorldStateChanges,
+  createDefaultWorldState,
+} from '@/game/rippleEffectSystem';
 import { StoryEntry } from './types';
 import { 
   validateGenerationState, 
@@ -317,6 +335,36 @@ export function AdventureGame() {
     return createLanguageSystemState();
   });
   
+  // === NEW SYSTEMS STATE: Grudges, Ripples, Unreliable Information ===
+  
+  // NPC Psychology state (grudges, debts, relationships for NPCs in scene)
+  const [sceneNPCs, setSceneNPCs] = useState<NPCGrudgeContext[]>([]);
+  
+  // Ripple Effect state (consequences cascading through world)
+  const [worldState, setWorldState] = useState<WorldStateChanges>(() => {
+    try {
+      const saved = localStorage.getItem('untold-world-state');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return createDefaultWorldState();
+  });
+  const [narrativeQueue, setNarrativeQueue] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('untold-narrative-queue');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  
+  // Rumor system state
+  const [activeRumors, setActiveRumors] = useState<Rumor[]>(() => {
+    try {
+      const saved = localStorage.getItem('untold-active-rumors');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+  
   // Persist mood changes
   useEffect(() => {
     localStorage.setItem('untold-player-mood', JSON.stringify(currentMood));
@@ -331,6 +379,21 @@ export function AdventureGame() {
   useEffect(() => {
     localStorage.setItem('untold-language-state', JSON.stringify(languageState));
   }, [languageState]);
+  
+  // Persist world state
+  useEffect(() => {
+    localStorage.setItem('untold-world-state', JSON.stringify(worldState));
+  }, [worldState]);
+  
+  // Persist narrative queue
+  useEffect(() => {
+    localStorage.setItem('untold-narrative-queue', JSON.stringify(narrativeQueue));
+  }, [narrativeQueue]);
+  
+  // Persist active rumors
+  useEffect(() => {
+    localStorage.setItem('untold-active-rumors', JSON.stringify(activeRumors));
+  }, [activeRumors]);
   
   // Sync language settings from GameContext
   useEffect(() => {
@@ -521,6 +584,33 @@ export function AdventureGame() {
         translateEnabled: languageState.translateEnabled,
         languageInstructions,
       };
+      
+      // === NEW SYSTEMS: Build context for grudges, ripples, unreliable info ===
+      
+      // NPC Psychology Context (grudges, debts, relationships)
+      let npcPsychologyPayload = undefined;
+      if (sceneNPCs.length > 0) {
+        npcPsychologyPayload = {
+          npcContexts: buildSceneNPCContext(sceneNPCs),
+        };
+      }
+      
+      // Ripple Effect Context (consequences and world state)
+      let ripplePayload = undefined;
+      if (narrativeQueue.length > 0 || worldState.securityLevel !== 'normal' || worldState.guardAlertLevel > 20) {
+        ripplePayload = {
+          consequenceContext: buildConsequenceContext(narrativeQueue),
+          worldStateContext: buildWorldStateContext(worldState),
+        };
+      }
+      
+      // Unreliable Information Context (rumors)
+      let unreliableInfoPayload = undefined;
+      if (activeRumors.length > 0) {
+        unreliableInfoPayload = {
+          rumorContext: buildRumorContext(activeRumors),
+        };
+      }
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -546,6 +636,13 @@ export function AdventureGame() {
             toneContext: toneContextPayload,
             // Pass language barrier context
             languageContext: languageContextPayload,
+            // === NEW SYSTEMS ===
+            // NPC Psychology (grudges, debts, relationships)
+            npcPsychologyContext: npcPsychologyPayload,
+            // Ripple effects and world state
+            rippleContext: ripplePayload,
+            // Unreliable information and rumors
+            unreliableInfoContext: unreliableInfoPayload,
           }),
         }
       );
@@ -633,7 +730,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     }
-  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState]);
+  }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState, sceneNPCs, worldState, narrativeQueue, activeRumors]);
 
   // Generate initial narrative for campaigns with empty history
   // Track the campaign ID we're generating for to prevent duplicate calls
