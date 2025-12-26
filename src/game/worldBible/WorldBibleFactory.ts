@@ -16,8 +16,22 @@ import {
 import { ValidationEngine } from './ValidationEngine';
 import { WarEra } from '@/types/genreData';
 
+// Track genre conflicts for narrative resolution instead of blocking
+export interface GenreConflict {
+  rule: string;
+  primary: { genre: string; value: unknown };
+  secondary: { genre: string; value: unknown };
+}
+
+export interface MergeResult {
+  merged: Record<string, unknown>;
+  conflicts: GenreConflict[];
+  activeGenres: string[];
+}
+
 /**
  * Create a new World Bible from options
+ * Uses priority-based merging with conflict queueing (non-blocking)
  */
 export function createWorldBible(options: WorldBibleOptions): WorldBible {
   const {
@@ -33,7 +47,10 @@ export function createWorldBible(options: WorldBibleOptions): WorldBible {
     customSpecies,
   } = options;
   
-  // Get primary genre definition
+  // Track conflicts for narrative use instead of blocking
+  const genreConflicts: GenreConflict[] = [];
+  
+  // Get primary genre definition (with null safety)
   const primaryDef = getGenreDefinition(primaryGenre);
   
   // Determine tech tier
@@ -63,12 +80,34 @@ export function createWorldBible(options: WorldBibleOptions): WorldBible {
     ['human'];
   
   // Add species from secondary genres with additive behavior
+  // Track conflicts instead of blocking
   for (const blend of secondaryGenres) {
     const secDef = getGenreDefinition(blend.genreId);
-    if (secDef && secDef.blendBehavior === 'additive') {
-      for (const species of secDef.speciesDefault) {
-        if (!speciesAllowed.includes(species)) {
-          speciesAllowed.push(species);
+    if (secDef) {
+      // Check for tech tier conflicts
+      if (primaryDef && primaryDef.techTier !== secDef.techTier) {
+        genreConflicts.push({
+          rule: 'techTier',
+          primary: { genre: primaryGenre, value: primaryDef.techTier },
+          secondary: { genre: blend.genreId, value: secDef.techTier }
+        });
+      }
+      
+      // Check for magic rule conflicts  
+      if (primaryDef && primaryDef.magicDefault !== secDef.magicDefault) {
+        genreConflicts.push({
+          rule: 'magicDefault',
+          primary: { genre: primaryGenre, value: primaryDef.magicDefault },
+          secondary: { genre: blend.genreId, value: secDef.magicDefault }
+        });
+      }
+      
+      // Add species from additive genres
+      if (secDef.blendBehavior === 'additive') {
+        for (const species of secDef.speciesDefault) {
+          if (!speciesAllowed.includes(species)) {
+            speciesAllowed.push(species);
+          }
         }
       }
     }
@@ -159,7 +198,9 @@ export function createWorldBible(options: WorldBibleOptions): WorldBible {
     }
   }
   
-  // Create the World Bible
+  // Create the World Bible with conflict tracking
+  const activeGenres = [primaryGenre, ...secondaryGenres.map(g => g.genreId)];
+  
   const worldBible: WorldBible = {
     campaignId: generateId(),
     campaignName,
@@ -179,6 +220,10 @@ export function createWorldBible(options: WorldBibleOptions): WorldBible {
     
     escalationMenu,
     reskinRules,
+    
+    // Genre conflict tracking for narrative resolution
+    genreConflicts,
+    activeGenres,
     
     intrusionBudget,
     intrusionsThisChapter: 0,

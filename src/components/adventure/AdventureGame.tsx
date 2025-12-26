@@ -399,10 +399,30 @@ export function AdventureGame() {
     
     console.log('[AdventureGame] Generating initial narrative for campaign:', currentCampaignId);
     
-    // Use an IIFE to handle async
+    // Genre-specific fallback openings (always works, no blocking)
+    const buildFallbackOpening = (genre: string, charName: string, scenario: string): string => {
+      const templates: Record<string, string> = {
+        fantasy: `${charName} stood at the threshold of destiny, the ancient magic of this realm humming faintly in the air. The path ahead promised both wonder and peril in equal measure.`,
+        scifi: `The hum of ${charName}'s ship systems provided a constant backdrop as vast darkness stretched beyond the viewport. Somewhere out there, answers waited to be found.`,
+        horror: `Something felt wrong. ${charName} couldn't shake the creeping sensation that unseen eyes watched from the shadows. Every instinct screamed caution.`,
+        mystery: `The pieces of the puzzle lay scattered before ${charName}, each clue a thread in a web of deception. Truth was out there—buried beneath layers of lies.`,
+        pirate: `Salt spray kissed ${charName}'s face as the ship cut through churning waves. Adventure and fortune beckoned from beyond the horizon.`,
+        western: `Dust swirled around ${charName}'s boots as they surveyed the sun-baked frontier. Out here, a person made their own law—or died trying.`,
+        cyberpunk: `Neon reflections danced in ${charName}'s eyes as rain-slicked streets pulsed with data and danger. In the shadow of the megacorps, survival was an art.`,
+        postapoc: `${charName} scanned the wasteland horizon, where ruins of the old world met the harsh reality of the new. Every day was a fight, and today was no different.`,
+        war: `${charName} checked their gear one final time. The calm before battle never lasted long, and when it broke, there would be no time for doubt.`,
+        default: `${charName} found themselves at the beginning of something new. The path ahead was uncertain, but the first step waited to be taken.`
+      };
+      return templates[genre] || templates.default;
+    };
+    
+    // Use an IIFE with timeout protection
     (async () => {
+      const TIMEOUT_MS = 8000; // 8 second timeout
+      
       try {
-        const response = await fetch(
+        // Race between API call and timeout
+        const fetchPromise = fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
           {
             method: 'POST',
@@ -412,9 +432,16 @@ export function AdventureGame() {
               conversationHistory: [],
               character: character,
               adultContent: settings.adultContent,
+              genreContract: worldBible?.contractSummary || null,
             }),
           }
         );
+        
+        const timeoutPromise = new Promise<Response>((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
+        );
+        
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
         
         if (!response.ok) {
           throw new Error(`API returned ${response.status}`);
@@ -423,7 +450,11 @@ export function AdventureGame() {
         const data = await response.json();
         console.log('[AdventureGame] Received narrative response:', !!data.narrative);
         
-        const narrativeContent = data.narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+        const narrativeContent = data.narrative || buildFallbackOpening(
+          scenarioSelection.genre, 
+          character.name, 
+          scenarioSelection.scenario
+        );
         
         const newStory: StoryEntry[] = [{
           id: `narrator_${Date.now()}`,
@@ -435,7 +466,6 @@ export function AdventureGame() {
         setStory(newStory);
         saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
         
-        // Add to campaign narrative history
         if (campaignContext) {
           campaignContext.addNarrativeEntry(newStory[0]);
         }
@@ -443,11 +473,18 @@ export function AdventureGame() {
         console.log('[AdventureGame] Initial narrative set successfully');
       } catch (error) {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
-        // Create fallback story entry
+        
+        // Use genre-specific fallback (always works, never blocks)
+        const fallbackContent = buildFallbackOpening(
+          scenarioSelection.genre,
+          character.name,
+          scenarioSelection.scenario
+        );
+        
         const fallbackStory: StoryEntry[] = [{
           id: `narrator_${Date.now()}`,
           role: 'narrator',
-          content: `You find yourself at the beginning of a new adventure. The world awaits your first move.`,
+          content: fallbackContent,
           timestamp: Date.now(),
         }];
         setStory(fallbackStory);
@@ -456,14 +493,13 @@ export function AdventureGame() {
           campaignContext.addNarrativeEntry(fallbackStory[0]);
         }
       } finally {
-        // Reset generation tracking for this campaign when done
         if (generatingForCampaignId.current === currentCampaignId) {
           generatingForCampaignId.current = null;
         }
         setIsLoading(false);
       }
     })();
-  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent]);
+  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {

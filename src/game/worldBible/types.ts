@@ -97,6 +97,13 @@ export interface GenreDefinition {
   };
 }
 
+// Genre conflict for narrative resolution (instead of blocking)
+export interface GenreConflict {
+  rule: string;
+  primary: { genre: string; value: unknown };
+  secondary: { genre: string; value: unknown };
+}
+
 // World Bible - the single source of truth
 export interface WorldBible {
   // Identity
@@ -126,6 +133,12 @@ export interface WorldBible {
   
   // Reskin rules - how to adapt foreign elements
   reskinRules: Record<string, string>;
+  
+  // Genre conflicts - queued for narrative resolution instead of blocking
+  genreConflicts: GenreConflict[];
+  
+  // Active genres for quick reference
+  activeGenres: string[];
   
   // Intrusion budget - allows limited cross-genre elements
   intrusionBudget: number;
