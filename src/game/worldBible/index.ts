@@ -16,6 +16,7 @@ export type {
   TechTier,
   AllowedSpecies,
   BlendBehavior,
+  GenreConflict,
 } from './types';
 
 // Genre Definitions
