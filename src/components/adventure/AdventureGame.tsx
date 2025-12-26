@@ -418,6 +418,8 @@ export function AdventureGame() {
             genreContract: worldBible?.contractSummary || null,
             // Pass adult content setting for NSFW control
             adultContent: settings.adultContent,
+            // Pass narrator style configuration
+            narratorConfig: settings.narratorConfig,
           }),
         }
       );
@@ -494,6 +496,7 @@ export function AdventureGame() {
               character: character,
               adultContent: settings.adultContent,
               genreContract: worldBible?.contractSummary || null,
+              narratorConfig: settings.narratorConfig,
             }),
           }
         );

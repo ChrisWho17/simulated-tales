@@ -1,5 +1,15 @@
 // Game Settings System - Including 18+ content toggle and feature toggles
 
+// Narrator style types
+export type NarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
+export type NarratorDetailLevel = 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
+
+export interface NarratorConfig {
+  voice: NarratorVoice;
+  detailLevel: NarratorDetailLevel;
+  emotionalLeakage: boolean;
+}
+
 export interface GameSettings {
   // Core toggles
   adultContent: boolean;        // 18+ content toggle
@@ -12,6 +22,9 @@ export interface GameSettings {
   fontSize: 'small' | 'medium' | 'large';
   showRollDetails: boolean;
   sceneIllustrations: boolean;
+  
+  // Narrator customization
+  narratorConfig: NarratorConfig;
   
   // Feature toggles
   enableMoodSystem: boolean;           // Mood tracking and display
@@ -29,6 +42,12 @@ export interface GameSettings {
 
 const SETTINGS_KEY = 'living-world-settings';
 
+export const DEFAULT_NARRATOR_CONFIG: NarratorConfig = {
+  voice: 'LITERARY',
+  detailLevel: 'MODERATE',
+  emotionalLeakage: true,
+};
+
 // Default settings
 export const DEFAULT_SETTINGS: GameSettings = {
   adultContent: false,
@@ -41,6 +60,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   fontSize: 'medium',
   showRollDetails: true,
   sceneIllustrations: true,
+  
+  // Narrator customization
+  narratorConfig: DEFAULT_NARRATOR_CONFIG,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,

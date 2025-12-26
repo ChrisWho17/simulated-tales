@@ -40,6 +40,15 @@ import {
 // GAME SETTINGS
 // ============================================================================
 
+export type NarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
+export type NarratorDetailLevel = 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
+
+export interface NarratorConfig {
+  voice: NarratorVoice;
+  detailLevel: NarratorDetailLevel;
+  emotionalLeakage: boolean;
+}
+
 export interface GameSettings {
   diceMode: DiceMode;
   adultContent: boolean;
@@ -49,6 +58,9 @@ export interface GameSettings {
   colorTheme: string;
   autoSave: boolean;
   showRollDetails: boolean;
+  
+  // Narrator customization
+  narratorConfig: NarratorConfig;
   
   // Feature toggles
   enableMoodSystem: boolean;
@@ -64,6 +76,12 @@ export interface GameSettings {
   enableInventoryWeight: boolean;
 }
 
+const defaultNarratorConfig: NarratorConfig = {
+  voice: 'LITERARY',
+  detailLevel: 'MODERATE',
+  emotionalLeakage: true,
+};
+
 const defaultSettings: GameSettings = {
   diceMode: 'story',
   adultContent: false,
@@ -73,6 +91,9 @@ const defaultSettings: GameSettings = {
   colorTheme: 'violet',
   autoSave: true,
   showRollDetails: true,
+  
+  // Narrator customization
+  narratorConfig: defaultNarratorConfig,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,
