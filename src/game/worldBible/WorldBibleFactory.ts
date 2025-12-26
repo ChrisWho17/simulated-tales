@@ -74,21 +74,70 @@ export function createWorldBible(options: WorldBibleOptions): WorldBible {
     }
   }
   
-  // Compute banned elements
+  // Compute banned elements based on hardLock mode
   const secondaryIds = secondaryGenres.map(g => g.genreId);
-  const bannedElements = getBannedElements(primaryGenre, secondaryIds);
+  let bannedElements: string[];
+  
+  if (hardLock) {
+    // HARD LOCK: Only elements from chosen genres are allowed
+    // Collect ALL banned elements from ALL genre definitions that aren't in our allowed set
+    const allowedElements = new Set<string>();
+    
+    // Add primary genre's core elements
+    if (primaryDef) {
+      primaryDef.coreElements.forEach(e => allowedElements.add(e.toLowerCase()));
+    }
+    
+    // Add secondary genres' core elements (scaled by blend strength)
+    for (const blend of secondaryGenres) {
+      const secDef = getGenreDefinition(blend.genreId);
+      if (secDef) {
+        // More blend = more elements allowed
+        const elementCount = Math.ceil(secDef.coreElements.length * (blend.blendStrength * 3)); // blendStrength is 0-0.30
+        secDef.coreElements.slice(0, elementCount).forEach(e => allowedElements.add(e.toLowerCase()));
+      }
+    }
+    
+    // Ban everything from OTHER genres that isn't in our allowed set
+    const allBanned = new Set<string>();
+    for (const def of Object.values(GENRE_DEFINITIONS)) {
+      // Skip our selected genres
+      if (def.id === primaryGenre || secondaryIds.includes(def.id)) continue;
+      
+      // Add this genre's core elements to potential bans
+      def.coreElements.forEach(e => {
+        if (!allowedElements.has(e.toLowerCase())) {
+          allBanned.add(e);
+        }
+      });
+    }
+    
+    // Also add primary genre's hardBanned (these are always banned)
+    if (primaryDef) {
+      primaryDef.hardBanned.forEach(e => allBanned.add(e));
+    }
+    
+    bannedElements = [...allBanned];
+  } else {
+    // Normal mode: use standard banned elements calculation
+    bannedElements = getBannedElements(primaryGenre, secondaryIds);
+  }
   
   // Build escalation menu from primary + secondary
-  const escalationMenu: EscalationBeat[] = primaryDef?.escalationLadder || [];
+  const escalationMenu: EscalationBeat[] = primaryDef?.escalationLadder ? 
+    JSON.parse(JSON.stringify(primaryDef.escalationLadder)) : [];
+  
   for (const blend of secondaryGenres) {
     const secDef = getGenreDefinition(blend.genreId);
-    if (secDef && blend.blendStrength >= 0.15) {
-      // Add some secondary escalation beats
-      for (const beat of secDef.escalationLadder.slice(0, 3)) {
+    if (secDef && blend.blendStrength >= 0.10) { // Lower threshold for escalation blending
+      // Add some secondary escalation beats proportional to blend strength
+      const beatsToAdd = blend.blendStrength >= 0.20 ? 4 : blend.blendStrength >= 0.15 ? 3 : 2;
+      for (const beat of secDef.escalationLadder.slice(0, beatsToAdd)) {
         const existingTier = escalationMenu.find(e => e.tier === beat.tier);
         if (existingTier) {
           // Merge beats
-          for (const b of beat.beats.slice(0, 2)) {
+          const newBeatsCount = blend.blendStrength >= 0.20 ? 3 : 2;
+          for (const b of beat.beats.slice(0, newBeatsCount)) {
             if (!existingTier.beats.includes(b)) {
               existingTier.beats.push(b);
             }

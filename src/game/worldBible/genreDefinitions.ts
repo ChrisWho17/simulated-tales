@@ -557,24 +557,39 @@ export function getCoreElements(primaryId: string, secondaryIds: string[] = []):
   return [...new Set(elements)];
 }
 
-// Get combined banned elements
+// Get combined banned elements (non-hardLock mode)
+// This allows blending by removing secondary genre elements from the banned list
 export function getBannedElements(primaryId: string, secondaryIds: string[] = []): string[] {
   const primary = getGenreDefinition(primaryId);
   if (!primary) return [];
   
   const banned = [...primary.hardBanned];
   
-  // Secondary genres can remove items from banned list
+  // Collect all allowed elements from secondary genres
+  const allowedFromSecondary = new Set<string>();
   for (const secId of secondaryIds) {
     const secondary = getGenreDefinition(secId);
     if (secondary) {
-      // Remove secondary's core elements from banned
-      for (const elem of secondary.coreElements) {
-        const idx = banned.indexOf(elem);
-        if (idx > -1) banned.splice(idx, 1);
+      // Add secondary's core elements as allowed
+      secondary.coreElements.forEach(e => allowedFromSecondary.add(e.toLowerCase()));
+      // Also add species if additive
+      if (secondary.blendBehavior === 'additive') {
+        secondary.speciesDefault.forEach(s => allowedFromSecondary.add(s.toLowerCase()));
       }
     }
   }
   
-  return [...new Set(banned)];
+  // Remove items from banned list if they appear in secondary genres' allowed elements
+  const filteredBanned = banned.filter(elem => {
+    const lowerElem = elem.toLowerCase();
+    // Check if this banned element is allowed by a secondary genre
+    for (const allowed of allowedFromSecondary) {
+      if (lowerElem.includes(allowed) || allowed.includes(lowerElem)) {
+        return false; // Remove from banned
+      }
+    }
+    return true; // Keep banned
+  });
+  
+  return [...new Set(filteredBanned)];
 }
