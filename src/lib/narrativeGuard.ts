@@ -1,0 +1,292 @@
+/**
+ * Narrative Generation Guard System
+ * 
+ * Prevents race conditions in AI narrative generation by:
+ * 1. Ensuring all required state is ready before generation
+ * 2. Detecting and rejecting echo responses
+ * 3. Managing concurrent generation requests
+ */
+
+import { RPGCharacter } from '@/types/rpgCharacter';
+import { WorldBible } from '@/game/worldBible/types';
+
+// ============= TYPES =============
+
+export interface GenerationState {
+  character: RPGCharacter | null;
+  worldBible: WorldBible | null;
+  scenario: string | null;
+  genre: string | null;
+}
+
+export interface StateValidation {
+  ready: boolean;
+  missing: string[];
+}
+
+// ============= GENERATION LOCK =============
+
+let isGenerating = false;
+const generationQueue: Array<{
+  resolve: (value: boolean) => void;
+  id: string;
+}> = [];
+
+/**
+ * Acquire generation lock - prevents concurrent generation
+ */
+export function acquireGenerationLock(requestId: string): Promise<boolean> {
+  if (!isGenerating) {
+    isGenerating = true;
+    console.log(`[NarrativeGuard] Lock acquired: ${requestId}`);
+    return Promise.resolve(true);
+  }
+  
+  console.log(`[NarrativeGuard] Generation in progress, queueing: ${requestId}`);
+  return new Promise((resolve) => {
+    generationQueue.push({ resolve, id: requestId });
+  });
+}
+
+/**
+ * Release generation lock - allows next queued request
+ */
+export function releaseGenerationLock(requestId: string): void {
+  console.log(`[NarrativeGuard] Lock released: ${requestId}`);
+  
+  if (generationQueue.length > 0) {
+    const next = generationQueue.shift()!;
+    console.log(`[NarrativeGuard] Processing queued request: ${next.id}`);
+    next.resolve(true);
+  } else {
+    isGenerating = false;
+  }
+}
+
+/**
+ * Cancel all queued generation requests
+ */
+export function cancelPendingGeneration(): void {
+  console.log(`[NarrativeGuard] Cancelling ${generationQueue.length} queued requests`);
+  while (generationQueue.length > 0) {
+    const request = generationQueue.shift()!;
+    request.resolve(false);
+  }
+  isGenerating = false;
+}
+
+/**
+ * Check if generation is currently in progress
+ */
+export function isGenerationInProgress(): boolean {
+  return isGenerating;
+}
+
+// ============= STATE VALIDATION =============
+
+/**
+ * Validate that all required state is ready for generation
+ */
+export function validateGenerationState(state: GenerationState): StateValidation {
+  const missing: string[] = [];
+  
+  if (!state.character) {
+    missing.push('character');
+  } else {
+    if (!state.character.name) missing.push('character.name');
+    if (!state.character.stats) missing.push('character.stats');
+  }
+  
+  if (!state.scenario) {
+    missing.push('scenario');
+  }
+  
+  if (!state.genre) {
+    missing.push('genre');
+  }
+  
+  // World Bible is optional but log if missing
+  if (!state.worldBible) {
+    console.log('[NarrativeGuard] WorldBible not ready (will use basic prompts)');
+  } else {
+    if (!state.worldBible.primaryGenre) missing.push('worldBible.primaryGenre');
+  }
+  
+  const ready = missing.length === 0;
+  
+  if (!ready) {
+    console.warn('[NarrativeGuard] State not ready. Missing:', missing.join(', '));
+  } else {
+    console.log('[NarrativeGuard] ✓ State validated for generation');
+  }
+  
+  return { ready, missing };
+}
+
+/**
+ * Wait for state to become ready (with timeout)
+ */
+export async function waitForStateReady(
+  getState: () => GenerationState,
+  timeoutMs: number = 3000,
+  pollIntervalMs: number = 100
+): Promise<StateValidation> {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    const validation = validateGenerationState(getState());
+    
+    if (validation.ready) {
+      return validation;
+    }
+    
+    // Wait before checking again
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+  
+  // Final check after timeout
+  const finalValidation = validateGenerationState(getState());
+  
+  if (!finalValidation.ready) {
+    console.error('[NarrativeGuard] Timeout waiting for state. Still missing:', finalValidation.missing.join(', '));
+  }
+  
+  return finalValidation;
+}
+
+// ============= ECHO DETECTION =============
+
+/**
+ * Detect if AI response is echoing player input
+ */
+export function isEchoResponse(response: string, playerInput: string): boolean {
+  if (!response || !playerInput) return false;
+  
+  const normResponse = response.toLowerCase().trim();
+  const normInput = playerInput.toLowerCase().trim();
+  
+  // Skip if input is too short to detect meaningful echo
+  if (normInput.length < 5) return false;
+  
+  // Pattern 1: "You attempt to [exact input]"
+  if (normResponse.includes(`you attempt to ${normInput}`)) {
+    console.warn('[NarrativeGuard] Echo detected: "you attempt to" pattern');
+    return true;
+  }
+  
+  // Pattern 2: "You try to [exact input]"
+  if (normResponse.includes(`you try to ${normInput}`)) {
+    console.warn('[NarrativeGuard] Echo detected: "you try to" pattern');
+    return true;
+  }
+  
+  // Pattern 3: Response starts with the input (with minor additions)
+  if (normResponse.startsWith(normInput) && normInput.length > 10) {
+    console.warn('[NarrativeGuard] Echo detected: starts with input');
+    return true;
+  }
+  
+  // Pattern 4: Input appears verbatim in response (for longer inputs)
+  if (normInput.length > 20 && normResponse.includes(normInput)) {
+    console.warn('[NarrativeGuard] Echo detected: verbatim inclusion');
+    return true;
+  }
+  
+  // Pattern 5: "You [input]." with just a period added
+  if (normResponse === `you ${normInput}.` || normResponse === `you ${normInput}`) {
+    console.warn('[NarrativeGuard] Echo detected: simple you + input pattern');
+    return true;
+  }
+  
+  // Pattern 6: Check for malformed prompts that leaked through
+  if (normResponse.includes('you attempt to i ') || normResponse.includes('you try to i ')) {
+    console.warn('[NarrativeGuard] Echo detected: malformed first-person leak');
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Clean player input for prompt construction
+ * Removes leading "I" and normalizes for better AI understanding
+ */
+export function cleanPlayerInputForPrompt(input: string): string {
+  let cleaned = input.trim();
+  
+  // Remove leading "I" patterns (AI should interpret the action, not echo it)
+  cleaned = cleaned.replace(/^i\s+/i, '');
+  
+  // Remove trailing punctuation that might confuse prompt structure
+  cleaned = cleaned.replace(/[.!?]+$/, '');
+  
+  return cleaned;
+}
+
+// ============= CONTEXTUAL FALLBACK =============
+
+const CONTEXTUAL_FALLBACKS = [
+  "The moment stretches, pregnant with possibility. Something is about to change.",
+  "A breath, then another. The world waits for your next move.",
+  "The air shifts subtly. Whatever happens next will matter.",
+  "Silence holds the space between heartbeats. The story pauses, then continues.",
+  "Time slows to a crawl. Every detail becomes sharp, significant.",
+  "The scene holds its breath, balanced on a knife's edge of consequence.",
+];
+
+/**
+ * Get a contextual fallback when echo is detected or generation fails
+ */
+export function getContextualFallback(genre?: string): string {
+  const base = CONTEXTUAL_FALLBACKS[Math.floor(Math.random() * CONTEXTUAL_FALLBACKS.length)];
+  
+  // Add genre flavor if available
+  const genreFlavors: Record<string, string> = {
+    fantasy: " Magic hums faintly at the edges of perception.",
+    horror: " Shadows seem to lean closer, hungry for what comes next.",
+    scifi: " Systems hum in the background, processing unknowable calculations.",
+    mystery: " A clue waits to be noticed, hiding in plain sight.",
+    noir: " The city breathes around you, indifferent to your troubles.",
+    war: " Distant thunder rolls—artillery or storm, impossible to tell.",
+    western: " Dust devils dance on the horizon, indifferent to human drama.",
+    cyberpunk: " Neon flickers. The network pulses. Data flows eternal.",
+    postapoc: " The ruins whisper of what was. What will be is unwritten.",
+    cosmic_horror: " Reality bends imperceptibly. Something vast stirs in the dark between stars.",
+  };
+  
+  if (genre && genreFlavors[genre]) {
+    return base + genreFlavors[genre];
+  }
+  
+  return base;
+}
+
+// ============= DEBUG LOGGING =============
+
+/**
+ * Log comprehensive generation debug info
+ */
+export function logGenerationDebug(
+  playerInput: string,
+  state: GenerationState,
+  additionalContext?: Record<string, unknown>
+): void {
+  console.group('=== NARRATIVE GENERATION DEBUG ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Player Input:', playerInput);
+  console.log('Player Input (cleaned):', cleanPlayerInputForPrompt(playerInput));
+  console.log('Character exists:', !!state.character);
+  console.log('Character name:', state.character?.name);
+  console.log('WorldBible exists:', !!state.worldBible);
+  console.log('WorldBible genre:', state.worldBible?.primaryGenre);
+  console.log('Scenario exists:', !!state.scenario);
+  console.log('Genre:', state.genre);
+  console.log('Is generating:', isGenerating);
+  console.log('Queue length:', generationQueue.length);
+  
+  if (additionalContext) {
+    console.log('Additional context:', additionalContext);
+  }
+  
+  console.groupEnd();
+}

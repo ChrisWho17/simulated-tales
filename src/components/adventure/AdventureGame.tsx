@@ -19,6 +19,17 @@ import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { StoryEntry } from './types';
+import { 
+  validateGenerationState, 
+  isEchoResponse, 
+  cleanPlayerInputForPrompt, 
+  getContextualFallback,
+  logGenerationDebug,
+  acquireGenerationLock,
+  releaseGenerationLock,
+  cancelPendingGeneration,
+  isGenerationInProgress
+} from '@/lib/narrativeGuard';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -380,12 +391,43 @@ export function AdventureGame() {
     const activeChar = char || character;
     if (!activeChar) return null;
     
+    // === RACE CONDITION FIX: Validate state before generation ===
+    const generationState = {
+      character: activeChar,
+      worldBible: worldBible,
+      scenario: scenario,
+      genre: scenarioSelection?.genre || null,
+    };
+    
+    const stateValidation = validateGenerationState(generationState);
+    if (!stateValidation.ready) {
+      console.warn('[generateNarrative] State not ready, using fallback. Missing:', stateValidation.missing);
+      return getContextualFallback(scenarioSelection?.genre);
+    }
+    
+    // === RACE CONDITION FIX: Acquire generation lock ===
+    const requestId = `gen_${Date.now()}`;
+    const lockAcquired = await acquireGenerationLock(requestId);
+    if (!lockAcquired) {
+      console.warn('[generateNarrative] Could not acquire lock, request cancelled');
+      return null;
+    }
+    
     // Only manage loading state if not handled by caller
     if (!skipLoadingState) {
       setIsLoading(true);
     }
 
     try {
+      // === DEBUG LOGGING ===
+      if (playerAction) {
+        logGenerationDebug(playerAction, generationState, {
+          historyLength: history.length,
+          hasDiceRoll: !!diceRoll,
+          hasMemoryContext: !!campaignMemory,
+        });
+      }
+      
       // Get memory context for AI
       const currentTick = campaignMemory?.campaign.currentTick ?? 0;
       const memContext = getCampaignContext?.('current_scene', [], currentTick);
@@ -399,6 +441,9 @@ export function AdventureGame() {
       
       // Enhance scenario with genre contract if world bible exists
       const enhancedScenario = getEnhancedPromptWithContract(scenario);
+      
+      // === RACE CONDITION FIX: Clean player input to prevent echo ===
+      const cleanedPlayerAction = playerAction ? cleanPlayerInputForPrompt(playerAction) : undefined;
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -407,7 +452,7 @@ export function AdventureGame() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             scenario: enhancedScenario,
-            playerAction,
+            playerAction: cleanedPlayerAction,
             conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
             cheatMode,
             character: activeChar,
@@ -431,7 +476,7 @@ export function AdventureGame() {
           duration: 5000,
           description: 'Rate limit exceeded'
         });
-        return generateNeutralContinuation();
+        return getContextualFallback(genre);
       }
       
       if (response.status === 402) {
@@ -440,7 +485,7 @@ export function AdventureGame() {
           duration: 8000,
           description: 'Usage limit reached'
         });
-        return generateNeutralContinuation();
+        return getContextualFallback(genre);
       }
 
       const data = await response.json();
@@ -449,7 +494,7 @@ export function AdventureGame() {
       if (data.error) {
         console.error('[AI] API returned error:', data.error);
         toast.error(data.error, { duration: 5000 });
-        return generateNeutralContinuation();
+        return getContextualFallback(genre);
       }
       
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
@@ -457,24 +502,33 @@ export function AdventureGame() {
       
       // If we have a narrative, validate it through World Bible
       if (data.narrative) {
+        // === RACE CONDITION FIX: Detect echo responses ===
+        if (playerAction && isEchoResponse(data.narrative, playerAction)) {
+          console.error('[AI] Echo response detected, using contextual fallback');
+          return getContextualFallback(genre);
+        }
+        
         const validation = validateContent(data.narrative);
         if (!validation.success) {
           console.warn('[World Bible] Narrative blocked, using fallback:', validation.log);
           // Use modified content or fallback
-          return validation.content || generateNeutralContinuation();
+          return validation.content || getContextualFallback(genre);
         }
         // Return validated (possibly reskinned) content
         return validation.content;
       }
       
       // If no narrative at all, generate a local neutral continuation
-      return generateNeutralContinuation();
+      return getContextualFallback(genre);
     } catch (error) {
       // Network or parsing error - generate local fallback to maintain immersion
       console.error('Error generating narrative:', error);
       toast.error('Failed to reach AI. Using fallback narrative.');
-      return generateNeutralContinuation();
+      return getContextualFallback(scenarioSelection?.genre);
     } finally {
+      // === RACE CONDITION FIX: Always release lock ===
+      releaseGenerationLock(requestId);
+      
       if (!skipLoadingState) {
         setIsLoading(false);
       }
@@ -808,9 +862,16 @@ export function AdventureGame() {
   }, []);
 
   // Rollback story to a specific entry (discard everything after)
-  // IMPORTANT: Block rollback while AI is generating to prevent flickering
+  // IMPORTANT: Cancel pending generation and block during active generation
   const handleRollbackToEntry = useCallback((entryIndex: number) => {
     if (!character || !scenarioSelection) return;
+    
+    // Cancel any pending generation requests to prevent race conditions
+    if (isGenerationInProgress()) {
+      console.log('[Story Rollback] Cancelling pending generation...');
+      cancelPendingGeneration();
+      setIsLoading(false);
+    }
     
     // Block rollback during AI generation to prevent flickering/race conditions
     if (isLoading) {
