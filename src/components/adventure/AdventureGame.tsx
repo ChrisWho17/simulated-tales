@@ -59,6 +59,10 @@ import {
   buildPlayerCorrectionsContext,
 } from '@/game/playerCorrectionSystem';
 import {
+  processNarrativeForNPCs,
+  getRecentlyRegisteredNPCContext,
+} from '@/game/npcAutoRegistration';
+import {
   buildConsequenceContext,
   buildWorldStateContext,
 } from '@/game/rippleEffectSystem';
@@ -1201,6 +1205,12 @@ export function AdventureGame() {
       // Add narrator response to campaign narrative
       if (campaignContext) {
         campaignContext.addNarrativeEntry(narratorEntry);
+      }
+      
+      // === NPC AUTO-REGISTRATION: Detect and register NPCs from narrative ===
+      const npcResult = processNarrativeForNPCs(narrative, currentTurn, character.name);
+      if (npcResult.registered.length > 0) {
+        console.log(`[NPCAutoReg] Registered ${npcResult.registered.length} NPCs:`, npcResult.registered);
       }
       
       // Process action for identity anchors and advance time
