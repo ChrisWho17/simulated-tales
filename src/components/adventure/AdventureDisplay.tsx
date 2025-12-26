@@ -40,6 +40,11 @@ import {
 import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
+import { 
+  addRelationshipMoment, 
+  MomentType, 
+  MilestoneType 
+} from '@/lib/relationshipJournal';
 
 interface StoryEntry {
   id: string;
@@ -64,6 +69,17 @@ interface XPEventData {
   isNeutral?: boolean;
 }
 
+interface RelationshipMomentData {
+  npcName: string;
+  momentType: string;
+  description: string;
+}
+
+interface MilestoneChangeData {
+  npcName: string;
+  milestoneType: string;
+}
+
 interface GameMechanics {
   rollRequired?: PendingRoll;
   xpGained?: { amount: number; reason: string; events?: XPEventData[] };
@@ -73,6 +89,8 @@ interface GameMechanics {
   heal?: number;
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
   chapterEnd?: boolean;
+  relationshipMoments?: RelationshipMomentData[];
+  milestoneChanges?: MilestoneChangeData[];
 }
 
 interface AdventureDisplayProps {
@@ -593,6 +611,65 @@ export function AdventureDisplay({
       }
       if (pendingMechanics.lootGained) {
         gameContext.processGameEvent('found_treasure', updatedCharacter);
+      }
+    }
+
+    // Process relationship moments from AI narrative
+    if (pendingMechanics.relationshipMoments && pendingMechanics.relationshipMoments.length > 0) {
+      for (const moment of pendingMechanics.relationshipMoments) {
+        const npcId = moment.npcName.toLowerCase().replace(/\s+/g, '-');
+        const validMomentTypes: MomentType[] = [
+          'first_meeting', 'first_conversation', 'shared_adventure', 'gift_given', 
+          'gift_received', 'first_flirt', 'first_kiss', 'confession', 'rejection',
+          'first_date', 'intimate_moment', 'argument', 'reconciliation', 'heartbreak',
+          'commitment', 'milestone', 'memory'
+        ];
+        const momentType: MomentType = validMomentTypes.includes(moment.momentType as MomentType) 
+          ? (moment.momentType as MomentType) 
+          : 'memory';
+        
+        const romanticTypes: MomentType[] = [
+          'first_flirt', 'first_kiss', 'confession', 'first_date', 
+          'intimate_moment', 'commitment'
+        ];
+        
+        addRelationshipMoment(npcId, moment.npcName, momentType, moment.description, {
+          isRomantic: romanticTypes.includes(momentType),
+          emotionalImpact: romanticTypes.includes(momentType) ? 50 : 20,
+        });
+        
+        toast({
+          title: `💕 ${moment.npcName}`,
+          description: moment.description,
+          duration: 4000,
+        });
+      }
+    }
+
+    // Process milestone changes
+    if (pendingMechanics.milestoneChanges && pendingMechanics.milestoneChanges.length > 0) {
+      for (const milestone of pendingMechanics.milestoneChanges) {
+        const npcId = milestone.npcName.toLowerCase().replace(/\s+/g, '-');
+        const validMilestones: MilestoneType[] = [
+          'acquaintance', 'friend', 'close_friend', 'romantic_interest',
+          'dating', 'lover', 'committed', 'soulmate'
+        ];
+        const milestoneType: MilestoneType = validMilestones.includes(milestone.milestoneType as MilestoneType)
+          ? (milestone.milestoneType as MilestoneType)
+          : 'acquaintance';
+        
+        addRelationshipMoment(npcId, milestone.npcName, 'milestone', `Relationship evolved to: ${milestoneType}`, {
+          isMilestone: true,
+          milestoneType: milestoneType,
+          isRomantic: ['romantic_interest', 'dating', 'lover', 'committed', 'soulmate'].includes(milestoneType),
+          emotionalImpact: 75,
+        });
+        
+        toast({
+          title: `⭐ Milestone Reached!`,
+          description: `${milestone.npcName}: ${milestoneType.replace(/_/g, ' ')}`,
+          duration: 5000,
+        });
       }
     }
 
