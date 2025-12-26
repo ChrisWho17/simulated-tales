@@ -54,7 +54,7 @@ const GENRE_COLORS: Record<string, string> = {
 
 interface CampaignManagerProps {
   onCreateNew: () => void;
-  onSelectCampaign: (campaign: CampaignMetadata) => void;
+  onSelectCampaign: () => void;
 }
 
 export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManagerProps) {
@@ -76,7 +76,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const handleContinue = useCallback((campaign: CampaignMetadata) => {
     const success = loadCampaign(campaign.id);
     if (success) {
-      onSelectCampaign(campaign);
+      onSelectCampaign();
     } else {
       toast.error('Failed to load campaign');
     }

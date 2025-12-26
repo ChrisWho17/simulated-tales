@@ -90,10 +90,12 @@ export function AdventureGame() {
   const [character, setCharacter] = useState<RPGCharacter | null>(null);
   const [story, setStory] = useState<StoryEntry[]>([]);
   
-  // Initialize from active campaign or localStorage on first load
+  // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
-    // Skip if not in loading phase (already initialized)
-    if (phase !== 'loading' || initialLoading) return;
+    // Wait for initial loading to complete
+    if (initialLoading) return;
+    // Skip if already initialized (not in loading phase)
+    if (phase !== 'loading') return;
     
     // First check if there's an active campaign in the new system
     if (campaignContext?.activeCampaign) {
@@ -151,23 +153,23 @@ export function AdventureGame() {
     }
     
     setPhase('scenario');
-  }, [phase, initialLoading, campaignContext?.activeCampaign, restoreWorldBible]);
+  }, [initialLoading, phase, campaignContext?.activeCampaign, restoreWorldBible]);
   
   // Sync local state when campaign data changes (e.g., after checkpoint restore)
+  const lastSyncedTick = useRef<number>(-1);
   useEffect(() => {
     if (phase !== 'playing' || !campaignContext?.activeCampaign) return;
     
     const campaign = campaignContext.activeCampaign;
+    const currentTick = campaign.currentTick;
     
-    // Sync story and character from campaign
-    setStory(campaign.narrativeHistory);
-    setCharacter(campaign.player);
-  }, [
-    phase,
-    // Use length and last entry ID as change indicators
-    campaignContext?.activeCampaign?.narrativeHistory?.length,
-    campaignContext?.activeCampaign?.currentTick,
-  ]);
+    // Only sync if tick changed (indicates checkpoint restore or external change)
+    if (currentTick !== lastSyncedTick.current) {
+      lastSyncedTick.current = currentTick;
+      setStory(campaign.narrativeHistory);
+      setCharacter(campaign.player);
+    }
+  }, [phase, campaignContext?.activeCampaign?.currentTick]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
