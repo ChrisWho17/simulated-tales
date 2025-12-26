@@ -378,24 +378,29 @@ export function AdventureGame() {
   }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible]);
 
   // Generate initial narrative for campaigns with empty history
-  // Use a separate ref to track if generation is in progress to prevent duplicate calls
-  const isGeneratingInitial = useRef<boolean>(false);
+  // Track the campaign ID we're generating for to prevent duplicate calls
+  const generatingForCampaignId = useRef<string | null>(null);
   
   useEffect(() => {
     // Must be in playing phase with the flag set
     if (phase !== 'playing' || !needsInitialNarrative.current) return;
     // Must have required data
     if (!character || !scenarioSelection) return;
-    // Prevent duplicate calls
-    if (isGeneratingInitial.current) return;
     
-    // Mark as generating and clear the flag
-    isGeneratingInitial.current = true;
+    // Get current campaign ID
+    const currentCampaignId = campaignContext?.activeCampaign?.id || 'local';
+    
+    // Prevent duplicate calls for the same campaign
+    if (generatingForCampaignId.current === currentCampaignId) return;
+    
+    // Mark as generating for this campaign and clear the flag
+    generatingForCampaignId.current = currentCampaignId;
     needsInitialNarrative.current = false;
     
-    const generateInitialStory = async () => {
-      console.log('[AdventureGame] Generating initial narrative for campaign with empty history');
-      
+    console.log('[AdventureGame] Generating initial narrative for campaign:', currentCampaignId);
+    
+    // Use an IIFE to handle async
+    (async () => {
       try {
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -411,7 +416,13 @@ export function AdventureGame() {
           }
         );
         
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('[AdventureGame] Received narrative response:', !!data.narrative);
+        
         const narrativeContent = data.narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
         
         const newStory: StoryEntry[] = [{
@@ -428,6 +439,8 @@ export function AdventureGame() {
         if (campaignContext) {
           campaignContext.addNarrativeEntry(newStory[0]);
         }
+        
+        console.log('[AdventureGame] Initial narrative set successfully');
       } catch (error) {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
         // Create fallback story entry
@@ -443,12 +456,13 @@ export function AdventureGame() {
           campaignContext.addNarrativeEntry(fallbackStory[0]);
         }
       } finally {
-        isGeneratingInitial.current = false;
+        // Reset generation tracking for this campaign when done
+        if (generatingForCampaignId.current === currentCampaignId) {
+          generatingForCampaignId.current = null;
+        }
         setIsLoading(false);
       }
-    };
-    
-    generateInitialStory();
+    })();
   }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent]);
 
   // Step 1: Scenario selection -> Color selection
@@ -487,40 +501,66 @@ export function AdventureGame() {
     setCharacter(char);
     setIsLoading(true);
     
-    // Initialize campaign memory for new adventure
-    const campaignId = `campaign_${char.name}_${Date.now()}`;
-    const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
-    initializeCampaign(campaignId, char.name, toneProfile);
-    console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
-    
-    // Create campaign in new campaign system if available
-    if (campaignContext && worldBible) {
-      const newCampaign = campaignContext.createCampaign(worldBible, char, scenario);
-      console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
-    }
+    try {
+      // Initialize campaign memory for new adventure
+      const campaignId = `campaign_${char.name}_${Date.now()}`;
+      const toneProfile = scenarioSelection?.genre ? [scenarioSelection.genre] : [];
+      initializeCampaign(campaignId, char.name, toneProfile);
+      console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+      
+      // Create campaign in new campaign system if available
+      if (campaignContext && worldBible) {
+        const newCampaign = campaignContext.createCampaign(worldBible, char, scenario);
+        console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
+      }
 
-    // Pass skipLoadingState=true since we manage loading ourselves
-    const narrative = await generateNarrative(scenario, undefined, [], undefined, char, true);
-    
-    // Create story entry (use fallback if narrative generation failed)
-    const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
-    const newStory: StoryEntry[] = [{
-      id: `narrator_${Date.now()}`,
-      role: 'narrator',
-      content: narrativeContent,
-      timestamp: Date.now(),
-    }];
-    setStory(newStory);
-    saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
-    
-    // Add to campaign narrative history
-    if (campaignContext) {
-      campaignContext.addNarrativeEntry(newStory[0]);
+      // Generate narrative with timeout protection
+      let narrative: string | null = null;
+      try {
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Narrative generation timeout')), 30000)
+        );
+        narrative = await Promise.race([
+          generateNarrative(scenario, undefined, [], undefined, char, true),
+          timeoutPromise
+        ]);
+      } catch (genError) {
+        console.error('[AdventureGame] Narrative generation failed:', genError);
+      }
+      
+      // Create story entry (use fallback if narrative generation failed)
+      const narrativeContent = narrative || `You find yourself at the beginning of a new adventure. The world awaits your first move.`;
+      const newStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: narrativeContent,
+        timestamp: Date.now(),
+      }];
+      setStory(newStory);
+      saveData(newStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+      
+      // Add to campaign narrative history
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(newStory[0]);
+      }
+      
+      console.log('[AdventureGame] Character complete, transitioning to playing phase');
+      setPhase('playing');
+    } catch (error) {
+      console.error('[AdventureGame] Character complete failed:', error);
+      // Still transition to playing with fallback story
+      const fallbackStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: `You find yourself at the beginning of a new adventure. The world awaits your first move.`,
+        timestamp: Date.now(),
+      }];
+      setStory(fallbackStory);
+      saveData(fallbackStory, char, scenario, scenarioSelection?.genre || 'fantasy');
+      setPhase('playing');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Set playing BEFORE clearing loading so the transition happens while loading overlay is still visible
-    setPhase('playing');
-    setIsLoading(false);
   }, [generateNarrative, saveData, scenarioSelection, initializeCampaign, campaignContext, worldBible]);
 
   // Back to scenario selection
