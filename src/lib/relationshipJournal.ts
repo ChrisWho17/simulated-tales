@@ -1,5 +1,7 @@
 // Relationship Journal System - Tracks romantic moments and milestones with characters
 
+import { resolveNPCId, getRegisteredNPC, findNPCByNameOrOccupation } from '@/game/npcIdentityRegistry';
+
 export type MomentType = 
   | 'first_meeting' 
   | 'first_conversation'
@@ -144,14 +146,34 @@ export function normalizeNpcName(name: string): string {
 
 /**
  * Find or create an NPC ID based on name matching.
- * Checks if a similar name already exists in the journal and returns that ID.
- * Otherwise creates a new ID.
+ * Now uses the centralized NPC Identity Registry as the source of truth.
+ * Falls back to journal's local index for legacy data.
  */
 export function findOrCreateNpcId(
   npcId: string | undefined,
   npcName: string,
   data: RelationshipJournalData
 ): { id: string; isExisting: boolean } {
+  // First, check the centralized NPC registry - this is the source of truth
+  const registeredNPC = findNPCByNameOrOccupation(npcName);
+  if (registeredNPC) {
+    const registryId = registeredNPC.permanent.id;
+    // Update local index to use registry ID
+    const normalizedName = normalizeNpcName(npcName);
+    if (normalizedName && data.nameIndex) {
+      data.nameIndex[normalizedName] = registryId;
+    }
+    return { id: registryId, isExisting: true };
+  }
+  
+  // If provided npcId exists in registry, use it
+  if (npcId) {
+    const npcFromId = getRegisteredNPC(npcId);
+    if (npcFromId) {
+      return { id: npcId, isExisting: true };
+    }
+  }
+  
   // Ensure nameIndex exists (migration)
   if (!data.nameIndex) {
     data.nameIndex = {};
@@ -166,22 +188,21 @@ export function findOrCreateNpcId(
 
   const normalizedName = normalizeNpcName(npcName);
   
-  // Check if this normalized name already has an ID
+  // Check local journal index for legacy data
   if (normalizedName && data.nameIndex[normalizedName]) {
     return { id: data.nameIndex[normalizedName], isExisting: true };
   }
   
-  // Check if the provided npcId already exists
+  // Check if the provided npcId already exists in journal
   if (npcId && data.journals[npcId]) {
-    // Update the name index with this name
     if (normalizedName) {
       data.nameIndex[normalizedName] = npcId;
     }
     return { id: npcId, isExisting: true };
   }
   
-  // Create new ID - prefer provided ID, otherwise generate from name
-  const newId = npcId || `npc-${normalizedName || Date.now()}`;
+  // Create new NPC via the central registry - this ensures consistent IDs everywhere
+  const newId = resolveNPCId(npcName, { occupation: npcName });
   if (normalizedName) {
     data.nameIndex[normalizedName] = newId;
   }

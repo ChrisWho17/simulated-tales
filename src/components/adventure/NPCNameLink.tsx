@@ -1,6 +1,14 @@
 // NPC Name Link - Makes NPC names in narrative text clickable
 import { useState, useMemo, useCallback } from 'react';
-import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC, loadNPCRegistry, createRegisteredNPC, findNPCByName } from '@/game/npcIdentityRegistry';
+import { 
+  RegisteredNPC, 
+  getAllRegisteredNPCs, 
+  getSiblings, 
+  getRegisteredNPC, 
+  loadNPCRegistry, 
+  findNPCByNameOrOccupation,
+  resolveNPCId
+} from '@/game/npcIdentityRegistry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -340,27 +348,29 @@ function registerDialogueSpeaker(
   // Skip if it's the player name
   if (playerName && speakerLower === playerName.toLowerCase()) return;
   
-  // Skip if already registered
+  // Skip if already in local map
   if (npcNameMap.has(speakerLower)) return;
   
-  // Check if this speaker exists by searching more flexibly
-  const existingNPC = findNPCByName(speakerName);
+  // Check if this speaker exists in the registry (by name or occupation)
+  const existingNPC = findNPCByNameOrOccupation(speakerName);
   if (existingNPC) {
     // Add to our local map for this render
     npcNameMap.set(speakerLower, existingNPC);
+    // Also add by occupation if different
+    if (existingNPC.semiPermanent.occupation && 
+        existingNPC.semiPermanent.occupation.toLowerCase() !== speakerLower) {
+      npcNameMap.set(existingNPC.semiPermanent.occupation.toLowerCase(), existingNPC);
+    }
   } else {
-    // Auto-register this new dialogue speaker as an NPC
-    const npcId = createRegisteredNPC({
-      name: speakerName,
-      occupation: speakerName, // Use the speaker label as occupation
-      currentTurn: 0,
-    });
+    // Auto-register this new dialogue speaker via the central registry
+    // This ensures consistent IDs across all systems
+    const npcId = resolveNPCId(speakerName, { occupation: speakerName });
     
-    // Fetch the newly created NPC and add to map
-    const newNPC = getAllRegisteredNPCs().find(n => n.permanent.id === npcId);
+    // Fetch the newly created/resolved NPC and add to map
+    const newNPC = getRegisteredNPC(npcId);
     if (newNPC) {
       npcNameMap.set(speakerLower, newNPC);
-      console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName}`);
+      console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName} (ID: ${npcId})`);
     }
   }
 }
