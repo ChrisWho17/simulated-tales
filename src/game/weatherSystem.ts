@@ -128,6 +128,7 @@ export interface WeatherState {
   totalDuration: number;
   intensity: number; // 0.5-1.5, affects severity
   transitioningTo: WeatherType | null;
+  transitionProgress: number; // 0-1, for smooth visual transitions
   history: Array<{ weather: WeatherType; startedAt: number }>;
 }
 
@@ -138,6 +139,7 @@ export function createInitialWeatherState(): WeatherState {
     totalDuration: 90,
     intensity: 1.0,
     transitioningTo: null,
+    transitionProgress: 0,
     history: [{ weather: 'clear', startedAt: 0 }],
   };
 }
@@ -171,9 +173,17 @@ function selectNextWeather(currentWeather: WeatherType): WeatherType {
   return 'clear'; // Fallback
 }
 
+// Transition duration in ticks for smooth visual blending
+const WEATHER_TRANSITION_TICKS = 8;
+
 export function tickWeather(state: WeatherState, currentTick: number): WeatherState {
   const newState = { ...state };
   newState.ticksRemaining--;
+  
+  // Handle ongoing transition animation
+  if (newState.transitionProgress > 0 && newState.transitionProgress < 1) {
+    newState.transitionProgress = Math.min(1, newState.transitionProgress + (1 / WEATHER_TRANSITION_TICKS));
+  }
   
   // Weather is ending - select new weather
   if (newState.ticksRemaining <= 0) {
@@ -183,16 +193,22 @@ export function tickWeather(state: WeatherState, currentTick: number): WeatherSt
     newState.current = nextWeather;
     newState.ticksRemaining = duration;
     newState.totalDuration = duration;
-    newState.intensity = 0.5 + Math.random() * 1.0; // Random intensity
+    newState.intensity = 0.5 + Math.random() * 1.0;
     newState.transitioningTo = null;
+    newState.transitionProgress = 0;
     newState.history = [
-      ...state.history.slice(-9), // Keep last 10
+      ...state.history.slice(-9),
       { weather: nextWeather, startedAt: currentTick }
     ];
   }
-  // Warn of transition when 5 ticks remaining
-  else if (newState.ticksRemaining <= 5 && !newState.transitioningTo) {
+  // Start transition warning/animation when 8 ticks remaining
+  else if (newState.ticksRemaining <= WEATHER_TRANSITION_TICKS && !newState.transitioningTo) {
     newState.transitioningTo = selectNextWeather(state.current);
+    newState.transitionProgress = 0.01; // Start transition animation
+  }
+  // Progress transition animation
+  else if (newState.transitioningTo && newState.transitionProgress > 0) {
+    newState.transitionProgress = Math.min(1, (WEATHER_TRANSITION_TICKS - newState.ticksRemaining) / WEATHER_TRANSITION_TICKS);
   }
   
   return newState;
@@ -207,10 +223,24 @@ export function forceWeather(state: WeatherState, weather: WeatherType, currentT
     totalDuration: duration,
     intensity: 0.5 + Math.random() * 1.0,
     transitioningTo: null,
+    transitionProgress: 0,
     history: [
       ...state.history.slice(-9),
       { weather, startedAt: currentTick }
     ],
+  };
+}
+
+// Get transition opacity for blending between weather states
+export function getWeatherTransitionOpacity(state: WeatherState): { current: number; next: number } {
+  if (!state.transitioningTo || state.transitionProgress === 0) {
+    return { current: 1, next: 0 };
+  }
+  // Smooth easing for transition
+  const eased = state.transitionProgress * state.transitionProgress * (3 - 2 * state.transitionProgress);
+  return { 
+    current: 1 - eased, 
+    next: eased 
   };
 }
 
