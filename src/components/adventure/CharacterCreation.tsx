@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,9 +19,11 @@ import {
 import { 
   ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
-  Eye, Crosshair, Zap
+  Eye, Crosshair, Zap, Blend
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SecondaryGenre } from './AdventureCreator';
+import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits } from '@/game/genreBlendSystem';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -30,6 +32,7 @@ interface CharacterCreationProps {
   onComplete: (character: ReturnType<typeof createGenreCharacter>, scenario: string) => void;
   onBack: () => void;
   isLoading: boolean;
+  secondaryGenres?: SecondaryGenre[];
 }
 
 type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | 'traits' | 'phobias' | 'portrait';
@@ -52,8 +55,27 @@ const AVAILABLE_PHOBIAS = [
 
 const STAT_POINT_POOL = 15;
 
-export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading }: CharacterCreationProps) {
+export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading, secondaryGenres = [] }: CharacterCreationProps) {
   const genreData = GENRE_DATA[genre];
+  
+  // Use blended data when secondary genres are present
+  const blendedClasses = useMemo(() => {
+    if (secondaryGenres.length === 0) return genreData.classes;
+    return getBlendedClasses(genre, secondaryGenres);
+  }, [genre, secondaryGenres, genreData.classes]);
+  
+  const blendedBackgrounds = useMemo(() => {
+    if (secondaryGenres.length === 0) return genreData.backgrounds;
+    return getBlendedBackgrounds(genre, secondaryGenres);
+  }, [genre, secondaryGenres, genreData.backgrounds]);
+  
+  const blendedTraits = useMemo(() => {
+    if (secondaryGenres.length === 0) return genreData.traits;
+    return getBlendedTraits(genre, secondaryGenres);
+  }, [genre, secondaryGenres, genreData.traits]);
+  
+  // Count hybrid classes added
+  const hybridClassCount = blendedClasses.length - genreData.classes.length;
   
   const [step, setStep] = useState<CreationStep>('name');
   const [name, setName] = useState('');
@@ -551,38 +573,58 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           {/* Class Step */}
           {step === 'class' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">Choose your role</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-primary">Choose your role</h2>
+                {hybridClassCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
+                    <Blend className="w-3 h-3" />
+                    +{hybridClassCount} hybrid roles
+                  </span>
+                )}
+              </div>
               <ScrollArea className="h-[400px] pr-4">
                 <div className="grid gap-3">
-                  {genreData.classes.map((charClass) => (
-                    <button
-                      key={charClass.id}
-                      onClick={() => setSelectedClass(charClass.id)}
-                      className={`w-full p-4 rounded-lg text-left transition-all ${
-                        selectedClass === charClass.id 
-                          ? 'bg-primary/20 border-2 border-primary' 
-                          : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="text-primary mt-0.5">{getClassIcon(charClass.id)}</div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">{charClass.name}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">{charClass.description}</p>
-                          <div className="flex gap-4 mt-2 text-xs text-primary/80">
-                            <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {charClass.abilities.map(ability => (
-                              <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                {ability}
-                              </span>
-                            ))}
+                  {blendedClasses.map((charClass) => {
+                    const isHybrid = !genreData.classes.some(c => c.id === charClass.id);
+                    return (
+                      <button
+                        key={charClass.id}
+                        onClick={() => setSelectedClass(charClass.id)}
+                        className={`w-full p-4 rounded-lg text-left transition-all ${
+                          selectedClass === charClass.id 
+                            ? 'bg-primary/20 border-2 border-primary' 
+                            : isHybrid 
+                              ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
+                              : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="text-primary mt-0.5">{getClassIcon(charClass.id)}</div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-foreground">{charClass.name}</h3>
+                              {isHybrid && (
+                                <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  Hybrid
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">{charClass.description}</p>
+                            <div className="flex gap-4 mt-2 text-xs text-primary/80">
+                              <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {charClass.abilities.map(ability => (
+                                <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                  {ability}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
@@ -591,30 +633,50 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           {/* Background Step */}
           {step === 'background' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">What is your origin?</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-primary">What is your origin?</h2>
+                {blendedBackgrounds.length > genreData.backgrounds.length && (
+                  <span className="flex items-center gap-1 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
+                    <Blend className="w-3 h-3" />
+                    +{blendedBackgrounds.length - genreData.backgrounds.length} hybrid origins
+                  </span>
+                )}
+              </div>
               <ScrollArea className="h-[400px] pr-4">
                 <div className="grid gap-3">
-                  {genreData.backgrounds.map((bg) => (
-                    <button
-                      key={bg.id}
-                      onClick={() => setSelectedBackground(bg.id)}
-                      className={`w-full p-4 rounded-lg text-left transition-all ${
-                        selectedBackground === bg.id 
-                          ? 'bg-primary/20 border-2 border-primary' 
-                          : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                      }`}
-                    >
-                      <h3 className="font-semibold text-foreground">{bg.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {bg.skills.map(skill => (
-                          <span key={skill} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
+                  {blendedBackgrounds.map((bg) => {
+                    const isHybrid = !genreData.backgrounds.some(b => b.id === bg.id);
+                    return (
+                      <button
+                        key={bg.id}
+                        onClick={() => setSelectedBackground(bg.id)}
+                        className={`w-full p-4 rounded-lg text-left transition-all ${
+                          selectedBackground === bg.id 
+                            ? 'bg-primary/20 border-2 border-primary' 
+                            : isHybrid 
+                              ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
+                              : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-foreground">{bg.name}</h3>
+                          {isHybrid && (
+                            <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              Hybrid
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {bg.skills.map(skill => (
+                            <span key={skill} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
@@ -633,8 +695,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
                   const base = 8;
                   const allocated = statAllocation[stat] || 0;
-                  const classBonus = genreData.classes.find(c => c.id === selectedClass)?.statBonuses[stat] || 0;
-                  const bgBonus = genreData.backgrounds.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
+                  const classBonus = blendedClasses.find(c => c.id === selectedClass)?.statBonuses[stat] || 0;
+                  const bgBonus = blendedBackgrounds.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
                   const total = base + allocated + classBonus + bgBonus;
                   const modifier = getStatModifier(total);
 

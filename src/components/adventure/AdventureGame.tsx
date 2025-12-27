@@ -1641,6 +1641,7 @@ export function AdventureGame() {
         onComplete={handleCharacterComplete}
         onBack={handleBackToScenario}
         isLoading={isLoading}
+        secondaryGenres={scenarioSelection.genreContract?.secondaryGenres}
       />
     );
   }
