@@ -577,6 +577,66 @@ export function CharacterProfileModal({
             </div>
           )}
 
+          {/* Appearance Section - Based on generated stats */}
+          {characterStats?.appearance && familiarity >= 15 && (
+            <div className="profile-section">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User className="h-4 w-4 text-primary" />
+                Appearance
+              </h3>
+              <div className="appearance-grid">
+                {characterStats.appearance.height && (
+                  <div className="appearance-item">
+                    <span className="appearance-label">Height</span>
+                    <span className="appearance-value">{characterStats.appearance.height}</span>
+                  </div>
+                )}
+                {characterStats.appearance.bodyType && (
+                  <div className="appearance-item">
+                    <span className="appearance-label">Build</span>
+                    <span className="appearance-value">{characterStats.appearance.bodyType}</span>
+                  </div>
+                )}
+                {characterStats.appearance.hairColor && (
+                  <div className="appearance-item">
+                    <span className="appearance-label">Hair</span>
+                    <span className="appearance-value">
+                      {characterStats.appearance.hairLength} {characterStats.appearance.hairColor}
+                    </span>
+                  </div>
+                )}
+                {characterStats.appearance.eyeColor && (
+                  <div className="appearance-item">
+                    <span className="appearance-label">Eyes</span>
+                    <span className="appearance-value">{characterStats.appearance.eyeColor}</span>
+                  </div>
+                )}
+                {characterStats.appearance.skinTone && (
+                  <div className="appearance-item">
+                    <span className="appearance-label">Skin</span>
+                    <span className="appearance-value">{characterStats.appearance.skinTone}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Personality from stats */}
+              {characterStats.personality && (
+                <div className="npc-personality-tags mt-2">
+                  {characterStats.personality.disposition && (
+                    <span className="personality-tag disposition">
+                      {characterStats.personality.disposition}
+                    </span>
+                  )}
+                  {characterStats.personality.socialStyle && (
+                    <span className="personality-tag social">
+                      {characterStats.personality.socialStyle}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Basic Info */}
           <div className="profile-section">
             <h3>Basic Info</h3>

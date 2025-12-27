@@ -1148,6 +1148,63 @@
   color: var(--health);
 }
 
+/* Appearance Grid */
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.appearance-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: hsl(var(--muted) / 0.15);
+  border: 1px solid hsl(var(--border) / 0.2);
+}
+
+.appearance-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 2px;
+}
+
+.appearance-value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+/* NPC Personality Tags */
+.npc-personality-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.personality-tag {
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.personality-tag.disposition {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.personality-tag.social {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 .profile-section {
   margin-bottom: 16px;
 }
