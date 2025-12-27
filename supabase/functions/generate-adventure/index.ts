@@ -242,6 +242,39 @@ interface AdventureRequest {
   failForwardContext?: FailForwardContext;
   // NEW: 3-Meter Relationship System - Trust/Respect/Attachment
   relationshipMeterContext?: RelationshipMeterContext;
+  // NEW: Micro-Events - Small interruptions that make the world feel alive
+  microEventContext?: MicroEventContext;
+  // NEW: Voice Signatures - NPCs recognizable by dialogue alone
+  voiceSignatureContext?: VoiceSignatureContext;
+  // NEW: Storied Loot - Items with history, not just stats
+  storiedLootEnabled?: boolean;
+}
+
+// ============= NEW: MICRO-EVENTS, VOICE SIGNATURES, STORIED LOOT =============
+
+interface MicroEventContext {
+  triggerEvent: boolean;           // Should a micro-event happen this turn?
+  selectedEvent?: {
+    id: string;
+    category: string;
+    description: string;
+    followUp?: string;
+  };
+  turnsSinceLastMicroEvent: number;
+}
+
+interface VoiceSignatureContext {
+  npcSignatures: Array<{
+    npcName: string;
+    favoritePhrase: string;
+    verbalTic?: string;
+    tempo: string;
+    voiceTrait: string;
+    sentenceLength: string;
+    usesContractions: boolean;
+    tell: string;
+    nervousHabit?: string;
+  }>;
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -516,7 +549,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1013,6 +1046,78 @@ ${relationshipMeterContext.sceneNPCMeters.map(npc =>
 ).join('\n')}
 
 Use these dynamics in dialogue and reactions. High respect + low trust = they admire your skills but doubt your motives.`;
+    }
+    
+    // ============= MICRO-EVENT SYSTEM (Small World Interruptions) =============
+    if (microEventContext?.triggerEvent && microEventContext.selectedEvent) {
+      const event = microEventContext.selectedEvent;
+      systemContent += `\n\n=== MICRO-EVENT - WORLD FEELS ALIVE ===
+The following small interruption MUST be woven into your response naturally:
+
+"${event.description}"
+
+${event.followUp ? `*Potential narrative hook: ${event.followUp}*` : ''}
+
+MICRO-EVENT RULES:
+- Include this moment organically, not as an announcement
+- Let it feel like a natural part of the scene
+- The player notices but may choose to ignore or investigate
+- These moments make the world feel FULL and ALIVE
+- Don't over-explain—let the mystery breathe
+- Mark inclusion with: [MICRO_EVENT:${event.id}]`;
+    }
+    
+    // ============= VOICE SIGNATURE SYSTEM (NPC Recognition by Dialogue) =============
+    if (voiceSignatureContext?.npcSignatures && voiceSignatureContext.npcSignatures.length > 0) {
+      systemContent += `\n\n=== VOICE SIGNATURES - RECOGNIZE NPCs BY DIALOGUE ALONE ===
+Each NPC should be RECOGNIZABLE by their speech patterns. Use these traits consistently:
+
+${voiceSignatureContext.npcSignatures.map(sig => 
+`**${sig.npcName}**
+  • Signature phrase: "${sig.favoritePhrase}"
+  ${sig.verbalTic ? `• Verbal tic: Uses "${sig.verbalTic}" frequently` : ''}
+  • Speech: ${sig.tempo} tempo, ${sig.voiceTrait} tone, ${sig.sentenceLength} sentences
+  • ${sig.usesContractions ? 'Uses contractions' : 'Avoids contractions'}
+  • Tell: ${sig.tell}
+  ${sig.nervousHabit ? `• When nervous: ${sig.nervousHabit}` : ''}`
+).join('\n\n')}
+
+VOICE SIGNATURE RULES:
+- Use the signature phrase naturally (not every time, but REGULARLY)
+- Match speech tempo to their pattern
+- Show tells through ACTION BEATS in dialogue
+- Players should recognize NPCs by speech alone
+- Consistency creates character
+- Premium immersion = every character sounds DISTINCT`;
+    }
+    
+    // ============= STORIED LOOT SYSTEM (Items with Meaning) =============
+    if (storiedLootEnabled !== false) {
+      systemContent += `\n\n=== STORIED LOOT - ITEMS WITH MEANING ===
+When players find, receive, or loot items, give them STORIES, not just stats.
+Every significant item should answer at least one:
+- **Who used this last?** (marks of wear, personal touches, lingering presence)
+- **Why is it here?** (journey, loss, deliberate placement)
+- **What does it cost to keep?** (attention, danger, moral weight)
+
+STORIED LOOT EXAMPLES:
+• "A ring with the inside worn smooth. Someone kept taking it off. Someone kept putting it back on."
+• "A knife with a notch in the blade. Deliberate. A count of something."
+• "A book with one page torn out. The missing page is referenced everywhere else."
+• "A key to a lock that's been destroyed. So what does it open now?"
+
+ITEM DESCRIPTION RULES:
+- Lead with the EVOCATIVE DETAIL, not the function
+- Physical wear tells stories without words
+- Mysteries are better than answers
+- Items can create plot hooks ("Someone will recognize this")
+- Let players ask questions you haven't answered
+- NOT everything needs a story—save it for MEANINGFUL finds
+
+When describing significant loot, use: [STORIED_LOOT:itemName:storyType:brief narrative]
+Story types: previous_owner, origin, journey, cost, secret, connection, wear, memory
+
+Now loot is PLOT.`;
     }
     
     if (cheatMode) {
