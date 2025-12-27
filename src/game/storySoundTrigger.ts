@@ -1,6 +1,7 @@
 // Story Sound Trigger System - Automatic narrative text detection and event-based sounds
 import { audioEngine, AudioChannel } from './audioEngine';
 import { acousticEnvironmentSystem, LocationAcoustics } from './acousticEnvironmentSystem';
+import { soundPreloader, CachedSound } from './soundPreloader';
 
 interface SoundEffectConfig {
   sounds: string[];
@@ -22,6 +23,149 @@ interface TextPattern {
 }
 
 class StorySoundTrigger {
+  // Mapping from internal sound IDs to preloader categories
+  private preloaderCategoryMap: Record<string, string[]> = {
+    // Combat sounds
+    'combat.gunshot_pistol': ['gun_pistol', 'combat_gunshot_pistol'],
+    'combat.gunshot_rifle': ['gun_rifle', 'combat_gunshot_rifle'],
+    'combat.gunshot_shotgun': ['gun_shotgun', 'combat_gunshot_shotgun'],
+    'combat.gunshot_distant': ['gun_distant', 'acoustic_outdoor_gunshot'],
+    'combat.gunshot_silenced': ['gun_silenced'],
+    'combat.bullet_impact': ['bullet_impact', 'bullet_ricochet'],
+    'combat.bullet_whiz': ['bullet_whiz'],
+    'combat.punch': ['combat_punch', 'action_combat_punch'],
+    'combat.kick': ['combat_kick', 'action_combat_kick'],
+    'combat.body_fall': ['human_grunt', 'action_combat'],
+    'combat.sword_swing': ['combat_sword', 'action_combat_sword'],
+    'combat.sword_clash': ['combat_sword', 'action_combat_sword'],
+    'combat.sword_draw': ['combat_sword'],
+    'combat.knife_stab': ['combat_dagger', 'action_combat_knife'],
+    'combat.pain_male': ['human_grunt', 'human_scream'],
+    'combat.pain_female': ['human_scream'],
+    'combat.death_male': ['human_scream', 'human_grunt'],
+    'combat.death_female': ['human_scream'],
+    
+    // Movement
+    'movement.footsteps_walk': ['footsteps_stone', 'footsteps_wood', 'footsteps_grass'],
+    'movement.footsteps_run': ['footsteps_stone', 'footsteps_wood'],
+    'movement.footsteps_sneak': ['action_stealth', 'footsteps_stone'],
+    
+    // Doors
+    'doors.door_open': ['door_wooden', 'door_metal', 'door_creaky'],
+    'doors.door_close': ['door_wooden', 'door_metal'],
+    'doors.door_slam': ['door_heavy', 'door_metal'],
+    'doors.door_creak': ['door_creaky'],
+    'doors.door_knock': ['door_wooden'],
+    'doors.door_break': ['door_heavy', 'explosion_debris'],
+    
+    // Objects
+    'objects.glass_break': ['glass_break', 'glass_shatter'],
+    'objects.glass_clink': ['glass_clink'],
+    'objects.metal_clang': ['chains_rattle', 'lever_mechanical'],
+    'objects.paper_rustle': ['action_investigation'],
+    'objects.coin_drop': ['coins_jingle', 'coins_drop'],
+    'objects.key_jingle': ['keys_jingle', 'keys_ring'],
+    
+    // Vehicles
+    'vehicles.car_start': ['vehicle_car_engine', 'vehicle_car_start'],
+    'vehicles.car_idle': ['vehicle_car_idle', 'vehicle_car_engine'],
+    'vehicles.car_horn': ['vehicle_car_horn'],
+    'vehicles.car_crash': ['vehicle_car_crash', 'explosion_debris'],
+    
+    // Dramatic
+    'dramatic.heartbeat': ['human_heartbeat'],
+    'dramatic.heartbeat_fast': ['human_heartbeat'],
+    'dramatic.gasp': ['human_gasp'],
+    'dramatic.scream': ['human_scream'],
+    'dramatic.laughter': ['human_laugh'],
+    'dramatic.crying': ['human_cry'],
+    'dramatic.sigh': ['human_breath'],
+    
+    // Ambient - location based
+    'ambient.crowd_murmur': ['ambience_market', 'ambience_plaza', 'crowd_busy'],
+    'ambient.bar_ambience': ['ambience_tavern', 'ambience_inn'],
+    'ambient.city_traffic': ['ambience_city_day', 'ambience_city_night'],
+    'ambient.forest_ambient': ['ambience_forest', 'ambience_wilderness'],
+    'ambient.cave_drips': ['ambience_cave', 'ambience_dungeon'],
+    'ambient.fire_crackling': ['element_fire', 'ambience_campsite'],
+    'ambient.water_stream': ['element_water', 'ambience_riverside'],
+    
+    // UI
+    'ui.notification': ['ui_notification'],
+    'ui.click': ['ui_click'],
+    'ui.success': ['ui_success'],
+    'ui.error': ['ui_error'],
+    'ui.level_up': ['magic_heal', 'ui_success'],
+    'ui.item_acquired': ['chest_open', 'coins_jingle']
+  };
+  
+  // Extended narrative keywords that map to preloader categories
+  private narrativeKeywordMap: Record<string, string[]> = {
+    // Weapons
+    'pistol|handgun|revolver': ['gun_pistol', 'acoustic_indoor_gunshot', 'acoustic_outdoor_gunshot'],
+    'rifle|carbine|sniper': ['gun_rifle'],
+    'shotgun': ['gun_shotgun'],
+    'machinegun|automatic': ['gun_machinegun'],
+    'explosion|explode|blast|detonate': ['explosion_large', 'explosion_small', 'explosion_debris'],
+    'grenade': ['explosion_grenade'],
+    
+    // Melee
+    'sword|blade': ['combat_sword'],
+    'axe|cleave': ['combat_axe'],
+    'mace|hammer|bludgeon': ['combat_mace'],
+    'bow|arrow': ['combat_bow'],
+    'dagger|knife|stab': ['combat_dagger'],
+    
+    // Creatures
+    'wolf|howl': ['creature_wolf'],
+    'dog|bark': ['creature_dog'],
+    'horse|gallop|neigh': ['creature_horse'],
+    'bear|growl': ['creature_bear'],
+    'dragon|roar': ['creature_dragon'],
+    'monster|beast': ['creature_monster'],
+    'zombie|undead': ['creature_zombie'],
+    'ghost|specter|phantom': ['creature_ghost'],
+    'demon|devil': ['creature_demon'],
+    
+    // Environment
+    'thunder|lightning': ['weather_thunder'],
+    'rain|downpour': ['weather_rain'],
+    'wind|gust': ['weather_wind'],
+    'fire|flame|burning': ['element_fire'],
+    'water|splash|river': ['element_water'],
+    'ice|freeze|frozen': ['element_ice'],
+    'electricity|shock|zap': ['element_electricity'],
+    
+    // Magic
+    'spell|cast|magic': ['magic_spell', 'magic_cast'],
+    'portal|dimension': ['magic_portal', 'scifi_teleport'],
+    'heal|healing|restore': ['magic_heal'],
+    
+    // Locations
+    'tavern|inn|bar': ['ambience_tavern', 'ambience_inn'],
+    'forest|woods|wilderness': ['ambience_forest', 'ambience_wilderness'],
+    'cave|cavern|underground': ['ambience_cave', 'ambience_dungeon'],
+    'city|town|street': ['ambience_city_day', 'ambience_city_night'],
+    'market|bazaar|plaza': ['ambience_market', 'ambience_plaza'],
+    'castle|throne|palace': ['ambience_castle', 'ambience_throne_room'],
+    'church|temple|shrine': ['ambience_temple', 'ambience_shrine'],
+    'ship|boat|deck': ['ambience_ship', 'ambience_harbor'],
+    'battlefield|war|siege': ['ambience_battlefield', 'crowd_battle'],
+    
+    // Actions
+    'sneak|stealth|creep': ['action_stealth', 'footsteps_stone'],
+    'chase|pursuit|run': ['action_chase', 'footsteps_stone'],
+    'climb|scale': ['action_climbing'],
+    'swim|swimming': ['element_water', 'action_swimming'],
+    'search|investigate': ['action_investigation'],
+    
+    // Sci-fi
+    'laser|blaster': ['scifi_laser'],
+    'spaceship|starship': ['scifi_engine', 'scifi_tech'],
+    'teleport|warp': ['scifi_teleport'],
+    'robot|android|mech': ['scifi_tech', 'hydraulics_machinery']
+  };
+
   // Sound effect definitions organized by category
   private soundEffects: Record<string, Record<string, SoundEffectConfig>> = {
     // ═══════════════════════════════════════════════════════════
@@ -556,10 +700,144 @@ class StorySoundTrigger {
   private heartbeatActive = false;
 
   // ═══════════════════════════════════════════════════════════
+  // PRELOADER INTEGRATION
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Try to play a sound from preloaded library first, fall back to static definitions
+   */
+  private async tryPlayFromPreloader(soundPath: string): Promise<boolean> {
+    // Check if preloader is ready
+    if (!soundPreloader.isReady()) return false;
+
+    // Get mapped categories for this sound path
+    const mappedCategories = this.preloaderCategoryMap[soundPath];
+    if (!mappedCategories || mappedCategories.length === 0) return false;
+
+    // Try each category until we find a match
+    for (const category of mappedCategories) {
+      const sound = soundPreloader.getRandomFromCategory(category);
+      if (sound) {
+        const acousticEffects = acousticEnvironmentSystem.getAudioEffects();
+        const isIndoors = acousticEnvironmentSystem.isIndoors();
+        const [cat, soundId] = soundPath.split('.');
+        const shouldApplyAcoustics = this.shouldApplyAcousticEffects(cat, soundId);
+
+        // Determine acoustic effects
+        const echo = shouldApplyAcoustics 
+          ? (isIndoors ? acousticEffects.reverb : acousticEffects.echo)
+          : false;
+        
+        const echoDelay = shouldApplyAcoustics
+          ? (isIndoors ? 0.1 + acousticEffects.reverbDuration * 0.1 : acousticEffects.echoDelay)
+          : 0.3;
+        
+        const echoDecay = shouldApplyAcoustics
+          ? (isIndoors ? 0.6 + acousticEffects.reverbDuration * 0.2 : acousticEffects.echoDecay)
+          : 0.4;
+
+        const soundKey = soundPreloader.getSoundKey(sound);
+        
+        try {
+          await audioEngine.playSound(soundKey, {
+            channel: 'effects',
+            volume: 1,
+            echo,
+            echoDelay,
+            echoDecay,
+            lowpass: acousticEffects.lowpass || undefined,
+            highpass: acousticEffects.highpass || undefined
+          });
+          console.log(`[StorySoundTrigger] Played preloaded sound: ${soundKey}`);
+          return true;
+        } catch (error) {
+          console.warn(`[StorySoundTrigger] Failed to play preloaded sound: ${soundKey}`, error);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Find and play sounds matching narrative keywords from preloaded library
+   */
+  private async playNarrativeKeywordSounds(text: string): Promise<string[]> {
+    if (!soundPreloader.isReady()) return [];
+
+    const playedSounds: string[] = [];
+    const now = Date.now();
+    const textLower = text.toLowerCase();
+
+    for (const [keywordPattern, categories] of Object.entries(this.narrativeKeywordMap)) {
+      // Check cooldown using pattern as key
+      const lastTime = this.lastPlayed.get(`keyword:${keywordPattern}`) || 0;
+      if (now - lastTime < 1000) continue; // 1 second cooldown per keyword group
+
+      // Check if any keyword matches
+      const keywords = keywordPattern.split('|');
+      const matches = keywords.some(kw => textLower.includes(kw));
+
+      if (matches) {
+        // Try to play from each category
+        for (const category of categories) {
+          const sound = soundPreloader.getRandomFromCategory(category);
+          if (sound) {
+            this.lastPlayed.set(`keyword:${keywordPattern}`, now);
+            
+            const acousticEffects = acousticEnvironmentSystem.getAudioEffects();
+            const isIndoors = acousticEnvironmentSystem.isIndoors();
+            const shouldApplyAcoustics = this.shouldApplyAcousticEffects('narrative', category);
+
+            const echo = shouldApplyAcoustics 
+              ? (isIndoors ? acousticEffects.reverb : acousticEffects.echo)
+              : false;
+            
+            const echoDelay = shouldApplyAcoustics
+              ? (isIndoors ? 0.1 + acousticEffects.reverbDuration * 0.1 : acousticEffects.echoDelay)
+              : 0.3;
+            
+            const echoDecay = shouldApplyAcoustics
+              ? (isIndoors ? 0.6 + acousticEffects.reverbDuration * 0.2 : acousticEffects.echoDecay)
+              : 0.4;
+
+            const soundKey = soundPreloader.getSoundKey(sound);
+            
+            try {
+              await audioEngine.playSound(soundKey, {
+                channel: 'effects',
+                volume: 0.8,
+                echo,
+                echoDelay,
+                echoDecay,
+                lowpass: acousticEffects.lowpass || undefined,
+                highpass: acousticEffects.highpass || undefined
+              });
+              playedSounds.push(soundKey);
+              console.log(`[StorySoundTrigger] Played keyword sound: ${soundKey} for "${keywords.find(k => textLower.includes(k))}"`);
+            } catch (error) {
+              console.warn(`[StorySoundTrigger] Failed to play keyword sound: ${soundKey}`, error);
+            }
+            
+            break; // Only play one sound per keyword group
+          }
+        }
+      }
+    }
+
+    return playedSounds;
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // SOUND PLAYBACK WITH ACOUSTIC ENVIRONMENT
   // ═══════════════════════════════════════════════════════════
 
   async play(soundPath: string, overrideOptions: Partial<SoundEffectConfig> = {}): Promise<void> {
+    // First, try to play from preloaded sounds
+    const playedFromPreloader = await this.tryPlayFromPreloader(soundPath);
+    if (playedFromPreloader) return;
+
+    // Fall back to static sound definitions
     const [category, soundId] = soundPath.split('.');
     const soundDef = this.soundEffects[category]?.[soundId];
 
@@ -623,11 +901,11 @@ class StorySoundTrigger {
   // Determine if acoustic effects should be applied to a sound
   private shouldApplyAcousticEffects(category: string, soundId: string): boolean {
     // Apply acoustics to combat, vehicles, and dramatic sounds
-    const acousticCategories = ['combat', 'vehicles', 'dramatic', 'doors'];
+    const acousticCategories = ['combat', 'vehicles', 'dramatic', 'doors', 'narrative'];
     if (acousticCategories.includes(category)) return true;
 
     // Apply to specific loud sounds
-    const loudSounds = ['gunshot', 'explosion', 'crash', 'break', 'slam', 'scream'];
+    const loudSounds = ['gunshot', 'explosion', 'crash', 'break', 'slam', 'scream', 'gun_', 'combat_', 'creature_'];
     if (loudSounds.some(s => soundId.includes(s))) return true;
 
     return false;
@@ -669,6 +947,14 @@ class StorySoundTrigger {
       this.setLocationAmbience(detectedLocation);
     }
 
+    // Try to play keyword-matched sounds from preloader
+    this.playNarrativeKeywordSounds(text).then(keywordSounds => {
+      if (keywordSounds.length > 0) {
+        console.log(`[StorySoundTrigger] Keyword sounds triggered: ${keywordSounds.join(', ')}`);
+      }
+    });
+
+    // Also check static text patterns
     for (const pattern of this.textPatterns) {
       // Check cooldown
       const lastTime = this.lastPlayed.get(pattern.sound) || 0;
