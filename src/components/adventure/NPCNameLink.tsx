@@ -329,6 +329,42 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   return nameMap;
 }
 
+// Helper to register a dialogue speaker as an NPC if not already registered
+function registerDialogueSpeaker(
+  speakerName: string, 
+  npcNameMap: Map<string, RegisteredNPC>,
+  playerName?: string
+): void {
+  const speakerLower = speakerName.toLowerCase();
+  
+  // Skip if it's the player name
+  if (playerName && speakerLower === playerName.toLowerCase()) return;
+  
+  // Skip if already registered
+  if (npcNameMap.has(speakerLower)) return;
+  
+  // Check if this speaker exists by searching more flexibly
+  const existingNPC = findNPCByName(speakerName);
+  if (existingNPC) {
+    // Add to our local map for this render
+    npcNameMap.set(speakerLower, existingNPC);
+  } else {
+    // Auto-register this new dialogue speaker as an NPC
+    const npcId = createRegisteredNPC({
+      name: speakerName,
+      occupation: speakerName, // Use the speaker label as occupation
+      currentTurn: 0,
+    });
+    
+    // Fetch the newly created NPC and add to map
+    const newNPC = getAllRegisteredNPCs().find(n => n.permanent.id === npcId);
+    if (newNPC) {
+      npcNameMap.set(speakerLower, newNPC);
+      console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName}`);
+    }
+  }
+}
+
 // Helper function to parse text and insert NPC and Player links
 // Also detects dialogue speaker patterns like "Name:" at the start of dialogue
 export function parseTextForNPCLinks(
@@ -339,38 +375,24 @@ export function parseTextForNPCLinks(
   onShowCharacterSheet?: () => void
 ): React.ReactNode[] {
   // First pass: detect and register any dialogue speakers that aren't in the registry
+  // Pattern 1: "Name: (dialogue)" format
   const dialogueSpeakerPattern = /^([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm;
   let speakerMatch;
   
   while ((speakerMatch = dialogueSpeakerPattern.exec(text)) !== null) {
     const speakerName = speakerMatch[1].trim();
-    const speakerLower = speakerName.toLowerCase();
-    
-    // Skip if it's the player name
-    if (playerName && speakerLower === playerName.toLowerCase()) continue;
-    
-    // Skip if already registered
-    if (npcNameMap.has(speakerLower)) continue;
-    
-    // Check if this speaker exists by searching more flexibly
-    const existingNPC = findNPCByName(speakerName);
-    if (existingNPC) {
-      // Add to our local map for this render
-      npcNameMap.set(speakerLower, existingNPC);
-    } else {
-      // Auto-register this new dialogue speaker as an NPC
-      const npcId = createRegisteredNPC({
-        name: speakerName,
-        occupation: speakerName, // Use the speaker label as occupation
-        currentTurn: 0,
-      });
-      
-      // Fetch the newly created NPC and add to map
-      const newNPC = getAllRegisteredNPCs().find(n => n.permanent.id === npcId);
-      if (newNPC) {
-        npcNameMap.set(speakerLower, newNPC);
-        console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName}`);
-      }
+    registerDialogueSpeaker(speakerName, npcNameMap, playerName);
+  }
+  
+  // Pattern 2: If the entire text looks like a character name/title (used for bold speaker names)
+  // This handles cases where "Squad Leader" is passed without the colon
+  const trimmedText = text.trim();
+  if (trimmedText && /^[A-Z][a-zA-Z\s]+$/.test(trimmedText) && trimmedText.length > 2 && trimmedText.length < 50) {
+    // This could be a speaker name - check if it looks like a title/name
+    const words = trimmedText.split(/\s+/);
+    const looksLikeName = words.length <= 4 && words.every(w => /^[A-Z][a-z]*$/.test(w));
+    if (looksLikeName) {
+      registerDialogueSpeaker(trimmedText, npcNameMap, playerName);
     }
   }
 
