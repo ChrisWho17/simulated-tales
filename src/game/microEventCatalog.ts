@@ -1888,6 +1888,11 @@ INSTRUCTIONS:
 // EXPORTS
 // =============================================================================
 
+import { ALL_EXPANSION_EVENTS } from './microEventCatalogExpansion';
+
+// Merge expansion events into main catalog
+MICRO_EVENT_CATALOG.push(...ALL_EXPANSION_EVENTS);
+
 export const CATALOG_SIZE = MICRO_EVENT_CATALOG.length;
 
 export function getMicroEventById(id: string): CatalogMicroEvent | undefined {
