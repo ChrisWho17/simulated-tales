@@ -1,12 +1,56 @@
 // NPC Identity Registry System - Ensures NPC identity persistence
 // NPCs have permanent, locked identities and relationships
 
+import { 
+  CharacterStats, 
+  createDefaultStats, 
+  getStatModifier 
+} from '@/types/rpgCharacter';
+import { 
+  CharacterAppearance, 
+  CharacterPersonality,
+  DispositionOption,
+  SocialStyleOption,
+  BodyTypeOption,
+  HeightOption,
+  HairLengthOption
+} from '@/types/characterCreation';
+
 // ============= TYPES =============
+
+/**
+ * NPC Aliases - Multiple ways to refer to an NPC
+ * All tied to a single NPC ID for consistency
+ */
+export interface NPCAliases {
+  fullName: string;           // Official full name (e.g., "Marcus Chen")
+  nickname?: string;          // Common nickname used in-world (e.g., "Merc")
+  callsign?: string;          // Military/professional callsign (e.g., "Viper")
+  title?: string;             // Formal title (e.g., "Dr.", "Captain")
+  occupation?: string;        // Job title for display (e.g., "Squad Leader")
+  form?: string;              // Alternative form/identity (e.g., "The Shadow")
+  playerNickname?: string;    // Custom name assigned by the player in character menu
+}
+
+/**
+ * NPC Character Stats - Same system as player character
+ * Generated randomly but weighted by personality/occupation
+ */
+export interface NPCCharacterStats {
+  stats: CharacterStats;
+  appearance?: Partial<CharacterAppearance>;
+  personality?: Partial<CharacterPersonality>;
+  level: number;
+  maxHealth: number;
+  currentHealth: number;
+}
 
 export interface NPCPermanentIdentity {
   id: string;
   createdTurn: number;
   name: string;
+  aliases: NPCAliases;
+  characterStats?: NPCCharacterStats;
   familyId: string | null;
   biologicalParents: string[];
   biologicalChildren: string[];
@@ -112,6 +156,9 @@ export function setNPCRegistry(newRegistry: NPCIdentityRegistry): void {
 export interface CreateNPCConfig {
   id?: string;
   name: string;
+  nickname?: string;
+  callsign?: string;
+  title?: string;
   familyId?: string;
   parents?: string[];
   children?: string[];
@@ -126,17 +173,127 @@ export interface CreateNPCConfig {
   occupation?: string;
   location?: string;
   currentTurn?: number;
+  generateStats?: boolean;  // Whether to generate character stats
+}
+
+/**
+ * Generate random stats for an NPC, weighted by occupation/personality
+ */
+export function generateNPCStats(occupation?: string, personality?: string): NPCCharacterStats {
+  // Base stats - same as player (8-18 range, averaging around 10-12)
+  const rollStat = (): number => {
+    // Roll 3d6 drop lowest, like classic D&D
+    const rolls = [
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+    ].sort((a, b) => b - a);
+    return rolls[0] + rolls[1] + Math.floor(rolls[2] / 2) + 3; // Range: ~6-18
+  };
+
+  const stats: CharacterStats = {
+    strength: rollStat(),
+    dexterity: rollStat(),
+    constitution: rollStat(),
+    intelligence: rollStat(),
+    wisdom: rollStat(),
+    charisma: rollStat(),
+  };
+
+  // Apply occupation bonuses (similar to class bonuses in player creation)
+  const occupationLower = (occupation || '').toLowerCase();
+  if (occupationLower.includes('soldier') || occupationLower.includes('guard') || occupationLower.includes('warrior')) {
+    stats.strength += 2;
+    stats.constitution += 1;
+  } else if (occupationLower.includes('leader') || occupationLower.includes('captain') || occupationLower.includes('commander')) {
+    stats.charisma += 2;
+    stats.wisdom += 1;
+  } else if (occupationLower.includes('doctor') || occupationLower.includes('medic') || occupationLower.includes('healer')) {
+    stats.intelligence += 2;
+    stats.wisdom += 1;
+  } else if (occupationLower.includes('thief') || occupationLower.includes('scout') || occupationLower.includes('rogue')) {
+    stats.dexterity += 2;
+    stats.charisma += 1;
+  } else if (occupationLower.includes('scholar') || occupationLower.includes('scientist') || occupationLower.includes('mage')) {
+    stats.intelligence += 2;
+    stats.wisdom += 1;
+  } else if (occupationLower.includes('merchant') || occupationLower.includes('trader') || occupationLower.includes('vendor')) {
+    stats.charisma += 2;
+    stats.intelligence += 1;
+  }
+
+  // Calculate health (same formula as player)
+  const conMod = getStatModifier(stats.constitution);
+  const level = Math.floor(Math.random() * 3) + 1; // Random level 1-3
+  const maxHealth = 10 + (conMod * level) + ((level - 1) * 6);
+
+  // Generate random appearance matching personality
+  const bodyTypes: BodyTypeOption[] = ['slim', 'average', 'athletic', 'curvy', 'heavy'];
+  const heights: HeightOption[] = ['short', 'average', 'tall'];
+  const hairColors = ['black', 'brown', 'blonde', 'red', 'gray', 'white', 'auburn'];
+  const hairLengths: HairLengthOption[] = ['short', 'medium', 'long'];
+  const eyeColors = ['brown', 'blue', 'green', 'hazel', 'gray', 'amber'];
+  const skinTones = ['pale', 'fair', 'light', 'medium', 'tan', 'olive', 'brown', 'dark'];
+
+  const appearance: Partial<CharacterAppearance> = {
+    bodyType: bodyTypes[Math.floor(Math.random() * bodyTypes.length)],
+    height: heights[Math.floor(Math.random() * heights.length)],
+    hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+    hairLength: hairLengths[Math.floor(Math.random() * hairLengths.length)],
+    eyeColor: eyeColors[Math.floor(Math.random() * eyeColors.length)],
+    skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+  };
+
+  // Generate personality based on stats
+  const dispositions: DispositionOption[] = ['Bold', 'Cautious', 'Adaptable'];
+  const socialStyles: SocialStyleOption[] = ['Charming', 'Reserved', 'Blunt'];
+  
+  // High charisma -> Charming, Low -> Reserved
+  const socialIndex = stats.charisma >= 14 ? 0 : stats.charisma <= 8 ? 1 : 2;
+  // High strength/con -> Bold, High wisdom -> Cautious
+  const dispIndex = stats.strength >= 14 || stats.constitution >= 14 ? 0 : 
+                    stats.wisdom >= 14 ? 1 : 2;
+
+  const npcPersonality: Partial<CharacterPersonality> = {
+    disposition: dispositions[dispIndex],
+    socialStyle: socialStyles[socialIndex],
+  };
+
+  return {
+    stats,
+    appearance,
+    personality: npcPersonality,
+    level,
+    maxHealth,
+    currentHealth: maxHealth,
+  };
 }
 
 export function createRegisteredNPC(config: CreateNPCConfig): string {
   const id = config.id || `npc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const currentTurn = config.currentTurn || 0;
   
+  // Build aliases from config
+  const aliases: NPCAliases = {
+    fullName: config.name,
+    nickname: config.nickname,
+    callsign: config.callsign,
+    title: config.title,
+    occupation: config.occupation,
+  };
+
+  // Generate character stats if requested (default true for new NPCs)
+  const characterStats = config.generateStats !== false 
+    ? generateNPCStats(config.occupation) 
+    : undefined;
+  
   const npc: RegisteredNPC = {
     permanent: {
       id,
       createdTurn: currentTurn,
       name: config.name,
+      aliases,
+      characterStats,
       familyId: config.familyId || null,
       biologicalParents: config.parents || [],
       biologicalChildren: config.children || [],
@@ -155,7 +312,7 @@ export function createRegisteredNPC(config: CreateNPCConfig): string {
     },
     mutable: {
       currentLocation: config.location || 'unknown',
-      health: 100,
+      health: characterStats?.currentHealth ?? 100,
       mood: 'neutral',
       currentActivity: 'idle',
       inventory: [],
@@ -352,6 +509,78 @@ export function addToFamily(npcId: string, familyId: string): boolean {
   
   saveNPCRegistry();
   return true;
+}
+
+// ============= ALIAS MANAGEMENT =============
+
+/**
+ * Set a player-assigned nickname for an NPC
+ */
+export function setPlayerNickname(npcId: string, nickname: string | undefined): boolean {
+  const npc = registry.npcs[npcId];
+  if (!npc) return false;
+  
+  npc.permanent.aliases.playerNickname = nickname;
+  saveNPCRegistry();
+  console.log(`[NPCRegistry] Player nickname set for ${npcId}: "${nickname}"`);
+  return true;
+}
+
+/**
+ * Update any alias field for an NPC
+ */
+export function updateNPCAliases(npcId: string, updates: Partial<NPCAliases>): boolean {
+  const npc = registry.npcs[npcId];
+  if (!npc) return false;
+  
+  npc.permanent.aliases = {
+    ...npc.permanent.aliases,
+    ...updates,
+  };
+  saveNPCRegistry();
+  console.log(`[NPCRegistry] Aliases updated for ${npcId}:`, updates);
+  return true;
+}
+
+/**
+ * Get the display name for an NPC based on their aliases and context
+ * Priority: playerNickname > nickname > callsign > title+name > occupation > name
+ */
+export function getNPCDisplayName(npcId: string, context?: 'formal' | 'casual' | 'military'): string {
+  const npc = registry.npcs[npcId];
+  if (!npc) return 'Unknown';
+  
+  const aliases = npc.permanent.aliases;
+  
+  // Player nickname always takes priority
+  if (aliases.playerNickname) {
+    return aliases.playerNickname;
+  }
+  
+  // Context-specific display
+  switch (context) {
+    case 'military':
+      if (aliases.callsign) return aliases.callsign;
+      if (aliases.title) return `${aliases.title} ${aliases.fullName}`;
+      break;
+    case 'formal':
+      if (aliases.title) return `${aliases.title} ${aliases.fullName}`;
+      break;
+    case 'casual':
+      if (aliases.nickname) return aliases.nickname;
+      break;
+  }
+  
+  // Default fallback chain
+  return aliases.nickname || aliases.callsign || aliases.occupation || aliases.fullName;
+}
+
+/**
+ * Get all aliases for an NPC
+ */
+export function getNPCAliases(npcId: string): NPCAliases | null {
+  const npc = registry.npcs[npcId];
+  return npc?.permanent.aliases || null;
 }
 
 // ============= QUERIES =============

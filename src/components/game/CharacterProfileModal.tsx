@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { NPC, EmotionalState } from '@/types/game';
-import { X, Heart, Shield, Eye, Award, MessageCircle, Loader2, User, Sparkles, HelpCircle } from 'lucide-react';
+import { X, Heart, Shield, Eye, Award, MessageCircle, Loader2, User, Sparkles, HelpCircle, Pencil, Check, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
   calculateRelationshipDisplay,
@@ -18,6 +19,16 @@ import {
   getDisplayName,
 } from '@/lib/knowledgeSystem';
 import { isAdultContentEnabled } from '@/lib/gameSettings';
+import { 
+  getRegisteredNPC, 
+  setPlayerNickname, 
+  getNPCDisplayName,
+  getNPCAliases,
+  NPCAliases,
+  NPCCharacterStats,
+  resolveNPCId,
+} from '@/game/npcIdentityRegistry';
+import { getStatModifier } from '@/types/rpgCharacter';
 
 interface CharacterProfileModalProps {
   npc: NPC;
@@ -180,6 +191,37 @@ function RelationshipSpectrum({ relData, npc }: { relData: RelationshipDisplayDa
   );
 }
 
+// Character Stats Display Component
+function CharacterStatsDisplay({ stats }: { stats: NPCCharacterStats }) {
+  const statList: { key: keyof typeof stats.stats; label: string; icon: string }[] = [
+    { key: 'strength', label: 'STR', icon: '💪' },
+    { key: 'dexterity', label: 'DEX', icon: '🏃' },
+    { key: 'constitution', label: 'CON', icon: '❤️' },
+    { key: 'intelligence', label: 'INT', icon: '🧠' },
+    { key: 'wisdom', label: 'WIS', icon: '👁️' },
+    { key: 'charisma', label: 'CHA', icon: '✨' },
+  ];
+
+  return (
+    <div className="character-stats-grid">
+      {statList.map(({ key, label, icon }) => {
+        const value = stats.stats[key];
+        const mod = getStatModifier(value);
+        return (
+          <div key={key} className="stat-box">
+            <span className="stat-icon">{icon}</span>
+            <span className="stat-label">{label}</span>
+            <span className="stat-value">{value}</span>
+            <span className={cn('stat-mod', mod >= 0 ? 'positive' : 'negative')}>
+              {mod >= 0 ? '+' : ''}{mod}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CharacterProfileModal({
   npc,
   onClose,
@@ -190,15 +232,36 @@ export function CharacterProfileModal({
   const [portrait, setPortrait] = useState<string | null>(npc.portrait || null);
   const [isLoading, setIsLoading] = useState(!npc.portrait);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState('');
 
   const relData = calculateRelationshipDisplay(npc);
   const isHere = npc.currentLocation === playerLocation;
   const isAdultEnabled = isAdultContentEnabled();
   
+  // Get registry data for this NPC
+  const npcId = resolveNPCId(npc.meta.name, { occupation: npc.meta.occupation });
+  const registeredNpc = getRegisteredNPC(npcId);
+  const aliases = registeredNpc?.permanent.aliases;
+  const characterStats = registeredNpc?.permanent.characterStats;
+  
   // Get display name based on knowledge
-  const displayName = knowledge ? getDisplayName(knowledge, npc) : npc.meta.name;
+  const displayName = aliases?.playerNickname || (knowledge ? getDisplayName(knowledge, npc) : npc.meta.name);
   const knowsName = knowledge?.knowsName ?? true;
   const familiarity = knowledge?.familiarity ?? 100;
+
+  // Initialize nickname input with current player nickname
+  useEffect(() => {
+    if (aliases?.playerNickname) {
+      setNicknameInput(aliases.playerNickname);
+    }
+  }, [aliases?.playerNickname]);
+
+  const handleSaveNickname = () => {
+    const trimmed = nicknameInput.trim();
+    setPlayerNickname(npcId, trimmed || undefined);
+    setIsEditingNickname(false);
+  };
 
   // Load portrait if not available
   useEffect(() => {
@@ -329,17 +392,72 @@ export function CharacterProfileModal({
 
         {/* Info Section */}
         <div className="profile-info-section">
-          {/* Header */}
+          {/* Header with nickname editor */}
           <div className="profile-header">
-            <h2 
-              className="profile-name"
-              style={{ textShadow: `0 0 20px ${relData.colors.glow}` }}
-            >
-              {displayName}
-              {!knowsName && (
-                <span className="name-unknown-hint"> (name unknown)</span>
+            <div className="profile-name-row">
+              {isEditingNickname ? (
+                <div className="nickname-editor">
+                  <Input
+                    value={nicknameInput}
+                    onChange={(e) => setNicknameInput(e.target.value)}
+                    placeholder="Enter nickname..."
+                    className="nickname-input"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveNickname();
+                      if (e.key === 'Escape') setIsEditingNickname(false);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="nickname-save-btn"
+                    onClick={handleSaveNickname}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <h2 
+                    className="profile-name"
+                    style={{ textShadow: `0 0 20px ${relData.colors.glow}` }}
+                  >
+                    {displayName}
+                    {aliases?.playerNickname && (
+                      <span className="real-name-hint"> ({npc.meta.name})</span>
+                    )}
+                    {!knowsName && !aliases?.playerNickname && (
+                      <span className="name-unknown-hint"> (name unknown)</span>
+                    )}
+                  </h2>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="nickname-edit-btn"
+                    onClick={() => {
+                      setNicknameInput(aliases?.playerNickname || '');
+                      setIsEditingNickname(true);
+                    }}
+                    title="Set nickname"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </>
               )}
-            </h2>
+            </div>
+            
+            {/* Show aliases if any */}
+            {aliases && (aliases.callsign || aliases.nickname || aliases.title) && (
+              <div className="aliases-row">
+                {aliases.title && <span className="alias-tag title">{aliases.title}</span>}
+                {aliases.callsign && <span className="alias-tag callsign">"{aliases.callsign}"</span>}
+                {aliases.nickname && !aliases.playerNickname && (
+                  <span className="alias-tag nickname">aka {aliases.nickname}</span>
+                )}
+              </div>
+            )}
+            
             <span className="profile-title">
               {knowledge?.background.occupation === 'known' ? npc.meta.occupation : 
                knowledge?.background.occupation === 'estimated' ? `~${npc.meta.occupation}` : 
@@ -438,6 +556,26 @@ export function CharacterProfileModal({
               </span>
             </div>
           </div>
+
+          {/* Character Stats Section - Same system as player */}
+          {characterStats && familiarity >= 30 && (
+            <div className="profile-section">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Swords className="h-4 w-4 text-primary" />
+                Attributes
+                <span className="text-xs text-muted-foreground ml-auto">
+                  Lv.{characterStats.level}
+                </span>
+              </h3>
+              <CharacterStatsDisplay stats={characterStats} />
+              <div className="health-display mt-2">
+                <span className="health-label">HP:</span>
+                <span className="health-value">
+                  {characterStats.currentHealth}/{characterStats.maxHealth}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Basic Info */}
           <div className="profile-section">
