@@ -90,6 +90,20 @@ export interface LanguageSettings {
   playerKnownLanguages: string[];
 }
 
+// In-Depth Mode Toggles
+export interface InDepthSettings {
+  worldTone: 'cozy' | 'balanced' | 'brutal';
+  enableHunger: boolean;
+  enableFatigue: boolean;
+  enableInjuryDetail: boolean;
+  enableEquipmentWear: boolean;
+  socialWeight: 'light' | 'balanced' | 'heavy';
+  combatWeight: 'light' | 'balanced' | 'heavy';
+  mysteryDensity: 'low' | 'medium' | 'high';
+  microEventFrequency: 'rare' | 'occasional' | 'frequent';
+  consequenceIntensity: 'forgiving' | 'balanced' | 'harsh';
+}
+
 export interface GameSettings {
   diceMode: DiceMode;
   adultContent: boolean;
@@ -105,6 +119,9 @@ export interface GameSettings {
   
   // Language settings
   languageSettings: LanguageSettings;
+  
+  // In-Depth Mode Toggles
+  inDepthSettings: InDepthSettings;
   
   // Feature toggles
   enableMoodSystem: boolean;
@@ -131,6 +148,19 @@ const defaultLanguageSettings: LanguageSettings = {
   playerKnownLanguages: ['en', 'common'],
 };
 
+const defaultInDepthSettings: InDepthSettings = {
+  worldTone: 'balanced',
+  enableHunger: false,
+  enableFatigue: false,
+  enableInjuryDetail: true,
+  enableEquipmentWear: false,
+  socialWeight: 'balanced',
+  combatWeight: 'balanced',
+  mysteryDensity: 'medium',
+  microEventFrequency: 'occasional',
+  consequenceIntensity: 'balanced',
+};
+
 const defaultSettings: GameSettings = {
   diceMode: 'story',
   adultContent: false,
@@ -146,6 +176,9 @@ const defaultSettings: GameSettings = {
   
   // Language settings
   languageSettings: defaultLanguageSettings,
+  
+  // In-Depth Mode
+  inDepthSettings: defaultInDepthSettings,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,
