@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -59,6 +59,8 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
+import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather } from '@/game/weatherSystem';
+import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 
 interface StoryEntry {
   id: string;
@@ -186,6 +188,8 @@ export function AdventureDisplay({
   const [showCheckSelfModal, setShowCheckSelfModal] = useState(false);
   const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
   const [showWeatherModal, setShowWeatherModal] = useState(false);
+  const [weatherState, setWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
+  const weatherTickRef = useRef(0);
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
@@ -261,10 +265,15 @@ export function AdventureDisplay({
     return () => viewport.removeEventListener('scroll', handleScroll);
   }, [checkIfAtBottom]);
 
-  // Detect new content when story updates
+  // Detect new content when story updates and tick weather
   useEffect(() => {
-    if (story.length > previousStoryLength.current && !isAtBottom) {
-      setHasNewContent(true);
+    if (story.length > previousStoryLength.current) {
+      if (!isAtBottom) {
+        setHasNewContent(true);
+      }
+      // Tick weather on each new story entry (narrator turn = 1 tick)
+      weatherTickRef.current++;
+      setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
     }
     previousStoryLength.current = story.length;
   }, [story.length, isAtBottom]);
@@ -1727,108 +1736,124 @@ export function AdventureDisplay({
         </div>
       )}
 
-      {/* Weather/Mood Modal */}
+      {/* Weather Modal with Particles */}
       {showWeatherModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="glass-panel p-6 max-w-md w-full mx-4 space-y-5 animate-scale-in">
-            <div className="text-center space-y-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowWeatherModal(false)}
+        >
+          <div 
+            className="glass-panel p-6 max-w-md w-full mx-4 space-y-5 animate-scale-in relative overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Particle Effects Background */}
+            <WeatherModalParticles weather={weatherState.current} intensity={weatherState.intensity} />
+            
+            <div className="text-center space-y-4 relative z-10">
               {/* Weather Icon with animation */}
-              <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center animate-pulse ${
-                currentMood === 'fearful' ? 'bg-yellow-500/20' : 
-                currentMood === 'sad' ? 'bg-blue-500/20' : 
-                currentMood === 'depressed' ? 'bg-violet-500/20' : 
-                currentMood === 'mad' ? 'bg-red-500/20' : 
-                currentMood === 'annoyed' ? 'bg-orange-500/20' :
-                currentMood === 'suspicious' ? 'bg-cyan-500/20' :
-                currentMood === 'happy' ? 'bg-green-500/20' :
-                currentMood === 'lusty' ? 'bg-pink-500/20' :
-                currentMood === 'determined' ? 'bg-white/20' :
-                'bg-emerald-500/20'
+              <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${
+                weatherState.current === 'storm' ? 'bg-yellow-500/20 animate-pulse' : 
+                weatherState.current === 'rain' ? 'bg-blue-500/20' : 
+                weatherState.current === 'fog' ? 'bg-violet-500/20' : 
+                weatherState.current === 'heat_wave' ? 'bg-red-500/20 animate-pulse' : 
+                weatherState.current === 'wind' ? 'bg-orange-500/20' :
+                weatherState.current === 'snow' ? 'bg-cyan-500/20' :
+                weatherState.current === 'cloudy' ? 'bg-slate-500/20' :
+                'bg-amber-500/20'
               }`}>
-                {currentMood === 'fearful' ? (
+                {weatherState.current === 'storm' ? (
                   <CloudLightning className="w-10 h-10 text-yellow-400" />
-                ) : currentMood === 'sad' ? (
+                ) : weatherState.current === 'rain' ? (
                   <CloudRain className="w-10 h-10 text-blue-400" />
-                ) : currentMood === 'depressed' ? (
+                ) : weatherState.current === 'fog' ? (
                   <CloudFog className="w-10 h-10 text-violet-400" />
-                ) : currentMood === 'mad' ? (
-                  <Sun className="w-10 h-10 text-red-400" />
-                ) : currentMood === 'annoyed' ? (
-                  <Cloud className="w-10 h-10 text-orange-400" />
-                ) : currentMood === 'suspicious' ? (
+                ) : weatherState.current === 'heat_wave' ? (
+                  <Flame className="w-10 h-10 text-red-400" />
+                ) : weatherState.current === 'wind' ? (
+                  <Wind className="w-10 h-10 text-orange-400" />
+                ) : weatherState.current === 'snow' ? (
                   <Snowflake className="w-10 h-10 text-cyan-400" />
-                ) : currentMood === 'happy' ? (
-                  <Sun className="w-10 h-10 text-green-400" />
-                ) : currentMood === 'lusty' ? (
-                  <Heart className="w-10 h-10 text-pink-400" />
-                ) : currentMood === 'determined' ? (
-                  <Zap className="w-10 h-10 text-white" />
+                ) : weatherState.current === 'cloudy' ? (
+                  <Cloud className="w-10 h-10 text-slate-400" />
                 ) : (
-                  <Wind className="w-10 h-10 text-emerald-400" />
+                  <Sun className="w-10 h-10 text-amber-400" />
                 )}
               </div>
               
-              {/* Mood Title */}
+              {/* Weather Title */}
               <h3 className={`text-3xl font-display font-bold ${
-                currentMood === 'fearful' ? 'text-yellow-300' : 
-                currentMood === 'sad' ? 'text-blue-300' : 
-                currentMood === 'depressed' ? 'text-violet-300' : 
-                currentMood === 'mad' ? 'text-red-300' : 
-                currentMood === 'annoyed' ? 'text-orange-300' :
-                currentMood === 'suspicious' ? 'text-cyan-300' :
-                currentMood === 'happy' ? 'text-green-300' :
-                currentMood === 'lusty' ? 'text-pink-300' :
-                currentMood === 'determined' ? 'text-white' :
-                'text-emerald-300'
+                weatherState.current === 'storm' ? 'text-yellow-300' : 
+                weatherState.current === 'rain' ? 'text-blue-300' : 
+                weatherState.current === 'fog' ? 'text-violet-300' : 
+                weatherState.current === 'heat_wave' ? 'text-red-300' : 
+                weatherState.current === 'wind' ? 'text-orange-300' :
+                weatherState.current === 'snow' ? 'text-cyan-300' :
+                weatherState.current === 'cloudy' ? 'text-slate-300' :
+                'text-amber-300'
               }`}>
-                {currentMood === 'neutral' ? 'Calm' : currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
+                {WEATHER_CONFIGS[weatherState.current].name}
               </h3>
+              
+              {/* Duration Bar */}
+              <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                <Timer className="w-3 h-3" />
+                <div className="w-24 h-1.5 bg-background/50 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${
+                      weatherState.current === 'storm' ? 'bg-yellow-500' : 
+                      weatherState.current === 'rain' ? 'bg-blue-500' : 
+                      weatherState.current === 'fog' ? 'bg-violet-500' : 
+                      weatherState.current === 'heat_wave' ? 'bg-red-500' : 
+                      weatherState.current === 'wind' ? 'bg-orange-500' :
+                      weatherState.current === 'snow' ? 'bg-cyan-500' :
+                      weatherState.current === 'cloudy' ? 'bg-slate-500' :
+                      'bg-amber-500'
+                    }`}
+                    style={{ width: `${(weatherState.ticksRemaining / weatherState.totalDuration) * 100}%` }}
+                  />
+                </div>
+                <span>{weatherState.ticksRemaining} turns</span>
+              </div>
               
               {/* Main Description */}
               <p className="text-muted-foreground leading-relaxed">
-                {currentMood === 'neutral' && 'The air is still and peaceful. A gentle breeze carries the scent of the land, and the world feels balanced—neither threatening nor welcoming, simply present.'}
-                {currentMood === 'fearful' && 'Thunder rumbles in the distance as dark clouds gather overhead. Every shadow seems to hold a threat, and the air crackles with dangerous potential. Your heart pounds in your chest.'}
-                {currentMood === 'sad' && 'A soft rain falls from gray skies, each drop carrying the weight of sorrow. The world seems muted, colors faded, as if mourning alongside you. Even familiar places feel lonely.'}
-                {currentMood === 'depressed' && 'A heavy fog blankets everything, muffling sound and obscuring sight. The weight of existence presses down, making each step feel like wading through thick water. Hope seems distant.'}
-                {currentMood === 'mad' && 'The air shimmers with heat as fury radiates from within. Blood pounds in your ears, and everything takes on a sharp, red-tinged edge. Restraint feels like a cage waiting to break.'}
-                {currentMood === 'annoyed' && 'Restless winds gust and swirl without pattern, carrying dust and debris. Small irritations compound into mounting frustration. Patience wears thin like fraying rope.'}
-                {currentMood === 'suspicious' && 'A cold chill permeates the air as frost creeps along edges. Something feels deeply wrong—whispers seem to follow you, and every glance over your shoulder reveals nothing. Yet.'}
-                {currentMood === 'happy' && 'Warm golden sunlight bathes everything in a pleasant glow. The world feels alive with possibility, colors seem brighter, and a lightness fills your step. Joy radiates outward.'}
-                {currentMood === 'lusty' && 'The atmosphere grows thick and warm, charged with intimate energy. Every sensation feels heightened, every touch electric. The world narrows to what—or who—captures your desire.'}
-                {currentMood === 'determined' && 'Lightning-like focus crackles through your being. Distractions fade away as pure resolve crystallizes into action. Nothing will stand in your way—you will see this through.'}
+                {WEATHER_CONFIGS[weatherState.current].description}
               </p>
               
-              {/* Atmospheric Effects */}
+              {/* Ambient Text */}
+              <p className="text-sm text-foreground/70 italic">
+                {WEATHER_CONFIGS[weatherState.current].ambientText}
+              </p>
+              
+              {/* Weather Effects */}
               <div className={`mt-4 p-3 rounded-lg border ${
-                currentMood === 'fearful' ? 'border-yellow-500/30 bg-yellow-500/5' : 
-                currentMood === 'sad' ? 'border-blue-500/30 bg-blue-500/5' : 
-                currentMood === 'depressed' ? 'border-violet-500/30 bg-violet-500/5' : 
-                currentMood === 'mad' ? 'border-red-500/30 bg-red-500/5' : 
-                currentMood === 'annoyed' ? 'border-orange-500/30 bg-orange-500/5' :
-                currentMood === 'suspicious' ? 'border-cyan-500/30 bg-cyan-500/5' :
-                currentMood === 'happy' ? 'border-green-500/30 bg-green-500/5' :
-                currentMood === 'lusty' ? 'border-pink-500/30 bg-pink-500/5' :
-                currentMood === 'determined' ? 'border-white/30 bg-white/5' :
-                'border-emerald-500/30 bg-emerald-500/5'
+                weatherState.current === 'storm' ? 'border-yellow-500/30 bg-yellow-500/5' : 
+                weatherState.current === 'rain' ? 'border-blue-500/30 bg-blue-500/5' : 
+                weatherState.current === 'fog' ? 'border-violet-500/30 bg-violet-500/5' : 
+                weatherState.current === 'heat_wave' ? 'border-red-500/30 bg-red-500/5' : 
+                weatherState.current === 'wind' ? 'border-orange-500/30 bg-orange-500/5' :
+                weatherState.current === 'snow' ? 'border-cyan-500/30 bg-cyan-500/5' :
+                weatherState.current === 'cloudy' ? 'border-slate-500/30 bg-slate-500/5' :
+                'border-amber-500/30 bg-amber-500/5'
               }`}>
-                <p className="text-xs text-muted-foreground/80 italic">
-                  {currentMood === 'neutral' && '✦ Clear skies • Gentle breeze • Ambient sounds of nature'}
-                  {currentMood === 'fearful' && '⚡ Distant thunder • Flickering shadows • Racing pulse'}
-                  {currentMood === 'sad' && '🌧 Soft rainfall • Muted colors • Heavy sighs'}
-                  {currentMood === 'depressed' && '🌫 Dense fog • Muffled sounds • Leaden limbs'}
-                  {currentMood === 'mad' && '🔥 Rising heat • Sharpened senses • Clenched fists'}
-                  {currentMood === 'annoyed' && '💨 Gusting winds • Furrowed brow • Short temper'}
-                  {currentMood === 'suspicious' && '❄ Creeping frost • Paranoid glances • Quiet whispers'}
-                  {currentMood === 'happy' && '☀ Warm sunlight • Bright colors • Light heart'}
-                  {currentMood === 'lusty' && '💗 Warm air • Heightened senses • Quickened breath'}
-                  {currentMood === 'determined' && '⚡ Focused energy • Clear purpose • Unstoppable will'}
+                <p className="text-xs text-muted-foreground/80">
+                  {WEATHER_CONFIGS[weatherState.current].effects.join(' • ')}
                 </p>
               </div>
+              
+              {/* Weather Transition Warning */}
+              {weatherState.transitioningTo && (
+                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1 animate-pulse">
+                  <span>Weather changing to</span>
+                  <span className="font-medium">{WEATHER_CONFIGS[weatherState.transitioningTo].name}</span>
+                  <span>soon...</span>
+                </div>
+              )}
             </div>
             
             <Button
               onClick={() => setShowWeatherModal(false)}
-              className="w-full"
+              className="w-full relative z-10"
               variant="outline"
             >
               Close
