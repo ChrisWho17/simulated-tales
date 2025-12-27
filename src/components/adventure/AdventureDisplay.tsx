@@ -1256,59 +1256,60 @@ export function AdventureDisplay({
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
-        <div className="flex items-center gap-2 px-2 md:px-4 py-2">
-          {/* Logo - Fiery Gold Effect */}
-          <h1 
-            className="text-sm font-display font-bold tracking-wider shrink-0 fiery-gold-text"
-            data-text="UNTOLD"
-          >
-            UNTOLD
-          </h1>
-          
-          {/* Weather Button - Opens weather modal */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowWeatherModal(true)}
-            className={`h-7 w-7 rounded-md frosted-button shrink-0 ${
-              weatherState.current === 'storm' ? 'text-yellow-400 hover:text-yellow-300' : 
-              weatherState.current === 'rain' ? 'text-blue-400 hover:text-blue-300' : 
-              weatherState.current === 'fog' ? 'text-violet-400 hover:text-violet-300' : 
-              weatherState.current === 'heat_wave' ? 'text-red-400 hover:text-red-300' : 
-              weatherState.current === 'wind' ? 'text-orange-400 hover:text-orange-300' :
-              weatherState.current === 'snow' ? 'text-cyan-400 hover:text-cyan-300' :
-              weatherState.current === 'cloudy' ? 'text-slate-400 hover:text-slate-300' :
-              'text-amber-400 hover:text-amber-300'
-            }`}
-            title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
-          >
-            {weatherState.current === 'storm' ? (
-              <CloudLightning className="w-4 h-4" />
-            ) : weatherState.current === 'rain' ? (
-              <CloudRain className="w-4 h-4" />
-            ) : weatherState.current === 'fog' ? (
-              <CloudFog className="w-4 h-4" />
-            ) : weatherState.current === 'heat_wave' ? (
-              <Flame className="w-4 h-4" />
-            ) : weatherState.current === 'wind' ? (
-              <Wind className="w-4 h-4" />
-            ) : weatherState.current === 'snow' ? (
-              <Snowflake className="w-4 h-4" />
-            ) : weatherState.current === 'cloudy' ? (
-              <Cloud className="w-4 h-4" />
-            ) : (
-              <Sun className="w-4 h-4" />
-            )}
-          </Button>
+        <div className="flex items-center gap-3 px-2 md:px-4 py-2">
+          {/* Left Group: Logo + Weather */}
+          <div className="flex items-center gap-2 shrink-0">
+            <h1 
+              className="text-sm md:text-base font-display font-bold tracking-widest fiery-gold-text pr-2"
+              data-text="UNTOLD"
+            >
+              UNTOLD
+            </h1>
+            
+            <div className="h-5 w-px bg-border/30" />
+            
+            {/* Weather Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowWeatherModal(true)}
+              className={`h-7 w-7 rounded-md frosted-button ${
+                weatherState.current === 'storm' ? 'text-yellow-400 hover:text-yellow-300' : 
+                weatherState.current === 'rain' ? 'text-blue-400 hover:text-blue-300' : 
+                weatherState.current === 'fog' ? 'text-violet-400 hover:text-violet-300' : 
+                weatherState.current === 'heat_wave' ? 'text-red-400 hover:text-red-300' : 
+                weatherState.current === 'wind' ? 'text-orange-400 hover:text-orange-300' :
+                weatherState.current === 'snow' ? 'text-cyan-400 hover:text-cyan-300' :
+                weatherState.current === 'cloudy' ? 'text-slate-400 hover:text-slate-300' :
+                'text-amber-400 hover:text-amber-300'
+              }`}
+              title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
+            >
+              {weatherState.current === 'storm' ? (
+                <CloudLightning className="w-4 h-4" />
+              ) : weatherState.current === 'rain' ? (
+                <CloudRain className="w-4 h-4" />
+              ) : weatherState.current === 'fog' ? (
+                <CloudFog className="w-4 h-4" />
+              ) : weatherState.current === 'heat_wave' ? (
+                <Flame className="w-4 h-4" />
+              ) : weatherState.current === 'wind' ? (
+                <Wind className="w-4 h-4" />
+              ) : weatherState.current === 'snow' ? (
+                <Snowflake className="w-4 h-4" />
+              ) : weatherState.current === 'cloudy' ? (
+                <Cloud className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
 
-          {/* Separator */}
-          <div className="hidden md:block h-4 w-px bg-border/30 shrink-0" />
-
-          {/* Character Quick Stats - Condensed frosted panels */}
+          {/* Center Group: Character Stats (desktop only) */}
           <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0">
             {/* Health with Mood Aura */}
             <div 
-              className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0"
+              className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20"
               style={currentMood !== 'neutral' ? {
                 boxShadow: `0 0 8px ${MOOD_COLORS[currentMood]?.glow || 'transparent'}40`,
               } : undefined}
@@ -1330,13 +1331,13 @@ export function AdventureDisplay({
             </div>
 
             {/* Gold */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20">
               <Coins className="w-3 h-3 text-warning" />
               <span className="font-mono text-[10px] font-semibold text-warning">{character.gold}</span>
             </div>
 
             {/* Level & XP */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20">
               <div className="flex items-center gap-0.5">
                 <span className="text-[10px] text-muted-foreground">Lv</span>
                 <span className="font-mono text-xs font-bold text-primary">{character.level}</span>
@@ -1351,7 +1352,7 @@ export function AdventureDisplay({
             </div>
           </div>
 
-          {/* Director Status - Debug only */}
+          {/* Debug Indicators */}
           {(cheatMode || gameContext?.settings?.showEventBusDebug) && (
             <DirectorStatusIndicator compact className="shrink-0" />
           )}
@@ -1362,29 +1363,33 @@ export function AdventureDisplay({
             </span>
           )}
 
-          {/* Action Buttons - Frosted UI */}
+          {/* Right Group: Action Buttons */}
           <div className="flex items-center gap-0.5 ml-auto shrink-0">
             <SavesDropdown />
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowInventory(true)}
-              className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Inventory (Ctrl+I)"
-            >
-              <Package className="w-3.5 h-3.5" />
-            </Button>
+            <div className="hidden sm:flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowInventory(true)}
+                className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+                title="Inventory (Ctrl+I)"
+              >
+                <Package className="w-3.5 h-3.5" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCharacterSheet(true)}
+                className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+                title="Character Sheet"
+              >
+                <Backpack className="w-3.5 h-3.5" />
+              </Button>
+            </div>
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowCharacterSheet(true)}
-              className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Character Sheet"
-            >
-              <Backpack className="w-3.5 h-3.5" />
-            </Button>
+            <div className="h-5 w-px bg-border/30 mx-0.5 hidden sm:block" />
             
             <Button
               variant="ghost"
