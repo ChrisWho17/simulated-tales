@@ -5,6 +5,14 @@ import { getTimePeriod } from './gameEngine';
 import { detectBreakpoints, analyzeNPCRelationships, simulateRelationshipEvolution, tickWorldEvolution, initializeWorldEvolution, Breakpoint } from './advancedDynamics';
 import { addStress, relieveStress, getStressTier, checkTraumaTrigger, processPsychologicalTick, createDefaultPsychState } from './psychologicalSystem';
 import { processConsequences, createConsequence, Consequence, getDayPhase, getEnvironmentalEffects } from './consequenceSystem';
+import { 
+  initializeUnifiedAmbient, 
+  processAmbientTick, 
+  getUnifiedAmbientFeed,
+  setAmbientGenre,
+  type UnifiedAmbientEntry,
+  type AmbientTickResult,
+} from './unifiedAmbientSystem';
 
 // ============= WORLD EVENT TYPES =============
 
@@ -324,7 +332,12 @@ export interface WorldTickResult {
   summary: string[];
   breakpoints: Breakpoint[];
   evolutionEvents: string[];
+  ambientResult?: AmbientTickResult;
+  ambientFeed?: UnifiedAmbientEntry[];
 }
+
+// Track if ambient system is initialized
+let ambientInitialized = false;
 
 export function worldTick(state: GameState, previousState?: GameState): WorldTickResult {
   let updatedState = { ...state };
@@ -333,6 +346,8 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
   const npcs = { ...state.npcs };
   let breakpoints: Breakpoint[] = [];
   let evolutionEvents: string[] = [];
+  let ambientResult: AmbientTickResult | undefined;
+  let ambientFeed: UnifiedAmbientEntry[] = [];
   
   // 0. Initialize world evolution if not present
   if (!updatedState.worldEvolution) {
@@ -342,6 +357,19 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
       socialStability: evolution.socialStability,
       resourceAvailability: evolution.resourceAvailability,
     };
+  }
+  
+  // 0.5 Initialize ambient system if not already done
+  if (!ambientInitialized) {
+    const genre = (state as any).genre || (state as any).gameGenre || 'modern';
+    initializeUnifiedAmbient(genre);
+    ambientInitialized = true;
+  } else {
+    // Update genre if it changed
+    const currentGenre = (state as any).genre || (state as any).gameGenre;
+    if (currentGenre) {
+      setAmbientGenre(currentGenre);
+    }
   }
   
   // 1. Move NPCs according to schedules (already in simulateNPCs)
@@ -478,12 +506,39 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
   
   updatedState.npcs = npcs;
   
-  // 3. Check for random events (simplified for now)
-  if (Math.random() < 0.05) { // 5% chance per tick
+  // 3. Process ambient events (unified chatter + micro-events)
+  try {
+    ambientResult = processAmbientTick(updatedState);
+    if (ambientResult.emitted && ambientResult.entry) {
+      // Add ambient event to world events for logging
+      worldEvents.push({
+        id: `we_ambient_${Date.now()}`,
+        tick: state.time.tick,
+        type: ambientResult.type === 'chatter' ? 'social' : 'environmental',
+        description: ambientResult.entry.text,
+        involvedEntities: ambientResult.entry.involvedNPCs || [],
+        location: (state as any).currentLocation || 'unknown',
+        visibility: 'witnessed',
+        consequences: [],
+      });
+      
+      // Add to summary for narrative context
+      summary.push(`[Ambient] ${ambientResult.entry.text}`);
+    }
+    
+    // Get current ambient feed for UI
+    ambientFeed = getUnifiedAmbientFeed();
+  } catch (e) {
+    // Ambient processing failed, continue without
+    console.warn('[WorldTick] Ambient processing error:', e);
+  }
+  
+  // 4. Check for random events (fallback if no ambient emitted)
+  if (!ambientResult?.emitted && Math.random() < 0.03) { // Reduced chance since ambient handles this
     const randomEvents = [
-      { desc: 'A cold wind blows through the town', type: 'environmental' as const },
-      { desc: 'Distant thunder rumbles', type: 'environmental' as const },
-      { desc: 'A stray dog wanders past', type: 'environmental' as const },
+      { desc: 'A cold wind blows through the area', type: 'environmental' as const },
+      { desc: 'Distant sounds echo in the distance', type: 'environmental' as const },
+      { desc: 'The atmosphere shifts subtly', type: 'environmental' as const },
     ];
     const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
     worldEvents.push({
@@ -492,14 +547,14 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
       type: event.type,
       description: event.desc,
       involvedEntities: [],
-      location: 'town_square',
+      location: (state as any).currentLocation || 'unknown',
       visibility: 'public',
       consequences: [],
     });
     summary.push(event.desc);
   }
   
-  // 4. Detect breakpoints (Phase 7)
+  // 5. Detect breakpoints (Phase 7)
   try {
     breakpoints = detectBreakpoints(updatedState, previousState);
     breakpoints.forEach(bp => {
@@ -515,7 +570,7 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     // Breakpoint detection failed, continue without
   }
   
-  // 5. Tick world evolution (Phase 7)
+  // 6. Tick world evolution (Phase 7)
   try {
     if (updatedState.worldEvolution) {
       const evolutionResult = tickWorldEvolution(
@@ -542,7 +597,7 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     // World evolution failed, continue without
   }
   
-  // 6. Simulate NPC-NPC relationship evolution (Phase 7)
+  // 7. Simulate NPC-NPC relationship evolution (Phase 7)
   try {
     const relationships = analyzeNPCRelationships(updatedState);
     relationships.slice(0, 3).forEach(rel => {
@@ -561,6 +616,8 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     summary,
     breakpoints,
     evolutionEvents,
+    ambientResult,
+    ambientFeed,
   };
 }
 
