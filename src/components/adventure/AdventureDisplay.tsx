@@ -1190,9 +1190,9 @@ export function AdventureDisplay({
 
   return (
     <div className="h-screen flex flex-col relative overflow-hidden">
-      {/* Subtle atmospheric background */}
+      {/* Subtle atmospheric background with weather effects */}
       <div className="absolute inset-0 z-0 opacity-30">
-        <AtmosphericBackground />
+        <AtmosphericBackground mood={currentMood} />
       </div>
 
       {/* Header */}
