@@ -13,6 +13,13 @@ import {
   type UnifiedAmbientEntry,
   type AmbientTickResult,
 } from './unifiedAmbientSystem';
+import { 
+  npcWeatherReactionSystem, 
+  NPCWeatherPersonality,
+  WeatherImpact,
+  PhysicalBehavior 
+} from './npcWeatherReactionSystem';
+import { WeatherType } from './weatherSystem';
 
 // ============= WORLD EVENT TYPES =============
 
@@ -334,6 +341,14 @@ export interface WorldTickResult {
   evolutionEvents: string[];
   ambientResult?: AmbientTickResult;
   ambientFeed?: UnifiedAmbientEntry[];
+  weatherReactions?: Record<string, { impact: WeatherImpact; dialogue: string | null; behaviors: PhysicalBehavior[] }>;
+}
+
+// Extended NPC type with weather personality
+interface NPCWithWeather extends NPC {
+  weatherPersonality?: NPCWeatherPersonality;
+  currentBehaviors?: PhysicalBehavior[];
+  weatherSmallTalk?: { topic: 'weather'; line: string } | null;
 }
 
 // Track if ambient system is initialized
@@ -343,11 +358,17 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
   let updatedState = { ...state };
   const worldEvents: WorldEvent[] = [];
   const summary: string[] = [];
-  const npcs = { ...state.npcs };
+  const npcs = { ...state.npcs } as Record<string, NPCWithWeather>;
   let breakpoints: Breakpoint[] = [];
   let evolutionEvents: string[] = [];
   let ambientResult: AmbientTickResult | undefined;
   let ambientFeed: UnifiedAmbientEntry[] = [];
+  const weatherReactions: Record<string, { impact: WeatherImpact; dialogue: string | null; behaviors: PhysicalBehavior[] }> = {};
+  
+  // Get current weather from state
+  const currentWeather: WeatherType = (state as any).weather?.type || 
+                                      (state as any).weatherState?.type || 
+                                      'clear';
   
   // 0. Initialize world evolution if not present
   if (!updatedState.worldEvolution) {
@@ -502,9 +523,77 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
         satisfaction: Math.max(0, n.satisfaction - 0.5),
       })),
     };
+    
+    // ========= WEATHER REACTION INTEGRATION =========
+    // Ensure NPC has weather personality
+    if (!npcs[npcId].weatherPersonality) {
+      npcs[npcId].weatherPersonality = npcWeatherReactionSystem.generateWeatherPersonality();
+    }
+    
+    const weatherPersonality = npcs[npcId].weatherPersonality!;
+    
+    // Calculate weather impact
+    const weatherImpact = npcWeatherReactionSystem.getWeatherImpact(weatherPersonality, currentWeather);
+    
+    // Apply weather effects to NPC mood and energy (scaled for per-tick)
+    const currentMood = npcs[npcId].meta.stats.mood || 50;
+    const currentEnergy = npcs[npcId].meta.stats.energy || 50;
+    
+    npcs[npcId] = {
+      ...npcs[npcId],
+      meta: {
+        ...npcs[npcId].meta,
+        stats: {
+          ...npcs[npcId].meta.stats,
+          mood: Math.max(0, Math.min(100, currentMood + weatherImpact.moodModifier * 0.05)),
+          energy: Math.max(0, Math.min(100, currentEnergy + weatherImpact.energyModifier * 0.05)),
+        },
+      },
+    };
+    
+    // Get physical behaviors based on weather
+    const weatherBehaviors = npcWeatherReactionSystem.getPhysicalBehaviors(weatherPersonality, currentWeather);
+    npcs[npcId].currentBehaviors = weatherBehaviors;
+    
+    // Generate weather dialogue for small talk
+    const weatherDialogue = npcWeatherReactionSystem.getWeatherSmallTalk(weatherPersonality, currentWeather);
+    npcs[npcId].weatherSmallTalk = weatherDialogue;
+    
+    // Store weather reactions for UI consumption
+    weatherReactions[npcId] = {
+      impact: weatherImpact,
+      dialogue: weatherDialogue?.line || null,
+      behaviors: weatherBehaviors,
+    };
+    
+    // If NPC really hates this weather, add stress
+    if (weatherImpact.comfortLevel < 30) {
+      npcs[npcId] = {
+        ...npcs[npcId],
+        stressLevel: Math.min(100, (npcs[npcId].stressLevel || 0) + 2),
+      };
+    }
+    
+    // Generate weather event if NPC is reacting strongly
+    if (weatherImpact.comfortLevel < 25 && Math.random() < 0.1) {
+      const description = npcWeatherReactionSystem.describeWeatherReaction(
+        npcs[npcId].meta.name,
+        weatherPersonality,
+        currentWeather
+      );
+      worldEvents.push({
+        id: `we_weather_${Date.now()}_${npcId}`,
+        tick: state.time.tick,
+        type: 'environmental',
+        description,
+        involvedEntities: [npcId],
+        location: npcs[npcId].currentLocation,
+        visibility: 'witnessed',
+        consequences: [],
+      });
+      summary.push(description);
+    }
   }
-  
-  updatedState.npcs = npcs;
   
   // 3. Process ambient events (unified chatter + micro-events)
   try {
@@ -618,6 +707,7 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     evolutionEvents,
     ambientResult,
     ambientFeed,
+    weatherReactions,
   };
 }
 

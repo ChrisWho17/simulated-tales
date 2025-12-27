@@ -11,8 +11,10 @@ import { DialogueBubble } from './DialogueBubble';
 import { ResponseOptions, ResponseType } from './ResponseOptions';
 import { MoodIndicator } from './MoodIndicator';
 import { CharacterInfoSheet } from './CharacterInfoSheet';
+import { npcWeatherReactionSystem, NPCWeatherPersonality } from '@/game/npcWeatherReactionSystem';
+import { WeatherType } from '@/game/weatherSystem';
 import { 
-  MessageSquare, X, Loader2, ChevronRight
+  MessageSquare, X, Loader2, ChevronRight, Cloud
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +24,7 @@ export interface DialogueEntry {
   content: string;
   timestamp: number;
   emotion?: EmotionType;
+  isWeatherComment?: boolean;
 }
 
 export interface ConversationResponse {
@@ -30,6 +33,12 @@ export interface ConversationResponse {
   icon?: string;
   relationshipImpact?: number;
   action?: string;
+}
+
+// Extended NPC type with weather personality
+interface NPCWithWeather extends NPC {
+  weatherPersonality?: NPCWeatherPersonality;
+  weatherSmallTalk?: { topic: 'weather'; line: string } | null;
 }
 
 interface ConversationUIProps {
@@ -42,6 +51,7 @@ interface ConversationUIProps {
   era: EraId;
   isLoading?: boolean;
   typewriterEffect?: boolean;
+  currentWeather?: WeatherType;
 }
 
 export function ConversationUI({
@@ -53,7 +63,8 @@ export function ConversationUI({
   genre,
   era,
   isLoading = false,
-  typewriterEffect = true
+  typewriterEffect = true,
+  currentWeather = 'clear'
 }: ConversationUIProps) {
   const [portrait, setPortrait] = useState<string | null>(null);
   const [isLoadingPortrait, setIsLoadingPortrait] = useState(false);
@@ -61,7 +72,12 @@ export function ConversationUI({
   const [isEntering, setIsEntering] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
+  const [weatherDialogueShown, setWeatherDialogueShown] = useState(false);
+  const [weatherDialogue, setWeatherDialogue] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Cast NPC to extended type
+  const npcWithWeather = npc as NPCWithWeather;
 
   // Get relationship
   const relationship: Relationship = npc.relationships?.player || {
@@ -122,6 +138,24 @@ export function ConversationUI({
     const timer = setTimeout(() => setIsEntering(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Generate weather dialogue on conversation start
+  useEffect(() => {
+    if (!weatherDialogueShown && currentWeather) {
+      // Use existing weather personality or generate one
+      let weatherPersonality = npcWithWeather.weatherPersonality;
+      if (!weatherPersonality) {
+        weatherPersonality = npcWeatherReactionSystem.generateWeatherPersonality();
+      }
+      
+      // Check if NPC wants to discuss weather
+      const smallTalk = npcWeatherReactionSystem.getWeatherSmallTalk(weatherPersonality, currentWeather);
+      if (smallTalk) {
+        setWeatherDialogue(smallTalk.line);
+      }
+      setWeatherDialogueShown(true);
+    }
+  }, [currentWeather, weatherDialogueShown, npcWithWeather.weatherPersonality]);
 
   const handleEndConversation = () => {
     setIsExiting(true);
@@ -236,6 +270,26 @@ export function ConversationUI({
           {/* Dialogue history */}
           <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
             <div className="space-y-4 pb-4">
+              {/* Weather greeting if NPC wants to discuss weather */}
+              {weatherDialogue && dialogueHistory.length === 0 && (
+                <div className="flex items-start gap-2 animate-fade-in">
+                  <Cloud className="w-4 h-4 text-muted-foreground mt-1 shrink-0" />
+                  <DialogueBubble
+                    entry={{
+                      id: 'weather-greeting',
+                      speaker: 'npc',
+                      content: weatherDialogue,
+                      timestamp: Date.now(),
+                      emotion: currentEmotion,
+                      isWeatherComment: true
+                    }}
+                    npcName={npc.meta.name}
+                    typewriterEffect={typewriterEffect}
+                    accentColor={relationshipColor}
+                  />
+                </div>
+              )}
+              
               {dialogueHistory.map((entry, index) => (
                 <DialogueBubble
                   key={entry.id}
