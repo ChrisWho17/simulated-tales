@@ -2,7 +2,7 @@
 // Supports: talking, actions, replies, inventory, terrain manipulation
 
 export interface ParsedCommand {
-  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system';
+  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself';
   verb: string;
   target?: string;
   args: string[];
@@ -20,12 +20,26 @@ const LOOK_KEYWORDS = ['look', 'see', 'observe', 'view', 'scan', 'watch', 'peer'
 const MOVE_KEYWORDS = ['go', 'walk', 'run', 'move', 'travel', 'head', 'enter', 'exit', 'north', 'south', 'east', 'west', 'n', 's', 'e', 'w'];
 const SYSTEM_KEYWORDS = ['help', 'save', 'load', 'status', 'wait', 'rest', 'sleep'];
 const END_CONVERSATION_KEYWORDS = ['bye', 'goodbye', 'farewell', 'later', 'cya', 'seeya'];
+const CHECKSELF_KEYWORDS = ['/checkself', '/check', 'checkself', '/assess', '/wounds', '/injuries'];
 
 export function parseEnhancedCommand(input: string): ParsedCommand {
   const trimmed = input.trim().toLowerCase();
   const words = trimmed.split(/\s+/);
   const firstWord = words[0] || '';
   const rest = words.slice(1);
+  
+  // Check for checkself command first (slash commands)
+  if (CHECKSELF_KEYWORDS.includes(firstWord)) {
+    // Parse thoroughness from args: /checkself careful, /checkself thorough
+    const thoroughness = rest[0] || 'quick';
+    return {
+      type: 'checkself',
+      verb: 'checkself',
+      target: thoroughness,
+      args: rest,
+      raw: input,
+    };
+  }
   
   // Check each keyword category
   if (TALK_KEYWORDS.includes(firstWord)) {
