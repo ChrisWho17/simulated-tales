@@ -373,6 +373,80 @@ export function findNPCByName(name: string): RegisteredNPC | null {
   return null;
 }
 
+/**
+ * Find an NPC by name OR occupation (for dialogue speakers like "Squad Leader")
+ */
+export function findNPCByNameOrOccupation(name: string): RegisteredNPC | null {
+  const lowerName = name.toLowerCase().trim();
+  
+  for (const npc of Object.values(registry.npcs)) {
+    // Check exact name match
+    if (npc.permanent.name.toLowerCase() === lowerName) {
+      return npc;
+    }
+    // Check occupation match
+    if (npc.semiPermanent.occupation && 
+        npc.semiPermanent.occupation.toLowerCase() === lowerName) {
+      return npc;
+    }
+  }
+  
+  // Fallback to partial match
+  for (const npc of Object.values(registry.npcs)) {
+    if (npc.permanent.name.toLowerCase().includes(lowerName) ||
+        (npc.semiPermanent.occupation && 
+         npc.semiPermanent.occupation.toLowerCase().includes(lowerName))) {
+      return npc;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Universal NPC ID resolution - finds or creates an NPC and returns their permanent ID.
+ * This is the single source of truth for NPC IDs across all systems.
+ * 
+ * @param name - The NPC name or occupation/title
+ * @param options - Additional options for NPC creation if new
+ * @returns The permanent NPC ID (always consistent)
+ */
+export function resolveNPCId(
+  name: string, 
+  options?: {
+    occupation?: string;
+    location?: string;
+    faction?: string;
+    currentTurn?: number;
+  }
+): string {
+  // First, try to find existing NPC by name or occupation
+  const existing = findNPCByNameOrOccupation(name);
+  if (existing) {
+    return existing.permanent.id;
+  }
+  
+  // Create new NPC with consistent ID
+  const npcId = createRegisteredNPC({
+    name,
+    occupation: options?.occupation || name, // Use name as occupation if not provided
+    location: options?.location,
+    faction: options?.faction,
+    currentTurn: options?.currentTurn || 0,
+  });
+  
+  console.log(`[NPCRegistry] Resolved new NPC ID: ${npcId} for "${name}"`);
+  return npcId;
+}
+
+/**
+ * Get NPC ID if exists, otherwise return null (doesn't create)
+ */
+export function getNPCId(name: string): string | null {
+  const existing = findNPCByNameOrOccupation(name);
+  return existing?.permanent.id || null;
+}
+
 export function getRelationship(npcId1: string, npcId2: string): NPCRelationship | null {
   const key = getRelationshipKey(npcId1, npcId2);
   return registry.relationships[key] || null;
