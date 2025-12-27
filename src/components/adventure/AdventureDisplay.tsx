@@ -424,11 +424,16 @@ export function AdventureDisplay({
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
 
+  // Focus input only on initial mount, not on every loading change (prevents keyboard popup)
   useEffect(() => {
-    if (!isLoading && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isLoading]);
+    const timer = setTimeout(() => {
+      if (inputRef.current && !isLoading) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   // Process mechanics and trigger emotional state changes AND update character stats
   useEffect(() => {

@@ -3,8 +3,11 @@ import { useState, useMemo, useCallback } from 'react';
 import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC } from '@/game/npcIdentityRegistry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Users, Briefcase, MapPin, Heart, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Users, Briefcase, MapPin, Heart, Camera, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface NPCProfileModalProps {
   npc: RegisteredNPC;
@@ -12,6 +15,9 @@ interface NPCProfileModalProps {
 }
 
 function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
+  const [portrait, setPortrait] = useState<string | null>(null);
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  
   const siblings = useMemo(() => getSiblings(npc.permanent.id), [npc.permanent.id]);
   const spouse = useMemo(() => {
     if (npc.semiPermanent.spouse) {
@@ -20,15 +26,75 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
     return null;
   }, [npc.semiPermanent.spouse]);
 
+  const handleGeneratePortrait = useCallback(async () => {
+    setIsGeneratingPortrait(true);
+    try {
+      // Build a description from available NPC data
+      const description = [
+        npc.permanent.species !== 'human' ? npc.permanent.species : '',
+        npc.semiPermanent.occupation !== 'none' ? npc.semiPermanent.occupation : '',
+        npc.mutable.mood !== 'neutral' ? `feeling ${npc.mutable.mood}` : '',
+      ].filter(Boolean).join(', ');
+      
+      const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+        body: {
+          npc: {
+            id: npc.permanent.id,
+            meta: {
+              name: npc.permanent.name,
+              occupation: npc.semiPermanent.occupation,
+              description: description || `A ${npc.permanent.species}`,
+            },
+            emotionalState: { current: npc.mutable.mood }
+          },
+          config: {
+            genre: 'fantasy',
+            emotion: npc.mutable.mood || 'neutral'
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.imageUrl) {
+        setPortrait(data.imageUrl);
+        toast({
+          title: "Portrait Generated",
+          description: `Created portrait for ${npc.permanent.name}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to generate portrait:', error);
+      toast({
+        title: "Portrait Generation Failed",
+        description: "Could not generate portrait at this time",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingPortrait(false);
+    }
+  }, [npc]);
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="glass-panel max-w-md border-primary/30">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-display">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40">
-              <User className="w-6 h-6 text-primary" />
+            {/* Portrait or Placeholder */}
+            <div className="relative w-16 h-16 rounded-full overflow-hidden bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
+              {portrait ? (
+                <img 
+                  src={portrait} 
+                  alt={npc.permanent.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-8 h-8 text-primary" />
+              )}
             </div>
-            <div>
+            <div className="flex-1">
               <span className="text-gradient-primary">{npc.permanent.name}</span>
               {npc.semiPermanent.occupation !== 'none' && (
                 <p className="text-sm text-muted-foreground font-normal mt-0.5">
@@ -41,6 +107,29 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
 
         <ScrollArea className="max-h-[60vh]">
           <div className="space-y-4 py-2">
+            {/* Generate Portrait Button */}
+            {!portrait && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGeneratePortrait}
+                disabled={isGeneratingPortrait}
+                className="w-full gap-2 border-primary/30 hover:border-primary/50"
+              >
+                {isGeneratingPortrait ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating Portrait...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-4 h-4" />
+                    Generate Portrait
+                  </>
+                )}
+              </Button>
+            )}
+
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-3">
               {npc.mutable.currentLocation && npc.mutable.currentLocation !== 'unknown' && (
