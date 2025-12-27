@@ -43,7 +43,6 @@ import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnch
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
-import { CheckSelfButton } from '@/components/game/CheckSelfButton';
 import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
 import { useGameLoop } from '@/hooks/useGameLoop';
@@ -58,6 +57,8 @@ import {
   resolveNPCId,
   NameRevealResult
 } from '@/game/npcIdentityRegistry';
+import { parseEnhancedCommand } from '@/game/commandParser';
+import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
 
 interface StoryEntry {
   id: string;
@@ -182,6 +183,8 @@ export function AdventureDisplay({
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [levelUpChoices, setLevelUpChoices] = useState<LevelUpChoice[]>([]);
   const [lastPlayerAction, setLastPlayerAction] = useState('');
+  const [showCheckSelfModal, setShowCheckSelfModal] = useState(false);
+  const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
@@ -882,6 +885,17 @@ export function AdventureDisplay({
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
+      // Check for /checkself command
+      const parsed = parseEnhancedCommand(input.trim());
+      if (parsed.type === 'checkself') {
+        const thoroughness = parsed.target === 'careful' ? 'careful' : 
+                           parsed.target === 'thorough' ? 'thorough' : 'quick';
+        setCheckSelfThoroughness(thoroughness);
+        setShowCheckSelfModal(true);
+        setInput('');
+        return;
+      }
+      
       // Track last action for XP stat inference
       setLastPlayerAction(input.trim());
       // Tick modifiers by 1 turn on each player action
@@ -898,6 +912,36 @@ export function AdventureDisplay({
       setInput('');
     }
   };
+
+  const handleCheckSelf = useCallback(() => {
+    if (!gameLoopState.adrenalineState) return;
+    
+    const result = playerAssessSelf(gameLoopState.adrenalineState, checkSelfThoroughness, 0);
+    
+    // Update state via game loop
+    console.log('[CheckSelf] Discovered', result.discoveredWounds.length, 'wounds');
+    
+    // Show result toast
+    if (result.discoveredWounds.length > 0) {
+      toast({
+        title: `Discovered ${result.discoveredWounds.length} wound(s)!`,
+        description: result.message,
+        variant: 'destructive',
+      });
+    } else if (result.status === 'clean') {
+      toast({
+        title: 'No hidden injuries found',
+        description: result.message,
+      });
+    } else {
+      toast({
+        title: 'Assessment inconclusive',
+        description: result.message,
+      });
+    }
+    
+    setShowCheckSelfModal(false);
+  }, [gameLoopState.adrenalineState, checkSelfThoroughness, toast]);
 
   const handleDiceRollComplete = (roll: any) => {
     // Tick modifiers by 1 turn for dice roll actions too
@@ -1248,19 +1292,6 @@ export function AdventureDisplay({
               {/* Saves Dropdown */}
               <SavesDropdown />
               
-              {/* Check Self Button - Only show if adrenaline system enabled */}
-              {(gameContext?.settings?.enableAdrenalineSystem || gameContext?.settings?.enableWoundSystem) && (
-                <CheckSelfButton
-                  adrenalineState={gameLoopState.adrenalineState}
-                  onStateUpdate={(newState) => {
-                    // State is managed by gameLoop hook
-                    console.log('[CheckSelf] State updated with', newState.hiddenDamage.wounds.length, 'hidden wounds');
-                  }}
-                  medicalSkill={0} // Could be derived from character stats if available
-                  disabled={isLoading}
-                />
-              )}
-              
               {/* Inventory */}
               <Button
                 variant="ghost"
@@ -1607,6 +1638,82 @@ export function AdventureDisplay({
       
       {/* Consequence Feed - show if enabled in settings */}
       {(gameContext?.settings?.showConsequenceFeed ?? true) && <ConsequenceFeed compact={false} />}
+      
+      {/* Check Self Modal */}
+      {showCheckSelfModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Heart className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Assess Yourself</h2>
+                <p className="text-sm text-muted-foreground">Check for hidden injuries</p>
+              </div>
+            </div>
+            
+            <p className="text-muted-foreground mb-6">
+              Take a moment to check your body for wounds you might not have noticed in the heat of the moment.
+            </p>
+            
+            <div className="space-y-2 mb-6">
+              <label className="text-sm font-medium">Thoroughness</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={checkSelfThoroughness === 'quick' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCheckSelfThoroughness('quick')}
+                  className="flex-1"
+                >
+                  Quick
+                </Button>
+                <Button
+                  variant={checkSelfThoroughness === 'careful' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCheckSelfThoroughness('careful')}
+                  className="flex-1"
+                >
+                  Careful
+                </Button>
+                <Button
+                  variant={checkSelfThoroughness === 'thorough' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCheckSelfThoroughness('thorough')}
+                  className="flex-1"
+                >
+                  Thorough
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {checkSelfThoroughness === 'quick' && 'Fast check, may miss some injuries'}
+                {checkSelfThoroughness === 'careful' && 'Balanced check, good chance to find injuries'}
+                {checkSelfThoroughness === 'thorough' && 'Slow and methodical, high chance to find everything'}
+              </p>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCheckSelfModal(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCheckSelf}
+                className="flex-1"
+              >
+                Check Self
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              Tip: Type <code className="bg-muted px-1 rounded">/checkself</code> or <code className="bg-muted px-1 rounded">/checkself thorough</code>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
