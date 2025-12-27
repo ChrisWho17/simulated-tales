@@ -180,6 +180,10 @@ export function AdventureDisplay({
   
   // Get registered NPC names for clickable links in narrative
   const npcNameMap = useRegisteredNPCNames();
+  
+  // Player name for clickable link
+  const playerName = character.name;
+  const openCharacterSheet = useCallback(() => setShowCharacterSheet(true), []);
 
   // Initialize modifier manager for buff/debuff tracking
   const modifierManagerRef = useRef<ModifierManager | null>(null);
@@ -915,7 +919,7 @@ export function AdventureDisplay({
     boldParts.forEach((part, i) => {
       if (i % 2 === 1) {
         // Bold text - check for NPC names first, then apply mood color
-        const npcParsed = parseTextForNPCLinks(part, npcNameMap, `${keyPrefix}-b-${i}`);
+        const npcParsed = parseTextForNPCLinks(part, npcNameMap, `${keyPrefix}-b-${i}`, playerName, openCharacterSheet);
         result.push(
           <strong 
             key={`${keyPrefix}-b-${i}`} 
@@ -936,12 +940,12 @@ export function AdventureDisplay({
         italicParts.forEach((iPart, j) => {
           if (j % 2 === 1) {
             // Italic text - also check for NPC names
-            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-i-${i}-${j}`);
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-i-${i}-${j}`, playerName, openCharacterSheet);
             result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{npcParsed}</em>);
           } else if (iPart && moodConfig && tintableWords && tintableWords.size > 0) {
             // For non-italic text with active mood, check for tintable keywords (limited set)
             // Also parse for NPC names
-            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-mood-${i}-${j}`);
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-mood-${i}-${j}`, playerName, openCharacterSheet);
             
             // If NPC parsing returned components, add them directly
             if (npcParsed.length > 1 || typeof npcParsed[0] !== 'string') {
@@ -1008,7 +1012,7 @@ export function AdventureDisplay({
             }
           } else if (iPart) {
             // Plain text - parse for NPC names
-            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-t-${i}-${j}`);
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-t-${i}-${j}`, playerName, openCharacterSheet);
             result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{npcParsed}</span>);
           }
         });
@@ -1071,7 +1075,7 @@ export function AdventureDisplay({
             >
               {speakerNPC ? (
                 <>
-                  {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${idx}`)}:
+                  {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${idx}`, playerName, openCharacterSheet)}:
                 </>
               ) : (
                 <>{speakerName}:</>
