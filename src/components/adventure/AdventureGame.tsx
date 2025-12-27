@@ -9,6 +9,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { playerStateManager } from '@/game/playerStateManager';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
@@ -394,6 +395,58 @@ export function AdventureGame() {
       console.log(`[Character Sync] Synced character to campaign - HP: ${character.currentHealth}/${character.maxHealth}, Gold: ${character.gold}, XP: ${character.experience}`);
     }
   }, [phase, character, campaignContext]);
+
+  // === PLAYER STATE MANAGER SYNC ===
+  // Initialize playerStateManager with character and sync changes back to React state
+  useEffect(() => {
+    if (!character || phase !== 'playing') return;
+    
+    // Initialize playerStateManager with current character data
+    playerStateManager.syncFromCharacter(character);
+    console.log('[PlayerStateManager] Initialized with character:', character.name);
+    
+    // Subscribe to HP changes
+    const unsubHp = playerStateManager.subscribe('hp', (data: any) => {
+      console.log('[PlayerStateManager] HP change event:', data);
+      setCharacter(prev => {
+        if (!prev) return prev;
+        const newHealth = data.newValue ?? prev.currentHealth;
+        const maxHealth = data.maxHP ?? prev.maxHealth;
+        if (newHealth === prev.currentHealth && maxHealth === prev.maxHealth) return prev;
+        return { ...prev, currentHealth: newHealth, maxHealth };
+      });
+    });
+    
+    // Subscribe to XP changes
+    const unsubXp = playerStateManager.subscribe('xp', (data: any) => {
+      console.log('[PlayerStateManager] XP change event:', data);
+      setCharacter(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          experience: data.newXP ?? prev.experience,
+          level: data.newLevel ?? prev.level,
+        };
+      });
+    });
+    
+    // Subscribe to currency changes  
+    const unsubCurrency = playerStateManager.subscribe('currency', (data: any) => {
+      console.log('[PlayerStateManager] Currency change event:', data);
+      setCharacter(prev => {
+        if (!prev) return prev;
+        const newGold = data.newValue ?? prev.gold;
+        if (newGold === prev.gold) return prev;
+        return { ...prev, gold: newGold };
+      });
+    });
+    
+    return () => {
+      unsubHp();
+      unsubXp();
+      unsubCurrency();
+    };
+  }, [character?.name, phase]); // Only re-subscribe when character name changes (new character)
 
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
