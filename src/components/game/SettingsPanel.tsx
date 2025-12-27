@@ -573,6 +573,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onCheckedChange={(checked) => updateSettings({ showEventBusDebug: checked })}
                     />
                   </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Consequence Feed</span>
+                      <p className="text-xs text-muted-foreground">Show real-time feedback for trust, reputation, inventory changes</p>
+                    </div>
+                    <Switch 
+                      checked={settings.showConsequenceFeed ?? true}
+                      onCheckedChange={(checked) => updateSettings({ showConsequenceFeed: checked })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

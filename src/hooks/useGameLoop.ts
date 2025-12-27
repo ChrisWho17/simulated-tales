@@ -141,8 +141,22 @@ function saveToStorage<T>(key: string, value: T): void {
   }
 }
 
+// ============= HOOK OPTIONS =============
+export interface GameLoopOptions {
+  initialTurn?: number;
+  playerHealth?: number;       // Current player health for Director priority
+  playerMaxHealth?: number;    // Max health for percentage calculation
+  criticalNeeds?: string[];    // Critical needs for priority context
+}
+
 // ============= HOOK =============
-export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopActions] {
+export function useGameLoop(options: GameLoopOptions = {}): [GameLoopState, GameLoopActions] {
+  const { 
+    initialTurn = 0, 
+    playerHealth = 100, 
+    playerMaxHealth = 100,
+    criticalNeeds = [] 
+  } = options;
   // State
   const [activeRipples, setActiveRipples] = useState<ScopedRipple[]>(() => 
     loadFromStorage(RIPPLES_KEY, [])
@@ -330,11 +344,12 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     }
     setAdrenalineState(adrenalineResult.state);
     
-    // Process Director pacing rules
+    // Process Director pacing rules with actual player state
+    const healthPercent = playerMaxHealth > 0 ? (playerHealth / playerMaxHealth) * 100 : 100;
     const directorContext: PriorityContext = {
-      playerHealth: 100, // TODO: Get from character
+      playerHealth: healthPercent,
       inCombat: worldState.guardAlertLevel > 60,
-      criticalNeeds: [], // TODO: Get from needs system
+      criticalNeeds: criticalNeeds,
       activeConversation: false,
       recentDamage: adrenalineState.adrenaline.current > 50,
       pendingQuest: false,
