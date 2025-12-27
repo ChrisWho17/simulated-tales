@@ -4,6 +4,7 @@ import { audioEngine, AudioEngineState, AudioVolumes, AudioChannel } from '@/gam
 import { weatherSoundManager } from '@/game/weatherSoundManager';
 import { storySoundTrigger } from '@/game/storySoundTrigger';
 import { acousticEnvironmentSystem, AcousticSpace, LocationAcoustics } from '@/game/acousticEnvironmentSystem';
+import { soundPreloader, PreloadProgress, CachedSound } from '@/game/soundPreloader';
 import { WeatherState } from '@/game/weatherSystem';
 
 interface UseAudioSystemReturn {
@@ -12,13 +13,19 @@ interface UseAudioSystemReturn {
   volumes: AudioVolumes;
   acousticSpace: AcousticSpace;
   isIndoors: boolean;
+  preloadProgress: PreloadProgress | null;
+  soundsReady: boolean;
   initializeAudio: () => Promise<void>;
+  preloadSounds: (options?: { priorityOnly?: boolean; categories?: string[] }) => Promise<void>;
   setMasterVolume: (volume: number) => void;
   setChannelVolume: (channel: AudioChannel, volume: number) => void;
   toggleMute: () => void;
   syncWeather: (weatherState: WeatherState, timeOfDay?: 'day' | 'night' | 'dawn' | 'dusk') => void;
   processNarrative: (text: string) => string[];
   playUISound: (sound: 'click' | 'notification' | 'success' | 'error' | 'level_up' | 'item_acquired') => void;
+  playSoundFromCategory: (category: string, options?: { volume?: number; pitch?: number }) => Promise<boolean>;
+  findSounds: (searchTerm: string) => CachedSound[];
+  getLoadedCategories: () => string[];
   setIndoors: (isIndoors: boolean) => void;
   setLocation: (locationType: string) => void;
   getAcoustics: () => LocationAcoustics;
@@ -40,6 +47,8 @@ export function useAudioSystem(): UseAudioSystemReturn {
 
   const [acousticSpace, setAcousticSpace] = useState<AcousticSpace>('outdoor');
   const [isIndoorsState, setIsIndoorsState] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState<PreloadProgress | null>(null);
+  const [soundsReady, setSoundsReady] = useState(false);
 
   // Subscribe to audio engine state changes
   useEffect(() => {
@@ -67,11 +76,37 @@ export function useAudioSystem(): UseAudioSystemReturn {
     return unsubscribe;
   }, []);
 
+  // Subscribe to preload progress
+  useEffect(() => {
+    const unsubscribe = soundPreloader.onProgress((progress) => {
+      setPreloadProgress(progress);
+      if (progress.isComplete) {
+        setSoundsReady(true);
+      }
+    });
+
+    // Check if already preloaded
+    setSoundsReady(soundPreloader.isReady());
+
+    return unsubscribe;
+  }, []);
+
   // Initialize audio on first user interaction
   const initializeAudio = useCallback(async () => {
     await audioEngine.ensureContext();
     setState(audioEngine.getState());
   }, []);
+
+  // Preload sounds from storage
+  const preloadSounds = useCallback(async (options?: { 
+    priorityOnly?: boolean; 
+    categories?: string[] 
+  }) => {
+    if (!state.initialized) {
+      await initializeAudio();
+    }
+    await soundPreloader.preloadAll(options);
+  }, [state.initialized, initializeAudio]);
 
   // Volume controls
   const setMasterVolume = useCallback((volume: number) => {
@@ -112,6 +147,25 @@ export function useAudioSystem(): UseAudioSystemReturn {
       storySoundTrigger.playUISound(sound);
     }
   }, [state.initialized, state.muted]);
+
+  // Play sound from preloaded category
+  const playSoundFromCategory = useCallback(async (
+    category: string,
+    options?: { volume?: number; pitch?: number }
+  ): Promise<boolean> => {
+    if (!state.initialized || state.muted) return false;
+    return soundPreloader.playFromCategory(category, options);
+  }, [state.initialized, state.muted]);
+
+  // Find sounds by search term
+  const findSounds = useCallback((searchTerm: string): CachedSound[] => {
+    return soundPreloader.findSounds(searchTerm);
+  }, []);
+
+  // Get loaded categories
+  const getLoadedCategories = useCallback((): string[] => {
+    return soundPreloader.getLoadedCategories();
+  }, []);
 
   // Indoor/outdoor (legacy support - now use setLocation instead)
   const setIndoors = useCallback((isIndoors: boolean) => {
@@ -154,13 +208,19 @@ export function useAudioSystem(): UseAudioSystemReturn {
     volumes: state.volumes,
     acousticSpace,
     isIndoors: isIndoorsState,
+    preloadProgress,
+    soundsReady,
     initializeAudio,
+    preloadSounds,
     setMasterVolume,
     setChannelVolume,
     toggleMute,
     syncWeather,
     processNarrative,
     playUISound,
+    playSoundFromCategory,
+    findSounds,
+    getLoadedCategories,
     setIndoors,
     setLocation,
     getAcoustics,
