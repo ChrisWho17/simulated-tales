@@ -131,6 +131,9 @@ export interface GameSettings {
   enableWoundSystem: boolean;
   enableKnowledgeSystem: boolean;
   enableWeatherEffects: boolean;
+  weatherMode: 'auto' | 'manual';
+  manualWeatherType?: string;
+  showWeatherParticles: boolean;
   enableNPCSchedules: boolean;
   enableReputationSystem: boolean;
   enableXPSystem: boolean;
@@ -195,6 +198,9 @@ const defaultSettings: GameSettings = {
   enableWoundSystem: true,
   enableKnowledgeSystem: true,
   enableWeatherEffects: true,
+  weatherMode: 'auto',
+  manualWeatherType: undefined,
+  showWeatherParticles: true,
   enableNPCSchedules: true,
   enableReputationSystem: true,
   enableXPSystem: true,

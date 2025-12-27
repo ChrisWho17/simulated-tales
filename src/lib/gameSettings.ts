@@ -37,7 +37,7 @@ export interface InDepthSettings {
   consequenceIntensity: 'forgiving' | 'balanced' | 'harsh';  // How hard failures hit
 }
 
-export interface GameSettings {
+export interface GameSettings { 
   // Core toggles
   adultContent: boolean;        // 18+ content toggle
   autoSave: boolean;
@@ -67,6 +67,9 @@ export interface GameSettings {
   enableWoundSystem: boolean;          // Wound tracking
   enableKnowledgeSystem: boolean;      // Progressive NPC knowledge reveal
   enableWeatherEffects: boolean;       // Weather influences gameplay
+  weatherMode: 'auto' | 'manual';      // Automatic or manual weather control
+  manualWeatherType?: string;          // Selected weather when in manual mode
+  showWeatherParticles: boolean;       // Show weather particle effects on background
   enableNPCSchedules: boolean;         // NPCs follow daily routines
   enableReputationSystem: boolean;     // Faction/NPC reputation tracking
   enableXPSystem: boolean;             // Experience and leveling
@@ -138,6 +141,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   enableWoundSystem: true,
   enableKnowledgeSystem: true,
   enableWeatherEffects: true,
+  weatherMode: 'auto',
+  manualWeatherType: undefined,
+  showWeatherParticles: true,
   enableNPCSchedules: true,
   enableReputationSystem: true,
   enableXPSystem: true,

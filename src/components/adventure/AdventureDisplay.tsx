@@ -59,8 +59,9 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
-import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather } from '@/game/weatherSystem';
+import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
+import { WeatherParticles } from '@/components/ui/weather-particles';
 
 interface StoryEntry {
   id: string;
@@ -196,6 +197,12 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
   
+  // Get weather settings from game context (must come after gameContext declaration)
+  const weatherEnabled = gameContext?.settings?.enableWeatherEffects ?? true;
+  const weatherMode = gameContext?.settings?.weatherMode ?? 'auto';
+  const manualWeatherType = gameContext?.settings?.manualWeatherType as WeatherType | undefined;
+  const showWeatherParticles = gameContext?.settings?.showWeatherParticles ?? true;
+  
   // Game loop for adrenaline system with player health for Director priority
   const [gameLoopState, gameLoopActions] = useGameLoop({
     playerHealth: character.currentHealth,
@@ -265,18 +272,27 @@ export function AdventureDisplay({
     return () => viewport.removeEventListener('scroll', handleScroll);
   }, [checkIfAtBottom]);
 
-  // Detect new content when story updates and tick weather
+  // Handle manual weather mode
+  useEffect(() => {
+    if (weatherMode === 'manual' && manualWeatherType && weatherState.current !== manualWeatherType) {
+      setWeatherState(prev => forceWeather(prev, manualWeatherType, weatherTickRef.current));
+    }
+  }, [weatherMode, manualWeatherType, weatherState.current]);
+
+  // Detect new content when story updates and tick weather (only in auto mode)
   useEffect(() => {
     if (story.length > previousStoryLength.current) {
       if (!isAtBottom) {
         setHasNewContent(true);
       }
-      // Tick weather on each new story entry (narrator turn = 1 tick)
-      weatherTickRef.current++;
-      setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
+      // Tick weather on each new story entry (narrator turn = 1 tick) - only in auto mode
+      if (weatherMode === 'auto') {
+        weatherTickRef.current++;
+        setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
+      }
     }
     previousStoryLength.current = story.length;
-  }, [story.length, isAtBottom]);
+  }, [story.length, isAtBottom, weatherMode]);
 
   // Scroll to bottom handler
   const scrollToBottom = useCallback(() => {
@@ -1204,6 +1220,25 @@ export function AdventureDisplay({
       <div className="absolute inset-0 z-0 opacity-30">
         <AtmosphericBackground mood={currentMood} />
       </div>
+      
+      {/* Weather particle effects on main background */}
+      {weatherEnabled && showWeatherParticles && (
+        <div className="absolute inset-0 z-[1] pointer-events-none">
+          <WeatherParticles 
+            mood={
+              weatherState.current === 'storm' ? 'fearful' :
+              weatherState.current === 'rain' ? 'sad' :
+              weatherState.current === 'fog' ? 'depressed' :
+              weatherState.current === 'heat_wave' ? 'mad' :
+              weatherState.current === 'wind' ? 'annoyed' :
+              weatherState.current === 'snow' ? 'suspicious' :
+              weatherState.current === 'cloudy' ? 'neutral' :
+              'happy'
+            } 
+            intensity={weatherState.intensity * 0.6}
+          />
+        </div>
+      )}
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
@@ -1222,30 +1257,33 @@ export function AdventureDisplay({
             size="icon"
             onClick={() => setShowWeatherModal(true)}
             className={`h-7 w-7 rounded-md frosted-button shrink-0 ${
-              currentMood === 'fearful' ? 'text-yellow-400 hover:text-yellow-300' : 
-              currentMood === 'sad' ? 'text-blue-400 hover:text-blue-300' : 
-              currentMood === 'depressed' ? 'text-violet-400 hover:text-violet-300' : 
-              currentMood === 'mad' ? 'text-red-400 hover:text-red-300' : 
-              currentMood === 'annoyed' ? 'text-orange-400 hover:text-orange-300' :
-              currentMood === 'suspicious' ? 'text-cyan-400 hover:text-cyan-300' :
-              'text-emerald-400 hover:text-emerald-300'
+              weatherState.current === 'storm' ? 'text-yellow-400 hover:text-yellow-300' : 
+              weatherState.current === 'rain' ? 'text-blue-400 hover:text-blue-300' : 
+              weatherState.current === 'fog' ? 'text-violet-400 hover:text-violet-300' : 
+              weatherState.current === 'heat_wave' ? 'text-red-400 hover:text-red-300' : 
+              weatherState.current === 'wind' ? 'text-orange-400 hover:text-orange-300' :
+              weatherState.current === 'snow' ? 'text-cyan-400 hover:text-cyan-300' :
+              weatherState.current === 'cloudy' ? 'text-slate-400 hover:text-slate-300' :
+              'text-amber-400 hover:text-amber-300'
             }`}
-            title="Weather & Mood"
+            title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
           >
-            {currentMood === 'fearful' ? (
+            {weatherState.current === 'storm' ? (
               <CloudLightning className="w-4 h-4" />
-            ) : currentMood === 'sad' ? (
+            ) : weatherState.current === 'rain' ? (
               <CloudRain className="w-4 h-4" />
-            ) : currentMood === 'depressed' ? (
+            ) : weatherState.current === 'fog' ? (
               <CloudFog className="w-4 h-4" />
-            ) : currentMood === 'mad' ? (
-              <Sun className="w-4 h-4" />
-            ) : currentMood === 'annoyed' ? (
-              <Cloud className="w-4 h-4" />
-            ) : currentMood === 'suspicious' ? (
-              <Snowflake className="w-4 h-4" />
-            ) : (
+            ) : weatherState.current === 'heat_wave' ? (
+              <Flame className="w-4 h-4" />
+            ) : weatherState.current === 'wind' ? (
               <Wind className="w-4 h-4" />
+            ) : weatherState.current === 'snow' ? (
+              <Snowflake className="w-4 h-4" />
+            ) : weatherState.current === 'cloudy' ? (
+              <Cloud className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
             )}
           </Button>
 
@@ -1836,9 +1874,43 @@ export function AdventureDisplay({
                 weatherState.current === 'cloudy' ? 'border-slate-500/30 bg-slate-500/5' :
                 'border-amber-500/30 bg-amber-500/5'
               }`}>
-                <p className="text-xs text-muted-foreground/80">
+                <p className="text-xs text-muted-foreground/80 mb-2">
                   {WEATHER_CONFIGS[weatherState.current].effects.join(' • ')}
                 </p>
+                
+                {/* Gameplay Modifiers */}
+                {weatherEnabled && (
+                  <div className="border-t border-border/20 pt-2 mt-2">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1">Gameplay Effects:</p>
+                    <div className="grid grid-cols-2 gap-1 text-[10px]">
+                      {(() => {
+                        const mods = getWeatherModifiers(weatherState);
+                        return (
+                          <>
+                            <span className={mods.visibilityMod >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              👁 Visibility: {mods.visibilityMod > 0 ? '+' : ''}{mods.visibilityMod}%
+                            </span>
+                            <span className={mods.movementMod >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              🦶 Movement: {mods.movementMod > 0 ? '+' : ''}{mods.movementMod}%
+                            </span>
+                            <span className={mods.rangedAccuracyMod >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              🎯 Ranged: {mods.rangedAccuracyMod > 0 ? '+' : ''}{mods.rangedAccuracyMod}%
+                            </span>
+                            <span className={mods.stealthMod >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              🥷 Stealth: {mods.stealthMod > 0 ? '+' : ''}{mods.stealthMod}%
+                            </span>
+                            <span className={mods.perceptionMod >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              👂 Perception: {mods.perceptionMod > 0 ? '+' : ''}{mods.perceptionMod}%
+                            </span>
+                            <span className={mods.fatigueRateMod <= 1 ? 'text-green-400' : 'text-red-400'}>
+                              💤 Fatigue: ×{mods.fatigueRateMod.toFixed(1)}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Weather Transition Warning */}

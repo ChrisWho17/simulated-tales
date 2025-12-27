@@ -237,3 +237,146 @@ export function getWeatherNarrativeContext(state: WeatherState): string {
 export function getWeatherMoodSynergy(weather: WeatherType): string | null {
   return WEATHER_CONFIGS[weather].moodInfluence || null;
 }
+
+// ============= WEATHER GAMEPLAY EFFECTS =============
+
+export interface WeatherGameplayModifiers {
+  visibilityMod: number;      // -50 to +10 (percentage modifier)
+  movementMod: number;        // -30 to +10 (percentage modifier)
+  rangedAccuracyMod: number;  // -40 to +10 (percentage modifier)
+  stealthMod: number;         // -20 to +30 (percentage modifier)
+  perceptionMod: number;      // -40 to +10 (percentage modifier)
+  fatigueRateMod: number;     // 0.5 to 2.0 (multiplier)
+  description: string;
+}
+
+export const WEATHER_GAMEPLAY_EFFECTS: Record<WeatherType, WeatherGameplayModifiers> = {
+  clear: {
+    visibilityMod: 10,
+    movementMod: 5,
+    rangedAccuracyMod: 5,
+    stealthMod: -10,
+    perceptionMod: 10,
+    fatigueRateMod: 0.9,
+    description: 'Perfect conditions. Visibility excellent, travel easy.',
+  },
+  cloudy: {
+    visibilityMod: -5,
+    movementMod: 0,
+    rangedAccuracyMod: 0,
+    stealthMod: 5,
+    perceptionMod: -5,
+    fatigueRateMod: 1.0,
+    description: 'Overcast skies provide some cover but no major hindrances.',
+  },
+  rain: {
+    visibilityMod: -20,
+    movementMod: -10,
+    rangedAccuracyMod: -15,
+    stealthMod: 15,
+    perceptionMod: -15,
+    fatigueRateMod: 1.2,
+    description: 'Rain hampers visibility and makes footing treacherous. Sound is muffled.',
+  },
+  storm: {
+    visibilityMod: -40,
+    movementMod: -20,
+    rangedAccuracyMod: -35,
+    stealthMod: 25,
+    perceptionMod: -30,
+    fatigueRateMod: 1.5,
+    description: 'Thunder masks sounds. Lightning blinds. Movement is hazardous.',
+  },
+  fog: {
+    visibilityMod: -50,
+    movementMod: -5,
+    rangedAccuracyMod: -40,
+    stealthMod: 30,
+    perceptionMod: -40,
+    fatigueRateMod: 1.1,
+    description: 'Dense fog limits visibility to mere feet. Perfect for ambushes.',
+  },
+  snow: {
+    visibilityMod: -25,
+    movementMod: -20,
+    rangedAccuracyMod: -10,
+    stealthMod: -15,
+    perceptionMod: -10,
+    fatigueRateMod: 1.4,
+    description: 'Snow slows movement and leaves tracks. Cold saps energy.',
+  },
+  heat_wave: {
+    visibilityMod: -10,
+    movementMod: -15,
+    rangedAccuracyMod: -5,
+    stealthMod: 0,
+    perceptionMod: -5,
+    fatigueRateMod: 1.8,
+    description: 'Oppressive heat causes exhaustion. Mirages distort vision.',
+  },
+  wind: {
+    visibilityMod: -15,
+    movementMod: -10,
+    rangedAccuracyMod: -25,
+    stealthMod: 10,
+    perceptionMod: -20,
+    fatigueRateMod: 1.2,
+    description: 'Strong winds affect projectiles and mask sounds.',
+  },
+};
+
+export function getWeatherModifiers(state: WeatherState): WeatherGameplayModifiers {
+  const base = WEATHER_GAMEPLAY_EFFECTS[state.current];
+  
+  // Scale modifiers by intensity (0.5-1.5)
+  const intensityScale = state.intensity;
+  
+  return {
+    visibilityMod: Math.round(base.visibilityMod * intensityScale),
+    movementMod: Math.round(base.movementMod * intensityScale),
+    rangedAccuracyMod: Math.round(base.rangedAccuracyMod * intensityScale),
+    stealthMod: Math.round(base.stealthMod * intensityScale),
+    perceptionMod: Math.round(base.perceptionMod * intensityScale),
+    fatigueRateMod: 1 + (base.fatigueRateMod - 1) * intensityScale,
+    description: base.description,
+  };
+}
+
+// Get skill check modifier for weather
+export function getWeatherSkillModifier(
+  state: WeatherState, 
+  skillType: 'ranged' | 'stealth' | 'perception' | 'athletics' | 'survival'
+): number {
+  const mods = getWeatherModifiers(state);
+  
+  switch (skillType) {
+    case 'ranged': return mods.rangedAccuracyMod;
+    case 'stealth': return mods.stealthMod;
+    case 'perception': return mods.perceptionMod;
+    case 'athletics': return mods.movementMod;
+    case 'survival': return state.current === 'clear' ? 5 : -10;
+    default: return 0;
+  }
+}
+
+// Format weather effects for AI context
+export function formatWeatherEffectsForAI(state: WeatherState): string {
+  const config = WEATHER_CONFIGS[state.current];
+  const mods = getWeatherModifiers(state);
+  const intensity = state.intensity > 1.2 ? 'intense' : state.intensity < 0.7 ? 'mild' : 'moderate';
+  
+  let context = `Current weather: ${config.name} (${intensity}). `;
+  context += mods.description + ' ';
+  
+  // Add specific mechanical effects
+  const effects: string[] = [];
+  if (mods.visibilityMod !== 0) effects.push(`Visibility ${mods.visibilityMod > 0 ? '+' : ''}${mods.visibilityMod}%`);
+  if (mods.movementMod !== 0) effects.push(`Movement ${mods.movementMod > 0 ? '+' : ''}${mods.movementMod}%`);
+  if (mods.rangedAccuracyMod !== 0) effects.push(`Ranged ${mods.rangedAccuracyMod > 0 ? '+' : ''}${mods.rangedAccuracyMod}%`);
+  
+  if (effects.length > 0) {
+    context += `Effects: ${effects.join(', ')}.`;
+  }
+  
+  return context;
+}
