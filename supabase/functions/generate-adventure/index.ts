@@ -93,6 +93,40 @@ interface UnreliableInfoContext {
   rumorContext: string;        // Pre-built from buildRumorContext
 }
 
+// ============= NEW SYSTEMS: PRESSURE CLOCKS, NPC MOTIVATIONS, MEMORY BITES =============
+
+interface PressureClockContext {
+  pressureContext: string;       // Pre-built from buildPressureContext
+  atmosphereLines: string[];     // Pre-built from getPressureAtmosphere
+  worldPressureLevel: number;    // 0-100 overall tension
+  activeEffects: string[];       // Currently active clock effects
+}
+
+interface NPCMotivationContext {
+  motivationContext: string;     // Pre-built from buildNPCMotivationContext
+  presentNPCMotivations?: Array<{
+    npcName: string;
+    desire: string;
+    fear: string;
+    leverage: string;
+    line: string;
+    trustLevel: number;
+    stance: string;
+    behaviors: string[];
+  }>;
+}
+
+interface MemoryBiteContext {
+  biteContext: string;           // Pre-built from buildMemoryBiteContext for relevant NPCs
+  unsurfacedBites: Array<{
+    npcName: string;
+    type: string;
+    context: string;
+    surfaceNarrative: string;    // Pre-generated surface narrative
+    emotionalWeight: number;
+  }>;
+}
+
 interface LocationTransitionContext {
   previousZone?: {
     name: string;
@@ -108,6 +142,7 @@ interface LocationTransitionContext {
     lighting: string;
     socialTone: string;
     surveillanceLevel: number;
+    signatureDetail?: string;    // The "Signature Detail" for this location
   };
   travelTime?: number; // minutes
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night';
@@ -168,6 +203,12 @@ interface AdventureRequest {
       hoursAgo: number;
     }>;
   };
+  // NEW: Pressure Clock System - world tension and urgency
+  pressureClockContext?: PressureClockContext;
+  // NEW: NPC Motivation System - desire, fear, leverage, line
+  npcMotivationContext?: NPCMotivationContext;
+  // NEW: Memory Bite System - emotional callbacks
+  memoryBiteContext?: MemoryBiteContext;
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -442,7 +483,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -770,6 +811,155 @@ EXAMPLES OF PROPER INTEGRATION:
 
 DO NOT ignore these events. They are the foundation of a living, breathing world where things happen even when the player isn't watching.`;
     }
+    
+    // ============= PRESSURE CLOCK SYSTEM (World Tension) =============
+    if (pressureClockContext) {
+      systemContent += `\n\n=== WORLD PRESSURE - TENSION CLOCKS ===
+${pressureClockContext.pressureContext}
+
+WORLD PRESSURE LEVEL: ${pressureClockContext.worldPressureLevel}%
+
+${pressureClockContext.atmosphereLines.length > 0 ? `ATMOSPHERIC TENSION (weave these naturally into descriptions):
+${pressureClockContext.atmosphereLines.map(line => `• ${line}`).join('\n')}` : ''}
+
+${pressureClockContext.activeEffects.length > 0 ? `ACTIVE PRESSURE EFFECTS:
+${pressureClockContext.activeEffects.map(effect => `- ${effect}`).join('\n')}` : ''}
+
+PRESSURE CLOCK NARRATIVE RULES:
+- The world doesn't wait. Hesitation has consequences.
+- When Heat is high: Describe watchers, whispered names, closing pursuit
+- When Resources are low: Make scarcity feel real—counting coins, rationing food
+- When Rumors spread: NPCs recognize the player, react to reputation
+- When Dread rises: The supernatural bleeds through—shadows move wrong, chills without wind
+- Create urgency through environmental details, not exposition
+- High pressure (>75%) means EVERY action should feel weighted with consequence
+- Let players feel the clock ticking without announcing it
+
+TENSION EXAMPLES:
+• Heat 4+: "Somewhere nearby, a door slams. Your name gets said by the wrong mouth."
+• Resources 4+: "Your stomach reminds you that survival is not guaranteed."
+• Rumors 4+: "Strangers study your face like they've seen it before."
+• Dread 4+: "The darkness has weight here. It watches with something like hunger."`;
+    }
+    
+    // ============= NPC MOTIVATION SYSTEM (Desire/Fear/Leverage/Line) =============
+    if (npcMotivationContext) {
+      systemContent += `\n\n=== NPC MOTIVATIONS - WHAT DRIVES THEM ===
+${npcMotivationContext.motivationContext}
+
+NPC MOTIVATION RULES - CRITICAL:
+NPCs act in SELF-INTEREST, not as simple good/bad characters. Every NPC has:
+- DESIRE: What they want (use this as leverage)
+- FEAR: What they'll avoid (exploit or trigger this)
+- LEVERAGE: What can move them (offer this to change their behavior)
+- LINE: What they won't tolerate (cross this at your peril)
+
+NPC BEHAVIORAL SPICE:
+NPCs should naturally exhibit their behavioral traits:
+- lies_to_protect_self: Deflect, half-truths, nervous tells
+- stalls_for_time: "Let me think about it..." or distractions
+- tests_loyalty: "Prove I can trust you first."
+- changes_prices: Adjust deals based on desperation
+- demands_proof: "Words are cheap. Show me."
+- jealous_of_others: React to attention given elsewhere
+- withholds_info: "There's more to know, but not yet."
+- trades_secrets: Offer information for information
+
+TRUST AND STANCE INTEGRATION:
+- Hostile NPCs should be openly antagonistic or subtly obstructive
+- Wary NPCs guard their words, test before sharing
+- Neutral NPCs are transactional—what's in it for them?
+- Friendly NPCs open up, offer help, but still have their own interests
+
+WHEN PLAYER CROSSES AN NPC'S LINE:
+This is a pivotal moment. The NPC should react with:
+- Immediate withdrawal of cooperation
+- Escalation of conflict
+- Lasting memory of the transgression
+Tag dramatic line-crossing moments: [NPC_LINE_CROSSED:npcName:what they crossed]`;
+      
+      // Add specific NPC motivations if present
+      if (npcMotivationContext.presentNPCMotivations && npcMotivationContext.presentNPCMotivations.length > 0) {
+        systemContent += `\n\nNPCs IN THIS SCENE:`;
+        for (const npc of npcMotivationContext.presentNPCMotivations) {
+          systemContent += `
+          
+**${npc.npcName}** [Trust: ${npc.trustLevel}, Stance: ${npc.stance}]
+  → Desires: ${npc.desire}
+  → Fears: ${npc.fear}
+  → Leverage: ${npc.leverage}
+  → Line: ${npc.line}
+  → Behaviors: ${npc.behaviors.join(', ')}`;
+        }
+      }
+    }
+    
+    // ============= MEMORY BITE SYSTEM (Emotional Callbacks) =============
+    if (memoryBiteContext) {
+      systemContent += `\n\n=== MEMORY BITES - SHARED HISTORY THAT HITS HARD ===
+${memoryBiteContext.biteContext}
+
+MEMORY BITE PHILOSOPHY:
+Small moments of shared history create powerful narrative payoff. These aren't plot points—they're emotional anchors that make the world feel real and relationships feel earned.
+
+CRITICAL - HOW TO SURFACE MEMORIES:
+${memoryBiteContext.unsurfacedBites.length > 0 ? `The following memories are READY to surface. Weave them naturally when the moment feels right:
+
+${memoryBiteContext.unsurfacedBites.slice(0, 5).map(bite => 
+  `• ${bite.npcName} - "${bite.type.replace(/_/g, ' ')}": ${bite.surfaceNarrative}`
+).join('\n\n')}
+
+SURFACING RULES:
+- Surface memories through BODY LANGUAGE, not exposition
+- "She doesn't look at your hands. She looks at your wrists. Like she remembers the rope."
+- Brief glances, pauses, the way someone flinches or relaxes
+- Let players catch the callback without you explaining it
+- One surfaced memory per scene maximum—don't overload
+- When you surface a memory, mark it: [MEMORY_SURFACED:biteType:npcName]` : 'No unsurfaced memories available currently.'}
+
+EMOTIONAL WEIGHT PRIORITY:
+Surface high-weight memories (7+) at dramatically appropriate moments. Low-weight memories (1-3) are subtle background flavor.
+
+MEMORY TYPES TO REFERENCE:
+Debt memories (owes_you, saved_life): Affect willingness to help
+Violence memories (saw_you_bleed, you_hurt_them): Create tension, fear, or grudging respect
+Intimacy memories (shared_secret, heard_you_pray): Build trust or vulnerability
+Shame memories (you_embarrassed_them, witnessed_shame): Create awkwardness or resentment
+Power memories (gave_order, knelt_to_you): Define relationship hierarchy`;
+    }
+    
+    // ============= SIGNATURE DETAIL SYSTEM (Location Atmosphere) =============
+    if (locationContext?.currentZone?.signatureDetail) {
+      systemContent += `\n\n=== SIGNATURE DETAIL - ${locationContext.currentZone.name.toUpperCase()} ===
+"${locationContext.currentZone.signatureDetail}"
+
+This is the SIGNATURE DETAIL of this location. Reference it subtly whenever the player is here.
+It should feel like a consistent sensory anchor—something that defines this place.`;
+    }
+    
+    // ============= FAIL FORWARD SYSTEM =============
+    systemContent += `\n\n=== FAIL FORWARD - CONSEQUENCES THAT CREATE CONTENT ===
+Failure should NEVER be "no." It should be "yes, but it costs."
+
+WHEN PLAYERS FAIL ROLLS OR ACTIONS:
+- The action partially succeeds with complications
+- Something is lost or damaged
+- New problems are created
+- Time is wasted and clocks advance
+- NPCs notice and remember
+
+FAIL-FORWARD EXAMPLES:
+• Pick the lock... but it snaps and now your tool's broken.
+• Persuade the guard... but he wants a favor later. [CONSEQUENCE_CREATED:favor_owed:guardName]
+• Win the fight... but you're injured and leave a blood trail. [DAMAGE:X]
+• Sneak past... but you're seen by someone who'll remember.
+• Get the information... but now they know you're asking questions.
+
+CONSEQUENCE TRACKING:
+When creating a new consequence, tag it: [CONSEQUENCE_CREATED:type:details]
+Types: favor_owed, enemy_made, resource_lost, secret_exposed, time_lost, witness_created
+
+Your story gets MEATIER every time the player "loses."`;
     
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
