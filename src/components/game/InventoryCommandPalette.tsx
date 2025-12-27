@@ -1,6 +1,6 @@
 // Inventory Command Palette - View items from the object registry
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, X, Backpack, Shirt, Sword, Key, Gem, FlaskConical, Boxes, MoreHorizontal, User, MapPin, ArrowRight } from 'lucide-react';
+import { Package, Search, X, Backpack, Shirt, Sword, Key, Gem, FlaskConical, Boxes, MoreHorizontal, User, MapPin, ArrowRight, Hand, Zap } from 'lucide-react';
 import {
   CommandDialog,
   CommandInput,
@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import {
   getInventory,
   getObjectRegistry,
@@ -23,6 +26,7 @@ import { getRegisteredNPC, getAllRegisteredNPCs } from '@/game/npcIdentityRegist
 interface InventoryCommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUseItem?: (itemName: string, intention: string) => void;
 }
 
 // Icon mapping for object types
@@ -75,10 +79,12 @@ function getConditionColor(condition: number): string {
   return 'text-red-400';
 }
 
-export function InventoryCommandPalette({ open, onOpenChange }: InventoryCommandPaletteProps) {
+export function InventoryCommandPalette({ open, onOpenChange, onUseItem }: InventoryCommandPaletteProps) {
   const [playerItems, setPlayerItems] = useState<WorldObject[]>([]);
   const [worldItems, setWorldItems] = useState<{ item: WorldObject; owner: ObjectOwnership }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<WorldObject | null>(null);
+  const [useIntention, setUseIntention] = useState('');
   
   // Refresh inventory when opened
   useEffect(() => {
@@ -98,6 +104,10 @@ export function InventoryCommandPalette({ open, onOpenChange }: InventoryCommand
         }
       }
       setWorldItems(others);
+    } else {
+      // Reset selection when closing
+      setSelectedItem(null);
+      setUseIntention('');
     }
   }, [open]);
   
@@ -113,9 +123,102 @@ export function InventoryCommandPalette({ open, onOpenChange }: InventoryCommand
   );
   
   const handleItemClick = useCallback((item: WorldObject) => {
-    // Could be extended to show item details or perform actions
-    console.log('[Inventory] Selected item:', item);
+    setSelectedItem(item);
+    setUseIntention('');
   }, []);
+
+  const handleUseItem = useCallback(() => {
+    if (!selectedItem || !useIntention.trim()) {
+      toast.error('Please describe how you want to use this item');
+      return;
+    }
+    
+    if (onUseItem) {
+      onUseItem(selectedItem.name, useIntention.trim());
+      toast.success(`Using ${selectedItem.name}`, {
+        description: useIntention.trim().slice(0, 50) + (useIntention.length > 50 ? '...' : '')
+      });
+    }
+    
+    setSelectedItem(null);
+    setUseIntention('');
+    onOpenChange(false);
+  }, [selectedItem, useIntention, onUseItem, onOpenChange]);
+
+  const handleBack = useCallback(() => {
+    setSelectedItem(null);
+    setUseIntention('');
+  }, []);
+  // If an item is selected, show the "use item" view
+  if (selectedItem) {
+    const Icon = TYPE_ICONS[selectedItem.type] || Package;
+    const colorClass = TYPE_COLORS[selectedItem.type] || 'text-muted-foreground';
+    
+    return (
+      <CommandDialog open={open} onOpenChange={onOpenChange}>
+        <div className="p-4 space-y-4">
+          {/* Item Header */}
+          <div className="flex items-start gap-3">
+            <div className={`p-3 rounded-lg bg-muted/50 ${colorClass}`}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{selectedItem.name}</h3>
+              <p className="text-sm text-muted-foreground">{selectedItem.description}</p>
+              <div className="flex gap-2 mt-2">
+                <Badge variant="outline" className="capitalize">
+                  {selectedItem.type.replace('_', ' ')}
+                </Badge>
+                {selectedItem.properties.unique && (
+                  <Badge variant="secondary">Unique</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Use Item Section */}
+          <div className="space-y-3 pt-2 border-t border-border/50">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+              <Hand className="h-4 w-4" />
+              <span>How do you want to use this item?</span>
+            </div>
+            
+            <Input
+              placeholder="e.g., Apply to my wounds, Show it to the merchant, Use as a lockpick..."
+              value={useIntention}
+              onChange={(e) => setUseIntention(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && useIntention.trim()) {
+                  handleUseItem();
+                }
+              }}
+              autoFocus
+              className="bg-muted/30"
+            />
+            
+            <p className="text-xs text-muted-foreground">
+              Describe your intention and it will be sent to the AI narrator
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={handleBack} className="flex-1">
+              Back
+            </Button>
+            <Button 
+              onClick={handleUseItem} 
+              disabled={!useIntention.trim()}
+              className="flex-1 gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              Use Item
+            </Button>
+          </div>
+        </div>
+      </CommandDialog>
+    );
+  }
   
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>

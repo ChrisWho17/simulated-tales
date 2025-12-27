@@ -1566,6 +1566,11 @@ export function AdventureDisplay({
       <InventoryCommandPalette
         open={showInventory}
         onOpenChange={setShowInventory}
+        onUseItem={(itemName, intention) => {
+          // Send item usage to the AI as a player action with the item context
+          const actionText = `[Uses ${itemName}]: ${intention}`;
+          onPlayerAction(actionText);
+        }}
       />
     </div>
   );

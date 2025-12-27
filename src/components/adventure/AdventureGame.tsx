@@ -371,6 +371,30 @@ export function AdventureGame() {
     }
   }, [phase, story, campaignContext]);
 
+  // CRITICAL: Sync local character state to campaign when character changes
+  // This ensures health, gold, XP, inventory are persisted
+  const lastSyncedCharacterRef = useRef<string>('');
+  useEffect(() => {
+    if (phase !== 'playing' || !character || !campaignContext?.updatePlayer) return;
+    
+    // Create a hash of character state to detect actual changes
+    const characterHash = JSON.stringify({
+      currentHealth: character.currentHealth,
+      gold: character.gold,
+      experience: character.experience,
+      level: character.level,
+      inventory: character.inventory.length,
+      stats: character.stats,
+    });
+    
+    // Only sync if character data has actually changed
+    if (characterHash !== lastSyncedCharacterRef.current) {
+      lastSyncedCharacterRef.current = characterHash;
+      campaignContext.updatePlayer(character);
+      console.log(`[Character Sync] Synced character to campaign - HP: ${character.currentHealth}/${character.maxHealth}, Gold: ${character.gold}, XP: ${character.experience}`);
+    }
+  }, [phase, character, campaignContext]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
