@@ -68,6 +68,14 @@ import { toast } from 'sonner';
 import { checkPlayerDeath, generateDeathNarrative } from '@/game/advancedDynamics';
 import { calculateSimulationStats } from '@/game/metaSystems';
 import { cn } from '@/lib/utils';
+import { useGame } from '@/contexts/GameContext';
+import { 
+  AdrenalineSystemState,
+  initializeAdrenalineSystem,
+  processCombatDamage,
+  tickAdrenalineSystem,
+  triggerSituationalAdrenaline,
+} from '@/game/adrenalineCombatIntegration';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -277,6 +285,24 @@ export function GameUI() {
   const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
   
+  // Adrenaline System State
+  const [adrenalineState, setAdrenalineState] = useState<AdrenalineSystemState>(() => {
+    const saved = localStorage.getItem('living-world-adrenaline');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return initializeAdrenalineSystem();
+      }
+    }
+    return initializeAdrenalineSystem();
+  });
+  const [adrenalineEvent, setAdrenalineEvent] = useState<{
+    type: 'wound_revealed' | 'damage_hidden';
+    message?: string;
+    vagueSymptom?: string;
+  } | null>(null);
+  
   // NPC Memory stores - persisted per NPC
   const [npcMemories, setNpcMemories] = useState<Record<string, NPCMemoryStore>>(() => {
     const saved = localStorage.getItem(MEMORY_STORE_KEY);
@@ -322,6 +348,11 @@ export function GameUI() {
     localStorage.setItem('living-world-quests', JSON.stringify(questLog));
   }, [questLog]);
   
+  // Save adrenaline state when it changes
+  useEffect(() => {
+    localStorage.setItem('living-world-adrenaline', JSON.stringify(adrenalineState));
+  }, [adrenalineState]);
+  
   // Update weather periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -329,6 +360,43 @@ export function GameUI() {
     }, 60000); // Check every minute
     return () => clearInterval(interval);
   }, [gameState.time.season]);
+  
+  // Tick adrenaline system for decay and wound reveals
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const result = tickAdrenalineSystem(adrenalineState, 10); // 10 seconds
+      if (result.state !== adrenalineState) {
+        setAdrenalineState(result.state);
+      }
+      // Show revealed wounds
+      if (result.revealedWounds.length > 0) {
+        const firstWound = result.revealedWounds[0];
+        setAdrenalineEvent({
+          type: 'wound_revealed',
+          message: firstWound.message,
+        });
+        // Apply the revealed damage
+        if (gameState.lifeSim) {
+          setGameState(prev => ({
+            ...prev,
+            lifeSim: prev.lifeSim ? {
+              ...prev.lifeSim,
+              needs: {
+                ...prev.lifeSim.needs,
+                physical: {
+                  ...prev.lifeSim.needs.physical,
+                  health: Math.max(0, prev.lifeSim.needs.physical.health - firstWound.damage)
+                }
+              }
+            } : null
+          }));
+        }
+        toast.error(firstWound.message);
+        setTimeout(() => setAdrenalineEvent(null), 4000);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [adrenalineState, gameState.lifeSim]);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
@@ -1277,6 +1345,8 @@ export function GameUI() {
         gameState={gameState}
         isOpen={storyPanelOpen}
         onToggle={() => setStoryPanelOpen(!storyPanelOpen)}
+        adrenalineState={adrenalineState}
+        adrenalineEvent={adrenalineEvent}
       />
       
       {/* Character Panel - slides out from left (legacy) */}
