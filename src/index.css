@@ -2053,3 +2053,38 @@
     box-shadow: 0 0 8px currentColor;
   }
 }
+
+/* ============= DIRECTOR MODE FROSTED CARDS ============= */
+.director-mode-card {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.director-mode-card.active {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.08) inset;
+}
+
+/* Fun Mode - Purple White Frost */
+.mode-fun.active {
+  background: linear-gradient(135deg, rgba(170,90,255,0.26), rgba(255,255,255,0.10));
+  border-color: rgba(170,90,255,0.4);
+}
+
+/* Easy Mode - Green Frost */
+.mode-easy.active {
+  background: linear-gradient(135deg, rgba(90,255,160,0.22), rgba(255,255,255,0.06));
+  border-color: rgba(90,255,160,0.4);
+}
+
+/* Medium Mode - Orange Frost */
+.mode-medium.active {
+  background: linear-gradient(135deg, rgba(255,170,70,0.22), rgba(255,255,255,0.06));
+  border-color: rgba(255,170,70,0.4);
+}
+
+/* Hard Mode - Red Frost */
+.mode-hard.active {
+  background: linear-gradient(135deg, rgba(255,90,110,0.22), rgba(255,255,255,0.06));
+  border-color: rgba(255,90,110,0.4);
+}

@@ -3,8 +3,9 @@ import {
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
-  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones
+  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard
 } from 'lucide-react';
+import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
@@ -42,7 +43,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     setChannelVolume,
     toggleMute
   } = useAudioSystem();
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   
@@ -119,17 +120,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'saves', 'display', 'audio'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'saves', 'display', 'audio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-md",
+                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-md flex items-center gap-1.5",
                   activeTab === tab 
                     ? "text-[var(--accent-primary)] bg-[var(--accent-bg)]/40 border border-[var(--accent-primary)]/30"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/30"
                 )}
               >
+                {tab === 'director' && <Clapperboard className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -680,6 +682,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
               </div>
             </div>
+          )}
+          
+          {/* Director Tab */}
+          {activeTab === 'director' && (
+            <DirectorSettingsTab
+              directorSettings={settings.directorSettings}
+              onUpdate={(directorSettings) => updateSettings({ directorSettings })}
+            />
           )}
           
           {/* Saves Tab */}

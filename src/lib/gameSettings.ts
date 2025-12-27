@@ -1,5 +1,14 @@
 // Game Settings System - Including 18+ content toggle and feature toggles
 
+import { 
+  DirectorSettings, 
+  DEFAULT_DIRECTOR_SETTINGS 
+} from '@/game/directorModeSystem';
+
+// Re-export director types for convenience
+export type { DirectorSettings } from '@/game/directorModeSystem';
+export { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
+
 // Narrator style types
 export type NarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
 export type NarratorDetailLevel = 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
@@ -98,6 +107,9 @@ export interface GameSettings {
   
   // UI toggles
   showConsequenceFeed?: boolean;       // Real-time consequence feedback
+  
+  // Director settings
+  directorSettings: DirectorSettings;
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -186,6 +198,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // UI toggles
   showConsequenceFeed: true,
+  
+  // Director settings
+  directorSettings: DEFAULT_DIRECTOR_SETTINGS,
 };
 
 // Get current settings (alias for loadSettings)
