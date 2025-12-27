@@ -42,6 +42,7 @@ import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
+import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
   addRelationshipMoment,
   MomentType, 
@@ -176,6 +177,9 @@ export function AdventureDisplay({
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
+  
+  // Get registered NPC names for clickable links in narrative
+  const npcNameMap = useRegisteredNPCNames();
 
   // Initialize modifier manager for buff/debuff tracking
   const modifierManagerRef = useRef<ModifierManager | null>(null);
@@ -892,7 +896,7 @@ export function AdventureDisplay({
     }
   };
 
-  // Safe text formatting with mood-tinted keywords (PDF spec: max 3-5 per paragraph, subtle frost)
+  // Safe text formatting with mood-tinted keywords and NPC name links
   const formatTextSegment = (
     text: string, 
     keyPrefix: string, 
@@ -905,7 +909,8 @@ export function AdventureDisplay({
     
     boldParts.forEach((part, i) => {
       if (i % 2 === 1) {
-        // Bold text - use mood color if available with subtle glow
+        // Bold text - check for NPC names first, then apply mood color
+        const npcParsed = parseTextForNPCLinks(part, npcNameMap, `${keyPrefix}-b-${i}`);
         result.push(
           <strong 
             key={`${keyPrefix}-b-${i}`} 
@@ -917,7 +922,7 @@ export function AdventureDisplay({
                 : undefined
             }}
           >
-            {part}
+            {npcParsed}
           </strong>
         );
       } else if (part) {
@@ -925,38 +930,81 @@ export function AdventureDisplay({
         const italicParts = part.split(/\*(.+?)\*/g);
         italicParts.forEach((iPart, j) => {
           if (j % 2 === 1) {
-            result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{iPart}</em>);
+            // Italic text - also check for NPC names
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-i-${i}-${j}`);
+            result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{npcParsed}</em>);
           } else if (iPart && moodConfig && tintableWords && tintableWords.size > 0) {
             // For non-italic text with active mood, check for tintable keywords (limited set)
-            const words = iPart.split(/(\s+)/);
-            words.forEach((word, wIdx) => {
-              if (/^\s+$/.test(word)) {
-                // Whitespace - just add it
-                result.push(<span key={`${keyPrefix}-ws-${i}-${j}-${wIdx}`}>{word}</span>);
-              } else {
-                const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
-                if (tintableWords.has(cleanWord)) {
-                  // Tint this word with a subtle frosted glow (PDF spec: translucent, not solid)
-                  result.push(
-                    <span 
-                      key={`${keyPrefix}-tw-${i}-${j}-${wIdx}`}
-                      className="transition-all duration-300"
-                      style={{ 
-                        color: moodConfig.primary,
-                        textShadow: `0 0 ${moodConfig.glowRadius}px ${moodConfig.glow}, 0 0 ${moodConfig.glowRadius * 1.5}px ${moodConfig.glow}`,
-                        fontWeight: 500
-                      }}
-                    >
-                      {word}
-                    </span>
-                  );
+            // Also parse for NPC names
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-mood-${i}-${j}`);
+            
+            // If NPC parsing returned components, add them directly
+            if (npcParsed.length > 1 || typeof npcParsed[0] !== 'string') {
+              npcParsed.forEach((node, nIdx) => {
+                if (typeof node === 'string') {
+                  // Process mood tinting for string parts
+                  const words = node.split(/(\s+)/);
+                  words.forEach((word, wIdx) => {
+                    if (/^\s+$/.test(word)) {
+                      result.push(<span key={`${keyPrefix}-ws-${i}-${j}-${nIdx}-${wIdx}`}>{word}</span>);
+                    } else {
+                      const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+                      if (tintableWords.has(cleanWord)) {
+                        result.push(
+                          <span 
+                            key={`${keyPrefix}-tw-${i}-${j}-${nIdx}-${wIdx}`}
+                            className="transition-all duration-300"
+                            style={{ 
+                              color: moodConfig.primary,
+                              textShadow: `0 0 ${moodConfig.glowRadius}px ${moodConfig.glow}, 0 0 ${moodConfig.glowRadius * 1.5}px ${moodConfig.glow}`,
+                              fontWeight: 500
+                            }}
+                          >
+                            {word}
+                          </span>
+                        );
+                      } else {
+                        result.push(<span key={`${keyPrefix}-w-${i}-${j}-${nIdx}-${wIdx}`}>{word}</span>);
+                      }
+                    }
+                  });
                 } else {
-                  result.push(<span key={`${keyPrefix}-w-${i}-${j}-${wIdx}`}>{word}</span>);
+                  // It's a React component (NPC link)
+                  result.push(node);
                 }
-              }
-            });
+              });
+            } else {
+              // No NPC names found, process mood tinting normally
+              const words = iPart.split(/(\s+)/);
+              words.forEach((word, wIdx) => {
+                if (/^\s+$/.test(word)) {
+                  result.push(<span key={`${keyPrefix}-ws-${i}-${j}-${wIdx}`}>{word}</span>);
+                } else {
+                  const cleanWord = word.toLowerCase().replace(/[^a-z]/g, '');
+                  if (tintableWords.has(cleanWord)) {
+                    result.push(
+                      <span 
+                        key={`${keyPrefix}-tw-${i}-${j}-${wIdx}`}
+                        className="transition-all duration-300"
+                        style={{ 
+                          color: moodConfig.primary,
+                          textShadow: `0 0 ${moodConfig.glowRadius}px ${moodConfig.glow}, 0 0 ${moodConfig.glowRadius * 1.5}px ${moodConfig.glow}`,
+                          fontWeight: 500
+                        }}
+                      >
+                        {word}
+                      </span>
+                    );
+                  } else {
+                    result.push(<span key={`${keyPrefix}-w-${i}-${j}-${wIdx}`}>{word}</span>);
+                  }
+                }
+              });
+            }
           } else if (iPart) {
-            result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{iPart}</span>);
+            // Plain text - parse for NPC names
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-t-${i}-${j}`);
+            result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{npcParsed}</span>);
           }
         });
       }
@@ -1001,6 +1049,12 @@ export function AdventureDisplay({
       
       const dialogueMatch = paragraph.match(/^\*\*(.+?)\*\*:\s*"(.+)"$/);
       if (dialogueMatch) {
+        const speakerName = dialogueMatch[1];
+        const dialogueText = dialogueMatch[2];
+        
+        // Check if speaker is a registered NPC for clickable link
+        const speakerNPC = npcNameMap.get(speakerName.toLowerCase());
+        
         return (
           <div 
             key={idx} 
@@ -1010,10 +1064,16 @@ export function AdventureDisplay({
               className="font-semibold transition-all duration-300" 
               style={moodConfig ? nameFrostStyle : { color: 'hsl(var(--primary))' }}
             >
-              {dialogueMatch[1]}:
+              {speakerNPC ? (
+                <>
+                  {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${idx}`)}:
+                </>
+              ) : (
+                <>{speakerName}:</>
+              )}
             </span>
             <span className="italic ml-2 text-foreground/90">
-              &ldquo;{dialogueMatch[2]}&rdquo;
+              &ldquo;{dialogueText}&rdquo;
             </span>
           </div>
         );
