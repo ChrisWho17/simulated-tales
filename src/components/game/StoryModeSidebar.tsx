@@ -10,6 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameState, NPC, Relationship } from '@/types/game';
 import { Wound } from '@/game/diceSystem';
 import { BodyInjury } from '@/types/lifeSim';
+import { AdrenalineBar } from './AdrenalineBar';
+import { AdrenalineSystemState } from '@/game/adrenalineSystem';
+import { useGameOptional } from '@/contexts/GameContext';
 
 // ============================================================================
 // TYPES
@@ -20,6 +23,8 @@ interface StoryModeSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   portrait?: string;
+  adrenalineState?: AdrenalineSystemState;
+  adrenalineEvent?: { type: 'wound_revealed' | 'damage_hidden'; message?: string; vagueSymptom?: string } | null;
 }
 
 // ============================================================================
@@ -227,10 +232,14 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
   gameState,
   isOpen,
   onToggle,
-  portrait
+  portrait,
+  adrenalineState,
+  adrenalineEvent
 }) => {
   const player = gameState.player;
   const lifeSim = gameState.lifeSim;
+  const gameContext = useGameOptional();
+  const enableAdrenalineSystem = gameContext?.settings?.enableAdrenalineSystem ?? false;
   
   // Convert body injuries to wounds for display
   const wounds: Wound[] = useMemo(() => {
@@ -420,6 +429,17 @@ export const StoryModeSidebar: React.FC<StoryModeSidebarProps> = ({
               </div>
             </div>
           </div>
+          
+          {/* Adrenaline Bar - Shown under portrait when enabled */}
+          {enableAdrenalineSystem && adrenalineState && (
+            <div className="mt-3 pt-2 border-t border-border/20">
+              <AdrenalineBar 
+                state={adrenalineState} 
+                compact={true}
+                recentEvent={adrenalineEvent}
+              />
+            </div>
+          )}
           
           {/* Location and Time Bar */}
           <div className="mt-3 pt-3 border-t border-border/30 space-y-1">
