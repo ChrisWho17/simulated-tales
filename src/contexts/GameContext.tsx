@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
+import { DirectorSettings, DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
 import { 
   CampaignMemoryStore, 
@@ -159,6 +160,9 @@ export interface GameSettings {
   
   // UI toggles
   showConsequenceFeed: boolean;
+  
+  // Director settings
+  directorSettings: DirectorSettings;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -240,6 +244,9 @@ const defaultSettings: GameSettings = {
   
   // UI toggles
   showConsequenceFeed: true,
+  
+  // Director settings
+  directorSettings: DEFAULT_DIRECTOR_SETTINGS,
 };
 
 // ============================================================================
