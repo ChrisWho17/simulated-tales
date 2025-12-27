@@ -1105,9 +1105,15 @@ export function AdventureGame() {
 
   // Step 2: Character creation complete -> start game directly (no loadout)
   const handleCharacterComplete = useCallback(async (char: RPGCharacter & { portraitUrl?: string }, scenario: string) => {
-    if (!scenarioSelection) return;
+    if (!scenarioSelection) {
+      console.error('[AdventureGame] handleCharacterComplete called without scenarioSelection');
+      return;
+    }
     
+    // CRITICAL: Set character and transition to playing phase immediately
+    // This prevents falling back to AdventureCreator during async operations
     setCharacter(char);
+    setPhase('playing');
     setIsLoading(true);
     
     try {
@@ -1161,11 +1167,10 @@ export function AdventureGame() {
         campaignContext.addNarrativeEntry(newStory[0]);
       }
       
-      console.log('[AdventureGame] Character created, transitioning to playing phase');
-      setPhase('playing');
+      console.log('[AdventureGame] Character created, game ready');
     } catch (error) {
       console.error('[AdventureGame] Character complete failed:', error);
-      // Still transition to playing with blended fallback story
+      // Create fallback story so game can proceed
       const fallbackStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
@@ -1179,7 +1184,6 @@ export function AdventureGame() {
       }];
       setStory(fallbackStory);
       saveData(fallbackStory, char, scenarioSelection.scenario, scenarioSelection.genre || 'fantasy');
-      setPhase('playing');
     } finally {
       setIsLoading(false);
     }
@@ -1493,6 +1497,11 @@ export function AdventureGame() {
     );
   }
 
-  // Fallback
+  // If we're in playing phase but waiting for character (during async completion)
+  if (phase === 'playing' && !character) {
+    return <LoadingScreen isLoading={true} message="Preparing your adventure..." minDuration={500} />;
+  }
+
+  // Fallback - only for truly unhandled states
   return <AdventureCreator onSelect={handleScenarioSelect} isLoading={isLoading} />;
 }
