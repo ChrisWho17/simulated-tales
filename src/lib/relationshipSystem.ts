@@ -1,12 +1,14 @@
 // Comprehensive Romance and Relationship Visualization System
 import { NPC, Relationship } from '@/types/game';
 
-// Extended relationship structure with romance
+// Extended relationship structure with romance and the 3-meter system
 export interface ExtendedRelationship extends Relationship {
   familiarity?: number;  // 0-100
   attraction?: number;   // -100 to 100
   intimacy?: number;     // 0-100
   romance?: number;      // -100 to 100
+  // 3-Meter System: Trust, Respect, Attachment
+  attachment?: number;   // 0-100 - Will they miss you? Emotional investment
 }
 
 export type RelationshipColorType = 
@@ -34,8 +36,11 @@ export interface RelationshipDisplayData {
   displayColor: RelationshipColorType;
   romanceUnlocked: boolean;
   romanceLevel: RomanceLevel;
-  trust: number;
-  respect: number;
+  // Core 3-Meter System
+  trust: number;       // Will they believe you?
+  respect: number;     // Will they follow you?
+  attachment: number;  // Will they miss you?
+  // Additional metrics
   fear: number;
   familiarity: number;
   attraction: number;
@@ -43,7 +48,18 @@ export interface RelationshipDisplayData {
   romance: number;
   status: RelationshipStatus;
   colors: RelationshipColors;
+  // Tension indicators for the 3-meter system
+  tensionFlags: RelationshipTension[];
 }
+
+// Relationship tension - when meters are misaligned
+export type RelationshipTension = 
+  | 'respects_but_distrusts'      // High respect, low trust
+  | 'trusts_but_doesnt_respect'   // High trust, low respect  
+  | 'attached_but_wary'           // High attachment, low trust
+  | 'respected_but_distant'       // High respect, low attachment
+  | 'clingy_without_respect'      // High attachment, low respect
+  | 'none';
 
 // Color definitions for each relationship state
 export const RELATIONSHIP_COLORS: Record<RelationshipColorType, RelationshipColors> = {
@@ -255,10 +271,12 @@ export function calculateRelationshipDisplay(npc: NPC): RelationshipDisplayData 
   const respect = rel.respect || 0;
   const fear = rel.fear || 0;
   const affection = rel.affection || 0;
-  const familiarity = rel.familiarity ?? Math.max(0, (trust + affection) / 4 + 20); // Estimate if not set
-  const attraction = rel.attraction ?? Math.max(-100, Math.min(100, affection * 0.5)); // Estimate from affection
+  const familiarity = rel.familiarity ?? Math.max(0, (trust + affection) / 4 + 20);
+  const attraction = rel.attraction ?? Math.max(-100, Math.min(100, affection * 0.5));
   const intimacy = rel.intimacy ?? Math.max(0, Math.min(100, (trust + affection) / 4));
   const romance = rel.romance ?? (affection > 30 && trust > 20 ? affection * 0.3 : 0);
+  // Attachment: Will they miss you? Based on familiarity and positive interactions
+  const attachment = rel.attachment ?? Math.max(0, Math.min(100, familiarity * 0.6 + affection * 0.4));
   
   // Calculate overall feeling (-100 to 100)
   const overall = Math.round(
@@ -279,7 +297,7 @@ export function calculateRelationshipDisplay(npc: NPC): RelationshipDisplayData 
   else baseColor = 'beloved';
   
   // Check romance threshold
-  const extendedRel: ExtendedRelationship = { ...rel, familiarity, attraction, intimacy, romance };
+  const extendedRel: ExtendedRelationship = { ...rel, familiarity, attraction, intimacy, romance, attachment };
   const romanceUnlocked = checkRomanceThreshold(npc, extendedRel);
   const romanceLevel = getRomanceLevel(extendedRel);
   
@@ -296,6 +314,9 @@ export function calculateRelationshipDisplay(npc: NPC): RelationshipDisplayData 
   const status = getRelationshipStatus(extendedRel);
   const colors = RELATIONSHIP_COLORS[displayColor];
   
+  // Calculate tension flags - when meters are misaligned, creates interesting dynamics
+  const tensionFlags = calculateTensionFlags(trust, respect, attachment);
+  
   return {
     overall,
     baseColor,
@@ -304,12 +325,76 @@ export function calculateRelationshipDisplay(npc: NPC): RelationshipDisplayData 
     romanceLevel,
     trust,
     respect,
+    attachment,
     fear,
     familiarity,
     attraction,
     intimacy,
     romance,
     status,
-    colors
+    colors,
+    tensionFlags
   };
+}
+
+// Calculate tension flags when the 3 meters are misaligned
+function calculateTensionFlags(trust: number, respect: number, attachment: number): RelationshipTension[] {
+  const flags: RelationshipTension[] = [];
+  const HIGH = 50;
+  const LOW = 25;
+  
+  // Respects you but doesn't trust you - they admire your skills but doubt your intentions
+  if (respect >= HIGH && trust < LOW) flags.push('respects_but_distrusts');
+  
+  // Trusts you but doesn't respect you - they believe you're honest but think you're weak/incompetent
+  if (trust >= HIGH && respect < LOW) flags.push('trusts_but_doesnt_respect');
+  
+  // Attached but wary - emotionally invested but doesn't fully trust you
+  if (attachment >= HIGH && trust < LOW) flags.push('attached_but_wary');
+  
+  // Respected but distant - admires you but has no emotional connection
+  if (respect >= HIGH && attachment < LOW) flags.push('respected_but_distant');
+  
+  // Clingy without respect - attached but doesn't respect you
+  if (attachment >= HIGH && respect < LOW) flags.push('clingy_without_respect');
+  
+  if (flags.length === 0) flags.push('none');
+  return flags;
+}
+
+// Get description for tension
+export function getTensionDescription(tension: RelationshipTension): string {
+  const descriptions: Record<RelationshipTension, string> = {
+    respects_but_distrusts: 'Admires your abilities but questions your motives',
+    trusts_but_doesnt_respect: 'Believes you are honest but doubts your competence',
+    attached_but_wary: 'Emotionally invested but keeps their guard up',
+    respected_but_distant: 'Respects you professionally but maintains emotional distance',
+    clingy_without_respect: 'Seeks your attention but doesnt truly value your judgment',
+    none: ''
+  };
+  return descriptions[tension];
+}
+
+// Build 3-meter context for AI
+export function buildRelationshipMeterContext(npc: NPC): string {
+  const data = calculateRelationshipDisplay(npc);
+  const npcName = npc.meta?.name || npc.id;
+  const lines: string[] = [
+    `## ${npcName} - Relationship Meters`,
+    '',
+    `**Trust** (Will they believe you?): ${data.trust}/100`,
+    `**Respect** (Will they follow you?): ${data.respect}/100`,
+    `**Attachment** (Will they miss you?): ${data.attachment}/100`,
+  ];
+  
+  const tensions = data.tensionFlags.filter(t => t !== 'none');
+  if (tensions.length > 0) {
+    lines.push('');
+    lines.push('**Tensions:**');
+    tensions.forEach(t => lines.push(`- ${getTensionDescription(t)}`));
+    lines.push('');
+    lines.push('These tensions create interesting dynamics - use them in dialogue and reactions.');
+  }
+  
+  return lines.join('\n');
 }

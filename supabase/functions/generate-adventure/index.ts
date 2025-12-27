@@ -127,6 +127,33 @@ interface MemoryBiteContext {
   }>;
 }
 
+// ============= NEW: SIGNATURE DETAILS, FAIL-FORWARD, 3-METER RELATIONSHIPS =============
+
+interface SignatureDetailContext {
+  currentLocationDetail?: string;     // The vivid sensory hook for current location
+  isReturnVisit: boolean;             // Have we been here before?
+  previousLocationDetails?: string[]; // Recent location signatures for contrast
+}
+
+interface FailForwardContext {
+  enabled: boolean;                   // Whether to use fail-forward philosophy
+  activeConsequences: Array<{        // Unresolved costs from previous fail-forwards
+    category: string;
+    description: string;
+    futureHook?: string;
+  }>;
+}
+
+interface RelationshipMeterContext {
+  sceneNPCMeters: Array<{
+    npcName: string;
+    trust: number;       // Will they believe you?
+    respect: number;     // Will they follow you?
+    attachment: number;  // Will they miss you?
+    tensions: string[];  // Misaligned meter dynamics
+  }>;
+}
+
 interface LocationTransitionContext {
   previousZone?: {
     name: string;
@@ -209,6 +236,12 @@ interface AdventureRequest {
   npcMotivationContext?: NPCMotivationContext;
   // NEW: Memory Bite System - emotional callbacks
   memoryBiteContext?: MemoryBiteContext;
+  // NEW: Signature Details - vivid sensory hooks per location
+  signatureDetailContext?: SignatureDetailContext;
+  // NEW: Fail-Forward System - failures create content
+  failForwardContext?: FailForwardContext;
+  // NEW: 3-Meter Relationship System - Trust/Respect/Attachment
+  relationshipMeterContext?: RelationshipMeterContext;
 }
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
@@ -483,7 +516,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -960,6 +993,27 @@ When creating a new consequence, tag it: [CONSEQUENCE_CREATED:type:details]
 Types: favor_owed, enemy_made, resource_lost, secret_exposed, time_lost, witness_created
 
 Your story gets MEATIER every time the player "loses."`;
+
+    // ============= 3-METER RELATIONSHIP SYSTEM =============
+    if (relationshipMeterContext?.sceneNPCMeters && relationshipMeterContext.sceneNPCMeters.length > 0) {
+      systemContent += `\n\n=== RELATIONSHIP METERS - TRUST/RESPECT/ATTACHMENT ===
+Relationships have THREE independent meters that create nuanced dynamics:
+
+**TRUST** - Will they believe you?
+**RESPECT** - Will they follow you?  
+**ATTACHMENT** - Will they miss you?
+
+A character can RESPECT you but not TRUST you. That's delicious tension.
+A character can be ATTACHED but not RESPECT you. That's complicated.
+
+NPCS IN SCENE:
+${relationshipMeterContext.sceneNPCMeters.map(npc => 
+`• ${npc.npcName}: Trust ${npc.trust}, Respect ${npc.respect}, Attachment ${npc.attachment}
+  ${npc.tensions.filter(t => t !== 'none').map(t => `→ ${t.replace(/_/g, ' ')}`).join(', ')}`
+).join('\n')}
+
+Use these dynamics in dialogue and reactions. High respect + low trust = they admire your skills but doubt your motives.`;
+    }
     
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
