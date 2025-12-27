@@ -243,7 +243,7 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
     <>
       <span
         className={cn(
-          'npc-name-link cursor-pointer underline decoration-primary/40 underline-offset-2 hover:decoration-primary hover:text-primary transition-colors duration-200',
+          'npc-name-link cursor-pointer font-bold text-primary underline decoration-primary/60 underline-offset-2 hover:decoration-primary hover:text-primary/80 transition-colors duration-200',
           className
         )}
         onClick={handleClick}
