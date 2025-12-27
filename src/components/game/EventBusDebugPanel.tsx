@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Activity, ChevronDown, ChevronUp, Trash2, Pause, Play, Filter } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Activity, ChevronDown, ChevronUp, Trash2, Pause, Play, Filter, AlertTriangle, Shield } from 'lucide-react';
+import { getRecentViolations, ConsistencyViolation } from '@/game/consistencyLayer';
+import { getDirectorState } from '@/game/directorSystem';
 
 interface EventDisplayProps {
   event: GameBusEvent;
@@ -76,6 +79,8 @@ export function EventBusDebugPanel({ isOpen = false, onClose }: EventBusDebugPan
   const [isPaused, setIsPaused] = useState(false);
   const [filter, setFilter] = useState<string>('');
   const [expanded, setExpanded] = useState(isOpen);
+  const [violations, setViolations] = useState<ConsistencyViolation[]>([]);
+  const [activeTab, setActiveTab] = useState<'events' | 'consistency' | 'director'>('events');
   
   // Subscribe to all events
   useEffect(() => {
@@ -90,6 +95,14 @@ export function EventBusDebugPanel({ isOpen = false, onClose }: EventBusDebugPan
     
     return unsubscribe;
   }, [isPaused]);
+  
+  // Periodically refresh violations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViolations(getRecentViolations(20));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
   
   const clearEvents = useCallback(() => {
     eventBus.clear();
@@ -133,16 +146,21 @@ export function EventBusDebugPanel({ isOpen = false, onClose }: EventBusDebugPan
     );
   }
 
+  // Get director state for display
+  const directorState = getDirectorState();
+  
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 max-h-[500px] bg-background/95 backdrop-blur border border-border rounded-lg shadow-lg overflow-hidden">
+    <div className="fixed bottom-4 right-4 z-50 w-[420px] max-h-[550px] bg-background/95 backdrop-blur border border-border rounded-lg shadow-lg overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-2 border-b border-border bg-muted/50">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />
-          <span className="font-semibold text-sm">Event Bus</span>
-          <Badge variant="secondary" className="text-[10px]">
-            {events.length}
-          </Badge>
+          <span className="font-semibold text-sm">System Debug</span>
+          {violations.filter(v => v.severity === 'error').length > 0 && (
+            <Badge variant="destructive" className="text-[9px] px-1">
+              {violations.filter(v => v.severity === 'error').length} errors
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={togglePause}>
@@ -157,21 +175,39 @@ export function EventBusDebugPanel({ isOpen = false, onClose }: EventBusDebugPan
         </div>
       </div>
       
-      {/* Filter */}
-      <div className="p-2 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Filter className="w-3 h-3 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Filter events..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="flex-1 bg-transparent border-none text-xs focus:outline-none"
-          />
-        </div>
-      </div>
-      
-      {/* Type summary */}
+      {/* Tabs for different views */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <TabsList className="w-full grid grid-cols-3 h-8 rounded-none border-b border-border">
+          <TabsTrigger value="events" className="text-xs h-7">
+            Events ({events.length})
+          </TabsTrigger>
+          <TabsTrigger value="consistency" className="text-xs h-7">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Consistency
+          </TabsTrigger>
+          <TabsTrigger value="director" className="text-xs h-7">
+            <Shield className="w-3 h-3 mr-1" />
+            Director
+          </TabsTrigger>
+        </TabsList>
+        
+        {/* Events Tab */}
+        <TabsContent value="events" className="mt-0">
+          {/* Filter */}
+          <div className="p-2 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3 h-3 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Filter events..."
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="flex-1 bg-transparent border-none text-xs focus:outline-none"
+              />
+            </div>
+          </div>
+          
+          {/* Type summary */}
       <Collapsible>
         <CollapsibleTrigger className="w-full p-2 flex items-center justify-between text-xs text-muted-foreground hover:bg-muted/50">
           <span>Event Types Summary</span>
@@ -205,6 +241,95 @@ export function EventBusDebugPanel({ isOpen = false, onClose }: EventBusDebugPan
           ))
         )}
       </ScrollArea>
+      
+        </TabsContent>
+        
+        {/* Consistency Tab */}
+        <TabsContent value="consistency" className="mt-0">
+          <ScrollArea className="h-[350px] p-2">
+            {violations.length === 0 ? (
+              <div className="text-center text-muted-foreground text-xs py-8">
+                ✓ No consistency violations
+              </div>
+            ) : (
+              violations.map((v) => (
+                <div key={v.id} className={`border rounded-md p-2 mb-1 text-xs ${
+                  v.severity === 'critical' ? 'border-red-500/50 bg-red-500/10' :
+                  v.severity === 'error' ? 'border-orange-500/50 bg-orange-500/10' :
+                  'border-yellow-500/50 bg-yellow-500/10'
+                }`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className={`text-[9px] px-1 ${
+                      v.severity === 'critical' ? 'text-red-400' :
+                      v.severity === 'error' ? 'text-orange-400' : 'text-yellow-400'
+                    }`}>
+                      {v.severity}
+                    </Badge>
+                    <span className="font-mono font-semibold">{v.type}</span>
+                    <span className="text-muted-foreground ml-auto">t:{v.tick}</span>
+                  </div>
+                  <div className="text-muted-foreground text-[10px]">
+                    {v.description}
+                  </div>
+                  {v.entities.length > 0 && (
+                    <div className="text-muted-foreground/60 text-[9px] mt-1">
+                      Entities: {v.entities.join(', ')}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </ScrollArea>
+        </TabsContent>
+        
+        {/* Director Tab */}
+        <TabsContent value="director" className="mt-0">
+          <div className="p-3 space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="border border-border rounded p-2">
+                <div className="text-muted-foreground text-[10px]">Priority</div>
+                <div className="font-semibold">{directorState.currentPriority}</div>
+              </div>
+              <div className="border border-border rounded p-2">
+                <div className="text-muted-foreground text-[10px]">Escalation</div>
+                <div className="font-semibold">{directorState.escalationLevel}%</div>
+              </div>
+            </div>
+            
+            <div className="border border-border rounded p-2">
+              <div className="text-muted-foreground text-[10px] mb-1">Active Cooldowns</div>
+              {directorState.cooldowns.length === 0 ? (
+                <div className="text-xs text-muted-foreground">None active</div>
+              ) : (
+                <div className="space-y-1">
+                  {directorState.cooldowns.slice(0, 5).map((cd, i) => (
+                    <div key={i} className="flex justify-between text-[10px]">
+                      <span>{cd.system}</span>
+                      <span className="text-muted-foreground">{cd.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="border border-border rounded p-2">
+              <div className="text-muted-foreground text-[10px] mb-1">Recent Beats</div>
+              {directorState.recentBeats.length === 0 ? (
+                <div className="text-xs text-muted-foreground">No recent beats</div>
+              ) : (
+                <div className="space-y-1">
+                  {directorState.recentBeats.slice(-5).map((beat, i) => (
+                    <div key={i} className="flex justify-between text-[10px]">
+                      <span>{beat.name}</span>
+                      <span className="text-muted-foreground">t:{beat.triggeredAt}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
       
       {/* Footer status */}
       <div className="p-2 border-t border-border text-[10px] text-muted-foreground flex justify-between">

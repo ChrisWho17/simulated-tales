@@ -44,6 +44,7 @@ import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game
 import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { CheckSelfButton } from '@/components/game/CheckSelfButton';
+import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
@@ -1594,6 +1595,9 @@ export function AdventureDisplay({
       
       {/* Event Bus Debug Panel - show if enabled in settings or cheat mode */}
       {(cheatMode || (gameContext?.settings?.showEventBusDebug ?? false)) && <EventBusDebugPanel />}
+      
+      {/* Consequence Feed - always visible for real-time feedback */}
+      <ConsequenceFeed compact={false} />
     </div>
   );
 }
