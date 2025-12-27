@@ -22,6 +22,8 @@ import { checkPlayerDeath, generateDeathNarrative } from './advancedDynamics';
 import { calculateSimulationStats } from './metaSystems';
 import { initializeLifeSimState, processLifeSimTick } from './lifeSimIntegration';
 import { canPerformActionAtLocation, getLocationTags } from './locationRequirements';
+import { eventBus } from './eventBus';
+import { processNeedsTick, setIntegrationTick, updateDirectorState, resolveSystemPriority } from './systemIntegrations';
 
 const HOURS_PER_DAY = 24;
 const DAYS_PER_WEEK = 7;
@@ -121,20 +123,44 @@ export function advanceTime(state: GameState, hours: number = 1): GameState {
     // Also run basic NPC schedule simulation
     currentState.npcs = simulateNPCs(currentState);
     
-    // Phase 9: Process life sim tick
+    // Phase 9: Process life sim tick with Event Bus integration
+    setIntegrationTick(currentState.time.tick);
+    eventBus.setTick(currentState.time.tick);
+    
     if (currentState.lifeSim) {
-      const lifeSimResult = processLifeSimTick(currentState.lifeSim, 1, []);
-      currentState.lifeSim = lifeSimResult.updatedState;
+      // Use integrated needs tick processing (emits critical need events)
+      const needsResult = processNeedsTick(
+        currentState.lifeSim.needs,
+        1, // hoursElapsed
+        undefined, // activityModifiers
+        currentState.time.tick
+      );
+      
+      // Update lifeSim with processed needs
+      currentState.lifeSim = {
+        ...currentState.lifeSim,
+        needs: needsResult.updatedNeeds,
+      };
+      
+      // Resolve system priority based on current state
+      const systemPriority = resolveSystemPriority({
+        playerHealth: needsResult.updatedNeeds.physical.health,
+        inCombat: false, // TODO: wire up combat state
+        criticalNeeds: needsResult.criticalNeeds,
+        activeConversation: false,
+        recentDamage: eventBus.getEventsByType('DAMAGE_RECEIVED', 1).length > 0,
+      });
+      updateDirectorState(systemPriority, undefined, currentState.time.tick);
       
       // Sync life sim needs with player stats
       currentState.player = {
         ...currentState.player,
         stats: {
           ...currentState.player.stats,
-          hunger: currentState.lifeSim.needs.physical.hunger,
-          energy: currentState.lifeSim.needs.physical.energy,
-          health: currentState.lifeSim.needs.physical.health,
-          mood: 100 - currentState.lifeSim.needs.psychological.stress,
+          hunger: needsResult.updatedNeeds.physical.hunger,
+          energy: needsResult.updatedNeeds.physical.energy,
+          health: needsResult.updatedNeeds.physical.health,
+          mood: 100 - needsResult.updatedNeeds.psychological.stress,
         },
       };
     } else {
