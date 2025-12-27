@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -476,6 +476,25 @@ export function AdventureDisplay({
         ? pendingMechanics.lootGained 
         : [pendingMechanics.lootGained];
       
+      // Helper to determine item icon based on name
+      const getItemIcon = (itemName: string) => {
+        const name = itemName.toLowerCase();
+        if (name.includes('sword') || name.includes('blade') || name.includes('dagger') || name.includes('axe') || name.includes('weapon')) return '⚔️';
+        if (name.includes('key')) return '🗝️';
+        if (name.includes('potion') || name.includes('elixir') || name.includes('flask')) return '🧪';
+        if (name.includes('gem') || name.includes('jewel') || name.includes('diamond') || name.includes('ruby') || name.includes('emerald')) return '💎';
+        if (name.includes('scroll') || name.includes('book') || name.includes('tome') || name.includes('letter')) return '📜';
+        if (name.includes('ring') || name.includes('amulet') || name.includes('necklace')) return '💍';
+        if (name.includes('coin') || name.includes('gold') || name.includes('silver')) return '🪙';
+        if (name.includes('armor') || name.includes('shield') || name.includes('helm')) return '🛡️';
+        if (name.includes('food') || name.includes('bread') || name.includes('meat')) return '🍖';
+        if (name.includes('bow') || name.includes('arrow')) return '🏹';
+        if (name.includes('staff') || name.includes('wand') || name.includes('rod')) return '🪄';
+        if (name.includes('map')) return '🗺️';
+        if (name.includes('torch') || name.includes('lantern')) return '🔦';
+        return '✨'; // Default sparkle for misc items
+      };
+      
       for (const lootName of lootItems) {
         const existingItemIndex = updatedCharacter.inventory.findIndex(
           item => item.name.toLowerCase() === lootName.toLowerCase()
@@ -499,10 +518,13 @@ export function AdventureDisplay({
           };
           updatedCharacter.inventory = [...updatedCharacter.inventory, newItem];
         }
+        
+        const itemIcon = getItemIcon(lootName);
         toast({
-          title: `Acquired: ${lootName}`,
-          description: "Added to your inventory!",
-          duration: 3000,
+          title: `${itemIcon} ${lootName}`,
+          description: "Added to inventory",
+          duration: 3500,
+          className: "bg-primary/10 border-primary/30",
         });
       }
       hasStatChanges = true;
