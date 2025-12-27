@@ -1,6 +1,6 @@
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
-import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -21,6 +21,8 @@ interface GameHeaderProps {
   onSave: () => void;
   onLoad: () => void;
   onNewGame?: () => void;
+  onOpenCharacterSheet?: () => void;
+  onOpenInventory?: () => void;
   character?: ExtendedCharacter | null;
   adrenalineState?: AdrenalineSystemState | null;
   showAdrenaline?: boolean;
@@ -71,7 +73,9 @@ export function GameHeader({
   time, 
   onSave, 
   onLoad, 
-  onNewGame, 
+  onNewGame,
+  onOpenCharacterSheet,
+  onOpenInventory,
   character,
   adrenalineState,
   showAdrenaline = false
@@ -103,6 +107,40 @@ export function GameHeader({
       </div>
       
       <div className="flex items-center gap-2">
+        {onOpenCharacterSheet && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onOpenCharacterSheet}
+                className="hover:bg-secondary hover:text-primary"
+              >
+                <ScrollText className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Character Sheet</TooltipContent>
+          </Tooltip>
+        )}
+        
+        {onOpenInventory && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onOpenInventory}
+                className="hover:bg-secondary hover:text-primary"
+              >
+                <Backpack className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Inventory</TooltipContent>
+          </Tooltip>
+        )}
+        
+        {(onOpenCharacterSheet || onOpenInventory) && <div className="h-6 w-px bg-border" />}
+        
         {onNewGame && (
           <Tooltip>
             <TooltipTrigger asChild>
