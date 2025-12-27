@@ -856,6 +856,222 @@ const CYBERPUNK_HORROR_BACKGROUNDS: HybridBackground[] = [
   }
 ];
 
+// Pirate + Horror backgrounds
+const PIRATE_HORROR_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'ghost_ship_survivor',
+    name: 'Ghost Ship Survivor',
+    description: 'You survived an encounter with a cursed vessel and bear its mark.',
+    statBonuses: { constitution: 1 },
+    startingItems: ['Cursed Coin', 'Ghost Compass'],
+    skills: ['See the Dead', 'Curse Lore', 'Survivor\'s Luck'],
+    sourceGenres: ['pirate', 'horror'],
+    blendDescription: 'Marked by the damned'
+  },
+  {
+    id: 'deep_cultist',
+    name: 'Deep One Convert',
+    description: 'You once worshipped the things beneath the waves.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Forbidden Idol', 'Deep One Mark'],
+    skills: ['Eldritch Knowledge', 'Breathe Deep', 'Cultist Past'],
+    sourceGenres: ['pirate', 'horror'],
+    blendDescription: 'Those who heard the deep call'
+  }
+];
+
+// Western + Sci-Fi backgrounds (Space Western)
+const WESTERN_SCIFI_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'frontier_colonist',
+    name: 'Frontier Planet Settler',
+    description: 'Raised on a distant colony world with frontier values.',
+    statBonuses: { constitution: 1 },
+    startingItems: ['Colony Deed', 'Plasma Rifle'],
+    skills: ['Pioneer Spirit', 'Alien Terrain', 'Self-Reliance'],
+    sourceGenres: ['western', 'scifi'],
+    blendDescription: 'Pioneers of new worlds'
+  },
+  {
+    id: 'asteroid_miner_family',
+    name: 'Mining Family Legacy',
+    description: 'Your family has mined asteroids for generations.',
+    statBonuses: { strength: 1 },
+    startingItems: ['Family Claim', 'Prospector Tools'],
+    skills: ['Ore Knowledge', 'Zero-G Native', 'Hard Work Ethic'],
+    sourceGenres: ['western', 'scifi'],
+    blendDescription: 'Born to the cosmic frontier'
+  }
+];
+
+// Fantasy + Mystery backgrounds
+const FANTASY_MYSTERY_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'mage_detective',
+    name: 'Arcane Investigator Apprentice',
+    description: 'Trained under a legendary magical detective.',
+    statBonuses: { intelligence: 1 },
+    startingItems: ['Mentor\'s Notes', 'Scrying Focus'],
+    skills: ['Magical Forensics', 'Deduction', 'Arcane Law'],
+    sourceGenres: ['fantasy', 'mystery'],
+    blendDescription: 'Students of magical justice'
+  },
+  {
+    id: 'spirit_touched',
+    name: 'Spirit-Touched Witness',
+    description: 'The dead speak to you, revealing truths hidden from the living.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Spirit Bell', 'Death Shroud'],
+    skills: ['Ghost Speak', 'Truth Sense', 'Medium\'s Burden'],
+    sourceGenres: ['fantasy', 'mystery'],
+    blendDescription: 'Voices of the departed'
+  }
+];
+
+// Cyberpunk + Pirate backgrounds
+const CYBERPUNK_PIRATE_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'data_smuggler',
+    name: 'Data Smuggler',
+    description: 'You ran illegal data across corporate borders.',
+    statBonuses: { dexterity: 1 },
+    startingItems: ['Hidden Data Port', 'Smuggler Contacts'],
+    skills: ['Data Running', 'Border Evasion', 'Black Market'],
+    sourceGenres: ['cyberpunk', 'pirate'],
+    blendDescription: 'Runners of forbidden data'
+  },
+  {
+    id: 'neon_pirate_crew',
+    name: 'Street Crew Member',
+    description: 'Part of a notorious street gang that operates like pirates.',
+    statBonuses: { charisma: 1 },
+    startingItems: ['Crew Tattoo', 'Territory Map'],
+    skills: ['Crew Loyalty', 'Street Code', 'Turf Knowledge'],
+    sourceGenres: ['cyberpunk', 'pirate'],
+    blendDescription: 'Urban buccaneers'
+  }
+];
+
+// Horror + Sci-Fi backgrounds
+const HORROR_SCIFI_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'colony_survivor',
+    name: 'Colony Massacre Survivor',
+    description: 'You survived when something killed everyone else on your colony.',
+    statBonuses: { constitution: 1 },
+    startingItems: ['Distress Beacon', 'Survivor\'s Guilt'],
+    skills: ['Trauma Hardened', 'Alien Recognition', 'Lone Survivor'],
+    sourceGenres: ['horror', 'scifi'],
+    blendDescription: 'The ones who got away'
+  },
+  {
+    id: 'void_exposed',
+    name: 'Void-Exposed',
+    description: 'You saw something in deep space that changed you forever.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Cosmic Fragment', 'Sanity Anchor'],
+    skills: ['Void Sight', 'Cosmic Whispers', 'Touched by Stars'],
+    sourceGenres: ['horror', 'scifi'],
+    blendDescription: 'Those who glimpsed beyond'
+  }
+];
+
+// Post-Apocalyptic + Fantasy backgrounds
+const POSTAPOC_FANTASY_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'mutation_shaman',
+    name: 'Mutation Tribe Shaman',
+    description: 'Your tribe reveres mutations as magical gifts.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Mutation Totem', 'Rad-Blessing'],
+    skills: ['Mutation Lore', 'Tribal Magic', 'Wasteland Spirits'],
+    sourceGenres: ['postapoc', 'fantasy'],
+    blendDescription: 'Shamans of the changed world'
+  },
+  {
+    id: 'ruin_seeker',
+    name: 'Ruin Temple Pilgrim',
+    description: 'You worship the power that ended the old world.',
+    statBonuses: { constitution: 1 },
+    startingItems: ['Apocalypse Relic', 'Temple Teachings'],
+    skills: ['Ruin Navigation', 'Old World Reverence', 'Radiation Resistance'],
+    sourceGenres: ['postapoc', 'fantasy'],
+    blendDescription: 'Seekers of apocalyptic power'
+  }
+];
+
+// War + Fantasy backgrounds
+const WAR_FANTASY_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'battle_mage_corps',
+    name: 'Battle Mage Corps Veteran',
+    description: 'Served in a military unit of combat wizards.',
+    statBonuses: { intelligence: 1 },
+    startingItems: ['Corps Medal', 'Battle Spellbook'],
+    skills: ['Military Magic', 'Unit Tactics', 'Battlefield Casting'],
+    sourceGenres: ['war', 'fantasy'],
+    blendDescription: 'Veterans of magical warfare'
+  },
+  {
+    id: 'dragon_cavalry_rider',
+    name: 'Dragon Corps Initiate',
+    description: 'Trained from youth to bond with war dragons.',
+    statBonuses: { charisma: 1 },
+    startingItems: ['Dragon Scale Token', 'Rider\'s Goggles'],
+    skills: ['Dragon Bond', 'Aerial Combat', 'Beast Empathy'],
+    sourceGenres: ['war', 'fantasy'],
+    blendDescription: 'Born to ride dragons'
+  }
+];
+
+// Modern Life + Horror backgrounds
+const MODERN_HORROR_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'haunted_house_survivor',
+    name: 'Haunting Survivor',
+    description: 'You lived in a haunted house and barely escaped with your sanity.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Protective Charm', 'Haunting Photos'],
+    skills: ['Sense Presence', 'Resist Fear', 'Ghost Lore'],
+    sourceGenres: ['modern_life', 'horror'],
+    blendDescription: 'Those who survived the haunting'
+  },
+  {
+    id: 'occult_family',
+    name: 'Occult Family Legacy',
+    description: 'Your family has always known about the supernatural.',
+    statBonuses: { intelligence: 1 },
+    startingItems: ['Family Grimoire', 'Warding Ring'],
+    skills: ['Occult Knowledge', 'Family Secrets', 'Hidden World'],
+    sourceGenres: ['modern_life', 'horror'],
+    blendDescription: 'Keepers of dark family secrets'
+  }
+];
+
+// Horror + Post-Apocalyptic backgrounds
+const HORROR_POSTAPOC_BACKGROUNDS: HybridBackground[] = [
+  {
+    id: 'infected_survivor',
+    name: 'Infection Survivor',
+    description: 'You carry the mark of the plague that ended civilization.',
+    statBonuses: { constitution: 1 },
+    startingItems: ['Immunity Proof', 'Infection Scars'],
+    skills: ['Disease Knowledge', 'Infected Empathy', 'Survivor Network'],
+    sourceGenres: ['horror', 'postapoc'],
+    blendDescription: 'Marked by the plague'
+  },
+  {
+    id: 'cult_escapee',
+    name: 'Doomsday Cult Escapee',
+    description: 'You escaped a cult that worships the apocalypse.',
+    statBonuses: { wisdom: 1 },
+    startingItems: ['Cult Brand', 'Deprogramming Notes'],
+    skills: ['Cult Recognition', 'Manipulation Resistance', 'Hidden Lore'],
+    sourceGenres: ['horror', 'postapoc'],
+    blendDescription: 'Those who broke free'
+  }
+];
+
 // ============================================
 // GENRE BLEND MATCHING AND GENERATION
 // ============================================
@@ -908,6 +1124,25 @@ const HYBRID_BACKGROUND_MAP: Record<string, HybridBackground[]> = {
   'fantasy-western': WESTERN_FANTASY_BACKGROUNDS,
   'cyberpunk-horror': CYBERPUNK_HORROR_BACKGROUNDS,
   'horror-cyberpunk': CYBERPUNK_HORROR_BACKGROUNDS,
+  // NEW HYBRID BACKGROUNDS
+  'pirate-horror': PIRATE_HORROR_BACKGROUNDS,
+  'horror-pirate': PIRATE_HORROR_BACKGROUNDS,
+  'western-scifi': WESTERN_SCIFI_BACKGROUNDS,
+  'scifi-western': WESTERN_SCIFI_BACKGROUNDS,
+  'fantasy-mystery': FANTASY_MYSTERY_BACKGROUNDS,
+  'mystery-fantasy': FANTASY_MYSTERY_BACKGROUNDS,
+  'cyberpunk-pirate': CYBERPUNK_PIRATE_BACKGROUNDS,
+  'pirate-cyberpunk': CYBERPUNK_PIRATE_BACKGROUNDS,
+  'horror-scifi': HORROR_SCIFI_BACKGROUNDS,
+  'scifi-horror': HORROR_SCIFI_BACKGROUNDS,
+  'postapoc-fantasy': POSTAPOC_FANTASY_BACKGROUNDS,
+  'fantasy-postapoc': POSTAPOC_FANTASY_BACKGROUNDS,
+  'war-fantasy': WAR_FANTASY_BACKGROUNDS,
+  'fantasy-war': WAR_FANTASY_BACKGROUNDS,
+  'modern_life-horror': MODERN_HORROR_BACKGROUNDS,
+  'horror-modern_life': MODERN_HORROR_BACKGROUNDS,
+  'horror-postapoc': HORROR_POSTAPOC_BACKGROUNDS,
+  'postapoc-horror': HORROR_POSTAPOC_BACKGROUNDS,
 };
 
 /**
