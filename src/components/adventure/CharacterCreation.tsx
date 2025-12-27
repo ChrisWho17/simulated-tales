@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SecondaryGenre } from './AdventureCreator';
-import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits } from '@/game/genreBlendSystem';
+import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
+import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -73,6 +74,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     if (secondaryGenres.length === 0) return genreData.traits;
     return getBlendedTraits(genre, secondaryGenres);
   }, [genre, secondaryGenres, genreData.traits]);
+  
+  // Get hybrid traits with narrative hooks
+  const hybridTraits = useMemo(() => {
+    if (secondaryGenres.length === 0) return [];
+    return getHybridTraits(genre, secondaryGenres);
+  }, [genre, secondaryGenres]);
+  
+  // Track selected hybrid traits separately
+  const [selectedHybridTraits, setSelectedHybridTraits] = useState<string[]>([]);
   
   // Count hybrid classes added
   const hybridClassCount = blendedClasses.length - genreData.classes.length;
@@ -289,9 +299,26 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-6 animate-fade-in">
-          <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-wider">
-            {genreData.name} Adventure
-          </span>
+          {/* Genre Blend Indicator */}
+          <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
+            <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+              <span>{GENRE_ICONS[genre]}</span>
+              {genreData.name}
+            </span>
+            {secondaryGenres.length > 0 && (
+              <>
+                <span className="text-muted-foreground text-xs">+</span>
+                {secondaryGenres.map((sg) => (
+                  <span key={sg.genreId} className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span>{GENRE_ICONS[sg.genreId]}</span>
+                    {getGenreTitle(sg.genreId)}
+                    <span className="text-[10px] opacity-70">({sg.blendStrength}%)</span>
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
+          
           <h1 className="text-3xl md:text-4xl font-narrative font-bold text-gradient-gold mt-3 mb-2">
             Create Your Hero
           </h1>
@@ -727,23 +754,74 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           {step === 'traits' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Select up to 3 personality traits</h2>
+              
+              {/* Hybrid Traits Section - Special narrative hooks */}
+              {hybridTraits.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Blend className="w-4 h-4 text-accent" />
+                    <span className="text-sm font-medium text-accent">Hybrid Traits (Narrative Hooks)</span>
+                  </div>
+                  <div className="grid gap-2 mb-4">
+                    {hybridTraits.map((trait) => (
+                      <button
+                        key={trait.id}
+                        onClick={() => {
+                          if (selectedHybridTraits.includes(trait.id)) {
+                            setSelectedHybridTraits(prev => prev.filter(t => t !== trait.id));
+                          } else if (selectedHybridTraits.length < 2) {
+                            setSelectedHybridTraits(prev => [...prev, trait.id]);
+                          }
+                        }}
+                        className={`w-full p-3 rounded-lg text-left transition-all ${
+                          selectedHybridTraits.includes(trait.id)
+                            ? 'bg-accent/20 border-2 border-accent'
+                            : 'bg-accent/5 border border-accent/30 hover:border-accent/50'
+                        }`}
+                        disabled={!selectedHybridTraits.includes(trait.id) && selectedHybridTraits.length >= 2}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Sparkles className={`w-4 h-4 mt-0.5 ${selectedHybridTraits.includes(trait.id) ? 'text-accent' : 'text-accent/60'}`} />
+                          <div>
+                            <div className="font-medium text-sm">{trait.name}</div>
+                            <p className="text-xs text-muted-foreground">{trait.description}</p>
+                            <p className="text-xs text-accent/80 mt-1 italic">✦ {trait.narrativeHook}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">Hybrid traits: {selectedHybridTraits.length}/2 (these unlock special story moments)</p>
+                  <div className="border-t border-border/30 pt-3" />
+                </div>
+              )}
+              
+              {/* Standard Traits */}
               <div className="flex flex-wrap gap-2">
-                {genreData.traits.map((trait) => (
-                  <button
-                    key={trait}
-                    onClick={() => toggleTrait(trait)}
-                    className={`px-3 py-2 rounded-lg text-sm transition-all ${
-                      selectedTraits.includes(trait)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                    }`}
-                    disabled={!selectedTraits.includes(trait) && selectedTraits.length >= 3}
-                  >
-                    {trait}
-                  </button>
-                ))}
+                {blendedTraits.map((trait) => {
+                  const isFromSecondary = !genreData.traits.includes(trait);
+                  return (
+                    <button
+                      key={trait}
+                      onClick={() => toggleTrait(trait)}
+                      className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                        selectedTraits.includes(trait)
+                          ? 'bg-primary text-primary-foreground'
+                          : isFromSecondary
+                            ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
+                            : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                      }`}
+                      disabled={!selectedTraits.includes(trait) && selectedTraits.length >= 3}
+                    >
+                      {trait}
+                      {isFromSecondary && !selectedTraits.includes(trait) && (
+                        <span className="ml-1 text-[10px] text-accent">•</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-sm text-muted-foreground">Selected: {selectedTraits.length}/3</p>
+              <p className="text-sm text-muted-foreground">Standard traits: {selectedTraits.length}/3</p>
             </div>
           )}
 

@@ -1218,6 +1218,94 @@ export function getBlendedBackgrounds(
   });
 }
 
+// ============================================
+// HYBRID TRAIT DEFINITIONS
+// Special narrative-hook traits for blended genres
+// ============================================
+
+export interface HybridTrait {
+  id: string;
+  name: string;
+  description: string;
+  narrativeHook: string; // Special story hook this trait unlocks
+  sourceGenres: [GameGenre, GameGenre];
+}
+
+const HYBRID_TRAITS: Record<string, HybridTrait[]> = {
+  'fantasy-scifi': [
+    { id: 'techno_mystic', name: 'Techno-Mystic', description: 'You sense the arcane in technology', narrativeHook: 'Can detect magical signatures in tech devices', sourceGenres: ['fantasy', 'scifi'] },
+    { id: 'dual_power_wielder', name: 'Dual Power Wielder', description: 'Channel both magic and technology', narrativeHook: 'May combine spell effects with tech abilities', sourceGenres: ['fantasy', 'scifi'] },
+  ],
+  'pirate-horror': [
+    { id: 'sea_cursed', name: 'Sea-Cursed', description: 'The ocean marked you with its darkness', narrativeHook: 'Ghosts of drowned sailors whisper secrets to you', sourceGenres: ['pirate', 'horror'] },
+    { id: 'deep_touched', name: 'Deep-Touched', description: 'Something from the abyss left its mark', narrativeHook: 'Can sense deep one presence and understand their whispers', sourceGenres: ['pirate', 'horror'] },
+  ],
+  'western-scifi': [
+    { id: 'frontier_born', name: 'Frontier Born', description: 'The cosmic frontier runs in your blood', narrativeHook: 'Gain bonus insights when exploring uncharted planets', sourceGenres: ['western', 'scifi'] },
+    { id: 'star_wanderer', name: 'Star Wanderer', description: 'No planet holds you for long', narrativeHook: 'Always know the fastest routes between settlements', sourceGenres: ['western', 'scifi'] },
+  ],
+  'fantasy-mystery': [
+    { id: 'truth_seer', name: 'Truth Seer', description: 'Magic reveals hidden truths to you', narrativeHook: 'Can detect lies through magical means once per scene', sourceGenres: ['fantasy', 'mystery'] },
+    { id: 'ghost_witness', name: 'Ghost Witness', description: 'The dead share their final moments with you', narrativeHook: 'May question spirits about events they witnessed', sourceGenres: ['fantasy', 'mystery'] },
+  ],
+  'cyberpunk-pirate': [
+    { id: 'data_corsair', name: 'Data Corsair', description: 'You raid the digital seas', narrativeHook: 'Can identify valuable data targets in any network', sourceGenres: ['cyberpunk', 'pirate'] },
+    { id: 'street_captain', name: 'Street Captain', description: 'Command loyalty from the urban underworld', narrativeHook: 'Can recruit temporary crew members in any city', sourceGenres: ['cyberpunk', 'pirate'] },
+  ],
+  'horror-scifi': [
+    { id: 'void_touched', name: 'Void-Touched', description: 'Something in space changed you', narrativeHook: 'Can sense when cosmic horrors are near', sourceGenres: ['horror', 'scifi'] },
+    { id: 'survivor_instinct', name: 'Survivor Instinct', description: 'You know when death is coming', narrativeHook: 'Get warning flashes before lethal dangers', sourceGenres: ['horror', 'scifi'] },
+  ],
+  'postapoc-fantasy': [
+    { id: 'mutation_blessed', name: 'Mutation Blessed', description: 'Your changes are gifts, not curses', narrativeHook: 'Mutations grant minor supernatural abilities', sourceGenres: ['postapoc', 'fantasy'] },
+    { id: 'ruin_speaker', name: 'Ruin Speaker', description: 'The destroyed places speak to you', narrativeHook: 'Sense the history and secrets of ruined locations', sourceGenres: ['postapoc', 'fantasy'] },
+  ],
+  'war-fantasy': [
+    { id: 'battle_touched', name: 'Battle-Touched', description: 'War magic flows through your veins', narrativeHook: 'Combat abilities become enhanced during mass battles', sourceGenres: ['war', 'fantasy'] },
+    { id: 'commander_aura', name: 'Commander Aura', description: 'Others follow your lead naturally', narrativeHook: 'Can inspire troops to fight beyond normal limits', sourceGenres: ['war', 'fantasy'] },
+  ],
+  'modern_life-horror': [
+    { id: 'mundane_ward', name: 'Mundane Ward', description: 'Your ordinary life protects you', narrativeHook: 'Supernatural entities find it harder to target you at home', sourceGenres: ['modern_life', 'horror'] },
+    { id: 'hidden_sight', name: 'Hidden Sight', description: 'You see what others refuse to notice', narrativeHook: 'Spot supernatural influences disguised as normal events', sourceGenres: ['modern_life', 'horror'] },
+  ],
+  'cyberpunk-horror': [
+    { id: 'digital_medium', name: 'Digital Medium', description: 'Ghosts speak through your implants', narrativeHook: 'Can communicate with digital spirits and AI echoes', sourceGenres: ['cyberpunk', 'horror'] },
+    { id: 'chrome_corrupted', name: 'Chrome Corrupted', description: 'Your cybernetics attract dark entities', narrativeHook: 'Can trap malevolent digital beings in your hardware', sourceGenres: ['cyberpunk', 'horror'] },
+  ],
+  'fantasy-horror': [
+    { id: 'dark_touched', name: 'Dark-Touched', description: 'Darkness recognizes one of its own', narrativeHook: 'Monsters may hesitate before attacking you', sourceGenres: ['fantasy', 'horror'] },
+    { id: 'curse_bearer', name: 'Curse Bearer', description: 'You carry an ancient curse', narrativeHook: 'Can transfer curse effects to willing or unwilling targets', sourceGenres: ['fantasy', 'horror'] },
+  ],
+  'horror-postapoc': [
+    { id: 'plague_touched', name: 'Plague-Touched', description: 'The infection changed but didn\'t kill you', narrativeHook: 'Infected creatures treat you as one of their own', sourceGenres: ['horror', 'postapoc'] },
+    { id: 'end_watcher', name: 'End Watcher', description: 'You\'ve seen how worlds die', narrativeHook: 'Can predict disasters moments before they happen', sourceGenres: ['horror', 'postapoc'] },
+  ],
+};
+
+/**
+ * Get hybrid traits for a genre combination
+ */
+export function getHybridTraits(
+  primaryGenre: GameGenre,
+  secondaryGenres: SecondaryGenre[]
+): HybridTrait[] {
+  const hybridTraits: HybridTrait[] = [];
+  
+  for (const secondary of secondaryGenres) {
+    const key = `${primaryGenre}-${secondary.genreId}`;
+    const reverseKey = `${secondary.genreId}-${primaryGenre}`;
+    
+    const traits = HYBRID_TRAITS[key] || HYBRID_TRAITS[reverseKey];
+    if (traits) {
+      // Add more traits based on blend strength
+      const traitCount = secondary.blendStrength >= 20 ? traits.length : 1;
+      hybridTraits.push(...traits.slice(0, traitCount));
+    }
+  }
+  
+  return hybridTraits;
+}
+
 /**
  * Get blended traits for a primary genre with secondary genres
  */
