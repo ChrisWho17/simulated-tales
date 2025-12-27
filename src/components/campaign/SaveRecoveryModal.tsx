@@ -4,7 +4,7 @@
 // Integrated with two-tier cache for auto-apply and inbox proposals
 // ============================================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -231,7 +231,7 @@ export function SaveRecoveryModal({
   const [autoApplyRecipe, setAutoApplyRecipe] = useState<ApprovedRecipe | null>(null);
 
   // Initialize recovery state when snapshot changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (snapshot && open) {
       const state = initializeRecoveryMode(snapshot);
       setRecoveryState(state);
@@ -411,6 +411,54 @@ export function SaveRecoveryModal({
     onAbort();
   };
 
+  const handleExportMemo = useCallback(() => handleExport(), [snapshot]);
+  const handleApplyStageMemo = useCallback(() => handleApplyStageA(), [snapshot, recoveryState, stageAOps]);
+  const handleApplyApprovedMemo = useCallback((r: ApprovedRecipe) => handleApplyApprovedRecipe(r), [snapshot]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to close/abort
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (currentView === 'result' && applyResult?.success) {
+          onClose();
+        } else {
+          handleAbort();
+        }
+      }
+      
+      // Enter to apply primary action
+      if (e.key === 'Enter' && !e.shiftKey && !isApplying) {
+        e.preventDefault();
+        if (currentView === 'result' && applyResult?.success) {
+          onClose();
+        } else if (autoApplyRecipe) {
+          handleApplyApprovedMemo(autoApplyRecipe);
+        } else if (stageACanFix && stageAOps.length > 0) {
+          handleApplyStageMemo();
+        }
+      }
+      
+      // Ctrl+E to export
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        handleExportMemo();
+      }
+      
+      // Ctrl+Shift+A to open Ask AI (avoid conflict with select all)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'a' && onAskAI) {
+        e.preventDefault();
+        onAskAI();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, currentView, applyResult, autoApplyRecipe, stageACanFix, stageAOps, isApplying, onClose, onAskAI, handleAbort, handleExportMemo, handleApplyStageMemo, handleApplyApprovedMemo]);
+
   const toggleSuggestion = (id: string) => {
     setSelectedSuggestions(prev => {
       const next = new Set(prev);
@@ -433,11 +481,14 @@ export function SaveRecoveryModal({
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col animate-scale-in">
+        <DialogHeader className="animate-fade-in">
           <DialogTitle className="flex items-center gap-2">
             <FileWarning className="h-5 w-5 text-amber-500" />
             Save Recovery Mode
+            <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground hidden sm:inline">
+              Esc to abort
+            </kbd>
           </DialogTitle>
           <DialogDescription>
             Your save file has issues that need to be fixed before loading.
@@ -446,7 +497,7 @@ export function SaveRecoveryModal({
 
         <ScrollArea className="flex-1 pr-4">
           {currentView === 'overview' && (
-<div className="space-y-4">
+<div className="space-y-4 animate-fade-in">
               {/* Auto-Applyable Approved Recipe */}
               {autoApplyRecipe && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">

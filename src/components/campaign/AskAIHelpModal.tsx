@@ -3,7 +3,7 @@
 // UI for AI-assisted fix proposals with proof mode display
 // ============================================================================
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Bot,
   CheckCircle2,
@@ -396,22 +396,59 @@ export function AskAIHelpModal({
     setView('review');
   }, [snapshot]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!open) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to go back or close
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (view === 'paste') {
+          setView('packet');
+        } else if (view === 'review') {
+          setView('paste');
+        } else {
+          onClose();
+        }
+      }
+      
+      // Enter to apply (in review mode)
+      if (e.key === 'Enter' && !e.shiftKey && view === 'review' && proposalReview && !isApplying) {
+        e.preventDefault();
+        handleApplyProposal();
+      }
+      
+      // Ctrl+V in packet view to jump to paste
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && view === 'packet') {
+        // Let natural paste happen, but also switch view
+        setTimeout(() => setView('paste'), 100);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, view, proposalReview, isApplying, onClose, handleApplyProposal]);
+
   if (!snapshot) return null;
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col animate-scale-in">
+        <DialogHeader className="animate-fade-in">
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
             Ask AI for Help
+            <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground hidden sm:inline">
+              Esc to go back
+            </kbd>
           </DialogTitle>
           <DialogDescription>
             Get an AI-generated fix proposal for your corrupted save.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4 animate-fade-in">
           {/* Inbox Proposals */}
           {inboxProposals.length > 0 && view === 'packet' && (
             <div className="mb-4">
