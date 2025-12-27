@@ -90,6 +90,17 @@ export interface LanguageSettings {
   playerKnownLanguages: string[];
 }
 
+export interface AudioSettings {
+  masterVolume: number;
+  ambienceVolume: number;
+  effectsVolume: number;
+  musicVolume: number;
+  uiVolume: number;
+  enableWeatherSounds: boolean;
+  enableStorySounds: boolean;
+  enableUISounds: boolean;
+}
+
 // In-Depth Mode Toggles
 export interface InDepthSettings {
   worldTone: 'cozy' | 'balanced' | 'brutal';
@@ -119,6 +130,9 @@ export interface GameSettings {
   
   // Language settings
   languageSettings: LanguageSettings;
+  
+  // Audio settings
+  audioSettings: AudioSettings;
   
   // In-Depth Mode Toggles
   inDepthSettings: InDepthSettings;
@@ -158,6 +172,17 @@ const defaultLanguageSettings: LanguageSettings = {
   playerKnownLanguages: ['en', 'common'],
 };
 
+const defaultAudioSettings: AudioSettings = {
+  masterVolume: 80,
+  ambienceVolume: 60,
+  effectsVolume: 90,
+  musicVolume: 40,
+  uiVolume: 50,
+  enableWeatherSounds: true,
+  enableStorySounds: true,
+  enableUISounds: true,
+};
+
 const defaultInDepthSettings: InDepthSettings = {
   worldTone: 'balanced',
   enableHunger: false,
@@ -186,6 +211,9 @@ const defaultSettings: GameSettings = {
   
   // Language settings
   languageSettings: defaultLanguageSettings,
+  
+  // Audio settings
+  audioSettings: defaultAudioSettings,
   
   // In-Depth Mode
   inDepthSettings: defaultInDepthSettings,
