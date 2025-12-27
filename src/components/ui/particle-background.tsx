@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-
+import { CoreMoodType } from '@/game/moodSystem';
+import { WeatherParticles } from './weather-particles';
 interface Particle {
   x: number;
   y: number;
@@ -174,11 +175,12 @@ export function AmbientGlow() {
 }
 
 // Combined atmospheric background
-export function AtmosphericBackground() {
+export function AtmosphericBackground({ mood = 'neutral' }: { mood?: CoreMoodType }) {
   return (
     <>
       <ParticleBackground />
       <AmbientGlow />
+      <WeatherParticles mood={mood} />
     </>
   );
 }
