@@ -16,6 +16,27 @@ export interface LanguageSettings {
   playerKnownLanguages: string[];   // Languages the player character knows
 }
 
+// In-Depth Mode Toggles - Customizable gameplay intensity
+export interface InDepthSettings {
+  // Tone settings
+  worldTone: 'cozy' | 'balanced' | 'brutal';           // Overall danger level
+  
+  // Realism toggles
+  enableHunger: boolean;              // Track hunger/thirst
+  enableFatigue: boolean;             // Track energy/sleep
+  enableInjuryDetail: boolean;        // Detailed wound tracking
+  enableEquipmentWear: boolean;       // Items degrade over time
+  
+  // Content density
+  socialWeight: 'light' | 'balanced' | 'heavy';        // Social vs action focus
+  combatWeight: 'light' | 'balanced' | 'heavy';        // Combat frequency
+  mysteryDensity: 'low' | 'medium' | 'high';           // Secrets and puzzles
+  
+  // Pacing
+  microEventFrequency: 'rare' | 'occasional' | 'frequent'; // World interruptions
+  consequenceIntensity: 'forgiving' | 'balanced' | 'harsh';  // How hard failures hit
+}
+
 export interface GameSettings {
   // Core toggles
   adultContent: boolean;        // 18+ content toggle
@@ -34,6 +55,9 @@ export interface GameSettings {
   
   // Language settings
   languageSettings: LanguageSettings;
+  
+  // In-Depth Mode Toggles
+  inDepthSettings: InDepthSettings;
   
   // Feature toggles
   enableMoodSystem: boolean;           // Mood tracking and display
@@ -62,6 +86,19 @@ export const DEFAULT_LANGUAGE_SETTINGS: LanguageSettings = {
   playerKnownLanguages: ['en', 'common'],
 };
 
+export const DEFAULT_INDEPTH_SETTINGS: InDepthSettings = {
+  worldTone: 'balanced',
+  enableHunger: false,
+  enableFatigue: false,
+  enableInjuryDetail: true,
+  enableEquipmentWear: false,
+  socialWeight: 'balanced',
+  combatWeight: 'balanced',
+  mysteryDensity: 'medium',
+  microEventFrequency: 'occasional',
+  consequenceIntensity: 'balanced',
+};
+
 // Default settings
 export const DEFAULT_SETTINGS: GameSettings = {
   adultContent: false,
@@ -80,6 +117,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Language settings
   languageSettings: DEFAULT_LANGUAGE_SETTINGS,
+  
+  // In-Depth settings
+  inDepthSettings: DEFAULT_INDEPTH_SETTINGS,
   
   // Feature toggles - all enabled by default
   enableMoodSystem: true,
