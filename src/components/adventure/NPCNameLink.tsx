@@ -1,6 +1,6 @@
 // NPC Name Link - Makes NPC names in narrative text clickable
 import { useState, useMemo, useCallback } from 'react';
-import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC, loadNPCRegistry } from '@/game/npcIdentityRegistry';
+import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC, loadNPCRegistry, createRegisteredNPC, findNPCByName } from '@/game/npcIdentityRegistry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -318,12 +318,19 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   for (const npc of npcs) {
     // Map by lowercase name for case-insensitive matching
     nameMap.set(npc.permanent.name.toLowerCase(), npc);
+    
+    // Also map by occupation for dialogue matching (e.g., "Squad Leader:")
+    const occupation = npc.semiPermanent.occupation;
+    if (occupation && occupation !== 'none') {
+      nameMap.set(occupation.toLowerCase(), npc);
+    }
   }
   
   return nameMap;
 }
 
 // Helper function to parse text and insert NPC and Player links
+// Also detects dialogue speaker patterns like "Name:" at the start of dialogue
 export function parseTextForNPCLinks(
   text: string,
   npcNameMap: Map<string, RegisteredNPC>,
@@ -331,19 +338,67 @@ export function parseTextForNPCLinks(
   playerName?: string,
   onShowCharacterSheet?: () => void
 ): React.ReactNode[] {
+  // First pass: detect and register any dialogue speakers that aren't in the registry
+  const dialogueSpeakerPattern = /^([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm;
+  let speakerMatch;
+  
+  while ((speakerMatch = dialogueSpeakerPattern.exec(text)) !== null) {
+    const speakerName = speakerMatch[1].trim();
+    const speakerLower = speakerName.toLowerCase();
+    
+    // Skip if it's the player name
+    if (playerName && speakerLower === playerName.toLowerCase()) continue;
+    
+    // Skip if already registered
+    if (npcNameMap.has(speakerLower)) continue;
+    
+    // Check if this speaker exists by searching more flexibly
+    const existingNPC = findNPCByName(speakerName);
+    if (existingNPC) {
+      // Add to our local map for this render
+      npcNameMap.set(speakerLower, existingNPC);
+    } else {
+      // Auto-register this new dialogue speaker as an NPC
+      const npcId = createRegisteredNPC({
+        name: speakerName,
+        occupation: speakerName, // Use the speaker label as occupation
+        currentTurn: 0,
+      });
+      
+      // Fetch the newly created NPC and add to map
+      const newNPC = getAllRegisteredNPCs().find(n => n.permanent.id === npcId);
+      if (newNPC) {
+        npcNameMap.set(speakerLower, newNPC);
+        console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName}`);
+      }
+    }
+  }
+
   if (npcNameMap.size === 0 && !playerName) return [text];
 
   // Build list of all names to match (NPCs + player)
-  const allNames: Array<{ name: string; type: 'npc' | 'player' }> = [];
+  const allNames: Array<{ name: string; type: 'npc' | 'player'; npc?: RegisteredNPC }> = [];
   
   // Add player name first (higher priority)
   if (playerName && playerName.trim()) {
     allNames.push({ name: playerName.toLowerCase(), type: 'player' });
   }
   
-  // Add NPC names
-  for (const name of npcNameMap.keys()) {
-    allNames.push({ name, type: 'npc' });
+  // Add NPC names AND their occupations for dialogue matching
+  for (const [name, npc] of npcNameMap.entries()) {
+    // Avoid duplicates
+    if (!allNames.some(e => e.name === name && e.type === 'npc')) {
+      allNames.push({ name, type: 'npc', npc });
+    }
+    
+    // Also add occupation as a potential match (for "Squad Leader:" style dialogue)
+    const occupation = npc.semiPermanent.occupation;
+    if (occupation && occupation !== 'none') {
+      const occLower = occupation.toLowerCase();
+      if (!allNames.some(e => e.name === occLower && e.type === 'npc')) {
+        allNames.push({ name: occLower, type: 'npc', npc });
+      }
+    }
   }
   
   if (allNames.length === 0) return [text];
@@ -381,13 +436,16 @@ export function parseTextForNPCLinks(
         />
       );
     } else {
-      // Check if it's an NPC
-      const npc = npcNameMap.get(matchedLower);
-      if (npc) {
+      // Check if it's an NPC (by name or occupation)
+      const matchingEntry = allNames.find(
+        entry => entry.type === 'npc' && entry.name === matchedLower
+      );
+      
+      if (matchingEntry?.npc) {
         result.push(
           <NPCNameLink
             key={`${keyPrefix}-npc-${match.index}`}
-            npc={npc}
+            npc={matchingEntry.npc}
           />
         );
       } else {

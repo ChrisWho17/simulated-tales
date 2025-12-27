@@ -33,6 +33,9 @@ export interface NPCRegistrationResult {
 // Common name patterns to identify potential NPCs
 // Matches capitalized names, especially when preceded by action words or descriptors
 const NAME_PATTERNS = [
+  // Dialogue speaker pattern: "Squad Leader:" or "Captain Marcus:" at start of line or after newline
+  /(?:^|\n)\s*([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm,
+  
   // Direct mention with article: "a woman named Sarah" or "the man called John"
   /(?:named|called|known as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g,
   
