@@ -15,6 +15,7 @@ import {
   treatWound,
   getAdrenalineStatus,
   getWoundRevealMessage,
+  emitWoundRevealEvents,
   ADRENALINE_TRIGGERS,
   COMBAT_WOUND_MAPPING,
 } from './adrenalineSystem';
@@ -147,7 +148,8 @@ export function processCombatDamage(
  */
 export function tickAdrenalineSystem(
   state: AdrenalineSystemState,
-  deltaSeconds: number
+  deltaSeconds: number,
+  currentTick: number = 0
 ): {
   state: AdrenalineSystemState;
   revealedWounds: Array<{ wound: Wound; message: string; damage: number }>;
@@ -161,6 +163,11 @@ export function tickAdrenalineSystem(
     message: getWoundRevealMessage(wound),
     damage: wound.hpDamage,
   }));
+  
+  // Emit events for revealed wounds
+  if (decayResult.revealedWounds.length > 0) {
+    emitWoundRevealEvents(decayResult.revealedWounds, currentTick);
+  }
   
   return {
     state: decayResult.state,

@@ -42,6 +42,7 @@ import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
+import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
   addRelationshipMoment,
@@ -1572,6 +1573,9 @@ export function AdventureDisplay({
           onPlayerAction(actionText);
         }}
       />
+      
+      {/* Event Bus Debug Panel - only show in cheat mode */}
+      {cheatMode && <EventBusDebugPanel />}
     </div>
   );
 }
