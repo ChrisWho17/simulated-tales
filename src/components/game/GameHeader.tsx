@@ -8,6 +8,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { AdrenalineBar } from './AdrenalineBar';
+import { AdrenalineSystemState } from '@/game/adrenalineSystem';
 
 interface ExtendedCharacter extends RPGCharacter {
   id?: string;
@@ -20,6 +22,8 @@ interface GameHeaderProps {
   onLoad: () => void;
   onNewGame?: () => void;
   character?: ExtendedCharacter | null;
+  adrenalineState?: AdrenalineSystemState | null;
+  showAdrenaline?: boolean;
 }
 
 function TimeIcon({ hour }: { hour: number }) {
@@ -63,7 +67,15 @@ function CharacterPortrait({ character }: { character: ExtendedCharacter }) {
   );
 }
 
-export function GameHeader({ time, onSave, onLoad, onNewGame, character }: GameHeaderProps) {
+export function GameHeader({ 
+  time, 
+  onSave, 
+  onLoad, 
+  onNewGame, 
+  character,
+  adrenalineState,
+  showAdrenaline = false
+}: GameHeaderProps) {
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -78,6 +90,16 @@ export function GameHeader({ time, onSave, onLoad, onNewGame, character }: GameH
             {formatTime(time)}
           </span>
         </div>
+        
+        {/* Adrenaline Bar */}
+        {showAdrenaline && adrenalineState && (
+          <>
+            <div className="h-6 w-px bg-border" />
+            <div className="w-32">
+              <AdrenalineBar state={adrenalineState} compact />
+            </div>
+          </>
+        )}
       </div>
       
       <div className="flex items-center gap-2">
