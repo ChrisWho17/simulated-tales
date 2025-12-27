@@ -58,10 +58,10 @@ const PRIORITY_CONFIG: Record<SystemPriority, {
     label: 'Story' 
   },
   AMBIENT: { 
-    icon: Wind, 
+    icon: Gauge, 
     color: 'text-muted-foreground', 
     bgColor: 'bg-muted/40',
-    label: 'Calm' 
+    label: 'Idle' 
   },
 };
 
