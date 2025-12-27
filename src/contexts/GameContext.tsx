@@ -35,6 +35,42 @@ import {
   startNewChapter,
   getEnhancedPrompt,
 } from '@/game/worldBible';
+import {
+  PressureState,
+  ClockType,
+  ClockAdvanceResult,
+  createPressureState,
+  advanceClock,
+  reduceClock,
+  parseNarrativeForClockTriggers,
+  tickTimeBasedClocks,
+  buildPressureContext,
+  serializePressureState,
+  deserializePressureState,
+} from '@/game/pressureClockSystem';
+import {
+  NPCMotivation,
+  getOrCreateMotivation,
+  updateMotivation,
+  recordPlayerInteraction,
+  getActiveMotivations,
+  buildNPCMotivationContext,
+  calculateNPCReaction,
+  clearMotivations,
+} from '@/game/npcMotivationSystem';
+import {
+  MemoryBite,
+  MemoryBiteType,
+  MemoryBiteStore,
+  createMemoryBite,
+  getBitesForNPC,
+  getUnsurfacedBites,
+  getMostSignificantBite,
+  markBiteSurfaced,
+  getSurfaceNarrative,
+  parseNarrativeForBites,
+  buildMemoryBiteContext,
+} from '@/game/memoryBiteSystem';
 
 // ============================================================================
 // GAME SETTINGS
@@ -172,6 +208,30 @@ interface GameContextType {
   endCurrentSession: (tick: number) => void;
   getCampaign: () => Campaign | null;
   updateCampaignMemory: (updatedStore: CampaignMemoryStore) => void;
+  
+  // Pressure Clock System
+  pressureState: PressureState;
+  advancePressureClock: (clockType: ClockType, amount?: number, reason?: string) => ClockAdvanceResult | null;
+  reducePressureClock: (clockType: ClockType, amount?: number, reason?: string) => void;
+  processNarrativeForPressure: (narrative: string) => ClockAdvanceResult[];
+  tickPressureClocks: (hoursPassed: number) => ClockAdvanceResult[];
+  getPressureContext: () => string;
+  
+  // NPC Motivation System
+  getNPCMotivation: (npcId: string, npcName: string, role?: string) => NPCMotivation;
+  updateNPCMotivation: (npcId: string, updates: Partial<NPCMotivation>) => void;
+  recordNPCInteraction: (npcId: string, action: string, type: 'positive' | 'negative' | 'neutral', impact: number) => void;
+  getAllNPCMotivations: () => NPCMotivation[];
+  getNPCMotivationContext: () => string;
+  
+  // Memory Bite System
+  createBite: (type: MemoryBiteType, npcId: string, npcName: string, context: string, options?: { gameTick?: number; location?: string; emotionalWeight?: number }) => MemoryBite;
+  getBitesForNPC: (npcId: string) => MemoryBite[];
+  getUnsurfacedBitesForNPC: (npcId?: string) => MemoryBite[];
+  surfaceBite: (biteId: string) => void;
+  getSurfaceNarrativeForBite: (bite: MemoryBite) => string;
+  processNarrativeForBites: (narrative: string, npcId: string, npcName: string, gameTick: number) => MemoryBite[];
+  getBiteContext: (npcId: string) => string;
 }
 
 // ============================================================================
@@ -201,6 +261,7 @@ const SETTINGS_STORAGE_KEY = 'untold-game-settings';
 const CAMPAIGN_MEMORY_KEY = 'untold-campaign-memory';
 const EMOTIONAL_STATE_KEY = 'untold-emotional-state';
 const WORLD_BIBLE_KEY = 'untold-world-bible';
+const PRESSURE_STATE_KEY = 'untold-pressure-state';
 
 const loadWorldBibleFromStorage = (): WorldBible | null => {
   try {
@@ -283,6 +344,26 @@ const saveCampaignMemoryToStorage = (store: CampaignMemoryStore): void => {
   }
 };
 
+const loadPressureStateFromStorage = (): PressureState => {
+  try {
+    const saved = localStorage.getItem(PRESSURE_STATE_KEY);
+    if (saved) {
+      return deserializePressureState(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load pressure state:', e);
+  }
+  return createPressureState();
+};
+
+const savePressureStateToStorage = (state: PressureState): void => {
+  try {
+    localStorage.setItem(PRESSURE_STATE_KEY, serializePressureState(state));
+  } catch (e) {
+    console.error('Failed to save pressure state:', e);
+  }
+};
+
 // ============================================================================
 // PROVIDER COMPONENT
 // ============================================================================
@@ -325,6 +406,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return loadWorldBibleFromStorage();
   });
   
+  // Pressure Clock State
+  const [pressureState, setPressureState] = useState<PressureState>(() => {
+    return loadPressureStateFromStorage();
+  });
+  
   // Apply color theme on mount
   useEffect(() => {
     applyColorTheme(colorTheme);
@@ -353,6 +439,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       saveWorldBibleToStorage(worldBible);
     }
   }, [worldBible]);
+  
+  // Auto-save pressure state when it changes
+  useEffect(() => {
+    savePressureStateToStorage(pressureState);
+  }, [pressureState]);
   
   const updateSettings = useCallback((partial: Partial<GameSettings>) => {
     setSettings(prev => ({ ...prev, ...partial }));
@@ -524,6 +615,124 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return serializeWorldBible(worldBible);
   }, [worldBible]);
   
+  // ============================================================================
+  // PRESSURE CLOCK SYSTEM FUNCTIONS
+  // ============================================================================
+  
+  const advancePressureClockFunc = useCallback((
+    clockType: ClockType,
+    amount: number = 1,
+    reason?: string
+  ): ClockAdvanceResult | null => {
+    const result = advanceClock(pressureState, clockType, amount, reason);
+    setPressureState(result.state);
+    return result.result;
+  }, [pressureState]);
+  
+  const reducePressureClockFunc = useCallback((
+    clockType: ClockType,
+    amount: number = 1,
+    reason?: string
+  ): void => {
+    const newState = reduceClock(pressureState, clockType, amount, reason);
+    setPressureState(newState);
+  }, [pressureState]);
+  
+  const processNarrativeForPressureFunc = useCallback((narrative: string): ClockAdvanceResult[] => {
+    const result = parseNarrativeForClockTriggers(narrative, pressureState);
+    setPressureState(result.state);
+    return result.advances;
+  }, [pressureState]);
+  
+  const tickPressureClocksFunc = useCallback((hoursPassed: number): ClockAdvanceResult[] => {
+    const result = tickTimeBasedClocks(pressureState, hoursPassed);
+    setPressureState(result.state);
+    return result.advances;
+  }, [pressureState]);
+  
+  const getPressureContextFunc = useCallback((): string => {
+    return buildPressureContext(pressureState);
+  }, [pressureState]);
+  
+  // ============================================================================
+  // NPC MOTIVATION SYSTEM FUNCTIONS
+  // ============================================================================
+  
+  const getNPCMotivationFunc = useCallback((
+    npcId: string,
+    npcName: string,
+    role?: string
+  ): NPCMotivation => {
+    return getOrCreateMotivation(npcId, npcName, role);
+  }, []);
+  
+  const updateNPCMotivationFunc = useCallback((
+    npcId: string,
+    updates: Partial<NPCMotivation>
+  ): void => {
+    updateMotivation(npcId, updates);
+  }, []);
+  
+  const recordNPCInteractionFunc = useCallback((
+    npcId: string,
+    action: string,
+    type: 'positive' | 'negative' | 'neutral',
+    impact: number
+  ): void => {
+    recordPlayerInteraction(npcId, action, type, impact);
+  }, []);
+  
+  const getAllNPCMotivationsFunc = useCallback((): NPCMotivation[] => {
+    return getActiveMotivations();
+  }, []);
+  
+  const getNPCMotivationContextFunc = useCallback((): string => {
+    return buildNPCMotivationContext(getActiveMotivations());
+  }, []);
+  
+  // ============================================================================
+  // MEMORY BITE SYSTEM FUNCTIONS
+  // ============================================================================
+  
+  const createBiteFunc = useCallback((
+    type: MemoryBiteType,
+    npcId: string,
+    npcName: string,
+    context: string,
+    options?: { gameTick?: number; location?: string; emotionalWeight?: number }
+  ): MemoryBite => {
+    return createMemoryBite(type, npcId, npcName, context, options);
+  }, []);
+  
+  const getBitesForNPCFunc = useCallback((npcId: string): MemoryBite[] => {
+    return getBitesForNPC(npcId);
+  }, []);
+  
+  const getUnsurfacedBitesForNPCFunc = useCallback((npcId?: string): MemoryBite[] => {
+    return getUnsurfacedBites(npcId);
+  }, []);
+  
+  const surfaceBiteFunc = useCallback((biteId: string): void => {
+    markBiteSurfaced(biteId);
+  }, []);
+  
+  const getSurfaceNarrativeForBiteFunc = useCallback((bite: MemoryBite): string => {
+    return getSurfaceNarrative(bite);
+  }, []);
+  
+  const processNarrativeForBitesFunc = useCallback((
+    narrative: string,
+    npcId: string,
+    npcName: string,
+    gameTick: number
+  ): MemoryBite[] => {
+    return parseNarrativeForBites(narrative, npcId, npcName, gameTick);
+  }, []);
+  
+  const getBiteContextFunc = useCallback((npcId: string): string => {
+    return buildMemoryBiteContext(npcId);
+  }, []);
+  
   const value: GameContextType = {
     settings,
     updateSettings,
@@ -557,6 +766,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     advanceChapter: advanceChapterFunc,
     restoreWorldBible: restoreWorldBibleFunc,
     getSerializedWorldBible: getSerializedWorldBibleFunc,
+    // Pressure Clock System
+    pressureState,
+    advancePressureClock: advancePressureClockFunc,
+    reducePressureClock: reducePressureClockFunc,
+    processNarrativeForPressure: processNarrativeForPressureFunc,
+    tickPressureClocks: tickPressureClocksFunc,
+    getPressureContext: getPressureContextFunc,
+    // NPC Motivation System
+    getNPCMotivation: getNPCMotivationFunc,
+    updateNPCMotivation: updateNPCMotivationFunc,
+    recordNPCInteraction: recordNPCInteractionFunc,
+    getAllNPCMotivations: getAllNPCMotivationsFunc,
+    getNPCMotivationContext: getNPCMotivationContextFunc,
+    // Memory Bite System
+    createBite: createBiteFunc,
+    getBitesForNPC: getBitesForNPCFunc,
+    getUnsurfacedBitesForNPC: getUnsurfacedBitesForNPCFunc,
+    surfaceBite: surfaceBiteFunc,
+    getSurfaceNarrativeForBite: getSurfaceNarrativeForBiteFunc,
+    processNarrativeForBites: processNarrativeForBitesFunc,
+    getBiteContext: getBiteContextFunc,
   };
   
   return (
