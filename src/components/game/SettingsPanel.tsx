@@ -204,6 +204,123 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
                 />
               </div>
+              
+              {/* In-Depth Settings Section */}
+              <div className="space-y-3 pt-4 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">In-Depth Mode</h3>
+                </div>
+                
+                {/* World Tone */}
+                <div className="space-y-2 pl-1">
+                  <span className="text-sm">World Tone</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['cozy', 'balanced', 'brutal'] as const).map((tone) => (
+                      <button
+                        key={tone}
+                        onClick={() => updateSettings({ 
+                          inDepthSettings: { ...settings.inDepthSettings, worldTone: tone }
+                        })}
+                        className={cn(
+                          "px-3 py-2 text-xs rounded-md border transition-colors capitalize",
+                          settings.inDepthSettings?.worldTone === tone
+                            ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                            : "border-border/50 hover:border-border"
+                        )}
+                      >
+                        {tone === 'cozy' ? '🌸 Cozy' : tone === 'brutal' ? '💀 Brutal' : '⚖️ Balanced'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Realism Toggles */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm">Hunger & Thirst</span>
+                    <p className="text-xs text-muted-foreground">Track survival needs</p>
+                  </div>
+                  <Switch 
+                    checked={settings.inDepthSettings?.enableHunger ?? false}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      inDepthSettings: { ...settings.inDepthSettings, enableHunger: checked }
+                    })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm">Fatigue System</span>
+                    <p className="text-xs text-muted-foreground">Track energy and sleep</p>
+                  </div>
+                  <Switch 
+                    checked={settings.inDepthSettings?.enableFatigue ?? false}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      inDepthSettings: { ...settings.inDepthSettings, enableFatigue: checked }
+                    })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm">Equipment Wear</span>
+                    <p className="text-xs text-muted-foreground">Items degrade over time</p>
+                  </div>
+                  <Switch 
+                    checked={settings.inDepthSettings?.enableEquipmentWear ?? false}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      inDepthSettings: { ...settings.inDepthSettings, enableEquipmentWear: checked }
+                    })}
+                  />
+                </div>
+
+                {/* Content Focus */}
+                <div className="space-y-2 pt-2">
+                  <span className="text-sm">Social vs Combat Focus</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['light', 'balanced', 'heavy'] as const).map((weight) => (
+                      <button
+                        key={weight}
+                        onClick={() => updateSettings({ 
+                          inDepthSettings: { ...settings.inDepthSettings, socialWeight: weight }
+                        })}
+                        className={cn(
+                          "px-3 py-2 text-xs rounded-md border transition-colors",
+                          settings.inDepthSettings?.socialWeight === weight
+                            ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                            : "border-border/50 hover:border-border"
+                        )}
+                      >
+                        {weight === 'light' ? '⚔️ Combat' : weight === 'heavy' ? '💬 Social' : '⚖️ Both'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mystery Density */}
+                <div className="space-y-2 pt-2">
+                  <span className="text-sm">Mystery Density</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['low', 'medium', 'high'] as const).map((density) => (
+                      <button
+                        key={density}
+                        onClick={() => updateSettings({ 
+                          inDepthSettings: { ...settings.inDepthSettings, mysteryDensity: density }
+                        })}
+                        className={cn(
+                          "px-3 py-2 text-xs rounded-md border transition-colors capitalize",
+                          settings.inDepthSettings?.mysteryDensity === density
+                            ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                            : "border-border/50 hover:border-border"
+                        )}
+                      >
+                        {density === 'low' ? '📖 Clear' : density === 'high' ? '🔮 Dense' : '🎭 Medium'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           
