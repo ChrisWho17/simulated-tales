@@ -71,6 +71,12 @@ export interface GameSettings {
   enableReputationSystem: boolean;     // Faction/NPC reputation tracking
   enableXPSystem: boolean;             // Experience and leveling
   enableInventoryWeight: boolean;      // Inventory capacity limits
+  
+  // Adrenaline system
+  enableAdrenalineSystem?: boolean;    // Hidden wounds under stress
+  
+  // Developer/Debug toggles
+  showEventBusDebug?: boolean;         // Event bus debug panel
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -133,6 +139,12 @@ export const DEFAULT_SETTINGS: GameSettings = {
   enableReputationSystem: true,
   enableXPSystem: true,
   enableInventoryWeight: true,
+  
+  // Adrenaline system
+  enableAdrenalineSystem: true,
+  
+  // Developer/Debug toggles
+  showEventBusDebug: false,
 };
 
 // Get current settings (alias for loadSettings)

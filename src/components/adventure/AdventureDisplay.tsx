@@ -43,6 +43,8 @@ import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnch
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
 import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
+import { CheckSelfButton } from '@/components/game/CheckSelfButton';
+import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
   addRelationshipMoment,
@@ -183,6 +185,9 @@ export function AdventureDisplay({
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
+  
+  // Game loop for adrenaline system
+  const [gameLoopState, gameLoopActions] = useGameLoop();
   
   // Get registered NPC names for clickable links in narrative
   const npcNameMap = useRegisteredNPCNames();
@@ -1233,6 +1238,19 @@ export function AdventureDisplay({
               {/* Saves Dropdown */}
               <SavesDropdown />
               
+              {/* Check Self Button - Only show if adrenaline system enabled */}
+              {(gameContext?.settings?.enableAdrenalineSystem || gameContext?.settings?.enableWoundSystem) && (
+                <CheckSelfButton
+                  adrenalineState={gameLoopState.adrenalineState}
+                  onStateUpdate={(newState) => {
+                    // State is managed by gameLoop hook
+                    console.log('[CheckSelf] State updated with', newState.hiddenDamage.wounds.length, 'hidden wounds');
+                  }}
+                  medicalSkill={0} // Could be derived from character stats if available
+                  disabled={isLoading}
+                />
+              )}
+              
               {/* Inventory */}
               <Button
                 variant="ghost"
@@ -1574,8 +1592,8 @@ export function AdventureDisplay({
         }}
       />
       
-      {/* Event Bus Debug Panel - only show in cheat mode */}
-      {cheatMode && <EventBusDebugPanel />}
+      {/* Event Bus Debug Panel - show if enabled in settings or cheat mode */}
+      {(cheatMode || (gameContext?.settings?.showEventBusDebug ?? false)) && <EventBusDebugPanel />}
     </div>
   );
 }

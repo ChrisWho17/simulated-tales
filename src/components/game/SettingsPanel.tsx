@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
-  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages
+  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug
 } from 'lucide-react';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
@@ -551,6 +551,27 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 italic">Learn new languages through gameplay</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Developer/Debug Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bug className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Developer Tools</h3>
+                </div>
+                
+                <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Event Bus Debug Panel</span>
+                      <p className="text-xs text-muted-foreground">Show real-time system events timeline</p>
+                    </div>
+                    <Switch 
+                      checked={settings.showEventBusDebug ?? false}
+                      onCheckedChange={(checked) => updateSettings({ showEventBusDebug: checked })}
+                    />
                   </div>
                 </div>
               </div>
