@@ -1618,7 +1618,13 @@ export function AdventureGame() {
 
   // Phase 1: Scenario selection
   if (phase === 'scenario') {
-    return <AdventureCreator onSelect={handleScenarioSelect} isLoading={isLoading} />;
+    return (
+      <AdventureCreator 
+        onSelect={handleScenarioSelect} 
+        onLoadCampaign={() => window.location.reload()} 
+        isLoading={isLoading} 
+      />
+    );
   }
 
   // Phase 1.5: Color selection
@@ -1683,5 +1689,11 @@ export function AdventureGame() {
   }
 
   // Fallback - only for truly unhandled states
-  return <AdventureCreator onSelect={handleScenarioSelect} isLoading={isLoading} />;
+  return (
+    <AdventureCreator 
+      onSelect={handleScenarioSelect} 
+      onLoadCampaign={() => window.location.reload()} 
+      isLoading={isLoading} 
+    />
+  );
 }

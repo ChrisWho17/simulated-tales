@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield, BookOpen, Dices, Swords, Lock, Plus, X } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Check, Shield, BookOpen, Dices, Swords, Lock, Plus, X, FolderOpen, Trash2 } from 'lucide-react';
+import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
+import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
@@ -46,6 +48,7 @@ export interface ScenarioSelection {
 
 interface AdventureCreatorProps {
   onSelect: (selection: ScenarioSelection) => void;
+  onLoadCampaign?: (campaignId: string) => void;
   isLoading: boolean;
 }
 
@@ -107,47 +110,94 @@ const getBlendLabel = (value: number): string => {
   return 'Strong';
 };
 
-// Contract badge component - vertical card layout for multiple genres
-function ContractBadge({ config }: { config: GenreContractConfig }) {
-  const allGenres = getAllGenres();
-  const primaryName = allGenres.find(g => g.id === config.primaryGenre)?.name || config.primaryGenre;
-  
-  // Simple badge for primary-only
-  if (config.secondaryGenres.length === 0) {
+// Load Story Dropdown component - shows saved campaigns
+function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }) {
+  const [campaigns, setCampaigns] = useState<CampaignMetadata[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Load campaigns from storage
+  useEffect(() => {
+    const loadedCampaigns = loadCampaignIndex();
+    // Sort by most recently updated
+    setCampaigns(loadedCampaigns.sort((a, b) => b.updatedAt - a.updatedAt));
+  }, [isOpen]); // Refresh when dropdown opens
+
+  const handleLoad = (campaignId: string) => {
+    setActiveCampaignId(campaignId);
+    setIsOpen(false);
+    if (onLoad) {
+      onLoad(campaignId);
+    } else {
+      // Fallback: reload page to trigger campaign load
+      window.location.reload();
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent, campaignId: string, campaignName: string) => {
+    e.stopPropagation();
+    if (confirm(`Delete "${campaignName}"? This cannot be undone.`)) {
+      deleteCampaignData(campaignId);
+      setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+    }
+  };
+
+  if (campaigns.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 border border-primary/30 text-sm">
-        <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
-        <span className="text-primary font-medium">{primaryName}</span>
-        {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400" />}
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 text-sm text-muted-foreground">
+        <FolderOpen className="w-4 h-4" />
+        <span>No saves</span>
       </div>
     );
   }
 
-  // Vertical card layout for multiple genres
   return (
-    <div className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-primary/20 border border-primary/30 text-sm min-w-[140px]">
-      {/* Primary genre */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-lg">{GENRE_ICONS[config.primaryGenre]}</span>
-        <span className="text-primary font-medium">{primaryName}</span>
-      </div>
-      
-      {/* Secondary genres */}
-      {config.secondaryGenres.map((s) => (
-        <div key={s.genreId} className="flex items-center gap-1 text-muted-foreground text-xs">
-          <span>+</span>
-          <span className="text-base">{GENRE_ICONS[s.genreId]}</span>
-          <span>{allGenres.find(g => g.id === s.genreId)?.name} ({s.blendStrength}%)</span>
-        </div>
-      ))}
-      
-      {/* Hard lock indicator */}
-      {config.hardLock && <Lock className="w-3.5 h-3.5 text-amber-400 mt-1" />}
-    </div>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 border border-primary/30 text-sm hover:bg-primary/30"
+        >
+          <FolderOpen className="w-4 h-4 text-primary" />
+          <span className="text-primary font-medium">Load Story</span>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
+        {campaigns.map((campaign) => (
+          <DropdownMenuItem 
+            key={campaign.id}
+            onClick={() => handleLoad(campaign.id)}
+            className="flex items-start gap-3 p-3 cursor-pointer group"
+          >
+            <div className="text-xl shrink-0">
+              {GENRE_ICONS[campaign.primaryGenre as GameGenre] || '📖'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-foreground truncate">{campaign.name}</div>
+              <div className="text-xs text-muted-foreground">
+                {campaign.characterName} · Lvl {campaign.characterLevel}
+              </div>
+              <div className="text-xs text-muted-foreground/70">
+                {formatPlayTime(campaign.playTime)} · {formatLastPlayed(campaign.updatedAt)}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={(e) => handleDelete(e, campaign.id, campaign.name)}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps) {
+export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: AdventureCreatorProps) {
   const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
@@ -299,7 +349,7 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
           <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-primary font-display text-xl tracking-wide">Genre Contract Setup</h2>
-              <ContractBadge config={genreContract} />
+              <LoadStoryDropdown onLoad={onLoadCampaign} />
             </div>
 
             {/* Primary Genre Section */}
