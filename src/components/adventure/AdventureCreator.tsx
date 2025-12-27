@@ -6,7 +6,7 @@ import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, 
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
+import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS, parseGenreTagsFromText, stripGenreTagsFromText } from '@/lib/genreDetection';
 import { DiceMode, DICE_MODES, saveDiceMode } from '@/game/diceSystem';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -165,12 +165,32 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
     return allGenres.filter(g => !selectedIds.includes(g.id));
   }, [allGenres, primaryGenre, secondaryGenres]);
 
-  // Build genre contract config
+  // Parse genre tags from custom scenario text
+  const parsedGenreTags = useMemo(() => {
+    if (!customScenario.trim() || hardLock) return [];
+    return parseGenreTagsFromText(customScenario, primaryGenre);
+  }, [customScenario, primaryGenre, hardLock]);
+
+  // Combine manually selected secondary genres with parsed tags
+  const effectiveSecondaryGenres = useMemo(() => {
+    const combined: SecondaryGenre[] = [...secondaryGenres];
+    
+    // Add parsed tags that aren't already manually selected
+    for (const tag of parsedGenreTags) {
+      if (!combined.some(s => s.genreId === tag.genre)) {
+        combined.push({ genreId: tag.genre, blendStrength: tag.blendStrength });
+      }
+    }
+    
+    return combined.slice(0, 2); // Max 2 secondary genres
+  }, [secondaryGenres, parsedGenreTags]);
+
+  // Build genre contract config for display (uses effective secondary genres)
   const genreContract: GenreContractConfig = useMemo(() => ({
     primaryGenre,
-    secondaryGenres,
+    secondaryGenres: effectiveSecondaryGenres,
     hardLock
-  }), [primaryGenre, secondaryGenres, hardLock]);
+  }), [primaryGenre, effectiveSecondaryGenres, hardLock]);
 
   // Detect war era from text when war genre is active
   const detectedWarEra = useMemo(() => {
@@ -235,12 +255,19 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
   const handleCustomStart = () => {
     if (customScenario.trim()) {
       saveDiceMode(selectedDiceMode);
+      // Strip genre tags from the scenario text for cleaner narrative
+      const cleanScenario = stripGenreTagsFromText(customScenario.trim());
+      const finalContract: GenreContractConfig = {
+        primaryGenre,
+        secondaryGenres: effectiveSecondaryGenres,
+        hardLock
+      };
       onSelect({ 
-        scenario: customScenario.trim(), 
+        scenario: cleanScenario || customScenario.trim(), 
         genre: primaryGenre, 
         genreTitle: getGenreTitle(primaryGenre),
         diceMode: selectedDiceMode,
-        genreContract
+        genreContract: finalContract
       });
     }
   };
@@ -425,7 +452,7 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
               <Input
                 value={customScenario}
                 onChange={(e) => setCustomScenario(e.target.value)}
-                placeholder="Describe your scenario... (e.g., 'A hacker in a neon-lit city')"
+                placeholder="Describe your scenario... (try '+horror' or '+mystery 20%' to blend genres)"
                 className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
                 onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
                 disabled={isLoading}
@@ -439,6 +466,23 @@ export function AdventureCreator({ onSelect, isLoading }: AdventureCreatorProps)
                 Begin
               </Button>
             </div>
+
+            {/* Parsed genre tags indicator */}
+            {parsedGenreTags.length > 0 && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Detected genres:</span>
+                {parsedGenreTags.map((tag) => (
+                  <span 
+                    key={tag.genre} 
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30"
+                  >
+                    <span>{GENRE_ICONS[tag.genre]}</span>
+                    <span>{tag.name}</span>
+                    <span className="text-muted-foreground">({tag.blendStrength}%)</span>
+                  </span>
+                ))}
+              </div>
+            )}
             
             {/* Quick Start - use genre contract without custom scenario */}
             <div className="mt-4 flex items-center gap-3">

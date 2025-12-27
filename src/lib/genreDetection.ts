@@ -174,3 +174,150 @@ export function getAllGenres(): { id: GameGenre; name: string; icon: string }[] 
 export function getGenreTitle(genre: GameGenre): string {
   return GENRE_TITLES[genre];
 }
+
+// Genre name mappings for parsing user input
+const GENRE_ALIASES: Record<string, GameGenre> = {
+  // Fantasy
+  'fantasy': 'fantasy',
+  'medieval': 'fantasy',
+  'magic': 'fantasy',
+  'sword and sorcery': 'fantasy',
+  
+  // Sci-Fi
+  'scifi': 'scifi',
+  'sci-fi': 'scifi',
+  'science fiction': 'scifi',
+  'space': 'scifi',
+  'futuristic': 'scifi',
+  
+  // Horror
+  'horror': 'horror',
+  'scary': 'horror',
+  'supernatural': 'horror',
+  'creepy': 'horror',
+  
+  // Mystery
+  'mystery': 'mystery',
+  'detective': 'mystery',
+  'noir': 'mystery',
+  'crime': 'mystery',
+  
+  // Pirate
+  'pirate': 'pirate',
+  'pirates': 'pirate',
+  'nautical': 'pirate',
+  'seafaring': 'pirate',
+  
+  // Western
+  'western': 'western',
+  'cowboy': 'western',
+  'frontier': 'western',
+  'wild west': 'western',
+  
+  // Cyberpunk
+  'cyberpunk': 'cyberpunk',
+  'cyber': 'cyberpunk',
+  'neon': 'cyberpunk',
+  'dystopia': 'cyberpunk',
+  
+  // Post-Apocalyptic
+  'postapoc': 'postapoc',
+  'post-apocalyptic': 'postapoc',
+  'apocalypse': 'postapoc',
+  'wasteland': 'postapoc',
+  'post apocalyptic': 'postapoc',
+  
+  // War
+  'war': 'war',
+  'military': 'war',
+  'combat': 'war',
+  'battlefield': 'war',
+  
+  // Modern Life
+  'modern': 'modern_life',
+  'modern life': 'modern_life',
+  'contemporary': 'modern_life',
+  'realistic': 'modern_life',
+  'slice of life': 'modern_life',
+};
+
+export interface ParsedGenreTag {
+  genre: GameGenre;
+  name: string;
+  blendStrength: number;
+}
+
+/**
+ * Parse genre tags from text input. Supports formats like:
+ * - "+horror" - adds horror as secondary genre with default 15% blend
+ * - "+horror 25" or "+horror 25%" - adds horror with 25% blend
+ * - "with horror" - adds horror as secondary
+ * - "horror elements" - adds horror as secondary
+ */
+export function parseGenreTagsFromText(text: string, excludeGenre?: GameGenre): ParsedGenreTag[] {
+  const tags: ParsedGenreTag[] = [];
+  const lower = text.toLowerCase();
+  
+  // Pattern 1: "+genre" or "+genre XX%" format
+  const plusPattern = /\+\s*([a-z\-\s]+?)(?:\s+(\d+)%?)?(?=\s|$|[,.])/gi;
+  let match;
+  
+  while ((match = plusPattern.exec(lower)) !== null) {
+    const genreName = match[1].trim();
+    const blendStr = match[2];
+    const genre = GENRE_ALIASES[genreName];
+    
+    if (genre && genre !== excludeGenre && !tags.some(t => t.genre === genre)) {
+      const blend = blendStr ? Math.min(30, Math.max(0, parseInt(blendStr))) : 15;
+      tags.push({
+        genre,
+        name: getAllGenres().find(g => g.id === genre)?.name || genreName,
+        blendStrength: blend
+      });
+    }
+  }
+  
+  // Pattern 2: "with [genre]" format
+  const withPattern = /\bwith\s+([a-z\-\s]+?)(?:\s+elements?)?(?=\s|$|[,.])/gi;
+  while ((match = withPattern.exec(lower)) !== null) {
+    const genreName = match[1].trim();
+    const genre = GENRE_ALIASES[genreName];
+    
+    if (genre && genre !== excludeGenre && !tags.some(t => t.genre === genre)) {
+      tags.push({
+        genre,
+        name: getAllGenres().find(g => g.id === genre)?.name || genreName,
+        blendStrength: 15
+      });
+    }
+  }
+  
+  // Pattern 3: "[genre] elements" format
+  const elementsPattern = /\b([a-z\-\s]+?)\s+elements?\b/gi;
+  while ((match = elementsPattern.exec(lower)) !== null) {
+    const genreName = match[1].trim();
+    const genre = GENRE_ALIASES[genreName];
+    
+    if (genre && genre !== excludeGenre && !tags.some(t => t.genre === genre)) {
+      tags.push({
+        genre,
+        name: getAllGenres().find(g => g.id === genre)?.name || genreName,
+        blendStrength: 10
+      });
+    }
+  }
+  
+  // Limit to 2 secondary genres
+  return tags.slice(0, 2);
+}
+
+/**
+ * Remove genre tags from text to get clean scenario description
+ */
+export function stripGenreTagsFromText(text: string): string {
+  return text
+    .replace(/\+\s*[a-z\-\s]+?(?:\s+\d+%?)?(?=\s|$|[,.])/gi, '')
+    .replace(/\bwith\s+[a-z\-\s]+?(?:\s+elements?)?(?=\s|$|[,.])/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
