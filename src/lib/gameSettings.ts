@@ -77,6 +77,9 @@ export interface GameSettings {
   
   // Developer/Debug toggles
   showEventBusDebug?: boolean;         // Event bus debug panel
+  
+  // UI toggles
+  showConsequenceFeed?: boolean;       // Real-time consequence feedback
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -145,6 +148,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Developer/Debug toggles
   showEventBusDebug: false,
+  
+  // UI toggles
+  showConsequenceFeed: true,
 };
 
 // Get current settings (alias for loadSettings)

@@ -139,6 +139,9 @@ export interface GameSettings {
   
   // Developer/Debug toggles
   showEventBusDebug: boolean;
+  
+  // UI toggles
+  showConsequenceFeed: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -200,6 +203,9 @@ const defaultSettings: GameSettings = {
   
   // Developer/Debug toggles
   showEventBusDebug: false,
+  
+  // UI toggles
+  showConsequenceFeed: true,
 };
 
 // ============================================================================

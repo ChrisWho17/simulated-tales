@@ -187,8 +187,11 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
   
-  // Game loop for adrenaline system
-  const [gameLoopState, gameLoopActions] = useGameLoop();
+  // Game loop for adrenaline system with player health for Director priority
+  const [gameLoopState, gameLoopActions] = useGameLoop({
+    playerHealth: character.currentHealth,
+    playerMaxHealth: character.maxHealth,
+  });
   
   // Get registered NPC names for clickable links in narrative
   const npcNameMap = useRegisteredNPCNames();
@@ -1596,8 +1599,8 @@ export function AdventureDisplay({
       {/* Event Bus Debug Panel - show if enabled in settings or cheat mode */}
       {(cheatMode || (gameContext?.settings?.showEventBusDebug ?? false)) && <EventBusDebugPanel />}
       
-      {/* Consequence Feed - always visible for real-time feedback */}
-      <ConsequenceFeed compact={false} />
+      {/* Consequence Feed - show if enabled in settings */}
+      {(gameContext?.settings?.showConsequenceFeed ?? true) && <ConsequenceFeed compact={false} />}
     </div>
   );
 }

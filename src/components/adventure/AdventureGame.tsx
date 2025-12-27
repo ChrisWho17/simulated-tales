@@ -524,7 +524,11 @@ export function AdventureGame() {
   });
   
   // === GAME LOOP: Manages ripples, world state, rumors, NPCs ===
-  const [gameLoopState, gameLoopActions] = useGameLoop(campaignMemory?.campaign.currentTick || 0);
+  const [gameLoopState, gameLoopActions] = useGameLoop({
+    initialTurn: campaignMemory?.campaign.currentTick || 0,
+    playerHealth: character?.currentHealth,
+    playerMaxHealth: character?.maxHealth,
+  });
   
   // Destructure for easier access
   const { worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, activeConsequences } = gameLoopState;
