@@ -1,6 +1,6 @@
 // NPC Name Link - Makes NPC names in narrative text clickable
 import { useState, useMemo, useCallback } from 'react';
-import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC } from '@/game/npcIdentityRegistry';
+import { RegisteredNPC, getAllRegisteredNPCs, getSiblings, getRegisteredNPC, loadNPCRegistry } from '@/game/npcIdentityRegistry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { User, Users, Briefcase, MapPin, Heart, Camera, Loader2 } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+
+// Ensure NPC registry is loaded
+loadNPCRegistry();
 
 interface NPCProfileModalProps {
   npc: RegisteredNPC;
@@ -305,18 +308,19 @@ export function PlayerNameLink({ playerName, onShowCharacterSheet, className }: 
 }
 
 // Hook to get all known NPC names for text parsing
+// This is called on every render to ensure we have the latest NPCs
 export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
-  return useMemo(() => {
-    const npcs = getAllRegisteredNPCs();
-    const nameMap = new Map<string, RegisteredNPC>();
-    
-    for (const npc of npcs) {
-      // Map by lowercase name for case-insensitive matching
-      nameMap.set(npc.permanent.name.toLowerCase(), npc);
-    }
-    
-    return nameMap;
-  }, []);
+  // Don't use useMemo here - we need to always get fresh data since
+  // NPCs can be registered during narrative processing
+  const npcs = getAllRegisteredNPCs();
+  const nameMap = new Map<string, RegisteredNPC>();
+  
+  for (const npc of npcs) {
+    // Map by lowercase name for case-insensitive matching
+    nameMap.set(npc.permanent.name.toLowerCase(), npc);
+  }
+  
+  return nameMap;
 }
 
 // Helper function to parse text and insert NPC and Player links
