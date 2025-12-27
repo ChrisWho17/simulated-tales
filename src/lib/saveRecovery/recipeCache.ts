@@ -154,8 +154,9 @@ export function getAllRecipes(): RecoveryRecipe[] {
 export function getRecipeCacheStats(): {
   recipeCount: number;
   totalApplied: number;
-  oldestRecipe: number | null;
-  newestRecipe: number | null;
+  oldestRecipe: number;
+  newestRecipe: number;
+  engineVersion: string;
 } {
   const cache = loadRecipeCache();
   const recipes = Object.values(cache.recipes);
@@ -164,8 +165,9 @@ export function getRecipeCacheStats(): {
     return {
       recipeCount: 0,
       totalApplied: 0,
-      oldestRecipe: null,
-      newestRecipe: null,
+      oldestRecipe: 0,
+      newestRecipe: 0,
+      engineVersion: cache.engineVersion,
     };
   }
   
@@ -177,6 +179,7 @@ export function getRecipeCacheStats(): {
     totalApplied,
     oldestRecipe: Math.min(...times),
     newestRecipe: Math.max(...times),
+    engineVersion: cache.engineVersion,
   };
 }
 
