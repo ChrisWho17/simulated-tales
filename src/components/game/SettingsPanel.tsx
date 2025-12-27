@@ -36,6 +36,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     initialized: audioInitialized,
     muted: audioMuted,
     volumes: audioVolumes,
+    unlocked: audioUnlocked,
     initializeAudio,
     setMasterVolume,
     setChannelVolume,
@@ -835,8 +836,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* Audio Tab */}
           {activeTab === 'audio' && (
             <div className="space-y-6">
-              {/* Initialize Audio Button */}
-              {!audioInitialized && (
+              {/* Audio Status Indicator */}
+              {!audioUnlocked && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <VolumeX className="w-4 h-4 text-amber-500" />
+                  <div>
+                    <span className="text-sm font-medium text-amber-500">Audio Locked</span>
+                    <p className="text-xs text-muted-foreground">
+                      Click anywhere on the page to unlock audio playback
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {audioUnlocked && !audioInitialized && (
                 <button
                   onClick={initializeAudio}
                   className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary/40 
@@ -848,6 +861,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <p className="text-xs text-muted-foreground">Click to initialize the audio system</p>
                   </div>
                 </button>
+              )}
+              
+              {audioUnlocked && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <Volume2 className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-green-500">Audio unlocked and ready</span>
+                </div>
               )}
               
               {/* Master Sound Toggle */}
