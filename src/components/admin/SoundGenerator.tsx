@@ -1028,19 +1028,58 @@ export const SoundGenerator: React.FC = () => {
   };
 
   const getDuration = (category: SoundCategory, soundKey: string) => {
+    // Weather sounds - longer for ambient looping
     if (category === 'weather') return 15;
-    // Short sounds (2-3 seconds)
-    if (soundKey.startsWith('combat_') || soundKey.startsWith('gun_') || 
-        soundKey.startsWith('footstep_') || soundKey.startsWith('human_gasp') ||
-        soundKey.startsWith('human_grunt') || soundKey.startsWith('human_cough')) return 3;
-    // Medium sounds (5 seconds)
-    if (soundKey.startsWith('door_') || soundKey.startsWith('object_') || 
-        soundKey.startsWith('explosion_') || soundKey.startsWith('creature_') ||
-        soundKey.startsWith('magic_') || soundKey.startsWith('scifi_') ||
-        soundKey.startsWith('music_')) return 5;
-    // Longer sounds (8 seconds)
-    if (soundKey.startsWith('vehicle_') || soundKey.startsWith('crowd_') ||
-        soundKey.startsWith('element_') || soundKey.startsWith('human_')) return 8;
+    
+    // === VERY SHORT (1-2 seconds) - instant impacts ===
+    if (soundKey.startsWith('gun_pistol') || soundKey.startsWith('gun_rifle') ||
+        soundKey.startsWith('gun_shotgun') || soundKey.startsWith('gun_bullet')) return 2;
+    if (soundKey.startsWith('combat_punch') || soundKey.startsWith('combat_kick') ||
+        soundKey.startsWith('combat_dagger')) return 2;
+    if (soundKey.startsWith('human_gasp') || soundKey.startsWith('human_cough') ||
+        soundKey.startsWith('human_grunt')) return 2;
+    if (soundKey.startsWith('object_glass_break')) return 2;
+    if (soundKey.startsWith('music_drum') || soundKey.startsWith('music_bell')) return 2;
+    
+    // === SHORT (3-4 seconds) - quick actions ===
+    if (soundKey.startsWith('combat_sword') || soundKey.startsWith('combat_axe') ||
+        soundKey.startsWith('combat_mace') || soundKey.startsWith('combat_bow')) return 3;
+    if (soundKey.startsWith('gun_reload') || soundKey.startsWith('gun_machinegun')) return 4;
+    if (soundKey.startsWith('footstep_')) return 3;
+    if (soundKey.startsWith('door_')) return 3;
+    if (soundKey.startsWith('object_keys') || soundKey.startsWith('object_coins') ||
+        soundKey.startsWith('object_lever') || soundKey.startsWith('object_chain')) return 3;
+    if (soundKey.startsWith('human_scream') || soundKey.startsWith('human_laugh')) return 4;
+    if (soundKey.startsWith('magic_spell') || soundKey.startsWith('magic_heal') ||
+        soundKey.startsWith('scifi_laser') || soundKey.startsWith('scifi_teleport')) return 3;
+    if (soundKey.startsWith('music_horn') || soundKey.startsWith('music_strings')) return 4;
+    
+    // === MEDIUM (5-6 seconds) - events with buildup ===
+    if (soundKey.startsWith('explosion_')) return 5;
+    if (soundKey.startsWith('creature_wolf') || soundKey.startsWith('creature_dog') ||
+        soundKey.startsWith('creature_cat') || soundKey.startsWith('creature_bird') ||
+        soundKey.startsWith('creature_snake') || soundKey.startsWith('creature_insect')) return 5;
+    if (soundKey.startsWith('creature_dragon') || soundKey.startsWith('creature_monster') ||
+        soundKey.startsWith('creature_demon') || soundKey.startsWith('creature_zombie') ||
+        soundKey.startsWith('creature_ghost') || soundKey.startsWith('creature_werewolf')) return 6;
+    if (soundKey.startsWith('creature_horse') || soundKey.startsWith('creature_bear')) return 5;
+    if (soundKey.startsWith('object_chest')) return 4;
+    if (soundKey.startsWith('human_cry') || soundKey.startsWith('human_breath') ||
+        soundKey.startsWith('human_heartbeat')) return 6;
+    if (soundKey.startsWith('element_fire') || soundKey.startsWith('element_water') ||
+        soundKey.startsWith('element_electricity') || soundKey.startsWith('element_ice')) return 6;
+    if (soundKey.startsWith('magic_portal') || soundKey.startsWith('scifi_tech')) return 5;
+    
+    // === LONGER (8-10 seconds) - sustained sounds ===
+    if (soundKey.startsWith('vehicle_car') || soundKey.startsWith('vehicle_motorcycle') ||
+        soundKey.startsWith('vehicle_truck') || soundKey.startsWith('vehicle_bus')) return 8;
+    if (soundKey.startsWith('vehicle_tank') || soundKey.startsWith('vehicle_helicopter') ||
+        soundKey.startsWith('vehicle_airplane') || soundKey.startsWith('vehicle_drone')) return 10;
+    if (soundKey.startsWith('vehicle_bicycle') || soundKey.startsWith('vehicle_hydraulics')) return 6;
+    if (soundKey.startsWith('crowd_')) return 8;
+    if (soundKey.startsWith('element_earthquake')) return 10;
+    
+    // Default fallback
     return 5;
   };
 
