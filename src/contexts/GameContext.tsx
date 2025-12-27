@@ -136,6 +136,9 @@ export interface GameSettings {
   enableXPSystem: boolean;
   enableInventoryWeight: boolean;
   enableAdrenalineSystem: boolean;
+  
+  // Developer/Debug toggles
+  showEventBusDebug: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -194,6 +197,9 @@ const defaultSettings: GameSettings = {
   enableXPSystem: true,
   enableInventoryWeight: true,
   enableAdrenalineSystem: false,
+  
+  // Developer/Debug toggles
+  showEventBusDebug: false,
 };
 
 // ============================================================================
