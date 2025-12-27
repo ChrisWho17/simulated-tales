@@ -4,3 +4,4 @@ export { AutoSaveIndicator } from './AutoSaveIndicator';
 export { CheckpointManager } from './CheckpointManager';
 export { MigrationPrompt } from './MigrationPrompt';
 export { SavesDropdown } from './SavesDropdown';
+export { SaveRecoveryModal } from './SaveRecoveryModal';
