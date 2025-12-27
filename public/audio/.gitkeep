@@ -1,0 +1,34 @@
+# Weather Sounds Directory
+# Generated sounds will be placed here after using the Sound Generator at /sound-generator
+
+# Expected structure:
+# /weather/
+#   rain_light_1.mp3 - rain_light_6.mp3
+#   rain_medium_1.mp3 - rain_medium_6.mp3
+#   rain_heavy_1.mp3 - rain_heavy_6.mp3
+#   rain_on_roof_1.mp3 - rain_on_roof_6.mp3
+#   rain_on_leaves_1.mp3 - rain_on_leaves_6.mp3
+#   thunder_distant_1.mp3 - thunder_distant_6.mp3
+#   thunder_close_1.mp3 - thunder_close_6.mp3
+#   wind_light_1.mp3 - wind_light_6.mp3
+#   wind_medium_1.mp3 - wind_medium_6.mp3
+#   wind_strong_1.mp3 - wind_strong_6.mp3
+#   wind_howl_1.mp3 - wind_howl_6.mp3
+#   wind_gust_1.mp3 - wind_gust_6.mp3
+#   storm_wind_1.mp3 - storm_wind_6.mp3
+#   storm_rain_1.mp3 - storm_rain_6.mp3
+#   storm_ambient_1.mp3 - storm_ambient_6.mp3
+#   snow_ambient_1.mp3 - snow_ambient_6.mp3
+#   snow_crunch_1.mp3 - snow_crunch_6.mp3
+#   fog_ambient_1.mp3 - fog_ambient_6.mp3
+#   heat_ambient_1.mp3 - heat_ambient_6.mp3
+
+# /ambience/
+#   amb_birds_light_1.mp3 - amb_birds_light_6.mp3
+#   amb_breeze_light_1.mp3 - amb_breeze_light_6.mp3
+#   amb_crickets_1.mp3 - amb_crickets_6.mp3
+#   amb_night_breeze_1.mp3 - amb_night_breeze_6.mp3
+#   amb_birds_dawn_1.mp3 - amb_birds_dawn_6.mp3
+#   amb_morning_breeze_1.mp3 - amb_morning_breeze_6.mp3
+#   amb_evening_birds_1.mp3 - amb_evening_birds_6.mp3
+#   amb_evening_breeze_1.mp3 - amb_evening_breeze_6.mp3
