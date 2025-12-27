@@ -103,6 +103,40 @@ export const NEED_EFFECTS: NeedEffect[] = [
   { need: 'fulfillment', threshold: 30, effect: 'motivation_penalty', modifier: -20 },
 ];
 
+// ============= CRITICAL NEEDS EXTRACTION =============
+
+/**
+ * Extract list of critical needs from PlayerNeeds state
+ * Used by Director system for priority context
+ */
+export function getCriticalNeeds(needs: PlayerNeeds): string[] {
+  const critical: string[] = [];
+  
+  // Physical needs - low values are critical
+  if (needs.physical.hunger <= 20) critical.push('hunger');
+  if (needs.physical.thirst <= 20) critical.push('thirst');
+  if (needs.physical.energy <= 20) critical.push('energy');
+  if (needs.physical.health <= 30) critical.push('health');
+  if (needs.physical.hygiene <= 15) critical.push('hygiene');
+  
+  // Bladder - high value is critical (inverted)
+  if (needs.physical.bladder >= 80) critical.push('bladder');
+  
+  // Psychological needs
+  if (needs.psychological.stress >= 70) critical.push('stress');
+  if (needs.psychological.social <= 20) critical.push('social');
+  if (needs.psychological.fulfillment <= 15) critical.push('fulfillment');
+  
+  return critical;
+}
+
+/**
+ * Check if any need is at critical level
+ */
+export function hasAnyCriticalNeed(needs: PlayerNeeds): boolean {
+  return getCriticalNeeds(needs).length > 0;
+}
+
 // ============= NEED PROCESSING =============
 
 export function processNeedDecay(needs: PlayerNeeds, hours: number = 1, activityModifiers?: Partial<Record<keyof PhysicalNeeds | keyof PsychologicalNeeds, number>>): PlayerNeeds {

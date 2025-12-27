@@ -1,7 +1,7 @@
 // Game Loop Hook - Processes ripple effects, world state changes, and time-based systems
 // Integrates consequence cascades from player actions with location-aware scoping
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   ActiveRipple,
   WorldStateChanges,
@@ -51,6 +51,8 @@ import {
   setScenePresence,
   buildConsistencyContextForAI,
 } from '@/game/consistencyLayer';
+import { PlayerNeeds } from '@/types/lifeSim';
+import { getCriticalNeeds } from '@/game/needsSystem';
 
 // ============= STORAGE KEYS =============
 const RIPPLES_KEY = 'untold-active-ripples';
@@ -146,7 +148,8 @@ export interface GameLoopOptions {
   initialTurn?: number;
   playerHealth?: number;       // Current player health for Director priority
   playerMaxHealth?: number;    // Max health for percentage calculation
-  criticalNeeds?: string[];    // Critical needs for priority context
+  criticalNeeds?: string[];    // Critical needs for priority context (manual override)
+  playerNeeds?: PlayerNeeds;   // Full needs state - will extract critical needs automatically
 }
 
 // ============= HOOK =============
@@ -155,8 +158,18 @@ export function useGameLoop(options: GameLoopOptions = {}): [GameLoopState, Game
     initialTurn = 0, 
     playerHealth = 100, 
     playerMaxHealth = 100,
-    criticalNeeds = [] 
+    criticalNeeds: manualCriticalNeeds,
+    playerNeeds,
   } = options;
+  
+  // Extract critical needs from playerNeeds if provided, otherwise use manual list
+  const criticalNeeds = useMemo(() => {
+    if (playerNeeds) {
+      return getCriticalNeeds(playerNeeds);
+    }
+    return manualCriticalNeeds || [];
+  }, [playerNeeds, manualCriticalNeeds]);
+  
   // State
   const [activeRipples, setActiveRipples] = useState<ScopedRipple[]>(() => 
     loadFromStorage(RIPPLES_KEY, [])
