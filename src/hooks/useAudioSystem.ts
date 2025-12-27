@@ -11,6 +11,7 @@ interface UseAudioSystemReturn {
   initialized: boolean;
   muted: boolean;
   volumes: AudioVolumes;
+  unlocked: boolean;
   acousticSpace: AcousticSpace;
   isIndoors: boolean;
   preloadProgress: PreloadProgress | null;
@@ -207,6 +208,7 @@ export function useAudioSystem(): UseAudioSystemReturn {
     initialized: state.initialized,
     muted: state.muted,
     volumes: state.volumes,
+    unlocked: state.unlocked,
     acousticSpace,
     isIndoors: isIndoorsState,
     preloadProgress,
