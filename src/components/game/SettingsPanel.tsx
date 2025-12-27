@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
-  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug
+  Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
+  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame
 } from 'lucide-react';
+import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
 import { COLOR_PRESETS } from '@/lib/colorTheme';
@@ -445,6 +447,86 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onCheckedChange={(checked) => updateSettings({ enableWeatherEffects: checked })}
                     />
                   </div>
+                  
+                  {settings.enableWeatherEffects && (
+                    <>
+                      {/* Weather Particles Toggle */}
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm">Weather Particles</span>
+                          <p className="text-xs text-muted-foreground">Show visual weather effects</p>
+                        </div>
+                        <Switch 
+                          checked={settings.showWeatherParticles ?? true}
+                          onCheckedChange={(checked) => updateSettings({ showWeatherParticles: checked })}
+                        />
+                      </div>
+                      
+                      {/* Weather Mode Selection */}
+                      <div className="space-y-2 pt-2">
+                        <span className="text-sm">Weather Control</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => updateSettings({ weatherMode: 'auto' })}
+                            className={cn(
+                              "px-3 py-2 text-xs rounded-md border transition-colors",
+                              settings.weatherMode === 'auto'
+                                ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                                : "border-border/50 hover:border-border"
+                            )}
+                          >
+                            🎲 Automatic
+                          </button>
+                          <button
+                            onClick={() => updateSettings({ weatherMode: 'manual' })}
+                            className={cn(
+                              "px-3 py-2 text-xs rounded-md border transition-colors",
+                              settings.weatherMode === 'manual'
+                                ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                                : "border-border/50 hover:border-border"
+                            )}
+                          >
+                            ✋ Manual
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Manual Weather Selection */}
+                      {settings.weatherMode === 'manual' && (
+                        <div className="space-y-2 pt-2">
+                          <span className="text-sm">Select Weather</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {(Object.keys(WEATHER_CONFIGS) as WeatherType[]).map((weather) => {
+                              const config = WEATHER_CONFIGS[weather];
+                              return (
+                                <button
+                                  key={weather}
+                                  onClick={() => updateSettings({ manualWeatherType: weather })}
+                                  className={cn(
+                                    "flex flex-col items-center gap-1 px-2 py-2 text-xs rounded-md border transition-colors",
+                                    settings.manualWeatherType === weather
+                                      ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                                      : "border-border/50 hover:border-border"
+                                  )}
+                                  title={config.name}
+                                >
+                                  {weather === 'clear' && <Sun className="w-4 h-4 text-amber-400" />}
+                                  {weather === 'cloudy' && <Cloud className="w-4 h-4 text-slate-400" />}
+                                  {weather === 'rain' && <CloudRain className="w-4 h-4 text-blue-400" />}
+                                  {weather === 'storm' && <CloudLightning className="w-4 h-4 text-yellow-400" />}
+                                  {weather === 'fog' && <CloudFog className="w-4 h-4 text-violet-400" />}
+                                  {weather === 'snow' && <Snowflake className="w-4 h-4 text-cyan-400" />}
+                                  {weather === 'heat_wave' && <Flame className="w-4 h-4 text-red-400" />}
+                                  {weather === 'wind' && <Wind className="w-4 h-4 text-orange-400" />}
+                                  <span className="text-[10px] truncate w-full text-center">{config.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                   
                   <div className="flex items-center justify-between py-2">
                     <div>
