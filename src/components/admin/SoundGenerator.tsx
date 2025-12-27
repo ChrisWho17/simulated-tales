@@ -1001,6 +1001,254 @@ const STORY_SOUND_PROMPTS = {
     'Orchestra strings swell, emotional rise',
     'Pizzicato pluck, playful string sound',
   ],
+
+  // === ACOUSTIC ENVIRONMENTS - INDOOR (reverb) ===
+  acoustic_indoor_gunshot: [
+    'Gunshot fired indoors, loud reverberating echo in enclosed space, concrete walls',
+    'Pistol shot in warehouse, metallic reverb, indoor gunfire echo',
+    'Rifle shot inside building, deafening indoor reverb, enclosed space',
+    'Shotgun blast indoors, massive reverberating boom, room echo',
+    'Gunfire in hallway, echoing down corridor, indoor acoustics',
+    'Suppressed gunshot indoors, muffled reverb, quiet indoor shot',
+  ],
+  acoustic_indoor_explosion: [
+    'Explosion inside building, reverberating blast, walls shaking',
+    'Grenade detonation indoors, enclosed explosion reverb, debris',
+    'Indoor blast with glass shattering, reverberating destruction',
+    'Explosion in tunnel, echoing blast down corridor, confined space',
+    'Small explosion in room, reverberating boom, indoor acoustics',
+    'Large indoor explosion, overwhelming reverb, structure damage',
+  ],
+  acoustic_indoor_voice: [
+    'Voice echoing in large hall, cathedral-like reverb, spacious',
+    'Shouting in warehouse, industrial reverb, echoing voice',
+    'Whisper in stone room, slight reverb, quiet indoor voice',
+    'Scream in enclosed space, reverberating terror, indoor shriek',
+    'Footsteps and voice in corridor, hallway reverb, approaching',
+    'Crowd murmur in large indoor space, reverberating chatter',
+  ],
+  acoustic_indoor_combat: [
+    'Sword fight indoors, metal clashing with reverb, stone walls',
+    'Hand to hand combat in room, impacts with indoor echo',
+    'Arrow hitting stone wall indoors, reverberating impact',
+    'Shield block echoing in hall, metallic reverb, defensive',
+    'Axe chopping wood indoors, echoing chop, workshop',
+    'Chain rattling in dungeon, metallic reverb, prison echo',
+  ],
+
+  // === ACOUSTIC ENVIRONMENTS - OUTDOOR (echo/open) ===
+  acoustic_outdoor_gunshot: [
+    'Gunshot outdoors, sharp crack echoing across open field, distance',
+    'Rifle shot in mountains, echoing off cliffs, outdoor gunfire',
+    'Pistol shot in forest, muffled by trees, outdoor woodland',
+    'Shotgun blast outside, open air boom, no reverb, clean',
+    'Distant outdoor gunfire, echoes fading, far away shots',
+    'Multiple outdoor gunshots, open field, rolling echoes',
+  ],
+  acoustic_outdoor_explosion: [
+    'Outdoor explosion, open air blast, echoing across landscape',
+    'Explosion in field, no reverb, clean blast, distant echo',
+    'Artillery explosion outdoors, thundering boom, rolling echo',
+    'Car explosion outside, open air fireball, echoing debris',
+    'Distant outdoor explosion, rumbling echo, far away blast',
+    'Multiple explosions outdoors, battlefield, rolling thunder',
+  ],
+  acoustic_outdoor_voice: [
+    'Shouting across open field, voice carrying, outdoor call',
+    'Voice echoing in canyon, natural reverb, outdoor acoustics',
+    'Crowd cheering outdoors, open air celebration, no reverb',
+    'Scream in open area, voice carrying, outdoor terror',
+    'Distant voices outdoors, conversation carrying on wind',
+    'Battle cries outdoors, warriors yelling, open field combat',
+  ],
+  acoustic_outdoor_combat: [
+    'Sword fight outdoors, clean metal clashes, open air duel',
+    'Battle sounds in open field, combat without reverb, clear',
+    'Arrow whistling through open air, outdoor archery',
+    'Horse hooves and combat outdoors, cavalry in field',
+    'Shield wall clash outdoors, armies meeting, open battle',
+    'Outdoor melee combat, multiple fighters, field battle',
+  ],
+
+  // === LOCATION AMBIENCES ===
+  ambience_tavern: [
+    'Busy medieval tavern, crowd chatter, glasses clinking, fireplace',
+    'Quiet tavern at night, few patrons murmuring, fire crackling',
+    'Rowdy tavern celebration, loud laughter, music, drinking',
+    'Tavern kitchen sounds, pots clanking, cooking, busy staff',
+    'Tavern with bard playing, lute music, appreciative crowd',
+    'Tense tavern atmosphere, quiet talking, nervous energy',
+  ],
+  ambience_forest: [
+    'Deep forest ambience, birds singing, leaves rustling, peaceful',
+    'Dark forest at night, owls hooting, insects, mysterious',
+    'Forest with stream, water babbling, nature sounds, serene',
+    'Windy forest, trees creaking, leaves blowing, atmospheric',
+    'Rainforest ambience, tropical birds, rain on canopy, humid',
+    'Autumn forest, dry leaves crunching, wind, seasonal',
+  ],
+  ambience_city: [
+    'Medieval city street, crowd noise, carts, merchants calling',
+    'Modern city traffic, cars passing, honking, urban bustle',
+    'City at night, distant traffic, occasional voices, quiet streets',
+    'Busy marketplace, vendors shouting, crowds, commerce',
+    'Industrial city, factories humming, machinery, urban noise',
+    'City during rain, traffic on wet roads, urban storm',
+  ],
+  ambience_dungeon: [
+    'Dark dungeon ambience, water dripping, distant chains, eerie',
+    'Dungeon with prisoners, moaning, chains rattling, suffering',
+    'Empty dungeon corridor, wind howling, torches flickering',
+    'Dungeon with creatures, distant growls, scratching, danger',
+    'Flooded dungeon, water echoing, splashing, wet stone',
+    'Ancient dungeon, crumbling stone, dust falling, decay',
+  ],
+  ambience_castle: [
+    'Castle great hall, echoing footsteps, distant voices, grand',
+    'Castle courtyard, guards patrolling, birds, outdoor castle',
+    'Castle during feast, celebration, music, crowd in hall',
+    'Quiet castle night, wind outside, creaking, peaceful',
+    'Castle under siege, distant battle, tension, war sounds',
+    'Abandoned castle, wind through halls, decay, haunting',
+  ],
+  ambience_cave: [
+    'Deep cave ambience, water dripping, echoes, underground',
+    'Cave with bats, wings fluttering, squeaking, colony',
+    'Underground river in cave, rushing water, cave acoustics',
+    'Crystal cave, ethereal resonance, magical atmosphere',
+    'Cave entrance, wind blowing in, daylight sounds mixing',
+    'Lava cave, bubbling magma, heat, volcanic underground',
+  ],
+  ambience_ship: [
+    'Sailing ship at sea, waves against hull, creaking wood, sails',
+    'Ship during storm, violent rocking, thunder, crew shouting',
+    'Ship below deck, muffled waves, creaking, sailor activity',
+    'Pirate ship battle, cannons firing, chaos, naval combat',
+    'Calm ship at anchor, gentle waves, birds, peaceful harbor',
+    'Ghost ship ambience, creaking abandoned vessel, eerie wind',
+  ],
+  ambience_spaceship: [
+    'Spaceship bridge, computer beeps, engine hum, sci-fi ambient',
+    'Spaceship engine room, loud machinery, power systems',
+    'Spaceship in hyperspace, warp drive hum, travel sounds',
+    'Damaged spaceship, alarms, sparking, emergency sounds',
+    'Spaceship cargo bay, echoing metal, crates, industrial',
+    'Quiet spaceship corridor, life support hum, footsteps echo',
+  ],
+  ambience_battlefield: [
+    'Active battlefield, gunfire, explosions, chaos, war zone',
+    'Battlefield aftermath, fires burning, wind, distant sounds',
+    'Medieval battlefield, swords clashing, war cries, combat',
+    'Trench warfare ambience, distant artillery, mud, tension',
+    'Aerial battle, planes roaring, explosions, dogfight',
+    'Naval battle, ship cannons, water splashing, combat at sea',
+  ],
+  ambience_hospital: [
+    'Hospital corridor, machines beeping, quiet footsteps, clinical',
+    'Emergency room, urgent activity, monitors, medical chaos',
+    'Hospital at night, quiet beeping, distant footsteps, calm',
+    'Field hospital, wounded moaning, medical activity, war',
+    'Mental asylum ambience, distant screams, unsettling, creepy',
+    'Abandoned hospital, wind through broken windows, decay',
+  ],
+  ambience_laboratory: [
+    'Science laboratory, bubbling beakers, electrical hum, research',
+    'Mad scientist lab, tesla coils, ominous machinery, danger',
+    'Clean room laboratory, air filtration, quiet precision',
+    'Alchemist workshop, mortar grinding, fire, magical brewing',
+    'Abandoned lab, dripping chemicals, broken equipment, decay',
+    'High tech lab, computers humming, futuristic research',
+  ],
+  ambience_church: [
+    'Church interior, organ playing, choir singing, reverent',
+    'Empty church, footsteps echoing, peaceful silence, sacred',
+    'Church bells ringing, congregation murmuring, service',
+    'Abandoned church, wind through broken windows, decay',
+    'Dark ritual in church, chanting, ominous, corrupted sacred',
+    'Church during funeral, somber organ, weeping, mourning',
+  ],
+  ambience_prison: [
+    'Prison block, inmates talking, guards walking, incarceration',
+    'Prison riot, chaos, shouting, alarms, violence',
+    'Solitary confinement, silence, distant sounds, isolation',
+    'Prison cafeteria, crowd noise, trays, institutional dining',
+    'Prison yard, outdoor prisoners, guards watching, exercise',
+    'Prison at night, snoring, occasional sounds, lights out',
+  ],
+  ambience_swamp: [
+    'Murky swamp, frogs croaking, insects buzzing, humid',
+    'Swamp at night, eerie sounds, splashing, mysterious',
+    'Swamp with alligators, low growls, water movement, danger',
+    'Foggy swamp, muffled sounds, dripping, atmospheric',
+    'Swamp village, stilted houses, water lapping, community',
+    'Haunted swamp, ghostly sounds, will-o-wisps, supernatural',
+  ],
+  ambience_desert: [
+    'Desert wind, sand blowing, dry heat, desolate',
+    'Desert at night, cold wind, distant coyotes, stars',
+    'Desert oasis, water sounds, birds, relief in wasteland',
+    'Sandstorm approaching, wind building, dangerous weather',
+    'Desert ruins, wind through ancient stones, mysterious',
+    'Desert caravan, camels, traders talking, journey',
+  ],
+  ambience_arctic: [
+    'Arctic wind, howling cold, ice creaking, frozen',
+    'Blizzard sounds, whiteout conditions, extreme cold',
+    'Arctic silence, pristine snow, distant wind, peaceful cold',
+    'Ice cave, dripping, crystalline sounds, frozen underground',
+    'Arctic wildlife, seals, penguins, polar environment',
+    'Ship in arctic ice, creaking hull, ice pressure, trapped',
+  ],
+
+  // === ACTION CONTEXT SOUNDS ===
+  action_stealth: [
+    'Quiet sneaking footsteps, careful movement, stealth approach',
+    'Lock picking sounds, metal tools, delicate clicks, breaking in',
+    'Hiding breathing, trying to stay quiet, tension, concealment',
+    'Stealth takedown, quick quiet attack, body falling softly',
+    'Creeping through shadows, cloth rustling, careful movement',
+    'Guard almost detecting, held breath, close call, tension',
+  ],
+  action_chase: [
+    'Running chase, rapid footsteps, heavy breathing, pursuit',
+    'Car chase, engines revving, tires screeching, dangerous driving',
+    'Chase through market, crashing stalls, people yelling, chaos',
+    'Rooftop chase, jumping, landing, urban parkour pursuit',
+    'Forest chase, branches breaking, running through woods',
+    'Chase ending, exhausted breathing, capture or escape',
+  ],
+  action_discovery: [
+    'Discovery moment, surprised gasp, wonder, finding something',
+    'Opening secret door, stone grinding, hidden passage revealed',
+    'Finding treasure, coins shifting, valuable discovery',
+    'Uncovering clue, paper rustling, investigation success',
+    'Shocking discovery, horror gasp, terrible finding',
+    'Ancient artifact discovery, magical resonance, important find',
+  ],
+  action_ritual: [
+    'Dark ritual chanting, ominous voices, forbidden magic',
+    'Holy ritual, sacred words, divine energy, blessing',
+    'Summoning ritual, building energy, portal opening, calling',
+    'Healing ritual, gentle chanting, restorative magic',
+    'Sacrifice ritual, dark atmosphere, terrible ceremony',
+    'Protective ritual, warding magic, barrier creation',
+  ],
+  action_death: [
+    'Character death, final breath, dramatic end, tragedy',
+    'Monster death, creature cry ending, defeated beast',
+    'Execution sound, final moment, grim ending',
+    'Peaceful death, quiet last breath, natural end',
+    'Violent death, impact and silence, sudden end',
+    'Undead rising, death reversing, resurrection horror',
+  ],
+  action_victory: [
+    'Victory fanfare, triumphant music, celebration, success',
+    'Battle won, cheering, relief, hard-fought victory',
+    'Quest complete, satisfying resolution, achievement',
+    'Boss defeated, epic victory, major accomplishment',
+    'Crowd celebrating victory, cheers, applause, triumph',
+    'Personal victory, internal satisfaction, quiet success',
+  ],
 };
 
 interface GenerationResult {
@@ -1054,6 +1302,16 @@ export const SoundGenerator: React.FC = () => {
         soundKey.startsWith('scifi_laser') || soundKey.startsWith('scifi_teleport')) return 3;
     if (soundKey.startsWith('music_horn') || soundKey.startsWith('music_strings')) return 4;
     
+    // === ACOUSTIC VARIANTS (3-5 seconds) - indoor reverb / outdoor echo ===
+    if (soundKey.startsWith('acoustic_indoor_gunshot') || 
+        soundKey.startsWith('acoustic_outdoor_gunshot')) return 4;
+    if (soundKey.startsWith('acoustic_indoor_explosion') || 
+        soundKey.startsWith('acoustic_outdoor_explosion')) return 5;
+    if (soundKey.startsWith('acoustic_indoor_voice') || 
+        soundKey.startsWith('acoustic_outdoor_voice')) return 4;
+    if (soundKey.startsWith('acoustic_indoor_combat') || 
+        soundKey.startsWith('acoustic_outdoor_combat')) return 4;
+    
     // === MEDIUM (5-6 seconds) - events with buildup ===
     if (soundKey.startsWith('explosion_')) return 5;
     if (soundKey.startsWith('creature_wolf') || soundKey.startsWith('creature_dog') ||
@@ -1070,6 +1328,14 @@ export const SoundGenerator: React.FC = () => {
         soundKey.startsWith('element_electricity') || soundKey.startsWith('element_ice')) return 6;
     if (soundKey.startsWith('magic_portal') || soundKey.startsWith('scifi_tech')) return 5;
     
+    // === ACTION CONTEXT SOUNDS (4-8 seconds) ===
+    if (soundKey.startsWith('action_stealth')) return 5;
+    if (soundKey.startsWith('action_chase')) return 8;
+    if (soundKey.startsWith('action_discovery')) return 4;
+    if (soundKey.startsWith('action_ritual')) return 10;
+    if (soundKey.startsWith('action_death')) return 5;
+    if (soundKey.startsWith('action_victory')) return 6;
+    
     // === LONGER (8-10 seconds) - sustained sounds ===
     if (soundKey.startsWith('vehicle_car') || soundKey.startsWith('vehicle_motorcycle') ||
         soundKey.startsWith('vehicle_truck') || soundKey.startsWith('vehicle_bus')) return 8;
@@ -1078,6 +1344,9 @@ export const SoundGenerator: React.FC = () => {
     if (soundKey.startsWith('vehicle_bicycle') || soundKey.startsWith('vehicle_hydraulics')) return 6;
     if (soundKey.startsWith('crowd_')) return 8;
     if (soundKey.startsWith('element_earthquake')) return 10;
+    
+    // === LOCATION AMBIENCES (12-15 seconds) - for looping backgrounds ===
+    if (soundKey.startsWith('ambience_')) return 15;
     
     // Default fallback
     return 5;
