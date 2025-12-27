@@ -1773,7 +1773,7 @@ export interface MicroEventContext {
   timeOfDay: MicroEventTimeOfDay;
   currentTensionTier: MicroEventTensionTier;
   weather?: string;
-  gameGenre?: GameGenre;
+  gameGenre?: string;
   turnsSinceLastMicroEvent: number;
 }
 
