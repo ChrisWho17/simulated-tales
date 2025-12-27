@@ -200,8 +200,26 @@ XP AND PROGRESSION SYSTEM (CRITICAL):
   - Example: [XP:25:charisma=0.6,wisdom=0.4:high:moderate:Convinced the guard captain despite suspicion]
 - For minor scene progression without success/failure, use: [NEUTRAL_XP:Scene progressed]
 - Gold/loot rewards: [GOLD:amount] or [LOOT:item name] (can include multiple)
-- Health changes: [DAMAGE:amount] or [HEAL:amount]
 - Skill improvements: [SKILL:skillName:amount:reason]
+
+CRITICAL - HEALTH/DAMAGE SYSTEM (MANDATORY):
+When the player takes damage from ANY source, you MUST include: [DAMAGE:amount]
+When the player heals from ANY source, you MUST include: [HEAL:amount]
+
+DAMAGE EXAMPLES:
+- Player gets hit in combat → [DAMAGE:8] (include in your response)
+- Player falls and hurts themselves → [DAMAGE:4]
+- Player is poisoned → [DAMAGE:6]
+- Enemy attacks successfully → [DAMAGE:12]
+- Environmental hazard → [DAMAGE:5]
+
+HEAL EXAMPLES:
+- Player uses healing potion → [HEAL:15]
+- Player rests and recovers → [HEAL:8]
+- Healer NPC treats wounds → [HEAL:20]
+- Magical healing → [HEAL:25]
+
+WITHOUT THESE TAGS, HEALTH CHANGES DO NOT APPLY! This is MANDATORY.
 
 CRITICAL - ITEM ACQUISITION SYSTEM:
 When the player successfully takes, grabs, picks up, steals, receives, or acquires ANY item, you MUST include:
