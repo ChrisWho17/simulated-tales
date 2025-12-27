@@ -23,9 +23,19 @@ export type {
   RecoverySuggestion,
   RecipeCache,
   RecoveryPipelineConfig,
+  // New types for filtered fix cache
+  FixProposal,
+  FixInbox,
+  ApprovedFixCache,
+  ApprovedRecipe,
+  VerificationResult,
+  GateResult,
+  ProofDisplay,
+  SupportPacket,
+  TrustScoreFactors,
 } from './types';
 
-export { DEFAULT_RECOVERY_CONFIG } from './types';
+export { DEFAULT_RECOVERY_CONFIG, TRUST_THRESHOLDS } from './types';
 
 // Signature
 export {
@@ -61,7 +71,7 @@ export {
   generateStageCOptions,
 } from './stages';
 
-// Recipe Cache
+// Recipe Cache (legacy)
 export {
   findRecipe,
   storeRecipe,
@@ -89,3 +99,51 @@ export {
   getRecoveryLog,
 } from './pipeline';
 export type { PipelineResult, RecoveryLogEntry } from './pipeline';
+
+// Two-Tier Cache (new filtered system)
+export {
+  addToInbox,
+  getFromInbox,
+  getInboxProposalsForSignature,
+  removeFromInbox,
+  clearInbox,
+  getApprovedRecipe,
+  getAllApprovedRecipes,
+  promoteToApproved,
+  recordRecipeApplication,
+  findAutoApplyableRecipe,
+  generateProofDisplay,
+  getTwoTierCacheStats,
+} from './twoTierCache';
+
+// Verification Gates
+export {
+  runGateA,
+  runGateB,
+  runGateC,
+  runGateD,
+  runGateE,
+  verifyProposal,
+  recordSuccessfulApplication,
+  markManuallyApproved,
+} from './verificationGates';
+
+// Trust Scoring
+export {
+  calculateTrustScore,
+  canAutoApply,
+  shouldSuggest,
+  shouldDemote,
+  getTrustLabel,
+  getTrustColor,
+  formatTrustFactors,
+} from './trustScoring';
+
+// Support Packet
+export {
+  generateSupportPacket,
+  generatePromptContext,
+  parseAIProposal,
+  createManualProposal,
+  createSystemProposal,
+} from './supportPacket';
