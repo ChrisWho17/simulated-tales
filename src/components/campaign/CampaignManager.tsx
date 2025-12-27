@@ -1,12 +1,13 @@
 // ============================================================================
 // CAMPAIGN MANAGER UI - Main campaign selection/management screen
+// Integrated with save recovery for automatic error handling
 // ============================================================================
 
 import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '@/contexts/CampaignContext';
 import { CampaignMetadata, MAX_CAMPAIGNS } from '@/types/campaign';
-import { formatPlayTime, formatLastPlayed, canCreateCampaign } from '@/lib/campaignStorage';
+import { formatPlayTime, formatLastPlayed, canCreateCampaign, loadCampaign as loadCampaignData } from '@/lib/campaignStorage';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,12 @@ import {
   Swords,
   AlertTriangle,
   Sparkles,
+  FileWarning,
 } from 'lucide-react';
+import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
+import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
+import { runInvariants } from '@/lib/saveRecovery/invariants';
+import { FailureSnapshot } from '@/lib/saveRecovery/types';
 
 // Genre badge colors
 const GENRE_COLORS: Record<string, string> = {
@@ -70,10 +76,46 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   // Import file ref
   const importInputRef = useRef<HTMLInputElement>(null);
   
+  // Recovery modal state
+  const [recoverySnapshot, setRecoverySnapshot] = useState<FailureSnapshot | null>(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [showAskAIModal, setShowAskAIModal] = useState(false);
+  const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
+  
   const canCreate = canCreateCampaign();
   
-  // Handle continue/load campaign
+  // Handle continue/load campaign with recovery
   const handleContinue = useCallback((campaign: CampaignMetadata) => {
+    // First, try to load and validate the campaign
+    const rawData = loadCampaignData(campaign.id);
+    
+    if (!rawData) {
+      toast.error('Failed to load campaign data');
+      return;
+    }
+    
+    // Run invariants to check for issues
+    const invariantResult = runInvariants(rawData);
+    
+    if (!invariantResult.valid) {
+      // Campaign has issues - trigger recovery mode
+      console.log('[CampaignManager] Campaign has issues, triggering recovery:', invariantResult.violations);
+      
+      const snapshot = createFailureSnapshot(
+        campaign.id,
+        rawData,
+        'INVARIANT_FAILURE',
+        `${invariantResult.violations.length} validation issue(s) detected`,
+        invariantResult
+      );
+      
+      setRecoverySnapshot(snapshot);
+      setPendingCampaignId(campaign.id);
+      setShowRecoveryModal(true);
+      return;
+    }
+    
+    // Campaign is valid, load normally
     const success = loadCampaign(campaign.id);
     if (success) {
       onSelectCampaign();
@@ -81,6 +123,43 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       toast.error('Failed to load campaign');
     }
   }, [loadCampaign, onSelectCampaign]);
+  
+  // Handle recovery success
+  const handleRecovered = useCallback((save: unknown) => {
+    if (pendingCampaignId) {
+      // Re-save the recovered data and load
+      const success = loadCampaign(pendingCampaignId);
+      if (success) {
+        toast.success('Campaign recovered and loaded');
+        setShowRecoveryModal(false);
+        setShowAskAIModal(false);
+        setRecoverySnapshot(null);
+        setPendingCampaignId(null);
+        onSelectCampaign();
+      }
+    }
+  }, [pendingCampaignId, loadCampaign, onSelectCampaign]);
+  
+  // Handle recovery abort
+  const handleRecoveryAbort = useCallback(() => {
+    setShowRecoveryModal(false);
+    setShowAskAIModal(false);
+    setRecoverySnapshot(null);
+    setPendingCampaignId(null);
+    toast.info('Recovery cancelled');
+  }, []);
+  
+  // Switch between recovery and AI modals
+  const handleSwitchToAI = useCallback(() => {
+    setShowRecoveryModal(false);
+    setShowAskAIModal(true);
+  }, []);
+  
+  const handleSwitchToRecovery = useCallback(() => {
+    setShowAskAIModal(false);
+    setShowRecoveryModal(true);
+  }, []);
+  
   
   // Handle delete
   const handleDelete = useCallback(() => {
@@ -278,6 +357,25 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Save Recovery Modal */}
+      <SaveRecoveryModal
+        open={showRecoveryModal}
+        snapshot={recoverySnapshot}
+        onClose={() => setShowRecoveryModal(false)}
+        onRecovered={handleRecovered}
+        onAbort={handleRecoveryAbort}
+        onAskAI={handleSwitchToAI}
+      />
+      
+      {/* Ask AI Help Modal */}
+      <AskAIHelpModal
+        open={showAskAIModal}
+        snapshot={recoverySnapshot}
+        onClose={() => setShowAskAIModal(false)}
+        onRecovered={handleRecovered}
+        onSwitchToRecovery={handleSwitchToRecovery}
+      />
     </div>
   );
 }
