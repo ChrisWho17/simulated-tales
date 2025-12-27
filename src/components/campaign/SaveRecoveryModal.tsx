@@ -1,6 +1,7 @@
 // ============================================================================
 // SAVE RECOVERY MODAL
 // UI for staged save recovery with diff preview and export
+// Integrated with two-tier cache for auto-apply and inbox proposals
 // ============================================================================
 
 import React, { useState, useMemo } from 'react';
@@ -15,7 +16,10 @@ import {
   ChevronDown,
   ChevronRight,
   FileWarning,
-  RefreshCw
+  RefreshCw,
+  Bot,
+  Star,
+  Sparkles,
 } from 'lucide-react';
 import {
   Dialog,
@@ -30,6 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   Collapsible,
   CollapsibleContent,
@@ -43,6 +48,8 @@ import {
   RecoveryOp,
   DiffEntry,
   RecoveryResult,
+  ApprovedRecipe,
+  FixProposal,
 } from '@/lib/saveRecovery/types';
 import {
   initializeRecoveryMode,
@@ -51,6 +58,12 @@ import {
   logRecoveryAction,
   restoreFromBackup,
 } from '@/lib/saveRecovery/pipeline';
+import {
+  findAutoApplyableRecipe,
+  getInboxProposalsForSignature,
+  recordRecipeApplication,
+  getApprovedRecipe,
+} from '@/lib/saveRecovery/twoTierCache';
 
 // ============================================================================
 // TYPES
@@ -62,6 +75,7 @@ interface SaveRecoveryModalProps {
   onClose: () => void;
   onRecovered: (save: unknown) => void;
   onAbort: () => void;
+  onAskAI?: () => void;
 }
 
 // ============================================================================
@@ -201,6 +215,7 @@ export function SaveRecoveryModal({
   onClose,
   onRecovered,
   onAbort,
+  onAskAI,
 }: SaveRecoveryModalProps) {
   // State
   const [recoveryState, setRecoveryState] = useState<RecoveryModeState | null>(null);
@@ -208,7 +223,12 @@ export function SaveRecoveryModal({
   const [stageCConfirmed, setStageCConfirmed] = useState(false);
   const [applyResult, setApplyResult] = useState<RecoveryResult | null>(null);
   const [isApplying, setIsApplying] = useState(false);
-  const [currentView, setCurrentView] = useState<'overview' | 'stageB' | 'stageC' | 'result'>('overview');
+  const [currentView, setCurrentView] = useState<'overview' | 'stageB' | 'stageC' | 'result' | 'approved'>('overview');
+  
+  // Two-tier cache state
+  const [approvedRecipe, setApprovedRecipe] = useState<ApprovedRecipe | null>(null);
+  const [inboxProposals, setInboxProposals] = useState<FixProposal[]>([]);
+  const [autoApplyRecipe, setAutoApplyRecipe] = useState<ApprovedRecipe | null>(null);
 
   // Initialize recovery state when snapshot changes
   React.useEffect(() => {
@@ -219,6 +239,16 @@ export function SaveRecoveryModal({
       setStageCConfirmed(false);
       setApplyResult(null);
       setCurrentView('overview');
+      
+      // Check for approved recipes and inbox proposals
+      const approved = getApprovedRecipe(snapshot.signature);
+      setApprovedRecipe(approved);
+      
+      const autoApply = findAutoApplyableRecipe(snapshot.signature);
+      setAutoApplyRecipe(autoApply);
+      
+      const inbox = getInboxProposalsForSignature(snapshot.signature);
+      setInboxProposals(inbox);
     }
   }, [snapshot, open]);
 
@@ -259,6 +289,41 @@ export function SaveRecoveryModal({
         opsApplied: stageAOps.length,
         success: result.success,
         lossyOps: false,
+      });
+      
+      if (result.success) {
+        const save = JSON.parse(snapshot.originalSave);
+        onRecovered(save);
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleApplyApprovedRecipe = async (recipe: ApprovedRecipe) => {
+    if (!snapshot) return;
+    
+    setIsApplying(true);
+    try {
+      const result = applyRecoveryOps(snapshot, recipe.ops, `Approved Recipe (${recipe.stage})`);
+      setApplyResult(result);
+      setCurrentView('result');
+      
+      // Record application for trust scoring
+      recordRecipeApplication(
+        snapshot.signature,
+        result.success,
+        snapshot.campaignId
+      );
+      
+      logRecoveryAction({
+        timestamp: Date.now(),
+        signature: snapshot.signature,
+        campaignId: snapshot.campaignId,
+        action: 'approved-recipe',
+        opsApplied: recipe.ops.length,
+        success: result.success,
+        lossyOps: recipe.lossyOpsCount > 0,
       });
       
       if (result.success) {
@@ -381,7 +446,85 @@ export function SaveRecoveryModal({
 
         <ScrollArea className="flex-1 pr-4">
           {currentView === 'overview' && (
-            <div className="space-y-4">
+<div className="space-y-4">
+              {/* Auto-Applyable Approved Recipe */}
+              {autoApplyRecipe && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-green-400" />
+                    <span className="font-medium text-green-400">
+                      Trusted Fix Available
+                    </span>
+                    <Badge variant="outline" className="ml-auto text-green-400 border-green-500 text-xs">
+                      <Star className="h-3 w-3 mr-1" />
+                      Trust: {autoApplyRecipe.trustScore}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {autoApplyRecipe.humanLabel}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                    <span>Applied {autoApplyRecipe.appliedCount} time(s)</span>
+                    <span>•</span>
+                    <span>Stage {autoApplyRecipe.stage}</span>
+                    <span>•</span>
+                    <span>{autoApplyRecipe.ops.length} operation(s)</span>
+                  </div>
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={() => handleApplyApprovedRecipe(autoApplyRecipe)}
+                    disabled={isApplying}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Apply Trusted Fix
+                  </Button>
+                </div>
+              )}
+
+              {/* Inbox Proposals */}
+              {inboxProposals.length > 0 && (
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                    <ChevronDown className="h-4 w-4" />
+                    <Bot className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{inboxProposals.length} Pending Proposal(s)</span>
+                    <Badge variant="outline" className="ml-auto text-xs">Inbox</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 pl-6 space-y-2">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      These proposals need verification before they can be applied.
+                    </p>
+                    {inboxProposals.map((proposal) => (
+                      <div
+                        key={proposal.id}
+                        className="border border-border/50 rounded-lg p-2 text-sm"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <StageBadge stage={proposal.stage} />
+                          <Badge variant="outline" className={cn(
+                            'text-xs',
+                            proposal.risk === 'low' ? 'text-green-400' :
+                            proposal.risk === 'medium' ? 'text-amber-400' : 'text-destructive'
+                          )}>
+                            {proposal.risk} risk
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{proposal.reasoningSummary}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">
+                          {proposal.ops.length} op(s) • {proposal.source}
+                        </p>
+                      </div>
+                    ))}
+                    {onAskAI && (
+                      <Button variant="outline" size="sm" onClick={onAskAI} className="w-full mt-2">
+                        <Bot className="h-3 w-3 mr-1" />
+                        Review & Verify in AI Modal
+                      </Button>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
               {/* Error Summary */}
               <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
@@ -573,10 +716,18 @@ export function SaveRecoveryModal({
         <Separator className="my-2" />
 
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            {onAskAI && (
+              <Button variant="outline" onClick={onAskAI}>
+                <Bot className="h-4 w-4 mr-2" />
+                Ask AI
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={handleAbort}>
               Abort

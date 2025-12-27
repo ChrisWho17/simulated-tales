@@ -407,7 +407,7 @@ export interface RecoveryLogEntry {
   timestamp: number;
   signature: string;
   campaignId: string;
-  action: 'auto-repair' | 'manual-repair' | 'salvage' | 'export' | 'abort';
+  action: 'auto-repair' | 'manual-repair' | 'salvage' | 'export' | 'abort' | 'ai-assisted' | 'approved-recipe';
   opsApplied: number;
   success: boolean;
   lossyOps: boolean;
