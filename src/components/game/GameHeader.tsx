@@ -69,7 +69,7 @@ export function GameHeader({ time, onSave, onLoad, onNewGame, character }: GameH
       <div className="flex items-center gap-4">
         {character && <CharacterPortrait character={character} />}
         <h1 className="text-xl font-narrative text-gradient-gold glow-text tracking-wide">
-          Living World
+          Untold
         </h1>
         <div className="h-6 w-px bg-border" />
         <div className="flex items-center gap-2">

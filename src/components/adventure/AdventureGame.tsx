@@ -1446,7 +1446,7 @@ export function AdventureGame() {
 
   // Show loading screen on initial load
   if (initialLoading) {
-    return <LoadingScreen isLoading={true} message="Initializing Living World Engine..." minDuration={500} />;
+    return <LoadingScreen isLoading={true} message="Initializing The Untold Story Engine..." minDuration={500} />;
   }
 
   // Phase 0.5: Recovery prompt for returning players

@@ -1,4 +1,4 @@
-// Core game types for the Living World RPG Engine
+// Core game types for The Untold Story Engine
 
 import { LifeSimPlayerState } from './lifeSim';
 
