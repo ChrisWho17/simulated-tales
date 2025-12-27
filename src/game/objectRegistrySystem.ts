@@ -354,6 +354,54 @@ export function buildObjectOwnershipContext(): string {
   return lines.join('\n');
 }
 
+// ============= SYNC CHARACTER INVENTORY TO REGISTRY =============
+
+// Sync character.inventory items to the object registry
+// This ensures the command palette shows items from the character's inventory
+export function syncCharacterInventoryToRegistry(
+  inventory: Array<{ id: string; name: string; description?: string; type?: string; quantity?: number }>,
+  currentTurn: number = 0
+): void {
+  // First, check what's already in player inventory in registry
+  const existingPlayerItems = getInventory('player', 'player');
+  const existingNames = new Set(existingPlayerItems.map(i => i.name.toLowerCase()));
+  
+  for (const item of inventory) {
+    // Skip if already exists in registry by name
+    if (existingNames.has(item.name.toLowerCase())) {
+      continue;
+    }
+    
+    // Determine item type based on name or provided type
+    let objType: WorldObject['type'] = 'misc';
+    const lowerName = item.name.toLowerCase();
+    if (item.type === 'weapon' || lowerName.includes('sword') || lowerName.includes('knife') || lowerName.includes('gun') || lowerName.includes('pistol') || lowerName.includes('rifle') || lowerName.includes('dagger') || lowerName.includes('bow') || lowerName.includes('sidearm')) {
+      objType = 'weapon';
+    } else if (lowerName.includes('potion') || lowerName.includes('medicine') || lowerName.includes('medkit') || lowerName.includes('kit') || lowerName.includes('stim') || lowerName.includes('bandage')) {
+      objType = 'consumable';
+    } else if (lowerName.includes('armor') || lowerName.includes('clothes') || lowerName.includes('suit') || lowerName.includes('vest') || lowerName.includes('helmet') || lowerName.includes('boots')) {
+      objType = 'equipment';
+    } else if (lowerName.includes('key') || lowerName.includes('badge') || lowerName.includes('pass') || lowerName.includes('photograph') || lowerName.includes('letter') || lowerName.includes('document') || lowerName.includes('map')) {
+      objType = 'key_item';
+    }
+    
+    // Create the object in the registry
+    const objId = createObject(
+      objType,
+      item.name,
+      { unique: false, stackable: (item.quantity || 1) > 1 },
+      currentTurn,
+      'character_inventory',
+      item.description || `${item.name} from inventory`
+    );
+    
+    // Transfer to player
+    transferObject(objId, 'player', 'player', 'inventory_sync', currentTurn);
+  }
+  
+  console.log('[ObjectRegistry] Synced character inventory:', inventory.length, 'items');
+}
+
 // ============= INITIALIZATION =============
 
 // Load on module import
