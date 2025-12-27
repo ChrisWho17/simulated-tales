@@ -95,13 +95,27 @@ function getStageBonus(stage: RecoveryStage): number {
 }
 
 // ============================================================================
-// TRUST DECISIONS
+// TRUST DECISIONS (Stricter thresholds per stage)
+// Stage A: 3 successes to auto-apply
+// Stage B: 5 successes to auto-apply
+// Stage C: NEVER auto-applies
 // ============================================================================
 
+const AUTO_APPLY_THRESHOLDS = {
+  A: 3,  // Stage A needs 3 successes
+  B: 5,  // Stage B needs 5 successes
+  C: Infinity, // Stage C never auto-applies
+} as const;
+
 export function canAutoApply(recipe: ApprovedRecipe): boolean {
+  // Stage C NEVER auto-applies
+  if (recipe.stage === 'C') return false;
+  
+  const requiredSuccesses = AUTO_APPLY_THRESHOLDS[recipe.stage];
+  
   return (
     recipe.trustScore >= TRUST_THRESHOLDS.autoApply &&
-    recipe.stage === 'A' &&
+    recipe.successCount >= requiredSuccesses &&
     recipe.generalizationCount >= 2
   );
 }
@@ -116,6 +130,10 @@ export function shouldDemote(recipe: ApprovedRecipe): boolean {
 
 export function shouldRemove(recipe: ApprovedRecipe): boolean {
   return recipe.trustScore < TRUST_THRESHOLDS.remove;
+}
+
+export function getRequiredSuccessesForAutoApply(stage: RecoveryStage): number {
+  return AUTO_APPLY_THRESHOLDS[stage] === Infinity ? -1 : AUTO_APPLY_THRESHOLDS[stage];
 }
 
 // ============================================================================
