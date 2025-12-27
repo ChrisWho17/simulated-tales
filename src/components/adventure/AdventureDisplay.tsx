@@ -1197,151 +1197,141 @@ export function AdventureDisplay({
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3">
-          <h1 className="text-xl font-display font-bold text-gradient-primary tracking-wider">
+        <div className="flex items-center gap-2 px-2 md:px-4 py-2">
+          {/* Logo - Condensed */}
+          <h1 className="text-sm font-display font-bold text-gradient-primary tracking-wider shrink-0">
             UNTOLD
           </h1>
           
-          {/* Character Quick Stats */}
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-6">
-              {/* Health with Mood Aura - Soft pulsing glow based on emotional state */}
-              <div 
-                className="flex items-center gap-2 relative"
-                style={currentMood !== 'neutral' ? {
-                  // Soft mood aura behind health indicator
-                  filter: `drop-shadow(0 0 12px ${MOOD_COLORS[currentMood]?.glow || 'transparent'})`,
-                } : undefined}
-              >
-                {/* Faint pulsing halo behind portrait/health */}
-                {currentMood !== 'neutral' && (
-                  <div 
-                    className="absolute inset-0 -m-2 rounded-full opacity-40 animate-pulse pointer-events-none"
-                    style={{
-                      background: `radial-gradient(circle, ${MOOD_COLORS[currentMood]?.glow || 'transparent'} 0%, transparent 70%)`,
-                    }}
-                  />
-                )}
-                <CircularStat 
-                  value={character.currentHealth} 
-                  max={character.maxHealth} 
-                  type="health"
-                  size={40}
-                  strokeWidth={3}
-                  icon={<Heart className="w-4 h-4" />}
-                />
-                <div className="text-xs">
-                  <span className={`font-mono font-bold ${isCritical ? 'text-destructive animate-pulse' : 'text-success'}`}>
-                    {character.currentHealth}
-                  </span>
-                  <span className="text-muted-foreground">/{character.maxHealth}</span>
-                </div>
-              </div>
-
-              {/* Mood Indicator - Compact label with glow */}
-              {currentMood !== 'neutral' && (
-                <div 
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300"
-                  style={{
-                    backgroundColor: `${MOOD_COLORS[currentMood]?.primary}20`,
-                    color: MOOD_COLORS[currentMood]?.primary,
-                    boxShadow: `0 0 10px ${MOOD_COLORS[currentMood]?.glow}`,
-                    border: `1px solid ${MOOD_COLORS[currentMood]?.primary}40`,
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: MOOD_COLORS[currentMood]?.primary }} />
-                  {currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
-                </div>
-              )}
-
-              {/* Gold */}
-              <div className="flex items-center gap-2 px-3 py-1.5 glass-panel-subtle rounded-full">
-                <Coins className="w-4 h-4 text-warning" />
-                <span className="font-mono font-semibold text-warning">{character.gold}</span>
-              </div>
-
-              {/* Class & Level with XP Progress */}
-              <div className="flex items-center gap-2 px-3 py-1.5 glass-panel-subtle rounded-full">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Lv.</span>
-                  <span className="font-mono font-bold text-primary">{character.level}</span>
-                </div>
-                <div className="w-16 h-1.5 bg-muted/50 rounded-full overflow-hidden" title={`${levelingState.currentXP}/${levelingState.xpThreshold} XP`}>
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500"
-                    style={{ width: `${Math.min(100, (levelingState.currentXP / levelingState.xpThreshold) * 100)}%` }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">{charClass?.name}</span>
-              </div>
+          {/* Mood Indicator - Compact */}
+          {currentMood !== 'neutral' && (
+            <div 
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm shrink-0"
+              style={{
+                backgroundColor: `${MOOD_COLORS[currentMood]?.primary}15`,
+                color: MOOD_COLORS[currentMood]?.primary,
+                border: `1px solid ${MOOD_COLORS[currentMood]?.primary}30`,
+              }}
+            >
+              <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: MOOD_COLORS[currentMood]?.primary }} />
+              {currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
             </div>
+          )}
 
-            {/* Action Buttons - Compact on mobile */}
-            <div className="flex items-center gap-0.5 sm:gap-1">
-              {/* Director Status - Compact indicator */}
-              {(cheatMode || gameContext?.settings?.showEventBusDebug) && (
-                <DirectorStatusIndicator compact className="mr-2" />
-              )}
-              
-              {cheatMode && (
-                <span className="text-[10px] sm:text-xs bg-primary/20 text-primary px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-primary/30 animate-glow-pulse">
-                  DEV
+          {/* Separator */}
+          <div className="hidden md:block h-4 w-px bg-border/30 shrink-0" />
+
+          {/* Character Quick Stats - Condensed frosted panels */}
+          <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0">
+            {/* Health with Mood Aura */}
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0"
+              style={currentMood !== 'neutral' ? {
+                boxShadow: `0 0 8px ${MOOD_COLORS[currentMood]?.glow || 'transparent'}40`,
+              } : undefined}
+            >
+              <CircularStat 
+                value={character.currentHealth} 
+                max={character.maxHealth} 
+                type="health"
+                size={28}
+                strokeWidth={2}
+                icon={<Heart className="w-3 h-3" />}
+              />
+              <div className="text-[10px]">
+                <span className={`font-mono font-bold ${isCritical ? 'text-destructive animate-pulse' : 'text-success'}`}>
+                  {character.currentHealth}
                 </span>
-              )}
-              
-              {/* Saves Dropdown */}
-              <SavesDropdown />
-              
-              {/* Inventory */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowInventory(true)}
-                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                title="Inventory (Ctrl+I)"
-              >
-                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              
-              {/* Character Sheet */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowCharacterSheet(true)}
-                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                title="Character Sheet"
-              >
-                <Backpack className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowSettings(true)}
-                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                title="Settings"
-              >
-                <Sliders className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              {/* Dev Mode toggle - hidden on very small screens */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggleCheatMode}
-                className="hidden xs:flex h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                title="Toggle Dev Mode"
-              >
-                <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onRestart}
-                className="h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                title="New Adventure"
-              >
-                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
+                <span className="text-muted-foreground">/{character.maxHealth}</span>
+              </div>
             </div>
+
+            {/* Gold */}
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0">
+              <Coins className="w-3 h-3 text-warning" />
+              <span className="font-mono text-[10px] font-semibold text-warning">{character.gold}</span>
+            </div>
+
+            {/* Level & XP */}
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20 shrink-0">
+              <div className="flex items-center gap-0.5">
+                <span className="text-[10px] text-muted-foreground">Lv</span>
+                <span className="font-mono text-xs font-bold text-primary">{character.level}</span>
+              </div>
+              <div className="w-10 h-1 bg-muted/30 rounded-full overflow-hidden" title={`${levelingState.currentXP}/${levelingState.xpThreshold} XP`}>
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-primary/70"
+                  style={{ width: `${Math.min(100, (levelingState.currentXP / levelingState.xpThreshold) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground truncate max-w-12">{charClass?.name}</span>
+            </div>
+          </div>
+
+          {/* Director Status - Debug only */}
+          {(cheatMode || gameContext?.settings?.showEventBusDebug) && (
+            <DirectorStatusIndicator compact className="shrink-0" />
+          )}
+          
+          {cheatMode && (
+            <span className="text-[8px] bg-primary/20 text-primary px-1 py-0.5 rounded-full border border-primary/30 animate-glow-pulse shrink-0">
+              DEV
+            </span>
+          )}
+
+          {/* Action Buttons - Frosted compact */}
+          <div className="flex items-center gap-0.5 ml-auto shrink-0">
+            <SavesDropdown />
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowInventory(true)}
+              className="h-7 w-7 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 backdrop-blur-sm"
+              title="Inventory (Ctrl+I)"
+            >
+              <Package className="w-3.5 h-3.5" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowCharacterSheet(true)}
+              className="h-7 w-7 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 backdrop-blur-sm"
+              title="Character Sheet"
+            >
+              <Backpack className="w-3.5 h-3.5" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              className="h-7 w-7 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 backdrop-blur-sm"
+              title="Settings"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCheatMode}
+              className="hidden xs:flex h-7 w-7 text-muted-foreground/70 hover:text-primary hover:bg-primary/10 backdrop-blur-sm"
+              title="Toggle Dev Mode"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRestart}
+              className="h-7 w-7 text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 backdrop-blur-sm"
+              title="New Adventure"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
       </header>
