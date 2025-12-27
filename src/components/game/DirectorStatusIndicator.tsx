@@ -59,9 +59,9 @@ const PRIORITY_CONFIG: Record<SystemPriority, {
   },
   AMBIENT: { 
     icon: Gauge, 
-    color: 'text-muted-foreground', 
-    bgColor: 'bg-muted/40',
-    label: 'Idle' 
+    color: 'text-transparent', 
+    bgColor: 'bg-transparent',
+    label: '' 
   },
 };
 
@@ -92,6 +92,11 @@ export const DirectorStatusIndicator: React.FC<DirectorStatusIndicatorProps> = (
     if (escalation >= 20) return 'bg-emerald-500';
     return 'bg-muted-foreground/50';
   };
+  
+  // Hide indicator entirely when in AMBIENT mode
+  if (priority === 'AMBIENT') {
+    return null;
+  }
   
   if (compact) {
     return (
