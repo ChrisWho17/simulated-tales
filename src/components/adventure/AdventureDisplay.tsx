@@ -45,6 +45,7 @@ import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalet
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { CheckSelfButton } from '@/components/game/CheckSelfButton';
 import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
+import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
@@ -1233,6 +1234,11 @@ export function AdventureDisplay({
 
             {/* Action Buttons - Compact on mobile */}
             <div className="flex items-center gap-0.5 sm:gap-1">
+              {/* Director Status - Compact indicator */}
+              {(cheatMode || gameContext?.settings?.showEventBusDebug) && (
+                <DirectorStatusIndicator compact className="mr-2" />
+              )}
+              
               {cheatMode && (
                 <span className="text-[10px] sm:text-xs bg-primary/20 text-primary px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full border border-primary/30 animate-glow-pulse">
                   DEV
