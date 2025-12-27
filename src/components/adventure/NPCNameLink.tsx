@@ -267,6 +267,43 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
   );
 }
 
+// ============= PLAYER NAME LINK =============
+
+interface PlayerNameLinkProps {
+  playerName: string;
+  onShowCharacterSheet: () => void;
+  className?: string;
+}
+
+export function PlayerNameLink({ playerName, onShowCharacterSheet, className }: PlayerNameLinkProps) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onShowCharacterSheet();
+  }, [onShowCharacterSheet]);
+
+  return (
+    <span
+      className={cn(
+        'player-name-link cursor-pointer font-bold text-accent underline decoration-accent/60 underline-offset-2 hover:decoration-accent hover:text-accent/80 transition-colors duration-200',
+        className
+      )}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onShowCharacterSheet();
+        }
+      }}
+      aria-label={`View ${playerName}'s character sheet`}
+    >
+      {playerName}
+    </span>
+  );
+}
+
 // Hook to get all known NPC names for text parsing
 export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   return useMemo(() => {
@@ -282,19 +319,36 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   }, []);
 }
 
-// Helper function to parse text and insert NPC links
+// Helper function to parse text and insert NPC and Player links
 export function parseTextForNPCLinks(
   text: string,
   npcNameMap: Map<string, RegisteredNPC>,
-  keyPrefix: string
+  keyPrefix: string,
+  playerName?: string,
+  onShowCharacterSheet?: () => void
 ): React.ReactNode[] {
-  if (npcNameMap.size === 0) return [text];
+  if (npcNameMap.size === 0 && !playerName) return [text];
 
-  // Sort NPC names by length (longest first) to avoid partial matches
-  const sortedNames = Array.from(npcNameMap.keys()).sort((a, b) => b.length - a.length);
+  // Build list of all names to match (NPCs + player)
+  const allNames: Array<{ name: string; type: 'npc' | 'player' }> = [];
+  
+  // Add player name first (higher priority)
+  if (playerName && playerName.trim()) {
+    allNames.push({ name: playerName.toLowerCase(), type: 'player' });
+  }
+  
+  // Add NPC names
+  for (const name of npcNameMap.keys()) {
+    allNames.push({ name, type: 'npc' });
+  }
+  
+  if (allNames.length === 0) return [text];
+
+  // Sort by length (longest first) to avoid partial matches
+  allNames.sort((a, b) => b.name.length - a.name.length);
   
   // Build regex pattern - escape special chars and use word boundaries
-  const escapedNames = sortedNames.map(name => 
+  const escapedNames = allNames.map(({ name }) => 
     name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   );
   const pattern = new RegExp(`\\b(${escapedNames.join('|')})\\b`, 'gi');
@@ -309,19 +363,32 @@ export function parseTextForNPCLinks(
       result.push(text.slice(lastIndex, match.index));
     }
 
-    // Find matching NPC (case-insensitive)
+    // Find what type of match this is
     const matchedName = match[1];
-    const npc = npcNameMap.get(matchedName.toLowerCase());
-
-    if (npc) {
+    const matchedLower = matchedName.toLowerCase();
+    
+    // Check if it's the player name
+    if (playerName && matchedLower === playerName.toLowerCase() && onShowCharacterSheet) {
       result.push(
-        <NPCNameLink
-          key={`${keyPrefix}-npc-${match.index}`}
-          npc={npc}
+        <PlayerNameLink
+          key={`${keyPrefix}-player-${match.index}`}
+          playerName={matchedName}
+          onShowCharacterSheet={onShowCharacterSheet}
         />
       );
     } else {
-      result.push(matchedName);
+      // Check if it's an NPC
+      const npc = npcNameMap.get(matchedLower);
+      if (npc) {
+        result.push(
+          <NPCNameLink
+            key={`${keyPrefix}-npc-${match.index}`}
+            npc={npc}
+          />
+        );
+      } else {
+        result.push(matchedName);
+      }
     }
 
     lastIndex = pattern.lastIndex;
