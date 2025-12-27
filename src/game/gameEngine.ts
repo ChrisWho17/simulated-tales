@@ -143,9 +143,14 @@ export function advanceTime(state: GameState, hours: number = 1): GameState {
       };
       
       // Resolve system priority based on current state
+      // Check combat state from recent combat events
+      const recentCombatEvents = eventBus.getEventsByType('DAMAGE_DEALT', 3);
+      const isInCombat = recentCombatEvents.length > 0 && 
+        (currentState.time.tick - recentCombatEvents[0]?.tick < 3);
+      
       const systemPriority = resolveSystemPriority({
         playerHealth: needsResult.updatedNeeds.physical.health,
-        inCombat: false, // TODO: wire up combat state
+        inCombat: isInCombat,
         criticalNeeds: needsResult.criticalNeeds,
         activeConversation: false,
         recentDamage: eventBus.getEventsByType('DAMAGE_RECEIVED', 1).length > 0,
@@ -352,9 +357,15 @@ export function processAction(state: GameState, action: Action): { newState: Gam
       const authorityPresent = npcsHere.some(npc => npc.id === 'npc_guard_james' && npc.id !== targetNPC.id);
       
       // Evaluate escalation triggers from player input
+      // Calculate time since last conflict using combat events
+      const lastCombatEvent = eventBus.getEventsByType('DAMAGE_DEALT', 1)[0];
+      const timeSinceLastConflict = lastCombatEvent 
+        ? newState.time.tick - lastCombatEvent.tick 
+        : 999; // No recent conflict
+      
       const escalationTriggers = evaluateEscalationTriggers(targetNPC, action.args?.join(' ') || action.target, {
         recentEvents: newState.events.slice(-5).map(e => e.content),
-        timeSinceLastConflict: 0, // TODO: track this properly
+        timeSinceLastConflict,
       });
       
       // Calculate escalation changes
