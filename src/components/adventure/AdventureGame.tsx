@@ -229,6 +229,7 @@ export function AdventureGame() {
     updateCampaignMemory, 
     emotionalState, 
     settings,
+    diceMode,
     // World Bible
     initializeWorldBible,
     validateContent,
@@ -735,6 +736,8 @@ export function AdventureGame() {
             toneContext: toneContextPayload,
             // Pass language barrier context
             languageContext: languageContextPayload,
+            // Pass dice mode for roll frequency
+            diceMode: diceMode,
             // === NEW SYSTEMS ===
             // NPC Psychology (grudges, debts, relationships)
             npcPsychologyContext: npcPsychologyPayload,
