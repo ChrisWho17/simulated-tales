@@ -30,6 +30,14 @@ import {
   buildRippleScopeContext,
 } from '@/game/locationTrackingSystem';
 import { UrbanZone, UrbanLocation } from '@/types/urbanZone';
+import {
+  AdrenalineSystemState,
+  createAdrenalineState,
+  registerAdrenalineForEventBus,
+  updateRegisteredAdrenalineState,
+  tickAdrenalineSystem,
+} from '@/game/adrenalineCombatIntegration';
+import { eventBus } from '@/game/eventBus';
 
 // ============= STORAGE KEYS =============
 const RIPPLES_KEY = 'untold-active-ripples';
@@ -39,6 +47,7 @@ const RUMORS_KEY = 'untold-active-rumors';
 const NPC_CONTEXTS_KEY = 'untold-scene-npcs';
 const LOCATION_KEY = 'untold-player-location';
 const LOCATION_HISTORY_KEY = 'untold-location-history';
+const ADRENALINE_KEY = 'untold-adrenaline-state';
 
 // ============= TYPES =============
 export interface GameLoopState {
@@ -51,6 +60,7 @@ export interface GameLoopState {
   playerLocation: PlayerLocation;
   locationHistory: LocationHistory;
   activeConsequences: LocationConsequence[];
+  adrenalineState: AdrenalineSystemState;
 }
 
 export interface GameLoopActions {
@@ -85,6 +95,10 @@ export interface GameLoopActions {
   // Persistence
   getSerializedState: () => string;
   restoreState: (serialized: string) => boolean;
+  
+  // Adrenaline system
+  getAdrenalineState: () => AdrenalineSystemState;
+  tickAdrenaline: (deltaSeconds: number) => { revealedWounds: Array<{ message: string; damage: number }> };
 }
 
 // ============= HELPER FUNCTIONS =============
@@ -137,6 +151,10 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     loadFromStorage(LOCATION_HISTORY_KEY, createLocationHistory())
   );
   
+  const [adrenalineState, setAdrenalineState] = useState<AdrenalineSystemState>(() =>
+    loadFromStorage(ADRENALINE_KEY, createAdrenalineState())
+  );
+  
   const [currentTurn, setCurrentTurn] = useState(initialTurn);
   
   // Track for debounced saves
@@ -148,6 +166,21 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     playerLocation,
     currentTurn
   );
+  
+  // Register adrenaline system with event bus for combat damage events
+  useEffect(() => {
+    const unsubscribe = registerAdrenalineForEventBus(adrenalineState, (newState) => {
+      setAdrenalineState(newState);
+      console.log('[GameLoop] Adrenaline state updated via event bus');
+    });
+    
+    return unsubscribe;
+  }, []); // Only register once on mount
+  
+  // Keep event bus registration updated with latest state
+  useEffect(() => {
+    updateRegisteredAdrenalineState(adrenalineState);
+  }, [adrenalineState]);
   
   // Debounced save effect
   useEffect(() => {
@@ -163,6 +196,7 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       saveToStorage(NPC_CONTEXTS_KEY, sceneNPCs);
       saveToStorage(LOCATION_KEY, playerLocation);
       saveToStorage(LOCATION_HISTORY_KEY, locationHistory);
+      saveToStorage(ADRENALINE_KEY, adrenalineState);
     }, 500);
     
     return () => {
@@ -170,7 +204,7 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, locationHistory]);
+  }, [activeRipples, worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, locationHistory, adrenalineState]);
   
   // ============= LOCATION TRACKING =============
   
@@ -262,7 +296,19 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
           .filter(inv => inv.hoursRemaining > 0),
       }));
     }
-  }, [currentTurn, activeRipples, worldState, activeRumors, sceneNPCs, playerLocation]);
+    
+    // Process adrenaline decay (every turn = ~1 minute game time)
+    const adrenalineResult = tickAdrenalineSystem(adrenalineState, 60, newTurn);
+    if (adrenalineResult.revealedWounds.length > 0) {
+      console.log(`[GameLoop] ${adrenalineResult.revealedWounds.length} wounds revealed as adrenaline drops`);
+      // Add wound reveal messages to narrative queue
+      setNarrativeQueue(prev => [
+        ...prev, 
+        ...adrenalineResult.revealedWounds.map(w => w.message)
+      ]);
+    }
+    setAdrenalineState(adrenalineResult.state);
+  }, [currentTurn, activeRipples, worldState, activeRumors, sceneNPCs, playerLocation, adrenalineState]);
   
   const processPlayerAction = useCallback((
     action: string,
@@ -384,12 +430,28 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       if (typeof parsed.currentTurn === 'number') setCurrentTurn(parsed.currentTurn);
       if (parsed.playerLocation) setPlayerLocation(parsed.playerLocation);
       if (parsed.locationHistory) setLocationHistory(parsed.locationHistory);
+      if (parsed.adrenalineState) setAdrenalineState(parsed.adrenalineState);
       return true;
     } catch (e) {
       console.error('Failed to restore game loop state:', e);
       return false;
     }
   }, []);
+  
+  // ============= ADRENALINE =============
+  
+  const getAdrenalineState = useCallback(() => adrenalineState, [adrenalineState]);
+  
+  const tickAdrenaline = useCallback((deltaSeconds: number) => {
+    const result = tickAdrenalineSystem(adrenalineState, deltaSeconds, currentTurn);
+    setAdrenalineState(result.state);
+    return { 
+      revealedWounds: result.revealedWounds.map(w => ({ 
+        message: w.message, 
+        damage: w.damage 
+      })) 
+    };
+  }, [adrenalineState, currentTurn]);
   
   // ============= RETURN =============
   
@@ -403,6 +465,7 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     playerLocation,
     locationHistory,
     activeConsequences,
+    adrenalineState,
   };
   
   const actions: GameLoopActions = {
@@ -422,6 +485,8 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     updateNPC,
     getSerializedState,
     restoreState,
+    getAdrenalineState,
+    tickAdrenaline,
   };
   
   return [state, actions];

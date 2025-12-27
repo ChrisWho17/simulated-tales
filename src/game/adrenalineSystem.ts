@@ -618,6 +618,23 @@ function checkWoundReveal(state: AdrenalineSystemState): {
   };
 }
 
+// Emit wound reveal events to event bus (import dynamically to avoid circular deps)
+export function emitWoundRevealEvents(revealedWounds: Wound[], tick: number): void {
+  // Dynamic import to avoid circular dependency
+  import('./eventBus').then((module) => {
+    const { eventBus } = module;
+    for (const wound of revealedWounds) {
+      eventBus.emitDamageReceived(
+        'player',
+        wound.hpDamage,
+        wound.type,
+        false, // no longer hidden
+        tick
+      );
+    }
+  });
+}
+
 // Generate wound reveal message
 export function getWoundRevealMessage(wound: Wound): string {
   const revealMessages: Record<string, string[]> = {
