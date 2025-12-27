@@ -78,9 +78,9 @@ export function GameHeader({
 }: GameHeaderProps) {
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {character && <CharacterPortrait character={character} />}
-        <h1 className="text-xl font-narrative text-gradient-gold glow-text tracking-wide">
+        <h1 className="text-base font-narrative text-gradient-gold glow-text tracking-wide">
           Untold
         </h1>
         <div className="h-6 w-px bg-border" />
