@@ -3,6 +3,7 @@
 
 import { NPC, GameState } from '@/types/game';
 import { LifeSimPlayerState } from '@/types/lifeSim';
+import { eventBus, CombatEvent } from './eventBus';
 import { 
   performSkillCheck, 
   performContestedCheck,
@@ -345,10 +346,35 @@ export function resolveCombatRound(
       });
       npcStats.health = newNpcHealth;
       
+      // Emit DAMAGE_DEALT event
+      eventBus.emit<CombatEvent>({
+        type: 'DAMAGE_DEALT',
+        tick: encounter.currentRound,
+        source: 'combatSystem',
+        priority: 'normal',
+        data: {
+          sourceEntity: 'player',
+          targetEntity: npcId,
+          amount: damageDealt,
+        },
+      });
+      
       if (newNpcHealth <= 0) {
         combatEnded = true;
         outcome = 'victory';
         narrative += `\n\n**${npc.meta.name} collapses, defeated!**`;
+        
+        // Emit death event
+        eventBus.emit<CombatEvent>({
+          type: 'DEATH',
+          tick: encounter.currentRound,
+          source: 'combatSystem',
+          priority: 'critical',
+          data: {
+            targetEntity: npcId,
+            sourceEntity: 'player',
+          },
+        });
       }
     }
     
@@ -363,10 +389,37 @@ export function resolveCombatRound(
       });
       playerStats.health = newPlayerHealth;
       
+      // Emit DAMAGE_RECEIVED event for adrenaline system
+      eventBus.emit<CombatEvent>({
+        type: 'DAMAGE_RECEIVED',
+        tick: encounter.currentRound,
+        source: 'combatSystem',
+        priority: 'high',
+        data: {
+          targetEntity: 'player',
+          sourceEntity: npcId,
+          amount: damageTaken,
+          woundType: 'combat_damage',
+          isHidden: false,
+        },
+      });
+      
       if (newPlayerHealth <= 0) {
         combatEnded = true;
         outcome = 'defeat';
         narrative += `\n\n**You collapse, unable to continue fighting!**`;
+        
+        // Emit knockout event
+        eventBus.emit<CombatEvent>({
+          type: 'KNOCKOUT',
+          tick: encounter.currentRound,
+          source: 'combatSystem',
+          priority: 'critical',
+          data: {
+            targetEntity: 'player',
+            sourceEntity: npcId,
+          },
+        });
       }
     }
   }

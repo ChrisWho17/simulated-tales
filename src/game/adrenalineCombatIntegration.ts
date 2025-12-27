@@ -1,5 +1,6 @@
 // Adrenaline & Combat Integration
 // Connects the adrenaline/hidden damage system to combat damage flow
+// Subscribes to Event Bus for damage events
 
 import { 
   AdrenalineSystemState,
@@ -17,6 +18,7 @@ import {
   ADRENALINE_TRIGGERS,
   COMBAT_WOUND_MAPPING,
 } from './adrenalineSystem';
+import { eventBus, CombatEvent } from './eventBus';
 
 // ============================================================================
 // ATTACK TYPE TO WOUND MAPPING
@@ -244,6 +246,103 @@ export function initializeAdrenalineSystem(): AdrenalineSystemState {
 export function shouldHideDamage(state: AdrenalineSystemState, woundSeverity: number): boolean {
   const baseThreshold = 20 + (woundSeverity * 10);
   return state.adrenaline.current >= baseThreshold;
+}
+
+// ============================================================================
+// EVENT BUS SUBSCRIPTIONS
+// ============================================================================
+
+let adrenalineStateRef: AdrenalineSystemState | null = null;
+let onStateUpdateCallback: ((state: AdrenalineSystemState) => void) | null = null;
+
+/**
+ * Register the adrenaline state for event bus integration
+ * The callback is called whenever the state is updated by event bus handlers
+ */
+export function registerAdrenalineForEventBus(
+  state: AdrenalineSystemState,
+  onStateUpdate: (state: AdrenalineSystemState) => void
+): () => void {
+  adrenalineStateRef = state;
+  onStateUpdateCallback = onStateUpdate;
+  
+  // Subscribe to damage events
+  const unsubDamage = eventBus.subscribe(['DAMAGE_RECEIVED'], (event) => {
+    if (!adrenalineStateRef) return;
+    
+    const combatEvent = event as CombatEvent;
+    if (combatEvent.data.targetEntity !== 'player') return;
+    
+    // Trigger adrenaline from being attacked
+    const triggerResult = triggerAdrenaline(
+      adrenalineStateRef, 
+      ADRENALINE_TRIGGERS.being_attacked || 20, 
+      'combat'
+    );
+    
+    adrenalineStateRef = triggerResult.state;
+    
+    // Process the damage through adrenaline masking
+    if (combatEvent.data.amount && combatEvent.data.amount > 0) {
+      const woundType = combatEvent.data.woundType as WoundCategory || 'blunt_trauma';
+      const damageResult = receiveDamage(
+        adrenalineStateRef,
+        woundType,
+        null,
+        combatEvent.data.sourceEntity || 'combat',
+        event.tick
+      );
+      
+      adrenalineStateRef = damageResult.state;
+      
+      // Emit wound event if wound was created
+      if (damageResult.wound) {
+        eventBus.emit<CombatEvent>({
+          type: 'WOUND_INFLICTED',
+          tick: event.tick,
+          source: 'adrenalineSystem',
+          priority: 'high',
+          data: {
+            targetEntity: 'player',
+            amount: damageResult.wound.hpDamage,
+            woundType: damageResult.wound.type,
+            location: damageResult.wound.location,
+            isHidden: damageResult.hidden,
+          },
+        });
+      }
+    }
+    
+    onStateUpdateCallback?.(adrenalineStateRef);
+  });
+  
+  // Subscribe to death/knockout events for max adrenaline
+  const unsubCritical = eventBus.subscribe(['KNOCKOUT'], (event) => {
+    if (!adrenalineStateRef) return;
+    
+    const combatEvent = event as CombatEvent;
+    if (combatEvent.data.targetEntity !== 'player') return;
+    
+    // Max out adrenaline on critical combat events
+    const triggerResult = triggerAdrenaline(adrenalineStateRef, 50, 'critical');
+    adrenalineStateRef = triggerResult.state;
+    onStateUpdateCallback?.(adrenalineStateRef);
+  });
+  
+  // Return cleanup function
+  return () => {
+    unsubDamage();
+    unsubCritical();
+    adrenalineStateRef = null;
+    onStateUpdateCallback = null;
+  };
+}
+
+/**
+ * Update the registered adrenaline state (call this when state changes externally)
+ */
+export function updateRegisteredAdrenalineState(state: AdrenalineSystemState): void {
+  adrenalineStateRef = state;
 }
 
 // Re-export common types and functions for convenience
