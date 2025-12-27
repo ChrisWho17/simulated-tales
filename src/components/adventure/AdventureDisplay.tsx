@@ -185,6 +185,7 @@ export function AdventureDisplay({
   const [lastPlayerAction, setLastPlayerAction] = useState('');
   const [showCheckSelfModal, setShowCheckSelfModal] = useState(false);
   const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
+  const [showWeatherModal, setShowWeatherModal] = useState(false);
   
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
@@ -1206,35 +1207,38 @@ export function AdventureDisplay({
             UNTOLD
           </h1>
           
-          {/* Weather Indicator - Frosted with weather colors */}
-          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 weather-frost weather-${currentMood === 'fearful' ? 'storm' : currentMood === 'sad' ? 'rain' : currentMood === 'depressed' ? 'fog' : currentMood === 'mad' ? 'hot' : currentMood === 'suspicious' ? 'cold' : 'calm'}`}>
+          {/* Weather Button - Opens weather modal */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowWeatherModal(true)}
+            className={`h-7 w-7 rounded-md frosted-button shrink-0 ${
+              currentMood === 'fearful' ? 'text-yellow-400 hover:text-yellow-300' : 
+              currentMood === 'sad' ? 'text-blue-400 hover:text-blue-300' : 
+              currentMood === 'depressed' ? 'text-violet-400 hover:text-violet-300' : 
+              currentMood === 'mad' ? 'text-red-400 hover:text-red-300' : 
+              currentMood === 'annoyed' ? 'text-orange-400 hover:text-orange-300' :
+              currentMood === 'suspicious' ? 'text-cyan-400 hover:text-cyan-300' :
+              'text-emerald-400 hover:text-emerald-300'
+            }`}
+            title="Weather & Mood"
+          >
             {currentMood === 'fearful' ? (
-              <CloudLightning className="w-3 h-3 text-yellow-400" />
+              <CloudLightning className="w-4 h-4" />
             ) : currentMood === 'sad' ? (
-              <CloudRain className="w-3 h-3 text-blue-400" />
+              <CloudRain className="w-4 h-4" />
             ) : currentMood === 'depressed' ? (
-              <CloudFog className="w-3 h-3 text-violet-400" />
+              <CloudFog className="w-4 h-4" />
             ) : currentMood === 'mad' ? (
-              <Sun className="w-3 h-3 text-red-400" />
+              <Sun className="w-4 h-4" />
             ) : currentMood === 'annoyed' ? (
-              <Cloud className="w-3 h-3 text-orange-400" />
+              <Cloud className="w-4 h-4" />
             ) : currentMood === 'suspicious' ? (
-              <Snowflake className="w-3 h-3 text-cyan-400" />
+              <Snowflake className="w-4 h-4" />
             ) : (
-              <Wind className="w-3 h-3 text-emerald-400" />
+              <Wind className="w-4 h-4" />
             )}
-            <span className={`${
-              currentMood === 'fearful' ? 'text-yellow-300' : 
-              currentMood === 'sad' ? 'text-blue-300' : 
-              currentMood === 'depressed' ? 'text-violet-300' : 
-              currentMood === 'mad' ? 'text-red-300' : 
-              currentMood === 'annoyed' ? 'text-orange-300' :
-              currentMood === 'suspicious' ? 'text-cyan-300' :
-              'text-emerald-300'
-            }`}>
-              {currentMood === 'neutral' ? 'Calm' : currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
-            </span>
-          </div>
+          </Button>
 
           {/* Separator */}
           <div className="hidden md:block h-4 w-px bg-border/30 shrink-0" />
@@ -1719,6 +1723,89 @@ export function AdventureDisplay({
             <p className="text-xs text-muted-foreground text-center mt-4">
               Tip: Type <code className="bg-muted px-1 rounded">/checkself</code> or <code className="bg-muted px-1 rounded">/checkself thorough</code>
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Weather/Mood Modal */}
+      {showWeatherModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel p-6 max-w-sm w-full mx-4 space-y-4 animate-scale-in">
+            <div className="text-center space-y-3">
+              {/* Weather Icon */}
+              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+                currentMood === 'fearful' ? 'bg-yellow-500/20' : 
+                currentMood === 'sad' ? 'bg-blue-500/20' : 
+                currentMood === 'depressed' ? 'bg-violet-500/20' : 
+                currentMood === 'mad' ? 'bg-red-500/20' : 
+                currentMood === 'annoyed' ? 'bg-orange-500/20' :
+                currentMood === 'suspicious' ? 'bg-cyan-500/20' :
+                currentMood === 'happy' ? 'bg-green-500/20' :
+                currentMood === 'lusty' ? 'bg-pink-500/20' :
+                currentMood === 'determined' ? 'bg-white/20' :
+                'bg-emerald-500/20'
+              }`}>
+                {currentMood === 'fearful' ? (
+                  <CloudLightning className={`w-8 h-8 text-yellow-400`} />
+                ) : currentMood === 'sad' ? (
+                  <CloudRain className={`w-8 h-8 text-blue-400`} />
+                ) : currentMood === 'depressed' ? (
+                  <CloudFog className={`w-8 h-8 text-violet-400`} />
+                ) : currentMood === 'mad' ? (
+                  <Sun className={`w-8 h-8 text-red-400`} />
+                ) : currentMood === 'annoyed' ? (
+                  <Cloud className={`w-8 h-8 text-orange-400`} />
+                ) : currentMood === 'suspicious' ? (
+                  <Snowflake className={`w-8 h-8 text-cyan-400`} />
+                ) : currentMood === 'happy' ? (
+                  <Sun className={`w-8 h-8 text-green-400`} />
+                ) : currentMood === 'lusty' ? (
+                  <Heart className={`w-8 h-8 text-pink-400`} />
+                ) : currentMood === 'determined' ? (
+                  <Zap className={`w-8 h-8 text-white`} />
+                ) : (
+                  <Wind className={`w-8 h-8 text-emerald-400`} />
+                )}
+              </div>
+              
+              {/* Mood Title */}
+              <h3 className={`text-2xl font-display font-bold ${
+                currentMood === 'fearful' ? 'text-yellow-300' : 
+                currentMood === 'sad' ? 'text-blue-300' : 
+                currentMood === 'depressed' ? 'text-violet-300' : 
+                currentMood === 'mad' ? 'text-red-300' : 
+                currentMood === 'annoyed' ? 'text-orange-300' :
+                currentMood === 'suspicious' ? 'text-cyan-300' :
+                currentMood === 'happy' ? 'text-green-300' :
+                currentMood === 'lusty' ? 'text-pink-300' :
+                currentMood === 'determined' ? 'text-white' :
+                'text-emerald-300'
+              }`}>
+                {currentMood === 'neutral' ? 'Calm' : currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
+              </h3>
+              
+              {/* Description */}
+              <p className="text-sm text-muted-foreground">
+                {currentMood === 'neutral' && 'The air is still. A sense of peace settles over the scene.'}
+                {currentMood === 'fearful' && 'Thunder rumbles in the distance. An unsettling tension fills the air.'}
+                {currentMood === 'sad' && 'A gentle rain falls, matching the melancholy of the moment.'}
+                {currentMood === 'depressed' && 'A heavy fog blankets everything, muffling sound and light.'}
+                {currentMood === 'mad' && 'Heat radiates intensely. Anger simmers just beneath the surface.'}
+                {currentMood === 'annoyed' && 'Gusts of wind stir restlessly, mirroring growing frustration.'}
+                {currentMood === 'suspicious' && 'A cold chill hangs in the air. Something feels... off.'}
+                {currentMood === 'happy' && 'Warm sunlight bathes everything in a pleasant glow.'}
+                {currentMood === 'lusty' && 'The atmosphere grows warm and intimate.'}
+                {currentMood === 'determined' && 'Focused energy crackles through the scene.'}
+              </p>
+            </div>
+            
+            <Button
+              onClick={() => setShowWeatherModal(false)}
+              className="w-full"
+              variant="outline"
+            >
+              Close
+            </Button>
           </div>
         </div>
       )}
