@@ -36,10 +36,18 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
 }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   
-  const isDisabled = !directorSettings.enabled || directorSettings.rawGame;
+  // Director Mode OFF = everything disabled
+  // Director Mode ON + Raw Game ON = only difficulty modes enabled
+  // Director Mode ON + Raw Game OFF = all settings enabled (full manipulation)
+  const isDirectorOff = !directorSettings.enabled;
+  const isDifficultyOnly = directorSettings.enabled && directorSettings.rawGame;
+  const isFullyEnabled = directorSettings.enabled && !directorSettings.rawGame;
+  
+  // Advanced settings disabled unless fully enabled (Raw OFF)
+  const isAdvancedDisabled = !isFullyEnabled;
   
   // Get current knobs for preview
-  const currentKnobs = directorSettings.rawGame || !directorSettings.enabled
+  const currentKnobs = !isFullyEnabled
     ? getRawGameKnobs()
     : computeDirectorKnobs(
         directorSettings.mode, 
@@ -111,8 +119,8 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
         )}
       </div>
       
-      {/* Directive Modes - Frosted Cards */}
-      <div className={cn("space-y-3", isDisabled && "opacity-40 pointer-events-none")}>
+      {/* Directive Modes - Frosted Cards (available when Director is ON) */}
+      <div className={cn("space-y-3", isDirectorOff && "opacity-40 pointer-events-none")}>
         <div className="flex items-center gap-2">
           <Gauge className="w-4 h-4 text-[var(--accent-secondary)]" />
           <h3 className="text-sm font-medium">Difficulty Mode</h3>
@@ -123,7 +131,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
             <button
               key={mode.id}
               onClick={() => handleModeChange(mode.id)}
-              disabled={isDisabled}
+              disabled={isDirectorOff}
               className={cn(
                 "director-mode-card p-3 rounded-xl border text-left transition-all",
                 "backdrop-blur-md",
@@ -144,8 +152,8 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
         </div>
       </div>
       
-      {/* Tightness Slider */}
-      <div className={cn("space-y-3", isDisabled && "opacity-40 pointer-events-none")}>
+      {/* Tightness Slider (only when Raw is OFF) */}
+      <div className={cn("space-y-3", isAdvancedDisabled && "opacity-40 pointer-events-none")}>
         <div className="flex items-center gap-2">
           <Compass className="w-4 h-4 text-[var(--accent-secondary)]" />
           <h3 className="text-sm font-medium">Narrative Tightness</h3>
@@ -166,7 +174,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
             min={0}
             max={100}
             step={5}
-            disabled={isDisabled}
+            disabled={isAdvancedDisabled}
             className="w-full"
           />
           
@@ -182,8 +190,8 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
         </div>
       </div>
       
-      {/* Director Types */}
-      <div className={cn("space-y-3", isDisabled && "opacity-40 pointer-events-none")}>
+      {/* Director Types (only when Raw is OFF) */}
+      <div className={cn("space-y-3", isAdvancedDisabled && "opacity-40 pointer-events-none")}>
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-[var(--accent-secondary)]" />
           <h3 className="text-sm font-medium">Director Type</h3>
@@ -263,7 +271,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
       </div>
       
       {/* Personality Toggles */}
-      <div className={cn("space-y-3", isDisabled && "opacity-40 pointer-events-none")}>
+      <div className={cn("space-y-3", isAdvancedDisabled && "opacity-40 pointer-events-none")}>
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[var(--accent-secondary)]" />
           <h3 className="text-sm font-medium">Personality</h3>
@@ -345,7 +353,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
       </div>
       
       {/* Allow Mid-Campaign Swap */}
-      <div className={cn(isDisabled && "opacity-40 pointer-events-none")}>
+      <div className={cn(isAdvancedDisabled && "opacity-40 pointer-events-none")}>
         <div className="flex items-center justify-between py-2">
           <div>
             <span className="text-sm font-medium">Allow Mid-Campaign Swap</span>
@@ -355,7 +363,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
           </div>
           <Switch 
             checked={directorSettings.allowMidCampaignSwap}
-            disabled={isDisabled}
+            disabled={isAdvancedDisabled}
             onCheckedChange={(checked) => onUpdate({ 
               ...directorSettings, 
               allowMidCampaignSwap: checked 
