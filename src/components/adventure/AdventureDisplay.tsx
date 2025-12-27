@@ -62,6 +62,7 @@ import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
 import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
+import { useAudioSystem } from '@/hooks/useAudioSystem';
 
 interface StoryEntry {
   id: string;
@@ -197,11 +198,21 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
   
+  // Audio system integration
+  const { 
+    initialized: audioInitialized, 
+    syncWeather, 
+    processNarrative,
+    initializeAudio 
+  } = useAudioSystem();
+  
   // Get weather settings from game context (must come after gameContext declaration)
   const weatherEnabled = gameContext?.settings?.enableWeatherEffects ?? true;
   const weatherMode = gameContext?.settings?.weatherMode ?? 'auto';
   const manualWeatherType = gameContext?.settings?.manualWeatherType as WeatherType | undefined;
   const showWeatherParticles = gameContext?.settings?.showWeatherParticles ?? true;
+  const enableWeatherSounds = gameContext?.settings?.audioSettings?.enableWeatherSounds ?? true;
+  const enableStorySounds = gameContext?.settings?.audioSettings?.enableStorySounds ?? true;
   
   // Game loop for adrenaline system with player health for Director priority
   const [gameLoopState, gameLoopActions] = useGameLoop({
@@ -290,9 +301,37 @@ export function AdventureDisplay({
         weatherTickRef.current++;
         setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
       }
+      
+      // Process narrative for sound triggers
+      const latestEntry = story[story.length - 1];
+      if (latestEntry?.role === 'narrator' && enableStorySounds && audioInitialized) {
+        processNarrative(latestEntry.content);
+      }
     }
     previousStoryLength.current = story.length;
-  }, [story.length, isAtBottom, weatherMode]);
+  }, [story.length, isAtBottom, weatherMode, enableStorySounds, audioInitialized, processNarrative, story]);
+
+  // Sync weather sounds with weather state
+  useEffect(() => {
+    if (audioInitialized && enableWeatherSounds && weatherEnabled) {
+      syncWeather(weatherState);
+    }
+  }, [weatherState, audioInitialized, enableWeatherSounds, weatherEnabled, syncWeather]);
+  
+  // Initialize audio on first user interaction
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      initializeAudio();
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+    document.addEventListener('click', handleFirstInteraction, { once: true });
+    document.addEventListener('keydown', handleFirstInteraction, { once: true });
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, [initializeAudio]);
 
   // Scroll to bottom handler
   const scrollToBottom = useCallback(() => {

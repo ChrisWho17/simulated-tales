@@ -16,6 +16,18 @@ export interface LanguageSettings {
   playerKnownLanguages: string[];   // Languages the player character knows
 }
 
+// Audio settings
+export interface AudioSettings {
+  masterVolume: number;      // 0-100
+  ambienceVolume: number;    // 0-100
+  effectsVolume: number;     // 0-100
+  musicVolume: number;       // 0-100
+  uiVolume: number;          // 0-100
+  enableWeatherSounds: boolean;
+  enableStorySounds: boolean;
+  enableUISounds: boolean;
+}
+
 // In-Depth Mode Toggles - Customizable gameplay intensity
 export interface InDepthSettings {
   // Tone settings
@@ -55,6 +67,9 @@ export interface GameSettings {
   
   // Language settings
   languageSettings: LanguageSettings;
+  
+  // Audio settings
+  audioSettings: AudioSettings;
   
   // In-Depth Mode Toggles
   inDepthSettings: InDepthSettings;
@@ -98,6 +113,17 @@ export const DEFAULT_LANGUAGE_SETTINGS: LanguageSettings = {
   playerKnownLanguages: ['en', 'common'],
 };
 
+export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  masterVolume: 80,
+  ambienceVolume: 60,
+  effectsVolume: 90,
+  musicVolume: 40,
+  uiVolume: 50,
+  enableWeatherSounds: true,
+  enableStorySounds: true,
+  enableUISounds: true,
+};
+
 export const DEFAULT_INDEPTH_SETTINGS: InDepthSettings = {
   worldTone: 'balanced',
   enableHunger: false,
@@ -129,6 +155,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Language settings
   languageSettings: DEFAULT_LANGUAGE_SETTINGS,
+  
+  // Audio settings
+  audioSettings: DEFAULT_AUDIO_SETTINGS,
   
   // In-Depth settings
   inDepthSettings: DEFAULT_INDEPTH_SETTINGS,
