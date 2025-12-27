@@ -1006,10 +1006,11 @@ const STORY_SOUND_PROMPTS = {
 interface GenerationResult {
   prompt: string;
   filename: string;
-  status: 'pending' | 'generating' | 'success' | 'error';
+  status: 'pending' | 'generating' | 'success' | 'error' | 'cached';
   audioUrl?: string;
   error?: string;
   audioBlob?: Blob;
+  cached?: boolean;
 }
 
 type SoundCategory = 'weather' | 'story';
@@ -1020,25 +1021,35 @@ export const SoundGenerator: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [currentCategory, setCurrentCategory] = useState('');
   const [activeTab, setActiveTab] = useState<SoundCategory>('weather');
+  const [cachedCount, setCachedCount] = useState(0);
 
   const getSoundPrompts = (category: SoundCategory) => {
     return category === 'weather' ? WEATHER_SOUND_PROMPTS : STORY_SOUND_PROMPTS;
   };
 
   const getDuration = (category: SoundCategory, soundKey: string) => {
-    // Weather sounds are longer for looping, story sounds are shorter
     if (category === 'weather') return 15;
-    // Combat and footsteps are very short
-    if (soundKey.startsWith('combat_') || soundKey.startsWith('footstep_')) return 3;
-    // Doors and objects are medium
+    // Short sounds (2-3 seconds)
+    if (soundKey.startsWith('combat_') || soundKey.startsWith('gun_') || 
+        soundKey.startsWith('footstep_') || soundKey.startsWith('human_gasp') ||
+        soundKey.startsWith('human_grunt') || soundKey.startsWith('human_cough')) return 3;
+    // Medium sounds (5 seconds)
+    if (soundKey.startsWith('door_') || soundKey.startsWith('object_') || 
+        soundKey.startsWith('explosion_') || soundKey.startsWith('creature_') ||
+        soundKey.startsWith('magic_') || soundKey.startsWith('scifi_') ||
+        soundKey.startsWith('music_')) return 5;
+    // Longer sounds (8 seconds)
+    if (soundKey.startsWith('vehicle_') || soundKey.startsWith('crowd_') ||
+        soundKey.startsWith('element_') || soundKey.startsWith('human_')) return 8;
     return 5;
   };
 
   const generateSound = async (
     prompt: string, 
     filename: string, 
-    duration: number
-  ): Promise<{ success: boolean; audioBlob?: Blob; error?: string }> => {
+    duration: number,
+    category: string
+  ): Promise<{ success: boolean; audioUrl?: string; audioBlob?: Blob; error?: string; cached?: boolean }> => {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-sfx`,
@@ -1053,7 +1064,8 @@ export const SoundGenerator: React.FC = () => {
             prompt, 
             duration,
             promptInfluence: 0.4,
-            filename 
+            filename,
+            category, // Pass category for storage organization
           }),
         }
       );
@@ -1065,16 +1077,24 @@ export const SoundGenerator: React.FC = () => {
 
       const data = await response.json();
       
-      // Convert base64 to blob
-      const byteCharacters = atob(data.audioContent);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      // If cached, we get a publicUrl directly
+      if (data.cached) {
+        return { success: true, audioUrl: data.publicUrl, cached: true };
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
+      
+      // If newly generated, convert base64 to blob for local playback
+      if (data.audioContent) {
+        const byteCharacters = atob(data.audioContent);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
+        return { success: true, audioBlob, audioUrl: data.publicUrl, cached: false };
+      }
 
-      return { success: true, audioBlob };
+      return { success: true, audioUrl: data.publicUrl, cached: false };
     } catch (error) {
       console.error('Generation error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -1109,6 +1129,7 @@ export const SoundGenerator: React.FC = () => {
     })));
 
     // Generate sounds sequentially to avoid rate limiting
+    let cached = 0;
     for (let i = 0; i < soundsToGenerate.length; i++) {
       const sound = soundsToGenerate[i];
       setCurrentCategory(sound.category);
@@ -1118,24 +1139,30 @@ export const SoundGenerator: React.FC = () => {
         idx === i ? { ...r, status: 'generating' } : r
       ));
 
-      const result = await generateSound(sound.prompt, sound.filename, sound.duration);
+      const result = await generateSound(sound.prompt, sound.filename, sound.duration, sound.category);
+      
+      if (result.cached) cached++;
       
       // Update with result
       setResults(prev => prev.map((r, idx) => 
         idx === i ? {
           ...r,
-          status: result.success ? 'success' : 'error',
+          status: result.cached ? 'cached' : (result.success ? 'success' : 'error'),
           audioBlob: result.audioBlob,
-          audioUrl: result.audioBlob ? URL.createObjectURL(result.audioBlob) : undefined,
+          audioUrl: result.audioUrl || (result.audioBlob ? URL.createObjectURL(result.audioBlob) : undefined),
           error: result.error,
+          cached: result.cached,
         } : r
       ));
 
       setProgress(((i + 1) / soundsToGenerate.length) * 100);
+      setCachedCount(cached);
 
-      // Small delay between requests to avoid rate limiting
-      if (i < soundsToGenerate.length - 1) {
+      // Only delay for newly generated sounds (cached ones are instant)
+      if (!result.cached && i < soundsToGenerate.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1500));
+      } else if (i < soundsToGenerate.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Brief delay for cached
       }
     }
 
@@ -1171,6 +1198,7 @@ export const SoundGenerator: React.FC = () => {
   };
 
   const successCount = results.filter(r => r.status === 'success').length;
+  const cachedResultCount = results.filter(r => r.status === 'cached').length;
   const errorCount = results.filter(r => r.status === 'error').length;
   const weatherCount = Object.values(WEATHER_SOUND_PROMPTS).flat().length;
   const storyCount = Object.values(STORY_SOUND_PROMPTS).flat().length;
@@ -1203,14 +1231,14 @@ export const SoundGenerator: React.FC = () => {
             )}
           </Button>
           
-          {successCount > 0 && (
+          {(successCount > 0 || cachedResultCount > 0) && (
             <Button 
               onClick={downloadAllSounds}
               variant="outline"
               disabled={isGenerating}
             >
               <Download className="h-4 w-4 mr-2" />
-              Download All ({successCount})
+              Download All ({successCount + cachedResultCount})
             </Button>
           )}
         </div>
@@ -1219,17 +1247,23 @@ export const SoundGenerator: React.FC = () => {
         {isGenerating && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Generating: {currentCategory}</span>
+              <span>Processing: {currentCategory}</span>
               <span>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} />
+            {cachedCount > 0 && (
+              <div className="text-xs text-blue-500">
+                ⚡ {cachedCount} sounds loaded from cache (saving API calls!)
+              </div>
+            )}
           </div>
         )}
 
         {/* Stats */}
         {results.length > 0 && (
-          <div className="flex gap-4 text-sm">
-            <span className="text-green-500">✓ Success: {successCount}</span>
+          <div className="flex gap-4 text-sm flex-wrap">
+            <span className="text-green-500">✓ Generated: {successCount}</span>
+            <span className="text-blue-500">⚡ Cached: {cachedResultCount}</span>
             <span className="text-red-500">✗ Errors: {errorCount}</span>
             <span className="text-muted-foreground">Pending: {results.filter(r => r.status === 'pending').length}</span>
           </div>
@@ -1244,6 +1278,7 @@ export const SoundGenerator: React.FC = () => {
                   key={index}
                   className={`flex items-center gap-3 p-3 rounded-lg border ${
                     result.status === 'success' ? 'bg-green-500/10 border-green-500/20' :
+                    result.status === 'cached' ? 'bg-blue-500/10 border-blue-500/20' :
                     result.status === 'error' ? 'bg-red-500/10 border-red-500/20' :
                     result.status === 'generating' ? 'bg-yellow-500/10 border-yellow-500/20' :
                     'bg-muted/50'
@@ -1251,18 +1286,22 @@ export const SoundGenerator: React.FC = () => {
                 >
                   <div className="flex-shrink-0">
                     {result.status === 'success' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                    {result.status === 'cached' && <CheckCircle className="h-5 w-5 text-blue-500" />}
                     {result.status === 'error' && <XCircle className="h-5 w-5 text-red-500" />}
                     {result.status === 'generating' && <Loader2 className="h-5 w-5 text-yellow-500 animate-spin" />}
                     {result.status === 'pending' && <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="font-mono text-sm font-medium truncate">{result.filename}</div>
+                    <div className="font-mono text-sm font-medium truncate">
+                      {result.filename}
+                      {result.status === 'cached' && <span className="ml-2 text-xs text-blue-500">(cached)</span>}
+                    </div>
                     <div className="text-xs text-muted-foreground truncate">{result.prompt}</div>
                     {result.error && <div className="text-xs text-red-500">{result.error}</div>}
                   </div>
                   
-                  {result.status === 'success' && result.audioUrl && result.audioBlob && (
+                  {(result.status === 'success' || result.status === 'cached') && result.audioUrl && (
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -1271,13 +1310,15 @@ export const SoundGenerator: React.FC = () => {
                       >
                         <Play className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => downloadSound(result.audioBlob!, result.filename)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      {result.audioBlob && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => downloadSound(result.audioBlob!, result.filename)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
