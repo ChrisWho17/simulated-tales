@@ -4,6 +4,7 @@ export interface AudioEngineState {
   initialized: boolean;
   muted: boolean;
   volumes: AudioVolumes;
+  unlocked: boolean;
 }
 
 export interface AudioVolumes {
@@ -63,9 +64,91 @@ class GameAudioEngine {
   // State
   public initialized = false;
   public muted = false;
+  public unlocked = false; // Track if audio is unlocked by user interaction
   
   // Listeners for state changes
   private listeners: Array<(state: AudioEngineState) => void> = [];
+  
+  // Pending sounds to play after unlock
+  private pendingUnlockCallbacks: Array<() => void> = [];
+  
+  constructor() {
+    this.setupUnlockListeners();
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // AUTOPLAY UNLOCK - Critical for Chrome/Safari
+  // ═══════════════════════════════════════════════════════════
+  
+  private setupUnlockListeners(): void {
+    if (typeof window === 'undefined') return;
+    
+    const unlock = async () => {
+      if (this.unlocked) return;
+      
+      try {
+        // Initialize if not already done
+        if (!this.initialized) {
+          await this.initialize();
+        }
+        
+        // Resume context if suspended
+        if (this.context?.state === 'suspended') {
+          await this.context.resume();
+        }
+        
+        // Play a silent buffer to fully unlock
+        if (this.context) {
+          const silentBuffer = this.context.createBuffer(1, 1, 22050);
+          const source = this.context.createBufferSource();
+          source.buffer = silentBuffer;
+          source.connect(this.context.destination);
+          source.start(0);
+        }
+        
+        this.unlocked = true;
+        console.log('🔊 Audio unlocked!');
+        this.notifyListeners();
+        
+        // Execute any pending callbacks
+        for (const callback of this.pendingUnlockCallbacks) {
+          try {
+            callback();
+          } catch (e) {
+            console.error('Pending audio callback error:', e);
+          }
+        }
+        this.pendingUnlockCallbacks = [];
+        
+        // Remove listeners after unlock
+        document.removeEventListener('click', unlock);
+        document.removeEventListener('touchstart', unlock);
+        document.removeEventListener('touchend', unlock);
+        document.removeEventListener('keydown', unlock);
+        document.removeEventListener('mousedown', unlock);
+      } catch (e) {
+        console.warn('Audio unlock failed:', e);
+      }
+    };
+    
+    // Add multiple event listeners for unlock
+    document.addEventListener('click', unlock, { once: false, passive: true });
+    document.addEventListener('touchstart', unlock, { once: false, passive: true });
+    document.addEventListener('touchend', unlock, { once: false, passive: true });
+    document.addEventListener('keydown', unlock, { once: false, passive: true });
+    document.addEventListener('mousedown', unlock, { once: false, passive: true });
+    
+    console.log('🔇 Audio engine waiting for user interaction to unlock');
+  }
+  
+  // Queue a callback to run after audio is unlocked
+  onUnlock(callback: () => void): void {
+    if (this.unlocked) {
+      callback();
+    } else {
+      this.pendingUnlockCallbacks.push(callback);
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════
   // INITIALIZATION
@@ -185,6 +268,12 @@ class GameAudioEngine {
     } = {}
   ): Promise<PlaybackResult | null> {
     if (!this.initialized || this.muted || !this.context) return null;
+    
+    // Check if audio is unlocked
+    if (!this.unlocked) {
+      console.warn('Audio not unlocked yet - waiting for user interaction');
+      return null;
+    }
 
     const {
       channel = 'effects',
@@ -299,6 +388,12 @@ class GameAudioEngine {
     } = {}
   ): Promise<PlaybackResult | null> {
     if (!this.initialized || this.muted || !this.context) return null;
+    
+    // Check if audio is unlocked
+    if (!this.unlocked) {
+      console.warn('Audio not unlocked yet - waiting for user interaction');
+      return null;
+    }
 
     const {
       channel = 'ambience',
@@ -457,7 +552,8 @@ class GameAudioEngine {
     return {
       initialized: this.initialized,
       muted: this.muted,
-      volumes: { ...this.volumes }
+      volumes: { ...this.volumes },
+      unlocked: this.unlocked
     };
   }
 

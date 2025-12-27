@@ -36,6 +36,7 @@ export function useAudioSystem(): UseAudioSystemReturn {
   const [state, setState] = useState<AudioEngineState>({
     initialized: false,
     muted: false,
+    unlocked: false,
     volumes: {
       master: 0.8,
       ambience: 0.6,
