@@ -566,3 +566,24 @@ export function clearBites(): void {
   store.bites = [];
   store.lastUpdate = Date.now();
 }
+
+/**
+ * Serialize memory bite store for saving
+ */
+export function serializeMemoryBites(): string {
+  return JSON.stringify(store);
+}
+
+/**
+ * Deserialize memory bite store from saved data
+ */
+export function deserializeMemoryBites(data: string): MemoryBiteStore {
+  try {
+    const parsed = JSON.parse(data);
+    store.bites = parsed.bites || [];
+    store.lastUpdate = parsed.lastUpdate || Date.now();
+    return store;
+  } catch {
+    return { bites: [], lastUpdate: Date.now() };
+  }
+}
