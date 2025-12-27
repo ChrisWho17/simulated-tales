@@ -138,6 +138,8 @@ interface AdventureRequest {
   narratorConfig?: NarratorConfig; // Customizable narrator style
   toneContext?: ToneContext; // Tone adaptation system
   languageContext?: LanguageContext; // Language barrier system
+  // Dice mode - story, partial, or full
+  diceMode?: 'story' | 'partial' | 'full';
   // New systems - Grudges and Memory Overhaul
   npcPsychologyContext?: NPCPsychologyContext; // NPC grudges, debts, relationships
   rippleContext?: RippleContext; // Consequence ripples and world state
@@ -399,7 +401,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -424,6 +426,69 @@ CRITICAL: You MUST stay within this genre contract.
 - Use the ESCALATION MENU to raise stakes appropriately
 - Adapt your vocabulary, tone, and elements to match the genre
 - If you need to increase drama, choose from the escalation options, NOT from other genres`;
+    }
+    
+    // === DICE MODE INSTRUCTIONS ===
+    if (diceMode) {
+      if (diceMode === 'story') {
+        systemContent += `\n\n=== DICE MODE: STORY MODE ===
+DICE ROLLS DISABLED. Do NOT request any dice rolls.
+- All actions succeed or fail based on narrative logic and player choices
+- Use character stats to flavor descriptions but don't gate actions behind rolls
+- Focus purely on storytelling and player agency
+- Never use [ROLL:...] tags`;
+      } else if (diceMode === 'partial') {
+        systemContent += `\n\n=== DICE MODE: NORMAL (PARTIAL DICE) ===
+Request dice rolls ONLY for major dramatic moments:
+- Combat encounters (attacks, defenses, escapes)
+- Critical story decisions with high stakes
+- Major persuasion/intimidation attempts
+- Life-or-death situations
+- Dramatic saving throws
+
+DO NOT request rolls for:
+- Opening unlocked doors, walking, basic movement
+- Simple conversations, asking for directions
+- Looking around, examining obvious things
+- Eating, drinking, resting
+- Minor social interactions
+
+Use [ROLL:stat:difficulty:reason] format when appropriate.`;
+      } else if (diceMode === 'full') {
+        systemContent += `\n\n=== DICE MODE: DICED OUT (FULL DICE) ===
+AGGRESSIVE DICE ROLLING - Request a roll for EVERY action with potential for failure!
+
+ALWAYS request a [ROLL:...] for:
+- ANY physical challenge: jumping gaps, climbing, swimming, running, balancing
+- ANY combat action: attacks, dodges, blocks, grapples, disarms
+- ANY stealth attempt: sneaking, hiding, pickpocketing, lockpicking
+- ANY social challenge: persuasion, intimidation, deception, seduction, haggling
+- ANY perception check: noticing traps, spotting hidden things, reading people
+- ANY crafting/skill use: repairs, cooking, medicine, survival
+- Resisting effects: poison, fear, charm, exhaustion
+- Athletic feats: lifting, throwing, catching
+- Knowledge checks: recalling lore, identifying objects
+
+NEVER request rolls for (truly trivial):
+- Opening an unlocked door at normal speed
+- Walking on flat, clear ground
+- Drinking water from a cup
+- Breathing
+
+EXAMPLES OF WHEN TO ROLL:
+- Jumping across a stream → [ROLL:dexterity:10:to leap across without slipping]
+- Climbing a rough wall → [ROLL:strength:12:to scale the weathered stone]
+- Sneaking past a guard → [ROLL:dexterity:14:to move silently past the watchman]
+- Persuading a merchant → [ROLL:charisma:11:to talk down the price]
+- Swimming in a river → [ROLL:constitution:10:to cross against the current]
+- Noticing an ambush → [ROLL:wisdom:13:to sense danger before it strikes]
+- Recalling monster lore → [ROLL:intelligence:12:to remember what you know about trolls]
+- Resisting intimidation → [ROLL:wisdom:11:to keep your composure under threat]
+- Catching a thrown object → [ROLL:dexterity:10:to snatch it from the air]
+- Lifting a heavy object → [ROLL:strength:14:to heave the boulder aside]
+
+The game should feel like a tabletop RPG where dice determine most outcomes. When in doubt, ROLL!`;
+      }
     }
     
     if (character) {
