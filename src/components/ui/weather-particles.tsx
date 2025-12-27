@@ -21,6 +21,7 @@ interface WeatherParticle {
 interface WeatherParticlesProps {
   mood: CoreMoodType;
   intensity?: number; // 0-1
+  transitionOpacity?: number; // 0-1, for smooth weather transitions
   className?: string;
 }
 
@@ -104,11 +105,17 @@ const WEATHER_CONFIG: Record<CoreMoodType, {
   },
 };
 
-export function WeatherParticles({ mood, intensity = 1, className = '' }: WeatherParticlesProps) {
+export function WeatherParticles({ mood, intensity = 1, transitionOpacity = 1, className = '' }: WeatherParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<WeatherParticle[]>([]);
   const animationRef = useRef<number>();
   const lightningFlashRef = useRef<number>(0);
+  const opacityRef = useRef<number>(transitionOpacity);
+
+  // Smooth opacity animation
+  useEffect(() => {
+    opacityRef.current = transitionOpacity;
+  }, [transitionOpacity]);
 
   const createParticle = useCallback((canvas: HTMLCanvasElement, config: typeof WEATHER_CONFIG[CoreMoodType]): WeatherParticle => {
     const color = config.colors[Math.floor(Math.random() * config.colors.length)];
@@ -305,26 +312,30 @@ export function WeatherParticles({ mood, intensity = 1, className = '' }: Weathe
       ctx.restore();
     };
 
+    // Epilepsy-safe lightning flash - gentler, slower, lower opacity
     const drawLightningFlash = () => {
       if (lightningFlashRef.current > 0) {
         ctx.save();
-        ctx.globalAlpha = lightningFlashRef.current * 0.15;
-        ctx.fillStyle = '#fef3c7';
+        // Reduced max opacity from 0.15 to 0.06 for safety
+        ctx.globalAlpha = lightningFlashRef.current * 0.06;
+        ctx.fillStyle = '#fef9c3'; // Softer yellow
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
-        lightningFlashRef.current -= 0.05;
+        // Slower fade (was 0.05, now 0.015) for gentler transition
+        lightningFlashRef.current -= 0.015;
       }
     };
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Lightning flash effect
+      // Epilepsy-safe lightning flash effect
       if (config.type === 'lightning') {
         drawLightningFlash();
-        // Random flash
-        if (Math.random() < 0.005) {
-          lightningFlashRef.current = 1;
+        // Reduced flash frequency from 0.005 to 0.002 (much less frequent)
+        if (Math.random() < 0.002) {
+          // Start at lower intensity (0.5 instead of 1.0)
+          lightningFlashRef.current = 0.5;
         }
       }
 
@@ -400,8 +411,8 @@ export function WeatherParticles({ mood, intensity = 1, className = '' }: Weathe
   return (
     <canvas
       ref={canvasRef}
-      className={`fixed inset-0 pointer-events-none z-[1] ${className}`}
-      style={{ opacity: 0.7 }}
+      className={`fixed inset-0 pointer-events-none z-[1] transition-opacity duration-700 ${className}`}
+      style={{ opacity: 0.7 * transitionOpacity }}
     />
   );
 }

@@ -59,7 +59,7 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
-import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers } from '@/game/weatherSystem';
+import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
 
@@ -1221,24 +1221,38 @@ export function AdventureDisplay({
         <AtmosphericBackground mood={currentMood} />
       </div>
       
-      {/* Weather particle effects on main background */}
-      {weatherEnabled && showWeatherParticles && (
-        <div className="absolute inset-0 z-[1] pointer-events-none">
-          <WeatherParticles 
-            mood={
-              weatherState.current === 'storm' ? 'fearful' :
-              weatherState.current === 'rain' ? 'sad' :
-              weatherState.current === 'fog' ? 'depressed' :
-              weatherState.current === 'heat_wave' ? 'mad' :
-              weatherState.current === 'wind' ? 'annoyed' :
-              weatherState.current === 'snow' ? 'suspicious' :
-              weatherState.current === 'cloudy' ? 'neutral' :
-              'happy'
-            } 
-            intensity={weatherState.intensity * 0.6}
-          />
-        </div>
-      )}
+      {/* Weather particle effects on main background with transitions */}
+      {weatherEnabled && showWeatherParticles && (() => {
+        const transitionOpacity = getWeatherTransitionOpacity(weatherState);
+        const weatherToMood = (w: WeatherType) => 
+          w === 'storm' ? 'fearful' :
+          w === 'rain' ? 'sad' :
+          w === 'fog' ? 'depressed' :
+          w === 'heat_wave' ? 'mad' :
+          w === 'wind' ? 'annoyed' :
+          w === 'snow' ? 'suspicious' :
+          w === 'cloudy' ? 'neutral' :
+          'happy';
+        
+        return (
+          <div className="absolute inset-0 z-[1] pointer-events-none">
+            {/* Current weather (fading out during transition) */}
+            <WeatherParticles 
+              mood={weatherToMood(weatherState.current)} 
+              intensity={weatherState.intensity * 0.6}
+              transitionOpacity={transitionOpacity.current}
+            />
+            {/* Next weather (fading in during transition) */}
+            {weatherState.transitioningTo && transitionOpacity.next > 0 && (
+              <WeatherParticles 
+                mood={weatherToMood(weatherState.transitioningTo)} 
+                intensity={weatherState.intensity * 0.6}
+                transitionOpacity={transitionOpacity.next}
+              />
+            )}
+          </div>
+        );
+      })()}
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
@@ -1784,9 +1798,26 @@ export function AdventureDisplay({
             className="glass-panel p-6 max-w-md w-full mx-4 space-y-5 animate-scale-in relative overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            {/* Particle Effects Background */}
-            <WeatherModalParticles weather={weatherState.current} intensity={weatherState.intensity} />
-            
+            {/* Particle Effects Background with transition support */}
+            {(() => {
+              const transitionOpacity = getWeatherTransitionOpacity(weatherState);
+              return (
+                <>
+                  <WeatherModalParticles 
+                    weather={weatherState.current} 
+                    intensity={weatherState.intensity}
+                    transitionOpacity={transitionOpacity.current}
+                  />
+                  {weatherState.transitioningTo && transitionOpacity.next > 0 && (
+                    <WeatherModalParticles 
+                      weather={weatherState.transitioningTo} 
+                      intensity={weatherState.intensity}
+                      transitionOpacity={transitionOpacity.next}
+                    />
+                  )}
+                </>
+              );
+            })()}
             <div className="text-center space-y-4 relative z-10">
               {/* Weather Icon with animation */}
               <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${

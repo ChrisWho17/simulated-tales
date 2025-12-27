@@ -22,7 +22,10 @@ interface ModalParticle {
 interface WeatherModalParticlesProps {
   weather: WeatherType;
   intensity?: number;
+  transitionOpacity?: number; // 0-1, for smooth transitions
 }
+
+type WeatherParticleType = 'dust' | 'rain' | 'snow' | 'fog' | 'fire' | 'lightning' | 'wind';
 
 const MODAL_WEATHER_CONFIG: Record<WeatherType, {
   particleCount: number;
@@ -71,11 +74,17 @@ const MODAL_WEATHER_CONFIG: Record<WeatherType, {
   },
 };
 
-export function WeatherModalParticles({ weather, intensity = 1 }: WeatherModalParticlesProps) {
+export function WeatherModalParticles({ weather, intensity = 1, transitionOpacity = 1 }: WeatherModalParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<ModalParticle[]>([]);
   const animationRef = useRef<number>();
   const lightningFlashRef = useRef<number>(0);
+  const currentOpacityRef = useRef<number>(transitionOpacity);
+
+  // Smooth opacity transitions
+  useEffect(() => {
+    currentOpacityRef.current = transitionOpacity;
+  }, [transitionOpacity]);
 
   const createParticle = useCallback((canvas: HTMLCanvasElement, config: typeof MODAL_WEATHER_CONFIG[WeatherType]): ModalParticle => {
     const color = config.colors[Math.floor(Math.random() * config.colors.length)];
@@ -276,14 +285,17 @@ export function WeatherModalParticles({ weather, intensity = 1 }: WeatherModalPa
       ctx.restore();
     };
 
+    // Epilepsy-safe lightning flash - gentler, slower, lower opacity
     const drawLightningFlash = () => {
       if (lightningFlashRef.current > 0) {
         ctx.save();
-        ctx.globalAlpha = lightningFlashRef.current * 0.2;
-        ctx.fillStyle = '#fef3c7';
+        // Reduced max opacity from 0.2 to 0.08 for safety
+        ctx.globalAlpha = lightningFlashRef.current * 0.08;
+        ctx.fillStyle = '#fef9c3'; // Softer yellow
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
-        lightningFlashRef.current -= 0.06;
+        // Slower fade (was 0.06, now 0.02) for gentler transition
+        lightningFlashRef.current -= 0.02;
       }
     };
 
@@ -292,8 +304,10 @@ export function WeatherModalParticles({ weather, intensity = 1 }: WeatherModalPa
 
       if (config.type === 'lightning') {
         drawLightningFlash();
-        if (Math.random() < 0.008) {
-          lightningFlashRef.current = 1;
+        // Reduced flash frequency from 0.008 to 0.003 (much less frequent)
+        if (Math.random() < 0.003) {
+          // Start at lower intensity (0.6 instead of 1.0)
+          lightningFlashRef.current = 0.6;
         }
       }
 
@@ -366,8 +380,8 @@ export function WeatherModalParticles({ weather, intensity = 1 }: WeatherModalPa
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden"
-      style={{ opacity: 0.8 }}
+      className="absolute inset-0 pointer-events-none rounded-lg overflow-hidden transition-opacity duration-500"
+      style={{ opacity: 0.8 * transitionOpacity }}
     />
   );
 }
