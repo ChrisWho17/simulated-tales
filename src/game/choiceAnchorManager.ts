@@ -112,9 +112,18 @@ export function createSnapshot(
     location: gameState.player?.currentLocation || 'unknown',
     npcDispositions,
     
-    // Narrative state
-    activeLoops: [], // TODO: Integrate with loop system
-    questStates: {}, // TODO: Integrate with quest system
+    // Narrative state - integrate with quest system if available
+    activeLoops: gameState.worldEvents
+      ?.filter(e => e.type === 'story_event')
+      .slice(-5)
+      .map(e => e.id) || [],
+    questStates: gameState.flags && typeof gameState.flags === 'object'
+      ? Object.fromEntries(
+          Object.entries(gameState.flags)
+            .filter(([key]) => key.startsWith('quest_'))
+            .map(([id, status]) => [id, String(status)])
+        ) 
+      : {},
     inventory: gameState.player?.inventory?.map(i => i.id) || [],
     
     // Flags

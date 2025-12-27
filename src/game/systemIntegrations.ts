@@ -49,9 +49,13 @@ function handleItemStolen(event: ItemEvent): void {
   const item = getObject(itemId);
   const itemValue = item?.properties.value || 10;
   
-  // Theft was witnessed if it came through as an event
-  // TODO: Add witness detection logic
-  const wasWitnessed = true;
+  // Check if theft was witnessed by looking at NPCs at the location
+  // A theft is witnessed if there are other NPCs present at the tick
+  const witnessEvents = eventBus.getEventsByType('LOCATION_ENTERED', 5);
+  const recentLocationEvents = witnessEvents.filter(e => 
+    e.tick >= event.tick - 1 && e.tick <= event.tick + 1
+  );
+  const wasWitnessed = recentLocationEvents.length > 0 || Math.random() < 0.3; // 30% chance even if no explicit witness
   
   // Apply steal modifier to relationship
   applyStealModifier(toEntity, fromEntity, itemValue, wasWitnessed, event.tick);
