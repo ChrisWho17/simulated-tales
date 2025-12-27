@@ -1,5 +1,6 @@
 // Story Sound Trigger System - Automatic narrative text detection and event-based sounds
 import { audioEngine, AudioChannel } from './audioEngine';
+import { acousticEnvironmentSystem, LocationAcoustics } from './acousticEnvironmentSystem';
 
 interface SoundEffectConfig {
   sounds: string[];
@@ -555,7 +556,7 @@ class StorySoundTrigger {
   private heartbeatActive = false;
 
   // ═══════════════════════════════════════════════════════════
-  // SOUND PLAYBACK
+  // SOUND PLAYBACK WITH ACOUSTIC ENVIRONMENT
   // ═══════════════════════════════════════════════════════════
 
   async play(soundPath: string, overrideOptions: Partial<SoundEffectConfig> = {}): Promise<void> {
@@ -572,8 +573,15 @@ class StorySoundTrigger {
       Math.floor(Math.random() * soundDef.sounds.length)
     ];
 
-    // Build options
+    // Get acoustic environment effects
+    const acousticEffects = acousticEnvironmentSystem.getAudioEffects();
+    const isIndoors = acousticEnvironmentSystem.isIndoors();
+
+    // Build options - merge sound definition with acoustic environment
     const pan = typeof soundDef.pan === 'function' ? soundDef.pan() : (soundDef.pan || 0);
+    
+    // Determine echo/reverb based on sound type and environment
+    const shouldApplyAcoustics = this.shouldApplyAcousticEffects(category, soundId);
     
     // Handle loops vs one-shots
     if (soundDef.loop) {
@@ -582,20 +590,62 @@ class StorySoundTrigger {
         channel: soundDef.channel || 'effects' as AudioChannel,
         volume: soundDef.volume || 1,
         pan,
-        lowpass: soundDef.lowpass || undefined
+        lowpass: acousticEffects.lowpass || soundDef.lowpass || undefined
       });
     } else {
+      // Apply acoustic environment to non-looping sounds
+      const echo = shouldApplyAcoustics 
+        ? (isIndoors ? acousticEffects.reverb : acousticEffects.echo)
+        : (soundDef.echo || false);
+      
+      const echoDelay = shouldApplyAcoustics
+        ? (isIndoors ? 0.1 + acousticEffects.reverbDuration * 0.1 : acousticEffects.echoDelay)
+        : (soundDef.echoDelay || 0.3);
+      
+      const echoDecay = shouldApplyAcoustics
+        ? (isIndoors ? 0.6 + acousticEffects.reverbDuration * 0.2 : acousticEffects.echoDecay)
+        : (soundDef.echoDecay || 0.4);
+
       await audioEngine.playSound(soundKey, {
         channel: soundDef.channel || 'effects' as AudioChannel,
         volume: soundDef.volume || 1,
-        echo: soundDef.echo || false,
-        echoDelay: soundDef.echoDelay || 0.3,
-        echoDecay: soundDef.echoDecay || 0.4,
-        lowpass: soundDef.lowpass || undefined,
+        echo,
+        echoDelay,
+        echoDecay,
+        lowpass: acousticEffects.lowpass || soundDef.lowpass || undefined,
+        highpass: acousticEffects.highpass || undefined,
         pan,
         delay: soundDef.delay || 0
       });
     }
+  }
+
+  // Determine if acoustic effects should be applied to a sound
+  private shouldApplyAcousticEffects(category: string, soundId: string): boolean {
+    // Apply acoustics to combat, vehicles, and dramatic sounds
+    const acousticCategories = ['combat', 'vehicles', 'dramatic', 'doors'];
+    if (acousticCategories.includes(category)) return true;
+
+    // Apply to specific loud sounds
+    const loudSounds = ['gunshot', 'explosion', 'crash', 'break', 'slam', 'scream'];
+    if (loudSounds.some(s => soundId.includes(s))) return true;
+
+    return false;
+  }
+
+  // Set location and update acoustic environment
+  setAcousticLocation(locationType: string): void {
+    acousticEnvironmentSystem.setLocation(locationType);
+  }
+
+  // Get current acoustic space
+  getAcousticSpace(): string {
+    return acousticEnvironmentSystem.getAcousticSpace();
+  }
+
+  // Check if indoors
+  isIndoors(): boolean {
+    return acousticEnvironmentSystem.isIndoors();
   }
 
   // Stop a looping sound
@@ -604,12 +654,20 @@ class StorySoundTrigger {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // AUTOMATIC TEXT DETECTION
+  // AUTOMATIC TEXT DETECTION WITH ACOUSTIC AWARENESS
   // ═══════════════════════════════════════════════════════════
 
   processNarrativeText(text: string): string[] {
     const triggeredSounds: string[] = [];
     const now = Date.now();
+
+    // First, detect and update location from text
+    const detectedLocation = acousticEnvironmentSystem.detectLocationFromText(text);
+    if (detectedLocation) {
+      acousticEnvironmentSystem.setLocation(detectedLocation);
+      // Also update ambience for the location
+      this.setLocationAmbience(detectedLocation);
+    }
 
     for (const pattern of this.textPatterns) {
       // Check cooldown
@@ -630,10 +688,13 @@ class StorySoundTrigger {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // LOCATION AMBIENCE
+  // LOCATION AMBIENCE WITH ACOUSTIC INTEGRATION
   // ═══════════════════════════════════════════════════════════
 
   async setLocationAmbience(locationType: string): Promise<void> {
+    // Update acoustic environment
+    acousticEnvironmentSystem.setLocation(locationType);
+    
     // Stop current ambience
     if (this.currentLocationAmbience) {
       await this.stop(this.currentLocationAmbience);
@@ -653,7 +714,15 @@ class StorySoundTrigger {
       campfire: 'ambient.fire_crackling',
       fireplace: 'ambient.fire_crackling',
       river: 'ambient.water_stream',
-      stream: 'ambient.water_stream'
+      stream: 'ambient.water_stream',
+      // Extended location ambiences
+      dungeon: 'ambient.cave_drips',
+      crypt: 'ambient.cave_drips',
+      church: 'ambient.cave_drips', // Echoey
+      cathedral: 'ambient.cave_drips',
+      warehouse: 'ambient.cave_drips',
+      swamp: 'ambient.forest_ambient',
+      battlefield: 'ambient.city_traffic', // Distant sounds
     };
 
     const ambienceKey = locationAmbience[locationType.toLowerCase()];
