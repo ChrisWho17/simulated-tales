@@ -114,6 +114,8 @@ export {
   findAutoApplyableRecipe,
   generateProofDisplay,
   getTwoTierCacheStats,
+  clearApprovedCache,
+  updateApprovedRecipe,
 } from './twoTierCache';
 
 // Verification Gates
@@ -137,6 +139,7 @@ export {
   getTrustLabel,
   getTrustColor,
   formatTrustFactors,
+  getRequiredSuccessesForAutoApply,
 } from './trustScoring';
 
 // Support Packet
