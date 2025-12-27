@@ -42,6 +42,9 @@ import {
   buildRumorContext,
 } from '@/game/unreliableInformationSystem';
 import {
+  getPressureAtmosphere,
+} from '@/game/pressureClockSystem';
+import {
   buildObjectOwnershipContext,
   validateObjectRegistry,
   repairObjectRegistry,
@@ -235,6 +238,23 @@ export function AdventureGame() {
     getEnhancedPromptWithContract,
     worldBible,
     restoreWorldBible,
+    // Pressure Clock System
+    pressureState,
+    getPressureContext,
+    processNarrativeForPressure,
+    tickPressureClocks,
+    // NPC Motivation System
+    getNPCMotivation,
+    recordNPCInteraction,
+    getNPCMotivationContext,
+    // Memory Bite System
+    createBite,
+    getBitesForNPC,
+    getUnsurfacedBitesForNPC,
+    surfaceBite,
+    getSurfaceNarrativeForBite,
+    processNarrativeForBites,
+    getBiteContext,
   } = useGame();
   
   // Campaign context (optional - may not be available)
@@ -768,6 +788,53 @@ export function AdventureGame() {
       // Background NPC Actions Context (living world - things that happened without player)
       const backgroundNPCActionsPayload = buildBackgroundNPCActionsContext(memContext, currentTick);
       
+      // === NEW PHASE 10 SYSTEMS: Pressure, Motivation, Memory Bites ===
+      
+      // Pressure Clock Context (world tension)
+      const pressureClockPayload = {
+        pressureContext: getPressureContext(),
+        atmosphereLines: getPressureAtmosphere(pressureState),
+        worldPressureLevel: pressureState.worldPressureLevel,
+        activeEffects: pressureState.activeEffects,
+      };
+      
+      // NPC Motivation Context (desire/fear/leverage/line)
+      // Note: sceneNPCs is NPCGrudgeContext[] which only has npcId, not name/role
+      // We use the npcId to get motivations from the motivation system
+      const npcMotivationPayload = {
+        motivationContext: getNPCMotivationContext(),
+        presentNPCMotivations: sceneNPCs.map(npc => {
+          // Extract a display name from npcId (e.g., "npc_merchant_elena" -> "Elena")
+          const npcName = npc.npcId.split('_').pop()?.replace(/^\w/, c => c.toUpperCase()) || npc.npcId;
+          const motivation = getNPCMotivation(npc.npcId, npcName);
+          return {
+            npcName: motivation.npcName,
+            desire: motivation.desire,
+            fear: motivation.fear,
+            leverage: motivation.leverage,
+            line: motivation.line,
+            trustLevel: motivation.trustLevel,
+            stance: motivation.currentStance,
+            behaviors: motivation.behaviors,
+          };
+        }),
+      };
+      
+      // Memory Bite Context (emotional callbacks)
+      const unsurfacedBites = getUnsurfacedBitesForNPC();
+      const memoryBitePayload = {
+        biteContext: sceneNPCs.length > 0 
+          ? sceneNPCs.map(npc => getBiteContext(npc.npcId)).filter(Boolean).join('\n\n')
+          : '',
+        unsurfacedBites: unsurfacedBites.map(bite => ({
+          npcName: bite.npcName,
+          type: bite.type,
+          context: bite.context,
+          surfaceNarrative: getSurfaceNarrativeForBite(bite),
+          emotionalWeight: bite.emotionalWeight,
+        })),
+      };
+      
       // Location Context - always include for spatial awareness
       const locationContextPayload = {
         currentZone: {
@@ -828,6 +895,10 @@ export function AdventureGame() {
             },
             // === LIVING WORLD: Background NPC actions ===
             backgroundNPCActionsContext: backgroundNPCActionsPayload,
+            // === PHASE 10: Pressure, Motivation, Memory Bites ===
+            pressureClockContext: pressureClockPayload,
+            npcMotivationContext: npcMotivationPayload,
+            memoryBiteContext: memoryBitePayload,
           }),
         }
       );
