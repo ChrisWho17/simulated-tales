@@ -8,7 +8,7 @@ import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
-import { RPGCharacter } from '@/types/rpgCharacter';
+import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
 import { playerStateManager } from '@/game/playerStateManager';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
@@ -48,6 +48,7 @@ import {
   buildObjectOwnershipContext,
   validateObjectRegistry,
   repairObjectRegistry,
+  syncCharacterInventoryToRegistry,
 } from '@/game/objectRegistrySystem';
 import {
   buildNPCIdentityContext,
@@ -294,7 +295,15 @@ export function AdventureGame() {
       // Set relationship journal context for this campaign + character
       setJournalContext(campaign.id, campaign.player.name);
       
-      setCharacter(campaign.player);
+      // Migrate character health if needed (for old characters with low HP)
+      const migratedPlayer = migrateCharacterHealth(campaign.player);
+      
+      // Sync character inventory to object registry for command palette
+      if (migratedPlayer.inventory && migratedPlayer.inventory.length > 0) {
+        syncCharacterInventoryToRegistry(migratedPlayer.inventory, 0);
+      }
+      
+      setCharacter(migratedPlayer);
       setStory(campaign.narrativeHistory);
       setScenarioSelection({
         scenario: campaign.scenario,
@@ -327,10 +336,19 @@ export function AdventureGame() {
     
     if (savedChar && savedStory) {
       try {
-        const char = JSON.parse(savedChar);
+        let char = JSON.parse(savedChar);
         const storyData = JSON.parse(savedStory);
         if (char && storyData.length > 0) {
           console.log('[AdventureGame] Restoring from localStorage');
+          
+          // Migrate character health if needed (for old characters with low HP)
+          char = migrateCharacterHealth(char);
+          
+          // Sync character inventory to object registry for command palette
+          if (char.inventory && char.inventory.length > 0) {
+            syncCharacterInventoryToRegistry(char.inventory, 0);
+          }
+          
           setCharacter(char);
           setStory(storyData);
           if (savedScenario && savedGenre) {
@@ -401,6 +419,7 @@ export function AdventureGame() {
     // Create a hash of character state to detect actual changes
     const characterHash = JSON.stringify({
       currentHealth: character.currentHealth,
+      maxHealth: character.maxHealth,
       gold: character.gold,
       experience: character.experience,
       level: character.level,
@@ -1525,8 +1544,16 @@ export function AdventureGame() {
     const gameData = save.gameData as { story?: StoryEntry[]; character?: RPGCharacter };
     
     if (gameData.story && gameData.character) {
+      // Migrate character health if needed (for old characters with low HP)
+      const migratedCharacter = migrateCharacterHealth(gameData.character);
+      
+      // Sync character inventory to object registry for command palette
+      if (migratedCharacter.inventory && migratedCharacter.inventory.length > 0) {
+        syncCharacterInventoryToRegistry(migratedCharacter.inventory, 0);
+      }
+      
       setStory(gameData.story);
-      setCharacter(gameData.character);
+      setCharacter(migratedCharacter);
       
       // Restore campaign memory if available
       if (save.campaignMemory) {
@@ -1535,14 +1562,14 @@ export function AdventureGame() {
           console.log(`[Campaign Memory] Restored campaign for ${save.characterName}`);
         } else {
           // Failed to restore, initialize a new one for continuity
-          const campaignId = `campaign_${gameData.character.name}_restored_${Date.now()}`;
-          initializeCampaign(campaignId, gameData.character.name, []);
+          const campaignId = `campaign_${migratedCharacter.name}_restored_${Date.now()}`;
+          initializeCampaign(campaignId, migratedCharacter.name, []);
           console.log(`[Campaign Memory] Initialized new campaign for restored save: ${campaignId}`);
         }
       } else {
         // Legacy save without campaign memory - initialize new
-        const campaignId = `campaign_${gameData.character.name}_legacy_${Date.now()}`;
-        initializeCampaign(campaignId, gameData.character.name, []);
+        const campaignId = `campaign_${migratedCharacter.name}_legacy_${Date.now()}`;
+        initializeCampaign(campaignId, migratedCharacter.name, []);
         console.log(`[Campaign Memory] Initialized campaign for legacy save: ${campaignId}`);
       }
       

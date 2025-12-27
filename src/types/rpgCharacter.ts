@@ -226,12 +226,34 @@ export function rollDice(
 }
 
 export function calculateMaxHealth(stats: CharacterStats, level: number): number {
-  // Base health: 90 at 10 CON (0 modifier), +1.75 HP per point above 10
+  // Base health: 90 at 10 CON (0 modifier), +1.75 HP per +1 CON above 10
   const conMod = getStatModifier(stats.constitution);
   const baseHealth = 90;
   const conBonus = Math.floor(conMod * 1.75);
   const levelBonus = (level - 1) * 6;
   return baseHealth + conBonus + (conMod * (level - 1)) + levelBonus;
+}
+
+// Migrate old character health to new formula
+export function migrateCharacterHealth(character: RPGCharacter): RPGCharacter {
+  const correctMaxHealth = calculateMaxHealth(character.stats, character.level);
+  
+  // If maxHealth is obviously wrong (old formula used 10 + conMod * 2 + level bonuses)
+  // The old formula would give ~10-20 HP at level 1, new formula gives ~90 HP
+  if (character.maxHealth < 50) {
+    const healthRatio = character.currentHealth / character.maxHealth;
+    const newCurrentHealth = Math.round(healthRatio * correctMaxHealth);
+    
+    console.log('[CharacterMigration] Migrating health:', character.maxHealth, '->', correctMaxHealth);
+    
+    return {
+      ...character,
+      maxHealth: correctMaxHealth,
+      currentHealth: Math.min(newCurrentHealth, correctMaxHealth),
+    };
+  }
+  
+  return character;
 }
 
 export function createCharacter(
