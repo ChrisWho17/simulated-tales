@@ -38,6 +38,19 @@ import {
   tickAdrenalineSystem,
 } from '@/game/adrenalineCombatIntegration';
 import { eventBus } from '@/game/eventBus';
+import { 
+  processDirectorTick, 
+  PriorityContext,
+  getDirectorState,
+  buildDirectorContextForAI,
+} from '@/game/directorSystem';
+import {
+  runFullConsistencyCheck,
+  getRecentViolations,
+  ConsistencyViolation,
+  setScenePresence,
+  buildConsistencyContextForAI,
+} from '@/game/consistencyLayer';
 
 // ============= STORAGE KEYS =============
 const RIPPLES_KEY = 'untold-active-ripples';
@@ -61,6 +74,10 @@ export interface GameLoopState {
   locationHistory: LocationHistory;
   activeConsequences: LocationConsequence[];
   adrenalineState: AdrenalineSystemState;
+  // Director and consistency state
+  directorPriority: string;
+  escalationLevel: number;
+  recentViolations: ConsistencyViolation[];
 }
 
 export interface GameLoopActions {
@@ -99,6 +116,10 @@ export interface GameLoopActions {
   // Adrenaline system
   getAdrenalineState: () => AdrenalineSystemState;
   tickAdrenaline: (deltaSeconds: number) => { revealedWounds: Array<{ message: string; damage: number }> };
+  
+  // Director and consistency
+  getDirectorContext: () => string;
+  getConsistencyContext: () => string;
 }
 
 // ============= HELPER FUNCTIONS =============
@@ -308,6 +329,33 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
       ]);
     }
     setAdrenalineState(adrenalineResult.state);
+    
+    // Process Director pacing rules
+    const directorContext: PriorityContext = {
+      playerHealth: 100, // TODO: Get from character
+      inCombat: worldState.guardAlertLevel > 60,
+      criticalNeeds: [], // TODO: Get from needs system
+      activeConversation: false,
+      recentDamage: adrenalineState.adrenaline.current > 50,
+      pendingQuest: false,
+      explorationMode: true,
+    };
+    processDirectorTick(directorContext, newTurn);
+    
+    // Run consistency checks every 5 turns
+    if (newTurn % 5 === 0) {
+      // Update scene presence for consistency layer
+      setScenePresence(sceneNPCs.map(npc => ({
+        entityId: npc.npcId,
+        entityType: 'npc' as const,
+        locationId: playerLocation.zoneId,
+        enteredTick: newTurn,
+      })));
+      
+      // Note: Full consistency check requires GameState which we don't have direct access to here
+      // The violations are logged and can be retrieved via getRecentViolations()
+      console.log(`[GameLoop] Turn ${newTurn}: Consistency check scheduled`);
+    }
   }, [currentTurn, activeRipples, worldState, activeRumors, sceneNPCs, playerLocation, adrenalineState]);
   
   const processPlayerAction = useCallback((
@@ -453,7 +501,20 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     };
   }, [adrenalineState, currentTurn]);
   
+  // Director context builder
+  const getDirectorContext = useCallback(() => {
+    return buildDirectorContextForAI();
+  }, []);
+  
+  // Consistency context builder  
+  const getConsistencyContext = useCallback(() => {
+    return buildConsistencyContextForAI();
+  }, []);
+  
   // ============= RETURN =============
+  
+  // Get director state for inclusion
+  const directorState = getDirectorState();
   
   const state: GameLoopState = {
     activeRipples,
@@ -466,6 +527,9 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     locationHistory,
     activeConsequences,
     adrenalineState,
+    directorPriority: directorState.currentPriority,
+    escalationLevel: directorState.escalationLevel,
+    recentViolations: getRecentViolations(10),
   };
   
   const actions: GameLoopActions = {
@@ -487,6 +551,8 @@ export function useGameLoop(initialTurn: number = 0): [GameLoopState, GameLoopAc
     restoreState,
     getAdrenalineState,
     tickAdrenaline,
+    getDirectorContext,
+    getConsistencyContext,
   };
   
   return [state, actions];
