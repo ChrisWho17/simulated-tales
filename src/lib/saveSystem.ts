@@ -6,6 +6,9 @@
 import { CampaignMemoryStore } from '@/types/campaignMemory';
 import { serializeCampaignMemory, deserializeCampaignMemory } from '@/game/campaignMemorySystem';
 
+// Current save format version - increment when save structure changes
+export const SAVE_VERSION = 2;
+
 export interface GameSave {
   id: string;
   characterName: string;
@@ -14,6 +17,38 @@ export interface GameSave {
   slotNumber: number;
   gameData: unknown; // The actual game state - typed loosely for flexibility
   campaignMemory?: string; // Serialized campaign memory (optional for backward compat)
+  version?: number; // Save format version for migrations
+}
+
+// ============================================================================
+// SAVE MIGRATIONS
+// ============================================================================
+
+type SaveMigrator = (save: GameSave) => GameSave;
+
+const MIGRATIONS: Record<number, SaveMigrator> = {
+  // v1 -> v2: Add version field
+  1: (save) => ({
+    ...save,
+    version: 2,
+  }),
+};
+
+export function migrateSave(save: GameSave): GameSave {
+  let currentVersion = save.version || 1;
+  let migratedSave = { ...save };
+  
+  while (currentVersion < SAVE_VERSION) {
+    const migrator = MIGRATIONS[currentVersion];
+    if (migrator) {
+      migratedSave = migrator(migratedSave);
+      console.log(`[SaveSystem] Migrated save from v${currentVersion} to v${currentVersion + 1}`);
+    }
+    currentVersion++;
+  }
+  
+  migratedSave.version = SAVE_VERSION;
+  return migratedSave;
 }
 
 const SAVES_KEY = 'untold-game-saves';
@@ -78,6 +113,7 @@ export function saveGame(
     slotNumber: isAutoSave ? -1 : 1,
     gameData,
     campaignMemory: campaignMemory ? serializeCampaignMemory(campaignMemory) : undefined,
+    version: SAVE_VERSION,
   };
   
   // Remove existing save for this campaign (character) if it exists
@@ -107,7 +143,11 @@ export function deleteSave(saveId: string): void {
 
 export function loadSave(saveId: string): GameSave | null {
   const saves = loadAllSaves();
-  return saves.find(s => s.id === saveId) || null;
+  const save = saves.find(s => s.id === saveId);
+  if (!save) return null;
+  
+  // Auto-migrate old saves
+  return migrateSave(save);
 }
 
 // ============================================================================
