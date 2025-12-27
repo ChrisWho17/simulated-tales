@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
-import "@/styles/living-world-engine.css";
+import "@/styles/untold-story-engine.css";
 
 const queryClient = new QueryClient();
 

@@ -55,7 +55,7 @@ export function LoadingScreen({
             UNTOLD
           </h1>
           <p className="text-muted-foreground text-sm uppercase tracking-[0.4em]">
-            Living World Engine
+            The Untold Story Engine
           </p>
         </div>
 
