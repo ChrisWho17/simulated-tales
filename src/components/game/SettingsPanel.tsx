@@ -320,6 +320,27 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Adrenaline System */}
+                <div className="space-y-3 pt-4 border-t border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-red-500" />
+                    <h3 className="text-sm font-medium">Adrenaline System</h3>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 pl-1">
+                    <div>
+                      <span className="text-sm">Enable Adrenaline & Hidden Wounds</span>
+                      <p className="text-xs text-muted-foreground">
+                        Under stress, injuries may go unnoticed until adrenaline fades
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableAdrenalineSystem ?? false}
+                      onCheckedChange={(checked) => updateSettings({ enableAdrenalineSystem: checked })}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

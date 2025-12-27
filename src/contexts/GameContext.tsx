@@ -135,6 +135,7 @@ export interface GameSettings {
   enableReputationSystem: boolean;
   enableXPSystem: boolean;
   enableInventoryWeight: boolean;
+  enableAdrenalineSystem: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -192,6 +193,7 @@ const defaultSettings: GameSettings = {
   enableReputationSystem: true,
   enableXPSystem: true,
   enableInventoryWeight: true,
+  enableAdrenalineSystem: false,
 };
 
 // ============================================================================

@@ -226,8 +226,12 @@ export function rollDice(
 }
 
 export function calculateMaxHealth(stats: CharacterStats, level: number): number {
+  // Base health: 90 at 10 CON (0 modifier), +1.75 HP per point above 10
   const conMod = getStatModifier(stats.constitution);
-  return 10 + (conMod * level) + ((level - 1) * 6);
+  const baseHealth = 90;
+  const conBonus = Math.floor(conMod * 1.75);
+  const levelBonus = (level - 1) * 6;
+  return baseHealth + conBonus + (conMod * (level - 1)) + levelBonus;
 }
 
 export function createCharacter(
