@@ -1342,6 +1342,30 @@ export function AdventureDisplay({
                 <Sun className="w-4 h-4" />
               )}
             </Button>
+            
+            <div className="h-5 w-px bg-border/30" />
+            
+            {/* Character Sheet Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowCharacterSheet(true)}
+              className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              title="Character Sheet"
+            >
+              <ScrollText className="w-4 h-4" />
+            </Button>
+            
+            {/* Inventory Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowInventory(true)}
+              className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              title="Inventory (Ctrl+I)"
+            >
+              <Backpack className="w-4 h-4" />
+            </Button>
           </div>
 
           {/* Center Group: Character Stats (desktop only) */}
@@ -1405,31 +1429,6 @@ export function AdventureDisplay({
           {/* Right Group: Action Buttons */}
           <div className="flex items-center gap-0.5 ml-auto shrink-0">
             <SavesDropdown />
-            
-            <div className="hidden sm:flex items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowInventory(true)}
-                className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
-                title="Inventory (Ctrl+I)"
-              >
-                <Package className="w-3.5 h-3.5" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowCharacterSheet(true)}
-                className="h-7 w-7 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
-                title="Character Sheet"
-              >
-                <Backpack className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            
-            <div className="h-5 w-px bg-border/30 mx-0.5 hidden sm:block" />
-            
             <Button
               variant="ghost"
               size="icon"
