@@ -83,10 +83,10 @@ export function SavesDropdown() {
   // Save status indicator
   const getSaveStatus = () => {
     if (isDirty) {
-      return { icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />, text: 'Saving...', color: 'text-yellow-500' };
+      return { icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />, text: 'Saving...', color: 'text-warning' };
     }
     if (lastSaved) {
-      return { icon: <Cloud className="h-3.5 w-3.5" />, text: 'Saved', color: 'text-emerald-500' };
+      return { icon: <Save className="h-3.5 w-3.5" />, text: 'Saved', color: 'text-success' };
     }
     return { icon: <CloudOff className="h-3.5 w-3.5" />, text: 'Not saved', color: 'text-muted-foreground' };
   };
@@ -185,11 +185,9 @@ export function SavesDropdown() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-1.5 px-2 h-8 text-muted-foreground hover:text-foreground"
+            className="gap-1 px-2 h-7 frosted-button text-muted-foreground/70 hover:text-foreground"
           >
             <span className={status.color}>{status.icon}</span>
-            <Save className="h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Saves</span>
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
