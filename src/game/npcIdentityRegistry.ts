@@ -543,6 +543,135 @@ export function updateNPCAliases(npcId: string, updates: Partial<NPCAliases>): b
 }
 
 /**
+ * Detect and extract name/callsign reveals from dialogue text.
+ * Patterns detected:
+ * - "My name is X" / "I'm X" / "Call me X"
+ * - "They call me X" / "My callsign is X"
+ * - "I go by X" / "You can call me X"
+ * 
+ * Returns the revealed info if found, null otherwise.
+ */
+export interface NameRevealResult {
+  type: 'name' | 'callsign' | 'nickname' | 'title';
+  value: string;
+  npcId: string;
+}
+
+export function detectNameReveal(
+  dialogueText: string, 
+  speakerNpcId: string
+): NameRevealResult | null {
+  const npc = registry.npcs[speakerNpcId];
+  if (!npc) return null;
+  
+  const text = dialogueText.toLowerCase();
+  
+  // Real name patterns
+  const namePatterns = [
+    /my (?:real )?name is (?:actually )?["']?([A-Z][a-z]+(?: [A-Z][a-z]+)?)/i,
+    /i'm (?:actually )?([A-Z][a-z]+(?: [A-Z][a-z]+)?)[,\.!\?]/i,
+    /call me ([A-Z][a-z]+)[,\.!\? ]/i,
+    /i go by ([A-Z][a-z]+)/i,
+    /you can call me ([A-Z][a-z]+)/i,
+    /the name(?:'s| is) ([A-Z][a-z]+(?: [A-Z][a-z]+)?)/i,
+  ];
+  
+  // Callsign patterns
+  const callsignPatterns = [
+    /my callsign is ["']?([A-Za-z0-9\-]+)/i,
+    /they call me ["']?([A-Za-z0-9\-]+)/i,
+    /codename[: ]+["']?([A-Za-z0-9\-]+)/i,
+    /designation[: ]+["']?([A-Za-z0-9\-]+)/i,
+  ];
+  
+  // Title patterns
+  const titlePatterns = [
+    /i(?:'m| am) (?:a |the )?(?:doctor|dr\.?|captain|capt\.?|sergeant|sgt\.?|lieutenant|lt\.?|commander|professor|prof\.?)/i,
+  ];
+  
+  // Check for name reveals
+  for (const pattern of namePatterns) {
+    const match = dialogueText.match(pattern);
+    if (match && match[1]) {
+      const revealedName = match[1].trim();
+      // Don't trigger if it matches the current occupation/alias
+      if (revealedName.toLowerCase() !== npc.semiPermanent.occupation?.toLowerCase()) {
+        return { type: 'name', value: revealedName, npcId: speakerNpcId };
+      }
+    }
+  }
+  
+  // Check for callsign reveals
+  for (const pattern of callsignPatterns) {
+    const match = dialogueText.match(pattern);
+    if (match && match[1]) {
+      return { type: 'callsign', value: match[1].trim(), npcId: speakerNpcId };
+    }
+  }
+  
+  // Check for title reveals
+  for (const pattern of titlePatterns) {
+    const match = dialogueText.match(pattern);
+    if (match) {
+      const titleMap: Record<string, string> = {
+        'doctor': 'Dr.', 'dr': 'Dr.', 'dr.': 'Dr.',
+        'captain': 'Capt.', 'capt': 'Capt.', 'capt.': 'Capt.',
+        'sergeant': 'Sgt.', 'sgt': 'Sgt.', 'sgt.': 'Sgt.',
+        'lieutenant': 'Lt.', 'lt': 'Lt.', 'lt.': 'Lt.',
+        'commander': 'Cmdr.',
+        'professor': 'Prof.', 'prof': 'Prof.', 'prof.': 'Prof.',
+      };
+      const foundTitle = match[0].toLowerCase().split(/\s+/).pop() || '';
+      const normalizedTitle = titleMap[foundTitle.replace('.', '')] || foundTitle;
+      return { type: 'title', value: normalizedTitle, npcId: speakerNpcId };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Process dialogue text for name reveals and auto-update NPC aliases
+ * Returns true if a reveal was detected and applied
+ */
+export function processDialogueForNameReveals(
+  dialogueText: string,
+  speakerNpcId: string
+): NameRevealResult | null {
+  const reveal = detectNameReveal(dialogueText, speakerNpcId);
+  
+  if (reveal) {
+    const updates: Partial<NPCAliases> = {};
+    
+    switch (reveal.type) {
+      case 'name':
+        updates.fullName = reveal.value;
+        // If this was previously an occupation-only NPC, update the name too
+        const npc = registry.npcs[speakerNpcId];
+        if (npc) {
+          npc.permanent.name = reveal.value;
+        }
+        break;
+      case 'callsign':
+        updates.callsign = reveal.value;
+        break;
+      case 'nickname':
+        updates.nickname = reveal.value;
+        break;
+      case 'title':
+        updates.title = reveal.value;
+        break;
+    }
+    
+    updateNPCAliases(speakerNpcId, updates);
+    console.log(`[NPCRegistry] Name reveal detected: ${reveal.type} = "${reveal.value}" for ${speakerNpcId}`);
+    return reveal;
+  }
+  
+  return null;
+}
+
+/**
  * Get the display name for an NPC based on their aliases and context
  * Priority: playerNickname > nickname > callsign > title+name > occupation > name
  */

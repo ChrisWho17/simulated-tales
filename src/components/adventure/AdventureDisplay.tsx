@@ -48,6 +48,11 @@ import {
   MomentType, 
   MilestoneType 
 } from '@/lib/relationshipJournal';
+import { 
+  processDialogueForNameReveals,
+  resolveNPCId,
+  NameRevealResult
+} from '@/game/npcIdentityRegistry';
 
 interface StoryEntry {
   id: string;
@@ -1061,6 +1066,11 @@ export function AdventureDisplay({
         const speakerName = dialogueMatch[1];
         const dialogueText = dialogueMatch[2];
         
+        // Process dialogue for potential name reveals (e.g., "My name is Marcus")
+        // This auto-updates the NPC's aliases if they reveal their name/callsign
+        const speakerNpcId = resolveNPCId(speakerName, { occupation: speakerName });
+        const nameReveal = processDialogueForNameReveals(dialogueText, speakerNpcId);
+        
         return (
           <div 
             key={idx} 
@@ -1076,6 +1086,14 @@ export function AdventureDisplay({
             <span className="italic ml-2 text-foreground/90">
               &ldquo;{dialogueText}&rdquo;
             </span>
+            {/* Show name reveal indicator if a name was just revealed */}
+            {nameReveal && (
+              <span className="ml-2 text-xs text-accent animate-fade-in">
+                ✨ {nameReveal.type === 'name' ? 'Name revealed!' : 
+                   nameReveal.type === 'callsign' ? 'Callsign revealed!' : 
+                   nameReveal.type === 'title' ? 'Title revealed!' : 'Nickname revealed!'}
+              </span>
+            )}
           </div>
         );
       }
