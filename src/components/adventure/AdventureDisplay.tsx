@@ -1730,10 +1730,10 @@ export function AdventureDisplay({
       {/* Weather/Mood Modal */}
       {showWeatherModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="glass-panel p-6 max-w-sm w-full mx-4 space-y-4 animate-scale-in">
-            <div className="text-center space-y-3">
-              {/* Weather Icon */}
-              <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+          <div className="glass-panel p-6 max-w-md w-full mx-4 space-y-5 animate-scale-in">
+            <div className="text-center space-y-4">
+              {/* Weather Icon with animation */}
+              <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center animate-pulse ${
                 currentMood === 'fearful' ? 'bg-yellow-500/20' : 
                 currentMood === 'sad' ? 'bg-blue-500/20' : 
                 currentMood === 'depressed' ? 'bg-violet-500/20' : 
@@ -1746,30 +1746,30 @@ export function AdventureDisplay({
                 'bg-emerald-500/20'
               }`}>
                 {currentMood === 'fearful' ? (
-                  <CloudLightning className={`w-8 h-8 text-yellow-400`} />
+                  <CloudLightning className="w-10 h-10 text-yellow-400" />
                 ) : currentMood === 'sad' ? (
-                  <CloudRain className={`w-8 h-8 text-blue-400`} />
+                  <CloudRain className="w-10 h-10 text-blue-400" />
                 ) : currentMood === 'depressed' ? (
-                  <CloudFog className={`w-8 h-8 text-violet-400`} />
+                  <CloudFog className="w-10 h-10 text-violet-400" />
                 ) : currentMood === 'mad' ? (
-                  <Sun className={`w-8 h-8 text-red-400`} />
+                  <Sun className="w-10 h-10 text-red-400" />
                 ) : currentMood === 'annoyed' ? (
-                  <Cloud className={`w-8 h-8 text-orange-400`} />
+                  <Cloud className="w-10 h-10 text-orange-400" />
                 ) : currentMood === 'suspicious' ? (
-                  <Snowflake className={`w-8 h-8 text-cyan-400`} />
+                  <Snowflake className="w-10 h-10 text-cyan-400" />
                 ) : currentMood === 'happy' ? (
-                  <Sun className={`w-8 h-8 text-green-400`} />
+                  <Sun className="w-10 h-10 text-green-400" />
                 ) : currentMood === 'lusty' ? (
-                  <Heart className={`w-8 h-8 text-pink-400`} />
+                  <Heart className="w-10 h-10 text-pink-400" />
                 ) : currentMood === 'determined' ? (
-                  <Zap className={`w-8 h-8 text-white`} />
+                  <Zap className="w-10 h-10 text-white" />
                 ) : (
-                  <Wind className={`w-8 h-8 text-emerald-400`} />
+                  <Wind className="w-10 h-10 text-emerald-400" />
                 )}
               </div>
               
               {/* Mood Title */}
-              <h3 className={`text-2xl font-display font-bold ${
+              <h3 className={`text-3xl font-display font-bold ${
                 currentMood === 'fearful' ? 'text-yellow-300' : 
                 currentMood === 'sad' ? 'text-blue-300' : 
                 currentMood === 'depressed' ? 'text-violet-300' : 
@@ -1784,19 +1784,46 @@ export function AdventureDisplay({
                 {currentMood === 'neutral' ? 'Calm' : currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
               </h3>
               
-              {/* Description */}
-              <p className="text-sm text-muted-foreground">
-                {currentMood === 'neutral' && 'The air is still. A sense of peace settles over the scene.'}
-                {currentMood === 'fearful' && 'Thunder rumbles in the distance. An unsettling tension fills the air.'}
-                {currentMood === 'sad' && 'A gentle rain falls, matching the melancholy of the moment.'}
-                {currentMood === 'depressed' && 'A heavy fog blankets everything, muffling sound and light.'}
-                {currentMood === 'mad' && 'Heat radiates intensely. Anger simmers just beneath the surface.'}
-                {currentMood === 'annoyed' && 'Gusts of wind stir restlessly, mirroring growing frustration.'}
-                {currentMood === 'suspicious' && 'A cold chill hangs in the air. Something feels... off.'}
-                {currentMood === 'happy' && 'Warm sunlight bathes everything in a pleasant glow.'}
-                {currentMood === 'lusty' && 'The atmosphere grows warm and intimate.'}
-                {currentMood === 'determined' && 'Focused energy crackles through the scene.'}
+              {/* Main Description */}
+              <p className="text-muted-foreground leading-relaxed">
+                {currentMood === 'neutral' && 'The air is still and peaceful. A gentle breeze carries the scent of the land, and the world feels balanced—neither threatening nor welcoming, simply present.'}
+                {currentMood === 'fearful' && 'Thunder rumbles in the distance as dark clouds gather overhead. Every shadow seems to hold a threat, and the air crackles with dangerous potential. Your heart pounds in your chest.'}
+                {currentMood === 'sad' && 'A soft rain falls from gray skies, each drop carrying the weight of sorrow. The world seems muted, colors faded, as if mourning alongside you. Even familiar places feel lonely.'}
+                {currentMood === 'depressed' && 'A heavy fog blankets everything, muffling sound and obscuring sight. The weight of existence presses down, making each step feel like wading through thick water. Hope seems distant.'}
+                {currentMood === 'mad' && 'The air shimmers with heat as fury radiates from within. Blood pounds in your ears, and everything takes on a sharp, red-tinged edge. Restraint feels like a cage waiting to break.'}
+                {currentMood === 'annoyed' && 'Restless winds gust and swirl without pattern, carrying dust and debris. Small irritations compound into mounting frustration. Patience wears thin like fraying rope.'}
+                {currentMood === 'suspicious' && 'A cold chill permeates the air as frost creeps along edges. Something feels deeply wrong—whispers seem to follow you, and every glance over your shoulder reveals nothing. Yet.'}
+                {currentMood === 'happy' && 'Warm golden sunlight bathes everything in a pleasant glow. The world feels alive with possibility, colors seem brighter, and a lightness fills your step. Joy radiates outward.'}
+                {currentMood === 'lusty' && 'The atmosphere grows thick and warm, charged with intimate energy. Every sensation feels heightened, every touch electric. The world narrows to what—or who—captures your desire.'}
+                {currentMood === 'determined' && 'Lightning-like focus crackles through your being. Distractions fade away as pure resolve crystallizes into action. Nothing will stand in your way—you will see this through.'}
               </p>
+              
+              {/* Atmospheric Effects */}
+              <div className={`mt-4 p-3 rounded-lg border ${
+                currentMood === 'fearful' ? 'border-yellow-500/30 bg-yellow-500/5' : 
+                currentMood === 'sad' ? 'border-blue-500/30 bg-blue-500/5' : 
+                currentMood === 'depressed' ? 'border-violet-500/30 bg-violet-500/5' : 
+                currentMood === 'mad' ? 'border-red-500/30 bg-red-500/5' : 
+                currentMood === 'annoyed' ? 'border-orange-500/30 bg-orange-500/5' :
+                currentMood === 'suspicious' ? 'border-cyan-500/30 bg-cyan-500/5' :
+                currentMood === 'happy' ? 'border-green-500/30 bg-green-500/5' :
+                currentMood === 'lusty' ? 'border-pink-500/30 bg-pink-500/5' :
+                currentMood === 'determined' ? 'border-white/30 bg-white/5' :
+                'border-emerald-500/30 bg-emerald-500/5'
+              }`}>
+                <p className="text-xs text-muted-foreground/80 italic">
+                  {currentMood === 'neutral' && '✦ Clear skies • Gentle breeze • Ambient sounds of nature'}
+                  {currentMood === 'fearful' && '⚡ Distant thunder • Flickering shadows • Racing pulse'}
+                  {currentMood === 'sad' && '🌧 Soft rainfall • Muted colors • Heavy sighs'}
+                  {currentMood === 'depressed' && '🌫 Dense fog • Muffled sounds • Leaden limbs'}
+                  {currentMood === 'mad' && '🔥 Rising heat • Sharpened senses • Clenched fists'}
+                  {currentMood === 'annoyed' && '💨 Gusting winds • Furrowed brow • Short temper'}
+                  {currentMood === 'suspicious' && '❄ Creeping frost • Paranoid glances • Quiet whispers'}
+                  {currentMood === 'happy' && '☀ Warm sunlight • Bright colors • Light heart'}
+                  {currentMood === 'lusty' && '💗 Warm air • Heightened senses • Quickened breath'}
+                  {currentMood === 'determined' && '⚡ Focused energy • Clear purpose • Unstoppable will'}
+                </p>
+              </div>
             </div>
             
             <Button
