@@ -462,6 +462,327 @@ const HORROR_POSTAPOC_CLASSES: HybridClass[] = [
   }
 ];
 
+// Pirate + Horror hybrids (Ghost Ships!)
+const PIRATE_HORROR_CLASSES: HybridClass[] = [
+  {
+    id: 'ghost_ship_captain',
+    name: 'Cursed Captain',
+    description: 'Doomed to sail forever, commanding a crew of the damned.',
+    statBonuses: { charisma: 2, constitution: 1 },
+    startingItems: ['Cursed Compass', 'Spectral Cutlass', 'Damned Crew Contract'],
+    abilities: ['Summon Ghostly Crew', 'Death\'s Anchor', 'Curse Transfer'],
+    portraitHints: ['skeletal features', 'rotting captain coat', 'glowing eyes', 'ghost ship'],
+    clothingStyle: 'decaying captain uniform with spectral energy and barnacles',
+    sourceGenres: ['pirate', 'horror'],
+    blendDescription: 'Captains of the cursed seas'
+  },
+  {
+    id: 'deep_one_caller',
+    name: 'Deep One Caller',
+    description: 'Communes with ancient horrors from the ocean depths.',
+    statBonuses: { wisdom: 2, intelligence: 1 },
+    startingItems: ['Eldritch Conch', 'Deep One Token', 'Waterlogged Tome'],
+    abilities: ['Summon Tentacles', 'Breathe Underwater', 'Maddening Whispers'],
+    portraitHints: ['fish-like features', 'webbed hands', 'deep sea bioluminescence', 'tentacle accessories'],
+    clothingStyle: 'barnacle-encrusted robes with deep sea creature motifs',
+    sourceGenres: ['pirate', 'horror'],
+    blendDescription: 'Servants of the deep horrors'
+  },
+  {
+    id: 'drowned_revenant',
+    name: 'Drowned Revenant',
+    description: 'Sailors who returned from a watery grave seeking vengeance.',
+    statBonuses: { constitution: 2, strength: 1 },
+    startingItems: ['Waterlogged Blade', 'Drowned Man\'s Rope', 'Vengeful Anchor'],
+    abilities: ['Undead Resilience', 'Drown Touch', 'Salt Water Curse'],
+    portraitHints: ['bloated appearance', 'seaweed hair', 'pale skin', 'dripping water'],
+    clothingStyle: 'rotting sailor clothes constantly dripping seawater',
+    sourceGenres: ['pirate', 'horror'],
+    blendDescription: 'The vengeful drowned'
+  }
+];
+
+// Western + Sci-Fi hybrids (Space Western!)
+const WESTERN_SCIFI_CLASSES: HybridClass[] = [
+  {
+    id: 'frontier_marshal_stellar',
+    name: 'Stellar Marshal',
+    description: 'Brings law to the lawless frontier planets.',
+    statBonuses: { charisma: 2, dexterity: 1 },
+    startingItems: ['Star Badge', 'Plasma Sixgun', 'Hoversteed'],
+    abilities: ['Frontier Justice', 'Quick Draw Protocol', 'Wanted Database'],
+    portraitHints: ['space cowboy hat', 'futuristic star badge', 'energy holster', 'dusty spaceport'],
+    clothingStyle: 'space-age cowboy gear with energy weapons and star badge',
+    sourceGenres: ['western', 'scifi'],
+    blendDescription: 'Law of the cosmic frontier'
+  },
+  {
+    id: 'cattle_runner',
+    name: 'Bio-Herd Wrangler',
+    description: 'Herds genetically modified livestock across alien plains.',
+    statBonuses: { wisdom: 2, constitution: 1 },
+    startingItems: ['Hover Lasso', 'Gene Scanner', 'Alien Steed'],
+    abilities: ['Animal Bond', 'Terrain Adapt', 'Herd Control'],
+    portraitHints: ['weathered space rancher', 'alien livestock', 'frontier planet', 'modified animals'],
+    clothingStyle: 'practical ranching gear adapted for alien environments',
+    sourceGenres: ['western', 'scifi'],
+    blendDescription: 'Cowboys of alien worlds'
+  },
+  {
+    id: 'claim_jumper',
+    name: 'Asteroid Prospector',
+    description: 'Stakes claims on asteroid mining sites in the cosmic frontier.',
+    statBonuses: { constitution: 2, intelligence: 1 },
+    startingItems: ['Mining Claim Beacon', 'Plasma Pickaxe', 'Ore Detector'],
+    abilities: ['Zero-G Mining', 'Claim Defense', 'Mineral Sense'],
+    portraitHints: ['dusty space suit', 'mining equipment', 'asteroid belt', 'rugged pioneer'],
+    clothingStyle: 'worn mining suit with prospecting equipment',
+    sourceGenres: ['western', 'scifi'],
+    blendDescription: 'Pioneers of the cosmic gold rush'
+  }
+];
+
+// Fantasy + Mystery hybrids
+const FANTASY_MYSTERY_CLASSES: HybridClass[] = [
+  {
+    id: 'arcane_investigator',
+    name: 'Arcane Investigator',
+    description: 'Uses magical abilities to solve crimes and uncover hidden truths.',
+    statBonuses: { intelligence: 2, wisdom: 1 },
+    startingItems: ['Divination Crystal', 'Truth Rune', 'Enchanted Magnifying Glass'],
+    abilities: ['Detect Magic', 'Truth Sense', 'Psychometry'],
+    portraitHints: ['wizard detective', 'magical monocle', 'investigation robes', 'mystical clues'],
+    clothingStyle: 'scholarly robes with detective accessories and magical tools',
+    sourceGenres: ['fantasy', 'mystery'],
+    blendDescription: 'Magical sleuths'
+  },
+  {
+    id: 'spirit_medium_detective',
+    name: 'Spirit Consul',
+    description: 'Speaks with the dead to solve crimes and find the truth.',
+    statBonuses: { wisdom: 2, charisma: 1 },
+    startingItems: ['Séance Candles', 'Spirit Board', 'Ghost Lantern'],
+    abilities: ['Speak with Dead', 'Spirit Witness', 'Ethereal Vision'],
+    portraitHints: ['mystical appearance', 'ghostly aura', 'medium robes', 'spirit companions'],
+    clothingStyle: 'flowing robes with spiritual symbols and ghost-attracting charms',
+    sourceGenres: ['fantasy', 'mystery'],
+    blendDescription: 'Detectives of the spirit world'
+  },
+  {
+    id: 'curse_breaker_detective',
+    name: 'Curse Detective',
+    description: 'Investigates supernatural crimes and breaks ancient curses.',
+    statBonuses: { intelligence: 2, constitution: 1 },
+    startingItems: ['Curse Detector', 'Hex Breaker Kit', 'Ancient Bestiary'],
+    abilities: ['Identify Curse', 'Ward Creation', 'Curse Trace'],
+    portraitHints: ['protective wards', 'investigation tools', 'curse marks', 'scholarly mage'],
+    clothingStyle: 'protective robes covered in ward symbols with investigation gear',
+    sourceGenres: ['fantasy', 'mystery'],
+    blendDescription: 'Investigators of the supernatural'
+  }
+];
+
+// Cyberpunk + Pirate hybrids (Tech Pirates!)
+const CYBERPUNK_PIRATE_CLASSES: HybridClass[] = [
+  {
+    id: 'data_corsair',
+    name: 'Data Corsair',
+    description: 'Raids corporate networks and steals valuable data from the digital seas.',
+    statBonuses: { intelligence: 2, dexterity: 1 },
+    startingItems: ['Pirate Deck', 'Data Harpoon', 'Stolen Credentials'],
+    abilities: ['Network Raid', 'Data Plunder', 'Corporate Sabotage'],
+    portraitHints: ['hacker pirate', 'cyberdeck with skull', 'neon eyepatch', 'data streams'],
+    clothingStyle: 'street pirate gear with integrated hacking equipment',
+    sourceGenres: ['cyberpunk', 'pirate'],
+    blendDescription: 'Raiders of the digital seas'
+  },
+  {
+    id: 'chrome_buccaneer',
+    name: 'Chrome Buccaneer',
+    description: 'Cybernetically enhanced pirate captain of a smuggling crew.',
+    statBonuses: { strength: 2, charisma: 1 },
+    startingItems: ['Monofilament Cutlass', 'Smuggler Ship Keys', 'Crew Contracts'],
+    abilities: ['Boarding Action', 'Crew Command', 'Escape Protocol'],
+    portraitHints: ['cyborg pirate', 'metal arm', 'captain swagger', 'neon tattoos'],
+    clothingStyle: 'street captain coat with visible cybernetics and weapons',
+    sourceGenres: ['cyberpunk', 'pirate'],
+    blendDescription: 'Captains of the urban underworld'
+  },
+  {
+    id: 'signal_privateer',
+    name: 'Signal Privateer',
+    description: 'Licensed by megacorps to raid competitor networks and shipments.',
+    statBonuses: { intelligence: 2, charisma: 1 },
+    startingItems: ['Letter of Marque (Corporate)', 'Signal Jammer', 'Encrypted Comms'],
+    abilities: ['Corporate Immunity', 'Signal Hijack', 'Licensed Plunder'],
+    portraitHints: ['corporate pirate', 'legitimate criminal', 'corporate badge', 'signal equipment'],
+    clothingStyle: 'semi-corporate attire with pirate flair and signal equipment',
+    sourceGenres: ['cyberpunk', 'pirate'],
+    blendDescription: 'Corporate-sanctioned raiders'
+  }
+];
+
+// Horror + Sci-Fi hybrids
+const HORROR_SCIFI_CLASSES: HybridClass[] = [
+  {
+    id: 'xenomorph_hunter',
+    name: 'Xenomorph Hunter',
+    description: 'Specialized in tracking and eliminating alien threats.',
+    statBonuses: { dexterity: 2, wisdom: 1 },
+    startingItems: ['Motion Tracker', 'Pulse Rifle', 'Acid-Proof Armor'],
+    abilities: ['Track Alien', 'Acid Resistance', 'Final Girl Luck'],
+    portraitHints: ['space marine', 'motion tracker', 'acid burns', 'determined survivor'],
+    clothingStyle: 'battle-worn space marine armor with xenomorph trophies',
+    sourceGenres: ['horror', 'scifi'],
+    blendDescription: 'Hunters of cosmic horrors'
+  },
+  {
+    id: 'void_touched',
+    name: 'Void-Touched',
+    description: 'Exposed to the horrors of deep space, changed forever.',
+    statBonuses: { wisdom: 2, constitution: 1 },
+    startingItems: ['Void Shard', 'Sanity Meds', 'Cosmic Insight Journal'],
+    abilities: ['Void Sight', 'Cosmic Whispers', 'Maddening Presence'],
+    portraitHints: ['space-touched', 'starfield eyes', 'cosmic marks', 'haunted expression'],
+    clothingStyle: 'damaged space suit with void corruption visible',
+    sourceGenres: ['horror', 'scifi'],
+    blendDescription: 'Those touched by cosmic horror'
+  },
+  {
+    id: 'quarantine_officer',
+    name: 'Quarantine Officer',
+    description: 'Specialist in containing space-borne biological horrors.',
+    statBonuses: { intelligence: 2, constitution: 1 },
+    startingItems: ['Containment Suit', 'Bio Scanner', 'Quarantine Protocols'],
+    abilities: ['Identify Pathogen', 'Containment Field', 'Immune Boost'],
+    portraitHints: ['hazmat suit', 'bio scanner', 'sterile environment', 'cautious stance'],
+    clothingStyle: 'advanced hazmat suit with bio-containment equipment',
+    sourceGenres: ['horror', 'scifi'],
+    blendDescription: 'First line against space plagues'
+  }
+];
+
+// Post-Apocalyptic + Fantasy hybrids
+const POSTAPOC_FANTASY_CLASSES: HybridClass[] = [
+  {
+    id: 'radiation_druid',
+    name: 'Rad-Druid',
+    description: 'Communes with mutated nature spirits in the wasteland.',
+    statBonuses: { wisdom: 2, constitution: 1 },
+    startingItems: ['Mutant Plant Staff', 'Rad-Water Blessing', 'Beast Totem'],
+    abilities: ['Mutant Shapeshifting', 'Radiation Blessing', 'Nature\'s Wrath'],
+    portraitHints: ['mutated nature priest', 'glowing plants', 'wasteland shaman', 'nature corruption'],
+    clothingStyle: 'robes made of mutated plants with radiation glow',
+    sourceGenres: ['postapoc', 'fantasy'],
+    blendDescription: 'Shamans of the irradiated wild'
+  },
+  {
+    id: 'ruin_mage',
+    name: 'Ruin Mage',
+    description: 'Draws magical power from the residual energy of the apocalypse.',
+    statBonuses: { intelligence: 2, wisdom: 1 },
+    startingItems: ['Apocalypse Focus', 'Ruin Spellbook', 'Energy Siphon'],
+    abilities: ['Channel Destruction', 'Ruin Sight', 'Apocalypse Echo'],
+    portraitHints: ['wasteland wizard', 'ruined cityscape', 'energy channeling', 'apocalyptic power'],
+    clothingStyle: 'patched wizard robes powered by apocalyptic energy',
+    sourceGenres: ['postapoc', 'fantasy'],
+    blendDescription: 'Mages of the broken world'
+  },
+  {
+    id: 'beast_lord',
+    name: 'Mutant Beast Lord',
+    description: 'Commands loyalty of mutated creatures in the wasteland.',
+    statBonuses: { charisma: 2, constitution: 1 },
+    startingItems: ['Beast Whistle', 'Pack Leader Token', 'Mutant Companion'],
+    abilities: ['Beast Command', 'Pack Bond', 'Mutant Empathy'],
+    portraitHints: ['wasteland beast master', 'mutant animals', 'tribal appearance', 'alpha presence'],
+    clothingStyle: 'tribal wasteland gear with mutant beast trophies',
+    sourceGenres: ['postapoc', 'fantasy'],
+    blendDescription: 'Masters of mutated beasts'
+  }
+];
+
+// War + Fantasy hybrids
+const WAR_FANTASY_CLASSES: HybridClass[] = [
+  {
+    id: 'battle_mage',
+    name: 'Battle Mage',
+    description: 'Military-trained wizard specializing in combat magic.',
+    statBonuses: { intelligence: 2, strength: 1 },
+    startingItems: ['War Staff', 'Military Spellbook', 'Battle Robes'],
+    abilities: ['Artillery Magic', 'Shield Wall', 'Tactical Casting'],
+    portraitHints: ['armored wizard', 'military bearing', 'combat spells', 'battlefield backdrop'],
+    clothingStyle: 'armored wizard robes with military insignia',
+    sourceGenres: ['war', 'fantasy'],
+    blendDescription: 'Magic artillery of the battlefield'
+  },
+  {
+    id: 'dragon_cavalry',
+    name: 'Dragon Rider',
+    description: 'Elite aerial cavalry bonded with trained war dragons.',
+    statBonuses: { dexterity: 2, charisma: 1 },
+    startingItems: ['Dragon Saddle', 'Lance of the Sky', 'Dragon Bond Token'],
+    abilities: ['Aerial Combat', 'Dragon Bond', 'Dive Bomb'],
+    portraitHints: ['dragon riding warrior', 'aerial armor', 'lance weapon', 'dragon companion'],
+    clothingStyle: 'lightweight aerial combat armor designed for dragon riding',
+    sourceGenres: ['war', 'fantasy'],
+    blendDescription: 'Lords of the dragon wings'
+  },
+  {
+    id: 'siege_enchanter',
+    name: 'Siege Enchanter',
+    description: 'Military engineer who enhances siege equipment with magic.',
+    statBonuses: { intelligence: 2, wisdom: 1 },
+    startingItems: ['Enchanting Tools', 'Siege Manual', 'Rune Components'],
+    abilities: ['Enchant Siege', 'Fortify Position', 'Breach Ward'],
+    portraitHints: ['military engineer', 'magical tools', 'siege equipment', 'fortifications'],
+    clothingStyle: 'practical engineer clothes with magical enhancement tools',
+    sourceGenres: ['war', 'fantasy'],
+    blendDescription: 'Magical siege masters'
+  }
+];
+
+// Modern Life + Horror hybrids
+const MODERN_HORROR_CLASSES: HybridClass[] = [
+  {
+    id: 'paranormal_investigator',
+    name: 'Paranormal Investigator',
+    description: 'Uses modern technology to investigate supernatural occurrences.',
+    statBonuses: { intelligence: 2, wisdom: 1 },
+    startingItems: ['EMF Detector', 'Night Vision Camera', 'Research Database'],
+    abilities: ['Spirit Detection', 'Evidence Analysis', 'Debunk or Confirm'],
+    portraitHints: ['ghost hunter', 'investigation equipment', 'modern setting', 'paranormal evidence'],
+    clothingStyle: 'casual investigation gear with technological equipment',
+    sourceGenres: ['modern_life', 'horror'],
+    blendDescription: 'Scientific ghost hunters'
+  },
+  {
+    id: 'urban_occultist',
+    name: 'Urban Occultist',
+    description: 'Practices dark arts while maintaining a normal day job.',
+    statBonuses: { wisdom: 2, charisma: 1 },
+    startingItems: ['Hidden Altar', 'Occult App', 'Secret Grimoire'],
+    abilities: ['Ritual Magic', 'Hide in Plain Sight', 'Summon Minor'],
+    portraitHints: ['normal appearance', 'hidden occult symbols', 'double life', 'secret knowledge'],
+    clothingStyle: 'normal business attire with hidden occult accessories',
+    sourceGenres: ['modern_life', 'horror'],
+    blendDescription: 'Everyday dark practitioners'
+  },
+  {
+    id: 'crisis_counselor',
+    name: 'Trauma Counselor',
+    description: 'Helps survivors of supernatural events process their experiences.',
+    statBonuses: { wisdom: 2, charisma: 1 },
+    startingItems: ['Therapy Notes', 'Survivor Network', 'Coping Techniques'],
+    abilities: ['Calm Mind', 'Trauma Bond', 'Support Network'],
+    portraitHints: ['professional therapist', 'understanding expression', 'safe space', 'helping hand'],
+    clothingStyle: 'professional therapy attire with calming presence',
+    sourceGenres: ['modern_life', 'horror'],
+    blendDescription: 'Healers of supernatural trauma'
+  }
+];
+
+
 // ============================================
 // HYBRID BACKGROUND DEFINITIONS
 // ============================================
@@ -549,8 +870,8 @@ const HYBRID_CLASS_MAP: Record<string, HybridClass[]> = {
   'horror-cyberpunk': CYBERPUNK_HORROR_CLASSES,
   'western-fantasy': WESTERN_FANTASY_CLASSES,
   'fantasy-western': WESTERN_FANTASY_CLASSES,
-  'scifi-western': SCIFI_WESTERN_CLASSES,
-  'western-scifi': SCIFI_WESTERN_CLASSES,
+  'scifi-western': [...SCIFI_WESTERN_CLASSES, ...WESTERN_SCIFI_CLASSES],
+  'western-scifi': [...SCIFI_WESTERN_CLASSES, ...WESTERN_SCIFI_CLASSES],
   'pirate-fantasy': PIRATE_FANTASY_CLASSES,
   'fantasy-pirate': PIRATE_FANTASY_CLASSES,
   'mystery-cyberpunk': MYSTERY_CYBERPUNK_CLASSES,
@@ -563,6 +884,21 @@ const HYBRID_CLASS_MAP: Record<string, HybridClass[]> = {
   'mystery-modern_life': MODERN_MYSTERY_CLASSES,
   'horror-postapoc': HORROR_POSTAPOC_CLASSES,
   'postapoc-horror': HORROR_POSTAPOC_CLASSES,
+  // NEW HYBRID COMBINATIONS
+  'pirate-horror': PIRATE_HORROR_CLASSES,
+  'horror-pirate': PIRATE_HORROR_CLASSES,
+  'fantasy-mystery': FANTASY_MYSTERY_CLASSES,
+  'mystery-fantasy': FANTASY_MYSTERY_CLASSES,
+  'cyberpunk-pirate': CYBERPUNK_PIRATE_CLASSES,
+  'pirate-cyberpunk': CYBERPUNK_PIRATE_CLASSES,
+  'horror-scifi': HORROR_SCIFI_CLASSES,
+  'scifi-horror': HORROR_SCIFI_CLASSES,
+  'postapoc-fantasy': POSTAPOC_FANTASY_CLASSES,
+  'fantasy-postapoc': POSTAPOC_FANTASY_CLASSES,
+  'war-fantasy': WAR_FANTASY_CLASSES,
+  'fantasy-war': WAR_FANTASY_CLASSES,
+  'modern_life-horror': MODERN_HORROR_CLASSES,
+  'horror-modern_life': MODERN_HORROR_CLASSES,
 };
 
 const HYBRID_BACKGROUND_MAP: Record<string, HybridBackground[]> = {
