@@ -1061,9 +1061,6 @@ export function AdventureDisplay({
         const speakerName = dialogueMatch[1];
         const dialogueText = dialogueMatch[2];
         
-        // Check if speaker is a registered NPC for clickable link
-        const speakerNPC = npcNameMap.get(speakerName.toLowerCase());
-        
         return (
           <div 
             key={idx} 
@@ -1073,13 +1070,8 @@ export function AdventureDisplay({
               className="font-semibold transition-all duration-300" 
               style={moodConfig ? nameFrostStyle : { color: 'hsl(var(--primary))' }}
             >
-              {speakerNPC ? (
-                <>
-                  {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${idx}`, playerName, openCharacterSheet)}:
-                </>
-              ) : (
-                <>{speakerName}:</>
-              )}
+              {/* Always use parseTextForNPCLinks - it will auto-register dialogue speakers */}
+              {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${idx}`, playerName, openCharacterSheet)}:
             </span>
             <span className="italic ml-2 text-foreground/90">
               &ldquo;{dialogueText}&rdquo;
