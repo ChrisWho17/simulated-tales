@@ -3,12 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { audioEngine, AudioEngineState, AudioVolumes, AudioChannel } from '@/game/audioEngine';
 import { weatherSoundManager } from '@/game/weatherSoundManager';
 import { storySoundTrigger } from '@/game/storySoundTrigger';
+import { acousticEnvironmentSystem, AcousticSpace, LocationAcoustics } from '@/game/acousticEnvironmentSystem';
 import { WeatherState } from '@/game/weatherSystem';
 
 interface UseAudioSystemReturn {
   initialized: boolean;
   muted: boolean;
   volumes: AudioVolumes;
+  acousticSpace: AcousticSpace;
+  isIndoors: boolean;
   initializeAudio: () => Promise<void>;
   setMasterVolume: (volume: number) => void;
   setChannelVolume: (channel: AudioChannel, volume: number) => void;
@@ -17,6 +20,8 @@ interface UseAudioSystemReturn {
   processNarrative: (text: string) => string[];
   playUISound: (sound: 'click' | 'notification' | 'success' | 'error' | 'level_up' | 'item_acquired') => void;
   setIndoors: (isIndoors: boolean) => void;
+  setLocation: (locationType: string) => void;
+  getAcoustics: () => LocationAcoustics;
   stopAll: () => void;
 }
 
@@ -33,6 +38,9 @@ export function useAudioSystem(): UseAudioSystemReturn {
     }
   });
 
+  const [acousticSpace, setAcousticSpace] = useState<AcousticSpace>('outdoor');
+  const [isIndoorsState, setIsIndoorsState] = useState(false);
+
   // Subscribe to audio engine state changes
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe((newState) => {
@@ -41,6 +49,20 @@ export function useAudioSystem(): UseAudioSystemReturn {
 
     // Set initial state
     setState(audioEngine.getState());
+
+    return unsubscribe;
+  }, []);
+
+  // Subscribe to acoustic environment changes
+  useEffect(() => {
+    const unsubscribe = acousticEnvironmentSystem.subscribe((acoustics) => {
+      setAcousticSpace(acoustics.space);
+      setIsIndoorsState(acoustics.space === 'indoor' || acoustics.space === 'underground');
+    });
+
+    // Set initial acoustic state
+    setAcousticSpace(acousticEnvironmentSystem.getAcousticSpace());
+    setIsIndoorsState(acousticEnvironmentSystem.isIndoors());
 
     return unsubscribe;
   }, []);
@@ -74,7 +96,7 @@ export function useAudioSystem(): UseAudioSystemReturn {
     }
   }, [state.initialized, state.muted]);
 
-  // Narrative processing
+  // Narrative processing (now with automatic location detection)
   const processNarrative = useCallback((text: string): string[] => {
     if (state.initialized && !state.muted) {
       return storySoundTrigger.processNarrativeText(text);
@@ -91,12 +113,33 @@ export function useAudioSystem(): UseAudioSystemReturn {
     }
   }, [state.initialized, state.muted]);
 
-  // Indoor/outdoor
+  // Indoor/outdoor (legacy support - now use setLocation instead)
   const setIndoors = useCallback((isIndoors: boolean) => {
     if (state.initialized) {
       weatherSoundManager.setIndoors(isIndoors);
+      // Also update acoustic environment
+      if (isIndoors) {
+        acousticEnvironmentSystem.setLocation('indoor');
+      } else {
+        acousticEnvironmentSystem.setLocation('outdoor');
+      }
     }
   }, [state.initialized]);
+
+  // Set location with full acoustic environment update
+  const setLocation = useCallback((locationType: string) => {
+    acousticEnvironmentSystem.setLocation(locationType);
+    storySoundTrigger.setLocationAmbience(locationType);
+    
+    // Also update weather manager
+    const isIndoors = acousticEnvironmentSystem.isIndoors();
+    weatherSoundManager.setIndoors(isIndoors);
+  }, []);
+
+  // Get current acoustics
+  const getAcoustics = useCallback(() => {
+    return acousticEnvironmentSystem.getAcoustics();
+  }, []);
 
   // Stop all sounds
   const stopAll = useCallback(() => {
@@ -109,6 +152,8 @@ export function useAudioSystem(): UseAudioSystemReturn {
     initialized: state.initialized,
     muted: state.muted,
     volumes: state.volumes,
+    acousticSpace,
+    isIndoors: isIndoorsState,
     initializeAudio,
     setMasterVolume,
     setChannelVolume,
@@ -117,6 +162,8 @@ export function useAudioSystem(): UseAudioSystemReturn {
     processNarrative,
     playUISound,
     setIndoors,
+    setLocation,
+    getAcoustics,
     stopAll
   };
 }
