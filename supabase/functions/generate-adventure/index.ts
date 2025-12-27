@@ -203,6 +203,29 @@ XP AND PROGRESSION SYSTEM (CRITICAL):
 - Health changes: [DAMAGE:amount] or [HEAL:amount]
 - Skill improvements: [SKILL:skillName:amount:reason]
 
+CRITICAL - ITEM ACQUISITION SYSTEM:
+When the player successfully takes, grabs, picks up, steals, receives, or acquires ANY item, you MUST include:
+[LOOT:item name]
+
+This is MANDATORY for items to appear in the player's inventory. Without this tag, items are NOT added!
+
+EXAMPLES - When player says:
+- "I grab the key" → Narrate grabbing it AND include [LOOT:Iron Key]
+- "I take the sword" → Narrate taking it AND include [LOOT:Rusty Sword]
+- "I pick up the gold coins" → Include [GOLD:amount] or [LOOT:Gold Pouch]
+- "I steal the amulet" → If successful, include [LOOT:Mysterious Amulet]
+- "I loot the body" → List each item: [LOOT:Dagger][LOOT:Leather Pouch][GOLD:15]
+- "I accept the gift" → Include [LOOT:Gift Name]
+- "I buy the potion" → Include [LOOT:Healing Potion] (and [GOLD:-cost] if tracking spending)
+
+ITEM ACQUISITION RULES:
+- Use [LOOT:ItemName] for EVERY item the player acquires
+- Be descriptive with item names (e.g., "Ornate Silver Key" not just "key")
+- Multiple items = multiple [LOOT:] tags
+- If stealing/taking requires skill, use [ROLL:] first, then [LOOT:] only on success
+- Narrate the acquisition naturally, don't mention the tag
+- For currency, prefer [GOLD:amount] over [LOOT:coins]
+
 CHAPTER SYSTEM:
 - Mark chapter endings with [CHAPTER_END] when a major story arc concludes
 - Chapter endings should feel earned - after boss defeats, major revelations, completing significant quests
