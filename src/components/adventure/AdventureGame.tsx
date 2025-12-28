@@ -421,6 +421,7 @@ export function AdventureGame() {
   
   
   // Sync local state when campaign data changes (e.g., after checkpoint restore)
+  // CRITICAL: Only sync when tick DECREASES (rollback) or on initial load, not on every narrative entry
   const lastSyncedTick = useRef<number>(-1);
   useEffect(() => {
     if (phase !== 'playing' || !campaignContext?.activeCampaign) return;
@@ -428,11 +429,25 @@ export function AdventureGame() {
     const campaign = campaignContext.activeCampaign;
     const currentTick = campaign.currentTick;
     
-    // Only sync if tick changed (indicates checkpoint restore or external change)
-    if (currentTick !== lastSyncedTick.current) {
+    // Initial load case - sync everything
+    if (lastSyncedTick.current === -1) {
       lastSyncedTick.current = currentTick;
       setStory(campaign.narrativeHistory);
       setCharacter(campaign.player);
+      console.log('[Campaign Sync] Initial sync from campaign');
+      return;
+    }
+    
+    // Only sync if tick DECREASED (indicates checkpoint restore/rollback)
+    // Don't sync when tick increases - that's normal narrative progression
+    if (currentTick < lastSyncedTick.current) {
+      console.log('[Campaign Sync] Checkpoint restore detected, syncing from campaign');
+      lastSyncedTick.current = currentTick;
+      setStory(campaign.narrativeHistory);
+      setCharacter(campaign.player);
+    } else {
+      // Just update the reference tick, don't overwrite local state
+      lastSyncedTick.current = currentTick;
     }
   }, [phase, campaignContext?.activeCampaign?.currentTick]);
 
@@ -463,7 +478,8 @@ export function AdventureGame() {
       gold: character.gold,
       experience: character.experience,
       level: character.level,
-      inventory: character.inventory.length,
+      // Include full inventory content to detect item additions/removals
+      inventory: character.inventory.map(i => ({ name: i.name, quantity: i.quantity })),
       stats: character.stats,
     });
     
