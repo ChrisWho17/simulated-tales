@@ -419,7 +419,7 @@ export function PlayerNameLink({ playerName, onShowCharacterSheet, className }: 
 }
 
 // Hook to get all known NPC names for text parsing
-// Common words that should NEVER be linked as NPCs (pronouns, common nouns, conjunctions, etc.)
+// Common words that should NEVER be linked as NPCs (pronouns, common nouns, conjunctions, skills, etc.)
 const NEVER_LINK_WORDS = new Set([
   // Pronouns
   'it', 'she', 'he', 'they', 'we', 'you', 'i', 'me', 'her', 'him', 'them', 'us',
@@ -437,6 +437,22 @@ const NEVER_LINK_WORDS = new Set([
   'rain', 'wind', 'sky', 'air', 'city', 'street', 'alley', 'crowd', 'voice', 'sound',
   // Short words that are never names
   'up', 'down', 'out', 'into', 'over', 'under', 'about', 'after', 'before', 'between',
+  // RPG SKILLS - these are NEVER NPC names
+  'survival', 'stealth', 'perception', 'athletics', 'acrobatics', 'intimidation', 'persuasion',
+  'deception', 'insight', 'investigation', 'medicine', 'nature', 'religion', 'arcana',
+  'history', 'performance', 'sleight', 'animal', 'handling', 'strength', 'dexterity',
+  'constitution', 'intelligence', 'wisdom', 'charisma', 'combat', 'melee', 'ranged',
+  'lockpicking', 'hacking', 'crafting', 'cooking', 'fishing', 'mining', 'herbalism',
+  'alchemy', 'enchanting', 'smithing', 'tailoring', 'leatherworking', 'engineering',
+  // Temporal/adverb words - NEVER names
+  'now', 'then', 'soon', 'later', 'here', 'there', 'today', 'tonight', 'tomorrow', 'yesterday',
+  'always', 'never', 'often', 'sometimes', 'rarely', 'still', 'already', 'just', 'only',
+  // Common short nonsense/sounds
+  'hhh', 'hmm', 'uhh', 'ahh', 'ohh', 'mmm', 'err', 'umm', 'huh', 'meh', 'bah', 'pah', 'tsk',
+  // More common nouns
+  'nothing', 'something', 'everything', 'anything', 'someone', 'everyone', 'anyone', 'nobody',
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'first', 'second', 'third', 'last', 'next', 'previous', 'other', 'another', 'each', 'every',
 ]);
 
 // Check if a name looks like a legitimate NPC name (not a common word)
