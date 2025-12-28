@@ -46,7 +46,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     toggleMute,
     playSoundFromCategory
   } = useAudioSystem();
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director' | 'weather'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   
@@ -123,7 +123,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'saves', 'display', 'audio'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'saves', 'display', 'audio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -135,6 +135,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 )}
               >
                 {tab === 'director' && <Clapperboard className="w-3 h-3" />}
+                {tab === 'weather' && <Cloud className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -1099,6 +1100,89 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   Click "Enable Audio" to access volume controls
                 </p>
               )}
+            </div>
+          )}
+          
+          {/* Weather Tab */}
+          {activeTab === 'weather' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <Cloud className="w-5 h-5 text-blue-400" />
+                <div>
+                  <span className="text-sm font-medium text-blue-400">Geographic Climate System</span>
+                  <p className="text-xs text-muted-foreground">
+                    Köppen-inspired climate zones with realistic weather patterns
+                  </p>
+                </div>
+              </div>
+              
+              {/* Climate Zone Info */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  Climate Zones
+                </h3>
+                <div className="grid gap-2 text-xs">
+                  <div className="flex justify-between p-2 rounded bg-background/30">
+                    <span>🌴 Tropical</span>
+                    <span className="text-muted-foreground">Hot, humid, no snow</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded bg-background/30">
+                    <span>🏜️ Arid/Desert</span>
+                    <span className="text-muted-foreground">Extreme temps, rare rain</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded bg-background/30">
+                    <span>🌲 Temperate</span>
+                    <span className="text-muted-foreground">Four seasons</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded bg-background/30">
+                    <span>❄️ Polar/Subarctic</span>
+                    <span className="text-muted-foreground">Cold dominant, heavy snow</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded bg-background/30">
+                    <span>⛰️ Highland</span>
+                    <span className="text-muted-foreground">Altitude-dependent</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Weather Fronts Info */}
+              <div className="space-y-3 pt-2 border-t border-border/30">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Wind className="w-4 h-4 text-cyan-500" />
+                  Weather Fronts
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Dynamic weather fronts move across regions, affecting weather probabilities.
+                </p>
+                <div className="grid gap-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 rounded bg-blue-500/10">
+                    <span>❄️ Cold Front</span>
+                    <span className="text-muted-foreground">Brings snow/rain, drops temps</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded bg-orange-500/10">
+                    <span>☀️ Warm Front</span>
+                    <span className="text-muted-foreground">Clears skies, raises temps</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded bg-purple-500/10">
+                    <span>⛈️ Storm System</span>
+                    <span className="text-muted-foreground">Heavy storms, wind</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Transition Matrix Info */}
+              <div className="space-y-3 pt-2 border-t border-border/30">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <CloudRain className="w-4 h-4 text-blue-400" />
+                  Realistic Transitions
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Weather follows logical patterns: rain often becomes overcast before clearing,
+                  storms break to wind, fog burns off to clear skies. Season and time of day
+                  affect probabilities.
+                </p>
+              </div>
             </div>
           )}
           </div>
