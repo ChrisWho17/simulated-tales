@@ -43,7 +43,10 @@ export function useAudioSystem(): UseAudioSystemReturn {
       ambience: 0.6,
       effects: 0.9,
       music: 0.4,
-      ui: 0.5
+      ui: 0.5,
+      weather: 0.7,
+      voice: 0.9,
+      dramatic: 0.8
     }
   });
 
