@@ -190,8 +190,15 @@ class SoundPreloader {
 
   /**
    * Generate a consistent key for a sound
+   * The filename already contains the path (e.g., "weather_rain/rain_light_loop")
+   * so we just use filename directly as the key
    */
   getSoundKey(sound: CachedSound | { category: string; filename: string }): string {
+    // If filename already contains a path separator, use it directly
+    if (sound.filename.includes('/')) {
+      return sound.filename;
+    }
+    // Otherwise construct from category/filename
     return `${sound.category}/${sound.filename}`;
   }
 
@@ -200,9 +207,14 @@ class SoundPreloader {
    */
   getRandomFromCategory(category: string): CachedSound | null {
     const matches = Array.from(this.loadedSounds.values())
-      .filter(s => s.category === category || s.category.startsWith(category));
+      .filter(s => s.category === category || s.category.startsWith(category) || category.startsWith(s.category));
     
-    if (matches.length === 0) return null;
+    if (matches.length === 0) {
+      console.warn(`[SoundPreloader] No matches for category "${category}". Loaded categories:`, this.getLoadedCategories());
+      return null;
+    }
+    
+    console.log(`[SoundPreloader] Found ${matches.length} sounds for category "${category}"`);
     return matches[Math.floor(Math.random() * matches.length)];
   }
 

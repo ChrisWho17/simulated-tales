@@ -38,10 +38,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     muted: audioMuted,
     volumes: audioVolumes,
     unlocked: audioUnlocked,
+    soundsReady,
+    preloadProgress,
     initializeAudio,
     setMasterVolume,
     setChannelVolume,
-    toggleMute
+    toggleMute,
+    playSoundFromCategory
   } = useAudioSystem();
   const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
@@ -914,8 +917,39 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 />
               </div>
               
+              {/* Sound Loading Status */}
+              {audioInitialized && preloadProgress && !preloadProgress.isComplete && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-blue-400">Loading Sounds...</span>
+                    <p className="text-xs text-muted-foreground">
+                      {preloadProgress.loaded} / {preloadProgress.total} ({preloadProgress.currentCategory})
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {audioInitialized && soundsReady && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <Volume2 className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-green-500">Sounds loaded and ready</span>
+                </div>
+              )}
+              
               {settings.soundEnabled && audioInitialized && (
                 <>
+                  {/* Test Sound Button */}
+                  <button
+                    onClick={() => playSoundFromCategory('ui_click')}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-primary/40 
+                               bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-all"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span className="text-sm">Test Sound</span>
+                  </button>
+                  
+                  {/* Master Volume */}
                   {/* Master Volume */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
