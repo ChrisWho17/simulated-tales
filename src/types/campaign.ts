@@ -8,6 +8,7 @@ import { WorldBible } from '@/game/worldBible/types';
 import { GameGenre } from './genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { CampaignMemoryStore } from './campaignMemory';
+import { WeatherState } from '@/game/weatherSystem';
 
 // ============================================================================
 // CAMPAIGN METADATA (for index)
@@ -97,6 +98,9 @@ export interface CampaignData {
   // Mood state
   currentMood?: string;
   moodHistory?: Array<{ mood: string; timestamp: number; chapter: number; trigger: string }>;
+  
+  // Weather state (persisted for continuity)
+  weatherState?: WeatherState;
   
   // Settings specific to this campaign
   settings?: {

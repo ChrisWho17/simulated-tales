@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -59,11 +59,13 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
-import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity } from '@/game/weatherSystem';
+import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
 import { useAudioSystem } from '@/hooks/useAudioSystem';
 import { livingWorldAudio } from '@/game/livingWorldAudio';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface StoryEntry {
   id: string;
@@ -1854,17 +1856,17 @@ export function AdventureDisplay({
         </div>
       )}
 
-      {/* Weather Modal with Particles */}
+      {/* Weather Modal with Particles and Forecast */}
       {showWeatherModal && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
           onClick={() => setShowWeatherModal(false)}
         >
           <div 
-            className="glass-panel p-6 max-w-md w-full mx-4 space-y-5 animate-scale-in relative overflow-hidden"
+            className="glass-panel p-6 max-w-md w-full mx-4 space-y-4 animate-scale-in relative overflow-hidden max-h-[85vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
-            {/* Particle Effects Background with transition support */}
+            {/* Particle Effects Background */}
             {(() => {
               const transitionOpacity = getWeatherTransitionOpacity(weatherState);
               return (
@@ -1884,147 +1886,101 @@ export function AdventureDisplay({
                 </>
               );
             })()}
-            <div className="text-center space-y-4 relative z-10">
-              {/* Weather Icon with animation */}
-              <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${
-                weatherState.current === 'storm' ? 'bg-yellow-500/20 animate-pulse' : 
-                weatherState.current === 'rain' ? 'bg-blue-500/20' : 
-                weatherState.current === 'fog' ? 'bg-violet-500/20' : 
-                weatherState.current === 'heat_wave' ? 'bg-red-500/20 animate-pulse' : 
-                weatherState.current === 'wind' ? 'bg-orange-500/20' :
-                weatherState.current === 'snow' ? 'bg-cyan-500/20' :
-                weatherState.current === 'cloudy' ? 'bg-slate-500/20' :
-                'bg-amber-500/20'
-              }`}>
-                {weatherState.current === 'storm' ? (
-                  <CloudLightning className="w-10 h-10 text-yellow-400" />
-                ) : weatherState.current === 'rain' ? (
-                  <CloudRain className="w-10 h-10 text-blue-400" />
-                ) : weatherState.current === 'fog' ? (
-                  <CloudFog className="w-10 h-10 text-violet-400" />
-                ) : weatherState.current === 'heat_wave' ? (
-                  <Flame className="w-10 h-10 text-red-400" />
-                ) : weatherState.current === 'wind' ? (
-                  <Wind className="w-10 h-10 text-orange-400" />
-                ) : weatherState.current === 'snow' ? (
-                  <Snowflake className="w-10 h-10 text-cyan-400" />
-                ) : weatherState.current === 'cloudy' ? (
-                  <Cloud className="w-10 h-10 text-slate-400" />
-                ) : (
-                  <Sun className="w-10 h-10 text-amber-400" />
-                )}
-              </div>
+            
+            <Tabs defaultValue="current" className="relative z-10">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="current">Current</TabsTrigger>
+                <TabsTrigger value="forecast">Forecast</TabsTrigger>
+              </TabsList>
               
-              {/* Weather Title */}
-              <h3 className={`text-3xl font-display font-bold ${
-                weatherState.current === 'storm' ? 'text-yellow-300' : 
-                weatherState.current === 'rain' ? 'text-blue-300' : 
-                weatherState.current === 'fog' ? 'text-violet-300' : 
-                weatherState.current === 'heat_wave' ? 'text-red-300' : 
-                weatherState.current === 'wind' ? 'text-orange-300' :
-                weatherState.current === 'snow' ? 'text-cyan-300' :
-                weatherState.current === 'cloudy' ? 'text-slate-300' :
-                'text-amber-300'
-              }`}>
-                {WEATHER_CONFIGS[weatherState.current].name}
-              </h3>
-              
-              {/* Duration Bar */}
-              <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
-                <Timer className="w-3 h-3" />
-                <div className="w-24 h-1.5 bg-background/50 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-500 ${
-                      weatherState.current === 'storm' ? 'bg-yellow-500' : 
-                      weatherState.current === 'rain' ? 'bg-blue-500' : 
-                      weatherState.current === 'fog' ? 'bg-violet-500' : 
-                      weatherState.current === 'heat_wave' ? 'bg-red-500' : 
-                      weatherState.current === 'wind' ? 'bg-orange-500' :
-                      weatherState.current === 'snow' ? 'bg-cyan-500' :
-                      weatherState.current === 'cloudy' ? 'bg-slate-500' :
-                      'bg-amber-500'
-                    }`}
-                    style={{ width: `${(weatherState.ticksRemaining / weatherState.totalDuration) * 100}%` }}
-                  />
+              <TabsContent value="current" className="space-y-4 text-center">
+                {/* Weather Icon with animation */}
+                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+                  weatherState.current === 'storm' ? 'bg-yellow-500/20 animate-pulse' : 
+                  weatherState.current === 'rain' ? 'bg-blue-500/20' : 
+                  weatherState.current === 'heat_wave' ? 'bg-red-500/20 animate-pulse' : 
+                  'bg-muted/30'
+                }`}>
+                  {weatherState.current === 'storm' ? <CloudLightning className="w-8 h-8 text-yellow-400" /> :
+                   weatherState.current === 'rain' ? <CloudRain className="w-8 h-8 text-blue-400" /> :
+                   weatherState.current === 'fog' ? <CloudFog className="w-8 h-8 text-violet-400" /> :
+                   weatherState.current === 'heat_wave' ? <Flame className="w-8 h-8 text-red-400" /> :
+                   weatherState.current === 'wind' ? <Wind className="w-8 h-8 text-orange-400" /> :
+                   weatherState.current === 'snow' ? <Snowflake className="w-8 h-8 text-cyan-400" /> :
+                   weatherState.current === 'cloudy' ? <Cloud className="w-8 h-8 text-slate-400" /> :
+                   <Sun className="w-8 h-8 text-amber-400" />}
                 </div>
-                <span>{weatherState.ticksRemaining} turns</span>
-              </div>
-              
-              {/* Main Description */}
-              <p className="text-muted-foreground leading-relaxed">
-                {WEATHER_CONFIGS[weatherState.current].description}
-              </p>
-              
-              {/* Ambient Text */}
-              <p className="text-sm text-foreground/70 italic">
-                {WEATHER_CONFIGS[weatherState.current].ambientText}
-              </p>
-              
-              {/* Weather Effects */}
-              <div className={`mt-4 p-3 rounded-lg border ${
-                weatherState.current === 'storm' ? 'border-yellow-500/30 bg-yellow-500/5' : 
-                weatherState.current === 'rain' ? 'border-blue-500/30 bg-blue-500/5' : 
-                weatherState.current === 'fog' ? 'border-violet-500/30 bg-violet-500/5' : 
-                weatherState.current === 'heat_wave' ? 'border-red-500/30 bg-red-500/5' : 
-                weatherState.current === 'wind' ? 'border-orange-500/30 bg-orange-500/5' :
-                weatherState.current === 'snow' ? 'border-cyan-500/30 bg-cyan-500/5' :
-                weatherState.current === 'cloudy' ? 'border-slate-500/30 bg-slate-500/5' :
-                'border-amber-500/30 bg-amber-500/5'
-              }`}>
-                <p className="text-xs text-muted-foreground/80 mb-2">
-                  {WEATHER_CONFIGS[weatherState.current].effects.join(' • ')}
-                </p>
                 
-                {/* Gameplay Modifiers */}
-                {weatherEnabled && (
-                  <div className="border-t border-border/20 pt-2 mt-2">
-                    <p className="text-[10px] font-medium text-muted-foreground mb-1">Gameplay Effects:</p>
-                    <div className="grid grid-cols-2 gap-1 text-[10px]">
-                      {(() => {
-                        const mods = getWeatherModifiers(weatherState);
-                        return (
-                          <>
-                            <span className={mods.visibilityMod >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              👁 Visibility: {mods.visibilityMod > 0 ? '+' : ''}{mods.visibilityMod}%
-                            </span>
-                            <span className={mods.movementMod >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              🦶 Movement: {mods.movementMod > 0 ? '+' : ''}{mods.movementMod}%
-                            </span>
-                            <span className={mods.rangedAccuracyMod >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              🎯 Ranged: {mods.rangedAccuracyMod > 0 ? '+' : ''}{mods.rangedAccuracyMod}%
-                            </span>
-                            <span className={mods.stealthMod >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              🥷 Stealth: {mods.stealthMod > 0 ? '+' : ''}{mods.stealthMod}%
-                            </span>
-                            <span className={mods.perceptionMod >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              👂 Perception: {mods.perceptionMod > 0 ? '+' : ''}{mods.perceptionMod}%
-                            </span>
-                            <span className={mods.fatigueRateMod <= 1 ? 'text-green-400' : 'text-red-400'}>
-                              💤 Fatigue: ×{mods.fatigueRateMod.toFixed(1)}
-                            </span>
-                          </>
-                        );
-                      })()}
-                    </div>
+                <h3 className="text-2xl font-display font-bold">{WEATHER_CONFIGS[weatherState.current].name}</h3>
+                
+                <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                  <Timer className="w-3 h-3" />
+                  <div className="w-24 h-1.5 bg-background/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary/70 transition-all" style={{ width: `${(weatherState.ticksRemaining / weatherState.totalDuration) * 100}%` }} />
+                  </div>
+                  <span>{weatherState.ticksRemaining} turns</span>
+                </div>
+                
+                <p className="text-sm text-muted-foreground">{WEATHER_CONFIGS[weatherState.current].description}</p>
+                <p className="text-xs italic text-foreground/60">{WEATHER_CONFIGS[weatherState.current].ambientText}</p>
+                
+                {weatherState.transitioningTo && (
+                  <div className="text-xs text-muted-foreground animate-pulse">
+                    Weather changing to <span className="font-medium">{WEATHER_CONFIGS[weatherState.transitioningTo].name}</span> soon...
                   </div>
                 )}
-              </div>
+              </TabsContent>
               
-              {/* Weather Transition Warning */}
-              {weatherState.transitioningTo && (
-                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1 animate-pulse">
-                  <span>Weather changing to</span>
-                  <span className="font-medium">{WEATHER_CONFIGS[weatherState.transitioningTo].name}</span>
-                  <span>soon...</span>
+              <TabsContent value="forecast" className="space-y-3">
+                <div className="bg-primary/5 rounded-lg p-2 border-l-2 border-primary/50 mb-3">
+                  <p className="text-xs italic text-muted-foreground">
+                    "{['My instruments are telling me...', 'Based on my experience...', 'The signs suggest...', 'If my calculations are correct...'][Math.floor(Date.now() / 10000) % 4]}"
+                  </p>
                 </div>
-              )}
-            </div>
+                
+                <div className="flex items-center gap-2 text-xs text-yellow-500 mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Forecasts may be inaccurate</span>
+                </div>
+                
+                {/* Forecast entries */}
+                {[
+                  { label: 'Next Few Hours', confidence: 60 + Math.floor(Math.random() * 25) },
+                  { label: 'Later Today', confidence: 35 + Math.floor(Math.random() * 25) },
+                  { label: 'Tomorrow', confidence: 15 + Math.floor(Math.random() * 20) },
+                ].map((forecast, idx) => {
+                  const possibleWeather: WeatherType[] = ['clear', 'cloudy', 'rain', 'wind', 'fog'];
+                  const predictedWeather = possibleWeather[Math.floor((Date.now() / 1000 + idx * 7) % possibleWeather.length)];
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-muted/20 rounded-lg p-2.5 border border-border/30">
+                      <div className="flex items-center gap-2">
+                        {predictedWeather === 'clear' ? <Sun className="w-4 h-4 text-amber-400" /> :
+                         predictedWeather === 'rain' ? <CloudRain className="w-4 h-4 text-blue-400" /> :
+                         predictedWeather === 'wind' ? <Wind className="w-4 h-4 text-orange-400" /> :
+                         predictedWeather === 'fog' ? <CloudFog className="w-4 h-4 text-violet-400" /> :
+                         <Cloud className="w-4 h-4 text-slate-400" />}
+                        <div>
+                          <p className="text-xs font-medium">{forecast.label}</p>
+                          <p className="text-[10px] text-muted-foreground">{WEATHER_CONFIGS[predictedWeather].name}</p>
+                        </div>
+                      </div>
+                      <div className="text-right w-14">
+                        <p className={`text-xs font-medium ${forecast.confidence >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {forecast.confidence}%
+                        </p>
+                        <Progress value={forecast.confidence} className="h-1 mt-0.5" />
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                <p className="text-[10px] text-center text-muted-foreground italic mt-2">
+                  ⚠️ Trust at your own risk
+                </p>
+              </TabsContent>
+            </Tabs>
             
-            <Button
-              onClick={() => setShowWeatherModal(false)}
-              className="w-full relative z-10"
-              variant="outline"
-            >
+            <Button onClick={() => setShowWeatherModal(false)} className="w-full relative z-10" variant="outline">
               Close
             </Button>
           </div>
