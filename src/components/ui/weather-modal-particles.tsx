@@ -38,7 +38,7 @@ const MODAL_WEATHER_CONFIG: Record<WeatherType, {
     type: 'dust',
   },
   cloudy: {
-    particleCount: 20,
+    particleCount: 12,
     colors: ['#94a3b8', '#cbd5e1', '#e2e8f0'],
     type: 'fog',
   },
@@ -53,7 +53,7 @@ const MODAL_WEATHER_CONFIG: Record<WeatherType, {
     type: 'lightning',
   },
   fog: {
-    particleCount: 25,
+    particleCount: 15,
     colors: ['#a78bfa', '#8b5cf6', '#c4b5fd'],
     type: 'fog',
   },
@@ -125,8 +125,8 @@ export function WeatherModalParticles({ weather, intensity = 1, transitionOpacit
           ...baseParticle,
           speedX: (Math.random() - 0.5) * 0.15,
           speedY: (Math.random() - 0.5) * 0.1,
-          opacity: 0.05 + Math.random() * 0.08,
-          size: 25 + Math.random() * 35,
+          opacity: 0.03 + Math.random() * 0.05,
+          size: 20 + Math.random() * 25,
         };
       case 'fire':
         return {
