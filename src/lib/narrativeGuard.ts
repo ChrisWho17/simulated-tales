@@ -157,7 +157,11 @@ export async function waitForStateReady(
 // ============= ECHO DETECTION =============
 
 /**
- * Detect if AI response is echoing player input
+ * Detect if AI response is echoing player input (lazy/malformed response)
+ * 
+ * IMPORTANT: This should NOT trigger for dialogue - it's NORMAL and CORRECT for
+ * the AI to include quoted player speech in the narrative. We're detecting
+ * LAZY echoes like "You say: I want to help" not proper narrative handling.
  */
 export function isEchoResponse(response: string, playerInput: string): boolean {
   if (!response || !playerInput) return false;
@@ -167,6 +171,32 @@ export function isEchoResponse(response: string, playerInput: string): boolean {
   
   // Skip if input is too short to detect meaningful echo
   if (normInput.length < 5) return false;
+  
+  // CRITICAL: Don't flag dialogue as echo - AI SHOULD quote what player said
+  // Check if this looks like a dialogue input (question, quoted, conversational)
+  const looksLikeDialogue = 
+    normInput.includes('?') ||
+    normInput.startsWith('"') ||
+    normInput.startsWith("'") ||
+    normInput.startsWith('say:') ||
+    normInput.startsWith('ask:') ||
+    /^(would|could|can|do|does|did|have|has|is|are|what|who|where|when|why|how)\s/i.test(normInput) ||
+    /^(yes|no|yeah|sure|okay|thanks|hello|hi|hey)\b/i.test(normInput);
+  
+  if (looksLikeDialogue) {
+    // For dialogue, only flag if the ENTIRE response is just the input echoed
+    // It's fine if dialogue appears IN the narrative
+    if (normResponse.length < 100) {
+      // Very short response that's mostly the input - suspicious
+      const inputWithoutPunc = normInput.replace(/[?.!,"']/g, '');
+      if (normResponse.includes(inputWithoutPunc) && normResponse.length < inputWithoutPunc.length * 2) {
+        console.warn('[NarrativeGuard] Suspiciously short dialogue echo detected');
+        return true;
+      }
+    }
+    // Otherwise, dialogue appearing in narrative is EXPECTED - not an echo
+    return false;
+  }
   
   // Pattern 1: "You attempt to [exact input]"
   if (normResponse.includes(`you attempt to ${normInput}`)) {
@@ -186,10 +216,14 @@ export function isEchoResponse(response: string, playerInput: string): boolean {
     return true;
   }
   
-  // Pattern 4: Input appears verbatim in response (for longer inputs)
+  // Pattern 4: Input appears verbatim in response (for longer NON-dialogue inputs)
+  // Only flag if the response is suspiciously short relative to input
   if (normInput.length > 20 && normResponse.includes(normInput)) {
-    console.warn('[NarrativeGuard] Echo detected: verbatim inclusion');
-    return true;
+    // Allow if the response is substantially longer (AI added content)
+    if (normResponse.length < normInput.length * 2) {
+      console.warn('[NarrativeGuard] Echo detected: verbatim inclusion with little added');
+      return true;
+    }
   }
   
   // Pattern 5: "You [input]." with just a period added
