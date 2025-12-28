@@ -52,6 +52,9 @@ export interface InDepthSettings {
   enableEquipmentWear: boolean;       // Items degrade over time
   gunNutDepth: GunNutDepth;           // Weapon detail level when equipment wear enabled
   
+  // Cheat mode
+  cheatModeEnabled: boolean;          // Free access to attachments/items without crafting
+  
   // Content density
   socialWeight: 'light' | 'balanced' | 'heavy';        // Social vs action focus
   combatWeight: 'light' | 'balanced' | 'heavy';        // Combat frequency
@@ -150,6 +153,7 @@ export const DEFAULT_INDEPTH_SETTINGS: InDepthSettings = {
   enableInjuryDetail: true,
   enableEquipmentWear: false,
   gunNutDepth: 'standard',
+  cheatModeEnabled: false,
   socialWeight: 'balanced',
   combatWeight: 'balanced',
   mysteryDensity: 'medium',

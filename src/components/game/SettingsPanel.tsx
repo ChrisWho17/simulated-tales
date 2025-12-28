@@ -336,6 +336,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   </div>
                 )}
 
+                {/* Cheat Mode Toggle */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm flex items-center gap-1.5">
+                      ✨ Cheat Mode
+                    </span>
+                    <p className="text-xs text-muted-foreground">Free access to all attachments & items</p>
+                  </div>
+                  <Switch 
+                    checked={settings.inDepthSettings?.cheatModeEnabled ?? false}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      inDepthSettings: { ...settings.inDepthSettings, cheatModeEnabled: checked }
+                    })}
+                  />
+                </div>
+
                 {/* Content Focus */}
                 <div className="space-y-2 pt-2">
                   <span className="text-sm">Social vs Combat Focus</span>

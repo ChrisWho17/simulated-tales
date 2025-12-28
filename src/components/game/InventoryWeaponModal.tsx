@@ -22,11 +22,12 @@ import {
   Box,
   ChevronRight,
   Eye,
-  EyeOff,
+  Sparkles,
 } from 'lucide-react';
 import { WeaponStatsPanel } from './WeaponStatsPanel';
 import { WeaponConditionDisplay, WeaponConditionBadge } from './WeaponConditionDisplay';
-import { ExtendedWeapon, WeaponAttachment } from '@/game/weaponAttachmentSystem';
+import { AttachmentBrowser } from './AttachmentBrowser';
+import { ExtendedWeapon, WeaponAttachment, AttachmentSlot, WeaponAttachmentSystem } from '@/game/weaponAttachmentSystem';
 import { 
   WeaponStatsProfile, 
   BASE_WEAPON_STATS,
@@ -42,9 +43,12 @@ interface InventoryWeaponModalProps {
   onOpenChange: (open: boolean) => void;
   weapon: Weapon | ExtendedWeapon | null;
   gunNutDepth?: GunNutDepth;
+  cheatModeEnabled?: boolean;
+  playerInventoryAttachments?: WeaponAttachment[];
   onOpenInspection?: () => void;
   onRepair?: () => void;
   onModify?: () => void;
+  onWeaponUpdate?: (weapon: ExtendedWeapon) => void;
 }
 
 // ============= WEAPON STATS MAPPING =============
@@ -174,12 +178,15 @@ export function InventoryWeaponModal({
   onOpenChange,
   weapon,
   gunNutDepth = 'standard',
+  cheatModeEnabled = false,
+  playerInventoryAttachments = [],
   onOpenInspection,
   onRepair,
   onModify,
+  onWeaponUpdate,
 }: InventoryWeaponModalProps) {
   const [activeTab, setActiveTab] = useState('stats');
-  const [showDetails, setShowDetails] = useState(true);
+  const [attachmentBrowserOpen, setAttachmentBrowserOpen] = useState(false);
   
   // Get weapon stats profile
   const weaponStats = useMemo(() => {
@@ -262,7 +269,16 @@ export function InventoryWeaponModal({
                   <div className="text-center py-8 text-muted-foreground">
                     <Box className="h-10 w-10 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No attachments installed</p>
-                    <p className="text-xs mt-1">Modify this weapon to add attachments</p>
+                    <p className="text-xs mt-1">Use the Modify button to add attachments</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-3"
+                      onClick={() => setAttachmentBrowserOpen(true)}
+                    >
+                      <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                      Browse Attachments
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -293,6 +309,19 @@ export function InventoryWeaponModal({
                     ))}
                   </div>
                 </div>
+
+                {/* Modify button in attachments tab */}
+                {Object.keys(attachments).length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-4"
+                    onClick={() => setAttachmentBrowserOpen(true)}
+                  >
+                    <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                    Modify Attachments
+                  </Button>
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
@@ -300,6 +329,13 @@ export function InventoryWeaponModal({
         
         {/* Footer actions */}
         <div className="p-3 border-t border-border/50 flex gap-2">
+          {cheatModeEnabled && (
+            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 mr-auto">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Cheat Mode
+            </Badge>
+          )}
+          
           {isGunNut && onOpenInspection && (
             <Button 
               variant="outline" 
@@ -324,19 +360,35 @@ export function InventoryWeaponModal({
             </Button>
           )}
           
-          {onModify && (
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="flex-1"
-              onClick={onModify}
-            >
-              <Settings2 className="h-3.5 w-3.5 mr-1.5" />
-              Modify
-            </Button>
-          )}
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => setAttachmentBrowserOpen(true)}
+          >
+            <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+            Modify
+          </Button>
         </div>
       </DialogContent>
+      
+      {/* Attachment Browser Modal */}
+      <AttachmentBrowser
+        open={attachmentBrowserOpen}
+        onOpenChange={setAttachmentBrowserOpen}
+        weapon={weapon}
+        cheatModeEnabled={cheatModeEnabled}
+        playerInventoryAttachments={playerInventoryAttachments}
+        onEquipAttachment={(extWeapon, attachment) => {
+          WeaponAttachmentSystem.attachToWeapon(extWeapon, attachment);
+          onWeaponUpdate?.(extWeapon);
+        }}
+        onUnequipAttachment={(extWeapon, slot) => {
+          const removed = WeaponAttachmentSystem.detachFromWeapon(extWeapon, slot);
+          onWeaponUpdate?.(extWeapon);
+          return removed;
+        }}
+      />
     </Dialog>
   );
 }

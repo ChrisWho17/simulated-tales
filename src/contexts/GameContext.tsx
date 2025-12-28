@@ -113,6 +113,7 @@ export interface InDepthSettings {
   enableInjuryDetail: boolean;
   enableEquipmentWear: boolean;
   gunNutDepth: GunNutDepth;  // Weapon detail level when equipment wear enabled
+  cheatModeEnabled: boolean; // Free access to attachments/items
   socialWeight: 'light' | 'balanced' | 'heavy';
   combatWeight: 'light' | 'balanced' | 'heavy';
   mysteryDensity: 'low' | 'medium' | 'high';
@@ -201,6 +202,7 @@ const defaultInDepthSettings: InDepthSettings = {
   enableInjuryDetail: true,
   enableEquipmentWear: false,
   gunNutDepth: 'standard',
+  cheatModeEnabled: false,
   socialWeight: 'balanced',
   combatWeight: 'balanced',
   mysteryDensity: 'medium',
