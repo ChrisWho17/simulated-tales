@@ -12,7 +12,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { User, Users, MapPin, Heart, Camera, Loader2, UserCircle2, Shield } from 'lucide-react';
+import { User, Users, MapPin, Heart, Camera, Loader2, UserCircle2, Shield, Dices } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -381,6 +381,30 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
   );
 }
 
+// ============= SKILL CHECK LINK =============
+// Displays skill names with a distinct dice icon and yellow/amber styling
+
+interface SkillCheckLinkProps {
+  skillName: string;
+  className?: string;
+}
+
+export function SkillCheckLink({ skillName, className }: SkillCheckLinkProps) {
+  return (
+    <span
+      className={cn(
+        'skill-check-link inline-flex items-center gap-1 font-semibold text-warning',
+        'underline decoration-warning/50 underline-offset-2',
+        className
+      )}
+      aria-label={`${skillName} skill check`}
+    >
+      <Dices className="w-3.5 h-3.5 text-warning/80 shrink-0" />
+      <span>{skillName}</span>
+    </span>
+  );
+}
+
 // ============= PLAYER NAME LINK =============
 
 interface PlayerNameLinkProps {
@@ -437,22 +461,87 @@ const NEVER_LINK_WORDS = new Set([
   'rain', 'wind', 'sky', 'air', 'city', 'street', 'alley', 'crowd', 'voice', 'sound',
   // Short words that are never names
   'up', 'down', 'out', 'into', 'over', 'under', 'about', 'after', 'before', 'between',
-  // RPG SKILLS - these are NEVER NPC names
+  
+  // ===== RPG SKILLS - COMPREHENSIVE LIST =====
+  // D&D 5e Skills
   'survival', 'stealth', 'perception', 'athletics', 'acrobatics', 'intimidation', 'persuasion',
   'deception', 'insight', 'investigation', 'medicine', 'nature', 'religion', 'arcana',
-  'history', 'performance', 'sleight', 'animal', 'handling', 'strength', 'dexterity',
-  'constitution', 'intelligence', 'wisdom', 'charisma', 'combat', 'melee', 'ranged',
-  'lockpicking', 'hacking', 'crafting', 'cooking', 'fishing', 'mining', 'herbalism',
-  'alchemy', 'enchanting', 'smithing', 'tailoring', 'leatherworking', 'engineering',
-  // Temporal/adverb words - NEVER names
+  'history', 'performance', 'sleight', 'animal', 'handling',
+  // Core Attributes
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+  'agility', 'endurance', 'willpower', 'luck', 'fortitude', 'reflex',
+  // Combat Skills
+  'combat', 'melee', 'ranged', 'unarmed', 'martial', 'firearms', 'archery', 'swordsmanship',
+  'blocking', 'parrying', 'dodge', 'evasion', 'defense', 'offense', 'tactics', 'strategy',
+  // Thief/Rogue Skills
+  'lockpicking', 'pickpocket', 'sneak', 'disguise', 'forgery', 'sleightofhand',
+  'burglary', 'trapfinding', 'disarmtrap', 'escape', 'hiding',
+  // Tech/Modern Skills
+  'hacking', 'computers', 'electronics', 'mechanics', 'driving', 'piloting', 'demolitions',
+  'security', 'surveillance', 'forensics', 'programming', 'networking',
+  // Crafting Skills
+  'crafting', 'cooking', 'fishing', 'mining', 'herbalism', 'alchemy', 'enchanting',
+  'smithing', 'tailoring', 'leatherworking', 'engineering', 'woodworking', 'brewing',
+  'jewelcrafting', 'inscription', 'runecarving',
+  // Social Skills
+  'diplomacy', 'negotiation', 'leadership', 'bargaining', 'etiquette', 'seduction',
+  'bluff', 'charm', 'gather', 'interrogation', 'streetwise',
+  // Magic/Supernatural Skills
+  'spellcasting', 'channeling', 'ritual', 'divination', 'necromancy', 'evocation',
+  'conjuration', 'illusion', 'transmutation', 'abjuration', 'enchantment',
+  // Survival/Nature Skills
+  'tracking', 'foraging', 'navigation', 'climbing', 'swimming', 'riding',
+  'hunting', 'trapping', 'taming', 'veterinary',
+  // Knowledge Skills
+  'lore', 'geography', 'linguistics', 'appraisal', 'occult', 'science',
+  'medicine', 'law', 'theology', 'mythology',
+  
+  // ===== TEMPORAL/ADVERB WORDS =====
   'now', 'then', 'soon', 'later', 'here', 'there', 'today', 'tonight', 'tomorrow', 'yesterday',
   'always', 'never', 'often', 'sometimes', 'rarely', 'still', 'already', 'just', 'only',
-  // Common short nonsense/sounds
+  'maybe', 'perhaps', 'probably', 'certainly', 'definitely', 'possibly', 'likely',
+  'again', 'once', 'twice', 'finally', 'eventually', 'immediately', 'suddenly',
+  
+  // ===== COMMON SOUNDS/INTERJECTIONS =====
   'hhh', 'hmm', 'uhh', 'ahh', 'ohh', 'mmm', 'err', 'umm', 'huh', 'meh', 'bah', 'pah', 'tsk',
-  // More common nouns
+  'ugh', 'argh', 'gah', 'oof', 'ooh', 'aah', 'eeh', 'shh', 'psst', 'hey', 'heh', 'hah',
+  'wow', 'whoa', 'yay', 'nah', 'yeah', 'yep', 'nope', 'okay',
+  
+  // ===== MORE COMMON NOUNS/DETERMINERS =====
   'nothing', 'something', 'everything', 'anything', 'someone', 'everyone', 'anyone', 'nobody',
   'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
   'first', 'second', 'third', 'last', 'next', 'previous', 'other', 'another', 'each', 'every',
+  'all', 'some', 'any', 'none', 'few', 'many', 'most', 'both', 'either', 'neither',
+  'self', 'myself', 'yourself', 'himself', 'herself', 'itself', 'ourselves', 'themselves',
+]);
+
+// RPG Skills that should be displayed as skill check links (not NPC links)
+export const RPG_SKILL_WORDS = new Set([
+  // D&D 5e Skills
+  'survival', 'stealth', 'perception', 'athletics', 'acrobatics', 'intimidation', 'persuasion',
+  'deception', 'insight', 'investigation', 'medicine', 'nature', 'religion', 'arcana',
+  'history', 'performance',
+  // Core Attributes
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+  'agility', 'endurance', 'willpower', 'luck', 'fortitude', 'reflex',
+  // Combat Skills
+  'combat', 'melee', 'ranged', 'unarmed', 'firearms', 'archery',
+  'blocking', 'parrying', 'dodge', 'evasion', 'defense', 'tactics',
+  // Thief/Rogue Skills
+  'lockpicking', 'pickpocket', 'sneak', 'disguise', 'forgery',
+  'burglary', 'trapfinding',
+  // Tech/Modern Skills
+  'hacking', 'computers', 'electronics', 'mechanics', 'driving', 'piloting', 'demolitions',
+  'security', 'forensics', 'programming',
+  // Crafting Skills
+  'crafting', 'cooking', 'alchemy', 'enchanting', 'smithing', 'engineering',
+  // Social Skills
+  'diplomacy', 'negotiation', 'leadership', 'bargaining', 'etiquette',
+  'bluff', 'charm', 'interrogation', 'streetwise',
+  // Magic Skills
+  'spellcasting', 'channeling', 'ritual', 'divination',
+  // Survival/Nature Skills
+  'tracking', 'foraging', 'navigation', 'climbing', 'swimming', 'riding', 'hunting',
 ]);
 
 // Check if a name looks like a legitimate NPC name (not a common word)
@@ -590,8 +679,9 @@ function registerDialogueSpeaker(
   }
 }
 
-// Helper function to parse text and insert NPC and Player links
+// Helper function to parse text and insert NPC, Player, and Skill links
 // Only links NPCs with valid IDs - filters out common words like "It", "She", etc.
+// Skill checks are shown with a distinct dice icon
 export function parseTextForNPCLinks(
   text: string,
   npcNameMap: Map<string, RegisteredNPC>,
@@ -615,8 +705,9 @@ export function parseTextForNPCLinks(
   // Pattern 2: If the entire text looks like a character name/title (used for bold speaker names)
   const trimmedText = text.trim();
   if (trimmedText && /^[A-Z][a-zA-Z\s]+$/.test(trimmedText) && trimmedText.length > 2 && trimmedText.length < 50) {
-    // Skip common words
-    if (!NEVER_LINK_WORDS.has(trimmedText.toLowerCase())) {
+    // Skip common words AND skills
+    const textLower = trimmedText.toLowerCase();
+    if (!NEVER_LINK_WORDS.has(textLower) && !RPG_SKILL_WORDS.has(textLower)) {
       const words = trimmedText.split(/\s+/);
       const looksLikeName = words.length <= 4 && words.every(w => /^[A-Z][a-z]*$/.test(w));
       if (looksLikeName) {
@@ -625,46 +716,59 @@ export function parseTextForNPCLinks(
     }
   }
 
-  if (npcNameMap.size === 0 && !playerName) return [text];
-
-  // Build list of all names to match (NPCs + player)
-  const allNames: Array<{ name: string; type: 'npc' | 'player'; npc?: RegisteredNPC }> = [];
+  // Build list of all names to match (Player + NPCs + Skills)
+  const allMatches: Array<{ 
+    name: string; 
+    type: 'npc' | 'player' | 'skill'; 
+    npc?: RegisteredNPC;
+  }> = [];
   
-  // Add player name first (higher priority)
+  // Add player name first (highest priority)
   if (playerName && playerName.trim()) {
-    allNames.push({ name: playerName.toLowerCase(), type: 'player' });
+    allMatches.push({ name: playerName.toLowerCase(), type: 'player' });
   }
   
   // Add NPC names AND their occupations for dialogue matching
   // ONLY add NPCs with valid IDs - filter out common words
   for (const [name, npc] of npcNameMap.entries()) {
-    // Skip common words and NPCs without valid IDs
+    // Skip common words, skills, and NPCs without valid IDs
     if (NEVER_LINK_WORDS.has(name)) continue;
+    if (RPG_SKILL_WORDS.has(name)) continue;
     if (!shouldLinkNPC(npc)) continue;
     
     // Avoid duplicates
-    if (!allNames.some(e => e.name === name && e.type === 'npc')) {
-      allNames.push({ name, type: 'npc', npc });
+    if (!allMatches.some(e => e.name === name && e.type === 'npc')) {
+      allMatches.push({ name, type: 'npc', npc });
     }
     
     // Also add occupation as a potential match (for "Squad Leader:" style dialogue)
     const occupation = npc.semiPermanent.occupation;
     if (occupation && occupation !== 'none') {
       const occLower = occupation.toLowerCase();
-      // Skip common words for occupations too
-      if (!NEVER_LINK_WORDS.has(occLower) && !allNames.some(e => e.name === occLower && e.type === 'npc')) {
-        allNames.push({ name: occLower, type: 'npc', npc });
+      // Skip common words and skills for occupations too
+      if (!NEVER_LINK_WORDS.has(occLower) && 
+          !RPG_SKILL_WORDS.has(occLower) && 
+          !allMatches.some(e => e.name === occLower && e.type === 'npc')) {
+        allMatches.push({ name: occLower, type: 'npc', npc });
       }
     }
   }
   
-  if (allNames.length === 0) return [text];
+  // Add skill names for highlighting (only match capitalized skill names in text)
+  // We'll match these with case-insensitive regex but only link if they're capitalized
+  for (const skill of RPG_SKILL_WORDS) {
+    if (!allMatches.some(e => e.name === skill)) {
+      allMatches.push({ name: skill, type: 'skill' });
+    }
+  }
+  
+  if (allMatches.length === 0) return [text];
 
   // Sort by length (longest first) to avoid partial matches
-  allNames.sort((a, b) => b.name.length - a.name.length);
+  allMatches.sort((a, b) => b.name.length - a.name.length);
   
   // Build regex pattern - escape special chars and use word boundaries
-  const escapedNames = allNames.map(({ name }) => 
+  const escapedNames = allMatches.map(({ name }) => 
     name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   );
   const pattern = new RegExp(`\\b(${escapedNames.join('|')})\\b`, 'gi');
@@ -692,9 +796,23 @@ export function parseTextForNPCLinks(
           onShowCharacterSheet={onShowCharacterSheet}
         />
       );
+    } else if (RPG_SKILL_WORDS.has(matchedLower)) {
+      // It's a skill - only show as skill link if capitalized (indicating game usage)
+      const isCapitalized = /^[A-Z]/.test(matchedName);
+      if (isCapitalized) {
+        result.push(
+          <SkillCheckLink
+            key={`${keyPrefix}-skill-${match.index}`}
+            skillName={matchedName}
+          />
+        );
+      } else {
+        // Lowercase skill word - just render as plain text
+        result.push(matchedName);
+      }
     } else {
       // Check if it's an NPC (by name or occupation)
-      const matchingEntry = allNames.find(
+      const matchingEntry = allMatches.find(
         entry => entry.type === 'npc' && entry.name === matchedLower
       );
       
