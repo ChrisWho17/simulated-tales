@@ -1116,8 +1116,103 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
               </div>
               
-              {/* Climate Zone Info */}
+              {/* Manual Weather Override */}
               <div className="space-y-3">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-[var(--accent-primary)]" />
+                  Manual Override
+                </h3>
+                
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm">Enable Manual Weather</span>
+                    <p className="text-xs text-muted-foreground">Override automatic weather generation</p>
+                  </div>
+                  <Switch 
+                    checked={settings.weatherMode === 'manual'}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      weatherMode: checked ? 'manual' : 'auto'
+                    })}
+                  />
+                </div>
+                
+                {settings.weatherMode === 'manual' && (
+                  <div className="space-y-3 pl-1">
+                    {/* Weather Type Selector */}
+                    <div className="space-y-2">
+                      <span className="text-sm">Select Weather</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'clear', icon: <Sun className="w-4 h-4" />, label: 'Clear', color: 'text-amber-500' },
+                          { id: 'overcast', icon: <Cloud className="w-4 h-4" />, label: 'Overcast', color: 'text-gray-400' },
+                          { id: 'rain', icon: <CloudRain className="w-4 h-4" />, label: 'Rain', color: 'text-blue-400' },
+                          { id: 'storm', icon: <CloudLightning className="w-4 h-4" />, label: 'Storm', color: 'text-purple-400' },
+                          { id: 'fog', icon: <CloudFog className="w-4 h-4" />, label: 'Fog', color: 'text-gray-300' },
+                          { id: 'snow', icon: <Snowflake className="w-4 h-4" />, label: 'Snow', color: 'text-cyan-300' },
+                          { id: 'heatWave', icon: <Flame className="w-4 h-4" />, label: 'Heat Wave', color: 'text-orange-500' },
+                          { id: 'windy', icon: <Wind className="w-4 h-4" />, label: 'Windy', color: 'text-teal-400' },
+                        ].map((weather) => (
+                          <button
+                            key={weather.id}
+                            onClick={() => updateSettings({ 
+                              manualWeatherType: weather.id
+                            })}
+                            className={cn(
+                              "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
+                              settings.manualWeatherType === weather.id
+                                ? "border-[var(--accent-primary)] bg-[var(--accent-bg)]"
+                                : "border-border/50 hover:border-border bg-background/30"
+                            )}
+                          >
+                            <span className={weather.color}>{weather.icon}</span>
+                            <span className="text-sm">{weather.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Intensity Selector */}
+                    <div className="space-y-2 pt-2">
+                      <span className="text-sm">Intensity</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([1, 2, 3] as const).map((intensity) => (
+                          <button
+                            key={intensity}
+                            onClick={() => updateSettings({ 
+                              manualWeatherIntensity: intensity
+                            })}
+                            className={cn(
+                              "px-3 py-2 text-xs rounded-md border transition-colors",
+                              (settings.manualWeatherIntensity ?? 2) === intensity
+                                ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                                : "border-border/50 hover:border-border"
+                            )}
+                          >
+                            {intensity === 1 ? 'Light' : intensity === 2 ? 'Moderate' : 'Heavy'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Current Manual Weather Display */}
+                    {settings.manualWeatherType && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--accent-bg)]/30 border border-[var(--accent-primary)]/30 mt-2">
+                        <span className="text-sm">
+                          Active: <span className="font-medium capitalize">{settings.manualWeatherType}</span>
+                          {settings.manualWeatherIntensity && (
+                            <span className="text-muted-foreground">
+                              {' '}({['Light', 'Moderate', 'Heavy'][(settings.manualWeatherIntensity ?? 2) - 1]})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Climate Zone Info */}
+              <div className="space-y-3 pt-2 border-t border-border/30">
                 <h3 className="text-sm font-medium flex items-center gap-2">
                   <Sun className="w-4 h-4 text-amber-500" />
                   Climate Zones

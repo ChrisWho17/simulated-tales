@@ -148,6 +148,7 @@ export interface GameSettings {
   enableWeatherEffects: boolean;
   weatherMode: 'auto' | 'manual';
   manualWeatherType?: string;
+  manualWeatherIntensity?: 1 | 2 | 3;
   showWeatherParticles: boolean;
   enableNPCSchedules: boolean;
   enableReputationSystem: boolean;
@@ -232,6 +233,7 @@ const defaultSettings: GameSettings = {
   enableWeatherEffects: true,
   weatherMode: 'auto',
   manualWeatherType: undefined,
+  manualWeatherIntensity: 2,
   showWeatherParticles: true,
   enableNPCSchedules: true,
   enableReputationSystem: true,
