@@ -295,6 +295,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   />
                 </div>
 
+                {/* Gun Nut Depth - only show when Equipment Wear is enabled */}
+                {settings.inDepthSettings?.enableEquipmentWear && (
+                  <div className="space-y-2 pl-4 border-l-2 border-[var(--accent-primary)]/30 ml-1">
+                    <span className="text-sm">Weapon Detail Level</span>
+                    <p className="text-xs text-muted-foreground mb-2">How deep to simulate weapon mechanics</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: 'standard', label: 'Standard', icon: '🔧' },
+                        { id: 'gunnut', label: 'Gun Nut', icon: '⚙️' },
+                        { id: 'gunnut_plus', label: 'Gun Nut+', icon: '🔬' }
+                      ] as const).map((depth) => (
+                        <button
+                          key={depth.id}
+                          onClick={() => updateSettings({ 
+                            inDepthSettings: { ...settings.inDepthSettings, gunNutDepth: depth.id }
+                          })}
+                          className={cn(
+                            "px-2 py-2 text-xs rounded-md border transition-colors flex flex-col items-center gap-1",
+                            settings.inDepthSettings?.gunNutDepth === depth.id
+                              ? "border-[var(--accent-primary)] bg-[var(--accent-bg)] text-[var(--accent-primary)]"
+                              : "border-border/50 hover:border-border"
+                          )}
+                        >
+                          <span>{depth.icon}</span>
+                          <span>{depth.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {settings.inDepthSettings?.gunNutDepth === 'gunnut_plus' 
+                        ? 'Full simulation: magazine springs, carbon buildup, barrel rifling wear'
+                        : settings.inDepthSettings?.gunNutDepth === 'gunnut'
+                        ? 'Part-by-part condition tracking and detailed malfunctions'
+                        : 'Simple overall durability for weapons'}
+                    </p>
+                  </div>
+                )}
+
                 {/* Content Focus */}
                 <div className="space-y-2 pt-2">
                   <span className="text-sm">Social vs Combat Focus</span>

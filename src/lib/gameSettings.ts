@@ -37,6 +37,9 @@ export interface AudioSettings {
   enableUISounds: boolean;
 }
 
+// Gun Nut depth levels
+export type GunNutDepth = 'standard' | 'gunnut' | 'gunnut_plus';
+
 // In-Depth Mode Toggles - Customizable gameplay intensity
 export interface InDepthSettings {
   // Tone settings
@@ -47,6 +50,7 @@ export interface InDepthSettings {
   enableFatigue: boolean;             // Track energy/sleep
   enableInjuryDetail: boolean;        // Detailed wound tracking
   enableEquipmentWear: boolean;       // Items degrade over time
+  gunNutDepth: GunNutDepth;           // Weapon detail level when equipment wear enabled
   
   // Content density
   socialWeight: 'light' | 'balanced' | 'heavy';        // Social vs action focus
@@ -145,6 +149,7 @@ export const DEFAULT_INDEPTH_SETTINGS: InDepthSettings = {
   enableFatigue: false,
   enableInjuryDetail: true,
   enableEquipmentWear: false,
+  gunNutDepth: 'standard',
   socialWeight: 'balanced',
   combatWeight: 'balanced',
   mysteryDensity: 'medium',
