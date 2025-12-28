@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle } from 'lucide-react';
 import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
+import { InputFormatGuide, InputHint } from './InputFormatGuide';
 
 interface PlayerInputProps {
   onSubmit: (command: string) => void;
@@ -101,10 +102,14 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
             className="pl-8 pr-24 bg-background border-border focus:border-primary focus:ring-primary/20 font-mono text-sm"
           />
           {/* Command type indicator */}
-          {commandInfo && (
+          {commandInfo ? (
             <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs ${commandInfo.color}`}>
               <span>{commandInfo.icon}</span>
               <span className="hidden sm:inline">{commandInfo.label}</span>
+            </div>
+          ) : (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <InputHint inputText={input} />
             </div>
           )}
         </div>
@@ -117,10 +122,14 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
         </Button>
       </form>
       
-      {/* Command hint */}
-      <p className="text-[10px] text-muted-foreground mt-2 text-center">
-        Keywords: <span className="text-primary/70">say/ask</span> to talk • <span className="text-primary/70">take/use</span> for actions • <span className="text-primary/70">go/walk</span> to move
-      </p>
+      {/* Bottom row: Input guide + keyword hints */}
+      <div className="flex items-center justify-between mt-2">
+        <InputFormatGuide />
+        <p className="text-[10px] text-muted-foreground">
+          <span className="text-primary/70">"quotes"</span> = speech • <span className="text-primary/70">verbs</span> = action • <span className="text-primary/70">tactics</span> = approach
+        </p>
+      </div>
     </div>
   );
 }
+
