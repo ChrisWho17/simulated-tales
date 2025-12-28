@@ -121,6 +121,9 @@ export interface CampaignData {
     lockedIds: string[];
   };
   
+  // NPC Personality assignments - personality templates for NPCs
+  npcPersonalityMap?: Record<string, unknown>;
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;

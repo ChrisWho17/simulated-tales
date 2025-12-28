@@ -20,6 +20,12 @@ import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
 import { createInitialWeatherState } from '@/game/weatherSystem';
 import { seedWorldForGenre, hasGenreSeed } from '@/game/livingWorld';
 import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry, clearNPCRegistry } from '@/game/npcIdentityRegistry';
+import { 
+  clearPersonalityAssignments, 
+  exportPersonalityMap, 
+  importPersonalityMap 
+} from '@/game/npcPersonalityDialogue';
+import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -89,7 +95,7 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       localStorage.setItem(key, JSON.stringify(result.campaign));
     }
     
-    // CRITICAL: Clear NPC registry before loading new campaign to prevent ID pollution
+    // CRITICAL: Clear NPC registry and personality assignments before loading new campaign
     // This ensures old NPC data from previous campaigns doesn't bleed into new ones
     const emptyRegistry: NPCIdentityRegistry = {
       npcs: {},
@@ -98,6 +104,12 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       lockedIds: [],
     };
     setNPCRegistry(emptyRegistry);
+    clearPersonalityAssignments();
+    
+    // Set the genre for auto-registration
+    if (result.campaign.meta?.primaryGenre) {
+      setNPCAutoRegistrationGenre(result.campaign.meta.primaryGenre);
+    }
     
     // Restore NPC registry state from campaign save if available
     if (result.campaign.npcRegistryState) {
@@ -113,6 +125,11 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       console.log(`[Campaign Storage] No NPC registry in save, starting fresh`);
     }
     
+    // Restore NPC personality assignments
+    if (result.campaign.npcPersonalityMap) {
+      importPersonalityMap(result.campaign.npcPersonalityMap as any);
+    }
+    
     return result.campaign;
   } catch (e) {
     console.error(`[Campaign Storage] Failed to load campaign ${campaignId}:`, e);
@@ -124,6 +141,8 @@ export function saveCampaign(campaign: CampaignData): void {
   try {
     // Capture current NPC registry state for this campaign
     const npcRegistry = getNPCRegistry();
+    const personalityMap = exportPersonalityMap();
+    
     const campaignWithNPCs: CampaignData = {
       ...campaign,
       npcRegistryState: {
@@ -132,6 +151,7 @@ export function saveCampaign(campaign: CampaignData): void {
         families: npcRegistry.families,
         lockedIds: npcRegistry.lockedIds,
       },
+      npcPersonalityMap: personalityMap,
     };
     
     const key = `${CAMPAIGN_STORAGE_PREFIX}${campaign.id}`;
