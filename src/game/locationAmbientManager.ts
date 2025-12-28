@@ -48,16 +48,29 @@ class LocationAmbientManagerClass {
   // LOCATION DEFINITIONS (40+ locations)
   // ═══════════════════════════════════════════════════════════
   
+  // ═══════════════════════════════════════════════════════════
+  // LOCATION DEFINITIONS
+  // WHERE: Each location type with genre-specific filtering
+  // WHEN: setLocation() called based on narrative context or player movement
+  // HOW: baseLayers play continuously; detailLayers trigger randomly based on chance/cooldown
+  // ═══════════════════════════════════════════════════════════
   private locations: Record<string, LocationDefinition> = {
-    // === URBAN - OUTDOOR ===
+    // ═══════════════════════════════════════════════════════════
+    // URBAN - OUTDOOR
+    // WHERE: Modern city environments, streets, plazas
+    // WHEN: Player in urban exterior locations
+    // HOW: Base city ambience + detail layers for traffic, crowds, horns
+    // ═══════════════════════════════════════════════════════════
     city_street: {
       name: 'City Street',
       genres: ['modern', 'cyberpunk'],
       baseLayers: [
-        { sound: 'ambience_city_day', volume: 0.35 }
+        { sound: 'urban/city_street_busy', volume: 0.35 },
+        { sound: 'ambience_city_day', volume: 0.3 }
       ],
       detailLayers: [
         { sound: 'crowd_busy', volume: 0.25, chance: 0.5 },
+        { sound: 'urban/car_horn', volume: 0.25, chance: 0.2, cooldown: 15000 },
         { sound: 'vehicle_car_pass', volume: 0.3, chance: 0.3, cooldown: 8000 }
       ]
     },
@@ -65,11 +78,14 @@ class LocationAmbientManagerClass {
       name: 'Busy City Street',
       genres: ['modern', 'cyberpunk'],
       baseLayers: [
-        { sound: 'ambience_city_day', volume: 0.45 },
+        { sound: 'urban/city_street_busy', volume: 0.45 },
+        { sound: 'ambience_city_day', volume: 0.35 },
         { sound: 'crowd_busy', volume: 0.35 }
       ],
       detailLayers: [
-        { sound: 'vehicle_car_horn', volume: 0.25, chance: 0.3, cooldown: 12000 }
+        { sound: 'urban/car_horn', volume: 0.3, chance: 0.35, cooldown: 10000 },
+        { sound: 'urban/police_siren_modern', volume: 0.4, chance: 0.1, cooldown: 45000 },
+        { sound: 'urban/ambulance_siren', volume: 0.35, chance: 0.08, cooldown: 60000 }
       ]
     },
     city_alley: {
@@ -87,18 +103,19 @@ class LocationAmbientManagerClass {
       name: 'City Park',
       genres: ['modern'],
       baseLayers: [
-        { sound: 'ambience_forest', volume: 0.35 },
-        { sound: 'ambience_city_day', volume: 0.2 }
+        { sound: 'nature/forest_peaceful', volume: 0.35 },
+        { sound: 'ambience_city_day', volume: 0.15 }
       ],
       detailLayers: [
-        { sound: 'creature_bird', volume: 0.25, chance: 0.6 }
+        { sound: 'creature_bird', volume: 0.3, chance: 0.6 }
       ]
     },
     rooftop: {
       name: 'Rooftop',
       genres: ['modern', 'cyberpunk'],
       baseLayers: [
-        { sound: 'ambience_city_day', volume: 0.3 }
+        { sound: 'ambience_city_day', volume: 0.25 },
+        { sound: 'nature/mountain_wind', volume: 0.3 }
       ],
       detailLayers: [
         { sound: 'weather_wind', volume: 0.25, chance: 0.4 }
@@ -110,10 +127,70 @@ class LocationAmbientManagerClass {
       baseLayers: [
         { sound: 'ambience_city_day', volume: 0.25 }
       ],
-      detailLayers: []
+      detailLayers: [
+        { sound: 'urban/car_horn', volume: 0.2, chance: 0.15, cooldown: 20000 }
+      ]
+    },
+    
+    // ═══════════════════════════════════════════════════════════
+    // URBAN - TRANSIT
+    // WHERE: Subway stations, airports, train stations
+    // WHEN: Player in public transit locations
+    // HOW: Echoing station ambience + announcement details
+    // ═══════════════════════════════════════════════════════════
+    subway_station: {
+      name: 'Subway Station',
+      genres: ['modern', 'cyberpunk'],
+      baseLayers: [
+        { sound: 'urban/subway_station', volume: 0.45 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    airport: {
+      name: 'Airport Terminal',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'urban/airport_terminal', volume: 0.4 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.3, chance: 0.5 }
+      ],
+      isIndoors: true
+    },
+    
+    // ═══════════════════════════════════════════════════════════
+    // URBAN - COMMERCIAL / HOSPITALITY
+    // WHERE: Bars, restaurants, shops, malls
+    // WHEN: Player in indoor commercial locations
+    // HOW: Venue-specific ambience + glass clinks, chatter
+    // ═══════════════════════════════════════════════════════════
+    shopping_mall: {
+      name: 'Shopping Mall',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'urban/shopping_mall', volume: 0.4 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.3, chance: 0.5 }
+      ],
+      isIndoors: true
+    },
+    coffee_shop: {
+      name: 'Coffee Shop',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'urban/coffee_shop', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_murmur', volume: 0.25, chance: 0.4 },
+        { sound: 'glass_clink', volume: 0.15, chance: 0.2, cooldown: 12000 }
+      ],
+      isIndoors: true
     },
 
-    // === COMMERCIAL / HOSPITALITY ===
     bar: {
       name: 'Bar',
       genres: ['modern', 'western', 'cyberpunk'],
@@ -182,21 +259,29 @@ class LocationAmbientManagerClass {
       isIndoors: true
     },
 
-    // === PROFESSIONAL / INSTITUTIONAL ===
+    // ═══════════════════════════════════════════════════════════
+    // PROFESSIONAL / INSTITUTIONAL
+    // WHERE: Offices, hospitals, factories, libraries
+    // WHEN: Player in professional/institutional buildings
+    // HOW: Quiet ambience with occasional machinery/HVAC details
+    // ═══════════════════════════════════════════════════════════
     office: {
       name: 'Office',
       genres: ['modern', 'cyberpunk'],
       baseLayers: [
-        { sound: 'ambience_castle', volume: 0.25 }
+        { sound: 'urban/office_ambiance', volume: 0.3 }
       ],
-      detailLayers: [],
+      detailLayers: [
+        { sound: 'urban/elevator_ding', volume: 0.2, chance: 0.1, cooldown: 30000 }
+      ],
       isIndoors: true
     },
     office_busy: {
       name: 'Busy Office',
       genres: ['modern', 'cyberpunk'],
       baseLayers: [
-        { sound: 'ambience_castle', volume: 0.35 }
+        { sound: 'urban/office_ambiance', volume: 0.4 },
+        { sound: 'crowd_murmur', volume: 0.25 }
       ],
       detailLayers: [],
       isIndoors: true
@@ -205,7 +290,7 @@ class LocationAmbientManagerClass {
       name: 'Hospital',
       genres: ['modern', 'horror'],
       baseLayers: [
-        { sound: 'ambience_castle', volume: 0.25 }
+        { sound: 'urban/hospital_corridor', volume: 0.35 }
       ],
       detailLayers: [],
       isIndoors: true
@@ -228,11 +313,20 @@ class LocationAmbientManagerClass {
       detailLayers: [],
       isIndoors: true
     },
+    construction: {
+      name: 'Construction Site',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'urban/construction_site', volume: 0.45 }
+      ],
+      detailLayers: [],
+      isIndoors: false
+    },
     library: {
       name: 'Library',
       genres: ['modern', 'fantasy'],
       baseLayers: [
-        { sound: 'ambience_castle', volume: 0.15 }
+        { sound: 'ambience_library', volume: 0.15 }
       ],
       detailLayers: [],
       isIndoors: true
@@ -249,12 +343,18 @@ class LocationAmbientManagerClass {
       isIndoors: true
     },
 
-    // === NATURE - FORESTS ===
+    // ═══════════════════════════════════════════════════════════
+    // NATURE - FORESTS
+    // WHERE: Wooded areas, wilderness
+    // WHEN: Player in forest/jungle/swamp locations
+    // HOW: Base nature ambience + wildlife details (birds, owls, wolves)
+    // ═══════════════════════════════════════════════════════════
     forest: {
       name: 'Forest',
       genres: ['medieval', 'fantasy', 'horror', 'western'],
       baseLayers: [
-        { sound: 'ambience_forest', volume: 0.4 }
+        { sound: 'nature/forest_peaceful', volume: 0.4 },
+        { sound: 'ambience_forest', volume: 0.35 }
       ],
       detailLayers: [
         { sound: 'creature_bird', volume: 0.25, chance: 0.5 }
@@ -264,7 +364,7 @@ class LocationAmbientManagerClass {
       name: 'Forest (Day)',
       genres: ['medieval', 'fantasy', 'western'],
       baseLayers: [
-        { sound: 'ambience_forest', volume: 0.4 }
+        { sound: 'nature/forest_peaceful', volume: 0.45 }
       ],
       detailLayers: [
         { sound: 'creature_bird', volume: 0.3, chance: 0.6 }
@@ -274,7 +374,7 @@ class LocationAmbientManagerClass {
       name: 'Forest (Night)',
       genres: ['medieval', 'fantasy', 'horror'],
       baseLayers: [
-        { sound: 'ambience_wilderness', volume: 0.4 }
+        { sound: 'nature/forest_night', volume: 0.45 }
       ],
       detailLayers: [
         { sound: 'creature_owl', volume: 0.25, chance: 0.4, cooldown: 20000 },
@@ -285,7 +385,7 @@ class LocationAmbientManagerClass {
       name: 'Dense Forest',
       genres: ['medieval', 'fantasy'],
       baseLayers: [
-        { sound: 'ambience_forest', volume: 0.45 }
+        { sound: 'nature/forest_peaceful', volume: 0.5 }
       ],
       detailLayers: [
         { sound: 'creature_bird', volume: 0.25, chance: 0.5 }
@@ -295,17 +395,18 @@ class LocationAmbientManagerClass {
       name: 'Jungle',
       genres: ['fantasy'],
       baseLayers: [
-        { sound: 'ambience_wilderness', volume: 0.5 }
+        { sound: 'nature/jungle_ambiance', volume: 0.5 }
       ],
       detailLayers: [
-        { sound: 'creature_bird', volume: 0.3, chance: 0.6 }
+        { sound: 'creature_bird', volume: 0.3, chance: 0.6 },
+        { sound: 'creature_insect', volume: 0.2, chance: 0.7 }
       ]
     },
     swamp: {
       name: 'Swamp',
       genres: ['fantasy', 'horror'],
       baseLayers: [
-        { sound: 'ambience_wilderness', volume: 0.45 },
+        { sound: 'nature/swamp_ambiance', volume: 0.45 },
         { sound: 'element_water', volume: 0.25 }
       ],
       detailLayers: [
@@ -316,20 +417,25 @@ class LocationAmbientManagerClass {
       name: 'Meadow',
       genres: ['medieval', 'fantasy'],
       baseLayers: [
-        { sound: 'ambience_forest', volume: 0.35 }
+        { sound: 'nature/forest_peaceful', volume: 0.35 }
       ],
       detailLayers: [
-        { sound: 'creature_bird', volume: 0.25, chance: 0.6 }
+        { sound: 'creature_bird', volume: 0.3, chance: 0.6 }
       ]
     },
 
-    // === NATURE - WATER ===
+    // ═══════════════════════════════════════════════════════════
+    // NATURE - WATER
+    // WHERE: Beaches, rivers, waterfalls, harbors
+    // WHEN: Player near bodies of water
+    // HOW: Water ambience + seagulls/wind as details
+    // ═══════════════════════════════════════════════════════════
     beach: {
       name: 'Beach',
       genres: ['modern', 'fantasy'],
       baseLayers: [
-        { sound: 'element_water', volume: 0.5 },
-        { sound: 'ambience_harbor', volume: 0.35 }
+        { sound: 'nature/ocean_waves', volume: 0.5 },
+        { sound: 'ambience_harbor', volume: 0.25 }
       ],
       detailLayers: [
         { sound: 'creature_seagull', volume: 0.3, chance: 0.4, cooldown: 10000 }
@@ -339,15 +445,17 @@ class LocationAmbientManagerClass {
       name: 'Riverside',
       genres: ['medieval', 'fantasy', 'western'],
       baseLayers: [
-        { sound: 'element_water', volume: 0.45 }
+        { sound: 'nature/river_stream', volume: 0.45 }
       ],
-      detailLayers: []
+      detailLayers: [
+        { sound: 'creature_bird', volume: 0.2, chance: 0.4 }
+      ]
     },
     waterfall: {
       name: 'Waterfall',
       genres: ['fantasy', 'medieval'],
       baseLayers: [
-        { sound: 'element_water', volume: 0.55 }
+        { sound: 'nature/waterfall', volume: 0.55 }
       ],
       detailLayers: []
     },
@@ -355,6 +463,7 @@ class LocationAmbientManagerClass {
       name: 'Harbor',
       genres: ['modern', 'medieval'],
       baseLayers: [
+        { sound: 'nature/ocean_waves', volume: 0.35 },
         { sound: 'ambience_harbor', volume: 0.4 }
       ],
       detailLayers: [
@@ -370,7 +479,12 @@ class LocationAmbientManagerClass {
       detailLayers: []
     },
 
-    // === NATURE - OTHER ===
+    // ═══════════════════════════════════════════════════════════
+    // NATURE - OTHER
+    // WHERE: Deserts, mountains, canyons
+    // WHEN: Player in open terrain locations
+    // HOW: Wind-heavy ambience with sparse details
+    // ═══════════════════════════════════════════════════════════
     desert: {
       name: 'Desert',
       genres: ['western', 'fantasy'],
@@ -378,37 +492,51 @@ class LocationAmbientManagerClass {
         { sound: 'ambience_wilderness', volume: 0.25 }
       ],
       detailLayers: [
-        { sound: 'weather_wind', volume: 0.2, chance: 0.4 }
+        { sound: 'nature/mountain_wind', volume: 0.25, chance: 0.4 }
       ]
     },
     mountain: {
       name: 'Mountain',
       genres: ['medieval', 'fantasy'],
       baseLayers: [
-        { sound: 'ambience_wilderness', volume: 0.3 }
+        { sound: 'nature/mountain_wind', volume: 0.4 }
       ],
       detailLayers: [
-        { sound: 'weather_wind', volume: 0.35, chance: 0.5 }
+        { sound: 'weather_wind', volume: 0.3, chance: 0.5 }
       ]
     },
     canyon: {
       name: 'Canyon',
       genres: ['western', 'fantasy'],
       baseLayers: [
-        { sound: 'ambience_wilderness', volume: 0.3 }
+        { sound: 'ambience_wilderness', volume: 0.3 },
+        { sound: 'nature/mountain_wind', volume: 0.25 }
       ],
-      detailLayers: [
-        { sound: 'weather_wind', volume: 0.25, chance: 0.4 }
-      ]
+      detailLayers: []
+    },
+    arctic: {
+      name: 'Arctic',
+      genres: ['fantasy', 'horror'],
+      baseLayers: [
+        { sound: 'weather/arctic_blizzard', volume: 0.5 },
+        { sound: 'nature/mountain_wind', volume: 0.3 }
+      ],
+      detailLayers: [],
+      isIndoors: false
     },
 
-    // === UNDERGROUND ===
+    // ═══════════════════════════════════════════════════════════
+    // UNDERGROUND
+    // WHERE: Caves, sewers, mines, dungeons
+    // WHEN: Player in underground locations
+    // HOW: Echo-heavy ambience with drips, wind drafts
+    // ═══════════════════════════════════════════════════════════
     cave: {
       name: 'Cave',
       genres: ['medieval', 'fantasy', 'horror'],
       baseLayers: [
-        { sound: 'ambience_cave', volume: 0.3 },
-        { sound: 'element_water', volume: 0.2 }
+        { sound: 'nature/cave_ambiance', volume: 0.35 },
+        { sound: 'element_water', volume: 0.15 }
       ],
       detailLayers: [],
       isIndoors: true
@@ -417,10 +545,10 @@ class LocationAmbientManagerClass {
       name: 'Deep Cave',
       genres: ['medieval', 'fantasy', 'horror'],
       baseLayers: [
-        { sound: 'ambience_cave', volume: 0.35 }
+        { sound: 'nature/cave_ambiance', volume: 0.4 }
       ],
       detailLayers: [
-        { sound: 'weather_wind', volume: 0.2, chance: 0.4 }
+        { sound: 'weather_wind', volume: 0.15, chance: 0.3 }
       ],
       isIndoors: true
     },
@@ -440,7 +568,7 @@ class LocationAmbientManagerClass {
       name: 'Mine',
       genres: ['western', 'medieval'],
       baseLayers: [
-        { sound: 'ambience_cave', volume: 0.35 }
+        { sound: 'nature/cave_ambiance', volume: 0.35 }
       ],
       detailLayers: [],
       isIndoors: true
@@ -910,17 +1038,7 @@ class LocationAmbientManagerClass {
       detailLayers: [],
       isIndoors: true
     },
-    airport: {
-      name: 'Airport',
-      genres: ['modern'],
-      baseLayers: [
-        { sound: 'ambience_plaza', volume: 0.4 }
-      ],
-      detailLayers: [
-        { sound: 'crowd_busy', volume: 0.3, chance: 0.5 }
-      ],
-      isIndoors: true
-    },
+    // airport already defined above with urban/airport_terminal sound
     train_station: {
       name: 'Train Station',
       genres: ['modern', 'western'],
