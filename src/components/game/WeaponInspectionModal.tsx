@@ -50,7 +50,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { WeaponConditionDisplay, WeaponConditionBadge } from './WeaponConditionDisplay';
-import { 
+import { TriggerGroup } from '@/game/gunNutTriggerSystem';
+import {
   ExtendedWeapon, 
   WeaponAttachment, 
   AttachmentSlot,
@@ -370,6 +371,87 @@ function MaintenancePanel({ maintenance }: { maintenance: GunNutMaintenance }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Trigger Group details panel (Gun Nut+)
+function TriggerGroupPanel({ trigger }: { trigger: TriggerGroup }) {
+  const breakQualityColor = {
+    crisp: 'text-emerald-400',
+    creeping: 'text-yellow-400',
+    rolling: 'text-orange-400',
+  };
+  
+  return (
+    <div className="p-3 rounded-lg border bg-card/50">
+      <div className="flex items-center justify-between mb-2">
+        <h5 className="text-sm font-medium flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          Trigger: {trigger.name}
+        </h5>
+        <Badge variant="outline" className={cn(
+          'text-[10px]',
+          trigger.condition >= 70 ? 'border-emerald-500/50 text-emerald-400' :
+          trigger.condition >= 40 ? 'border-yellow-500/50 text-yellow-400' :
+          'border-red-500/50 text-red-400'
+        )}>
+          {Math.round(trigger.condition)}%
+        </Badge>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Pull Weight</span>
+          <span className="font-mono">{trigger.pullWeight} lbs</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Travel</span>
+          <span className="font-mono">{trigger.travelDistance}"</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Reset</span>
+          <span className="font-mono">{trigger.resetDistance}"</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Break</span>
+          <span className={cn('capitalize', breakQualityColor[trigger.breakQuality])}>
+            {trigger.breakQuality}
+          </span>
+        </div>
+      </div>
+      
+      <Separator className="my-2" />
+      
+      <div className="flex justify-between text-xs">
+        <span className="text-muted-foreground">Accuracy Modifier</span>
+        <span className={cn(
+          'font-mono',
+          trigger.accuracyModifier >= 1.1 ? 'text-emerald-400' : 
+          trigger.accuracyModifier >= 1.0 ? 'text-muted-foreground' : 'text-orange-400'
+        )}>
+          {trigger.accuracyModifier >= 1 ? '+' : ''}{Math.round((trigger.accuracyModifier - 1) * 100)}%
+        </span>
+      </div>
+      <div className="flex justify-between text-xs mt-1">
+        <span className="text-muted-foreground">Fire Rate Modifier</span>
+        <span className="font-mono">
+          {trigger.fireRateModifier >= 1 ? '+' : ''}{Math.round((trigger.fireRateModifier - 1) * 100)}%
+        </span>
+      </div>
+      <div className="flex justify-between text-xs mt-1">
+        <span className="text-muted-foreground">Fire Modes</span>
+        <span className="font-mono uppercase">{trigger.fireModes.join(' / ')}</span>
+      </div>
+      
+      {trigger.condition < 50 && (
+        <div className="mt-2 p-2 rounded bg-orange-500/10 border border-orange-500/30">
+          <div className="flex items-center gap-1.5 text-xs text-orange-400">
+            <AlertTriangle className="h-3 w-3" />
+            Trigger feels gritty - service recommended
+          </div>
+        </div>
+      )}
     </div>
   );
 }
