@@ -46,3 +46,6 @@ export type {
 
 export { LivingWorldEngine, buildLivingWorldContext } from './livingWorldEngine';
 export type { LivingWorldState } from './livingWorldEngine';
+
+export { seedWorldForGenre, getGenreSeed, hasGenreSeed } from './genreWorldSeeder';
+export type { GenreWorldSeed } from './genreWorldSeeder';

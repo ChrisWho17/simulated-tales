@@ -260,6 +260,17 @@ interface AdventureRequest {
   storiedLootEnabled?: boolean;
   // WEATHER CONTEXT - Ensures story narrative matches displayed weather
   weatherContext?: WeatherContext;
+  // LIVING WORLD CONTEXT - Properties, rivals, factions
+  livingWorldContext?: LivingWorldContext;
+}
+
+// ============= LIVING WORLD SYSTEM =============
+
+interface LivingWorldContext {
+  propertyContext?: string;    // Player-owned properties, tenants, threats
+  rivalContext?: string;       // Active rivals, conflicts, dispositions
+  factionContext?: string;     // Faction standings, memberships, relations
+  fullContext: string;         // Combined context for AI
 }
 
 // ============= NEW: MICRO-EVENTS, VOICE SIGNATURES, STORIED LOOT =============
@@ -581,7 +592,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled, weatherContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled, weatherContext, livingWorldContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1167,6 +1178,42 @@ When describing significant loot, use: [STORIED_LOOT:itemName:storyType:brief na
 Story types: previous_owner, origin, journey, cost, secret, connection, wear, memory
 
 Now loot is PLOT.`;
+    }
+    
+    // ============= LIVING WORLD SYSTEM (Properties, Rivals, Factions) =============
+    if (livingWorldContext?.fullContext) {
+      systemContent += `\n\n=== LIVING WORLD - PROPERTIES, RIVALS, FACTIONS ===
+The world has ongoing power dynamics, rivalries, and ownership that persist independently of the player.
+
+${livingWorldContext.fullContext}
+
+LIVING WORLD RULES:
+- Reference player properties naturally (tenants, condition, threats)
+- Rivals make moves based on disposition (tense → cold shoulders, hostile → sabotage, war → violence)
+- Faction members recognize standing (respected → greetings, hated → hostility)
+- Property threats should escalate if unaddressed
+- Faction territories affect NPC behavior and available services
+- Rival conflicts create story opportunities and consequences
+
+PROPERTY INTERACTIONS:
+- Tenants may approach player with complaints or requests
+- Property threats (rival claims, legal issues) create urgency
+- Mortgage payments and rent collection happen in the background
+- Property reputation affects who will visit or do business there
+
+RIVAL DYNAMICS:
+- Rivals pursue their desires actively
+- Fear tempers aggression, respect opens negotiation
+- Conflicts escalate from economic to social to direct violence
+- Truces can be proposed but may be rejected
+- Defeated rivals may become allies or seek revenge
+
+FACTION STANDING:
+- Members get access to faction resources and jobs
+- Standing affects NPC attitudes from faction members
+- Grudges persist—factions have long memories
+- Rising in rank opens new opportunities
+- Betrayal creates permanent enemies`;
     }
     
     if (cheatMode) {

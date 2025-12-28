@@ -82,6 +82,14 @@ import {
   setJournalContext,
   clearJournalContext,
 } from '@/lib/relationshipJournal';
+import {
+  LivingWorldEngine,
+  buildLivingWorldContext,
+  seedWorldForGenre,
+  PropertySystem,
+  RivalSystem,
+  FactionSystem,
+} from '@/game/livingWorld';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { UrbanZone, UrbanLocation } from '@/types/urbanZone';
 import { StoryEntry } from './types';
@@ -973,6 +981,13 @@ export function AdventureGame() {
               narrativeContext: getWeatherNarrativeContext(weatherState),
               effects: formatWeatherEffectsForAI(weatherState),
             } : null,
+            // === LIVING WORLD ENGINE - Properties, Rivals, Factions ===
+            livingWorldContext: {
+              propertyContext: PropertySystem.buildPropertyContext(),
+              rivalContext: RivalSystem.buildRivalContext(),
+              factionContext: FactionSystem.buildFactionContext(),
+              fullContext: buildLivingWorldContext(),
+            },
           }),
         }
       );
