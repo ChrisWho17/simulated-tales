@@ -93,13 +93,27 @@ export function useAudioSystem(): UseAudioSystemReturn {
     return unsubscribe;
   }, []);
 
-  // Initialize audio on first user interaction
+  // Initialize audio on first user interaction - now also preloads sounds
   const initializeAudio = useCallback(async () => {
     await audioEngine.ensureContext();
     setState(audioEngine.getState());
+    
+    // Automatically preload sounds after audio context is ready
+    console.log('[AudioSystem] Audio initialized, preloading sounds...');
+    try {
+      await soundPreloader.preloadAll({ priorityOnly: true });
+      console.log('[AudioSystem] Priority sounds preloaded');
+      
+      // Load remaining sounds in background
+      soundPreloader.preloadAll().then(() => {
+        console.log('[AudioSystem] All sounds preloaded');
+      });
+    } catch (error) {
+      console.error('[AudioSystem] Failed to preload sounds:', error);
+    }
   }, []);
 
-  // Preload sounds from storage
+  // Preload sounds from storage (can be called manually for specific categories)
   const preloadSounds = useCallback(async (options?: { 
     priorityOnly?: boolean; 
     categories?: string[] 
