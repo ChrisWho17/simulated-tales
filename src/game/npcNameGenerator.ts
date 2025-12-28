@@ -376,6 +376,39 @@ const NAME_POOLS: Record<string, NamePool> = {
 };
 
 // ============================================================================
+// NAME BLACKLIST - Hierarchy/rank terms that shouldn't be used as names
+// ============================================================================
+
+const NAME_BLACKLIST = new Set([
+  // Military ranks (not names)
+  'Command', 'Commander', 'Captain', 'Admiral', 'Major', 'Sergeant', 
+  'Private', 'Lieutenant', 'Colonel', 'General', 'Corporal', 'Chief',
+  'Officer', 'Ensign', 'Cadet', 'Marshal', 'Brigadier', 'Commodore',
+  // Pirate/nautical ranks
+  'Quartermaster', 'Boatswain', 'Mate', 'Skipper',
+  // Generic titles
+  'Doctor', 'Professor', 'Director', 'Manager', 'Boss', 'Leader',
+  'Master', 'Lord', 'Lady', 'Sir', 'Dame', 'King', 'Queen', 'Prince',
+  'Princess', 'Duke', 'Duchess', 'Count', 'Countess', 'Baron', 'Baroness',
+  // Job titles that sound like names but aren't
+  'Gunner', 'Driver', 'Pilot', 'Engineer', 'Medic', 'Scout',
+]);
+
+/**
+ * Check if a name is blacklisted (hierarchy/rank term)
+ */
+export function isBlacklistedName(name: string): boolean {
+  return NAME_BLACKLIST.has(name);
+}
+
+/**
+ * Filter blacklisted names from an array
+ */
+function filterBlacklist(names: string[]): string[] {
+  return names.filter(name => !NAME_BLACKLIST.has(name));
+}
+
+// ============================================================================
 // NAME GENERATION FUNCTIONS
 // ============================================================================
 
@@ -405,6 +438,7 @@ function randomFromArray<T>(arr: T[], rng: () => number = Math.random): T {
 /**
  * Generate a full NPC name based on genre and optional gender
  * Uses seeded randomness for deterministic results when campaignSeed is provided
+ * Filters out blacklisted hierarchy/rank terms
  */
 export function generateNPCName(
   genre: GameGenre,
@@ -421,15 +455,19 @@ export function generateNPCName(
   // Determine gender if not provided
   const actualGender: Gender = gender || (rng() < 0.4 ? 'male' : rng() < 0.8 ? 'female' : 'neutral');
   
-  // Select first name based on gender
+  // Select first name based on gender, filtering blacklisted terms
   let firstName: string;
+  let namePool: string[];
+  
   if (actualGender === 'neutral') {
-    firstName = randomFromArray(pool.neutral, rng);
+    namePool = filterBlacklist(pool.neutral);
   } else if (actualGender === 'female') {
-    firstName = randomFromArray(pool.female, rng);
+    namePool = filterBlacklist(pool.female);
   } else {
-    firstName = randomFromArray(pool.male, rng);
+    namePool = filterBlacklist(pool.male);
   }
+  
+  firstName = randomFromArray(namePool, rng);
   
   // Select surname
   const lastName = randomFromArray(pool.surnames, rng);
@@ -467,13 +505,13 @@ export function generateNPCNameBatch(
 }
 
 /**
- * Get available first names for a genre and gender
+ * Get available first names for a genre and gender (filtered)
  */
 export function getFirstNames(genre: GameGenre, gender: Gender): string[] {
   const pool = NAME_POOLS[genre] || NAME_POOLS.modern_life;
-  if (gender === 'neutral') return pool.neutral;
-  if (gender === 'female') return pool.female;
-  return pool.male;
+  if (gender === 'neutral') return filterBlacklist(pool.neutral);
+  if (gender === 'female') return filterBlacklist(pool.female);
+  return filterBlacklist(pool.male);
 }
 
 /**
