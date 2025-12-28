@@ -18,6 +18,8 @@ import { StoryEntry } from '@/components/adventure/types';
 import { GameGenre } from '@/types/genreData';
 import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
 import { createInitialWeatherState } from '@/game/weatherSystem';
+import { seedWorldForGenre, hasGenreSeed } from '@/game/livingWorld';
+import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry } from '@/game/npcIdentityRegistry';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -87,6 +89,18 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       localStorage.setItem(key, JSON.stringify(result.campaign));
     }
     
+    // Restore NPC registry state from campaign save if available
+    if (result.campaign.npcRegistryState) {
+      const savedRegistry: NPCIdentityRegistry = {
+        npcs: result.campaign.npcRegistryState.npcs as any,
+        relationships: result.campaign.npcRegistryState.relationships as any,
+        families: result.campaign.npcRegistryState.families as any,
+        lockedIds: result.campaign.npcRegistryState.lockedIds || [],
+      };
+      setNPCRegistry(savedRegistry);
+      console.log(`[Campaign Storage] Restored NPC registry with ${Object.keys(savedRegistry.npcs).length} NPCs`);
+    }
+    
     return result.campaign;
   } catch (e) {
     console.error(`[Campaign Storage] Failed to load campaign ${campaignId}:`, e);
@@ -96,8 +110,20 @@ export function loadCampaign(campaignId: string): CampaignData | null {
 
 export function saveCampaign(campaign: CampaignData): void {
   try {
+    // Capture current NPC registry state for this campaign
+    const npcRegistry = getNPCRegistry();
+    const campaignWithNPCs: CampaignData = {
+      ...campaign,
+      npcRegistryState: {
+        npcs: npcRegistry.npcs,
+        relationships: npcRegistry.relationships,
+        families: npcRegistry.families,
+        lockedIds: npcRegistry.lockedIds,
+      },
+    };
+    
     const key = `${CAMPAIGN_STORAGE_PREFIX}${campaign.id}`;
-    localStorage.setItem(key, JSON.stringify(campaign));
+    localStorage.setItem(key, JSON.stringify(campaignWithNPCs));
     
     // Update index
     const index = loadCampaignIndex();
@@ -162,12 +188,32 @@ export function createNewCampaign(
 ): CampaignData {
   const now = Date.now();
   const campaignId = `campaign_${now}_${Math.random().toString(36).substr(2, 9)}`;
+  const genre = worldBible.primaryGenre as GameGenre;
+  
+  // Auto-seed living world based on genre
+  let livingWorldState: CampaignData['livingWorldState'] = undefined;
+  if (hasGenreSeed(genre)) {
+    console.log(`[Campaign Storage] Auto-seeding living world for genre: ${genre}`);
+    const seeded = seedWorldForGenre(genre);
+    
+    // Convert to serializable format for persistence
+    livingWorldState = {
+      properties: seeded.properties.map(p => [p.id, p]),
+      playerProperties: [],
+      rivals: seeded.rivals.map(r => [r.id, r]),
+      playerRivalries: [],
+      factions: seeded.factions.map(f => [f.id, f]),
+      playerStanding: [],
+      lastTick: 0,
+    };
+    console.log(`[Campaign Storage] Seeded ${seeded.properties.length} properties, ${seeded.rivals.length} rivals, ${seeded.factions.length} factions`);
+  }
   
   const campaign: CampaignData = {
     id: campaignId,
     meta: {
       name: worldBible.campaignName,
-      primaryGenre: worldBible.primaryGenre as GameGenre,
+      primaryGenre: genre,
       secondaryGenres: worldBible.secondaryGenres.map(g => g.genreId as string),
       createdAt: now,
       updatedAt: now,
@@ -190,6 +236,7 @@ export function createNewCampaign(
     currentMood: 'neutral',
     moodHistory: [],
     weatherState: createInitialWeatherState(),
+    livingWorldState,
     settings: {
       adultContent: false,
       cheatMode: false,

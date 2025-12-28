@@ -113,6 +113,14 @@ export interface CampaignData {
     lastTick: number;
   };
   
+  // NPC Registry state - permanent NPC identities for this campaign
+  npcRegistryState?: {
+    npcs: Record<string, unknown>;
+    relationships: Record<string, unknown>;
+    families: Record<string, unknown>;
+    lockedIds: string[];
+  };
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;
