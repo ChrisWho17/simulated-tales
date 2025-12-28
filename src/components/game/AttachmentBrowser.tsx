@@ -25,6 +25,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Crosshair,
   Target,
   Box,
@@ -40,6 +47,7 @@ import {
   ArrowDownRight,
   Minus,
   AlertCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -359,6 +367,7 @@ export function AttachmentBrowser({
 }: AttachmentBrowserProps) {
   const [selectedSlot, setSelectedSlot] = useState<AttachmentSlot>('muzzle');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dropdownFilter, setDropdownFilter] = useState<string>('all');
   
   // Get compatible slots for this weapon
   const compatibleSlots = useMemo(() => {
@@ -382,11 +391,28 @@ export function AttachmentBrowser({
       .map(({ id, slot }) => WeaponAttachmentSystem.createAttachment(id, slot))
       .filter((att): att is WeaponAttachment => att !== null)
       .filter(att => {
-        if (!searchQuery) return true;
-        return att.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               att.description.toLowerCase().includes(searchQuery.toLowerCase());
+        // Apply search filter
+        if (searchQuery) {
+          const matchesSearch = att.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                 att.description.toLowerCase().includes(searchQuery.toLowerCase());
+          if (!matchesSearch) return false;
+        }
+        
+        // Apply dropdown filter (cheat mode only)
+        if (cheatModeEnabled && dropdownFilter !== 'all') {
+          if (dropdownFilter === 'equipped') {
+            return equippedAttachments[selectedSlot]?.name === att.name;
+          }
+          if (dropdownFilter === 'unequipped') {
+            return equippedAttachments[selectedSlot]?.name !== att.name;
+          }
+          // Rarity filter
+          return att.rarity === dropdownFilter;
+        }
+        
+        return true;
       });
-  }, [selectedSlot, searchQuery]);
+  }, [selectedSlot, searchQuery, dropdownFilter, cheatModeEnabled, equippedAttachments]);
   
   // Check if player owns an attachment
   const isOwned = (attachmentName: string) => {
@@ -478,8 +504,9 @@ export function AttachmentBrowser({
           
           {/* Attachment list */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Search */}
-            <div className="p-3 border-b border-border/50">
+            {/* Search + Filters */}
+            <div className="p-3 border-b border-border/50 space-y-2">
+              {/* Search input */}
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -489,6 +516,28 @@ export function AttachmentBrowser({
                   className="pl-8 h-8 text-sm"
                 />
               </div>
+              
+              {/* Dropdown filter - only shown in cheat mode */}
+              {cheatModeEnabled && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Filter:</span>
+                  <Select value={dropdownFilter} onValueChange={setDropdownFilter}>
+                    <SelectTrigger className="h-7 text-xs flex-1">
+                      <SelectValue placeholder="All attachments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Attachments</SelectItem>
+                      <SelectItem value="equipped">Currently Equipped</SelectItem>
+                      <SelectItem value="unequipped">Not Equipped</SelectItem>
+                      <SelectItem value="common">Common</SelectItem>
+                      <SelectItem value="uncommon">Uncommon</SelectItem>
+                      <SelectItem value="rare">Rare</SelectItem>
+                      <SelectItem value="epic">Epic</SelectItem>
+                      <SelectItem value="legendary">Legendary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             {/* Grid */}

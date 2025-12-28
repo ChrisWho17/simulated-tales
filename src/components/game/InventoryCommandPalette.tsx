@@ -1,6 +1,6 @@
 // Inventory Command Palette - View items from the object registry
-import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, X, Backpack, Shirt, Sword, Key, Gem, FlaskConical, Boxes, MoreHorizontal, User, MapPin, ArrowRight, Hand, Zap } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Package, Search, X, Backpack, Shirt, Sword, Key, Gem, FlaskConical, Boxes, MoreHorizontal, User, MapPin, ArrowRight, Hand, Zap, Settings2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandInput,
@@ -22,6 +22,9 @@ import {
   ObjectOwnership,
 } from '@/game/objectRegistrySystem';
 import { getRegisteredNPC, getAllRegisteredNPCs } from '@/game/npcIdentityRegistry';
+import { getGameSettings } from '@/lib/gameSettings';
+import { InventoryWeaponModal } from './InventoryWeaponModal';
+import { Weapon } from '@/game/weaponWearSystem';
 
 interface InventoryCommandPaletteProps {
   open: boolean;
@@ -85,6 +88,12 @@ export function InventoryCommandPalette({ open, onOpenChange, onUseItem }: Inven
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<WorldObject | null>(null);
   const [useIntention, setUseIntention] = useState('');
+  const [weaponArsenalOpen, setWeaponArsenalOpen] = useState(false);
+  
+  // Get gun nut mode status
+  const settings = useMemo(() => getGameSettings(), []);
+  const isGunNutEnabled = settings.inDepthSettings.gunNutDepth !== 'standard';
+  const isCheatModeEnabled = settings.inDepthSettings.cheatModeEnabled;
   
   // Refresh inventory when opened
   useEffect(() => {
@@ -206,6 +215,19 @@ export function InventoryCommandPalette({ open, onOpenChange, onUseItem }: Inven
             <Button variant="outline" onClick={handleBack} className="flex-1">
               Back
             </Button>
+            
+            {/* Weapon Arsenal button - only shown for weapons when Gun Nut is enabled */}
+            {isGunNutEnabled && selectedItem.type === 'weapon' && (
+              <Button 
+                variant="outline"
+                onClick={() => setWeaponArsenalOpen(true)}
+                className="flex-1 gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              >
+                <Settings2 className="h-4 w-4" />
+                Arsenal
+              </Button>
+            )}
+            
             <Button 
               onClick={handleUseItem} 
               disabled={!useIntention.trim()}
@@ -216,6 +238,29 @@ export function InventoryCommandPalette({ open, onOpenChange, onUseItem }: Inven
             </Button>
           </div>
         </div>
+        
+        {/* Weapon Arsenal Modal */}
+        {selectedItem && selectedItem.type === 'weapon' && (
+          <InventoryWeaponModal
+            open={weaponArsenalOpen}
+            onOpenChange={setWeaponArsenalOpen}
+            weapon={{
+              id: selectedItem.id,
+              name: selectedItem.name,
+              type: 'pistol_basic',
+              condition: selectedItem.condition,
+              destroyed: false,
+              mods: [],
+              ammo: 0,
+              maxAmmo: 15,
+              shotsFired: 0,
+              jamsCleared: 0,
+              lastMaintenance: Date.now(),
+            } as Weapon}
+            gunNutDepth={settings.inDepthSettings.gunNutDepth}
+            cheatModeEnabled={isCheatModeEnabled}
+          />
+        )}
       </CommandDialog>
     );
   }
