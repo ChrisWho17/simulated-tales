@@ -565,6 +565,92 @@ export const RPG_SKILL_WORDS = new Set([
   'tracking', 'foraging', 'navigation', 'climbing', 'swimming', 'riding', 'hunting',
 ]);
 
+// ============= EQUIPMENT POSSESSION PATTERNS =============
+// These patterns detect when text is describing items/equipment, NOT people
+// If a name appears in one of these contexts, it's NOT an NPC
+
+const EQUIPMENT_POSSESSION_PATTERNS: RegExp[] = [
+  // ===== DIRECT POSSESSION =====
+  // "your X", "my X", "his X", "her X", "their X"
+  /(?:your|my|his|her|their|our|its)\s+([A-Z][a-zA-Z\s]+)/gi,
+  // "X in your hand", "X in his hands"
+  /([A-Z][a-zA-Z\s]+)\s+in\s+(?:your|my|his|her|their|our)\s+(?:hand|hands|grip|grasp)/gi,
+  // "wielding X", "holding X", "carrying X"
+  /(?:wielding|holding|carrying|gripping|clutching|brandishing|swinging|raising)\s+(?:a|an|the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  
+  // ===== EQUIPMENT ACTIONS =====
+  // "equipped with X", "armed with X"
+  /(?:equipped|armed|outfitted|geared|fitted)\s+with\s+(?:a|an|the)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "draw your X", "draws his X", "sheathes the X"
+  /(?:draw|draws|drew|sheathe|sheathes|sheathed|unsheathe|unsheathes)\s+(?:your|his|her|their|the|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "holster X", "aim X", "fire X", "reload X"
+  /(?:holster|holsters|aim|aims|fire|fires|reload|reloads|cock|cocks)\s+(?:your|his|her|their|the|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  
+  // ===== INVENTORY/PICKUP =====
+  // "pick up X", "take X", "grab X", "loot X"
+  /(?:pick up|picks up|picked up|take|takes|took|grab|grabs|grabbed|loot|loots|looted)\s+(?:a|an|the)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "found X", "find X", "discover X"
+  /(?:find|finds|found|discover|discovers|discovered|obtain|obtains|obtained)\s+(?:a|an|the)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X drops", "X falls", "drops the X"
+  /(?:drops|drop|fell|falls)\s+(?:the|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  
+  // ===== EQUIPMENT DESCRIPTIONS =====
+  // "a/an/the X glints", "the X gleams"
+  /(?:a|an|the)\s+([A-Z][a-zA-Z\s]+)\s+(?:glints|gleams|shimmers|glows|pulses|hums|vibrates)/gi,
+  // "rusty X", "ancient X", "enchanted X" + equipment word
+  /(?:rusty|ancient|enchanted|magical|cursed|blessed|broken|pristine|ornate|gilded|silver|golden|iron|steel|wooden)\s+([A-Z][a-zA-Z\s]+)/gi,
+  // "X of [modifier]" for items
+  /([A-Z][a-zA-Z]+)\s+of\s+(?:fire|ice|lightning|thunder|poison|death|life|healing|destruction|protection|strength|agility|wisdom)/gi,
+  
+  // ===== COMBAT EQUIPMENT CONTEXT =====
+  // "swing X at", "thrust X toward", "parry with X"
+  /(?:swing|swings|thrust|thrusts|stab|stabs|slash|slashes|strike|strikes|parry|parries|block|blocks)\s+(?:with|at|the|a|an|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X deals damage", "X hits"
+  /(?:the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)\s+(?:deals|dealt|hits|hit|strikes|struck|connects|connected)/gi,
+  
+  // ===== ARMOR/CLOTHING CONTEXT =====
+  // "wearing X", "donning X", "removing X"
+  /(?:wearing|donning|removing|putting on|taking off|strapping on)\s+(?:a|an|the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X protects", "X absorbs"
+  /(?:the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)\s+(?:protects|absorbs|deflects|blocks|saves|shields)/gi,
+  
+  // ===== SCI-FI EQUIPMENT =====
+  // "calibrating X", "charging X", "overloading X"
+  /(?:calibrating|charging|overloading|activating|deactivating|powering)\s+(?:the|your|his|her|their|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X malfunctions", "X overheats"
+  /(?:the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)\s+(?:malfunctions|overheats|jams|misfires|depletes|recharges)/gi,
+  
+  // ===== MAGIC ITEM CONTEXT =====
+  // "casting with X", "channeling through X"
+  /(?:casting|channeling|focusing|invoking)\s+(?:with|through)\s+(?:the|your|his|her|their|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X glows", "X pulses with energy"
+  /(?:the|your|his|her)?\s*([A-Z][a-zA-Z\s]+)\s+(?:glows|pulses|crackles|sparks|emanates|radiates)/gi,
+  
+  // ===== CRAFTING/UPGRADE CONTEXT =====
+  // "upgrade X", "repair X", "modify X", "enhance X"
+  /(?:upgrade|upgrades|repair|repairs|modify|modifies|enhance|enhances|forge|forges|craft|crafts)\s+(?:the|your|his|her|their|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  // "X needs repair", "X is damaged"
+  /(?:the|your|his|her)?\s*([A-Z][a-zA-Z\s]+)\s+(?:needs|requires|is)\s+(?:repair|repairs|damaged|broken|maintenance)/gi,
+];
+
+// Extract equipment names from text using possession patterns
+function extractEquipmentNames(text: string): Set<string> {
+  const equipment = new Set<string>();
+  
+  for (const pattern of EQUIPMENT_POSSESSION_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const name = match[1]?.trim();
+      if (name && name.length >= 2) {
+        equipment.add(name);
+      }
+    }
+  }
+  
+  return equipment;
+}
+
 // Check if a name looks like an equipment/item name (not a person)
 function isEquipmentName(name: string): boolean {
   const nameLower = name.toLowerCase();
@@ -875,24 +961,32 @@ export function parseTextForNPCLinks(
   // These are CONFIRMED to be people, not items
   const confirmedNames = extractIntroducedNames(text);
   
-  // Second pass: detect dialogue speakers ("Name: dialogue" format)
+  // SECOND: Extract equipment names from context ("your X", "wielding X", etc.)
+  // These are CONFIRMED to be items, not people
+  const confirmedEquipment = extractEquipmentNames(text);
+  
+  // Third pass: detect dialogue speakers ("Name: dialogue" format)
   const dialogueSpeakerPattern = /^([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm;
   let speakerMatch;
   
   while ((speakerMatch = dialogueSpeakerPattern.exec(text)) !== null) {
     const speakerName = speakerMatch[1].trim();
-    // Only register if it passes validation
-    if (!NEVER_LINK_WORDS.has(speakerName.toLowerCase()) && !isEquipmentName(speakerName)) {
+    // Only register if it passes validation AND is not equipment
+    if (!NEVER_LINK_WORDS.has(speakerName.toLowerCase()) && 
+        !isEquipmentName(speakerName) &&
+        !confirmedEquipment.has(speakerName)) {
       registerDialogueSpeaker(speakerName, npcNameMap, playerName, confirmedNames);
     }
   }
   
-  // Register any explicitly introduced names
+  // Register any explicitly introduced names (but not if also detected as equipment)
   for (const name of confirmedNames) {
-    registerDialogueSpeaker(name, npcNameMap, playerName, confirmedNames);
+    if (!confirmedEquipment.has(name)) {
+      registerDialogueSpeaker(name, npcNameMap, playerName, confirmedNames);
+    }
   }
   
-  // Pattern 3: If the entire text looks like a character name/title (used for bold speaker names)
+  // Pattern 4: If the entire text looks like a character name/title (used for bold speaker names)
   const trimmedText = text.trim();
   if (trimmedText && /^[A-Z][a-zA-Z\s]+$/.test(trimmedText) && trimmedText.length > 2 && trimmedText.length < 50) {
     // Skip common words, skills, AND equipment
