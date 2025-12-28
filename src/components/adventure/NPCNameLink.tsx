@@ -358,50 +358,52 @@ export function PlayerNameLink({ playerName, onShowCharacterSheet, className }: 
 }
 
 // Hook to get all known NPC names for text parsing
-// This is called on every render to ensure we have the latest NPCs
-export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
-  // Don't use useMemo here - we need to always get fresh data since
-  // NPCs can be registered during narrative processing
-  const npcs = getAllRegisteredNPCs();
-  const nameMap = new Map<string, RegisteredNPC>();
-  
-  for (const npc of npcs) {
-    // Map by lowercase name for case-insensitive matching
-    nameMap.set(npc.permanent.name.toLowerCase(), npc);
-    
-    // Also map by occupation for dialogue matching (e.g., "Squad Leader:")
-    const occupation = npc.semiPermanent.occupation;
-    if (occupation && occupation !== 'none') {
-      nameMap.set(occupation.toLowerCase(), npc);
-    }
-  }
-  
-  return nameMap;
-}
-
-// Common words that should NEVER be linked as NPCs (pronouns, common nouns, etc.)
+// Common words that should NEVER be linked as NPCs (pronouns, common nouns, conjunctions, etc.)
 const NEVER_LINK_WORDS = new Set([
+  // Pronouns
   'it', 'she', 'he', 'they', 'we', 'you', 'i', 'me', 'her', 'him', 'them', 'us',
   'this', 'that', 'these', 'those', 'who', 'what', 'which', 'where', 'when', 'why', 'how',
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  // Articles and conjunctions
+  'the', 'a', 'an', 'and', 'or', 'but', 'nor', 'yet', 'so', 'for', 'as', 'if', 'of', 'to', 'in', 'on', 'at', 'by', 'with', 'from',
+  // Verbs
+  'is', 'are', 'was', 'were', 'be', 'been', 'being',
   'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+  'can', 'must', 'shall', 'get', 'got', 'go', 'goes', 'went', 'come', 'came', 'take', 'took',
+  // Common narrative words
   'echo', 'vow', 'soul', 'death', 'life', 'love', 'hate', 'fear', 'hope', 'rage', 'fury',
   'chamber', 'room', 'door', 'wall', 'floor', 'light', 'dark', 'shadow', 'fire', 'water',
+  'night', 'day', 'time', 'place', 'way', 'man', 'woman', 'thing', 'hand', 'eye', 'eyes',
+  'rain', 'wind', 'sky', 'air', 'city', 'street', 'alley', 'crowd', 'voice', 'sound',
+  // Short words that are never names
+  'up', 'down', 'out', 'into', 'over', 'under', 'about', 'after', 'before', 'between',
 ]);
+
+// Check if a name looks like a legitimate NPC name (not a common word)
+function isLegitimateNPCName(name: string): boolean {
+  if (!name || name.length < 3) return false;
+  
+  const nameLower = name.toLowerCase();
+  
+  // Must not be in the blocklist
+  if (NEVER_LINK_WORDS.has(nameLower)) return false;
+  
+  // Must be properly capitalized (start with capital)
+  if (!/^[A-Z]/.test(name)) return false;
+  
+  // Name should be at least 3 chars
+  return name.length >= 3;
+}
 
 // Check if an NPC ID looks like a real registered NPC (not auto-generated from a common word)
 function isValidNPCId(npcId: string): boolean {
   if (!npcId) return false;
   
-  // Valid NPC IDs should be longer than 3 characters and contain meaningful prefixes
-  // Auto-registered NPCs from the registry have UUIDs or structured IDs
-  // Reject IDs that are just lowercase common words
   const idLower = npcId.toLowerCase();
   
   // Reject if the ID is just a common word
   if (NEVER_LINK_WORDS.has(idLower)) return false;
   
-  // Reject very short IDs (likely auto-generated from pronouns)
+  // Reject very short IDs
   if (npcId.length <= 3) return false;
   
   // Accept IDs with underscores or hyphens (structured IDs)
@@ -410,10 +412,10 @@ function isValidNPCId(npcId: string): boolean {
   // Accept IDs that look like UUIDs
   if (/^[a-f0-9]{8,}/.test(idLower)) return true;
   
-  // Accept properly capitalized names (at least 2 capital letters or multi-word)
+  // Accept properly capitalized names
   if (/[A-Z].*[A-Z]/.test(npcId) || npcId.includes(' ')) return true;
   
-  // Accept if it has at least 5 characters (reasonable name length)
+  // Accept if it has at least 5 characters
   if (npcId.length >= 5) return true;
   
   return false;
@@ -421,16 +423,43 @@ function isValidNPCId(npcId: string): boolean {
 
 // Helper to check if an NPC should be linked
 function shouldLinkNPC(npc: RegisteredNPC): boolean {
-  // Must have a valid permanent ID
   if (!npc.permanent?.id) return false;
-  
-  // Check if the ID is valid
   if (!isValidNPCId(npc.permanent.id)) return false;
   
-  // The name itself shouldn't be a common word
-  if (NEVER_LINK_WORDS.has(npc.permanent.name.toLowerCase())) return false;
+  const nameLower = npc.permanent.name.toLowerCase();
+  if (NEVER_LINK_WORDS.has(nameLower)) return false;
+  if (!isLegitimateNPCName(npc.permanent.name)) return false;
   
   return true;
+}
+
+// This is called on every render to ensure we have the latest NPCs
+export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
+  const npcs = getAllRegisteredNPCs();
+  const nameMap = new Map<string, RegisteredNPC>();
+  
+  for (const npc of npcs) {
+    // Only add NPCs that pass validation
+    if (!shouldLinkNPC(npc)) continue;
+    
+    const nameLower = npc.permanent.name.toLowerCase();
+    
+    // Skip blocklisted names
+    if (NEVER_LINK_WORDS.has(nameLower)) continue;
+    
+    nameMap.set(nameLower, npc);
+    
+    // Also map by occupation for dialogue matching
+    const occupation = npc.semiPermanent.occupation;
+    if (occupation && occupation !== 'none') {
+      const occLower = occupation.toLowerCase();
+      if (!NEVER_LINK_WORDS.has(occLower)) {
+        nameMap.set(occLower, npc);
+      }
+    }
+  }
+  
+  return nameMap;
 }
 
 // Helper to register a dialogue speaker as an NPC if not already registered
