@@ -47,6 +47,27 @@ export type Database = {
         }
         Relationships: []
       }
+      npc_portraits: {
+        Row: {
+          created_at: string
+          id: string
+          npc_id: string
+          portrait_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          npc_id: string
+          portrait_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          npc_id?: string
+          portrait_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
