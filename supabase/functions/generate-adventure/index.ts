@@ -256,12 +256,32 @@ interface AdventureRequest {
   microEventContext?: MicroEventContext;
   // NEW: Voice Signatures - NPCs recognizable by dialogue alone
   voiceSignatureContext?: VoiceSignatureContext;
+  // NEW: NPC Personality Templates - Archetype-driven dialogue and behavior
+  npcPersonalityContext?: NPCPersonalityContext;
   // NEW: Storied Loot - Items with history, not just stats
   storiedLootEnabled?: boolean;
   // WEATHER CONTEXT - Ensures story narrative matches displayed weather
   weatherContext?: WeatherContext;
   // LIVING WORLD CONTEXT - Properties, rivals, factions
   livingWorldContext?: LivingWorldContext;
+}
+
+// ============= NPC PERSONALITY SYSTEM =============
+
+interface NPCPersonalityContext {
+  fullContext: string;                // Full AI prompt context for all NPCs
+  npcProfiles: Array<{
+    npcName: string;
+    archetypeName: string;
+    mentalState: string;
+    experienceLevel: string;
+    disposition: string;
+    speechPattern: string;
+    quirk: string;
+    motivation: string;
+    fear: string;
+    backstory: string;
+  }>;
 }
 
 // ============= LIVING WORLD SYSTEM =============
@@ -592,7 +612,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled, weatherContext, livingWorldContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, weatherContext, livingWorldContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1149,6 +1169,48 @@ VOICE SIGNATURE RULES:
 - Players should recognize NPCs by speech alone
 - Consistency creates character
 - Premium immersion = every character sounds DISTINCT`;
+    }
+    
+    // ============= NPC PERSONALITY TEMPLATE SYSTEM (Archetype-Driven Dialogue) =============
+    if (npcPersonalityContext?.npcProfiles && npcPersonalityContext.npcProfiles.length > 0) {
+      systemContent += `\n\n=== NPC PERSONALITY ARCHETYPES - DEEP CHARACTER VOICES ===
+Each NPC has a PERSONALITY ARCHETYPE that drives their behavior, speech, and reactions.
+Use these to create consistent, psychologically grounded characters:
+
+${npcPersonalityContext.npcProfiles.map(profile => 
+`**${profile.npcName}** - ${profile.archetypeName}
+  • Mental State: ${profile.mentalState}
+  • Experience: ${profile.experienceLevel}
+  • Disposition: ${profile.disposition}
+  • Speech: ${profile.speechPattern}
+  • Quirk: ${profile.quirk}
+  • Motivation: ${profile.motivation}
+  • Fear: ${profile.fear}
+  • Backstory: ${profile.backstory}`
+).join('\n\n')}
+
+NPC PERSONALITY RULES:
+- Mental state affects SPEECH PATTERNS: depressed → flat, manic → rapid, traumatized → fragmented
+- Experience level affects CONFIDENCE: green → uncertain, veteran → weary authority
+- Disposition affects APPROACH: friendly → welcoming, hostile → challenging, wary → probing
+- Let quirks and fears LEAK through dialogue naturally
+- Motivations drive what they ASK FOR or OFFER
+- Backstory hooks should surface when TRUST is built
+- Different archetypes react differently to the SAME situation
+
+MENTAL STATE SPEECH EXAMPLES:
+• Depressed: "Does it matter? ...I suppose not." (flat, trailing off)
+• Paranoid: "*glances around* Who sent you? Really?" (suspicious, probing)
+• Manic: "Oh! Yes! And ALSO—wait, have you considered—" (rapid, interrupting)
+• Traumatized: "*flinches* Sorry, I... what were we talking about?" (fragmented)
+• Stable: "I understand. Let me consider our options." (measured, calm)
+
+Make each NPC FEEL different through how they speak, not just what they say.`;
+    }
+    
+    // Include full context if provided
+    if (npcPersonalityContext?.fullContext) {
+      systemContent += `\n\n${npcPersonalityContext.fullContext}`;
     }
     
     // ============= STORIED LOOT SYSTEM (Items with Meaning) =============

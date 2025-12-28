@@ -73,7 +73,16 @@ import {
 import {
   processNarrativeForNPCs,
   getRecentlyRegisteredNPCContext,
+  getAllNPCPersonalityContext,
+  setNPCAutoRegistrationGenre,
 } from '@/game/npcAutoRegistration';
+import {
+  getNPCPersonality,
+} from '@/game/npcPersonalityDialogue';
+import { getPersonalityById } from '@/game/npcPersonalityTemplates';
+import { 
+  getAllRegisteredNPCs 
+} from '@/game/npcIdentityRegistry';
 import {
   buildConsequenceContext,
   buildWorldStateContext,
@@ -909,6 +918,54 @@ export function AdventureGame() {
         })),
       };
       
+      // === NPC PERSONALITY CONTEXT - Archetype-driven dialogue ===
+      const npcPersonalityPayload = (() => {
+        const allNPCs = getAllRegisteredNPCs();
+        if (allNPCs.length === 0) return undefined;
+        
+        const npcProfiles: Array<{
+          npcName: string;
+          archetypeName: string;
+          mentalState: string;
+          experienceLevel: string;
+          disposition: string;
+          speechPattern: string;
+          quirk: string;
+          motivation: string;
+          fear: string;
+          backstory: string;
+        }> = [];
+        
+        // Get personality profiles for recent NPCs (max 10)
+        for (const npc of allNPCs.slice(-10)) {
+          const stored = getNPCPersonality(npc.permanent.id);
+          if (stored) {
+            const template = getPersonalityById(stored.personalityId);
+            if (template) {
+              npcProfiles.push({
+                npcName: npc.permanent.name,
+                archetypeName: template.name,
+                mentalState: template.mentalState,
+                experienceLevel: template.experienceLevel,
+                disposition: template.socialDisposition,
+                speechPattern: template.speechPatterns[0] || 'measured speech',
+                quirk: stored.selectedQuirk,
+                motivation: stored.selectedMotivation,
+                fear: stored.selectedFear,
+                backstory: stored.selectedBackstory,
+              });
+            }
+          }
+        }
+        
+        if (npcProfiles.length === 0) return undefined;
+        
+        return {
+          fullContext: getAllNPCPersonalityContext(),
+          npcProfiles,
+        };
+      })();
+      
       // Location Context - always include for spatial awareness
       const locationContextPayload = {
         currentZone: {
@@ -988,6 +1045,8 @@ export function AdventureGame() {
               factionContext: FactionSystem.buildFactionContext(),
               fullContext: buildLivingWorldContext(),
             },
+            // === NPC PERSONALITY CONTEXT - Archetype-driven dialogue ===
+            npcPersonalityContext: npcPersonalityPayload,
           }),
         }
       );
@@ -1359,6 +1418,11 @@ export function AdventureGame() {
       const toneProfile = scenarioSelection.genre ? [scenarioSelection.genre] : [];
       initializeCampaign(campaignId, char.name, toneProfile);
       console.log(`[Campaign Memory] Initialized new campaign: ${campaignId} for ${char.name}`);
+      
+      // Set NPC auto-registration genre for personality assignment
+      if (scenarioSelection.genre) {
+        setNPCAutoRegistrationGenre(scenarioSelection.genre);
+      }
       
       // Set relationship journal context for this new campaign + character
       setJournalContext(campaignId, char.name);
