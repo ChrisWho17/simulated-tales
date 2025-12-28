@@ -1244,11 +1244,33 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
           .replace(/^i\s+/i, '')  // Remove leading "I " 
           .replace(/^i$/i, 'pause');  // Handle bare "I" input
         
+        // Detect if this is dialogue/speech (wrapped in say: "..." or ask: "...")
+        const isDialogueAction = /^(say|ask|tell|speak|shout|whisper):\s*["']/.test(cleanedAction);
+        
         // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
-        let actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
+        let actionContent: string;
+        
+        if (isDialogueAction) {
+          // Extract the actual dialogue
+          const dialogueMatch = cleanedAction.match(/^(say|ask|tell|speak|shout|whisper):\s*["'](.+?)["']?$/i);
+          const dialogueVerb = dialogueMatch?.[1] || 'say';
+          const dialogueText = dialogueMatch?.[2] || cleanedAction;
+          
+          actionContent = `PLAYER SPEAKS (the character ${dialogueVerb}s this aloud - narrate the NPC/world RESPONSE, do NOT just describe the player speaking):
+"${dialogueText}"
+
+CRITICAL: The player's character just said this. You must show:
+1. How other characters/NPCs REACT to these words
+2. What they SAY in response (with **Name:** "dialogue" format)
+3. The scene's development as a RESULT of this dialogue
+
+DO NOT just describe the act of speaking. Show the REACTION and RESPONSE.`;
+        } else {
+          actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
 "${cleanedAction}"
 
 Write what happens as a result of this action. Transform it into evocative prose.`;
+        }
         
         if (diceRoll) {
           const rollResult = diceRoll.criticalSuccess 

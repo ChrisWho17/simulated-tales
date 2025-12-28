@@ -208,17 +208,87 @@ export function isEchoResponse(response: string, playerInput: string): boolean {
 }
 
 /**
+ * Detect if input appears to be conversational/dialogue
+ * These patterns suggest the player wants their character to SAY something
+ */
+function isConversationalInput(input: string): boolean {
+  const lowered = input.toLowerCase().trim();
+  
+  // Question patterns (direct questions the character would ask)
+  const questionPatterns = [
+    /^(have|has|had|do|does|did|can|could|would|will|shall|should|is|are|was|were|what|who|where|when|why|how|which)\s/i,
+    /\?$/,  // Ends with question mark
+  ];
+  
+  // Dialogue patterns (statements that sound like speech)
+  const dialoguePatterns = [
+    /^(yes|no|yeah|nah|sure|okay|ok|maybe|perhaps|definitely|absolutely|never|always)/i,
+    /^(thanks|thank you|please|sorry|excuse me|pardon|hello|hi|hey|goodbye|bye|farewell)/i,
+    /^(i think|i believe|i feel|i want|i need|i'll|i'd|i'm|we should|we could|let's|let me)/i,
+    /^(you're|you are|you look|you seem|you should|you could|you must|you need)/i,
+    /^(that's|that is|this is|it's|it is|there's|there is)/i,
+    /^(tell me|show me|give me|help me|explain|describe)/i,
+  ];
+  
+  // Check question patterns
+  for (const pattern of questionPatterns) {
+    if (pattern.test(lowered)) return true;
+  }
+  
+  // Check dialogue patterns
+  for (const pattern of dialoguePatterns) {
+    if (pattern.test(lowered)) return true;
+  }
+  
+  // Check if input is primarily words (not action verbs like "attack", "grab", etc.)
+  // and doesn't match known action patterns
+  const actionVerbs = /^(attack|grab|take|push|pull|hit|kick|throw|climb|jump|run|hide|sneak|search|examine|open|close|use|look at|go to|walk to|move to)/i;
+  if (!actionVerbs.test(lowered)) {
+    // If it's a short phrase with no obvious action verb, it's likely dialogue
+    const wordCount = lowered.split(/\s+/).length;
+    if (wordCount <= 8 && !lowered.includes(' the ') && !lowered.includes(' a ')) {
+      // Short phrases without articles are often conversational
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
  * Clean player input for prompt construction
  * Removes leading "I" and normalizes for better AI understanding
+ * Also detects conversational input and marks it explicitly as dialogue
  */
 export function cleanPlayerInputForPrompt(input: string): string {
   let cleaned = input.trim();
   
-  // Remove leading "I" patterns (AI should interpret the action, not echo it)
-  cleaned = cleaned.replace(/^i\s+/i, '');
+  // First check if this appears to be conversational/dialogue
+  const isDialogue = isConversationalInput(cleaned);
   
-  // Remove trailing punctuation that might confuse prompt structure
-  cleaned = cleaned.replace(/[.!?]+$/, '');
+  // Remove leading "I" patterns (AI should interpret the action, not echo it)
+  // But preserve for dialogue since "I think..." should stay as speech
+  if (!isDialogue) {
+    cleaned = cleaned.replace(/^i\s+/i, '');
+  }
+  
+  // Keep trailing punctuation for questions - it's important context!
+  // Only remove trailing periods and exclamation marks
+  cleaned = cleaned.replace(/[.!]+$/, '');
+  
+  // If this is dialogue, wrap it to make intent crystal clear to the AI
+  if (isDialogue) {
+    // Check if already prefixed with a dialogue keyword
+    const hasDialoguePrefix = /^(say|ask|tell|speak|shout|whisper|reply|respond|answer)\s/i.test(cleaned);
+    if (!hasDialoguePrefix) {
+      // Add prefix to make it clear this is SPEECH, not an action
+      if (cleaned.includes('?') || /^(have|has|do|does|can|could|would|will|what|who|where|when|why|how|which)\s/i.test(cleaned)) {
+        cleaned = `say: "${cleaned}"`;
+      } else {
+        cleaned = `say: "${cleaned}"`;
+      }
+    }
+  }
   
   return cleaned;
 }
