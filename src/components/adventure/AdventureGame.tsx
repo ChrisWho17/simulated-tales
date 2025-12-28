@@ -282,7 +282,13 @@ export function AdventureGame() {
   const [story, setStory] = useState<StoryEntry[]>([]);
   
   // Weather state - synced from AdventureDisplay for AI context
-  const [weatherState, setWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
+  // Initialize from campaign if available, otherwise create fresh
+  const [weatherState, setWeatherState] = useState<WeatherState>(() => {
+    if (campaignContext?.activeCampaign?.weatherState) {
+      return campaignContext.activeCampaign.weatherState;
+    }
+    return createInitialWeatherState();
+  });
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
@@ -325,6 +331,12 @@ export function AdventureGame() {
       // Restore world bible if available
       if (campaign.worldBible) {
         restoreWorldBible(JSON.stringify(campaign.worldBible));
+      }
+      
+      // Restore weather state if available
+      if (campaign.weatherState) {
+        setWeatherState(campaign.weatherState);
+        console.log('[AdventureGame] Restored weather:', campaign.weatherState.current);
       }
       
       // Check if we need to generate initial narrative (restored campaign with no history)
@@ -444,6 +456,27 @@ export function AdventureGame() {
       console.log(`[Character Sync] Synced character to campaign - HP: ${character.currentHealth}/${character.maxHealth}, Gold: ${character.gold}, XP: ${character.experience}`);
     }
   }, [phase, character, campaignContext]);
+  
+  // CRITICAL: Sync weather state to campaign when weather changes
+  // This ensures weather is persisted across save/load
+  const lastSyncedWeatherRef = useRef<string>('');
+  useEffect(() => {
+    if (phase !== 'playing' || !campaignContext?.updateCampaign) return;
+    
+    // Create a hash of weather state to detect actual changes
+    const weatherHash = JSON.stringify({
+      current: weatherState.current,
+      ticksRemaining: weatherState.ticksRemaining,
+      intensity: weatherState.intensity,
+    });
+    
+    // Only sync if weather data has actually changed
+    if (weatherHash !== lastSyncedWeatherRef.current) {
+      lastSyncedWeatherRef.current = weatherHash;
+      campaignContext.updateCampaign({ weatherState });
+      console.log(`[Weather Sync] Synced weather to campaign - ${weatherState.current} (${weatherState.ticksRemaining} ticks remaining)`);
+    }
+  }, [phase, weatherState, campaignContext]);
 
   // === PLAYER STATE MANAGER SYNC ===
   // Initialize playerStateManager with character and sync changes back to React state

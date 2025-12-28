@@ -17,6 +17,7 @@ import { RPGCharacter } from '@/types/rpgCharacter';
 import { StoryEntry } from '@/components/adventure/types';
 import { GameGenre } from '@/types/genreData';
 import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
+import { createInitialWeatherState } from '@/game/weatherSystem';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -188,6 +189,7 @@ export function createNewCampaign(
     checkpoints: [],
     currentMood: 'neutral',
     moodHistory: [],
+    weatherState: createInitialWeatherState(),
     settings: {
       adultContent: false,
       cheatMode: false,
