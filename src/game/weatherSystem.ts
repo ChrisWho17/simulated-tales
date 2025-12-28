@@ -430,3 +430,128 @@ export function formatWeatherEffectsForAI(state: WeatherState): string {
   
   return context;
 }
+
+// ============= WEATHER FORECAST SYSTEM =============
+
+export interface ForecastEntry {
+  label: string;
+  predictedWeather: WeatherType;
+  confidence: number; // 0-100
+  isActuallyCorrect: boolean; // Hidden - for debugging
+}
+
+/**
+ * Generate weather forecasts based on actual transition probabilities with error margins
+ * Uses the real spawn weights but introduces "meteorologist error" for later predictions
+ */
+export function generateWeatherForecast(state: WeatherState): ForecastEntry[] {
+  const forecasts: ForecastEntry[] = [];
+  let currentWeather = state.current;
+  let ticksUntilChange = state.ticksRemaining;
+  
+  // Forecast periods with decreasing accuracy
+  const periods = [
+    { label: 'Next Few Hours', errorChance: 0.15, confidenceBase: 75 },
+    { label: 'Later Today', errorChance: 0.35, confidenceBase: 50 },
+    { label: 'Tomorrow', errorChance: 0.55, confidenceBase: 25 },
+  ];
+  
+  for (const period of periods) {
+    // If transitioning soon, use that for first period
+    if (period.label === 'Next Few Hours' && state.transitioningTo && ticksUntilChange <= 15) {
+      forecasts.push({
+        label: period.label,
+        predictedWeather: state.transitioningTo,
+        confidence: Math.min(95, period.confidenceBase + 20 + Math.floor(Math.random() * 10)),
+        isActuallyCorrect: true,
+      });
+      currentWeather = state.transitioningTo;
+      ticksUntilChange = WEATHER_CONFIGS[currentWeather].minDuration + 
+        Math.floor(Math.random() * (WEATHER_CONFIGS[currentWeather].maxDuration - WEATHER_CONFIGS[currentWeather].minDuration));
+      continue;
+    }
+    
+    // Calculate likely next weather using actual spawn weights
+    const likelyWeather = predictMostLikelyWeather(currentWeather);
+    
+    // Apply error chance - meteorologist might be wrong
+    const isWrong = Math.random() < period.errorChance;
+    let predictedWeather: WeatherType;
+    
+    if (isWrong) {
+      // Pick a different weather type, weighted towards "reasonable" mistakes
+      predictedWeather = pickReasonableMistake(currentWeather, likelyWeather);
+    } else {
+      predictedWeather = likelyWeather;
+    }
+    
+    // Calculate confidence with some variance
+    const confidenceVariance = Math.floor(Math.random() * 15) - 7;
+    const confidence = Math.max(10, Math.min(95, period.confidenceBase + confidenceVariance));
+    
+    forecasts.push({
+      label: period.label,
+      predictedWeather,
+      confidence,
+      isActuallyCorrect: !isWrong,
+    });
+    
+    // For next iteration, assume the predicted weather happens
+    currentWeather = predictedWeather;
+  }
+  
+  return forecasts;
+}
+
+/**
+ * Get the most likely next weather based on spawn weights
+ */
+function predictMostLikelyWeather(currentWeather: WeatherType): WeatherType {
+  const weights: Array<{ weather: WeatherType; weight: number }> = [];
+  let totalWeight = 0;
+  
+  for (const [weather, config] of Object.entries(WEATHER_CONFIGS)) {
+    // Apply same logic as selectNextWeather - reduce repeat chance
+    const weight = weather === currentWeather ? config.spawnWeight * 0.3 : config.spawnWeight;
+    weights.push({ weather: weather as WeatherType, weight });
+    totalWeight += weight;
+  }
+  
+  // Sort by weight to get most likely
+  weights.sort((a, b) => b.weight - a.weight);
+  
+  // Pick from top 3 with bias toward highest
+  const roll = Math.random();
+  if (roll < 0.5) return weights[0].weather; // 50% chance of most likely
+  if (roll < 0.8) return weights[1].weather; // 30% chance of second
+  return weights[2].weather; // 20% chance of third
+}
+
+/**
+ * Pick a "reasonable" wrong prediction (not completely random)
+ */
+function pickReasonableMistake(currentWeather: WeatherType, correctPrediction: WeatherType): WeatherType {
+  // Weather that "makes sense" to confuse
+  const confusionGroups: Record<string, WeatherType[]> = {
+    precipitation: ['rain', 'storm', 'snow'],
+    clear: ['clear', 'cloudy', 'wind'],
+    atmospheric: ['fog', 'cloudy', 'rain'],
+    extreme: ['storm', 'heat_wave', 'snow'],
+  };
+  
+  // Find which group the correct prediction is in
+  for (const group of Object.values(confusionGroups)) {
+    if (group.includes(correctPrediction)) {
+      // Pick a different one from the same group
+      const alternatives = group.filter(w => w !== correctPrediction && w !== currentWeather);
+      if (alternatives.length > 0) {
+        return alternatives[Math.floor(Math.random() * alternatives.length)];
+      }
+    }
+  }
+  
+  // Fallback: pick any different weather
+  const allWeather: WeatherType[] = ['clear', 'cloudy', 'rain', 'storm', 'fog', 'snow', 'heat_wave', 'wind'];
+  const options = allWeather.filter(w => w !== correctPrediction && w !== currentWeather);
+  return options[Math.floor(Math.random() * options.length)];
+}

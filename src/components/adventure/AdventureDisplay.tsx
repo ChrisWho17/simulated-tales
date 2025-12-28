@@ -59,7 +59,7 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
-import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS } from '@/game/weatherSystem';
+import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS, generateWeatherForecast, ForecastEntry } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
 import { useAudioSystem } from '@/hooks/useAudioSystem';
@@ -1943,29 +1943,36 @@ export function AdventureDisplay({
                   <span>Forecasts may be inaccurate</span>
                 </div>
                 
-                {/* Forecast entries */}
-                {[
-                  { label: 'Next Few Hours', confidence: 60 + Math.floor(Math.random() * 25) },
-                  { label: 'Later Today', confidence: 35 + Math.floor(Math.random() * 25) },
-                  { label: 'Tomorrow', confidence: 15 + Math.floor(Math.random() * 20) },
-                ].map((forecast, idx) => {
-                  const possibleWeather: WeatherType[] = ['clear', 'cloudy', 'rain', 'wind', 'fog'];
-                  const predictedWeather = possibleWeather[Math.floor((Date.now() / 1000 + idx * 7) % possibleWeather.length)];
+                {/* Forecast entries using real weather transition system */}
+                {generateWeatherForecast(weatherState).map((forecast, idx) => {
+                  const getWeatherIcon = (w: WeatherType) => {
+                    switch (w) {
+                      case 'clear': return <Sun className="w-4 h-4 text-amber-400" />;
+                      case 'rain': return <CloudRain className="w-4 h-4 text-blue-400" />;
+                      case 'storm': return <CloudLightning className="w-4 h-4 text-yellow-400" />;
+                      case 'wind': return <Wind className="w-4 h-4 text-orange-400" />;
+                      case 'fog': return <CloudFog className="w-4 h-4 text-violet-400" />;
+                      case 'snow': return <Snowflake className="w-4 h-4 text-cyan-400" />;
+                      case 'heat_wave': return <Flame className="w-4 h-4 text-red-400" />;
+                      default: return <Cloud className="w-4 h-4 text-slate-400" />;
+                    }
+                  };
+                  
                   return (
                     <div key={idx} className="flex items-center justify-between bg-muted/20 rounded-lg p-2.5 border border-border/30">
                       <div className="flex items-center gap-2">
-                        {predictedWeather === 'clear' ? <Sun className="w-4 h-4 text-amber-400" /> :
-                         predictedWeather === 'rain' ? <CloudRain className="w-4 h-4 text-blue-400" /> :
-                         predictedWeather === 'wind' ? <Wind className="w-4 h-4 text-orange-400" /> :
-                         predictedWeather === 'fog' ? <CloudFog className="w-4 h-4 text-violet-400" /> :
-                         <Cloud className="w-4 h-4 text-slate-400" />}
+                        {getWeatherIcon(forecast.predictedWeather)}
                         <div>
                           <p className="text-xs font-medium">{forecast.label}</p>
-                          <p className="text-[10px] text-muted-foreground">{WEATHER_CONFIGS[predictedWeather].name}</p>
+                          <p className="text-[10px] text-muted-foreground">{WEATHER_CONFIGS[forecast.predictedWeather].name}</p>
                         </div>
                       </div>
                       <div className="text-right w-14">
-                        <p className={`text-xs font-medium ${forecast.confidence >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        <p className={`text-xs font-medium ${
+                          forecast.confidence >= 70 ? 'text-green-400' : 
+                          forecast.confidence >= 45 ? 'text-yellow-400' : 
+                          'text-red-400'
+                        }`}>
                           {forecast.confidence}%
                         </p>
                         <Progress value={forecast.confidence} className="h-1 mt-0.5" />
