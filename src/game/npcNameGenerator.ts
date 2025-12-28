@@ -376,11 +376,13 @@ const NAME_POOLS: Record<string, NamePool> = {
 };
 
 // ============================================================================
-// NAME BLACKLIST - Hierarchy/rank terms that shouldn't be used as names
+// NAME BLACKLIST - Hierarchy/rank terms that shouldn't be used as standalone names
 // ============================================================================
 
-const NAME_BLACKLIST = new Set([
-  // Military ranks (not names)
+// These terms are only blacklisted when used ALONE as a first name
+// They're valid when used as a title prefix (e.g., "Captain Anderson")
+const STANDALONE_NAME_BLACKLIST = new Set([
+  // Military ranks (not names when alone)
   'Command', 'Commander', 'Captain', 'Admiral', 'Major', 'Sergeant', 
   'Private', 'Lieutenant', 'Colonel', 'General', 'Corporal', 'Chief',
   'Officer', 'Ensign', 'Cadet', 'Marshal', 'Brigadier', 'Commodore',
@@ -394,18 +396,129 @@ const NAME_BLACKLIST = new Set([
   'Gunner', 'Driver', 'Pilot', 'Engineer', 'Medic', 'Scout',
 ]);
 
+// Title abbreviations that indicate a valid "Title + Name" pattern
+const TITLE_ABBREVIATIONS: Record<string, string> = {
+  'Cpt': 'Captain',
+  'Cpt.': 'Captain',
+  'Capt': 'Captain',
+  'Capt.': 'Captain',
+  'Cmdr': 'Commander',
+  'Cmdr.': 'Commander',
+  'Cmd': 'Commander',
+  'Cmd.': 'Commander',
+  'Lt': 'Lieutenant',
+  'Lt.': 'Lieutenant',
+  'Col': 'Colonel',
+  'Col.': 'Colonel',
+  'Sgt': 'Sergeant',
+  'Sgt.': 'Sergeant',
+  'Pvt': 'Private',
+  'Pvt.': 'Private',
+  'Gen': 'General',
+  'Gen.': 'General',
+  'Adm': 'Admiral',
+  'Adm.': 'Admiral',
+  'Maj': 'Major',
+  'Maj.': 'Major',
+  'Cpl': 'Corporal',
+  'Cpl.': 'Corporal',
+  'Dr': 'Doctor',
+  'Dr.': 'Doctor',
+  'Prof': 'Professor',
+  'Prof.': 'Professor',
+};
+
 /**
- * Check if a name is blacklisted (hierarchy/rank term)
+ * Check if a standalone name is blacklisted (hierarchy/rank term used alone)
+ * Returns false if it's a valid "Title + Name" pattern (e.g., "Captain Anderson")
  */
 export function isBlacklistedName(name: string): boolean {
-  return NAME_BLACKLIST.has(name);
+  // If it's just a single word, check the blacklist
+  const parts = name.trim().split(/\s+/);
+  
+  if (parts.length === 1) {
+    // Single word - check if it's a blacklisted term
+    return STANDALONE_NAME_BLACKLIST.has(parts[0]);
+  }
+  
+  // Multi-word name - check if first part is a title and second is a real name
+  const firstPart = parts[0];
+  const restOfName = parts.slice(1).join(' ');
+  
+  // If the first part is a title/rank and there's a following name, it's valid
+  if (STANDALONE_NAME_BLACKLIST.has(firstPart) || TITLE_ABBREVIATIONS[firstPart]) {
+    // e.g., "Captain Anderson" or "Cpt. Anderson" - this is valid
+    // The "Anderson" part should not be blacklisted
+    return !restOfName || STANDALONE_NAME_BLACKLIST.has(restOfName);
+  }
+  
+  // Check if ANY part is blacklisted as a standalone
+  // But allow hyphenated names like "Neo-Kyo"
+  for (const part of parts) {
+    // Skip hyphenated parts - they're compound names, not titles
+    if (part.includes('-')) continue;
+    if (STANDALONE_NAME_BLACKLIST.has(part)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Parse a name that may include a title prefix
+ * Returns { title, name } where title is the rank/title and name is the actual name
+ */
+export function parseNameWithTitle(fullName: string): { title: string | null; name: string } {
+  const parts = fullName.trim().split(/\s+/);
+  
+  if (parts.length < 2) {
+    return { title: null, name: fullName.trim() };
+  }
+  
+  const firstPart = parts[0];
+  const restOfName = parts.slice(1).join(' ');
+  
+  // Check for abbreviated titles (Cpt., Dr., etc.)
+  if (TITLE_ABBREVIATIONS[firstPart]) {
+    return { 
+      title: TITLE_ABBREVIATIONS[firstPart], 
+      name: restOfName 
+    };
+  }
+  
+  // Check for full titles (Captain, Commander, etc.)
+  if (STANDALONE_NAME_BLACKLIST.has(firstPart)) {
+    return { 
+      title: firstPart, 
+      name: restOfName 
+    };
+  }
+  
+  return { title: null, name: fullName.trim() };
+}
+
+/**
+ * Check if a name is a valid hyphenated name (e.g., "Neo-Kyo", "Mary-Jane")
+ * Hyphenated names should be treated as single names, not split
+ */
+export function isHyphenatedName(name: string): boolean {
+  // Must contain hyphen and have valid parts on both sides
+  if (!name.includes('-')) return false;
+  
+  const parts = name.split('-');
+  // Each part should be capitalized and at least 2 characters
+  return parts.every(part => 
+    part.length >= 2 && 
+    /^[A-Z][a-zA-Z]+$/.test(part)
+  );
 }
 
 /**
  * Filter blacklisted names from an array
  */
 function filterBlacklist(names: string[]): string[] {
-  return names.filter(name => !NAME_BLACKLIST.has(name));
+  return names.filter(name => !STANDALONE_NAME_BLACKLIST.has(name));
 }
 
 // ============================================================================
