@@ -583,13 +583,385 @@ class LocationAmbientManagerClass {
       ],
       isIndoors: true
     },
+    spaceship_bridge: {
+      name: 'Spaceship Bridge',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_engine', volume: 0.2 },
+        { sound: 'scifi_tech', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'scifi_computer', volume: 0.25, chance: 0.5, cooldown: 8000 }
+      ],
+      isIndoors: true
+    },
+    spaceship_engineering: {
+      name: 'Engineering Bay',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_engine', volume: 0.5 },
+        { sound: 'hydraulics_machinery', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'scifi_tech', volume: 0.2, chance: 0.4, cooldown: 10000 }
+      ],
+      isIndoors: true
+    },
+    cargo_bay: {
+      name: 'Cargo Bay',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_engine', volume: 0.25 },
+        { sound: 'ambience_dungeon', volume: 0.2 }
+      ],
+      detailLayers: [
+        { sound: 'hydraulics_machinery', volume: 0.2, chance: 0.3, cooldown: 15000 }
+      ],
+      isIndoors: true
+    },
     space_station: {
       name: 'Space Station',
       genres: ['scifi'],
       baseLayers: [
         { sound: 'scifi_tech', volume: 0.35 }
       ],
+      detailLayers: [
+        { sound: 'scifi_computer', volume: 0.2, chance: 0.4, cooldown: 12000 }
+      ],
+      isIndoors: true
+    },
+    airlock: {
+      name: 'Airlock',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_tech', volume: 0.4 }
+      ],
       detailLayers: [],
+      isIndoors: true
+    },
+    laboratory: {
+      name: 'Laboratory',
+      genres: ['scifi', 'modern', 'horror'],
+      baseLayers: [
+        { sound: 'scifi_tech', volume: 0.3 },
+        { sound: 'ambience_hospital', volume: 0.25 }
+      ],
+      detailLayers: [
+        { sound: 'scifi_computer', volume: 0.2, chance: 0.4, cooldown: 10000 }
+      ],
+      isIndoors: true
+    },
+    medbay: {
+      name: 'Medical Bay',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'ambience_hospital', volume: 0.35 },
+        { sound: 'scifi_tech', volume: 0.2 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    cryo_bay: {
+      name: 'Cryo Bay',
+      genres: ['scifi', 'horror'],
+      baseLayers: [
+        { sound: 'scifi_tech', volume: 0.35 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    hangar: {
+      name: 'Hangar Bay',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_engine', volume: 0.3 },
+        { sound: 'hydraulics_machinery', volume: 0.25 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    observation_deck: {
+      name: 'Observation Deck',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'scifi_tech', volume: 0.2 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    mess_hall: {
+      name: 'Mess Hall',
+      genres: ['scifi'],
+      baseLayers: [
+        { sound: 'ambience_inn', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.2, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    
+    // === CYBERPUNK SPECIFIC ===
+    hacker_den: {
+      name: 'Hacker Den',
+      genres: ['cyberpunk'],
+      baseLayers: [
+        { sound: 'scifi_computer', volume: 0.4 },
+        { sound: 'ambience_city_night', volume: 0.15 }
+      ],
+      detailLayers: [
+        { sound: 'scifi_tech', volume: 0.2, chance: 0.4, cooldown: 8000 }
+      ],
+      isIndoors: true
+    },
+    cyber_clinic: {
+      name: 'Cyber Clinic',
+      genres: ['cyberpunk'],
+      baseLayers: [
+        { sound: 'ambience_hospital', volume: 0.3 },
+        { sound: 'scifi_tech', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'hydraulics_machinery', volume: 0.2, chance: 0.3, cooldown: 12000 }
+      ],
+      isIndoors: true
+    },
+    megacorp: {
+      name: 'Megacorp Tower',
+      genres: ['cyberpunk'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.3 },
+        { sound: 'scifi_tech', volume: 0.2 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    slums: {
+      name: 'Slums',
+      genres: ['cyberpunk', 'post_apocalyptic'],
+      baseLayers: [
+        { sound: 'ambience_city_night', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.2, chance: 0.3 },
+        { sound: 'creature_rat', volume: 0.15, chance: 0.2, cooldown: 20000 }
+      ]
+    },
+    black_market: {
+      name: 'Black Market',
+      genres: ['cyberpunk', 'modern'],
+      baseLayers: [
+        { sound: 'ambience_market', volume: 0.35 },
+        { sound: 'ambience_city_night', volume: 0.2 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    arcade: {
+      name: 'Arcade',
+      genres: ['cyberpunk', 'modern'],
+      baseLayers: [
+        { sound: 'scifi_computer', volume: 0.4 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    noodle_shop: {
+      name: 'Noodle Shop',
+      genres: ['cyberpunk'],
+      baseLayers: [
+        { sound: 'ambience_inn', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    parking_garage: {
+      name: 'Parking Garage',
+      genres: ['modern', 'cyberpunk', 'horror'],
+      baseLayers: [
+        { sound: 'ambience_dungeon', volume: 0.25 }
+      ],
+      detailLayers: [
+        { sound: 'vehicle_car_engine', volume: 0.2, chance: 0.3, cooldown: 15000 }
+      ],
+      isIndoors: true
+    },
+    elevator: {
+      name: 'Elevator',
+      genres: ['modern', 'cyberpunk', 'scifi'],
+      baseLayers: [
+        { sound: 'hydraulics_machinery', volume: 0.3 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    penthouse: {
+      name: 'Penthouse',
+      genres: ['modern', 'cyberpunk'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.25 }
+      ],
+      detailLayers: [
+        { sound: 'weather_wind', volume: 0.15, chance: 0.3 }
+      ],
+      isIndoors: true
+    },
+    subway: {
+      name: 'Subway Station',
+      genres: ['modern', 'cyberpunk', 'horror'],
+      baseLayers: [
+        { sound: 'ambience_dungeon', volume: 0.3 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 },
+        { sound: 'train_horn', volume: 0.3, chance: 0.2, cooldown: 30000 }
+      ],
+      isIndoors: true
+    },
+    
+    // === HORROR SPECIFIC ===
+    abandoned_house: {
+      name: 'Abandoned House',
+      genres: ['horror'],
+      baseLayers: [
+        { sound: 'ambience_dungeon', volume: 0.3 }
+      ],
+      detailLayers: [
+        { sound: 'door_creaky', volume: 0.2, chance: 0.3, cooldown: 20000 },
+        { sound: 'weather_wind', volume: 0.2, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    asylum: {
+      name: 'Asylum',
+      genres: ['horror'],
+      baseLayers: [
+        { sound: 'ambience_hospital', volume: 0.3 },
+        { sound: 'ambience_dungeon', volume: 0.2 }
+      ],
+      detailLayers: [
+        { sound: 'creature_ghost', volume: 0.15, chance: 0.2, cooldown: 25000 }
+      ],
+      isIndoors: true
+    },
+    morgue: {
+      name: 'Morgue',
+      genres: ['horror', 'modern'],
+      baseLayers: [
+        { sound: 'ambience_hospital', volume: 0.25 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    catacombs: {
+      name: 'Catacombs',
+      genres: ['horror', 'medieval'],
+      baseLayers: [
+        { sound: 'ambience_dungeon', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'creature_ghost', volume: 0.15, chance: 0.2, cooldown: 20000 }
+      ],
+      isIndoors: true
+    },
+    
+    // === ADDITIONAL MODERN ===
+    apartment: {
+      name: 'Apartment',
+      genres: ['modern', 'horror'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.2 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    hotel: {
+      name: 'Hotel',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_inn', volume: 0.3 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    police_station: {
+      name: 'Police Station',
+      genres: ['modern', 'cyberpunk'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.3 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.2, chance: 0.3 }
+      ],
+      isIndoors: true
+    },
+    courthouse: {
+      name: 'Courthouse',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.25 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    airport: {
+      name: 'Airport',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_plaza', volume: 0.4 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.3, chance: 0.5 }
+      ],
+      isIndoors: true
+    },
+    train_station: {
+      name: 'Train Station',
+      genres: ['modern', 'western'],
+      baseLayers: [
+        { sound: 'ambience_plaza', volume: 0.35 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 },
+        { sound: 'train_horn', volume: 0.3, chance: 0.2, cooldown: 25000 }
+      ],
+      isIndoors: true
+    },
+    school: {
+      name: 'School',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_castle', volume: 0.25 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.25, chance: 0.4 }
+      ],
+      isIndoors: true
+    },
+    gym: {
+      name: 'Gym',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_plaza', volume: 0.3 }
+      ],
+      detailLayers: [],
+      isIndoors: true
+    },
+    museum: {
+      name: 'Museum',
+      genres: ['modern'],
+      baseLayers: [
+        { sound: 'ambience_library', volume: 0.3 }
+      ],
+      detailLayers: [
+        { sound: 'crowd_busy', volume: 0.15, chance: 0.3 }
+      ],
       isIndoors: true
     },
 
@@ -795,6 +1167,7 @@ class LocationAmbientManagerClass {
   // ═══════════════════════════════════════════════════════════
 
   private locationPatterns: Array<{ patterns: RegExp[]; location: string }> = [
+    // Classic/Fantasy locations
     { patterns: [/\benters?\s+(the\s+)?bar\b/i, /\bsteps?\s+into\s+(the\s+)?bar\b/i], location: 'bar' },
     { patterns: [/\benters?\s+(the\s+)?tavern\b/i, /\bsteps?\s+into\s+(the\s+)?tavern\b/i], location: 'tavern' },
     { patterns: [/\benters?\s+(the\s+)?restaurant\b/i], location: 'restaurant' },
@@ -802,20 +1175,70 @@ class LocationAmbientManagerClass {
     { patterns: [/\benters?\s+(the\s+)?hospital\b/i, /\barrives?\s+at\s+(the\s+)?hospital\b/i], location: 'hospital' },
     { patterns: [/\benters?\s+(the\s+)?warehouse\b/i], location: 'warehouse' },
     { patterns: [/\benters?\s+(the\s+)?factory\b/i], location: 'factory' },
-    { patterns: [/\benters?\s+(the\s+)?forest\b/i, /\bwalks?\s+into\s+(the\s+)?forest\b/i], location: 'forest_day' },
-    { patterns: [/\benters?\s+(the\s+)?cave\b/i], location: 'cave' },
-    { patterns: [/\bsteps?\s+outside\b/i, /\bwalks?\s+onto\s+(the\s+)?street\b/i], location: 'city_street' },
-    { patterns: [/\benters?\s+(the\s+)?alley\b/i, /\bsteps?\s+into\s+(the\s+)?alley\b/i], location: 'city_alley' },
-    { patterns: [/\benters?\s+(the\s+)?sewer\b/i, /\bclimbs?\s+into\s+(the\s+)?sewer\b/i], location: 'sewer' },
-    { patterns: [/\breaches?\s+(the\s+)?beach\b/i, /\barrives?\s+at\s+(the\s+)?beach\b/i], location: 'beach' },
+    { patterns: [/\benters?\s+(the\s+)?forest\b/i, /\bwalks?\s+into\s+(the\s+)?forest\b/i, /\bthrough\s+(the\s+)?woods\b/i], location: 'forest_day' },
+    { patterns: [/\benters?\s+(the\s+)?cave\b/i, /\bsteps?\s+into\s+(the\s+)?cavern\b/i], location: 'cave' },
+    { patterns: [/\bsteps?\s+outside\b/i, /\bwalks?\s+onto\s+(the\s+)?street\b/i, /\bon\s+(the\s+)?sidewalk\b/i], location: 'city_street' },
+    { patterns: [/\benters?\s+(the\s+)?alley\b/i, /\bsteps?\s+into\s+(the\s+)?alley\b/i, /\bdark\s+alley\b/i], location: 'city_alley' },
+    { patterns: [/\benters?\s+(the\s+)?sewer\b/i, /\bclimbs?\s+into\s+(the\s+)?sewer\b/i, /\bsewer\s+tunnel\b/i], location: 'sewer' },
+    { patterns: [/\breaches?\s+(the\s+)?beach\b/i, /\barrives?\s+at\s+(the\s+)?beach\b/i, /\bon\s+(the\s+)?shore\b/i], location: 'beach' },
     { patterns: [/\benters?\s+(the\s+)?graveyard\b/i, /\bwalks?\s+into\s+(the\s+)?cemetery\b/i], location: 'graveyard' },
-    { patterns: [/\benters?\s+(the\s+)?castle\b/i, /\barrives?\s+at\s+(the\s+)?castle\b/i], location: 'castle' },
-    { patterns: [/\benters?\s+(the\s+)?temple\b/i], location: 'temple' },
-    { patterns: [/\benters?\s+(the\s+)?marketplace\b/i, /\barrives?\s+at\s+(the\s+)?market\b/i], location: 'marketplace' },
-    { patterns: [/\benters?\s+(the\s+)?dungeon\b/i], location: 'dungeon' },
-    { patterns: [/\benters?\s+(the\s+)?ship\b/i, /\bboards?\s+(the\s+)?ship\b/i], location: 'ship_deck' },
-    { patterns: [/\benters?\s+(the\s+)?mine\b/i], location: 'mine' },
-    { patterns: [/\barrives?\s+at\s+(the\s+)?campfire\b/i, /\bsits?\s+by\s+(the\s+)?fire\b/i], location: 'campfire' }
+    { patterns: [/\benters?\s+(the\s+)?castle\b/i, /\barrives?\s+at\s+(the\s+)?castle\b/i, /\bcastle\s+gates?\b/i], location: 'castle' },
+    { patterns: [/\benters?\s+(the\s+)?temple\b/i, /\bsteps?\s+into\s+(the\s+)?shrine\b/i], location: 'temple' },
+    { patterns: [/\benters?\s+(the\s+)?marketplace\b/i, /\barrives?\s+at\s+(the\s+)?market\b/i, /\bbazaar\b/i], location: 'marketplace' },
+    { patterns: [/\benters?\s+(the\s+)?dungeon\b/i, /\bdescends?\s+into\s+(the\s+)?dungeon\b/i], location: 'dungeon' },
+    { patterns: [/\benters?\s+(the\s+)?ship\b/i, /\bboards?\s+(the\s+)?ship\b/i, /\bon\s+(the\s+)?deck\b/i], location: 'ship_deck' },
+    { patterns: [/\benters?\s+(the\s+)?mine\b/i, /\binto\s+(the\s+)?mineshaft\b/i], location: 'mine' },
+    { patterns: [/\barrives?\s+at\s+(the\s+)?campfire\b/i, /\bsits?\s+by\s+(the\s+)?fire\b/i, /\bcamp(site)?\b/i], location: 'campfire' },
+    { patterns: [/\benters?\s+(the\s+)?library\b/i, /\bsteps?\s+into\s+(the\s+)?library\b/i], location: 'library' },
+    { patterns: [/\benters?\s+(the\s+)?church\b/i, /\bsteps?\s+into\s+(the\s+)?chapel\b/i, /\bcathedral\b/i], location: 'church' },
+    { patterns: [/\benters?\s+(the\s+)?throne\s*room\b/i, /\bgreat\s+hall\b/i], location: 'throne_room' },
+    
+    // Sci-Fi locations
+    { patterns: [/\benters?\s+(the\s+)?spaceship\b/i, /\bboards?\s+(the\s+)?ship\b/i, /\baboard\s+(the\s+)?vessel\b/i, /\bstarship\b/i], location: 'spaceship' },
+    { patterns: [/\benters?\s+(the\s+)?bridge\b/i, /\bon\s+(the\s+)?bridge\b/i, /\bcommand\s+(deck|center)\b/i], location: 'spaceship_bridge' },
+    { patterns: [/\bengineering\b/i, /\bengine\s+room\b/i, /\breactor\s+room\b/i], location: 'spaceship_engineering' },
+    { patterns: [/\bcargo\s+(bay|hold)\b/i, /\bstorage\s+bay\b/i], location: 'cargo_bay' },
+    { patterns: [/\bspace\s+station\b/i, /\borbital\s+station\b/i, /\bstation\s+deck\b/i, /\bdocking\s+bay\b/i], location: 'space_station' },
+    { patterns: [/\benters?\s+(the\s+)?airlock\b/i, /\bairlock\s+chamber\b/i], location: 'airlock' },
+    { patterns: [/\benters?\s+(the\s+)?lab(oratory)?\b/i, /\bresearch\s+(lab|facility)\b/i, /\bscience\s+lab\b/i], location: 'laboratory' },
+    { patterns: [/\bmedical\s+bay\b/i, /\bmedbay\b/i, /\bsick\s*bay\b/i, /\binfirmary\b/i], location: 'medbay' },
+    { patterns: [/\bcryogenic\b/i, /\bcryo\s*(pod|chamber|bay)\b/i, /\bstasis\s+chamber\b/i], location: 'cryo_bay' },
+    { patterns: [/\bhangar\s*(bay)?\b/i, /\blanding\s+bay\b/i, /\bflight\s+deck\b/i], location: 'hangar' },
+    { patterns: [/\bobservation\s+(deck|lounge)\b/i, /\bviewing\s+deck\b/i], location: 'observation_deck' },
+    { patterns: [/\bmess\s+hall\b/i, /\bcantina\b/i, /\bcrew\s+quarters\b/i], location: 'mess_hall' },
+    
+    // Cyberpunk locations
+    { patterns: [/\benters?\s+(the\s+)?nightclub\b/i, /\bsteps?\s+into\s+(the\s+)?club\b/i, /\bneon\s+club\b/i, /\brave\b/i], location: 'nightclub' },
+    { patterns: [/\bon\s+(the\s+)?rooftop\b/i, /\bclimbs?\s+to\s+(the\s+)?roof\b/i, /\brooftop\s+garden\b/i], location: 'rooftop' },
+    { patterns: [/\benters?\s+(the\s+)?subway\b/i, /\bmetro\s+station\b/i, /\bunderground\s+station\b/i, /\bsubway\s+platform\b/i], location: 'subway' },
+    { patterns: [/\bhacker\s*(den|lair|hideout)\b/i, /\bnet\s*runner\b/i, /\bserver\s+room\b/i], location: 'hacker_den' },
+    { patterns: [/\bcyber\s*(clinic|doc)\b/i, /\bripperdoc\b/i, /\bchop\s+shop\b/i, /\baugmentation\s+clinic\b/i], location: 'cyber_clinic' },
+    { patterns: [/\bmegacorp\b/i, /\bcorporate\s+(tower|lobby|office)\b/i, /\bexecutive\s+floor\b/i], location: 'megacorp' },
+    { patterns: [/\bslums?\b/i, /\bshanty\s*town\b/i, /\bundercity\b/i, /\blower\s+levels?\b/i], location: 'slums' },
+    { patterns: [/\bblack\s+market\b/i, /\bunderground\s+market\b/i, /\billegal\s+market\b/i], location: 'black_market' },
+    { patterns: [/\barcade\b/i, /\bvr\s*(lounge|parlor|den)\b/i, /\bsim\s*sense\b/i], location: 'arcade' },
+    { patterns: [/\bnoodle\s+(shop|stand|bar)\b/i, /\bramen\s+shop\b/i, /\bstreet\s+food\b/i], location: 'noodle_shop' },
+    { patterns: [/\bparking\s+garage\b/i, /\bunderground\s+parking\b/i, /\bparking\s+structure\b/i], location: 'parking_garage' },
+    { patterns: [/\benters?\s+(the\s+)?elevator\b/i, /\blift\s+shaft\b/i], location: 'elevator' },
+    { patterns: [/\bpenthouse\b/i, /\bluxury\s+apartment\b/i, /\bsky\s*rise\b/i], location: 'penthouse' },
+    
+    // Horror locations
+    { patterns: [/\babandoned\s+(house|building|mansion)\b/i, /\bhaunted\s+house\b/i], location: 'abandoned_house' },
+    { patterns: [/\basylum\b/i, /\bmental\s+(hospital|institution)\b/i, /\bsanatorium\b/i], location: 'asylum' },
+    { patterns: [/\bmorgue\b/i, /\bautopsy\s+room\b/i, /\bfuneral\s+home\b/i], location: 'morgue' },
+    { patterns: [/\bcatacombs?\b/i, /\bbone\s+pit\b/i, /\bossuary\b/i], location: 'catacombs' },
+    
+    // Modern locations
+    { patterns: [/\benters?\s+(the\s+)?apartment\b/i, /\bsteps?\s+into\s+(the\s+)?flat\b/i], location: 'apartment' },
+    { patterns: [/\benters?\s+(the\s+)?hotel\b/i, /\bhotel\s+(room|lobby)\b/i, /\bmotel\b/i], location: 'hotel' },
+    { patterns: [/\bpolice\s+station\b/i, /\bprecinct\b/i, /\bcop\s+shop\b/i], location: 'police_station' },
+    { patterns: [/\bcourt\s*(house|room)\b/i, /\btribunal\b/i], location: 'courthouse' },
+    { patterns: [/\bprison\b/i, /\bjail\s*(cell)?\b/i, /\bdetention\s+center\b/i], location: 'prison' },
+    { patterns: [/\bairport\b/i, /\bterminal\b/i, /\bflight\s+gate\b/i], location: 'airport' },
+    { patterns: [/\btrain\s+station\b/i, /\brailway\s+station\b/i, /\bplatform\b/i], location: 'train_station' },
+    { patterns: [/\bschool\b/i, /\bclassroom\b/i, /\bcollege\b/i, /\buniversity\b/i], location: 'school' },
+    { patterns: [/\bgym\b/i, /\bfitness\s+center\b/i, /\bworkout\b/i], location: 'gym' },
+    { patterns: [/\bmuseum\b/i, /\bgallery\b/i, /\bexhibit\b/i], location: 'museum' }
   ];
 
   detectLocation(text: string): string | null {
