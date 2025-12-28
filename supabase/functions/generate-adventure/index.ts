@@ -127,6 +127,16 @@ interface MemoryBiteContext {
   }>;
 }
 
+// ============= WEATHER CONTEXT - Story/UI sync =============
+
+interface WeatherContext {
+  current: string;                    // Weather type (clear, rain, storm, etc.)
+  intensity: string;                  // mild, moderate, intense
+  name: string;                       // Display name
+  narrativeContext: string;           // Pre-built narrative description
+  effects: string;                    // Gameplay effects description
+}
+
 // ============= NEW: SIGNATURE DETAILS, FAIL-FORWARD, 3-METER RELATIONSHIPS =============
 
 interface SignatureDetailContext {
@@ -248,6 +258,8 @@ interface AdventureRequest {
   voiceSignatureContext?: VoiceSignatureContext;
   // NEW: Storied Loot - Items with history, not just stats
   storiedLootEnabled?: boolean;
+  // WEATHER CONTEXT - Ensures story narrative matches displayed weather
+  weatherContext?: WeatherContext;
 }
 
 // ============= NEW: MICRO-EVENTS, VOICE SIGNATURES, STORIED LOOT =============
@@ -569,7 +581,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, storiedLootEnabled, weatherContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -594,6 +606,23 @@ CRITICAL: You MUST stay within this genre contract.
 - Use the ESCALATION MENU to raise stakes appropriately
 - Adapt your vocabulary, tone, and elements to match the genre
 - If you need to increase drama, choose from the escalation options, NOT from other genres`;
+    }
+    
+    // === WEATHER CONTEXT - CRITICAL FOR UI SYNC ===
+    if (weatherContext) {
+      systemContent += `\n\n=== CURRENT WEATHER (MUST MATCH UI DISPLAY) ===
+CURRENT WEATHER: ${weatherContext.name} (${weatherContext.intensity})
+
+${weatherContext.narrativeContext}
+
+${weatherContext.effects}
+
+CRITICAL WEATHER RULES:
+- ALWAYS describe weather consistently with the above
+- If rain is shown in the UI, describe rain in the story
+- If clear skies are shown, describe clear skies
+- Weather affects visibility, NPC behavior, and atmosphere
+- Never contradict the displayed weather with different conditions`;
     }
     
     // === DICE MODE INSTRUCTIONS ===

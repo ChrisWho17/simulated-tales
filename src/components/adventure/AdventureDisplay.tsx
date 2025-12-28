@@ -135,6 +135,9 @@ interface AdventureDisplayProps {
   currentMood?: CoreMoodType;
   moodHistory?: MoodLogEntry[];
   onMoodChange?: (mood: CoreMoodType) => void;
+  // Weather state lifted from parent for AI sync
+  weatherState?: WeatherState;
+  onWeatherStateChange?: (state: WeatherState) => void;
 }
 
 export function AdventureDisplay({
@@ -159,6 +162,8 @@ export function AdventureDisplay({
   currentMood = 'neutral',
   moodHistory = [],
   onMoodChange,
+  weatherState: externalWeatherState,
+  onWeatherStateChange,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -192,7 +197,21 @@ export function AdventureDisplay({
   const [showCheckSelfModal, setShowCheckSelfModal] = useState(false);
   const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
   const [showWeatherModal, setShowWeatherModal] = useState(false);
-  const [weatherState, setWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
+  
+  // Weather state - use external if provided, otherwise manage locally
+  const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
+  const weatherState = externalWeatherState ?? localWeatherState;
+  const setWeatherState = useCallback((newState: WeatherState | ((prev: WeatherState) => WeatherState)) => {
+    if (onWeatherStateChange) {
+      if (typeof newState === 'function') {
+        onWeatherStateChange(newState(weatherState));
+      } else {
+        onWeatherStateChange(newState);
+      }
+    } else {
+      setLocalWeatherState(newState as any);
+    }
+  }, [onWeatherStateChange, weatherState]);
   const weatherTickRef = useRef(0);
   
   const gameContext = useGameOptional();
