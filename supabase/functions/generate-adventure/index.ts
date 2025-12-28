@@ -351,6 +351,26 @@ ITEM ACQUISITION RULES:
 - Narrate the acquisition naturally, don't mention the tag
 - For currency, prefer [GOLD:amount] over [LOOT:coins]
 
+CRITICAL - ITEM REMOVAL SYSTEM:
+When the player discards, leaves behind, drops, loses, sells, gives away, or has an item taken from them, you MUST include:
+[DROP:item name]
+
+This is MANDATORY for items to be removed from inventory. Without this tag, items are NOT removed!
+
+EXAMPLES:
+- "I leave my guitar behind" → Narrate leaving it AND include [DROP:Guitar]
+- "I drop the torch" → Narrate dropping it AND include [DROP:Torch]
+- "I give the amulet to the merchant" → Include [DROP:Amulet]
+- "I sell my sword" → Include [DROP:Sword] AND [GOLD:amount received]
+- Player disguises themselves and AI decides equipment is too conspicuous → Include [DROP:ItemName] for each stashed item
+
+ITEM REMOVAL RULES:
+- Use [DROP:ItemName] for EVERY item the player loses, discards, or stores elsewhere
+- Match the item name exactly as it appears in the inventory
+- If YOU (the AI) decide the player should leave something behind for story reasons, ALWAYS use [DROP:]
+- When items are stashed or left temporarily, include WHERE in the narrative so player can retrieve later
+- CRITICAL: If you narrate leaving an item behind, YOU MUST include [DROP:] or it will still be in inventory!
+
 CHAPTER SYSTEM:
 - Mark chapter endings with [CHAPTER_END] when a major story arc concludes
 - Chapter endings should feel earned - after boss defeats, major revelations, completing significant quests
@@ -1360,6 +1380,13 @@ Write what happens as a result of this action. Transform it into evocative prose
       allLoot.push(match[1]);
     }
     
+    // Parse ALL dropped/discarded items (NEW - fixes item duplication bug)
+    const dropMatches = [...narrative.matchAll(/\[DROP:([^\]]+)\]/g)];
+    const droppedItems: string[] = [];
+    for (const match of dropMatches) {
+      droppedItems.push(match[1]);
+    }
+    
     // Parse ALL skill improvements
     const skillMatches = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)];
     const skillImprovements: Array<{ skill: string; amount: number; reason: string }> = [];
@@ -1413,6 +1440,7 @@ Write what happens as a result of this action. Transform it into evocative prose
       .replace(/\[CHAPTER_END\]/g, '')
       .replace(/\[GOLD:\d+\]/g, '')
       .replace(/\[LOOT:[^\]]+\]/g, '')
+      .replace(/\[DROP:[^\]]+\]/g, '')  // Clean dropped item tags
       .replace(/\[SKILL:[^\]]+\]/g, '')
       .replace(/\[DAMAGE:\d+\]/g, '')
       .replace(/\[HEAL:\d+\]/g, '')
@@ -1442,6 +1470,9 @@ Write what happens as a result of this action. Transform it into evocative prose
     }
     if (allLoot.length > 0) {
       mechanics.lootGained = allLoot;
+    }
+    if (droppedItems.length > 0) {
+      mechanics.itemsDropped = droppedItems;
     }
     if (skillImprovements.length > 0) {
       mechanics.skillImprovements = skillImprovements;
