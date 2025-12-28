@@ -214,14 +214,23 @@ export function tickWeather(state: WeatherState, currentTick: number): WeatherSt
   return newState;
 }
 
-export function forceWeather(state: WeatherState, weather: WeatherType, currentTick: number): WeatherState {
+export function forceWeather(
+  state: WeatherState, 
+  weather: WeatherType, 
+  currentTick: number,
+  manualIntensity?: number
+): WeatherState {
   const duration = rollDuration(weather);
+  // Convert 1-3 intensity to 0.3-1.5 range, or use random if not specified
+  const intensity = manualIntensity 
+    ? 0.3 + ((manualIntensity - 1) / 2) * 1.2
+    : 0.5 + Math.random() * 1.0;
   return {
     ...state,
     current: weather,
     ticksRemaining: duration,
     totalDuration: duration,
-    intensity: 0.5 + Math.random() * 1.0,
+    intensity,
     transitioningTo: null,
     transitionProgress: 0,
     history: [

@@ -210,6 +210,7 @@ export function AdventureDisplay({
   const weatherEnabled = gameContext?.settings?.enableWeatherEffects ?? true;
   const weatherMode = gameContext?.settings?.weatherMode ?? 'auto';
   const manualWeatherType = gameContext?.settings?.manualWeatherType as WeatherType | undefined;
+  const manualWeatherIntensity = gameContext?.settings?.manualWeatherIntensity;
   const showWeatherParticles = gameContext?.settings?.showWeatherParticles ?? true;
   const enableWeatherSounds = gameContext?.settings?.audioSettings?.enableWeatherSounds ?? true;
   const enableStorySounds = gameContext?.settings?.audioSettings?.enableStorySounds ?? true;
@@ -283,12 +284,20 @@ export function AdventureDisplay({
     return () => viewport.removeEventListener('scroll', handleScroll);
   }, [checkIfAtBottom]);
 
-  // Handle manual weather mode
+  // Handle manual weather mode - update when weather type or intensity changes
   useEffect(() => {
-    if (weatherMode === 'manual' && manualWeatherType && weatherState.current !== manualWeatherType) {
-      setWeatherState(prev => forceWeather(prev, manualWeatherType, weatherTickRef.current));
+    if (weatherMode === 'manual' && manualWeatherType) {
+      // Always update when in manual mode to reflect intensity changes
+      const currentIntensity = manualWeatherIntensity ?? 2;
+      const targetIntensity = 0.3 + ((currentIntensity - 1) / 2) * 1.2;
+      const needsUpdate = weatherState.current !== manualWeatherType || 
+                          Math.abs(weatherState.intensity - targetIntensity) > 0.1;
+      
+      if (needsUpdate) {
+        setWeatherState(prev => forceWeather(prev, manualWeatherType, weatherTickRef.current, manualWeatherIntensity));
+      }
     }
-  }, [weatherMode, manualWeatherType, weatherState.current]);
+  }, [weatherMode, manualWeatherType, manualWeatherIntensity, weatherState.current, weatherState.intensity]);
 
   // Detect new content when story updates and tick weather (only in auto mode)
   useEffect(() => {
