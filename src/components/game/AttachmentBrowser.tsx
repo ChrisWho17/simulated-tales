@@ -261,15 +261,15 @@ function AttachmentCard({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full h-7 text-xs opacity-50"
-                  disabled
+                  className="w-full h-7 text-xs border-amber-500/30 text-amber-400"
+                  onClick={onEquip}
                 >
-                  <Lock className="h-3 w-3 mr-1" />
-                  Locked
+                  <Hammer className="h-3 w-3 mr-1" />
+                  Craft / Find
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">Find or craft this attachment to equip</p>
+                <p className="text-xs">Craft this attachment or find it in the world</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

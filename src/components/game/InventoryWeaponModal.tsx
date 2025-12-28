@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Eye,
   Sparkles,
+  Hammer,
+  Package,
 } from 'lucide-react';
 import { WeaponStatsPanel } from './WeaponStatsPanel';
 import { WeaponConditionDisplay, WeaponConditionBadge } from './WeaponConditionDisplay';
@@ -235,10 +237,10 @@ export function InventoryWeaponModal({
         
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="w-full grid grid-cols-2 mx-4 mt-2" style={{ width: 'calc(100% - 2rem)' }}>
+          <TabsList className="w-full grid grid-cols-3 mx-4 mt-2" style={{ width: 'calc(100% - 2rem)' }}>
             <TabsTrigger value="stats" className="text-xs">
               <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-              Statistics
+              Stats
             </TabsTrigger>
             <TabsTrigger value="attachments" className="text-xs">
               <Settings2 className="h-3.5 w-3.5 mr-1.5" />
@@ -248,6 +250,10 @@ export function InventoryWeaponModal({
                   {Object.keys(attachments).length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="crafting" className="text-xs">
+              <Hammer className="h-3.5 w-3.5 mr-1.5" />
+              Crafting
             </TabsTrigger>
           </TabsList>
           
@@ -322,6 +328,56 @@ export function InventoryWeaponModal({
                     Modify Attachments
                   </Button>
                 )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          
+          {/* Crafting Tab */}
+          <TabsContent value="crafting" className="flex-1 overflow-hidden mt-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-4">
+                <div className="text-center py-6">
+                  <Hammer className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <h4 className="text-sm font-medium">Attachment Crafting</h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                    {cheatModeEnabled 
+                      ? "Cheat mode enabled - all attachments are unlocked!"
+                      : "Find materials in the world or loot enemies to craft attachments."
+                    }
+                  </p>
+                  
+                  {!cheatModeEnabled && (
+                    <div className="mt-4 p-3 rounded-lg bg-muted/30 border border-border/50 text-left">
+                      <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                        How to Unlock Attachments
+                      </h5>
+                      <ul className="text-xs text-muted-foreground space-y-1.5">
+                        <li className="flex items-start gap-2">
+                          <Package className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>Search containers and loot caches for parts</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Wrench className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>Find crafting materials to build attachments</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Eye className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>Discover pre-made attachments in armories</span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => setAttachmentBrowserOpen(true)}
+                  >
+                    <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                    Browse All Attachments
+                  </Button>
+                </div>
               </div>
             </ScrollArea>
           </TabsContent>
