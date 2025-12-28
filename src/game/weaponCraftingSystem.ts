@@ -478,13 +478,228 @@ export function fullServiceWeapon(weapon: GunNutWeapon, quality: 'basic' | 'stan
   };
 }
 
+// ============= ATTACHMENT UNLOCK SYSTEM =============
+
+export interface LootSource {
+  id: string;
+  name: string;
+  description: string;
+  attachmentDrops: { 
+    attachmentId: string; 
+    slot: string;
+    dropChance: number; // 0-100
+  }[];
+  materialDrops: {
+    materialId: string;
+    dropChance: number;
+    minQuantity: number;
+    maxQuantity: number;
+  }[];
+}
+
+export const LOOT_SOURCES: LootSource[] = [
+  {
+    id: 'military_crate',
+    name: 'Military Supply Crate',
+    description: 'Standard military equipment cache',
+    attachmentDrops: [
+      { attachmentId: 'flash_hider', slot: 'muzzle', dropChance: 25 },
+      { attachmentId: 'compensator', slot: 'muzzle', dropChance: 15 },
+      { attachmentId: 'red_dot', slot: 'optic', dropChance: 20 },
+      { attachmentId: 'foregrip_vertical', slot: 'tactical_rail_bottom', dropChance: 20 },
+      { attachmentId: 'extended_mag', slot: 'magazine', dropChance: 15 },
+    ],
+    materialDrops: [
+      { materialId: 'steel_scrap', dropChance: 60, minQuantity: 2, maxQuantity: 5 },
+      { materialId: 'polymer_block', dropChance: 40, minQuantity: 1, maxQuantity: 3 },
+      { materialId: 'spring_steel', dropChance: 30, minQuantity: 1, maxQuantity: 2 },
+    ],
+  },
+  {
+    id: 'armory_locker',
+    name: 'Armory Locker',
+    description: 'Secured weapon storage facility',
+    attachmentDrops: [
+      { attachmentId: 'suppressor_small', slot: 'muzzle', dropChance: 15 },
+      { attachmentId: 'muzzle_brake', slot: 'muzzle', dropChance: 20 },
+      { attachmentId: 'acog_4x', slot: 'optic', dropChance: 12 },
+      { attachmentId: 'precision_stock', slot: 'stock', dropChance: 10 },
+    ],
+    materialDrops: [
+      { materialId: 'gas_block', dropChance: 50, minQuantity: 1, maxQuantity: 2 },
+      { materialId: 'aluminum_scrap', dropChance: 40, minQuantity: 1, maxQuantity: 4 },
+      { materialId: 'threading_die', dropChance: 25, minQuantity: 1, maxQuantity: 1 },
+    ],
+  },
+  {
+    id: 'abandoned_workshop',
+    name: 'Abandoned Workshop',
+    description: 'Old gunsmith workshop with scattered parts',
+    attachmentDrops: [
+      { attachmentId: 'ergonomic_grip', slot: 'grip', dropChance: 30 },
+      { attachmentId: 'rubberized_grip', slot: 'grip', dropChance: 25 },
+      { attachmentId: 'collapsible_stock', slot: 'stock', dropChance: 15 },
+    ],
+    materialDrops: [
+      { materialId: 'steel_scrap', dropChance: 70, minQuantity: 3, maxQuantity: 8 },
+      { materialId: 'rubber_grip', dropChance: 50, minQuantity: 2, maxQuantity: 5 },
+      { materialId: 'spring_steel', dropChance: 45, minQuantity: 2, maxQuantity: 4 },
+      { materialId: 'gun_oil', dropChance: 60, minQuantity: 1, maxQuantity: 2 },
+    ],
+  },
+  {
+    id: 'defeated_enemy',
+    name: 'Enemy Combatant',
+    description: 'Loot from defeated enemy',
+    attachmentDrops: [
+      { attachmentId: 'flash_hider', slot: 'muzzle', dropChance: 10 },
+      { attachmentId: 'red_dot', slot: 'optic', dropChance: 8 },
+      { attachmentId: 'standard_grip', slot: 'grip', dropChance: 15 },
+    ],
+    materialDrops: [
+      { materialId: 'steel_scrap', dropChance: 50, minQuantity: 1, maxQuantity: 3 },
+      { materialId: 'polymer_block', dropChance: 30, minQuantity: 1, maxQuantity: 2 },
+    ],
+  },
+];
+
+// Attachment recipes for the unlock system
+export const ATTACHMENT_CRAFT_RECIPES: Record<string, { materials: Record<string, number>; successRate: number }> = {
+  flash_hider: { materials: { steel_tube: 1 }, successRate: 95 },
+  compensator: { materials: { steel_tube: 1, steel_scrap: 1 }, successRate: 85 },
+  muzzle_brake: { materials: { steel_tube: 1, steel_plate: 1 }, successRate: 80 },
+  suppressor_small: { materials: { aluminum_scrap: 3, rubber_grip: 2, steel_tube: 1 }, successRate: 70 },
+  suppressor_large: { materials: { aluminum_scrap: 5, rubber_grip: 3, steel_tube: 2 }, successRate: 60 },
+  red_dot: { materials: { aluminum_scrap: 2, steel_scrap: 1 }, successRate: 75 },
+  holographic: { materials: { aluminum_scrap: 3, steel_scrap: 2 }, successRate: 70 },
+  acog_4x: { materials: { aluminum_scrap: 2, gas_block: 1 }, successRate: 65 },
+  sniper_scope: { materials: { aluminum_scrap: 4, gas_block: 2 }, successRate: 50 },
+  standard_grip: { materials: { polymer_block: 2 }, successRate: 98 },
+  ergonomic_grip: { materials: { polymer_block: 3, rubber_grip: 2 }, successRate: 90 },
+  rubberized_grip: { materials: { rubber_grip: 4 }, successRate: 95 },
+  fixed_stock: { materials: { polymer_block: 4, steel_scrap: 2 }, successRate: 85 },
+  collapsible_stock: { materials: { polymer_block: 3, steel_scrap: 3, spring_steel: 2 }, successRate: 75 },
+  folding_stock: { materials: { polymer_block: 2, steel_scrap: 4, gas_block: 1 }, successRate: 75 },
+  precision_stock: { materials: { aluminum_scrap: 3, polymer_block: 2 }, successRate: 60 },
+  extended_mag: { materials: { steel_scrap: 3, spring_steel: 2 }, successRate: 85 },
+  drum_mag: { materials: { steel_scrap: 6, spring_steel: 4, gas_block: 1 }, successRate: 65 },
+  foregrip_vertical: { materials: { polymer_block: 3, steel_scrap: 1 }, successRate: 90 },
+  foregrip_angled: { materials: { polymer_block: 4, aluminum_scrap: 1 }, successRate: 85 },
+  bipod: { materials: { aluminum_scrap: 4, spring_steel: 2, steel_scrap: 2 }, successRate: 75 },
+  flashlight: { materials: { aluminum_scrap: 2 }, successRate: 90 },
+  laser_red: { materials: { aluminum_scrap: 2, steel_scrap: 1 }, successRate: 75 },
+  laser_green: { materials: { aluminum_scrap: 3, steel_scrap: 1 }, successRate: 70 },
+};
+
+/**
+ * Check if player can craft an attachment
+ */
+export function canCraftAttachment(
+  attachmentId: string,
+  availableMaterials: Record<string, number>
+): { canCraft: boolean; missing: { material: string; needed: number; have: number }[] } {
+  const recipe = ATTACHMENT_CRAFT_RECIPES[attachmentId];
+  if (!recipe) {
+    return { canCraft: false, missing: [] };
+  }
+
+  const missing: { material: string; needed: number; have: number }[] = [];
+  
+  for (const [mat, amount] of Object.entries(recipe.materials)) {
+    const have = availableMaterials[mat] || 0;
+    if (have < amount) {
+      missing.push({ material: mat, needed: amount, have });
+    }
+  }
+
+  return { canCraft: missing.length === 0, missing };
+}
+
+/**
+ * Attempt to craft an attachment
+ */
+export function craftAttachment(
+  attachmentId: string,
+  availableMaterials: Record<string, number>
+): { success: boolean; materialsConsumed?: Record<string, number>; failReason?: string } {
+  const { canCraft } = canCraftAttachment(attachmentId, availableMaterials);
+  if (!canCraft) {
+    return { success: false, failReason: 'missing_materials' };
+  }
+
+  const recipe = ATTACHMENT_CRAFT_RECIPES[attachmentId];
+  
+  // Consume materials
+  const consumed: Record<string, number> = {};
+  for (const [mat, amount] of Object.entries(recipe.materials)) {
+    availableMaterials[mat] = (availableMaterials[mat] || 0) - amount;
+    consumed[mat] = amount;
+  }
+
+  // Check success rate
+  const roll = Math.random() * 100;
+  if (roll > recipe.successRate) {
+    return { success: false, materialsConsumed: consumed, failReason: 'craft_failed' };
+  }
+
+  return { success: true, materialsConsumed: consumed };
+}
+
+/**
+ * Generate loot from a source
+ */
+export function generateLoot(sourceId: string): {
+  attachments: { id: string; slot: string }[];
+  materials: { id: string; quantity: number }[];
+} {
+  const source = LOOT_SOURCES.find(s => s.id === sourceId);
+  if (!source) {
+    return { attachments: [], materials: [] };
+  }
+
+  const attachments: { id: string; slot: string }[] = [];
+  const materials: { id: string; quantity: number }[] = [];
+
+  // Roll for attachments
+  source.attachmentDrops.forEach(drop => {
+    if (Math.random() * 100 < drop.dropChance) {
+      attachments.push({ id: drop.attachmentId, slot: drop.slot });
+    }
+  });
+
+  // Roll for materials
+  source.materialDrops.forEach(drop => {
+    if (Math.random() * 100 < drop.dropChance) {
+      const quantity = Math.floor(
+        Math.random() * (drop.maxQuantity - drop.minQuantity + 1) + drop.minQuantity
+      );
+      materials.push({ id: drop.materialId, quantity });
+    }
+  });
+
+  return { attachments, materials };
+}
+
+/**
+ * Get attachment unlock key
+ */
+export function getAttachmentKey(attachmentId: string, slot: string): string {
+  return `${slot}:${attachmentId}`;
+}
+
 export default {
   MATERIALS,
   TOOLS,
   CRAFTING_RECIPES,
   REPAIR_RECIPES,
+  LOOT_SOURCES,
+  ATTACHMENT_CRAFT_RECIPES,
   attemptCraft,
   attemptRepair,
   fieldCleanWeapon,
   fullServiceWeapon,
+  canCraftAttachment,
+  craftAttachment,
+  generateLoot,
+  getAttachmentKey,
 };
