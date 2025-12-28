@@ -459,6 +459,23 @@ const NEVER_LINK_WORDS = new Set([
   'chamber', 'room', 'door', 'wall', 'floor', 'light', 'dark', 'shadow', 'fire', 'water',
   'night', 'day', 'time', 'place', 'way', 'man', 'woman', 'thing', 'hand', 'eye', 'eyes',
   'rain', 'wind', 'sky', 'air', 'city', 'street', 'alley', 'crowd', 'voice', 'sound',
+  
+  // Cyberpunk/Sci-fi common words (NOT character names)
+  'static', 'glitch', 'neon', 'chrome', 'razor', 'zero', 'grind', 'surge',
+  'pulse', 'signal', 'voltage', 'current', 'flux', 'data', 'code', 'grid',
+  'matrix', 'network', 'system', 'protocol', 'hack', 'breach', 'scan',
+  
+  // Body parts and senses (often appear with "your")
+  'vision', 'sight', 'gaze', 'hearing', 'touch', 'smell', 'taste',
+  'skin', 'bone', 'bones', 'muscle', 'muscles', 'nerve', 'nerves',
+  'finger', 'fingers', 'arm', 'arms', 'leg', 'legs', 'foot', 'feet',
+  'back', 'chest', 'head', 'face', 'mouth', 'nose', 'ear', 'ears',
+  'throat', 'neck', 'shoulder', 'shoulders', 'wrist', 'wrists', 'ankle', 'ankles',
+  
+  // Common narrative phrases that look like names
+  'moment', 'moments', 'breath', 'breaths', 'step', 'steps', 'move', 'moves',
+  'edge', 'corner', 'center', 'centre', 'side', 'sides', 'front',
+  'target', 'objective', 'mission', 'task', 'goal', 'purpose',
   // Short words that are never names
   'up', 'down', 'out', 'into', 'over', 'under', 'about', 'after', 'before', 'between',
   
@@ -694,8 +711,20 @@ function isLegitimateNPCName(name: string): boolean {
   // Must be properly capitalized (start with capital)
   if (!/^[A-Z]/.test(name)) return false;
   
+  // Reject phrases that start with "Your" - these are possessive, not names
+  // e.g., "Your vision", "Your hands"
+  if (/^your\s+/i.test(name)) return false;
+  
   // Name should be at least 3 chars
   return name.length >= 3;
+}
+
+// Check if text at a position is preceded by "your " (possessive context)
+function isPrecededByPossessive(text: string, matchIndex: number): boolean {
+  if (matchIndex < 5) return false;
+  const beforeText = text.slice(Math.max(0, matchIndex - 10), matchIndex).toLowerCase();
+  // Check for possessive pronouns immediately before
+  return /(?:your|my|his|her|its|their|our)\s+$/i.test(beforeText);
 }
 
 // Check if an NPC ID looks like a real registered NPC (not auto-generated from a common word)
@@ -1103,7 +1132,11 @@ export function parseTextForNPCLinks(
         entry => entry.type === 'npc' && entry.name === matchedLower
       );
       
-      if (matchingEntry?.npc) {
+      // CRITICAL: Skip NPC linking if preceded by possessive pronoun
+      // This prevents "your vision", "his hand", etc. from becoming NPC links
+      const isPossessiveContext = isPrecededByPossessive(text, match.index);
+      
+      if (matchingEntry?.npc && !isPossessiveContext) {
         result.push(
           <NPCNameLink
             key={`${keyPrefix}-npc-${match.index}`}
