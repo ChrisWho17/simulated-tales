@@ -337,7 +337,62 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   return nameMap;
 }
 
+// Common words that should NEVER be linked as NPCs (pronouns, common nouns, etc.)
+const NEVER_LINK_WORDS = new Set([
+  'it', 'she', 'he', 'they', 'we', 'you', 'i', 'me', 'her', 'him', 'them', 'us',
+  'this', 'that', 'these', 'those', 'who', 'what', 'which', 'where', 'when', 'why', 'how',
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+  'echo', 'vow', 'soul', 'death', 'life', 'love', 'hate', 'fear', 'hope', 'rage', 'fury',
+  'chamber', 'room', 'door', 'wall', 'floor', 'light', 'dark', 'shadow', 'fire', 'water',
+]);
+
+// Check if an NPC ID looks like a real registered NPC (not auto-generated from a common word)
+function isValidNPCId(npcId: string): boolean {
+  if (!npcId) return false;
+  
+  // Valid NPC IDs should be longer than 3 characters and contain meaningful prefixes
+  // Auto-registered NPCs from the registry have UUIDs or structured IDs
+  // Reject IDs that are just lowercase common words
+  const idLower = npcId.toLowerCase();
+  
+  // Reject if the ID is just a common word
+  if (NEVER_LINK_WORDS.has(idLower)) return false;
+  
+  // Reject very short IDs (likely auto-generated from pronouns)
+  if (npcId.length <= 3) return false;
+  
+  // Accept IDs with underscores or hyphens (structured IDs)
+  if (npcId.includes('_') || npcId.includes('-')) return true;
+  
+  // Accept IDs that look like UUIDs
+  if (/^[a-f0-9]{8,}/.test(idLower)) return true;
+  
+  // Accept properly capitalized names (at least 2 capital letters or multi-word)
+  if (/[A-Z].*[A-Z]/.test(npcId) || npcId.includes(' ')) return true;
+  
+  // Accept if it has at least 5 characters (reasonable name length)
+  if (npcId.length >= 5) return true;
+  
+  return false;
+}
+
+// Helper to check if an NPC should be linked
+function shouldLinkNPC(npc: RegisteredNPC): boolean {
+  // Must have a valid permanent ID
+  if (!npc.permanent?.id) return false;
+  
+  // Check if the ID is valid
+  if (!isValidNPCId(npc.permanent.id)) return false;
+  
+  // The name itself shouldn't be a common word
+  if (NEVER_LINK_WORDS.has(npc.permanent.name.toLowerCase())) return false;
+  
+  return true;
+}
+
 // Helper to register a dialogue speaker as an NPC if not already registered
+// Only registers if it looks like a real NPC name, not common words
 function registerDialogueSpeaker(
   speakerName: string, 
   npcNameMap: Map<string, RegisteredNPC>,
@@ -345,15 +400,21 @@ function registerDialogueSpeaker(
 ): void {
   const speakerLower = speakerName.toLowerCase();
   
+  // Skip common words that should never be NPCs
+  if (NEVER_LINK_WORDS.has(speakerLower)) return;
+  
   // Skip if it's the player name
   if (playerName && speakerLower === playerName.toLowerCase()) return;
   
   // Skip if already in local map
   if (npcNameMap.has(speakerLower)) return;
   
+  // Skip very short names (likely pronouns or abbreviations)
+  if (speakerName.length <= 2) return;
+  
   // Check if this speaker exists in the registry (by name or occupation)
   const existingNPC = findNPCByNameOrOccupation(speakerName);
-  if (existingNPC) {
+  if (existingNPC && shouldLinkNPC(existingNPC)) {
     // Add to our local map for this render
     npcNameMap.set(speakerLower, existingNPC);
     // Also add by occupation if different
@@ -361,22 +422,28 @@ function registerDialogueSpeaker(
         existingNPC.semiPermanent.occupation.toLowerCase() !== speakerLower) {
       npcNameMap.set(existingNPC.semiPermanent.occupation.toLowerCase(), existingNPC);
     }
-  } else {
-    // Auto-register this new dialogue speaker via the central registry
-    // This ensures consistent IDs across all systems
-    const npcId = resolveNPCId(speakerName, { occupation: speakerName });
+  } else if (!existingNPC && speakerName.length >= 4) {
+    // Only auto-register if the name looks legitimate (not a common word)
+    // Must be at least 4 characters and properly capitalized
+    const looksLegitimate = /^[A-Z][a-z]+/.test(speakerName) && 
+                           !NEVER_LINK_WORDS.has(speakerLower);
     
-    // Fetch the newly created/resolved NPC and add to map
-    const newNPC = getRegisteredNPC(npcId);
-    if (newNPC) {
-      npcNameMap.set(speakerLower, newNPC);
-      console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName} (ID: ${npcId})`);
+    if (looksLegitimate) {
+      // Auto-register this new dialogue speaker via the central registry
+      const npcId = resolveNPCId(speakerName, { occupation: speakerName });
+      
+      // Fetch the newly created/resolved NPC and add to map
+      const newNPC = getRegisteredNPC(npcId);
+      if (newNPC && shouldLinkNPC(newNPC)) {
+        npcNameMap.set(speakerLower, newNPC);
+        console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName} (ID: ${npcId})`);
+      }
     }
   }
 }
 
 // Helper function to parse text and insert NPC and Player links
-// Also detects dialogue speaker patterns like "Name:" at the start of dialogue
+// Only links NPCs with valid IDs - filters out common words like "It", "She", etc.
 export function parseTextForNPCLinks(
   text: string,
   npcNameMap: Map<string, RegisteredNPC>,
@@ -391,18 +458,22 @@ export function parseTextForNPCLinks(
   
   while ((speakerMatch = dialogueSpeakerPattern.exec(text)) !== null) {
     const speakerName = speakerMatch[1].trim();
-    registerDialogueSpeaker(speakerName, npcNameMap, playerName);
+    // Only register if it's not a common word
+    if (!NEVER_LINK_WORDS.has(speakerName.toLowerCase())) {
+      registerDialogueSpeaker(speakerName, npcNameMap, playerName);
+    }
   }
   
   // Pattern 2: If the entire text looks like a character name/title (used for bold speaker names)
-  // This handles cases where "Squad Leader" is passed without the colon
   const trimmedText = text.trim();
   if (trimmedText && /^[A-Z][a-zA-Z\s]+$/.test(trimmedText) && trimmedText.length > 2 && trimmedText.length < 50) {
-    // This could be a speaker name - check if it looks like a title/name
-    const words = trimmedText.split(/\s+/);
-    const looksLikeName = words.length <= 4 && words.every(w => /^[A-Z][a-z]*$/.test(w));
-    if (looksLikeName) {
-      registerDialogueSpeaker(trimmedText, npcNameMap, playerName);
+    // Skip common words
+    if (!NEVER_LINK_WORDS.has(trimmedText.toLowerCase())) {
+      const words = trimmedText.split(/\s+/);
+      const looksLikeName = words.length <= 4 && words.every(w => /^[A-Z][a-z]*$/.test(w));
+      if (looksLikeName) {
+        registerDialogueSpeaker(trimmedText, npcNameMap, playerName);
+      }
     }
   }
 
@@ -417,7 +488,12 @@ export function parseTextForNPCLinks(
   }
   
   // Add NPC names AND their occupations for dialogue matching
+  // ONLY add NPCs with valid IDs - filter out common words
   for (const [name, npc] of npcNameMap.entries()) {
+    // Skip common words and NPCs without valid IDs
+    if (NEVER_LINK_WORDS.has(name)) continue;
+    if (!shouldLinkNPC(npc)) continue;
+    
     // Avoid duplicates
     if (!allNames.some(e => e.name === name && e.type === 'npc')) {
       allNames.push({ name, type: 'npc', npc });
@@ -427,7 +503,8 @@ export function parseTextForNPCLinks(
     const occupation = npc.semiPermanent.occupation;
     if (occupation && occupation !== 'none') {
       const occLower = occupation.toLowerCase();
-      if (!allNames.some(e => e.name === occLower && e.type === 'npc')) {
+      // Skip common words for occupations too
+      if (!NEVER_LINK_WORDS.has(occLower) && !allNames.some(e => e.name === occLower && e.type === 'npc')) {
         allNames.push({ name: occLower, type: 'npc', npc });
       }
     }
