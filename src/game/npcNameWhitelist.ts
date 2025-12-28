@@ -41,9 +41,9 @@ export const SCIFI_WHITELIST = new Set([
   'Viktor', 'Elara', 'Cyrus', 'Nova', 'Maxim',
   'Aurora', 'Zane', 'Stella', 'Dex', 'Genesis',
   
-  // Hackers & netrunners
-  'Cipher', 'Glitch', 'Neon', 'Pixel', 'Vector',
-  'Hex', 'Static', 'Chrome', 'Razor', 'Zero',
+// Hackers & netrunners (avoiding common words like Static, Glitch, Neon)
+  'Cipher', 'Neuromancer', 'Jackpoint', 'Pixel', 'Vector',
+  'Hexcode', 'Chromatic', 'Razorgirl', 'Zerotrace', 'Datastream',
   
   // Military & security
   'Riker', 'Ripley', 'Phoenix', 'Viper', 'Ghost',

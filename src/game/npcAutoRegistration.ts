@@ -140,6 +140,21 @@ const FALSE_POSITIVE_NAMES = new Set([
   
   // Interjections
   'Well', 'Oh', 'Ah', 'Hmm', 'Huh', 'Hey', 'Wow', 'Yes', 'No', 'Maybe',
+  
+  // Cyberpunk/Sci-fi common words (NOT character names)
+  'Static', 'Glitch', 'Neon', 'Chrome', 'Razor', 'Zero', 'Grind', 'Surge',
+  'Pulse', 'Signal', 'Voltage', 'Current', 'Flux', 'Data', 'Code', 'Grid',
+  'Matrix', 'Network', 'System', 'Protocol', 'Hack', 'Breach', 'Scan',
+  
+  // Body parts and senses (often used in narrative)
+  'Vision', 'Sight', 'Gaze', 'Hearing', 'Touch', 'Smell', 'Taste',
+  'Skin', 'Bone', 'Bones', 'Muscle', 'Muscles', 'Nerve', 'Nerves',
+  'Finger', 'Fingers', 'Arm', 'Arms', 'Leg', 'Legs', 'Foot', 'Feet',
+  
+  // Common narrative phrases that look like names
+  'Moment', 'Moments', 'Breath', 'Breaths', 'Step', 'Steps', 'Move', 'Moves',
+  'Edge', 'Corner', 'Center', 'Centre', 'Side', 'Sides', 'Front', 'Back',
+  'Target', 'Objective', 'Mission', 'Task', 'Goal', 'Purpose',
 ]);
 
 // Occupation detection patterns
