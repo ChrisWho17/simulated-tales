@@ -710,20 +710,20 @@ function isValidNPCId(npcId: string): boolean {
   // Reject if ID looks like equipment
   if (isEquipmentName(npcId)) return false;
   
-  // Reject very short IDs
-  if (npcId.length <= 3) return false;
+  // Reject very short IDs (increased from 3 to 4)
+  if (npcId.length <= 4) return false;
   
-  // Accept IDs with underscores or hyphens (structured IDs)
-  if (npcId.includes('_') || npcId.includes('-')) return true;
+  // Accept IDs with proper structure (underscores, hyphens indicate structured IDs)
+  if (npcId.includes('npc_') || npcId.includes('_')) return true;
   
   // Accept IDs that look like UUIDs
   if (/^[a-f0-9]{8,}/.test(idLower)) return true;
   
-  // Accept properly capitalized names
+  // Accept properly formatted compound names (multiple capitals)
   if (/[A-Z].*[A-Z]/.test(npcId) || npcId.includes(' ')) return true;
   
-  // Accept if it has at least 5 characters
-  if (npcId.length >= 5) return true;
+  // Accept if it has at least 5 characters and starts with capital
+  if (npcId.length >= 5 && /^[A-Z]/.test(npcId)) return true;
   
   return false;
 }
@@ -911,7 +911,8 @@ function registerDialogueSpeaker(
   if (npcNameMap.has(speakerLower)) return;
   
   // Skip very short names (likely pronouns or abbreviations)
-  if (speakerName.length <= 2) return;
+  // CHANGED: Increased from 2 to 3 characters minimum
+  if (speakerName.length <= 3) return;
   
   // Check if this speaker exists in the registry (by name or occupation)
   const existingNPC = findNPCByNameOrOccupation(speakerName);
@@ -923,17 +924,19 @@ function registerDialogueSpeaker(
         existingNPC.semiPermanent.occupation.toLowerCase() !== speakerLower) {
       npcNameMap.set(existingNPC.semiPermanent.occupation.toLowerCase(), existingNPC);
     }
-  } else if (!existingNPC && speakerName.length >= 3) {
+  } else if (!existingNPC && speakerName.length >= 4) {
     // For new names, only auto-register if:
     // 1. It was explicitly introduced ("My name is X")
     // 2. OR it's a dialogue speaker pattern ("Name: dialogue")
     // 3. AND it passes all validation
+    // 4. AND the name is at least 4 characters
     const isConfirmedName = confirmedNames?.has(speakerName);
     const looksLegitimate = /^[A-Z][a-z]+/.test(speakerName) && 
                            !NEVER_LINK_WORDS.has(speakerLower) &&
-                           !isEquipmentName(speakerName);
+                           !isEquipmentName(speakerName) &&
+                           speakerName.length >= 4; // REQUIRE at least 4 chars
     
-    if (looksLegitimate && (isConfirmedName || speakerName.length >= 4)) {
+    if (looksLegitimate && (isConfirmedName || speakerName.length >= 5)) {
       // Auto-register this new dialogue speaker via the central registry
       const npcId = resolveNPCId(speakerName, { occupation: speakerName });
       
