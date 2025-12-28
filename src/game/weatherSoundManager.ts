@@ -50,28 +50,40 @@ class WeatherSoundManager {
   private listeners: Array<(event: any) => void> = [];
 
   // Weather sound definitions - keys match seeded sounds (category/filename format)
+  // WHERE: Maps weather types/conditions to layered sound configurations
+  // WHEN: Selected based on WeatherState.current + intensity + timeOfDay + indoor/outdoor
+  // HOW: Layers are calculated in calculateTargetLayers(), transitioned smoothly via transitionToLayers()
   private weatherSounds: Record<string, WeatherSoundConfig> = {
-    // Base ambience by time of day
+    // ═══════════════════════════════════════════════════════════
+    // BASE AMBIENCE BY TIME OF DAY
+    // WHERE: Outdoor locations as background layer
+    // WHEN: Always active based on timeOfDay
+    // ═══════════════════════════════════════════════════════════
     ambience_day: {
-      sounds: ['ambience_forest/forest_ambient_loop', 'creature_crow/crow_caw'],
+      sounds: ['nature/forest_peaceful', 'ambience_forest/forest_ambient_loop', 'creature_crow/crow_caw'],
       baseVolume: 0.4
     },
     ambience_night: {
-      sounds: ['ambience_forest/forest_night', 'creature_owl/owl_hoot'],
+      sounds: ['nature/forest_night', 'ambience_forest/forest_night'],
       baseVolume: 0.5
     },
     ambience_dawn: {
-      sounds: ['ambience_forest/forest_ambient_loop'],
+      sounds: ['nature/forest_peaceful', 'ambience_forest/forest_ambient_loop'],
       baseVolume: 0.45
     },
     ambience_dusk: {
-      sounds: ['ambience_forest/forest_night'],
+      sounds: ['nature/forest_night', 'ambience_forest/forest_night'],
       baseVolume: 0.45
     },
 
-    // Rain layers (by intensity) - using seeded weather_rain sounds
+    // ═══════════════════════════════════════════════════════════
+    // RAIN LAYERS - OUTDOOR
+    // WHERE: Exterior locations during rain/storm
+    // WHEN: intensity 0.1-1.0 scales which layer plays
+    // HOW: Layers selected by addRainLayers() based on intensity threshold
+    // ═══════════════════════════════════════════════════════════
     rain_light: {
-      sounds: ['weather_rain/rain_light_loop'],
+      sounds: ['nature/rain_light_drizzle', 'weather_rain/rain_light_loop'],
       minIntensity: 0.1,
       maxIntensity: 0.4,
       baseVolume: 0.5
@@ -83,30 +95,65 @@ class WeatherSoundManager {
       baseVolume: 0.6
     },
     rain_heavy: {
-      sounds: ['weather_rain/rain_heavy_loop'],
+      sounds: ['nature/rain_heavy_outside', 'weather_rain/rain_heavy_loop'],
       minIntensity: 0.7,
       maxIntensity: 1.0,
       baseVolume: 0.7
     },
-    rain_on_surface: {
-      sounds: ['weather_rain/rain_on_roof', 'weather_rain/rain_on_leaves'],
+    
+    // ═══════════════════════════════════════════════════════════
+    // RAIN LAYERS - INDOOR (when isIndoors = true)
+    // WHERE: Interior locations during rain/storm
+    // WHEN: Player enters building during precipitation
+    // HOW: setIndoors(true) triggers these via indoorAttenuation + lowpass filter
+    // ═══════════════════════════════════════════════════════════
+    rain_on_window: {
+      sounds: ['weather/rain_on_window_inside', 'weather_rain/rain_on_window'],
       minIntensity: 0.3,
-      baseVolume: 0.4
+      baseVolume: 0.35,
+      lowpass: 600
+    },
+    rain_on_roof: {
+      sounds: ['weather/rain_on_metal_roof', 'weather_rain/rain_on_roof'],
+      minIntensity: 0.4,
+      baseVolume: 0.4,
+      lowpass: 800
+    },
+    rain_on_tent: {
+      sounds: ['weather/rain_on_tent'],
+      minIntensity: 0.3,
+      baseVolume: 0.45
+    },
+    rain_on_umbrella: {
+      sounds: ['weather/rain_on_umbrella'],
+      minIntensity: 0.3,
+      baseVolume: 0.4,
+      oneShot: true
     },
 
-    // Thunder (triggered separately) - using seeded weather_thunder sounds
+    // ═══════════════════════════════════════════════════════════
+    // THUNDER (triggered via startThunderCycle / triggerThunder)
+    // WHERE: Any location during storm weather
+    // WHEN: Storm intensity > 0.4; frequency scales with intensity
+    // HOW: scheduleNextThunder() randomizes interval; triggerThunder() plays + optional lightning flash
+    // ═══════════════════════════════════════════════════════════
     thunder_distant: {
-      sounds: ['weather_thunder/thunder_distant_1', 'weather_thunder/thunder_distant_2', 'weather_thunder/thunder_distant_3'],
+      sounds: ['weather/thunder_distant', 'weather_thunder/thunder_distant_1', 'weather_thunder/thunder_distant_2', 'weather_thunder/thunder_distant_3'],
       baseVolume: 0.6,
       oneShot: true
     },
     thunder_close: {
-      sounds: ['weather_thunder/thunder_close_1', 'weather_thunder/thunder_close_2'],
+      sounds: ['weather/thunder_close', 'weather_thunder/thunder_close_1', 'weather_thunder/thunder_close_2'],
       baseVolume: 1.0,
       oneShot: true
     },
 
-    // Wind layers - using seeded weather_wind sounds
+    // ═══════════════════════════════════════════════════════════
+    // WIND LAYERS
+    // WHERE: Outdoor locations, exposed areas (rooftops, mountains, open fields)
+    // WHEN: windSpeed 0.1-1.0; also plays through windows when indoors
+    // HOW: addWindLayers() selects by windSpeed threshold; gusts triggered separately
+    // ═══════════════════════════════════════════════════════════
     wind_light: {
       sounds: ['weather_wind/wind_light_loop'],
       minIntensity: 0.1,
@@ -120,10 +167,16 @@ class WeatherSoundManager {
       baseVolume: 0.55
     },
     wind_strong: {
-      sounds: ['weather_wind/wind_strong_loop', 'weather_wind/wind_howl_loop'],
+      sounds: ['weather/wind_strong_outside', 'weather_wind/wind_strong_loop', 'weather_wind/wind_howl_loop'],
       minIntensity: 0.7,
       maxIntensity: 1.0,
       baseVolume: 0.7
+    },
+    wind_inside_window: {
+      sounds: ['weather/wind_outside_window'],
+      minIntensity: 0.3,
+      baseVolume: 0.3,
+      lowpass: 400
     },
     wind_gusts: {
       sounds: ['weather_wind/wind_gust_1', 'weather_wind/wind_gust_2', 'weather_wind/wind_gust_3'],
@@ -133,23 +186,83 @@ class WeatherSoundManager {
       baseVolume: 0.6
     },
 
-    // Snow - using seeded weather_snow sounds
+    // ═══════════════════════════════════════════════════════════
+    // SNOW / WINTER
+    // WHERE: Cold climate regions, winter setting
+    // WHEN: WeatherType = 'snow', scales with intensity
+    // HOW: Combined with light wind for blowing snow effect
+    // ═══════════════════════════════════════════════════════════
     snow_ambient: {
-      sounds: ['weather_snow/snow_ambient_loop'],
+      sounds: ['weather/snow_falling', 'weather_snow/snow_ambient_loop'],
       baseVolume: 0.3
     },
-
-    // Storm - combines rain and wind
-    storm_ambient: {
-      sounds: ['weather_wind/wind_strong_loop', 'weather_rain/rain_heavy_loop'],
-      baseVolume: 0.75
+    snow_footsteps: {
+      sounds: ['weather/snow_footsteps'],
+      baseVolume: 0.5,
+      oneShot: true
+    },
+    arctic_blizzard: {
+      sounds: ['weather/arctic_blizzard'],
+      minIntensity: 0.7,
+      baseVolume: 0.65
     },
 
-    // Fog - using seeded weather_fog sounds
+    // ═══════════════════════════════════════════════════════════
+    // STORM - COMBINED LAYERS
+    // WHERE: Any location during severe weather
+    // WHEN: WeatherType = 'storm'
+    // HOW: Combines heavy rain + strong wind + thunder cycle
+    // ═══════════════════════════════════════════════════════════
+    storm_ambient: {
+      sounds: ['nature/thunderstorm', 'weather_wind/wind_strong_loop', 'weather_rain/rain_heavy_loop'],
+      baseVolume: 0.75
+    },
+    
+    // ═══════════════════════════════════════════════════════════
+    // HAIL
+    // WHERE: Outdoor locations, vehicles
+    // WHEN: Severe storm conditions
+    // HOW: Layered on top of rain during intense storms
+    // ═══════════════════════════════════════════════════════════
+    hailstorm: {
+      sounds: ['weather/hailstorm'],
+      minIntensity: 0.6,
+      baseVolume: 0.6
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // FOG
+    // WHERE: Any location during low visibility
+    // WHEN: WeatherType = 'fog'
+    // HOW: Subtle ambience with lowpass filter for muffled effect
+    // ═══════════════════════════════════════════════════════════
     fog_ambient: {
       sounds: ['weather_fog/fog_ambient_loop'],
       baseVolume: 0.25,
       lowpass: 800
+    },
+    fog_horn: {
+      sounds: ['weather/fog_horn'],
+      baseVolume: 0.5,
+      oneShot: true,
+      interval: { min: 30000, max: 60000 }
+    },
+
+    // ═══════════════════════════════════════════════════════════
+    // EMERGENCY / SEVERE WEATHER
+    // WHERE: Urban/suburban areas during severe weather events
+    // WHEN: Tornado, hurricane, extreme conditions
+    // HOW: Triggered by narrative or specific weather conditions
+    // ═══════════════════════════════════════════════════════════
+    tornado_siren: {
+      sounds: ['weather/tornado_siren'],
+      baseVolume: 0.7,
+      oneShot: true
+    },
+    hurricane: {
+      sounds: ['weather/hurricane_storm'],
+      minIntensity: 0.8,
+      baseVolume: 0.75
     }
   };
 

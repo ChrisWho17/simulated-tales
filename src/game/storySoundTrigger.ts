@@ -99,9 +99,16 @@ class StorySoundTrigger {
     'ui.item_acquired': ['chest_open', 'coins_jingle']
   };
   
-  // Extended narrative keywords that map to preloader categories
+  // ═══════════════════════════════════════════════════════════
+  // EXTENDED NARRATIVE KEYWORDS → PRELOADER CATEGORIES
+  // WHERE: Maps detected narrative text patterns to sound categories
+  // WHEN: Processed in analyzeText() during story generation
+  // HOW: Regex matches trigger playFromCategories() with matched sounds
+  // ═══════════════════════════════════════════════════════════
   private narrativeKeywordMap: Record<string, string[]> = {
-    // Weapons
+    // ═══════════════════════════════════════════════════════════
+    // WEAPONS - Combat narrative triggers
+    // ═══════════════════════════════════════════════════════════
     'pistol|handgun|revolver': ['gun_pistol', 'acoustic_indoor_gunshot', 'acoustic_outdoor_gunshot'],
     'rifle|carbine|sniper': ['gun_rifle'],
     'shotgun': ['gun_shotgun'],
@@ -109,14 +116,18 @@ class StorySoundTrigger {
     'explosion|explode|blast|detonate': ['explosion_large', 'explosion_small', 'explosion_debris'],
     'grenade': ['explosion_grenade'],
     
-    // Melee
+    // ═══════════════════════════════════════════════════════════
+    // MELEE WEAPONS
+    // ═══════════════════════════════════════════════════════════
     'sword|blade': ['combat_sword'],
     'axe|cleave': ['combat_axe'],
     'mace|hammer|bludgeon': ['combat_mace'],
     'bow|arrow': ['combat_bow'],
     'dagger|knife|stab': ['combat_dagger'],
     
-    // Creatures
+    // ═══════════════════════════════════════════════════════════
+    // CREATURES - Animal and monster sounds
+    // ═══════════════════════════════════════════════════════════
     'wolf|howl': ['creature_wolf'],
     'dog|bark': ['creature_dog'],
     'horse|gallop|neigh': ['creature_horse'],
@@ -127,39 +138,87 @@ class StorySoundTrigger {
     'ghost|specter|phantom': ['creature_ghost'],
     'demon|devil': ['creature_demon'],
     
-    // Environment
-    'thunder|lightning': ['weather_thunder'],
-    'rain|downpour': ['weather_rain'],
-    'wind|gust': ['weather_wind'],
-    'fire|flame|burning': ['element_fire'],
-    'water|splash|river': ['element_water'],
+    // ═══════════════════════════════════════════════════════════
+    // WEATHER - New expanded weather keywords with indoor/outdoor variants
+    // ═══════════════════════════════════════════════════════════
+    'thunder|lightning|thunderstorm': ['weather_thunder', 'weather/thunder_close', 'weather/thunder_distant', 'nature/thunderstorm'],
+    'rain|downpour|drizzle|raining': ['weather_rain', 'nature/rain_light_drizzle', 'nature/rain_heavy_outside'],
+    'rain.*window|window.*rain|inside.*rain': ['weather/rain_on_window_inside'],
+    'rain.*roof|roof.*rain|patter.*roof': ['weather/rain_on_metal_roof'],
+    'rain.*tent|tent.*rain|camping.*rain': ['weather/rain_on_tent'],
+    'umbrella.*rain|rain.*umbrella': ['weather/rain_on_umbrella'],
+    'wind|gust|breeze|blustery': ['weather_wind', 'nature/mountain_wind', 'weather/wind_strong_outside'],
+    'wind.*window|window.*wind|draft': ['weather/wind_outside_window'],
+    'hail|hailstorm|hailstones': ['weather/hailstorm'],
+    'blizzard|snowstorm|whiteout': ['weather/arctic_blizzard'],
+    'snow|snowfall|snowing': ['weather_snow', 'weather/snow_falling'],
+    'fog|mist|foggy|misty': ['weather_fog', 'weather/fog_horn'],
+    'tornado|cyclone|twister': ['weather/tornado_siren'],
+    'hurricane|typhoon': ['weather/hurricane_storm'],
+    
+    // ═══════════════════════════════════════════════════════════
+    // ELEMENTS
+    // ═══════════════════════════════════════════════════════════
+    'fire|flame|burning|campfire': ['element_fire', 'nature/campfire'],
+    'water|splash|river|stream': ['element_water', 'nature/river_stream'],
+    'waterfall|cascade|falls': ['nature/waterfall'],
+    'ocean|waves|sea|beach': ['nature/ocean_waves', 'ambience_ocean'],
     'ice|freeze|frozen': ['element_ice'],
     'electricity|shock|zap': ['element_electricity'],
     
-    // Magic
+    // ═══════════════════════════════════════════════════════════
+    // MAGIC
+    // ═══════════════════════════════════════════════════════════
     'spell|cast|magic': ['magic_spell', 'magic_cast'],
     'portal|dimension': ['magic_portal', 'scifi_teleport'],
     'heal|healing|restore': ['magic_heal'],
     
-    // Locations
+    // ═══════════════════════════════════════════════════════════
+    // NATURE LOCATIONS - New expanded nature keywords
+    // ═══════════════════════════════════════════════════════════
+    'forest|woods|wilderness|glade': ['ambience_forest', 'ambience_wilderness', 'nature/forest_peaceful', 'nature/forest_night'],
+    'jungle|rainforest|tropics': ['nature/jungle_ambiance', 'ambience_wilderness'],
+    'swamp|marsh|bog|bayou': ['nature/swamp_ambiance'],
+    'cave|cavern|underground|grotto': ['ambience_cave', 'ambience_dungeon', 'nature/cave_ambiance'],
+    'mountain|peak|summit|highlands': ['nature/mountain_wind', 'ambience_wilderness'],
+    
+    // ═══════════════════════════════════════════════════════════
+    // URBAN LOCATIONS - New expanded urban keywords
+    // ═══════════════════════════════════════════════════════════
+    'city|town|street|urban': ['ambience_city_day', 'ambience_city_night', 'urban/city_street_busy'],
+    'subway|metro|underground train': ['urban/subway_station'],
+    'office|cubicle|corporate': ['urban/office_ambiance'],
+    'coffee shop|cafe|starbucks': ['urban/coffee_shop'],
+    'mall|shopping center': ['urban/shopping_mall'],
+    'airport|terminal|departures': ['urban/airport_terminal'],
+    'hospital|medical|emergency room': ['urban/hospital_corridor'],
+    'construction|building site': ['urban/construction_site'],
+    'siren|police|ambulance': ['urban/police_siren_modern', 'urban/ambulance_siren'],
+    'car horn|honk|traffic': ['urban/car_horn'],
+    'elevator|lift': ['urban/elevator_ding'],
+    
+    // ═══════════════════════════════════════════════════════════
+    // MEDIEVAL/FANTASY LOCATIONS
+    // ═══════════════════════════════════════════════════════════
     'tavern|inn|bar': ['ambience_tavern', 'ambience_inn'],
-    'forest|woods|wilderness': ['ambience_forest', 'ambience_wilderness'],
-    'cave|cavern|underground': ['ambience_cave', 'ambience_dungeon'],
-    'city|town|street': ['ambience_city_day', 'ambience_city_night'],
     'market|bazaar|plaza': ['ambience_market', 'ambience_plaza'],
     'castle|throne|palace': ['ambience_castle', 'ambience_throne_room'],
     'church|temple|shrine': ['ambience_temple', 'ambience_shrine'],
     'ship|boat|deck': ['ambience_ship', 'ambience_harbor'],
     'battlefield|war|siege': ['ambience_battlefield', 'crowd_battle'],
     
-    // Actions
+    // ═══════════════════════════════════════════════════════════
+    // ACTIONS
+    // ═══════════════════════════════════════════════════════════
     'sneak|stealth|creep': ['action_stealth', 'footsteps_stone'],
     'chase|pursuit|run': ['action_chase', 'footsteps_stone'],
     'climb|scale': ['action_climbing'],
     'swim|swimming': ['element_water', 'action_swimming'],
     'search|investigate': ['action_investigation'],
     
-    // Sci-fi
+    // ═══════════════════════════════════════════════════════════
+    // SCI-FI
+    // ═══════════════════════════════════════════════════════════
     'laser|blaster': ['scifi_laser'],
     'spaceship|starship': ['scifi_engine', 'scifi_tech'],
     'teleport|warp': ['scifi_teleport'],
