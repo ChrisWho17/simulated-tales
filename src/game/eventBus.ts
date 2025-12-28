@@ -35,6 +35,10 @@ export type GameEventType =
   | 'WOUND_TREATED'
   | 'DEATH'
   | 'KNOCKOUT'
+  // Weapon events
+  | 'WEAPON_JAM'
+  | 'WEAPON_DESTROYED'
+  | 'WEAPON_REPAIRED'
   // Knowledge/Memory events
   | 'FACT_LEARNED'
   | 'FACT_REVEALED'
@@ -113,6 +117,17 @@ export interface CombatEvent extends BaseEvent {
   };
 }
 
+export interface WeaponEvent extends BaseEvent {
+  type: 'WEAPON_JAM' | 'WEAPON_DESTROYED' | 'WEAPON_REPAIRED';
+  data: {
+    weaponId: string;
+    weaponType: string;
+    condition?: number;
+    playerDamage?: number;
+    wasCriticalFailure?: boolean;
+  };
+}
+
 export interface NeedEvent extends BaseEvent {
   type: 'NEED_CRITICAL' | 'NEED_LOW' | 'NEED_RESTORED' | 'ACTIVITY_PERFORMED';
   data: {
@@ -151,6 +166,7 @@ export type GameBusEvent =
   | ItemEvent 
   | RelationshipEvent 
   | CombatEvent 
+  | WeaponEvent
   | NeedEvent 
   | ReputationEvent 
   | KnowledgeEvent
