@@ -20,6 +20,13 @@ import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { 
+  WeatherState, 
+  createInitialWeatherState, 
+  getWeatherNarrativeContext,
+  formatWeatherEffectsForAI,
+  WEATHER_CONFIGS,
+} from '@/game/weatherSystem';
+import { 
   ToneState, 
   createInitialToneState, 
   analyzePlayerTone, 
@@ -273,6 +280,9 @@ export function AdventureGame() {
   // Character and story - will be initialized from campaign or localStorage
   const [character, setCharacter] = useState<RPGCharacter | null>(null);
   const [story, setStory] = useState<StoryEntry[]>([]);
+  
+  // Weather state - synced from AdventureDisplay for AI context
+  const [weatherState, setWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
@@ -922,6 +932,14 @@ export function AdventureGame() {
             pressureClockContext: pressureClockPayload,
             npcMotivationContext: npcMotivationPayload,
             memoryBiteContext: memoryBitePayload,
+            // === WEATHER CONTEXT - Critical for narrative consistency ===
+            weatherContext: settings.enableWeatherEffects ? {
+              current: weatherState.current,
+              intensity: weatherState.intensity > 1.2 ? 'intense' : weatherState.intensity < 0.7 ? 'mild' : 'moderate',
+              name: WEATHER_CONFIGS[weatherState.current]?.name || weatherState.current,
+              narrativeContext: getWeatherNarrativeContext(weatherState),
+              effects: formatWeatherEffectsForAI(weatherState),
+            } : null,
           }),
         }
       );
@@ -1679,6 +1697,8 @@ export function AdventureGame() {
         currentMood={currentMood}
         moodHistory={moodHistory}
         onMoodChange={handleMoodChange}
+        weatherState={weatherState}
+        onWeatherStateChange={setWeatherState}
       />
     );
   }
