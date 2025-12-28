@@ -48,105 +48,105 @@ class WeatherSoundManager {
   // Event listeners
   private listeners: Array<(event: any) => void> = [];
 
-  // Weather sound definitions
+  // Weather sound definitions - keys match seeded sounds (category/filename format)
   private weatherSounds: Record<string, WeatherSoundConfig> = {
     // Base ambience by time of day
     ambience_day: {
-      sounds: ['amb_birds_light', 'amb_breeze_light'],
+      sounds: ['ambience_forest/forest_ambient_loop', 'creature_crow/crow_caw'],
       baseVolume: 0.4
     },
     ambience_night: {
-      sounds: ['amb_crickets', 'amb_night_breeze'],
+      sounds: ['ambience_forest/forest_night', 'creature_owl/owl_hoot'],
       baseVolume: 0.5
     },
     ambience_dawn: {
-      sounds: ['amb_birds_dawn', 'amb_morning_breeze'],
+      sounds: ['ambience_forest/forest_ambient_loop'],
       baseVolume: 0.45
     },
     ambience_dusk: {
-      sounds: ['amb_evening_birds', 'amb_evening_breeze'],
+      sounds: ['ambience_forest/forest_night'],
       baseVolume: 0.45
     },
 
-    // Rain layers (by intensity)
+    // Rain layers (by intensity) - using seeded weather_rain sounds
     rain_light: {
-      sounds: ['rain_light_loop'],
+      sounds: ['weather_rain/rain_light_loop'],
       minIntensity: 0.1,
       maxIntensity: 0.4,
       baseVolume: 0.5
     },
     rain_medium: {
-      sounds: ['rain_medium_loop'],
+      sounds: ['weather_rain/rain_medium_loop'],
       minIntensity: 0.4,
       maxIntensity: 0.7,
       baseVolume: 0.6
     },
     rain_heavy: {
-      sounds: ['rain_heavy_loop'],
+      sounds: ['weather_rain/rain_heavy_loop'],
       minIntensity: 0.7,
       maxIntensity: 1.0,
       baseVolume: 0.7
     },
     rain_on_surface: {
-      sounds: ['rain_on_roof', 'rain_on_leaves'],
+      sounds: ['weather_rain/rain_on_roof', 'weather_rain/rain_on_leaves'],
       minIntensity: 0.3,
       baseVolume: 0.4
     },
 
-    // Thunder (triggered separately)
+    // Thunder (triggered separately) - using seeded weather_thunder sounds
     thunder_distant: {
-      sounds: ['thunder_distant_1', 'thunder_distant_2', 'thunder_distant_3'],
+      sounds: ['weather_thunder/thunder_distant_1', 'weather_thunder/thunder_distant_2', 'weather_thunder/thunder_distant_3'],
       baseVolume: 0.6,
       oneShot: true
     },
     thunder_close: {
-      sounds: ['thunder_close_1', 'thunder_close_2'],
+      sounds: ['weather_thunder/thunder_close_1', 'weather_thunder/thunder_close_2'],
       baseVolume: 1.0,
       oneShot: true
     },
 
-    // Wind layers
+    // Wind layers - using seeded weather_wind sounds
     wind_light: {
-      sounds: ['wind_light_loop'],
+      sounds: ['weather_wind/wind_light_loop'],
       minIntensity: 0.1,
       maxIntensity: 0.4,
       baseVolume: 0.4
     },
     wind_medium: {
-      sounds: ['wind_medium_loop'],
+      sounds: ['weather_wind/wind_medium_loop'],
       minIntensity: 0.4,
       maxIntensity: 0.7,
       baseVolume: 0.55
     },
     wind_strong: {
-      sounds: ['wind_strong_loop', 'wind_howl_loop'],
+      sounds: ['weather_wind/wind_strong_loop', 'weather_wind/wind_howl_loop'],
       minIntensity: 0.7,
       maxIntensity: 1.0,
       baseVolume: 0.7
     },
     wind_gusts: {
-      sounds: ['wind_gust_1', 'wind_gust_2', 'wind_gust_3'],
+      sounds: ['weather_wind/wind_gust_1', 'weather_wind/wind_gust_2', 'weather_wind/wind_gust_3'],
       oneShot: true,
       minIntensity: 0.5,
       interval: { min: 8000, max: 25000 },
       baseVolume: 0.6
     },
 
-    // Snow
+    // Snow - using seeded weather_snow sounds
     snow_ambient: {
-      sounds: ['snow_ambient_loop'],
+      sounds: ['weather_snow/snow_ambient_loop'],
       baseVolume: 0.3
     },
 
-    // Storm
+    // Storm - combines rain and wind
     storm_ambient: {
-      sounds: ['storm_wind_loop', 'storm_rain_loop'],
+      sounds: ['weather_wind/wind_strong_loop', 'weather_rain/rain_heavy_loop'],
       baseVolume: 0.75
     },
 
-    // Fog (eerie, quiet)
+    // Fog - using seeded weather_fog sounds
     fog_ambient: {
-      sounds: ['fog_ambient_loop'],
+      sounds: ['weather_fog/fog_ambient_loop'],
       baseVolume: 0.25,
       lowpass: 800
     }
