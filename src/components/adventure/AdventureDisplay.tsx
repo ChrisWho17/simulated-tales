@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -204,7 +204,9 @@ export function AdventureDisplay({
     initialized: audioInitialized, 
     syncWeather, 
     processNarrative,
-    initializeAudio 
+    initializeAudio,
+    preloadProgress,
+    soundsReady
   } = useAudioSystem();
   
   // Get weather settings from game context (must come after gameContext declaration)
@@ -1360,6 +1362,34 @@ export function AdventureDisplay({
                 <Sun className="w-4 h-4" />
               )}
             </Button>
+            
+            {/* Audio Status Indicator */}
+            <div 
+              className="relative h-7 w-7 flex items-center justify-center"
+              title={
+                !audioInitialized ? 'Click to enable audio' :
+                !soundsReady ? `Loading sounds: ${preloadProgress?.loaded || 0}/${preloadProgress?.total || 0}` :
+                'Audio ready'
+              }
+            >
+              {!audioInitialized ? (
+                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
+              ) : !soundsReady ? (
+                <div className="relative">
+                  <Volume2 className="w-4 h-4 text-primary/50 animate-pulse" />
+                  <div 
+                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary/30 rounded-full overflow-hidden"
+                  >
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${preloadProgress ? (preloadProgress.loaded / preloadProgress.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Volume2 className="w-4 h-4 text-green-400/70" />
+              )}
+            </div>
             
             <div className="h-5 w-px bg-border/30" />
             
