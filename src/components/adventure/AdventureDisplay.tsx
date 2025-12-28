@@ -1348,11 +1348,11 @@ export function AdventureDisplay({
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
-        <div className="flex items-center gap-0.5 px-1 py-0.5">
-          {/* Left Group: Logo + Weather */}
-          <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center justify-between px-2 py-1">
+          {/* All icons in a single row, evenly spaced */}
+          <div className="flex items-center justify-between w-full">
             <h1 
-              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text px-1"
+              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text"
               data-text="UNTOLD"
             >
               UNTOLD
@@ -1363,7 +1363,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`h-5 w-5 p-0 frosted-button ${
+              className={`h-7 w-7 frosted-button ${
                 weatherState.current === 'storm' ? 'text-yellow-400' : 
                 weatherState.current === 'rain' ? 'text-blue-400' : 
                 weatherState.current === 'fog' ? 'text-violet-400' : 
@@ -1376,27 +1376,27 @@ export function AdventureDisplay({
               title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
             >
               {weatherState.current === 'storm' ? (
-                <CloudLightning className="w-3.5 h-3.5" />
+                <CloudLightning className="w-4 h-4" />
               ) : weatherState.current === 'rain' ? (
-                <CloudRain className="w-3.5 h-3.5" />
+                <CloudRain className="w-4 h-4" />
               ) : weatherState.current === 'fog' ? (
-                <CloudFog className="w-3.5 h-3.5" />
+                <CloudFog className="w-4 h-4" />
               ) : weatherState.current === 'heat_wave' ? (
-                <Flame className="w-3.5 h-3.5" />
+                <Flame className="w-4 h-4" />
               ) : weatherState.current === 'wind' ? (
-                <Wind className="w-3.5 h-3.5" />
+                <Wind className="w-4 h-4" />
               ) : weatherState.current === 'snow' ? (
-                <Snowflake className="w-3.5 h-3.5" />
+                <Snowflake className="w-4 h-4" />
               ) : weatherState.current === 'cloudy' ? (
-                <Cloud className="w-3.5 h-3.5" />
+                <Cloud className="w-4 h-4" />
               ) : (
-                <Sun className="w-3.5 h-3.5" />
+                <Sun className="w-4 h-4" />
               )}
             </Button>
             
             {/* Audio Status Indicator */}
             <div 
-              className="h-5 w-5 flex items-center justify-center"
+              className="h-7 w-7 flex items-center justify-center"
               title={
                 !audioInitialized ? 'Click to enable audio' :
                 !soundsReady ? `Loading sounds: ${preloadProgress?.loaded || 0}/${preloadProgress?.total || 0}` :
@@ -1404,11 +1404,11 @@ export function AdventureDisplay({
               }
             >
               {!audioInitialized ? (
-                <VolumeX className="w-3.5 h-3.5 text-muted-foreground/50" />
+                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
               ) : !soundsReady ? (
-                <Volume2 className="w-3.5 h-3.5 text-primary/50 animate-pulse" />
+                <Volume2 className="w-4 h-4 text-primary/50 animate-pulse" />
               ) : (
-                <Volume2 className="w-3.5 h-3.5 text-green-400/70" />
+                <Volume2 className="w-4 h-4 text-green-400/70" />
               )}
             </div>
             
@@ -1417,10 +1417,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowCharacterSheet(true)}
-              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Character Sheet"
             >
-              <ScrollText className="w-3.5 h-3.5" />
+              <ScrollText className="w-4 h-4" />
             </Button>
             
             {/* Inventory Button */}
@@ -1428,106 +1428,40 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowInventory(true)}
-              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Inventory (Ctrl+I)"
             >
-              <Backpack className="w-3.5 h-3.5" />
+              <Backpack className="w-4 h-4" />
             </Button>
-          </div>
-
-          {/* Center Group: Character Stats (desktop only) */}
-          <div className="hidden md:flex items-center gap-1.5 flex-1 min-w-0">
-            {/* Health with Mood Aura */}
-            <div 
-              className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20"
-              style={currentMood !== 'neutral' ? {
-                boxShadow: `0 0 8px ${MOOD_COLORS[currentMood]?.glow || 'transparent'}40`,
-              } : undefined}
-            >
-              <CircularStat 
-                value={character.currentHealth} 
-                max={character.maxHealth} 
-                type="health"
-                size={28}
-                strokeWidth={2}
-                icon={<Heart className="w-3 h-3" />}
-              />
-              <div className="text-[10px]">
-                <span className={`font-mono font-bold ${isCritical ? 'text-destructive animate-pulse' : 'text-success'}`}>
-                  {character.currentHealth}
-                </span>
-                <span className="text-muted-foreground">/{character.maxHealth}</span>
-              </div>
-            </div>
-
-            {/* Gold */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20">
-              <Coins className="w-3 h-3 text-warning" />
-              <span className="font-mono text-[10px] font-semibold text-warning">{character.gold}</span>
-            </div>
-
-            {/* Level & XP */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/20 border border-border/20">
-              <div className="flex items-center gap-0.5">
-                <span className="text-[10px] text-muted-foreground">Lv</span>
-                <span className="font-mono text-xs font-bold text-primary">{character.level}</span>
-              </div>
-              <div className="w-10 h-1 bg-muted/30 rounded-full overflow-hidden" title={`${levelingState.currentXP}/${levelingState.xpThreshold} XP`}>
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-primary/70"
-                  style={{ width: `${Math.min(100, (levelingState.currentXP / levelingState.xpThreshold) * 100)}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-muted-foreground truncate max-w-12">{charClass?.name}</span>
-            </div>
-          </div>
-
-          {/* Debug Indicators */}
-          {(cheatMode || gameContext?.settings?.showEventBusDebug) && (
-            <DirectorStatusIndicator compact className="shrink-0" />
-          )}
-          
-          {cheatMode && (
-            <span className="text-[8px] bg-primary/20 text-primary px-1 py-0.5 rounded-full border border-primary/30 animate-glow-pulse shrink-0">
-              DEV
-            </span>
-          )}
-
-          {/* Right Group: Action Buttons */}
-          <div className="flex items-center gap-0 ml-auto shrink-0">
+            
+            {/* Saves Dropdown */}
             <SavesDropdown />
+            
+            {/* Settings */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowSettings(true)}
-              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Settings"
             >
-              <Sliders className="w-3 h-3" />
+              <Sliders className="w-4 h-4" />
             </Button>
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCheatMode}
-              className="hidden xs:flex h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Toggle Dev Mode"
-            >
-              <Settings className="w-3 h-3" />
-            </Button>
-            
+            {/* Restart */}
             <Button
               variant="ghost"
               size="icon"
               onClick={onRestart}
-              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-destructive"
+              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-destructive"
               title="New Adventure"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
+
 
       {/* Auto-generated Scene Illustration */}
       {(sceneImageUrl || isGeneratingScene) && (
