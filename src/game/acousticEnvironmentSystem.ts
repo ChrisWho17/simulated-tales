@@ -109,9 +109,9 @@ const DEFAULT_ACOUSTICS: Record<AcousticSpace, LocationAcoustics> = {
   underwater: { space: 'underwater', reverbLevel: 0.3, echoLevel: 0.1, lowpassFilter: 800, highpassFilter: 200 },
 };
 
-// Sound categories that have acoustic variants
+// Sound categories that have acoustic variants - SCREAM REMOVED
 const ACOUSTIC_VARIANT_SOUNDS = [
-  'gunshot', 'explosion', 'voice', 'combat', 'scream', 'shout', 'yell',
+  'gunshot', 'explosion', 'voice', 'combat', 'shout', 'yell',
   'sword_clash', 'punch', 'kick', 'impact'
 ];
 
@@ -233,6 +233,7 @@ class AcousticEnvironmentSystem {
   }
 
   // Get audio effect parameters based on current acoustics
+  // REDUCED: Single echo with fast decay, minimal reverb
   getAudioEffects(): {
     echo: boolean;
     echoDelay: number;
@@ -245,14 +246,14 @@ class AcousticEnvironmentSystem {
     const { space, reverbLevel, echoLevel, lowpassFilter, highpassFilter } = this.currentAcoustics;
     
     return {
-      // Use reverb for indoor/underground
+      // Use minimal reverb for indoor/underground - fast decay
       reverb: space === 'indoor' || space === 'underground',
-      reverbDuration: reverbLevel * 2, // 0-2 seconds based on level
+      reverbDuration: Math.min(reverbLevel * 0.3, 0.3), // Max 0.3s, dies quickly
       
-      // Use echo for outdoor (and some indoor)
-      echo: echoLevel > 0.2,
-      echoDelay: 0.1 + (echoLevel * 0.5), // 0.1-0.6 seconds
-      echoDecay: 0.3 + (echoLevel * 0.4), // 0.3-0.7 decay
+      // Single echo for outdoor, very fast decay
+      echo: echoLevel > 0.3,
+      echoDelay: 0.15, // Single quick echo
+      echoDecay: 0.1, // Dies very fast
       
       // Filters
       lowpass: lowpassFilter,

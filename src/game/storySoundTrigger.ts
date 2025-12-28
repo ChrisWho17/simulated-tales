@@ -72,11 +72,11 @@ class StorySoundTrigger {
     'vehicles.car_horn': ['vehicle_car_horn'],
     'vehicles.car_crash': ['vehicle_car_crash', 'explosion_debris'],
     
-    // Dramatic
+    // Dramatic - SCREAM REMOVED to reduce chaos
     'dramatic.heartbeat': ['human_heartbeat'],
     'dramatic.heartbeat_fast': ['human_heartbeat'],
     'dramatic.gasp': ['human_gasp'],
-    'dramatic.scream': ['human_scream'],
+    // 'dramatic.scream' - DISABLED: causes chaos
     'dramatic.laughter': ['human_laugh'],
     'dramatic.crying': ['human_cry'],
     'dramatic.sigh': ['human_breath'],
@@ -228,317 +228,321 @@ class StorySoundTrigger {
   // Sound effect definitions organized by category
   private soundEffects: Record<string, Record<string, SoundEffectConfig>> = {
     // ═══════════════════════════════════════════════════════════
-    // COMBAT SOUNDS
+    // COMBAT SOUNDS - Loud: gunshots, artillery, tank. Others: background level
+    // Echo: single, fast decay for immersion without chaos
     // ═══════════════════════════════════════════════════════════
     combat: {
       gunshot_pistol: {
         sounds: ['gun_pistol_1', 'gun_pistol_2'],
         echo: true,
-        echoDelay: 0.4,
-        echoDecay: 0.5,
-        volume: 0.9
+        echoDelay: 0.15,
+        echoDecay: 0.15,
+        volume: 0.6
       },
       gunshot_rifle: {
         sounds: ['gun_rifle_1', 'gun_rifle_2'],
         echo: true,
-        echoDelay: 0.5,
-        echoDecay: 0.6,
-        volume: 1.0
+        echoDelay: 0.15,
+        echoDecay: 0.15,
+        volume: 0.65
       },
       gunshot_shotgun: {
         sounds: ['gun_shotgun_1'],
         echo: true,
-        echoDelay: 0.6,
-        echoDecay: 0.7,
-        volume: 1.0
+        echoDelay: 0.15,
+        echoDecay: 0.15,
+        volume: 0.65
       },
       gunshot_distant: {
         sounds: ['gun_distant_1', 'gun_distant_2', 'gun_distant_3'],
-        volume: 0.4,
+        volume: 0.25,
         lowpass: 1200
       },
       gunshot_silenced: {
         sounds: ['gun_silenced_1'],
-        volume: 0.3,
+        volume: 0.2,
         echo: false
       },
       bullet_impact: {
         sounds: ['bullet_impact_1', 'bullet_impact_2', 'bullet_ricochet'],
-        volume: 0.5,
+        volume: 0.2,
         delay: 0.1
       },
       bullet_whiz: {
         sounds: ['bullet_whiz_1', 'bullet_whiz_2'],
-        volume: 0.6,
+        volume: 0.2,
         pan: () => Math.random() * 2 - 1
       },
       punch: {
         sounds: ['punch_1', 'punch_2', 'punch_3'],
-        volume: 0.7
+        volume: 0.2
       },
       kick: {
         sounds: ['kick_1', 'kick_2'],
-        volume: 0.7
+        volume: 0.2
       },
       body_fall: {
         sounds: ['body_fall_1', 'body_fall_2'],
-        volume: 0.6
+        volume: 0.2
       },
       sword_swing: {
         sounds: ['sword_swing_1', 'sword_swing_2'],
-        volume: 0.6
+        volume: 0.2
       },
       sword_clash: {
         sounds: ['sword_clash_1', 'sword_clash_2', 'sword_clash_3'],
-        volume: 0.8
+        volume: 0.25
       },
       sword_draw: {
         sounds: ['sword_draw_1'],
-        volume: 0.5
+        volume: 0.15
       },
       knife_stab: {
         sounds: ['knife_stab_1', 'knife_stab_2'],
-        volume: 0.6
+        volume: 0.2
       },
       pain_male: {
         sounds: ['pain_male_1', 'pain_male_2', 'pain_male_3'],
-        volume: 0.7
+        volume: 0.2
       },
       pain_female: {
         sounds: ['pain_female_1', 'pain_female_2'],
-        volume: 0.7
+        volume: 0.2
       },
       death_male: {
         sounds: ['death_male_1', 'death_male_2'],
-        volume: 0.6
+        volume: 0.2
       },
       death_female: {
         sounds: ['death_female_1', 'death_female_2'],
-        volume: 0.6
+        volume: 0.2
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // MOVEMENT & ENVIRONMENT
+    // MOVEMENT & ENVIRONMENT - Very quiet background
     // ═══════════════════════════════════════════════════════════
     movement: {
       footsteps_walk: {
         sounds: ['step_walk_1', 'step_walk_2', 'step_walk_3', 'step_walk_4'],
-        volume: 0.3
+        volume: 0.1
       },
       footsteps_run: {
         sounds: ['step_run_1', 'step_run_2', 'step_run_3'],
-        volume: 0.5
+        volume: 0.15
       },
       footsteps_sneak: {
         sounds: ['step_sneak_1', 'step_sneak_2'],
-        volume: 0.15
+        volume: 0.08
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // DOORS
+    // DOORS - Quiet background
     // ═══════════════════════════════════════════════════════════
     doors: {
       door_open: {
         sounds: ['door_open_1', 'door_open_2'],
-        volume: 0.5
+        volume: 0.15
       },
       door_close: {
         sounds: ['door_close_1', 'door_close_2'],
-        volume: 0.5
+        volume: 0.15
       },
       door_slam: {
         sounds: ['door_slam_1'],
-        volume: 0.8
+        volume: 0.25
       },
       door_creak: {
         sounds: ['door_creak_1', 'door_creak_2'],
-        volume: 0.4
+        volume: 0.12
       },
       door_knock: {
         sounds: ['door_knock_1', 'door_knock_2'],
-        volume: 0.6
+        volume: 0.2
       },
       door_break: {
         sounds: ['door_break_1'],
-        volume: 0.9
+        volume: 0.3
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // OBJECTS & INTERACTIONS
+    // OBJECTS & INTERACTIONS - Quiet background
     // ═══════════════════════════════════════════════════════════
     objects: {
       glass_break: {
         sounds: ['glass_break_1', 'glass_break_2', 'glass_shatter'],
-        volume: 0.8
+        volume: 0.25
       },
       glass_clink: {
         sounds: ['glass_clink_1', 'glass_clink_2'],
-        volume: 0.3
+        volume: 0.1
       },
       metal_clang: {
         sounds: ['metal_clang_1', 'metal_clang_2'],
-        volume: 0.7
+        volume: 0.2
       },
       paper_rustle: {
         sounds: ['paper_rustle_1', 'paper_rustle_2'],
-        volume: 0.25
+        volume: 0.08
       },
       coin_drop: {
         sounds: ['coin_drop_1', 'coin_drop_2', 'coin_jingle'],
-        volume: 0.4
+        volume: 0.12
       },
       key_jingle: {
         sounds: ['key_jingle_1', 'key_jingle_2'],
-        volume: 0.35
+        volume: 0.1
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // VEHICLES
+    // VEHICLES - Quiet background except crashes
     // ═══════════════════════════════════════════════════════════
     vehicles: {
       car_start: {
         sounds: ['car_start_1', 'car_start_2'],
-        volume: 0.7
+        volume: 0.2
       },
       car_idle: {
         sounds: ['car_idle_loop'],
         loop: true,
-        volume: 0.4
+        volume: 0.12
       },
       car_horn: {
         sounds: ['car_horn_1', 'car_horn_2'],
-        volume: 0.7
+        volume: 0.2
       },
       car_crash: {
         sounds: ['car_crash_1', 'car_crash_2'],
-        volume: 1.0,
-        echo: true
+        volume: 0.4,
+        echo: true,
+        echoDelay: 0.15,
+        echoDecay: 0.15
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // EMOTIONAL / DRAMATIC
+    // EMOTIONAL / DRAMATIC - Quiet, no screaming (removed chaos sounds)
     // ═══════════════════════════════════════════════════════════
     dramatic: {
       heartbeat: {
         sounds: ['heartbeat_loop'],
         loop: true,
-        volume: 0.5,
+        volume: 0.2,
         channel: 'effects'
       },
       heartbeat_fast: {
         sounds: ['heartbeat_fast_loop'],
         loop: true,
-        volume: 0.6,
+        volume: 0.25,
         channel: 'effects'
       },
       gasp: {
         sounds: ['gasp_1', 'gasp_2', 'gasp_surprise'],
-        volume: 0.5
+        volume: 0.15
       },
+      // Scream disabled - causes chaos, replaced with silent placeholder
       scream: {
-        sounds: ['scream_1', 'scream_2'],
-        volume: 0.8
+        sounds: [],
+        volume: 0
       },
       laughter: {
         sounds: ['laugh_1', 'laugh_2', 'chuckle'],
-        volume: 0.5
+        volume: 0.15
       },
       crying: {
         sounds: ['crying_1', 'sobbing_1'],
-        volume: 0.5
+        volume: 0.15
       },
       sigh: {
         sounds: ['sigh_1', 'sigh_relief'],
-        volume: 0.4
+        volume: 0.1
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // AMBIENT / LOCATION
+    // AMBIENT / LOCATION - Very quiet background noise
     // ═══════════════════════════════════════════════════════════
     ambient: {
       crowd_murmur: {
         sounds: ['crowd_murmur_loop'],
         loop: true,
-        volume: 0.4
+        volume: 0.12
       },
       bar_ambience: {
         sounds: ['bar_ambient_loop'],
         loop: true,
-        volume: 0.4
+        volume: 0.12
       },
       city_traffic: {
         sounds: ['city_traffic_loop'],
         loop: true,
-        volume: 0.35
+        volume: 0.1
       },
       forest_ambient: {
         sounds: ['forest_ambient_loop'],
         loop: true,
-        volume: 0.4
+        volume: 0.12
       },
       cave_drips: {
         sounds: ['cave_drips_loop'],
         loop: true,
-        volume: 0.3
+        volume: 0.1
       },
       fire_crackling: {
         sounds: ['fire_crackle_loop'],
         loop: true,
-        volume: 0.5
+        volume: 0.15
       },
       water_stream: {
         sounds: ['stream_loop'],
         loop: true,
-        volume: 0.4
+        volume: 0.12
       }
     },
 
     // ═══════════════════════════════════════════════════════════
-    // UI SOUNDS
+    // UI SOUNDS - Quiet feedback
     // ═══════════════════════════════════════════════════════════
     ui: {
       notification: {
         sounds: ['ui_notification'],
-        volume: 0.4,
+        volume: 0.2,
         channel: 'ui'
       },
       click: {
         sounds: ['ui_click'],
-        volume: 0.3,
+        volume: 0.15,
         channel: 'ui'
       },
       success: {
         sounds: ['ui_success'],
-        volume: 0.5,
+        volume: 0.25,
         channel: 'ui'
       },
       error: {
         sounds: ['ui_error'],
-        volume: 0.4,
+        volume: 0.2,
         channel: 'ui'
       },
       level_up: {
         sounds: ['ui_levelup'],
-        volume: 0.6,
+        volume: 0.3,
         channel: 'ui'
       },
       item_acquired: {
         sounds: ['ui_item_get'],
-        volume: 0.5,
+        volume: 0.25,
         channel: 'ui'
       }
     }
   };
 
-  // Text patterns for auto-triggering sounds
+  // Text patterns for auto-triggering sounds - LONGER COOLDOWNS to prevent spam
   private textPatterns: TextPattern[] = [
-    // Gunshots
+    // Gunshots - loud sounds, moderate cooldown
     {
       patterns: [
         /\b(fires?|shoots?|shot|fired)\b.*\b(gun|pistol|revolver|handgun)\b/i,
@@ -546,14 +550,14 @@ class StorySoundTrigger {
         /\bpulls?\s+the\s+trigger\b/i
       ],
       sound: 'combat.gunshot_pistol',
-      cooldown: 500
+      cooldown: 3000
     },
     {
       patterns: [
         /\b(fires?|shoots?)\b.*\b(rifle|carbine|AR|AK)\b/i
       ],
       sound: 'combat.gunshot_rifle',
-      cooldown: 500
+      cooldown: 3000
     },
     {
       patterns: [
@@ -561,7 +565,7 @@ class StorySoundTrigger {
         /\bblast\b.*\bshotgun\b/i
       ],
       sound: 'combat.gunshot_shotgun',
-      cooldown: 500
+      cooldown: 3000
     },
     {
       patterns: [
@@ -570,22 +574,22 @@ class StorySoundTrigger {
         /\bhear\b.*\b(shots?|gunfire)\b/i
       ],
       sound: 'combat.gunshot_distant',
-      cooldown: 1000
+      cooldown: 5000
     },
 
-    // Melee combat
+    // Melee combat - long cooldowns
     {
       patterns: [
         /\b(punche?s?|punched|punching)\b/i,
         /\bfist\b.*\b(connects?|lands?|hits?)\b/i
       ],
       sound: 'combat.punch',
-      cooldown: 300
+      cooldown: 4000
     },
     {
       patterns: [/\b(kicks?)\b/i],
       sound: 'combat.kick',
-      cooldown: 300
+      cooldown: 4000
     },
     {
       patterns: [
@@ -594,7 +598,7 @@ class StorySoundTrigger {
         /\bblade\b.*\b(enters?|pierces?)\b/i
       ],
       sound: 'combat.knife_stab',
-      cooldown: 500
+      cooldown: 5000
     },
     {
       patterns: [
@@ -603,7 +607,7 @@ class StorySoundTrigger {
         /\bparr(y|ies|ied)\b/i
       ],
       sound: 'combat.sword_clash',
-      cooldown: 400
+      cooldown: 4000
     },
     {
       patterns: [
@@ -611,7 +615,7 @@ class StorySoundTrigger {
         /\bsword\b.*\b(swings?|arcs?)\b/i
       ],
       sound: 'combat.sword_swing',
-      cooldown: 400
+      cooldown: 4000
     },
     {
       patterns: [
@@ -619,10 +623,10 @@ class StorySoundTrigger {
         /\b(unsheathes?|pulls?)\b.*\bsword\b/i
       ],
       sound: 'combat.sword_draw',
-      cooldown: 1000
+      cooldown: 8000
     },
 
-    // Falls and impacts
+    // Falls and impacts - long cooldowns
     {
       patterns: [
         /\b(falls?|collapses?|drops?)\b.*\b(ground|floor|dead)\b/i,
@@ -630,17 +634,17 @@ class StorySoundTrigger {
         /\bslumps?\s+(to|onto)\b/i
       ],
       sound: 'combat.body_fall',
-      cooldown: 1000
+      cooldown: 8000
     },
 
-    // Doors
+    // Doors - long cooldowns
     {
       patterns: [
         /\b(opens?|opening)\b.*\bdoor\b/i,
         /\bdoor\b.*\b(opens?|swings?\s+open)\b/i
       ],
       sound: 'doors.door_open',
-      cooldown: 500
+      cooldown: 5000
     },
     {
       patterns: [
@@ -648,7 +652,7 @@ class StorySoundTrigger {
         /\bdoor\b.*\b(closes?|shuts?)\b/i
       ],
       sound: 'doors.door_close',
-      cooldown: 500
+      cooldown: 5000
     },
     {
       patterns: [
@@ -656,7 +660,7 @@ class StorySoundTrigger {
         /\bdoor\b.*\bslams?\b/i
       ],
       sound: 'doors.door_slam',
-      cooldown: 500
+      cooldown: 5000
     },
     {
       patterns: [
@@ -664,7 +668,7 @@ class StorySoundTrigger {
         /\bdoor\b.*\bknock\b/i
       ],
       sound: 'doors.door_knock',
-      cooldown: 500
+      cooldown: 5000
     },
     {
       patterns: [
@@ -672,10 +676,10 @@ class StorySoundTrigger {
         /\bdoor\b.*\b(splinters?|crashes?|breaks?)\b/i
       ],
       sound: 'doors.door_break',
-      cooldown: 1000
+      cooldown: 8000
     },
 
-    // Glass
+    // Glass - long cooldowns
     {
       patterns: [
         /\bglass\b.*\b(shatters?|breaks?|smashes?)\b/i,
@@ -683,17 +687,17 @@ class StorySoundTrigger {
         /\bcrash\b.*\bthrough\b.*\bwindow\b/i
       ],
       sound: 'objects.glass_break',
-      cooldown: 500
+      cooldown: 6000
     },
 
-    // Vehicles
+    // Vehicles - long cooldowns
     {
       patterns: [
         /\b(starts?|fires?\s+up)\b.*\b(car|engine|vehicle)\b/i,
         /\bengine\b.*\b(roars?|rumbles?)\s+to\s+life\b/i
       ],
       sound: 'vehicles.car_start',
-      cooldown: 2000
+      cooldown: 10000
     },
     {
       patterns: [
@@ -701,38 +705,32 @@ class StorySoundTrigger {
         /\b(collision|crash|impact)\b.*\bvehicle\b/i
       ],
       sound: 'vehicles.car_crash',
-      cooldown: 2000
+      cooldown: 10000
     },
     {
       patterns: [
         /\b(honks?|horn\s+blares?)\b/i
       ],
       sound: 'vehicles.car_horn',
-      cooldown: 1000
+      cooldown: 8000
     },
 
-    // Emotional
+    // Emotional - REMOVED SCREAMING, kept others with long cooldowns
     {
       patterns: [
         /\bgasps?\b/i,
         /\bsharp\s+intake\s+of\s+breath\b/i
       ],
       sound: 'dramatic.gasp',
-      cooldown: 1000
+      cooldown: 8000
     },
-    {
-      patterns: [
-        /\b(screams?|shrieks?)\b/i
-      ],
-      sound: 'dramatic.scream',
-      cooldown: 2000
-    },
+    // SCREAMING PATTERN REMOVED - causes chaos
     {
       patterns: [
         /\b(laughs?|chuckles?|giggles?)\b/i
       ],
       sound: 'dramatic.laughter',
-      cooldown: 1500
+      cooldown: 10000
     },
     {
       patterns: [
@@ -740,12 +738,12 @@ class StorySoundTrigger {
         /\btears\b.*\b(stream|fall|roll)\b/i
       ],
       sound: 'dramatic.crying',
-      cooldown: 3000
+      cooldown: 15000
     },
     {
       patterns: [/\bsighs?\b/i],
       sound: 'dramatic.sigh',
-      cooldown: 2000
+      cooldown: 10000
     }
   ];
 
