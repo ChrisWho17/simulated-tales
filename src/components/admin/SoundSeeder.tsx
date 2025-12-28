@@ -529,8 +529,11 @@ export function SoundSeeder() {
     // Check what already exists
     const existingFiles = await checkExistingSounds();
     
-    // Filter to only generate missing sounds
-    const toGenerate = SOUND_DEFINITIONS.filter(def => !existingFiles.has(def.filename));
+    // Filter to only generate missing sounds (database stores as category/filename)
+    const toGenerate = SOUND_DEFINITIONS.filter(def => {
+      const storagePath = `${def.category}/${def.filename}`;
+      return !existingFiles.has(storagePath);
+    });
     
     if (toGenerate.length === 0) {
       setResults([{ filename: 'All sounds already exist!', status: 'success' }]);
