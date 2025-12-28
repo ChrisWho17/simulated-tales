@@ -5,7 +5,7 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +34,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { TemperatureDisplay } from '@/components/game/TemperatureDisplay';
+import { WeatherState as TurnBasedWeatherState } from '@/game/weatherSystem';
+import { TemperatureState } from '@/game/temperatureSystem';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
@@ -44,6 +47,10 @@ interface CharacterSheetProps {
   genre?: GameGenre;
   onJumpToMessage?: (messageId: string, turnId: number) => void;
   onMoodChange?: (newMood: CoreMoodType) => void;
+  weatherState?: TurnBasedWeatherState;
+  temperatureState?: TemperatureState;
+  activeConditions?: string[];
+  hasBloodLoss?: boolean;
 }
 
 // Helper to find class/background across all genres
@@ -254,11 +261,28 @@ function PortraitDisplay({
   );
 }
 
-export function CharacterSheet({ character, onClose, onUpdateCharacter, modifierState, moodState, genre = 'fantasy', onJumpToMessage, onMoodChange }: CharacterSheetProps) {
+export function CharacterSheet({ 
+  character, 
+  onClose, 
+  onUpdateCharacter, 
+  modifierState, 
+  moodState, 
+  genre = 'fantasy', 
+  onJumpToMessage, 
+  onMoodChange,
+  weatherState,
+  temperatureState,
+  activeConditions = [],
+  hasBloodLoss = false
+}: CharacterSheetProps) {
   const { settings } = useGame();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  
+  // Check if realism mode is enabled
+  const isRealismMode = settings.inDepthSettings?.worldTone === 'brutal' || 
+                        settings.inDepthSettings?.enableInjuryDetail;
   
   const currentMood = moodState?.currentMood || deriveMoodFromStats({
     stress: 20,
@@ -343,7 +367,23 @@ export function CharacterSheet({ character, onClose, onUpdateCharacter, modifier
                 onUpdatePortrait={handlePortraitUpdate}
               />
 
-              {/* Health & Resources */}
+              {/* Weather & Temperature Section */}
+              {settings.enableWeatherEffects && (
+                <div>
+                  <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 text-sm md:text-base">
+                    <Thermometer className="w-4 h-4" />
+                    Environment & Vitals
+                  </h3>
+                  <TemperatureDisplay
+                    weatherState={weatherState}
+                    temperatureState={temperatureState}
+                    activeConditions={activeConditions}
+                    hasBloodLoss={hasBloodLoss}
+                    isRealismMode={isRealismMode}
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <div className="bg-background/50 rounded-lg p-3 md:p-4 border border-border/30">
                   <div className="flex items-center gap-1.5 md:gap-2 text-destructive mb-1 md:mb-2">

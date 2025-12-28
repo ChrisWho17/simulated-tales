@@ -1709,6 +1709,9 @@ export function AdventureDisplay({
           moodState={{ currentMood, moodIntensity: 0.6, moodHistory, lastChangeTimestamp: Date.now() }}
           genre={genre}
           onMoodChange={onMoodChange}
+          weatherState={weatherState}
+          activeConditions={getModifierState()?.activeModifiers.map(m => m.name) || []}
+          hasBloodLoss={gameLoopState.adrenalineState?.hiddenDamage?.revealedWounds?.some(w => (w.bleedRate || 0) > 0) || false}
         />
       )}
 
