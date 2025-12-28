@@ -45,6 +45,7 @@ import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalet
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
+import { InventoryNotification, useInventoryNotifications } from '@/components/game/InventoryNotification';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
@@ -220,6 +221,14 @@ export function AdventureDisplay({
   const diceMode = gameContext?.diceMode ?? 'story';
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
+  
+  // Inventory notification system
+  const { 
+    changes: inventoryChanges, 
+    addItem: notifyItemAdded, 
+    removeItem: notifyItemRemoved, 
+    handleProcessed: handleNotificationProcessed 
+  } = useInventoryNotifications();
   
   // Audio system integration
   const { 
@@ -661,12 +670,9 @@ export function AdventureDisplay({
         }
         
         const itemIcon = getItemIcon(lootName);
-        toast({
-          title: `${itemIcon} ${lootName}`,
-          description: "Added to inventory",
-          duration: 3500,
-          className: "bg-primary/10 border-primary/30",
-        });
+        
+        // Trigger animated notification
+        notifyItemAdded(lootName, 1, itemIcon);
       }
       hasStatChanges = true;
     }
@@ -690,12 +696,8 @@ export function AdventureDisplay({
             updatedCharacter.inventory = updatedCharacter.inventory.filter((_, i) => i !== itemIndex);
           }
           
-          toast({
-            title: `📦 ${droppedItemName}`,
-            description: "Removed from inventory",
-            duration: 3000,
-            className: "bg-muted/50 border-muted-foreground/30",
-          });
+          // Trigger animated notification for removal
+          notifyItemRemoved(droppedItemName);
           hasStatChanges = true;
         } else {
           console.warn(`[ItemDrop] Item "${droppedItemName}" not found in inventory to remove`);
@@ -913,7 +915,7 @@ export function AdventureDisplay({
       // Clear mechanics after applying non-dice changes
       onClearMechanics();
     }
-  }, [pendingMechanics, diceMode, gameContext, character, onUpdateCharacter, toast]);
+  }, [pendingMechanics, diceMode, gameContext, character, onUpdateCharacter, toast, notifyItemAdded, notifyItemRemoved]);
 
   // Map pending roll stat to action type
   const statToActionType = (stat: string): string => {
@@ -1995,6 +1997,13 @@ export function AdventureDisplay({
           </div>
         </div>
       )}
+      
+      {/* Inventory change notifications */}
+      <InventoryNotification 
+        changes={inventoryChanges} 
+        onChangeProcessed={handleNotificationProcessed}
+        position="bottom-right"
+      />
     </div>
   );
 }
