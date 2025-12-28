@@ -96,10 +96,20 @@ serve(async (req) => {
     const audioBuffer = await response.arrayBuffer();
     const audioData = new Uint8Array(audioBuffer);
     
+    // Validate that we actually got audio data, not an HTML error page
+    if (audioData.byteLength < 1000) {
+      const textDecoder = new TextDecoder();
+      const possibleText = textDecoder.decode(audioData.slice(0, 100));
+      if (possibleText.includes('<html') || possibleText.includes('<!DOCTYPE')) {
+        console.error('ElevenLabs returned HTML instead of audio:', possibleText);
+        throw new Error('ElevenLabs returned an error page instead of audio. Check API key status.');
+      }
+    }
+    
     console.log(`Generated audio: ${audioData.byteLength} bytes`);
 
     // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('sound-effects')
       .upload(storagePath, audioData, {
         contentType: 'audio/mpeg',
@@ -107,7 +117,7 @@ serve(async (req) => {
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
+      console.error('Upload error:', JSON.stringify(uploadError));
       throw new Error(`Storage upload failed: ${uploadError.message}`);
     }
 
