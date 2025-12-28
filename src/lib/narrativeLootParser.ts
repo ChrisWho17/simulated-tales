@@ -231,16 +231,25 @@ export function parseNarrativeForDrops(narrative: string, existingDrops: string[
       if (foundItems.has(itemLower) || existingLower.has(itemLower)) continue;
       
       // Only consider drops of items the player ACTUALLY HAS in inventory
-      // Use fuzzy matching to handle name variations
-      const isInInventory = playerInventory.some(invItem => 
-        invItem.toLowerCase().includes(itemLower) || 
-        itemLower.includes(invItem.toLowerCase())
-      );
+      // Use fuzzy matching to handle name variations (e.g., "pistol" matches "Tank Commander Pistol")
+      const matchingInventoryItem = playerInventory.find(invItem => {
+        const invLower = invItem.toLowerCase();
+        const parsedLower = itemLower;
+        // Check if either contains the other, or if they share significant words
+        if (invLower.includes(parsedLower) || parsedLower.includes(invLower)) return true;
+        // Check for word-level matches (e.g., "pistol" matches "Tank Commander Pistol")
+        const parsedWords = parsedLower.split(/\s+/);
+        const invWords = invLower.split(/\s+/);
+        return parsedWords.some(pw => pw.length >= 4 && invWords.some(iw => iw === pw || iw.includes(pw)));
+      });
       
-      if (isInInventory && itemName.length >= 3) {
-        foundItems.add(itemLower);
+      const isInInventory = !!matchingInventoryItem;
+      
+      if (isInInventory && matchingInventoryItem && itemName.length >= 3) {
+        // Use the ACTUAL inventory item name for accurate removal
+        foundItems.add(matchingInventoryItem.toLowerCase());
         results.push({
-          itemName,
+          itemName: matchingInventoryItem, // Use the real inventory name!
           confidence: 'high',
           matchedPattern: pattern.source.slice(0, 50) + '...'
         });
@@ -260,15 +269,21 @@ export function parseNarrativeForDrops(narrative: string, existingDrops: string[
       
       if (foundItems.has(itemLower) || existingLower.has(itemLower)) continue;
       
-      const isInInventory = playerInventory.some(invItem => 
-        invItem.toLowerCase().includes(itemLower) || 
-        itemLower.includes(invItem.toLowerCase())
-      );
+      const matchingInventoryItem = playerInventory.find(invItem => {
+        const invLower = invItem.toLowerCase();
+        const parsedLower = itemLower;
+        if (invLower.includes(parsedLower) || parsedLower.includes(invLower)) return true;
+        const parsedWords = parsedLower.split(/\s+/);
+        const invWords = invLower.split(/\s+/);
+        return parsedWords.some(pw => pw.length >= 4 && invWords.some(iw => iw === pw || iw.includes(pw)));
+      });
       
-      if (isInInventory && itemName.length >= 3) {
-        foundItems.add(itemLower);
+      const isInInventory = !!matchingInventoryItem;
+      
+      if (isInInventory && matchingInventoryItem && itemName.length >= 3) {
+        foundItems.add(matchingInventoryItem.toLowerCase());
         results.push({
-          itemName,
+          itemName: matchingInventoryItem, // Use the real inventory name!
           confidence: 'medium',
           matchedPattern: pattern.source.slice(0, 50) + '...'
         });
@@ -331,13 +346,6 @@ export function detectMissingDropTags(
     console.log('[DropParser] Detected potential drops not tagged:', filtered);
   }
   
-  // Match detected drops to actual inventory item names
-  return filtered.slice(0, maxItems).map(p => {
-    // Find the actual inventory item name that matches
-    const inventoryMatch = playerInventory.find(invItem => 
-      invItem.toLowerCase().includes(p.itemName.toLowerCase()) || 
-      p.itemName.toLowerCase().includes(invItem.toLowerCase())
-    );
-    return inventoryMatch || p.itemName;
-  });
+  // The parsed results already contain the correct inventory item names
+  return filtered.slice(0, maxItems).map(p => p.itemName);
 }
