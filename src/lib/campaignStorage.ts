@@ -19,7 +19,7 @@ import { GameGenre } from '@/types/genreData';
 import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
 import { createInitialWeatherState } from '@/game/weatherSystem';
 import { seedWorldForGenre, hasGenreSeed } from '@/game/livingWorld';
-import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry } from '@/game/npcIdentityRegistry';
+import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry, clearNPCRegistry } from '@/game/npcIdentityRegistry';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -89,16 +89,28 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       localStorage.setItem(key, JSON.stringify(result.campaign));
     }
     
+    // CRITICAL: Clear NPC registry before loading new campaign to prevent ID pollution
+    // This ensures old NPC data from previous campaigns doesn't bleed into new ones
+    const emptyRegistry: NPCIdentityRegistry = {
+      npcs: {},
+      relationships: {},
+      families: {},
+      lockedIds: [],
+    };
+    setNPCRegistry(emptyRegistry);
+    
     // Restore NPC registry state from campaign save if available
     if (result.campaign.npcRegistryState) {
       const savedRegistry: NPCIdentityRegistry = {
-        npcs: result.campaign.npcRegistryState.npcs as any,
-        relationships: result.campaign.npcRegistryState.relationships as any,
-        families: result.campaign.npcRegistryState.families as any,
+        npcs: result.campaign.npcRegistryState.npcs as any || {},
+        relationships: result.campaign.npcRegistryState.relationships as any || {},
+        families: result.campaign.npcRegistryState.families as any || {},
         lockedIds: result.campaign.npcRegistryState.lockedIds || [],
       };
       setNPCRegistry(savedRegistry);
       console.log(`[Campaign Storage] Restored NPC registry with ${Object.keys(savedRegistry.npcs).length} NPCs`);
+    } else {
+      console.log(`[Campaign Storage] No NPC registry in save, starting fresh`);
     }
     
     return result.campaign;

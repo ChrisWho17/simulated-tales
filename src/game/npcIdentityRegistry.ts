@@ -151,6 +151,21 @@ export function setNPCRegistry(newRegistry: NPCIdentityRegistry): void {
   saveNPCRegistry();
 }
 
+/**
+ * Clear the NPC registry completely - used when switching campaigns
+ * to prevent ID pollution between different stories
+ */
+export function clearNPCRegistry(): void {
+  registry = {
+    npcs: {},
+    relationships: {},
+    families: {},
+    lockedIds: [],
+  };
+  saveNPCRegistry();
+  console.log('[NPCRegistry] Cleared all NPC data');
+}
+
 // ============= NPC CREATION =============
 
 export interface CreateNPCConfig {

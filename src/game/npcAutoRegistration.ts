@@ -68,21 +68,62 @@ const NAME_PATTERNS = [
 ];
 
 // Words that look like names but aren't (false positives to skip)
+// EXPANDED: Includes common narrative words, skills, equipment, and pronouns
 const FALSE_POSITIVE_NAMES = new Set([
+  // Pronouns and determiners
   'The', 'This', 'That', 'Then', 'There', 'They', 'Their', 'These', 'Those',
-  'You', 'Your', 'Yours', 'Yourself',
+  'You', 'Your', 'Yours', 'Yourself', 'She', 'He', 'Her', 'Him', 'It', 'Its',
   'And', 'But', 'Yet', 'Now', 'Here', 'When', 'Where', 'What', 'Who', 'Why', 'How',
-  'North', 'South', 'East', 'West',
+  
+  // Directions and time
+  'North', 'South', 'East', 'West', 'Up', 'Down', 'Left', 'Right',
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
   'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December',
+  'Today', 'Tomorrow', 'Yesterday', 'Tonight', 'Morning', 'Evening', 'Night',
+  
+  // Places
   'Street', 'Avenue', 'Road', 'Boulevard', 'Lane', 'Drive', 'Place', 'Court',
-  'Tower', 'Castle', 'Palace', 'Temple', 'Church', 'Cathedral', 'Shrine',
-  'Forest', 'Mountain', 'River', 'Lake', 'Ocean', 'Sea', 'Island',
-  'Chapter', 'Part', 'Section', 'Act', 'Scene',
-  'First', 'Second', 'Third', 'Fourth', 'Fifth',
-  'Ancient', 'Old', 'New', 'Great', 'Grand', 'High', 'Low', 'Dark', 'Light',
-  'Red', 'Blue', 'Green', 'Gold', 'Silver', 'Black', 'White',
-  'Something', 'Nothing', 'Everything', 'Anything', 'Someone', 'Anyone', 'Everyone',
+  'Tower', 'Castle', 'Palace', 'Temple', 'Church', 'Cathedral', 'Shrine', 'City', 'Town', 'Village',
+  'Forest', 'Mountain', 'River', 'Lake', 'Ocean', 'Sea', 'Island', 'Desert', 'Plains', 'Jungle',
+  
+  // Story structure
+  'Chapter', 'Part', 'Section', 'Act', 'Scene', 'Story', 'Tale', 'Legend',
+  'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Last', 'Next', 'Previous',
+  
+  // Adjectives
+  'Ancient', 'Old', 'New', 'Great', 'Grand', 'High', 'Low', 'Dark', 'Light', 'Deep',
+  'Red', 'Blue', 'Green', 'Gold', 'Silver', 'Black', 'White', 'Gray', 'Grey', 'Brown',
+  'Big', 'Small', 'Tall', 'Short', 'Long', 'Wide', 'Narrow', 'Thick', 'Thin',
+  
+  // Pronouns
+  'Something', 'Nothing', 'Everything', 'Anything', 'Someone', 'Anyone', 'Everyone', 'Nobody',
+  'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+  
+  // Skills and abilities (common RPG terms)
+  'Survival', 'Stealth', 'Perception', 'Athletics', 'Acrobatics', 'Combat', 'Defense',
+  'Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma',
+  'Medicine', 'Nature', 'Arcana', 'History', 'Religion', 'Persuasion', 'Deception',
+  'Intimidation', 'Investigation', 'Insight', 'Performance',
+  
+  // Weapons and equipment
+  'Sword', 'Dagger', 'Axe', 'Mace', 'Hammer', 'Spear', 'Bow', 'Arrow', 'Shield',
+  'Rifle', 'Pistol', 'Shotgun', 'Gun', 'Blade', 'Knife', 'Staff', 'Wand',
+  'Armor', 'Helm', 'Helmet', 'Boots', 'Gloves', 'Cloak', 'Ring', 'Amulet',
+  'Weapon', 'Item', 'Potion', 'Scroll', 'Key', 'Torch', 'Tool', 'Pack',
+  
+  // Common narrative words that get mistakenly tagged
+  'Echo', 'Vow', 'Soul', 'Death', 'Life', 'Love', 'Hate', 'Fear', 'Hope', 'Rage', 'Fury',
+  'Voice', 'Sound', 'Wind', 'Rain', 'Storm', 'Fire', 'Water', 'Earth', 'Air', 'Shadow',
+  'Light', 'Darkness', 'Silence', 'Noise', 'Whisper', 'Shout', 'Scream', 'Cry',
+  'Door', 'Window', 'Wall', 'Floor', 'Ceiling', 'Room', 'Chamber', 'Hall', 'Corridor',
+  'Hand', 'Eye', 'Eyes', 'Face', 'Head', 'Heart', 'Mind', 'Body', 'Blood',
+  
+  // Verbs that might be capitalized
+  'Said', 'Says', 'Asked', 'Replied', 'Answered', 'Whispered', 'Shouted', 'Murmured',
+  'Walked', 'Ran', 'Stood', 'Sat', 'Lay', 'Fell', 'Rose', 'Turned', 'Looked',
+  
+  // Interjections
+  'Well', 'Oh', 'Ah', 'Hmm', 'Huh', 'Hey', 'Wow', 'Yes', 'No', 'Maybe',
 ]);
 
 // Occupation detection patterns
@@ -143,13 +184,22 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
         // Skip if already seen or is a false positive
         if (seenNames.has(name.toLowerCase())) continue;
         if (FALSE_POSITIVE_NAMES.has(name)) continue;
-        if (name.length < 2) continue;
+        if (FALSE_POSITIVE_NAMES.has(name.toLowerCase())) continue; // Case-insensitive check
+        if (name.length < 3) continue; // Must be at least 3 characters
+        
+        // Skip if name is a single common word (not a proper name)
+        if (name.split(' ').length === 1 && name.length < 4) continue;
         
         // Skip standalone blacklisted terms (ranks without a following name)
         if (isBlacklistedName(name)) continue;
         
         // Parse potential title + name combinations
         const { title, name: actualName } = parseNameWithTitle(name);
+        
+        // Skip if the actual name is too short or is a false positive
+        if (actualName.length < 3) continue;
+        if (FALSE_POSITIVE_NAMES.has(actualName)) continue;
+        if (FALSE_POSITIVE_NAMES.has(actualName.toLowerCase())) continue;
         
         // Determine confidence based on pattern type
         let confidence: 'high' | 'medium' | 'low' = 'medium';
@@ -167,6 +217,10 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
         // High confidence for hyphenated names (clearly intentional compound names)
         if (isHyphenatedName(actualName)) {
           confidence = 'high';
+        }
+        // Lower confidence for very short names
+        if (actualName.length < 4) {
+          confidence = 'low';
         }
         
         seenNames.add(actualName.toLowerCase());
