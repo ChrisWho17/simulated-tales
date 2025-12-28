@@ -63,6 +63,7 @@ import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, 
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
 import { useAudioSystem } from '@/hooks/useAudioSystem';
+import { livingWorldAudio } from '@/game/livingWorldAudio';
 
 interface StoryEntry {
   id: string;
@@ -311,10 +312,18 @@ export function AdventureDisplay({
         setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
       }
       
-      // Process narrative for sound triggers
+      // Process narrative for sound triggers using LivingWorldAudio
       const latestEntry = story[story.length - 1];
       if (latestEntry?.role === 'narrator' && enableStorySounds && audioInitialized) {
-        processNarrative(latestEntry.content);
+        // Use the unified LivingWorldAudio API for comprehensive audio processing
+        livingWorldAudio.processNarrative(latestEntry.content).then(result => {
+          if (result.sounds.length > 0) {
+            console.log('[AdventureDisplay] Triggered sounds:', result.sounds);
+          }
+          if (result.locationChanged) {
+            console.log('[AdventureDisplay] Location changed to:', result.locationChanged);
+          }
+        });
       }
     }
     previousStoryLength.current = story.length;

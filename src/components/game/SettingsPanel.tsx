@@ -1048,8 +1048,61 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         className="w-full"
                       />
                     </div>
+                    
+                    {/* Weather */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Weather</span>
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(audioVolumes.weather * 100)}%
+                        </span>
+                      </div>
+                      <Slider
+                        value={[audioVolumes.weather * 100]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={([value]) => setChannelVolume('weather', value / 100)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    {/* Voice */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Voice</span>
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(audioVolumes.voice * 100)}%
+                        </span>
+                      </div>
+                      <Slider
+                        value={[audioVolumes.voice * 100]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={([value]) => setChannelVolume('voice', value / 100)}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    {/* Dramatic */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Dramatic</span>
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(audioVolumes.dramatic * 100)}%
+                        </span>
+                      </div>
+                      <Slider
+                        value={[audioVolumes.dramatic * 100]}
+                        min={0}
+                        max={100}
+                        step={1}
+                        onValueChange={([value]) => setChannelVolume('dramatic', value / 100)}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
-                  
                   {/* Sound Type Toggles */}
                   <div className="space-y-3 pt-2 border-t border-border/30">
                     <h3 className="text-sm font-medium">Sound Categories</h3>
