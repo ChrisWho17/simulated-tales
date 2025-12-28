@@ -1,5 +1,5 @@
 // NPC Name Link - Makes NPC names in narrative text clickable
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   RegisteredNPC, 
   getAllRegisteredNPCs, 
@@ -28,6 +28,7 @@ interface NPCProfileModalProps {
 function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
   const [portrait, setPortrait] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [isLoadingCached, setIsLoadingCached] = useState(true);
   
   const siblings = useMemo(() => getSiblings(npc.permanent.id), [npc.permanent.id]);
   const spouse = useMemo(() => {
@@ -36,6 +37,30 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
     }
     return null;
   }, [npc.semiPermanent.spouse]);
+
+  // Load cached portrait on mount
+  useEffect(() => {
+    const loadCachedPortrait = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('npc_portraits')
+          .select('portrait_url')
+          .eq('npc_id', npc.permanent.id)
+          .maybeSingle();
+        
+        if (data?.portrait_url) {
+          setPortrait(data.portrait_url);
+          console.log(`[NPCPortrait] Loaded cached portrait for ${npc.permanent.name} (ID: ${npc.permanent.id})`);
+        }
+      } catch (error) {
+        console.error('Error loading cached portrait:', error);
+      } finally {
+        setIsLoadingCached(false);
+      }
+    };
+    
+    loadCachedPortrait();
+  }, [npc.permanent.id, npc.permanent.name]);
 
   const handleGeneratePortrait = useCallback(async () => {
     setIsGeneratingPortrait(true);
@@ -71,6 +96,23 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
 
       if (data?.imageUrl) {
         setPortrait(data.imageUrl);
+        
+        // Cache the portrait URL in the database by NPC ID
+        const { error: cacheError } = await supabase
+          .from('npc_portraits')
+          .upsert({
+            npc_id: npc.permanent.id,
+            portrait_url: data.imageUrl
+          }, {
+            onConflict: 'npc_id'
+          });
+        
+        if (cacheError) {
+          console.error('Failed to cache portrait:', cacheError);
+        } else {
+          console.log(`[NPCPortrait] Cached portrait for ${npc.permanent.name} (ID: ${npc.permanent.id})`);
+        }
+        
         toast({
           title: "Portrait Generated",
           description: `Created portrait for ${npc.permanent.name}`,
