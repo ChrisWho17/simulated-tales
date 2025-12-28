@@ -5,7 +5,13 @@ import { weatherSoundManager } from '@/game/weatherSoundManager';
 import { storySoundTrigger } from '@/game/storySoundTrigger';
 import { acousticEnvironmentSystem, AcousticSpace, LocationAcoustics } from '@/game/acousticEnvironmentSystem';
 import { soundPreloader, PreloadProgress, CachedSound } from '@/game/soundPreloader';
-import { WeatherState } from '@/game/weatherSystem';
+import { WeatherType } from '@/game/weatherSystem';
+
+// Simple weather state interface that works with both weather systems
+interface SimpleWeatherState {
+  current: WeatherType;
+  intensity: number | 'light' | 'moderate' | 'heavy';
+}
 
 interface UseAudioSystemReturn {
   initialized: boolean;
@@ -21,7 +27,7 @@ interface UseAudioSystemReturn {
   setMasterVolume: (volume: number) => void;
   setChannelVolume: (channel: AudioChannel, volume: number) => void;
   toggleMute: () => void;
-  syncWeather: (weatherState: WeatherState, timeOfDay?: 'day' | 'night' | 'dawn' | 'dusk') => void;
+  syncWeather: (weatherState: SimpleWeatherState, timeOfDay?: 'day' | 'night' | 'dawn' | 'dusk') => void;
   processNarrative: (text: string) => string[];
   playUISound: (sound: 'click' | 'notification' | 'success' | 'error' | 'level_up' | 'item_acquired') => void;
   playSoundFromCategory: (category: string, options?: { volume?: number; pitch?: number }) => Promise<boolean>;
@@ -140,13 +146,21 @@ export function useAudioSystem(): UseAudioSystemReturn {
     audioEngine.toggleMute();
   }, []);
 
-  // Weather sync
+  // Weather sync - works with both weatherSystem.ts and worldEventsSystem.ts WeatherState types
   const syncWeather = useCallback((
-    weatherState: WeatherState,
+    weatherState: SimpleWeatherState,
     timeOfDay: 'day' | 'night' | 'dawn' | 'dusk' = 'day'
   ) => {
     if (state.initialized && !state.muted) {
-      weatherSoundManager.syncWithWeatherState(weatherState, timeOfDay);
+      // Convert intensity to number if it's a string
+      const intensity = typeof weatherState.intensity === 'string' 
+        ? { light: 0.3, moderate: 0.5, heavy: 0.8 }[weatherState.intensity] || 0.5
+        : weatherState.intensity;
+      
+      weatherSoundManager.syncWithWeatherState(
+        { current: weatherState.current, intensity } as any,
+        timeOfDay
+      );
     }
   }, [state.initialized, state.muted]);
 
