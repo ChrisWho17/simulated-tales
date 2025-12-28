@@ -13,6 +13,7 @@ export interface GameMechanics {
   xpGained?: { amount: number; reason: string };
   goldGained?: number;
   lootGained?: string | string[];
+  itemsDropped?: string[];  // Items removed from inventory (left behind, sold, given away, etc.)
   damage?: number;
   heal?: number;
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;

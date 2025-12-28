@@ -104,6 +104,7 @@ interface GameMechanics {
   xpGained?: { amount: number; reason: string; events?: XPEventData[] };
   goldGained?: number;
   lootGained?: string | string[];
+  itemsDropped?: string[];  // Items removed from inventory (left behind, sold, given away, etc.)
   damage?: number;
   heal?: number;
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
@@ -645,6 +646,38 @@ export function AdventureDisplay({
         });
       }
       hasStatChanges = true;
+    }
+    
+    // Remove dropped items from inventory (NEW - fixes item duplication bug)
+    if (pendingMechanics.itemsDropped && pendingMechanics.itemsDropped.length > 0) {
+      for (const droppedItemName of pendingMechanics.itemsDropped) {
+        const itemIndex = updatedCharacter.inventory.findIndex(
+          item => item.name.toLowerCase() === droppedItemName.toLowerCase()
+        );
+        
+        if (itemIndex !== -1) {
+          const item = updatedCharacter.inventory[itemIndex];
+          if (item.quantity > 1) {
+            // Reduce quantity by 1
+            const newInventory = [...updatedCharacter.inventory];
+            newInventory[itemIndex] = { ...item, quantity: item.quantity - 1 };
+            updatedCharacter.inventory = newInventory;
+          } else {
+            // Remove item entirely
+            updatedCharacter.inventory = updatedCharacter.inventory.filter((_, i) => i !== itemIndex);
+          }
+          
+          toast({
+            title: `📦 ${droppedItemName}`,
+            description: "Removed from inventory",
+            duration: 3000,
+            className: "bg-muted/50 border-muted-foreground/30",
+          });
+          hasStatChanges = true;
+        } else {
+          console.warn(`[ItemDrop] Item "${droppedItemName}" not found in inventory to remove`);
+        }
+      }
     }
 
     // Apply XP through leveling system
