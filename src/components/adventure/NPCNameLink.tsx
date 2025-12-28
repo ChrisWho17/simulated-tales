@@ -686,18 +686,101 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
 // ============= NAME INTRODUCTION PATTERNS =============
 // Instead of blocklisting everything, detect explicit name introductions
 // These patterns indicate someone is being introduced as a person
+// Covers many genres: fantasy, noir, sci-fi, western, modern, etc.
 
-const NAME_INTRODUCTION_PATTERNS = [
-  // Direct introductions
-  /(?:my name is|i'm|i am|call me|they call me|the name's|name's)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
-  // Third person introductions
-  /(?:this is|meet|introducing|allow me to introduce)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
-  // Self-identification in dialogue
-  /["'](?:I'm|I am|Call me|Name's)\s+([A-Z][a-z]+)/gi,
+const NAME_INTRODUCTION_PATTERNS: RegExp[] = [
+  // ===== DIRECT SELF-INTRODUCTIONS =====
+  // Basic: "My name is X", "I'm X", "I am X"
+  /(?:my name is|my name's|i'm|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // Casual: "Call me X", "You can call me X", "Just call me X"
+  /(?:call me|you can call me|just call me|everyone calls me|folks call me|people call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // Nickname style: "I go by X", "I'm known as X", "Known as X"
+  /(?:i go by|i'm known as|known as|also known as|aka|a\.k\.a\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // Formal: "The name's X", "Name's X"
+  /(?:the name's|name's|the name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // They/others call me: "They call me X", "Round here they call me X"
+  /(?:they call me|'round here they call me|around here they call me|some call me|most call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== NOIR / DETECTIVE GENRE =====
+  // "The dame introduced herself as X", "The broad's name was X"
+  /(?:introduced (?:himself|herself|themselves|themself) as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:goes by the name of|goes by the name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:working under the name|operating under the alias)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== FANTASY / MEDIEVAL GENRE =====
+  // "I am called X", "I am X of House Y", "Sir X at your service"
+  /(?:i am called|i'm called|i be called|i be)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:i am|i'm)\s+([A-Z][a-z]+)\s+(?:of house|of clan|of the|son of|daughter of)/gi,
+  /(?:sir|lady|lord|dame|master|mistress)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:at your service|of|the)/gi,
+  /(?:you may address me as|address me as|refer to me as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:i bear the name|i carry the name|my given name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== SCI-FI / CYBERPUNK GENRE =====
+  // "Designation: X", "Unit X reporting", "My handle is X"
+  /(?:designation[:\s]+|unit\s+)([A-Z][a-z0-9]+(?:[-\s][A-Z][a-z0-9]+)?)/gi,
+  /(?:my handle is|handle's|street name is|net name is|alias is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:registered as|ID reads|identification[:\s]+)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== WESTERN GENRE =====
+  // "Folks 'round here call me X", "I'm X, fastest gun in..."
+  /(?:folks call me|pardner.*call me|stranger.*name's)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:wanted poster says|bounty on)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== MILITARY / WAR GENRE =====
+  // "Private X reporting", "Sergeant X", "Callsign X"
+  /(?:private|corporal|sergeant|lieutenant|captain|major|colonel|general|commander|admiral)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:callsign[:\s]+|codename[:\s]+|operating under callsign)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:soldier named|marine named|officer named|trooper named)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== PIRATE / NAUTICAL GENRE =====
+  // "Captain X at yer service", "They call me X the Terrible"
+  /(?:captain|first mate|quartermaster|bo'sun|bosun)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:sailed under|crewed with|served under captain)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== HORROR / SUPERNATURAL GENRE =====
+  // "The entity known as X", "The spirit of X", "I was once called X"
+  /(?:entity known as|being known as|creature called|thing called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:spirit of|ghost of|soul of|shade of|specter of)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:i was once called|i was once known as|in life.*called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== URBAN / STREET GENRE =====
+  // "On the streets they call me X", "My crew knows me as X"
+  /(?:on the streets.*call me|streets know me as|hood knows me as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:my crew calls me|gang knows me as|boys call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== ROMANCE / SOCIAL GENRE =====
+  // "Allow me to introduce myself, I'm X", "Pleased to meet you, I'm X"
+  /(?:pleased to meet you.*i'm|pleasure to meet you.*i'm|charmed.*i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:may i introduce myself\??\s*i'm|let me introduce myself.*i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== POST-APOCALYPTIC GENRE =====
+  // "Before the bombs I was X", "Used to be called X", "The wasteland knows me as X"
+  /(?:before the.*i was|used to be called|used to be known as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:wasteland knows me as|survivors call me|scavengers know me as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== THIRD PERSON INTRODUCTIONS =====
+  // "This is X", "Meet X", "Allow me to introduce X"
+  /(?:this is|meet|may i present|allow me to introduce|introducing|let me introduce)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // "X, this is Y" - second name capture
+  /[A-Z][a-z]+,\s*(?:this is|meet)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  
+  // ===== NARRATIVE INTRODUCTIONS =====
+  // "A man/woman named X", "The stranger called X"
+  /(?:man|woman|person|stranger|figure|individual|someone|girl|boy|youth|elder)\s+(?:named|called|known as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
   // "X introduced himself/herself"
   /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:introduced|introduces)\s+(?:himself|herself|themselves)/gi,
-  // "A man/woman named X"
-  /(?:man|woman|person|stranger|figure|individual)\s+(?:named|called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // "The bartender, X, poured..."
+  /(?:the\s+\w+),\s+([A-Z][a-z]+),/gi,
+  
+  // ===== DIALOGUE SELF-IDENTIFICATION =====
+  // Quoted: "I'm X", "Call me X" inside quotes
+  /["'](?:I'm|I am|Call me|Name's|The name's|I go by)\s+([A-Z][a-z]+)/gi,
+  // Response to "What's your name?": "X." or "It's X."
+  /(?:what's your name|what is your name|who are you)[?"']*\s*["']?(?:It's\s+|I'm\s+)?([A-Z][a-z]+)/gi,
+  
+  // ===== TITLE + NAME PATTERNS =====
+  // "Doctor X", "Professor X", "Father X", "Sister X"
+  /(?:doctor|dr\.|professor|prof\.|father|sister|brother|mother|elder|chief|boss|mister|mr\.|miss|ms\.|mrs\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
 ];
 
 // Extract names from text using introduction patterns
