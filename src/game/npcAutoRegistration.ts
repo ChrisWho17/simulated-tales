@@ -10,6 +10,11 @@ import {
   getAllRegisteredNPCs,
   CreateNPCConfig,
 } from './npcIdentityRegistry';
+import { 
+  isBlacklistedName, 
+  parseNameWithTitle, 
+  isHyphenatedName 
+} from './npcNameGenerator';
 
 // ============= TYPES =============
 
@@ -34,29 +39,32 @@ export interface NPCRegistrationResult {
 // Matches capitalized names, especially when preceded by action words or descriptors
 const NAME_PATTERNS = [
   // Dialogue speaker pattern: "Squad Leader:" or "Captain Marcus:" at start of line or after newline
-  /(?:^|\n)\s*([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm,
+  // Also handles hyphenated names like "Neo-Kyo:"
+  /(?:^|\n)\s*([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?(?:\s+[A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)*):\s*(?:\(|["']|[A-Z])/gm,
   
   // Direct mention with article: "a woman named Sarah" or "the man called John"
-  /(?:named|called|known as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g,
+  // Also handles hyphenated names
+  /(?:named|called|known as)\s+([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?(?:\s+[A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)?)/g,
   
-  // Introduction patterns: "introduces himself as Marcus"
-  /introduces?\s+(?:himself|herself|themselves)\s+as\s+([A-Z][a-z]+)/g,
+  // Introduction patterns: "introduces himself as Marcus" or "introduces herself as Neo-Kyo"
+  /introduces?\s+(?:himself|herself|themselves)\s+as\s+([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)/g,
   
-  // Speaking attribution: 'says Sarah' or 'Sarah says'
-  /["'][^"']+["']\s*(?:says?|asks?|replies?|shouts?|whispers?|murmurs?|exclaims?)\s+([A-Z][a-z]+)/g,
-  /([A-Z][a-z]+)\s+(?:says?|asks?|replies?|shouts?|whispers?|murmurs?|exclaims?)\s*["']/g,
+  // Speaking attribution: 'says Sarah' or 'Sarah says' or 'Neo-Kyo says'
+  /["'][^"']+["']\s*(?:says?|asks?|replies?|shouts?|whispers?|murmurs?|exclaims?)\s+([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)/g,
+  /([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)\s+(?:says?|asks?|replies?|shouts?|whispers?|murmurs?|exclaims?)\s*["']/g,
   
-  // Action with name: "Marcus approaches" or "approaches Marcus"
-  /([A-Z][a-z]+)\s+(?:approaches?|greets?|waves?|nods?|smiles?|laughs?|frowns?|enters?|leaves?|stands?|sits?)/g,
+  // Action with name: "Marcus approaches" or "Neo-Kyo waves"
+  /([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)\s+(?:approaches?|greets?|waves?|nods?|smiles?|laughs?|frowns?|enters?|leaves?|stands?|sits?)/g,
   
-  // Title + Name: "Captain Rodriguez", "Dr. Chen", "Lady Elara"
-  /(?:Captain|Commander|Admiral|General|Lord|Lady|Sir|Dame|Dr\.?|Doctor|Professor|Chief|Elder|Master|Mistress)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g,
+  // Title + Name: "Captain Rodriguez", "Dr. Chen", "Cpt. Anderson"
+  // Now captures the full "Title Name" for proper parsing
+  /(?:Captain|Commander|Admiral|General|Lord|Lady|Sir|Dame|Dr\.?|Doctor|Professor|Chief|Elder|Master|Mistress|Cpt\.?|Cmdr\.?|Lt\.?|Col\.?|Sgt\.?|Maj\.?|Gen\.?)\s+([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?(?:\s+[A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)?)/g,
   
-  // Relationship mentions: "your sister Maya" or "his brother Kael"
-  /(?:your|his|her|their|my)\s+(?:sister|brother|mother|father|friend|ally|rival|enemy|companion|partner|spouse|wife|husband)\s+([A-Z][a-z]+)/gi,
+  // Relationship mentions: "your sister Maya" or "his brother Kael" or "her friend Neo-Kyo"
+  /(?:your|his|her|their|my)\s+(?:sister|brother|mother|father|friend|ally|rival|enemy|companion|partner|spouse|wife|husband)\s+([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)/gi,
   
-  // Possessive with name: "Maya's eyes" or "Kael's sword"
-  /([A-Z][a-z]+)'s\s+(?:eyes?|voice|face|hand|sword|weapon|expression|smile|frown|words?)/g,
+  // Possessive with name: "Maya's eyes" or "Neo-Kyo's sword"
+  /([A-Z][a-zA-Z]+(?:-[A-Z][a-zA-Z]+)?)'s\s+(?:eyes?|voice|face|hand|sword|weapon|expression|smile|frown|words?)/g,
 ];
 
 // Words that look like names but aren't (false positives to skip)
@@ -129,13 +137,19 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
         const rawName = match[1]?.trim();
         if (!rawName) continue;
         
-        // Clean up the name
+        // Clean up the name - preserve hyphens for compound names like "Neo-Kyo"
         const name = rawName.replace(/['".,!?:;]+$/, '').trim();
         
         // Skip if already seen or is a false positive
         if (seenNames.has(name.toLowerCase())) continue;
         if (FALSE_POSITIVE_NAMES.has(name)) continue;
         if (name.length < 2) continue;
+        
+        // Skip standalone blacklisted terms (ranks without a following name)
+        if (isBlacklistedName(name)) continue;
+        
+        // Parse potential title + name combinations
+        const { title, name: actualName } = parseNameWithTitle(name);
         
         // Determine confidence based on pattern type
         let confidence: 'high' | 'medium' | 'low' = 'medium';
@@ -146,12 +160,16 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
             pattern.source.includes('introduces')) {
           confidence = 'high';
         }
-        // High confidence for titled names
-        if (pattern.source.includes('Captain') || pattern.source.includes('Dr')) {
+        // High confidence for titled names (Captain Anderson, Dr. Chen)
+        if (title || pattern.source.includes('Captain') || pattern.source.includes('Dr')) {
+          confidence = 'high';
+        }
+        // High confidence for hyphenated names (clearly intentional compound names)
+        if (isHyphenatedName(actualName)) {
           confidence = 'high';
         }
         
-        seenNames.add(name.toLowerCase());
+        seenNames.add(actualName.toLowerCase());
         
         // Try to detect occupation
         let possibleOccupation: string | undefined;
@@ -172,8 +190,8 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
         }
         
         detected.push({
-          name,
-          possibleOccupation,
+          name: actualName, // Use the parsed actual name, not the full "Title Name"
+          possibleOccupation: title ? `${title.toLowerCase()}` : possibleOccupation,
           possibleRelationships: possibleRelationships.length > 0 ? possibleRelationships : undefined,
           context: sentence.trim().slice(0, 100),
           confidence,
