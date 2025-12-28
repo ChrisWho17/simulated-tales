@@ -146,6 +146,12 @@ export function createInitialWeatherState(): WeatherState {
 
 function rollDuration(weather: WeatherType): number {
   const config = WEATHER_CONFIGS[weather];
+  // Fallback to 'clear' if config is undefined (invalid weather type)
+  if (!config) {
+    console.warn(`[Weather] Invalid weather type: ${weather}, falling back to 'clear'`);
+    const fallbackConfig = WEATHER_CONFIGS['clear'];
+    return Math.floor(Math.random() * (fallbackConfig.maxDuration - fallbackConfig.minDuration + 1)) + fallbackConfig.minDuration;
+  }
   return Math.floor(Math.random() * (config.maxDuration - config.minDuration + 1)) + config.minDuration;
 }
 
@@ -220,14 +226,19 @@ export function forceWeather(
   currentTick: number,
   manualIntensity?: number
 ): WeatherState {
-  const duration = rollDuration(weather);
+  // Validate weather type exists in config
+  const validWeather = WEATHER_CONFIGS[weather] ? weather : 'clear';
+  if (!WEATHER_CONFIGS[weather]) {
+    console.warn(`[Weather] Invalid weather type: ${weather}, falling back to 'clear'`);
+  }
+  const duration = rollDuration(validWeather);
   // Convert 1-3 intensity to 0.3-1.5 range, or use random if not specified
   const intensity = manualIntensity 
     ? 0.3 + ((manualIntensity - 1) / 2) * 1.2
     : 0.5 + Math.random() * 1.0;
   return {
     ...state,
-    current: weather,
+    current: validWeather,
     ticksRemaining: duration,
     totalDuration: duration,
     intensity,
@@ -235,7 +246,7 @@ export function forceWeather(
     transitionProgress: 0,
     history: [
       ...state.history.slice(-9),
-      { weather, startedAt: currentTick }
+      { weather: validWeather, startedAt: currentTick }
     ],
   };
 }
