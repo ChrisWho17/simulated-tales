@@ -102,6 +102,17 @@ export interface CampaignData {
   // Weather state (persisted for continuity)
   weatherState?: WeatherState;
   
+  // Living World state (properties, rivals, factions)
+  livingWorldState?: {
+    properties: Array<[string, unknown]>;
+    playerProperties: string[];
+    rivals: Array<[string, unknown]>;
+    playerRivalries: Array<[string, unknown]>;
+    factions: Array<[string, unknown]>;
+    playerStanding: Array<[string, unknown]>;
+    lastTick: number;
+  };
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;
