@@ -1348,57 +1348,55 @@ export function AdventureDisplay({
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
-        <div className="flex items-center gap-1 px-1 md:px-4 py-1">
+        <div className="flex items-center gap-0.5 px-1 py-0.5">
           {/* Left Group: Logo + Weather */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0">
             <h1 
-              className="text-xs md:text-sm font-display font-bold tracking-widest fiery-gold-text pr-1"
+              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text px-1"
               data-text="UNTOLD"
             >
               UNTOLD
             </h1>
-            
-            <div className="h-4 w-px bg-border/30" />
             
             {/* Weather Button */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`h-6 w-6 rounded-md frosted-button ${
-                weatherState.current === 'storm' ? 'text-yellow-400 hover:text-yellow-300' : 
-                weatherState.current === 'rain' ? 'text-blue-400 hover:text-blue-300' : 
-                weatherState.current === 'fog' ? 'text-violet-400 hover:text-violet-300' : 
-                weatherState.current === 'heat_wave' ? 'text-red-400 hover:text-red-300' : 
-                weatherState.current === 'wind' ? 'text-orange-400 hover:text-orange-300' :
-                weatherState.current === 'snow' ? 'text-cyan-400 hover:text-cyan-300' :
-                weatherState.current === 'cloudy' ? 'text-slate-400 hover:text-slate-300' :
-                'text-amber-400 hover:text-amber-300'
+              className={`h-5 w-5 p-0 frosted-button ${
+                weatherState.current === 'storm' ? 'text-yellow-400' : 
+                weatherState.current === 'rain' ? 'text-blue-400' : 
+                weatherState.current === 'fog' ? 'text-violet-400' : 
+                weatherState.current === 'heat_wave' ? 'text-red-400' : 
+                weatherState.current === 'wind' ? 'text-orange-400' :
+                weatherState.current === 'snow' ? 'text-cyan-400' :
+                weatherState.current === 'cloudy' ? 'text-slate-400' :
+                'text-amber-400'
               }`}
               title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
             >
               {weatherState.current === 'storm' ? (
-                <CloudLightning className="w-4 h-4" />
+                <CloudLightning className="w-3.5 h-3.5" />
               ) : weatherState.current === 'rain' ? (
-                <CloudRain className="w-4 h-4" />
+                <CloudRain className="w-3.5 h-3.5" />
               ) : weatherState.current === 'fog' ? (
-                <CloudFog className="w-4 h-4" />
+                <CloudFog className="w-3.5 h-3.5" />
               ) : weatherState.current === 'heat_wave' ? (
-                <Flame className="w-4 h-4" />
+                <Flame className="w-3.5 h-3.5" />
               ) : weatherState.current === 'wind' ? (
-                <Wind className="w-4 h-4" />
+                <Wind className="w-3.5 h-3.5" />
               ) : weatherState.current === 'snow' ? (
-                <Snowflake className="w-4 h-4" />
+                <Snowflake className="w-3.5 h-3.5" />
               ) : weatherState.current === 'cloudy' ? (
-                <Cloud className="w-4 h-4" />
+                <Cloud className="w-3.5 h-3.5" />
               ) : (
-                <Sun className="w-4 h-4" />
+                <Sun className="w-3.5 h-3.5" />
               )}
             </Button>
             
             {/* Audio Status Indicator */}
             <div 
-              className="relative h-6 w-6 flex items-center justify-center"
+              className="h-5 w-5 flex items-center justify-center"
               title={
                 !audioInitialized ? 'Click to enable audio' :
                 !soundsReady ? `Loading sounds: ${preloadProgress?.loaded || 0}/${preloadProgress?.total || 0}` :
@@ -1406,32 +1404,20 @@ export function AdventureDisplay({
               }
             >
               {!audioInitialized ? (
-                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
+                <VolumeX className="w-3.5 h-3.5 text-muted-foreground/50" />
               ) : !soundsReady ? (
-                <div className="relative">
-                  <Volume2 className="w-4 h-4 text-primary/50 animate-pulse" />
-                  <div 
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary/30 rounded-full overflow-hidden"
-                  >
-                    <div 
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ width: `${preloadProgress ? (preloadProgress.loaded / preloadProgress.total) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
+                <Volume2 className="w-3.5 h-3.5 text-primary/50 animate-pulse" />
               ) : (
-                <Volume2 className="w-4 h-4 text-green-400/70" />
+                <Volume2 className="w-3.5 h-3.5 text-green-400/70" />
               )}
             </div>
-            
-            <div className="h-4 w-px bg-border/30" />
             
             {/* Character Sheet Button */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowCharacterSheet(true)}
-              className="h-6 w-6 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Character Sheet"
             >
               <ScrollText className="w-3.5 h-3.5" />
@@ -1442,7 +1428,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowInventory(true)}
-              className="h-6 w-6 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Inventory (Ctrl+I)"
             >
               <Backpack className="w-3.5 h-3.5" />
@@ -1514,7 +1500,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowSettings(true)}
-              className="h-6 w-6 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Settings"
             >
               <Sliders className="w-3 h-3" />
@@ -1524,7 +1510,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={onToggleCheatMode}
-              className="hidden xs:flex h-6 w-6 rounded-md frosted-button text-muted-foreground/70 hover:text-primary"
+              className="hidden xs:flex h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Toggle Dev Mode"
             >
               <Settings className="w-3 h-3" />
@@ -1534,7 +1520,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={onRestart}
-              className="h-6 w-6 rounded-md frosted-button text-muted-foreground/70 hover:text-destructive"
+              className="h-5 w-5 p-0 frosted-button text-muted-foreground/70 hover:text-destructive"
               title="New Adventure"
             >
               <RotateCcw className="w-3 h-3" />
