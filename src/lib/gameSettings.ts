@@ -93,6 +93,7 @@ export interface GameSettings {
   enableWeatherEffects: boolean;       // Weather influences gameplay
   weatherMode: 'auto' | 'manual';      // Automatic or manual weather control
   manualWeatherType?: string;          // Selected weather when in manual mode
+  manualWeatherIntensity?: 1 | 2 | 3;  // Intensity when in manual mode (1=light, 2=moderate, 3=heavy)
   showWeatherParticles: boolean;       // Show weather particle effects on background
   enableNPCSchedules: boolean;         // NPCs follow daily routines
   enableReputationSystem: boolean;     // Faction/NPC reputation tracking
@@ -184,6 +185,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   enableWeatherEffects: true,
   weatherMode: 'auto',
   manualWeatherType: undefined,
+  manualWeatherIntensity: 2,
   showWeatherParticles: true,
   enableNPCSchedules: true,
   enableReputationSystem: true,
