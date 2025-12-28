@@ -15,6 +15,7 @@ import {
   parseNameWithTitle, 
   isHyphenatedName 
 } from './npcNameGenerator';
+import { isWhitelistedName, MASTER_NPC_WHITELIST } from './npcNameWhitelist';
 
 // ============= TYPES =============
 
@@ -204,22 +205,26 @@ export function detectNPCsInNarrative(narrative: string): DetectedNPC[] {
         // Determine confidence based on pattern type
         let confidence: 'high' | 'medium' | 'low' = 'medium';
         
+        // High confidence for whitelisted names (pre-approved NPC names)
+        if (isWhitelistedName(actualName)) {
+          confidence = 'high';
+        }
         // High confidence for explicit introductions or speaking
-        if (pattern.source.includes('named') || 
+        else if (pattern.source.includes('named') || 
             pattern.source.includes('called') ||
             pattern.source.includes('introduces')) {
           confidence = 'high';
         }
         // High confidence for titled names (Captain Anderson, Dr. Chen)
-        if (title || pattern.source.includes('Captain') || pattern.source.includes('Dr')) {
+        else if (title || pattern.source.includes('Captain') || pattern.source.includes('Dr')) {
           confidence = 'high';
         }
         // High confidence for hyphenated names (clearly intentional compound names)
-        if (isHyphenatedName(actualName)) {
+        else if (isHyphenatedName(actualName)) {
           confidence = 'high';
         }
-        // Lower confidence for very short names
-        if (actualName.length < 4) {
+        // Lower confidence for very short names (unless whitelisted)
+        else if (actualName.length < 4) {
           confidence = 'low';
         }
         
