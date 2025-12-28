@@ -1,6 +1,7 @@
 // Weather Sound Manager - Layered, dynamic weather ambience
 import { audioEngine, AudioChannel } from './audioEngine';
 import { WeatherType, WeatherState } from './weatherSystem';
+import { soundPreloader } from './soundPreloader';
 
 interface WeatherSoundConfig {
   sounds: string[];
@@ -160,6 +161,13 @@ class WeatherSoundManager {
     weatherState: Partial<typeof this.currentWeather>,
     transitionTime = 3
   ): Promise<void> {
+    // Skip if sounds aren't preloaded yet
+    if (!soundPreloader.isReady()) {
+      // Store intent for when sounds are ready
+      this.currentWeather = { ...this.currentWeather, ...weatherState };
+      return;
+    }
+
     const previousWeather = { ...this.currentWeather };
     this.currentWeather = { ...this.currentWeather, ...weatherState };
 
@@ -423,6 +431,9 @@ class WeatherSoundManager {
   }
 
   async triggerThunder(forceClose = false): Promise<void> {
+    // Skip if sounds aren't ready
+    if (!soundPreloader.isReady()) return;
+
     const intensity = this.currentWeather.intensity;
     const isClose = forceClose || Math.random() < intensity * 0.4;
 
@@ -505,6 +516,9 @@ class WeatherSoundManager {
   }
 
   private async triggerWindGust(): Promise<void> {
+    // Skip if sounds aren't ready
+    if (!soundPreloader.isReady()) return;
+
     const config = this.weatherSounds.wind_gusts;
     if (!config) return;
 

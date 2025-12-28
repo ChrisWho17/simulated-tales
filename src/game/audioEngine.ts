@@ -222,17 +222,31 @@ class GameAudioEngine {
       return this.bufferCache.get(key)!;
     }
 
+    // Ensure context exists
+    if (!this.context) {
+      await this.initialize();
+    }
+
+    if (!this.context) {
+      console.error('[AudioEngine] No audio context available');
+      return null;
+    }
+
     try {
       const response = await fetch(url);
+      if (!response.ok) {
+        console.error(`[AudioEngine] Failed to fetch audio: ${url} (${response.status})`);
+        return null;
+      }
       const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await this.context!.decodeAudioData(arrayBuffer);
+      const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
 
       // Cache the buffer
       this.bufferCache.set(key, audioBuffer);
 
       return audioBuffer;
     } catch (e) {
-      console.error(`Failed to load audio: ${url}`, e);
+      console.error(`[AudioEngine] Failed to load audio: ${url}`, e);
       return null;
     }
   }
@@ -299,9 +313,10 @@ class GameAudioEngine {
     } = options;
 
     // Get buffer
-    const buffer = this.bufferCache.get(soundKey);
+    let buffer = this.bufferCache.get(soundKey);
     if (!buffer) {
-      console.warn(`Sound not loaded: ${soundKey}`);
+      // Don't spam console - just return null for missing sounds
+      // This is expected during preload or for sounds that don't exist
       return null;
     }
 
@@ -420,7 +435,7 @@ class GameAudioEngine {
 
     const buffer = this.bufferCache.get(soundKey);
     if (!buffer) {
-      console.warn(`Loop sound not loaded: ${soundKey}`);
+      // Silent return - sound may not be preloaded yet
       return null;
     }
 
