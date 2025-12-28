@@ -895,9 +895,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
                 <Switch 
                   checked={settings.soundEnabled && !audioMuted}
-                  onCheckedChange={(checked) => {
+                  onCheckedChange={async (checked) => {
                     updateSettings({ soundEnabled: checked });
-                    if (checked !== !audioMuted) toggleMute();
+                    if (checked) {
+                      // Initialize and preload sounds when enabling
+                      if (!audioInitialized) {
+                        await initializeAudio();
+                      }
+                      if (audioMuted) {
+                        toggleMute();
+                      }
+                    } else {
+                      if (!audioMuted) {
+                        toggleMute();
+                      }
+                    }
                   }}
                 />
               </div>
