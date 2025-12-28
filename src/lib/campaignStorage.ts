@@ -16,6 +16,7 @@ import { WorldBible } from '@/game/worldBible/types';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { StoryEntry } from '@/components/adventure/types';
 import { GameGenre } from '@/types/genreData';
+import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -69,13 +70,27 @@ export function loadCampaign(campaignId: string): CampaignData | null {
   try {
     const key = `${CAMPAIGN_STORAGE_PREFIX}${campaignId}`;
     const saved = localStorage.getItem(key);
-    if (saved) {
-      return JSON.parse(saved);
+    if (!saved) return null;
+    
+    const parsed = JSON.parse(saved);
+    
+    // Run migration if needed
+    const result = migrateCampaign(parsed);
+    
+    if (result.migrated) {
+      console.log(`[Campaign Storage] Migrated campaign ${campaignId} from v${result.fromVersion} to v${result.toVersion}`);
+      if (result.warnings.length > 0) {
+        console.warn('[Campaign Storage] Migration warnings:', result.warnings);
+      }
+      // Save the migrated version
+      localStorage.setItem(key, JSON.stringify(result.campaign));
     }
+    
+    return result.campaign;
   } catch (e) {
     console.error(`[Campaign Storage] Failed to load campaign ${campaignId}:`, e);
+    return null;
   }
-  return null;
 }
 
 export function saveCampaign(campaign: CampaignData): void {
@@ -285,12 +300,14 @@ export function exportCampaignToJson(campaignId: string): string | null {
 
 export function importCampaignFromJson(jsonData: string): CampaignData | null {
   try {
-    const campaign = JSON.parse(jsonData) as CampaignData;
+    const parsed = JSON.parse(jsonData);
     
-    // Validate basic structure
-    if (!campaign.id || !campaign.meta || !campaign.player || !campaign.worldBible) {
-      console.error('[Campaign Storage] Invalid campaign structure');
-      return null;
+    // Run migration to ensure compatibility
+    const result = migrateCampaign(parsed);
+    const campaign = result.campaign;
+    
+    if (result.warnings.length > 0) {
+      console.warn('[Campaign Storage] Import migration warnings:', result.warnings);
     }
     
     // Check limit
