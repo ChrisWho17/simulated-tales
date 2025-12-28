@@ -20,7 +20,7 @@ interface InvariantDef {
 
 const INVARIANTS: InvariantDef[] = [
   // ============================================================================
-  // CAMPAIGN INVARIANTS
+  // CAMPAIGN INVARIANTS - Updated to match CampaignData structure
   // ============================================================================
   {
     id: 'CAMPAIGN_ID',
@@ -42,44 +42,54 @@ const INVARIANTS: InvariantDef[] = [
     id: 'CHARACTER_NAME',
     name: 'Character name exists',
     check: (save) => {
-      const name = getAtPath(save, '/characterName');
-      if (typeof name !== 'string' || name.length === 0) {
+      // Check player.name (CampaignData structure)
+      const playerName = getAtPath(save, '/player/name');
+      if (typeof playerName === 'string' && playerName.length > 0) {
+        return [];
+      }
+      // Only error if player object exists but name is missing
+      const player = getAtPath(save, '/player');
+      if (player !== undefined) {
         return [{
-          path: '/characterName',
+          path: '/player/name',
           code: 'CHARACTER_NAME',
           message: 'Character name is missing or empty',
-          severity: 'error',
+          severity: 'warning', // Downgrade to warning - recoverable
+        }];
+      }
+      return []; // No player object yet is okay for new campaigns
+    },
+  },
+  {
+    id: 'META_EXISTS',
+    name: 'Campaign meta exists',
+    check: (save) => {
+      const meta = getAtPath(save, '/meta');
+      if (meta === undefined || meta === null || typeof meta !== 'object') {
+        return [{
+          path: '/meta',
+          code: 'META_EXISTS',
+          message: 'Campaign meta is missing',
+          severity: 'warning', // Recoverable with defaults
         }];
       }
       return [];
     },
   },
   {
-    id: 'TIMESTAMP_VALID',
-    name: 'Timestamp is valid',
+    id: 'META_NAME',
+    name: 'Campaign name exists',
     check: (save) => {
-      const ts = getAtPath(save, '/timestamp');
-      if (typeof ts !== 'number' || ts <= 0 || isNaN(ts)) {
+      const name = getAtPath(save, '/meta/name');
+      // Only check if meta exists
+      const meta = getAtPath(save, '/meta');
+      if (meta === undefined) return []; // Handled by META_EXISTS
+      
+      if (typeof name !== 'string' || name.length === 0) {
         return [{
-          path: '/timestamp',
-          code: 'TIMESTAMP_VALID',
-          message: 'Timestamp is invalid or missing',
-          severity: 'error',
-        }];
-      }
-      return [];
-    },
-  },
-  {
-    id: 'SAVE_VERSION',
-    name: 'Save version exists',
-    check: (save) => {
-      const version = getAtPath(save, '/saveVersion');
-      if (typeof version !== 'number' || version < 1) {
-        return [{
-          path: '/saveVersion',
-          code: 'SAVE_VERSION',
-          message: 'Save version is missing or invalid',
+          path: '/meta/name',
+          code: 'META_NAME',
+          message: 'Campaign name is missing',
           severity: 'warning',
         }];
       }
@@ -88,27 +98,19 @@ const INVARIANTS: InvariantDef[] = [
   },
   
   // ============================================================================
-  // GAME DATA INVARIANTS
+  // WORLD BIBLE INVARIANTS
   // ============================================================================
   {
-    id: 'GAME_DATA_EXISTS',
-    name: 'Game data object exists',
+    id: 'WORLD_BIBLE_EXISTS',
+    name: 'World Bible exists',
     check: (save) => {
-      const data = getAtPath(save, '/gameData');
-      if (data === undefined || data === null) {
+      const worldBible = getAtPath(save, '/worldBible');
+      if (worldBible === undefined || worldBible === null) {
         return [{
-          path: '/gameData',
-          code: 'GAME_DATA_EXISTS',
-          message: 'gameData is missing',
-          severity: 'error',
-        }];
-      }
-      if (typeof data !== 'object') {
-        return [{
-          path: '/gameData',
-          code: 'GAME_DATA_EXISTS',
-          message: 'gameData is not an object',
-          severity: 'error',
+          path: '/worldBible',
+          code: 'WORLD_BIBLE_EXISTS',
+          message: 'World Bible is missing',
+          severity: 'warning', // Recoverable - can create minimal one
         }];
       }
       return [];
@@ -116,42 +118,67 @@ const INVARIANTS: InvariantDef[] = [
   },
   
   // ============================================================================
-  // PLAYER/CHARACTER INVARIANTS
+  // PLAYER INVARIANTS - CampaignData has /player at root level
   // ============================================================================
+  {
+    id: 'PLAYER_EXISTS',
+    name: 'Player object exists',
+    check: (save) => {
+      const player = getAtPath(save, '/player');
+      if (player === undefined || player === null) {
+        return [{
+          path: '/player',
+          code: 'PLAYER_EXISTS',
+          message: 'Player object is missing',
+          severity: 'warning', // Recoverable
+        }];
+      }
+      if (typeof player !== 'object') {
+        return [{
+          path: '/player',
+          code: 'PLAYER_EXISTS',
+          message: 'Player is not an object',
+          severity: 'error',
+        }];
+      }
+      return [];
+    },
+  },
   {
     id: 'PLAYER_HEALTH',
     name: 'Player health is valid',
     check: (save) => {
       const violations: InvariantViolation[] = [];
-      const gameData = getAtPath(save, '/gameData') as Record<string, unknown> | undefined;
+      const player = getAtPath(save, '/player') as Record<string, unknown> | undefined;
       
-      if (!gameData) return [];
+      if (!player) return []; // Handled by PLAYER_EXISTS
       
-      // Check player object if it exists
-      const player = gameData.player as Record<string, unknown> | undefined;
-      if (player) {
-        const hp = player.hp;
-        const maxHp = player.maxHp;
-        
+      const hp = player.hp;
+      const maxHp = player.maxHp;
+      
+      // Only check if these fields exist
+      if (hp !== undefined) {
         if (typeof hp !== 'number' || isNaN(hp)) {
           violations.push({
-            path: '/gameData/player/hp',
+            path: '/player/hp',
             code: 'PLAYER_HEALTH',
             message: 'Player HP is not a valid number',
-            severity: 'error',
+            severity: 'warning',
           });
         } else if (hp < 0) {
           violations.push({
-            path: '/gameData/player/hp',
+            path: '/player/hp',
             code: 'PLAYER_HEALTH',
             message: 'Player HP is negative',
             severity: 'warning',
           });
         }
-        
+      }
+      
+      if (maxHp !== undefined) {
         if (typeof maxHp !== 'number' || isNaN(maxHp) || maxHp <= 0) {
           violations.push({
-            path: '/gameData/player/maxHp',
+            path: '/player/maxHp',
             code: 'PLAYER_HEALTH',
             message: 'Player maxHp is invalid',
             severity: 'warning',
@@ -164,156 +191,21 @@ const INVARIANTS: InvariantDef[] = [
   },
   
   // ============================================================================
-  // NEEDS SYSTEM INVARIANTS
-  // ============================================================================
-  {
-    id: 'NEEDS_VALID',
-    name: 'Needs values are valid',
-    check: (save) => {
-      const violations: InvariantViolation[] = [];
-      const needs = getAtPath(save, '/gameData/needs') as Record<string, unknown> | undefined;
-      
-      if (!needs) return []; // Missing needs is not an error, Stage A will fix
-      
-      // Check physical needs
-      const physical = needs.physical as Record<string, unknown> | undefined;
-      if (physical) {
-        for (const [key, value] of Object.entries(physical)) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            violations.push({
-              path: `/gameData/needs/physical/${key}`,
-              code: 'NEEDS_VALID',
-              message: `Need "${key}" is not a valid number`,
-              severity: 'error',
-            });
-          } else if (value < 0 || value > 100) {
-            violations.push({
-              path: `/gameData/needs/physical/${key}`,
-              code: 'NEEDS_VALID',
-              message: `Need "${key}" is out of range (0-100)`,
-              severity: 'warning',
-            });
-          }
-        }
-      }
-      
-      // Check psychological needs
-      const psychological = needs.psychological as Record<string, unknown> | undefined;
-      if (psychological) {
-        for (const [key, value] of Object.entries(psychological)) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            violations.push({
-              path: `/gameData/needs/psychological/${key}`,
-              code: 'NEEDS_VALID',
-              message: `Need "${key}" is not a valid number`,
-              severity: 'error',
-            });
-          }
-        }
-      }
-      
-      return violations;
-    },
-  },
-  
-  // ============================================================================
-  // RELATIONSHIP INVARIANTS
-  // ============================================================================
-  {
-    id: 'RELATIONSHIP_EDGES_VALID',
-    name: 'Relationship edges have valid references',
-    check: (save) => {
-      const violations: InvariantViolation[] = [];
-      const gameData = getAtPath(save, '/gameData') as Record<string, unknown> | undefined;
-      
-      if (!gameData) return [];
-      
-      const relationships = gameData.relationships as Record<string, unknown> | undefined;
-      if (!relationships) return [];
-      
-      const edges = relationships.edges as unknown[] | undefined;
-      if (!Array.isArray(edges)) return [];
-      
-      // Collect all known character IDs
-      const knownIds = new Set<string>();
-      knownIds.add('player'); // Player is always valid
-      
-      const characters = gameData.characters as unknown[] | undefined;
-      if (Array.isArray(characters)) {
-        for (const char of characters) {
-          if (typeof char === 'object' && char !== null) {
-            const id = (char as Record<string, unknown>).id;
-            if (typeof id === 'string') knownIds.add(id);
-          }
-        }
-      }
-      
-      // Check each edge
-      edges.forEach((edge, idx) => {
-        if (typeof edge !== 'object' || edge === null) {
-          violations.push({
-            path: `/gameData/relationships/edges/${idx}`,
-            code: 'RELATIONSHIP_EDGES_VALID',
-            message: `Edge at index ${idx} is not an object`,
-            severity: 'error',
-          });
-          return;
-        }
-        
-        const e = edge as Record<string, unknown>;
-        const from = e.from;
-        const to = e.to;
-        
-        if (typeof from !== 'string') {
-          violations.push({
-            path: `/gameData/relationships/edges/${idx}/from`,
-            code: 'RELATIONSHIP_EDGES_VALID',
-            message: `Edge ${idx} has invalid 'from' field`,
-            severity: 'error',
-          });
-        }
-        
-        if (typeof to !== 'string') {
-          violations.push({
-            path: `/gameData/relationships/edges/${idx}/to`,
-            code: 'RELATIONSHIP_EDGES_VALID',
-            message: `Edge ${idx} has invalid 'to' field`,
-            severity: 'error',
-          });
-        }
-        
-        // Only warn about orphan references, don't error
-        // Stage B will offer to clean these up
-        if (typeof to === 'string' && !knownIds.has(to)) {
-          violations.push({
-            path: `/gameData/relationships/edges/${idx}/to`,
-            code: 'ORPHAN_REFERENCE',
-            message: `Edge ${idx} references unknown character "${to}"`,
-            severity: 'warning',
-          });
-        }
-      });
-      
-      return violations;
-    },
-  },
-  
-  // ============================================================================
-  // INVENTORY INVARIANTS
+  // INVENTORY INVARIANTS - CampaignData has /player/inventory
   // ============================================================================
   {
     id: 'INVENTORY_VALID',
     name: 'Inventory items are valid',
     check: (save) => {
       const violations: InvariantViolation[] = [];
-      const inventory = getAtPath(save, '/gameData/inventory') as unknown[] | undefined;
+      const inventory = getAtPath(save, '/player/inventory') as unknown[] | undefined;
       
-      if (!Array.isArray(inventory)) return [];
+      if (!Array.isArray(inventory)) return []; // Missing inventory is okay
       
       inventory.forEach((item, idx) => {
         if (item === null || item === undefined) {
           violations.push({
-            path: `/gameData/inventory/${idx}`,
+            path: `/player/inventory/${idx}`,
             code: 'INVENTORY_VALID',
             message: `Inventory slot ${idx} contains null/undefined`,
             severity: 'warning',
@@ -323,21 +215,10 @@ const INVARIANTS: InvariantDef[] = [
         
         if (typeof item !== 'object') {
           violations.push({
-            path: `/gameData/inventory/${idx}`,
+            path: `/player/inventory/${idx}`,
             code: 'INVENTORY_VALID',
             message: `Inventory slot ${idx} is not an object`,
-            severity: 'error',
-          });
-          return;
-        }
-        
-        const i = item as Record<string, unknown>;
-        if (!i.id || typeof i.id !== 'string') {
-          violations.push({
-            path: `/gameData/inventory/${idx}/id`,
-            code: 'INVENTORY_VALID',
-            message: `Item at ${idx} has invalid ID`,
-            severity: 'error',
+            severity: 'warning',
           });
         }
       });
@@ -347,90 +228,21 @@ const INVARIANTS: InvariantDef[] = [
   },
   
   // ============================================================================
-  // KNOWLEDGE INVARIANTS
-  // ============================================================================
-  {
-    id: 'KNOWLEDGE_FORMAT',
-    name: 'Knowledge entries are valid',
-    check: (save) => {
-      const violations: InvariantViolation[] = [];
-      const gameData = getAtPath(save, '/gameData') as Record<string, unknown> | undefined;
-      
-      if (!gameData) return [];
-      
-      const knowledge = gameData.knowledge;
-      
-      // Knowledge can be array (new format) or object (legacy)
-      if (knowledge === undefined) return [];
-      
-      if (Array.isArray(knowledge)) {
-        // Tuple format: [[key, value], ...]
-        knowledge.forEach((entry, idx) => {
-          if (!Array.isArray(entry) || entry.length < 2) {
-            violations.push({
-              path: `/gameData/knowledge/${idx}`,
-              code: 'KNOWLEDGE_FORMAT',
-              message: `Knowledge entry ${idx} is not a valid tuple`,
-              severity: 'warning',
-            });
-          }
-        });
-      } else if (typeof knowledge === 'object' && knowledge !== null) {
-        // Object format is acceptable, will be migrated
-      } else {
-        violations.push({
-          path: '/gameData/knowledge',
-          code: 'KNOWLEDGE_FORMAT',
-          message: 'Knowledge is not an array or object',
-          severity: 'error',
-        });
-      }
-      
-      return violations;
-    },
-  },
-  
-  // ============================================================================
-  // EVENT LEDGER INVARIANTS
-  // ============================================================================
-  {
-    id: 'EVENT_LEDGER_SIZE',
-    name: 'Event ledger is not oversized',
-    check: (save) => {
-      const MAX_EVENTS = 500;
-      const events = getAtPath(save, '/gameData/eventHistory') as unknown[] | undefined;
-      
-      if (!Array.isArray(events)) return [];
-      
-      if (events.length > MAX_EVENTS * 1.5) {
-        return [{
-          path: '/gameData/eventHistory',
-          code: 'EVENT_LEDGER_SIZE',
-          message: `Event ledger has ${events.length} entries (max: ${MAX_EVENTS})`,
-          severity: 'warning',
-        }];
-      }
-      
-      return [];
-    },
-  },
-  
-  // ============================================================================
-  // NARRATIVE HISTORY INVARIANTS
+  // NARRATIVE HISTORY INVARIANTS - CampaignData has /narrativeHistory at root
   // ============================================================================
   {
     id: 'NARRATIVE_VALID',
     name: 'Narrative history is valid',
     check: (save) => {
       const violations: InvariantViolation[] = [];
-      const history = getAtPath(save, '/gameData/narrativeHistory') as unknown[] | undefined;
+      const history = getAtPath(save, '/narrativeHistory') as unknown[] | undefined;
       
-      if (!Array.isArray(history)) return [];
+      if (!Array.isArray(history)) return []; // Missing is okay for new campaigns
       
       history.forEach((entry, idx) => {
         if (entry === null || entry === undefined) {
           violations.push({
-            path: `/gameData/narrativeHistory/${idx}`,
+            path: `/narrativeHistory/${idx}`,
             code: 'NARRATIVE_VALID',
             message: `Narrative entry ${idx} is null/undefined`,
             severity: 'warning',
@@ -443,24 +255,24 @@ const INVARIANTS: InvariantDef[] = [
   },
   
   // ============================================================================
-  // CHECKPOINT INVARIANTS
+  // CHECKPOINT INVARIANTS - CampaignData has /checkpoints at root
   // ============================================================================
   {
     id: 'CHECKPOINTS_VALID',
     name: 'Checkpoints are valid',
     check: (save) => {
       const violations: InvariantViolation[] = [];
-      const checkpoints = getAtPath(save, '/gameData/checkpoints') as unknown[] | undefined;
+      const checkpoints = getAtPath(save, '/checkpoints') as unknown[] | undefined;
       
-      if (!Array.isArray(checkpoints)) return [];
+      if (!Array.isArray(checkpoints)) return []; // Missing is okay
       
       checkpoints.forEach((cp, idx) => {
         if (typeof cp !== 'object' || cp === null) {
           violations.push({
-            path: `/gameData/checkpoints/${idx}`,
+            path: `/checkpoints/${idx}`,
             code: 'CHECKPOINTS_VALID',
             message: `Checkpoint ${idx} is not an object`,
-            severity: 'error',
+            severity: 'warning',
           });
           return;
         }
@@ -468,13 +280,48 @@ const INVARIANTS: InvariantDef[] = [
         const c = cp as Record<string, unknown>;
         if (!c.id || typeof c.id !== 'string') {
           violations.push({
-            path: `/gameData/checkpoints/${idx}/id`,
+            path: `/checkpoints/${idx}/id`,
             code: 'CHECKPOINTS_VALID',
             message: `Checkpoint ${idx} has invalid ID`,
-            severity: 'error',
+            severity: 'warning',
           });
         }
       });
+      
+      return violations;
+    },
+  },
+  
+  // ============================================================================
+  // CHAPTERS INVARIANTS
+  // ============================================================================
+  {
+    id: 'CHAPTERS_VALID',
+    name: 'Chapters structure is valid',
+    check: (save) => {
+      const violations: InvariantViolation[] = [];
+      const chapters = getAtPath(save, '/chapters') as unknown[] | undefined;
+      const currentChapter = getAtPath(save, '/currentChapter');
+      
+      // chapters array is optional
+      if (chapters !== undefined && !Array.isArray(chapters)) {
+        violations.push({
+          path: '/chapters',
+          code: 'CHAPTERS_VALID',
+          message: 'Chapters is not an array',
+          severity: 'warning',
+        });
+      }
+      
+      // currentChapter should exist if we have chapters
+      if (currentChapter !== undefined && typeof currentChapter !== 'object') {
+        violations.push({
+          path: '/currentChapter',
+          code: 'CHAPTERS_VALID',
+          message: 'Current chapter is not an object',
+          severity: 'warning',
+        });
+      }
       
       return violations;
     },
@@ -516,9 +363,11 @@ export function runInvariants(save: unknown): InvariantResult {
 
 /**
  * Run only critical invariants (faster check for quick validation)
+ * Updated to match CampaignData structure - no GAME_DATA_EXISTS anymore
  */
 export function runCriticalInvariants(save: unknown): InvariantResult {
-  const criticalIds = ['CAMPAIGN_ID', 'CHARACTER_NAME', 'GAME_DATA_EXISTS'];
+  // Only check for campaign ID - other fields are optional/recoverable
+  const criticalIds = ['CAMPAIGN_ID'];
   const criticalInvariants = INVARIANTS.filter(i => criticalIds.includes(i.id));
   
   const allViolations: InvariantViolation[] = [];
