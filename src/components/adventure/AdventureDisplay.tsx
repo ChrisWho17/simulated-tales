@@ -577,8 +577,11 @@ export function AdventureDisplay({
   // Process mechanics and trigger emotional state changes AND update character stats
   useEffect(() => {
     if (!pendingMechanics) return;
+    
+    console.log('[AdventureDisplay] Processing pendingMechanics:', pendingMechanics);
+    console.log('[AdventureDisplay] Current inventory before:', character.inventory.map(i => i.name));
 
-    let updatedCharacter = { ...character };
+    let updatedCharacter = { ...character, inventory: [...character.inventory] };
     let hasStatChanges = false;
 
     // Apply gold changes
@@ -806,7 +809,10 @@ export function AdventureDisplay({
 
     // Update character state if any stats changed
     if (hasStatChanges) {
+      console.log('[AdventureDisplay] Updating character with inventory:', updatedCharacter.inventory.map(i => i.name));
       onUpdateCharacter(updatedCharacter);
+    } else {
+      console.log('[AdventureDisplay] No stat changes detected');
     }
 
     // Trigger emotional events based on mechanics
