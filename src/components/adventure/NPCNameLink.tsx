@@ -683,17 +683,57 @@ export function useRegisteredNPCNames(): Map<string, RegisteredNPC> {
   return nameMap;
 }
 
+// ============= NAME INTRODUCTION PATTERNS =============
+// Instead of blocklisting everything, detect explicit name introductions
+// These patterns indicate someone is being introduced as a person
+
+const NAME_INTRODUCTION_PATTERNS = [
+  // Direct introductions
+  /(?:my name is|i'm|i am|call me|they call me|the name's|name's)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // Third person introductions
+  /(?:this is|meet|introducing|allow me to introduce)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  // Self-identification in dialogue
+  /["'](?:I'm|I am|Call me|Name's)\s+([A-Z][a-z]+)/gi,
+  // "X introduced himself/herself"
+  /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:introduced|introduces)\s+(?:himself|herself|themselves)/gi,
+  // "A man/woman named X"
+  /(?:man|woman|person|stranger|figure|individual)\s+(?:named|called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+];
+
+// Extract names from text using introduction patterns
+function extractIntroducedNames(text: string): Set<string> {
+  const names = new Set<string>();
+  
+  for (const pattern of NAME_INTRODUCTION_PATTERNS) {
+    // Reset regex state
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const name = match[1]?.trim();
+      if (name && name.length >= 2 && !NEVER_LINK_WORDS.has(name.toLowerCase())) {
+        names.add(name);
+      }
+    }
+  }
+  
+  return names;
+}
+
 // Helper to register a dialogue speaker as an NPC if not already registered
 // Only registers if it looks like a real NPC name, not common words
 function registerDialogueSpeaker(
   speakerName: string, 
   npcNameMap: Map<string, RegisteredNPC>,
-  playerName?: string
+  playerName?: string,
+  confirmedNames?: Set<string>
 ): void {
   const speakerLower = speakerName.toLowerCase();
   
   // Skip common words that should never be NPCs
   if (NEVER_LINK_WORDS.has(speakerLower)) return;
+  
+  // Skip equipment names
+  if (isEquipmentName(speakerName)) return;
   
   // Skip if it's the player name
   if (playerName && speakerLower === playerName.toLowerCase()) return;
@@ -714,13 +754,17 @@ function registerDialogueSpeaker(
         existingNPC.semiPermanent.occupation.toLowerCase() !== speakerLower) {
       npcNameMap.set(existingNPC.semiPermanent.occupation.toLowerCase(), existingNPC);
     }
-  } else if (!existingNPC && speakerName.length >= 4) {
-    // Only auto-register if the name looks legitimate (not a common word)
-    // Must be at least 4 characters and properly capitalized
+  } else if (!existingNPC && speakerName.length >= 3) {
+    // For new names, only auto-register if:
+    // 1. It was explicitly introduced ("My name is X")
+    // 2. OR it's a dialogue speaker pattern ("Name: dialogue")
+    // 3. AND it passes all validation
+    const isConfirmedName = confirmedNames?.has(speakerName);
     const looksLegitimate = /^[A-Z][a-z]+/.test(speakerName) && 
-                           !NEVER_LINK_WORDS.has(speakerLower);
+                           !NEVER_LINK_WORDS.has(speakerLower) &&
+                           !isEquipmentName(speakerName);
     
-    if (looksLegitimate) {
+    if (looksLegitimate && (isConfirmedName || speakerName.length >= 4)) {
       // Auto-register this new dialogue speaker via the central registry
       const npcId = resolveNPCId(speakerName, { occupation: speakerName });
       
@@ -728,7 +772,7 @@ function registerDialogueSpeaker(
       const newNPC = getRegisteredNPC(npcId);
       if (newNPC && shouldLinkNPC(newNPC)) {
         npcNameMap.set(speakerLower, newNPC);
-        console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName} (ID: ${npcId})`);
+        console.log(`[NPCNameLink] Auto-registered dialogue speaker: ${speakerName} (ID: ${npcId})${isConfirmedName ? ' [confirmed by introduction]' : ''}`);
       }
     }
   }
@@ -744,29 +788,37 @@ export function parseTextForNPCLinks(
   playerName?: string,
   onShowCharacterSheet?: () => void
 ): React.ReactNode[] {
-  // First pass: detect and register any dialogue speakers that aren't in the registry
-  // Pattern 1: "Name: (dialogue)" format
+  // FIRST: Extract names that are explicitly introduced ("My name is X", etc.)
+  // These are CONFIRMED to be people, not items
+  const confirmedNames = extractIntroducedNames(text);
+  
+  // Second pass: detect dialogue speakers ("Name: dialogue" format)
   const dialogueSpeakerPattern = /^([A-Z][a-zA-Z\s]+?):\s*(?:\(|["']|[A-Z])/gm;
   let speakerMatch;
   
   while ((speakerMatch = dialogueSpeakerPattern.exec(text)) !== null) {
     const speakerName = speakerMatch[1].trim();
-    // Only register if it's not a common word
-    if (!NEVER_LINK_WORDS.has(speakerName.toLowerCase())) {
-      registerDialogueSpeaker(speakerName, npcNameMap, playerName);
+    // Only register if it passes validation
+    if (!NEVER_LINK_WORDS.has(speakerName.toLowerCase()) && !isEquipmentName(speakerName)) {
+      registerDialogueSpeaker(speakerName, npcNameMap, playerName, confirmedNames);
     }
   }
   
-  // Pattern 2: If the entire text looks like a character name/title (used for bold speaker names)
+  // Register any explicitly introduced names
+  for (const name of confirmedNames) {
+    registerDialogueSpeaker(name, npcNameMap, playerName, confirmedNames);
+  }
+  
+  // Pattern 3: If the entire text looks like a character name/title (used for bold speaker names)
   const trimmedText = text.trim();
   if (trimmedText && /^[A-Z][a-zA-Z\s]+$/.test(trimmedText) && trimmedText.length > 2 && trimmedText.length < 50) {
-    // Skip common words AND skills
+    // Skip common words, skills, AND equipment
     const textLower = trimmedText.toLowerCase();
-    if (!NEVER_LINK_WORDS.has(textLower) && !RPG_SKILL_WORDS.has(textLower)) {
+    if (!NEVER_LINK_WORDS.has(textLower) && !RPG_SKILL_WORDS.has(textLower) && !isEquipmentName(trimmedText)) {
       const words = trimmedText.split(/\s+/);
       const looksLikeName = words.length <= 4 && words.every(w => /^[A-Z][a-z]*$/.test(w));
       if (looksLikeName) {
-        registerDialogueSpeaker(trimmedText, npcNameMap, playerName);
+        registerDialogueSpeaker(trimmedText, npcNameMap, playerName, confirmedNames);
       }
     }
   }
