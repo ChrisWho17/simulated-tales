@@ -81,7 +81,7 @@ export function GameHeader({
   showAdrenaline = false
 }: GameHeaderProps) {
   return (
-    <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
+    <header className="min-h-16 py-3 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center gap-2">
         {character && <CharacterPortrait character={character} />}
         <h1 className="text-base font-narrative text-gradient-gold glow-text tracking-wide">
