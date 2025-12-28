@@ -12,10 +12,13 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { User, Users, Briefcase, MapPin, Heart, Camera, Loader2 } from 'lucide-react';
+import { User, Users, Briefcase, MapPin, Heart, Camera, Loader2, UserCircle2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { getStatModifier } from '@/types/rpgCharacter';
+import { NPCCharacterStats } from '@/game/npcIdentityRegistry';
 
 // Ensure NPC registry is loaded
 loadNPCRegistry();
@@ -130,6 +133,51 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
     }
   }, [npc]);
 
+  // NPC Stats Grid Component
+  const NPCStatsGrid = ({ stats }: { stats: NPCCharacterStats }) => {
+    const statList: { key: keyof typeof stats.stats; label: string; icon: string }[] = [
+      { key: 'strength', label: 'STR', icon: '💪' },
+      { key: 'dexterity', label: 'DEX', icon: '🏃' },
+      { key: 'constitution', label: 'CON', icon: '❤️' },
+      { key: 'intelligence', label: 'INT', icon: '🧠' },
+      { key: 'wisdom', label: 'WIS', icon: '👁️' },
+      { key: 'charisma', label: 'CHA', icon: '✨' },
+    ];
+
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {statList.map(({ key, label, icon }) => {
+          const value = stats.stats[key];
+          const mod = getStatModifier(value);
+          return (
+            <div key={key} className="flex flex-col items-center p-2 rounded-lg bg-muted/30 border border-border/50">
+              <span className="text-xs">{icon}</span>
+              <span className="text-xs font-medium text-muted-foreground">{label}</span>
+              <span className="text-sm font-bold text-foreground">{value}</span>
+              <span className={cn(
+                'text-xs',
+                mod >= 0 ? 'text-emerald-400' : 'text-red-400'
+              )}>
+                {mod >= 0 ? '+' : ''}{mod}
+              </span>
+            </div>
+          );
+        })}
+        {/* Level and Health */}
+        <div className="col-span-3 grid grid-cols-2 gap-2 mt-1">
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/30">
+            <span className="text-xs text-muted-foreground">Level</span>
+            <span className="text-sm font-bold text-primary">{stats.level}</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+            <span className="text-xs text-muted-foreground">HP</span>
+            <span className="text-sm font-bold text-destructive">{stats.currentHealth}/{stats.maxHealth}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="glass-panel max-w-md border-primary/30">
@@ -226,6 +274,17 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
               </div>
             )}
 
+            {/* Character Stats Section */}
+            {npc.permanent.characterStats && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Character Stats
+                </h4>
+                <NPCStatsGrid stats={npc.permanent.characterStats} />
+              </div>
+            )}
+
             {/* Relationships Section */}
             {(spouse || siblings.length > 0) && (
               <div className="space-y-2">
@@ -296,7 +355,7 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
     <>
       <span
         className={cn(
-          'npc-name-link cursor-pointer font-bold text-primary underline decoration-primary/60 underline-offset-2 hover:decoration-primary hover:text-primary/80 transition-colors duration-200',
+          'npc-name-link inline-flex items-center gap-1 cursor-pointer font-bold text-primary hover:text-primary/80 transition-colors duration-200',
           className
         )}
         onClick={handleClick}
@@ -310,7 +369,10 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
         }}
         aria-label={`View ${npc.permanent.name}'s profile`}
       >
-        {npc.permanent.name}
+        <UserCircle2 className="w-3.5 h-3.5 text-primary/70 shrink-0" />
+        <span className="underline decoration-primary/60 underline-offset-2 hover:decoration-primary">
+          {npc.permanent.name}
+        </span>
       </span>
 
       {showProfile && (
