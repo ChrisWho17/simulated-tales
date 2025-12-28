@@ -615,6 +615,8 @@ export function AdventureDisplay({
         ? pendingMechanics.lootGained 
         : [pendingMechanics.lootGained];
       
+      console.log('[AdventureDisplay] Processing loot:', lootItems);
+      
       // Helper to determine item icon based on name
       const getItemIcon = (itemName: string) => {
         const name = itemName.toLowerCase();

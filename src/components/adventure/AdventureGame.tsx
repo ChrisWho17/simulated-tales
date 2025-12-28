@@ -113,6 +113,7 @@ import {
   cancelPendingGeneration,
   isGenerationInProgress
 } from '@/lib/narrativeGuard';
+import { detectMissingLootTags } from '@/lib/narrativeLootParser';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -1080,12 +1081,36 @@ export function AdventureGame() {
       }
       
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
-      if (data.mechanics) {
-        setPendingMechanics(data.mechanics);
+      let finalMechanics = data.mechanics ? { ...data.mechanics } : {};
+      
+      // === FALLBACK LOOT DETECTION ===
+      // If AI forgot to use [LOOT:] tags, try to detect item pickups from narrative
+      if (data.narrative) {
+        const existingLoot = Array.isArray(finalMechanics.lootGained) 
+          ? finalMechanics.lootGained 
+          : (finalMechanics.lootGained ? [finalMechanics.lootGained] : []);
+        
+        const detectedLoot = detectMissingLootTags(data.narrative, existingLoot, { 
+          minConfidence: 'high' // Only high confidence to avoid false positives
+        });
+        
+        if (detectedLoot.length > 0) {
+          console.log('[AdventureGame] Fallback loot detection found:', detectedLoot);
+          // Merge with existing loot
+          const allLoot = [...existingLoot, ...detectedLoot];
+          finalMechanics.lootGained = allLoot;
+        }
+        
+        // Log mechanics for debugging
+        console.log('[AdventureGame] Final mechanics:', finalMechanics);
+      }
+      
+      if (Object.keys(finalMechanics).length > 0) {
+        setPendingMechanics(finalMechanics);
         
         // Handle language learning from backend
-        if (data.mechanics.languagesLearned && data.mechanics.languagesLearned.length > 0) {
-          for (const learned of data.mechanics.languagesLearned) {
+        if (finalMechanics.languagesLearned && finalMechanics.languagesLearned.length > 0) {
+          for (const learned of finalMechanics.languagesLearned) {
             if (!languageState.playerKnownLanguages.includes(learned.language)) {
               setLanguageState(prev => learnLanguage(prev, learned.language));
               toast.success(`You've learned ${getLanguageDisplayName(learned.language)}!`, {
