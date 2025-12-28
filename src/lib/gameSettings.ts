@@ -94,6 +94,8 @@ export interface GameSettings {
   weatherMode: 'auto' | 'manual';      // Automatic or manual weather control
   manualWeatherType?: string;          // Selected weather when in manual mode
   manualWeatherIntensity?: 1 | 2 | 3;  // Intensity when in manual mode (1=light, 2=moderate, 3=heavy)
+  climateMode: 'auto' | 'manual';      // Automatic or manual climate zone
+  manualClimateZone?: string;          // Selected climate zone when in manual mode
   showWeatherParticles: boolean;       // Show weather particle effects on background
   enableNPCSchedules: boolean;         // NPCs follow daily routines
   enableReputationSystem: boolean;     // Faction/NPC reputation tracking
@@ -186,6 +188,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   weatherMode: 'auto',
   manualWeatherType: undefined,
   manualWeatherIntensity: 2,
+  climateMode: 'auto',
+  manualClimateZone: undefined,
   showWeatherParticles: true,
   enableNPCSchedules: true,
   enableReputationSystem: true,

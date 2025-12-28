@@ -691,6 +691,59 @@ class GeographicClimateSystemClass {
     
     return descriptions[weather.type];
   }
+
+  // Get a climate zone by ID for manual override
+  getClimateZone(zoneId: ClimateZoneId): ClimateZone | null {
+    return CLIMATE_ZONES[zoneId] || null;
+  }
+
+  // Create a region with a specific climate zone (for manual override)
+  createRegionWithClimate(
+    regionId: string,
+    regionName: string,
+    climateZoneId: ClimateZoneId
+  ): GeographicRegion | null {
+    const climate = CLIMATE_ZONES[climateZoneId];
+    if (!climate) return null;
+
+    return {
+      id: regionId,
+      name: regionName,
+      latitude: this.getDefaultLatitudeForClimate(climateZoneId),
+      longitude: 0,
+      elevation: 0,
+      continentality: 0.5,
+      proximityToWater: 0.5,
+      terrain: climate.features[0] || 'plains',
+      climate,
+      modifiers: {
+        temperatureOffset: 0,
+        humidityOffset: 0,
+        weatherAdjustments: {}
+      }
+    };
+  }
+
+  // Helper to get reasonable latitude for a climate zone
+  private getDefaultLatitudeForClimate(zoneId: ClimateZoneId): number {
+    const latitudes: Record<ClimateZoneId, number> = {
+      tropical: 5,
+      arid: 25,
+      mediterranean: 38,
+      temperate: 45,
+      continental: 50,
+      subarctic: 60,
+      polar: 75,
+      highland: 40,
+      oceanic: 50
+    };
+    return latitudes[zoneId] || 45;
+  }
+
+  // Get all climate zone IDs for iteration
+  getAllClimateZoneIds(): ClimateZoneId[] {
+    return Object.keys(CLIMATE_ZONES) as ClimateZoneId[];
+  }
 }
 
 export const GeographicClimateSystem = new GeographicClimateSystemClass();

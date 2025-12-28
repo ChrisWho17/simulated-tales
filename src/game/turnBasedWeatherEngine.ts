@@ -9,7 +9,9 @@ import {
   GeographicWeatherType, 
   GameDate,
   GeneratedWeather,
-  SeasonType 
+  SeasonType,
+  ClimateZoneId,
+  CLIMATE_ZONES
 } from './geographicClimateSystem';
 
 // ============================================
@@ -776,4 +778,45 @@ export function initializeDefaultWorld(): void {
     peaks: { north: 'northlands', south: 'suncoast', east: null, west: 'heartland' },
     suncoast: { north: 'peaks', south: null, east: null, west: 'heartland' }
   });
+}
+
+// ============================================
+// MANUAL CLIMATE ZONE HELPER
+// ============================================
+
+/**
+ * Sets up a region with a specific climate zone for manual override.
+ * This allows players to force a specific climate for their current location.
+ */
+export function setManualClimateZone(
+  regionId: string,
+  climateZoneId: ClimateZoneId,
+  gameDate: GameDate
+): RegionWeatherState | null {
+  const climate = CLIMATE_ZONES[climateZoneId];
+  if (!climate) return null;
+
+  // Create or update region with this climate
+  const region = GeographicClimateSystem.createRegionWithClimate(
+    regionId,
+    `${climate.name} Region`,
+    climateZoneId
+  );
+
+  if (!region) return null;
+
+  // Register the region
+  TurnBasedWeatherEngine.registerRegion(region);
+
+  // Initialize weather for this region
+  return TurnBasedWeatherEngine.initializeRegion(regionId, gameDate);
+}
+
+/**
+ * Gets climate-appropriate weather weights for a given climate zone.
+ * Useful for understanding what weather is possible in manual mode.
+ */
+export function getClimateWeatherWeights(climateZoneId: ClimateZoneId): Record<GeographicWeatherType, number> | null {
+  const climate = CLIMATE_ZONES[climateZoneId];
+  return climate?.weatherWeights || null;
 }

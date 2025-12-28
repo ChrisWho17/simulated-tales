@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
+import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
 import { COLOR_PRESETS } from '@/lib/colorTheme';
@@ -1211,34 +1212,97 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 )}
               </div>
               
-              {/* Climate Zone Info */}
+              {/* Climate Zone Override */}
               <div className="space-y-3 pt-2 border-t border-border/30">
                 <h3 className="text-sm font-medium flex items-center gap-2">
                   <Sun className="w-4 h-4 text-amber-500" />
                   Climate Zones
                 </h3>
-                <div className="grid gap-2 text-xs">
-                  <div className="flex justify-between p-2 rounded bg-background/30">
-                    <span>🌴 Tropical</span>
-                    <span className="text-muted-foreground">Hot, humid, no snow</span>
+                
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-sm">Enable Manual Climate</span>
+                    <p className="text-xs text-muted-foreground">Override automatic climate detection</p>
                   </div>
-                  <div className="flex justify-between p-2 rounded bg-background/30">
-                    <span>🏜️ Arid/Desert</span>
-                    <span className="text-muted-foreground">Extreme temps, rare rain</span>
-                  </div>
-                  <div className="flex justify-between p-2 rounded bg-background/30">
-                    <span>🌲 Temperate</span>
-                    <span className="text-muted-foreground">Four seasons</span>
-                  </div>
-                  <div className="flex justify-between p-2 rounded bg-background/30">
-                    <span>❄️ Polar/Subarctic</span>
-                    <span className="text-muted-foreground">Cold dominant, heavy snow</span>
-                  </div>
-                  <div className="flex justify-between p-2 rounded bg-background/30">
-                    <span>⛰️ Highland</span>
-                    <span className="text-muted-foreground">Altitude-dependent</span>
-                  </div>
+                  <Switch 
+                    checked={settings.climateMode === 'manual'}
+                    onCheckedChange={(checked) => updateSettings({ 
+                      climateMode: checked ? 'manual' : 'auto'
+                    })}
+                  />
                 </div>
+                
+                {settings.climateMode === 'manual' && (
+                  <div className="space-y-2 pl-1">
+                    <span className="text-sm">Select Climate Zone</span>
+                    <div className="grid gap-2">
+                      {[
+                        { id: 'tropical', icon: '🌴', label: 'Tropical', desc: 'Hot, humid, no snow' },
+                        { id: 'arid', icon: '🏜️', label: 'Arid/Desert', desc: 'Extreme temps, rare rain' },
+                        { id: 'mediterranean', icon: '🍇', label: 'Mediterranean', desc: 'Dry summers, wet winters' },
+                        { id: 'temperate', icon: '🌲', label: 'Temperate', desc: 'Four distinct seasons' },
+                        { id: 'continental', icon: '🌾', label: 'Continental', desc: 'Hot summers, cold winters' },
+                        { id: 'subarctic', icon: '🌨️', label: 'Subarctic', desc: 'Long cold winters' },
+                        { id: 'polar', icon: '❄️', label: 'Polar', desc: 'Extreme cold year-round' },
+                        { id: 'highland', icon: '⛰️', label: 'Highland', desc: 'Altitude-dependent' },
+                        { id: 'oceanic', icon: '🌊', label: 'Oceanic', desc: 'Mild, wet, cloudy' },
+                      ].map((climate) => (
+                        <button
+                          key={climate.id}
+                          onClick={() => updateSettings({ 
+                            manualClimateZone: climate.id
+                          })}
+                          className={cn(
+                            "flex items-center gap-3 p-2.5 rounded-lg border transition-all text-left",
+                            settings.manualClimateZone === climate.id
+                              ? "border-[var(--accent-primary)] bg-[var(--accent-bg)]"
+                              : "border-border/50 hover:border-border bg-background/30"
+                          )}
+                        >
+                          <span className="text-lg">{climate.icon}</span>
+                          <div className="flex-1">
+                            <span className="text-sm font-medium">{climate.label}</span>
+                            <p className="text-xs text-muted-foreground">{climate.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Current Climate Display */}
+                    {settings.manualClimateZone && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--accent-bg)]/30 border border-[var(--accent-primary)]/30 mt-2">
+                        <span className="text-sm">
+                          Active Climate: <span className="font-medium capitalize">{settings.manualClimateZone}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {settings.climateMode !== 'manual' && (
+                  <div className="grid gap-2 text-xs">
+                    <div className="flex justify-between p-2 rounded bg-background/30">
+                      <span>🌴 Tropical</span>
+                      <span className="text-muted-foreground">Hot, humid, no snow</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-background/30">
+                      <span>🏜️ Arid/Desert</span>
+                      <span className="text-muted-foreground">Extreme temps, rare rain</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-background/30">
+                      <span>🌲 Temperate</span>
+                      <span className="text-muted-foreground">Four seasons</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-background/30">
+                      <span>❄️ Polar/Subarctic</span>
+                      <span className="text-muted-foreground">Cold dominant, heavy snow</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-background/30">
+                      <span>⛰️ Highland</span>
+                      <span className="text-muted-foreground">Altitude-dependent</span>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Weather Fronts Info */}
