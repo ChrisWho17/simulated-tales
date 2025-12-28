@@ -10,7 +10,10 @@ export interface AudioEngineState {
 export interface AudioVolumes {
   master: number;
   ambience: number;
+  weather: number;
   effects: number;
+  voice: number;
+  dramatic: number;
   music: number;
   ui: number;
 }
@@ -37,21 +40,27 @@ class GameAudioEngine {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   
-  // Channel gains for mixing
+  // Channel gains for mixing (7-channel system with ducking behavior)
   private channels: Record<AudioChannel, GainNode | null> = {
     ambience: null,
+    weather: null,
     effects: null,
+    voice: null,
+    dramatic: null,
     music: null,
     ui: null
   };
   
-  // Volume settings (0-1)
+  // Volume settings (0-1) with proper gain staging
   public volumes: AudioVolumes = {
-    master: 0.8,
-    ambience: 0.6,
-    effects: 0.9,
-    music: 0.4,
-    ui: 0.5
+    master: 0.75,
+    ambience: 0.45,
+    weather: 0.50,
+    effects: 0.70,
+    voice: 0.85,
+    dramatic: 0.65,
+    music: 0.35,
+    ui: 0.50
   };
   
   // Active audio sources
