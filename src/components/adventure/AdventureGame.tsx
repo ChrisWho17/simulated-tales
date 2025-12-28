@@ -1601,8 +1601,8 @@ export function AdventureGame() {
     }
   }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible]);
 
-  // Show loading screen on initial load
-  if (initialLoading) {
+  // Show loading screen on initial load or during initialization phase
+  if (initialLoading || phase === 'loading') {
     return <LoadingScreen isLoading={true} message="Initializing The Untold Story Engine..." minDuration={500} />;
   }
 
