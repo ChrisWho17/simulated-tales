@@ -358,6 +358,120 @@ const SOUND_DEFINITIONS = [
   { category: 'ui_hover', filename: 'ui_hover', prompt: 'UI hover sound, subtle interface hover, 0.1 seconds' },
   { category: 'ui_open', filename: 'ui_menu_open', prompt: 'Menu opening sound, interface panel open, 0.3 seconds' },
   { category: 'ui_close', filename: 'ui_menu_close', prompt: 'Menu closing sound, interface panel close, 0.3 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // NATURE SOUNDS (from locationAmbientManager)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'nature', filename: 'forest_peaceful', prompt: 'Peaceful forest ambient, birds singing, gentle breeze through trees, nature sounds, 5 seconds' },
+  { category: 'nature', filename: 'forest_night', prompt: 'Night forest ambient, crickets chirping, owls hooting, nocturnal wildlife, 5 seconds' },
+  { category: 'nature', filename: 'jungle_ambiance', prompt: 'Dense jungle ambient, tropical birds, insect chorus, humid rainforest, 5 seconds' },
+  { category: 'nature', filename: 'swamp_ambiance', prompt: 'Murky swamp ambient, frogs croaking, bubbling water, eerie marsh sounds, 5 seconds' },
+  { category: 'nature', filename: 'cave_ambiance', prompt: 'Dark cave ambient, water dripping, echoing silence, underground atmosphere, 5 seconds' },
+  { category: 'nature', filename: 'mountain_wind', prompt: 'Mountain peak wind, high altitude gusts, cold whistling wind, alpine atmosphere, 5 seconds' },
+  { category: 'nature', filename: 'ocean_waves', prompt: 'Ocean waves ambient, waves crashing on shore, beach sounds, coastal atmosphere, 5 seconds' },
+  { category: 'nature', filename: 'river_stream', prompt: 'River flowing ambient, babbling brook, rushing water stream, peaceful river, 5 seconds' },
+  { category: 'nature', filename: 'waterfall', prompt: 'Waterfall cascading, powerful rushing water, mist and spray sounds, 5 seconds' },
+  { category: 'nature', filename: 'campfire', prompt: 'Campfire crackling, wood popping, warm fire ambient, outdoor camping, 5 seconds' },
+  { category: 'nature', filename: 'rain_light_drizzle', prompt: 'Light rain drizzle, gentle rain falling, soft peaceful rain, 5 seconds' },
+  { category: 'nature', filename: 'rain_heavy_outside', prompt: 'Heavy rain outdoors, intense rainfall, pouring rain, 5 seconds' },
+  { category: 'nature', filename: 'thunderstorm', prompt: 'Thunderstorm ambient, thunder rumbles, heavy rain, storm atmosphere, 5 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // URBAN SOUNDS (from locationAmbientManager)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'urban', filename: 'city_street_busy', prompt: 'Busy city street, traffic noise, car horns, pedestrians, urban daytime, 5 seconds' },
+  { category: 'urban', filename: 'subway_station', prompt: 'Subway station ambient, train announcements, echoing footsteps, underground metro, 5 seconds' },
+  { category: 'urban', filename: 'airport_terminal', prompt: 'Airport terminal ambient, flight announcements, rolling luggage, busy travelers, 5 seconds' },
+  { category: 'urban', filename: 'shopping_mall', prompt: 'Shopping mall ambient, muzak, crowd chatter, escalators, retail atmosphere, 5 seconds' },
+  { category: 'urban', filename: 'coffee_shop', prompt: 'Coffee shop ambient, espresso machine, quiet chatter, cafe atmosphere, 5 seconds' },
+  { category: 'urban', filename: 'construction_site', prompt: 'Construction site ambient, jackhammer, machinery, workers shouting, building sounds, 5 seconds' },
+  { category: 'urban', filename: 'office_ambiance', prompt: 'Office ambient, keyboard typing, phone ringing, quiet workplace, 5 seconds' },
+  { category: 'urban', filename: 'hospital_corridor', prompt: 'Hospital corridor ambient, PA announcements, rolling carts, clinical atmosphere, 5 seconds' },
+  { category: 'urban', filename: 'elevator_ding', prompt: 'Elevator arrival ding, electronic chime, doors opening, 1 second' },
+  { category: 'urban', filename: 'police_siren_modern', prompt: 'Police siren wailing, modern cop car siren, emergency vehicle, 3 seconds' },
+  { category: 'urban', filename: 'ambulance_siren', prompt: 'Ambulance siren blaring, medical emergency siren, urgent wailing, 3 seconds' },
+  { category: 'urban', filename: 'car_horn', prompt: 'Car horn honking, impatient horn blast, traffic horn, 1 second' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // INDOOR WEATHER VARIANTS (from weatherSoundManager)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'weather', filename: 'rain_on_window_inside', prompt: 'Rain on window from inside, cozy indoor rain, water droplets on glass, 5 seconds' },
+  { category: 'weather', filename: 'rain_on_metal_roof', prompt: 'Rain on metal roof, tin roof rain sound, indoor during rainstorm, 5 seconds' },
+  { category: 'weather', filename: 'rain_on_tent', prompt: 'Rain falling on tent, camping in rain, fabric tent rain sounds, 5 seconds' },
+  { category: 'weather', filename: 'rain_on_umbrella', prompt: 'Rain hitting umbrella, droplets on umbrella fabric, walking in rain, 3 seconds' },
+  { category: 'weather', filename: 'wind_outside_window', prompt: 'Wind howling outside window, indoor draft, wind through cracks, 5 seconds' },
+  { category: 'weather', filename: 'wind_strong_outside', prompt: 'Strong wind blowing outdoors, powerful gusts, blustery weather, 5 seconds' },
+  { category: 'weather', filename: 'thunder_distant', prompt: 'Distant thunder rolling, faraway thunderstorm, rumbling thunder, 3 seconds' },
+  { category: 'weather', filename: 'thunder_close', prompt: 'Close thunder crack, nearby lightning strike, loud thunder boom, 2 seconds' },
+  { category: 'weather', filename: 'snow_falling', prompt: 'Quiet snow falling ambient, muffled winter silence, peaceful snowfall, 5 seconds' },
+  { category: 'weather', filename: 'snow_footsteps', prompt: 'Walking through snow, crunching footsteps in snow, winter walking, 2 seconds' },
+  { category: 'weather', filename: 'hailstorm', prompt: 'Hailstorm hitting ground, ice pellets falling, hail on roof, severe weather, 5 seconds' },
+  { category: 'weather', filename: 'arctic_blizzard', prompt: 'Arctic blizzard, intense snowstorm, howling freezing wind, whiteout conditions, 5 seconds' },
+  { category: 'weather', filename: 'fog_horn', prompt: 'Fog horn sounding, maritime warning horn, harbor fog signal, 3 seconds' },
+  { category: 'weather', filename: 'tornado_siren', prompt: 'Tornado warning siren, civil defense siren, emergency alert, 4 seconds' },
+  { category: 'weather', filename: 'hurricane_storm', prompt: 'Hurricane winds, extreme storm, violent wind and rain, tropical storm, 5 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // ADDITIONAL AMBIENCE (from locationAmbientManager)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'ambience_inn', filename: 'inn_ambient', prompt: 'Cozy inn ambient, warm fireplace, quiet conversation, comfortable tavern, 5 seconds' },
+  { category: 'ambience_wilderness', filename: 'wilderness_ambient', prompt: 'Open wilderness ambient, distant birds, wind through grass, vast outdoor space, 5 seconds' },
+  { category: 'ambience_temple', filename: 'temple_ambient', prompt: 'Ancient temple ambient, echoing chamber, sacred atmosphere, mysterious, 5 seconds' },
+  { category: 'ambience_shrine', filename: 'shrine_ambient', prompt: 'Peaceful shrine ambient, wind chimes, spiritual calm, sacred space, 5 seconds' },
+  { category: 'ambience_ship', filename: 'ship_ambient', prompt: 'Ship at sea ambient, creaking wood, waves against hull, sailing sounds, 5 seconds' },
+  { category: 'ambience_harbor', filename: 'harbor_ambient', prompt: 'Harbor ambient, seagulls, boat bells, dockside atmosphere, maritime, 5 seconds' },
+  { category: 'ambience_battlefield', filename: 'battlefield_ambient', prompt: 'Distant battlefield ambient, far off explosions, war sounds, tension, 5 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // CROWD SOUNDS (from location systems)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'crowd_busy', filename: 'crowd_busy', prompt: 'Busy crowd ambient, many people talking, bustling crowd noise, 5 seconds' },
+  { category: 'crowd_murmur', filename: 'crowd_murmur', prompt: 'Quiet crowd murmur, low conversation, background chatter, 5 seconds' },
+  { category: 'crowd_battle', filename: 'crowd_battle', prompt: 'Battle crowd sounds, warriors shouting, combat chaos, melee crowd, 5 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // CREATURE SOUNDS (from storySoundTrigger)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'creature_bird', filename: 'birds_chirping', prompt: 'Birds chirping, songbirds singing, forest birds, morning birdsong, 3 seconds' },
+  { category: 'creature_owl', filename: 'owl_hooting', prompt: 'Owl hooting at night, nocturnal owl call, mysterious hoot, 2 seconds' },
+  { category: 'creature_frog', filename: 'frogs_croaking', prompt: 'Frogs croaking, swamp frogs, pond frog chorus, 3 seconds' },
+  { category: 'creature_insect', filename: 'insects_buzzing', prompt: 'Insects buzzing, cicadas and crickets, summer insect sounds, 5 seconds' },
+  { category: 'creature_seagull', filename: 'seagulls_calling', prompt: 'Seagulls calling, coastal birds, harbor seagulls, beach birds, 3 seconds' },
+  { category: 'creature_rat', filename: 'rats_scurrying', prompt: 'Rats scurrying, rodent sounds, scratching and squeaking, 2 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // ACTION SOUNDS (from storySoundTrigger)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'action_chase', filename: 'chase_running', prompt: 'Frantic running footsteps, chase sequence, urgent running, 3 seconds' },
+  { category: 'action_climbing', filename: 'climbing_sounds', prompt: 'Climbing sounds, grunting effort, grabbing handholds, scaling wall, 3 seconds' },
+  { category: 'action_swimming', filename: 'swimming_sounds', prompt: 'Swimming sounds, splashing water, person swimming, water movement, 3 seconds' },
+  { category: 'action_investigation', filename: 'paper_rustling', prompt: 'Paper rustling, searching through documents, investigation sounds, 2 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // SCI-FI SOUNDS (expanded from storySoundTrigger)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'scifi_engine', filename: 'spaceship_engine', prompt: 'Spaceship engine hum, sci-fi ship propulsion, space vessel engine, 5 seconds' },
+  { category: 'scifi_tech', filename: 'tech_beeps', prompt: 'Sci-fi technology beeps, futuristic computer sounds, electronic interface, 3 seconds' },
+  { category: 'hydraulics_machinery', filename: 'hydraulics_hiss', prompt: 'Hydraulic machinery, pneumatic hiss, industrial robot sounds, 2 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // ACOUSTIC ENVIRONMENT VARIANTS (from acousticEnvironmentSystem)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'acoustic_indoor_gunshot', filename: 'gunshot_indoor_reverb', prompt: 'Gunshot in enclosed space, indoor gun echo, reverberating shot, 2 seconds' },
+  { category: 'acoustic_outdoor_gunshot', filename: 'gunshot_outdoor_echo', prompt: 'Gunshot outdoors, open air gunfire, distant echo, 2 seconds' },
+  
+  // ═══════════════════════════════════════════════════════════
+  // VEHICLE SOUNDS (expanded)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'vehicle_car_start', filename: 'car_engine_start', prompt: 'Car engine starting, ignition turning over, engine coming to life, 2 seconds' },
+  { category: 'vehicle_car_idle', filename: 'car_engine_idle', prompt: 'Car engine idling, stationary vehicle, engine running low, 5 seconds' },
+  { category: 'vehicle_car_pass', filename: 'car_passing', prompt: 'Car passing by, vehicle driving past, traffic sound, 3 seconds' },
+  { category: 'vehicle_car_horn', filename: 'car_horn_honk', prompt: 'Car horn honking, vehicle horn blast, impatient honk, 1 second' },
+  
+  // ═══════════════════════════════════════════════════════════  
+  // MAGIC SOUNDS (expanded from storySoundTrigger)
+  // ═══════════════════════════════════════════════════════════
+  { category: 'magic_cast', filename: 'magic_casting', prompt: 'Magic spell being cast, mystical energy gathering, enchantment sound, 2 seconds' },
 ];
 
 interface GenerationResult {
