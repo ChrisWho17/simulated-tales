@@ -113,7 +113,7 @@ import {
   cancelPendingGeneration,
   isGenerationInProgress
 } from '@/lib/narrativeGuard';
-import { detectMissingLootTags } from '@/lib/narrativeLootParser';
+import { detectMissingLootTags, detectMissingDropTags } from '@/lib/narrativeLootParser';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -1115,6 +1115,24 @@ export function AdventureGame() {
           // Merge with existing loot
           const allLoot = [...existingLoot, ...detectedLoot];
           finalMechanics.lootGained = allLoot;
+        }
+        
+        // === FALLBACK DROP DETECTION ===
+        // If AI forgot to use [DROP:] tags, try to detect item drops from narrative
+        const existingDrops = Array.isArray(finalMechanics.itemsDropped) 
+          ? finalMechanics.itemsDropped 
+          : (finalMechanics.itemsDropped ? [finalMechanics.itemsDropped] : []);
+        
+        const playerInventoryNames = character.inventory.map(item => item.name);
+        const detectedDrops = detectMissingDropTags(data.narrative, existingDrops, playerInventoryNames, { 
+          minConfidence: 'high' // Only high confidence to avoid removing wrong items
+        });
+        
+        if (detectedDrops.length > 0) {
+          console.log('[AdventureGame] Fallback drop detection found:', detectedDrops);
+          // Merge with existing drops
+          const allDrops = [...existingDrops, ...detectedDrops];
+          finalMechanics.itemsDropped = allDrops;
         }
         
         // Log mechanics for debugging
