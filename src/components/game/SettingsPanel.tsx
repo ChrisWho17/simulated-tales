@@ -309,7 +309,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         <button
                           key={depth.id}
                           onClick={() => updateSettings({ 
-                            inDepthSettings: { ...settings.inDepthSettings, gunNutDepth: depth.id }
+                            inDepthSettings: { 
+                              ...settings.inDepthSettings,
+                              gunNutDepth: depth.id
+                            }
                           })}
                           className={cn(
                             "px-2 py-2 text-xs rounded-md border transition-colors flex flex-col items-center gap-1",
