@@ -69,11 +69,11 @@ const WEATHER_CONFIG: Record<CoreMoodType, {
     size: { min: 1, max: 2 },
   },
   depressed: {
-    particleCount: 50,
+    particleCount: 20,
     colors: ['#a78bfa', '#8b5cf6', '#7c3aed'],
     type: 'fog',
-    speed: 0.2,
-    size: { min: 20, max: 60 },
+    speed: 0.15,
+    size: { min: 30, max: 50 },
   },
   fearful: {
     particleCount: 60,
@@ -156,7 +156,7 @@ export function WeatherParticles({ mood, intensity = 1, transitionOpacity = 1, c
           ...baseParticle,
           speedX: (Math.random() - 0.5) * config.speed,
           speedY: (Math.random() - 0.5) * config.speed * 0.5,
-          opacity: 0.03 + Math.random() * 0.05,
+          opacity: 0.02 + Math.random() * 0.03,
           size: config.size.min + Math.random() * (config.size.max - config.size.min),
         };
       case 'fire':
