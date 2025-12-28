@@ -129,6 +129,14 @@ class TurnBasedWeatherEngineClass {
     this.regions.set(region.id, region);
   }
 
+  getRegion(regionId: string): GeographicRegion | undefined {
+    return this.regions.get(regionId);
+  }
+
+  getRegionWeather(regionId: string): RegionWeatherState | undefined {
+    return this.regionWeather.get(regionId);
+  }
+
   setRegionConnections(connections: Record<string, Record<Direction, string | null>>): void {
     this.regionConnections = connections;
   }
@@ -665,6 +673,11 @@ class TurnBasedWeatherEngineClass {
         direction: f.direction,
         description: this.describeFront(f)
       }));
+  }
+
+  // Get full front data for advanced UI
+  getFullFrontsForRegion(regionId: string): WeatherFront[] {
+    return this.activeFronts.filter(f => f.affectedRegions.includes(regionId));
   }
 
   private describeFront(front: WeatherFront): string {
