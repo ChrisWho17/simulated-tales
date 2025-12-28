@@ -3,7 +3,6 @@
 
 import { 
   CharacterStats, 
-  createDefaultStats, 
   getStatModifier 
 } from '@/types/rpgCharacter';
 import { 
@@ -15,6 +14,7 @@ import {
   HeightOption,
   HairLengthOption
 } from '@/types/characterCreation';
+import { generateNPCName, Gender } from './npcNameGenerator';
 
 // ============= TYPES =============
 

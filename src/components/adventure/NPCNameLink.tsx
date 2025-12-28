@@ -12,11 +12,10 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { User, Users, Briefcase, MapPin, Heart, Camera, Loader2, UserCircle2, Shield } from 'lucide-react';
+import { User, Users, MapPin, Heart, Camera, Loader2, UserCircle2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
 import { getStatModifier } from '@/types/rpgCharacter';
 import { NPCCharacterStats } from '@/game/npcIdentityRegistry';
 
