@@ -513,6 +513,27 @@ const NEVER_LINK_WORDS = new Set([
   'first', 'second', 'third', 'last', 'next', 'previous', 'other', 'another', 'each', 'every',
   'all', 'some', 'any', 'none', 'few', 'many', 'most', 'both', 'either', 'neither',
   'self', 'myself', 'yourself', 'himself', 'herself', 'itself', 'ourselves', 'themselves',
+  
+  // ===== WEAPONS & EQUIPMENT - NEVER NPC NAMES =====
+  // Firearms
+  'rifle', 'pistol', 'shotgun', 'revolver', 'carbine', 'musket', 'blaster', 'phaser',
+  'sniper', 'machinegun', 'submachinegun', 'smg', 'lmg', 'hmg', 'firearm', 'gun', 'cannon',
+  // Melee Weapons
+  'sword', 'dagger', 'axe', 'mace', 'hammer', 'spear', 'halberd', 'lance', 'pike',
+  'staff', 'wand', 'rod', 'club', 'flail', 'morningstar', 'scythe', 'sickle', 'trident',
+  'rapier', 'saber', 'sabre', 'katana', 'longsword', 'shortsword', 'greatsword', 'claymore',
+  'knife', 'machete', 'cutlass', 'scimitar', 'falchion', 'glaive', 'naginata', 'quarterstaff',
+  // Ranged Weapons
+  'bow', 'crossbow', 'longbow', 'shortbow', 'sling', 'javelin', 'dart', 'throwing',
+  // Armor & Shields
+  'armor', 'armour', 'shield', 'helmet', 'helm', 'breastplate', 'chainmail', 'platemail',
+  'gauntlet', 'gauntlets', 'greaves', 'boots', 'cloak', 'robe', 'vest', 'jacket',
+  // Equipment Modifiers
+  'spiked', 'war', 'battle', 'combat', 'tactical', 'military', 'heavy', 'light', 'leather',
+  // Common Item Types
+  'potion', 'scroll', 'wand', 'ring', 'amulet', 'necklace', 'bracelet', 'belt', 'bag',
+  'backpack', 'torch', 'lantern', 'rope', 'key', 'lockpick', 'tool', 'kit', 'pack',
+  'food', 'ration', 'rations', 'water', 'flask', 'bottle', 'vial', 'container',
 ]);
 
 // RPG Skills that should be displayed as skill check links (not NPC links)
@@ -544,7 +565,35 @@ export const RPG_SKILL_WORDS = new Set([
   'tracking', 'foraging', 'navigation', 'climbing', 'swimming', 'riding', 'hunting',
 ]);
 
-// Check if a name looks like a legitimate NPC name (not a common word)
+// Check if a name looks like an equipment/item name (not a person)
+function isEquipmentName(name: string): boolean {
+  const nameLower = name.toLowerCase();
+  const words = nameLower.split(/\s+/);
+  
+  // Check if any word in the name is a weapon/equipment word
+  for (const word of words) {
+    if (NEVER_LINK_WORDS.has(word)) return true;
+  }
+  
+  // Common equipment patterns: "Adjective + Weapon" or "Material + Item"
+  // e.g., "Sniper Rifle", "War Club", "Spiked Mace", "Leather Armor"
+  const equipmentPatterns = [
+    /rifle$/i, /pistol$/i, /shotgun$/i, /gun$/i, /sword$/i, /dagger$/i,
+    /axe$/i, /mace$/i, /hammer$/i, /spear$/i, /bow$/i, /crossbow$/i,
+    /club$/i, /staff$/i, /wand$/i, /blade$/i, /knife$/i, /armor$/i,
+    /armour$/i, /shield$/i, /helmet$/i, /helm$/i, /cloak$/i, /robe$/i,
+    /potion$/i, /scroll$/i, /amulet$/i, /ring$/i, /boots$/i, /gloves$/i,
+    /gauntlets$/i, /greaves$/i, /vest$/i, /jacket$/i, /weapon$/i,
+  ];
+  
+  for (const pattern of equipmentPatterns) {
+    if (pattern.test(nameLower)) return true;
+  }
+  
+  return false;
+}
+
+// Check if a name looks like a legitimate NPC name (not a common word or item)
 function isLegitimateNPCName(name: string): boolean {
   if (!name || name.length < 3) return false;
   
@@ -552,6 +601,9 @@ function isLegitimateNPCName(name: string): boolean {
   
   // Must not be in the blocklist
   if (NEVER_LINK_WORDS.has(nameLower)) return false;
+  
+  // Must not look like equipment
+  if (isEquipmentName(name)) return false;
   
   // Must be properly capitalized (start with capital)
   if (!/^[A-Z]/.test(name)) return false;
@@ -568,6 +620,9 @@ function isValidNPCId(npcId: string): boolean {
   
   // Reject if the ID is just a common word
   if (NEVER_LINK_WORDS.has(idLower)) return false;
+  
+  // Reject if ID looks like equipment
+  if (isEquipmentName(npcId)) return false;
   
   // Reject very short IDs
   if (npcId.length <= 3) return false;
