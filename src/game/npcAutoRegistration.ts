@@ -16,6 +16,17 @@ import {
   isHyphenatedName 
 } from './npcNameGenerator';
 import { isWhitelistedName, MASTER_NPC_WHITELIST } from './npcNameWhitelist';
+import { 
+  getRandomPersonalityForGenre,
+  getPersonalityById,
+  NPCPersonalityTemplate,
+} from './npcPersonalityTemplates';
+import {
+  assignPersonalityToNPC,
+  getOrAssignPersonality,
+  buildNPCDialoguePrompt,
+  StoredNPCPersonality,
+} from './npcPersonalityDialogue';
 
 // ============= TYPES =============
 
@@ -32,7 +43,11 @@ export interface NPCRegistrationResult {
   skipped: string[];
   locked: string[];
   relationshipsCreated: number;
+  personalitiesAssigned: number;
 }
+
+// Current genre for personality assignment
+let currentGenre: string = 'fantasy';
 
 // ============= NAME DETECTION PATTERNS =============
 
@@ -274,6 +289,7 @@ export function registerDetectedNPCs(
     skipped: [],
     locked: [],
     relationshipsCreated: 0,
+    personalitiesAssigned: 0,
   };
   
   // Skip if player name is in the detected list
@@ -308,6 +324,16 @@ export function registerDetectedNPCs(
     
     const npcId = createRegisteredNPC(config);
     result.registered.push(npc.name);
+    
+    // Assign a personality based on current genre
+    try {
+      const personality = getRandomPersonalityForGenre(currentGenre);
+      assignPersonalityToNPC(npcId, personality.id, currentGenre);
+      result.personalitiesAssigned++;
+      console.log(`[NPCAutoReg] Assigned personality "${personality.name}" to ${npc.name}`);
+    } catch (e) {
+      console.warn(`[NPCAutoReg] Failed to assign personality to ${npc.name}:`, e);
+    }
     
     // Lock high-confidence NPCs immediately
     if (npc.confidence === 'high') {
@@ -352,6 +378,7 @@ export function processNarrativeForNPCs(
       skipped: [],
       locked: [],
       relationshipsCreated: 0,
+      personalitiesAssigned: 0,
     };
   }
   
@@ -361,7 +388,29 @@ export function processNarrativeForNPCs(
   return registerDetectedNPCs(detected, currentTurn, playerName);
 }
 
+// ============= GENRE MANAGEMENT =============
+
+/**
+ * Set the current genre for personality assignment
+ */
+export function setNPCAutoRegistrationGenre(genre: string): void {
+  currentGenre = genre.toLowerCase();
+  console.log(`[NPCAutoReg] Genre set to: ${currentGenre}`);
+}
+
+/**
+ * Get the current genre
+ */
+export function getNPCAutoRegistrationGenre(): string {
+  return currentGenre;
+}
+
 // ============= CONTEXT ENRICHMENT =============
+
+import { 
+  getNPCPersonality,
+  buildNPCDialoguePrompt as buildDialoguePrompt,
+} from './npcPersonalityDialogue';
 
 // After processing, enrich NPC context for AI
 export function getRecentlyRegisteredNPCContext(): string {
@@ -381,6 +430,16 @@ export function getRecentlyRegisteredNPCContext(): string {
     if (npc.semiPermanent.occupation && npc.semiPermanent.occupation !== 'none') {
       entry += ` (${npc.semiPermanent.occupation})`;
     }
+    
+    // Add personality info if available
+    const personality = getNPCPersonality(npc.permanent.id);
+    if (personality) {
+      const template = getPersonalityById(personality.personalityId);
+      if (template) {
+        entry += ` - ${template.name}`;
+      }
+    }
+    
     lines.push(entry);
   }
   
@@ -388,4 +447,42 @@ export function getRecentlyRegisteredNPCContext(): string {
   lines.push('Maintain consistency with these newly introduced characters.');
   
   return lines.join('\n');
+}
+
+/**
+ * Get comprehensive personality context for all active NPCs
+ * Use this for AI dialogue generation
+ */
+export function getAllNPCPersonalityContext(): string {
+  const allNPCs = getAllRegisteredNPCs();
+  if (allNPCs.length === 0) return '';
+  
+  const personalityContexts: string[] = [];
+  
+  for (const npc of allNPCs.slice(-10)) { // Last 10 NPCs max
+    const personality = getNPCPersonality(npc.permanent.id);
+    if (personality) {
+      const dialoguePrompt = buildDialoguePrompt(
+        npc.permanent.id,
+        npc.permanent.name
+      );
+      if (dialoguePrompt) {
+        personalityContexts.push(dialoguePrompt);
+      }
+    }
+  }
+  
+  if (personalityContexts.length === 0) return '';
+  
+  return `### NPC PERSONALITY VOICE GUIDES\n\n${personalityContexts.join('\n\n---\n\n')}`;
+}
+
+/**
+ * Get personality context for a specific NPC by name
+ */
+export function getNPCPersonalityContextByName(npcName: string): string | null {
+  const npc = findNPCByName(npcName);
+  if (!npc) return null;
+  
+  return buildDialoguePrompt(npc.permanent.id, npc.permanent.name);
 }
