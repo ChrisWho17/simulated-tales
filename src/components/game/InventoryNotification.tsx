@@ -57,7 +57,7 @@ export function InventoryNotification({
     setTimeout(() => {
       setActiveChanges(prev => prev.filter(c => c.id !== id));
       onChangeProcessed?.(id);
-    }, 2500);
+    }, 4000);
   }, [onChangeProcessed]);
 
   const positionClasses = {
@@ -192,7 +192,7 @@ export function InventoryNotification({
               <motion.div
                 initial={{ scaleX: 1 }}
                 animate={{ scaleX: 0 }}
-                transition={{ duration: 2.5, ease: "linear" }}
+                transition={{ duration: 4, ease: "linear" }}
                 className={`
                   absolute bottom-0 left-0 right-0 h-0.5 origin-left
                   ${change.type === 'add' 
