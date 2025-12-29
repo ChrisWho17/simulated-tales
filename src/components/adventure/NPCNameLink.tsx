@@ -354,7 +354,8 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
     <>
       <span
         className={cn(
-          'npc-name-link inline-flex items-center gap-1 cursor-pointer font-bold text-primary hover:text-primary/80 transition-colors duration-200',
+          'npc-name-link cursor-pointer font-bold italic text-primary hover:text-primary/80 transition-colors duration-200',
+          'underline decoration-primary/60 underline-offset-2 hover:decoration-primary',
           className
         )}
         onClick={handleClick}
@@ -368,10 +369,7 @@ export function NPCNameLink({ npc, className }: NPCNameLinkProps) {
         }}
         aria-label={`View ${npc.permanent.name}'s profile`}
       >
-        <UserCircle2 className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-        <span className="underline decoration-primary/60 underline-offset-2 hover:decoration-primary">
-          {npc.permanent.name}
-        </span>
+        {npc.permanent.name}
       </span>
 
       {showProfile && (

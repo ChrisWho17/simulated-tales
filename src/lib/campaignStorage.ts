@@ -29,6 +29,7 @@ import {
   importPersonalityMap 
 } from '@/game/npcPersonalityDialogue';
 import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
+import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -308,6 +309,7 @@ export function createNewCampaign(
     settings: {
       adultContent: false,
       cheatMode: false,
+      directorSettings: { ...DEFAULT_DIRECTOR_SETTINGS },
     },
   };
   
