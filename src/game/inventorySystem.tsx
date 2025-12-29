@@ -64,6 +64,9 @@ export const ACTIONS = {
   SET_CAPACITY: 'SET_CAPACITY',
   // Patching
   PATCH_ITEMS: 'PATCH_ITEMS',
+  // Campaign isolation
+  CLEAR_INVENTORY: 'CLEAR_INVENTORY',
+  LOAD_STATE: 'LOAD_STATE',
 };
 
 // ============================================================================
@@ -695,9 +698,22 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
       };
     }
     
+    // CLEAR_INVENTORY - Reset to empty state (CRITICAL for campaign isolation)
+    case ACTIONS.CLEAR_INVENTORY:
+    case 'CLEAR_INVENTORY': {
+      console.log('[INVENTORY] Clearing all items for campaign switch');
+      return createInitialState();
+    }
+    
     // LOAD_STATE - For restoring inventory from save
+    case ACTIONS.LOAD_STATE:
     case 'LOAD_STATE': {
       const loaded = action.payload;
+      if (!loaded) {
+        console.log('[INVENTORY] LOAD_STATE with empty payload - returning fresh state');
+        return createInitialState();
+      }
+      console.log('[INVENTORY] Loading state with', loaded.items?.length || 0, 'items');
       return {
         ...state,
         items: loaded.items || [],

@@ -1,5 +1,5 @@
 // ============================================================================
-// CAMPAIGN STORAGE SYSTEM - localStorage operations
+// CAMPAIGN STORAGE SYSTEM - localStorage operations with COMPLETE ISOLATION
 // ============================================================================
 
 import {
@@ -9,8 +9,11 @@ import {
   CAMPAIGN_STORAGE_PREFIX,
   CAMPAIGN_INDEX_KEY,
   ACTIVE_CAMPAIGN_KEY,
+  INVENTORY_STORAGE_PREFIX,
+  GAME_STATE_STORAGE_PREFIX,
   MAX_CAMPAIGNS,
   MAX_CHECKPOINTS,
+  getCampaignStorageKeys,
 } from '@/types/campaign';
 import { WorldBible } from '@/game/worldBible/types';
 import { RPGCharacter } from '@/types/rpgCharacter';
@@ -189,21 +192,54 @@ export function saveCampaign(campaign: CampaignData): void {
 }
 
 export function deleteCampaignData(campaignId: string): void {
+  if (!campaignId) {
+    console.error('[Campaign Storage] Cannot delete: no campaign ID provided');
+    return;
+  }
+  
   try {
-    const key = `${CAMPAIGN_STORAGE_PREFIX}${campaignId}`;
-    localStorage.removeItem(key);
+    console.log(`[Campaign Storage] FULL DELETE starting for: ${campaignId}`);
     
-    // Update index
+    // 1. Remove all known campaign-specific keys
+    const keysToRemove = getCampaignStorageKeys(campaignId);
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`[Campaign Storage] Removed: ${key}`);
+    });
+    
+    // 2. Scan for ANY other keys containing this campaign ID (safety net)
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(key => {
+      if (key.includes(campaignId)) {
+        localStorage.removeItem(key);
+        console.log(`[Campaign Storage] Removed orphaned key: ${key}`);
+      }
+    });
+    
+    // 3. Update campaign index
     const index = loadCampaignIndex();
     const filtered = index.filter(c => c.id !== campaignId);
     saveCampaignIndex(filtered);
     
-    // Clear active if this was the active campaign
+    // 4. Clear active campaign if this was active
     if (getActiveCampaignId() === campaignId) {
       setActiveCampaignId(null);
     }
     
-    console.log(`[Campaign Storage] Deleted campaign: ${campaignId}`);
+    // 5. Also check for legacy key formats (migration support)
+    const legacyKeys = [
+      `simtales_campaign_${campaignId}`,
+      `game_inventory_state`, // Old shared inventory key
+      `inventory_${campaignId}`,
+    ];
+    legacyKeys.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`[Campaign Storage] Removed legacy key: ${key}`);
+      }
+    });
+    
+    console.log(`[Campaign Storage] FULL DELETE complete for: ${campaignId}`);
   } catch (e) {
     console.error(`[Campaign Storage] Failed to delete campaign:`, e);
   }
@@ -452,4 +488,81 @@ export function formatLastPlayed(timestamp: number): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+// ============================================================================
+// CAMPAIGN-SCOPED INVENTORY STORAGE
+// ============================================================================
+
+export function saveInventoryForCampaign(campaignId: string, inventoryState: unknown): boolean {
+  if (!campaignId) {
+    console.error('[Campaign Storage] Cannot save inventory: no campaign ID');
+    return false;
+  }
+  
+  try {
+    const key = `${INVENTORY_STORAGE_PREFIX}${campaignId}`;
+    localStorage.setItem(key, JSON.stringify(inventoryState));
+    console.log(`[Campaign Storage] Saved inventory for campaign: ${campaignId}`);
+    return true;
+  } catch (e) {
+    console.error('[Campaign Storage] Failed to save inventory:', e);
+    return false;
+  }
+}
+
+export function loadInventoryForCampaign(campaignId: string): unknown | null {
+  if (!campaignId) {
+    console.warn('[Campaign Storage] Cannot load inventory: no campaign ID');
+    return null;
+  }
+  
+  try {
+    const key = `${INVENTORY_STORAGE_PREFIX}${campaignId}`;
+    const saved = localStorage.getItem(key);
+    if (!saved) {
+      console.log(`[Campaign Storage] No saved inventory for campaign: ${campaignId}`);
+      return null;
+    }
+    
+    const parsed = JSON.parse(saved);
+    console.log(`[Campaign Storage] Loaded inventory for campaign: ${campaignId} (${parsed.items?.length || 0} items)`);
+    return parsed;
+  } catch (e) {
+    console.error('[Campaign Storage] Failed to load inventory:', e);
+    return null;
+  }
+}
+
+export function clearInventoryForCampaign(campaignId: string): void {
+  if (!campaignId) return;
+  
+  const key = `${INVENTORY_STORAGE_PREFIX}${campaignId}`;
+  localStorage.removeItem(key);
+  console.log(`[Campaign Storage] Cleared inventory for campaign: ${campaignId}`);
+}
+
+// ============================================================================
+// DEBUG UTILITIES
+// ============================================================================
+
+export function debugCampaignStorage(): void {
+  const allKeys = Object.keys(localStorage).filter(k => 
+    k.startsWith('lwe_') || k.startsWith('simtales_')
+  );
+  
+  console.log('=== Campaign Storage Debug ===');
+  console.log('Active campaign:', getActiveCampaignId());
+  console.log('Campaign index:', loadCampaignIndex().map(c => c.id));
+  console.log('Storage keys:');
+  allKeys.forEach(k => {
+    const size = localStorage.getItem(k)?.length || 0;
+    console.log(`  ${k}: ${size} bytes`);
+  });
+  console.log('==============================');
+}
+
+// Expose debug function globally for console access
+if (typeof window !== 'undefined') {
+  (window as any).debugCampaignStorage = debugCampaignStorage;
 }

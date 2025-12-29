@@ -195,41 +195,70 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     return campaign;
   }, [refreshCampaigns]);
   
-  // Load campaign
+  // Load campaign - CRITICAL: Clear previous state first
   const loadCampaignFunc = useCallback((campaignId: string): boolean => {
+    // If loading a different campaign, save current one first
+    if (activeCampaign && activeCampaign.id !== campaignId && isDirty) {
+      console.log(`[Campaign] Saving current campaign before switch: ${activeCampaign.meta.name}`);
+      saveNow();
+    }
+    
+    // Clear current campaign state BEFORE loading new one
+    if (activeCampaign && activeCampaign.id !== campaignId) {
+      console.log(`[Campaign] Clearing state before loading new campaign`);
+      setActiveCampaign(null);
+      setActiveCampaignId(null);
+    }
+    
+    // Load the new campaign
     const campaign = loadCampaign(campaignId);
     if (campaign) {
       setActiveCampaignId(campaignId);
       setActiveCampaign(campaign);
       lastTickRef.current = Date.now();
       playTimeRef.current = 0;
+      setIsDirty(false);
       refreshCampaigns();
-      console.log(`[Campaign] Loaded: ${campaign.meta.name}`);
+      console.log(`[Campaign] Loaded: ${campaign.meta.name} (ID: ${campaignId})`);
       return true;
     }
+    console.error(`[Campaign] Failed to load campaign: ${campaignId}`);
     return false;
-  }, [refreshCampaigns]);
+  }, [activeCampaign, isDirty, saveNow, refreshCampaigns]);
   
-  // Unload campaign
+  // Unload campaign - Fully clear state
   const unloadCampaign = useCallback(() => {
-    if (activeCampaign && isDirty) {
-      saveNow();
+    if (activeCampaign) {
+      if (isDirty) {
+        saveNow();
+      }
+      console.log(`[Campaign] Unloading: ${activeCampaign.meta.name}`);
     }
     setActiveCampaignId(null);
     setActiveCampaign(null);
+    setIsDirty(false);
+    playTimeRef.current = 0;
     refreshCampaigns();
-    console.log('[Campaign] Unloaded');
+    console.log('[Campaign] Unloaded and state cleared');
   }, [activeCampaign, isDirty, saveNow, refreshCampaigns]);
   
-  // Delete campaign
+  // Delete campaign - Use proper full delete
   const deleteCampaignFunc = useCallback((campaignId: string) => {
+    console.log(`[Campaign] Starting delete: ${campaignId}`);
+    
+    // If deleting active campaign, unload first
     if (activeCampaign?.id === campaignId) {
-      unloadCampaign();
+      console.log(`[Campaign] Unloading active campaign before delete`);
+      setActiveCampaignId(null);
+      setActiveCampaign(null);
+      setIsDirty(false);
     }
+    
+    // Perform the full delete (removes all related keys)
     deleteCampaignData(campaignId);
     refreshCampaigns();
-    console.log(`[Campaign] Deleted: ${campaignId}`);
-  }, [activeCampaign, unloadCampaign, refreshCampaigns]);
+    console.log(`[Campaign] Delete complete: ${campaignId}`);
+  }, [activeCampaign, refreshCampaigns]);
   
   // Duplicate campaign
   const duplicateCampaignFunc = useCallback((campaignId: string, newName: string): CampaignData | null => {

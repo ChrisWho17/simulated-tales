@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "@/contexts/GameContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { InventoryProvider, InventoryAction } from "@/game/inventorySystem";
+import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySync";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
@@ -30,24 +31,26 @@ const App = () => (
     <GameProvider>
       <CampaignProvider>
         <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/campaigns" element={<Campaigns />} />
-                <Route path="/campaigns/new" element={<Index />} />
-                <Route path="/play" element={<Index />} />
-                <Route path="/loadout-test" element={<LoadoutTest />} />
-                <Route path="/inventory-test" element={<InventoryTest />} />
-                <Route path="/sound-generator" element={<SoundGeneratorPage />} />
-                <Route path="/sound-seeder" element={<SoundSeederPage />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+          <CampaignInventorySync>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/campaigns" element={<Campaigns />} />
+                  <Route path="/campaigns/new" element={<Index />} />
+                  <Route path="/play" element={<Index />} />
+                  <Route path="/loadout-test" element={<LoadoutTest />} />
+                  <Route path="/inventory-test" element={<InventoryTest />} />
+                  <Route path="/sound-generator" element={<SoundGeneratorPage />} />
+                  <Route path="/sound-seeder" element={<SoundSeederPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </CampaignInventorySync>
         </InventoryProvider>
       </CampaignProvider>
     </GameProvider>
