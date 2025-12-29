@@ -38,74 +38,27 @@ export interface GenreStartingGear {
 }
 
 export const STARTING_GEAR: Record<string, GenreStartingGear> = {
-  // Modern/War genres
-  war: {
-    default: [
-      { name: 'Service Rifle', category: 'weapons', weaponType: 'rifle', autoEquip: 'primaryWeapon', description: 'Standard issue military rifle, well-maintained.' },
-      { name: 'Combat Knife', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'A reliable blade for close quarters.' },
-      { name: 'Tactical Vest', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Kevlar-lined vest with utility pouches.' },
-      { name: 'Combat Helmet', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Standard military helmet.' },
-      { name: 'First Aid Kit', category: 'aid', quantity: 2, description: 'Basic field medical supplies.' },
-      { name: 'Rifle Ammunition', category: 'ammo', quantity: 60, description: 'Standard rifle rounds.' },
-    ],
-    soldier: [
-      { name: 'M4 Carbine', category: 'weapons', weaponType: 'assaultRifle', autoEquip: 'primaryWeapon', description: 'Reliable assault rifle, fully automatic capable.' },
-      { name: 'M9 Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'sidearm', description: 'Standard sidearm, 9mm.' },
-      { name: 'Body Armor', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Full ballistic protection.' },
-      { name: 'Combat Helmet', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Advanced combat helmet with NVG mount.' },
-      { name: 'Tactical Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Reinforced tactical gloves.' },
-      { name: 'Combat Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Steel-toed military boots.' },
-      { name: 'First Aid Kit', category: 'aid', quantity: 3, description: 'Military-grade medical supplies.' },
-      { name: '5.56 NATO Rounds', category: 'ammo', quantity: 90, description: 'Standard assault rifle ammunition.' },
-      { name: '9mm Rounds', category: 'ammo', quantity: 30, description: 'Pistol ammunition.' },
-    ],
-  },
-  
-  // Cyberpunk
-  cyberpunk: {
-    default: [
-      { name: 'Heavy Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'Chrome-plated handgun with smart targeting.' },
-      { name: 'Monofilament Blade', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Retractable forearm blade.' },
-      { name: 'Armored Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Ballistic weave street jacket.' },
-      { name: 'Stim Injector', category: 'aid', quantity: 2, description: 'Combat stim for emergency healing.' },
-      { name: 'Credstick', category: 'misc', description: 'Digital currency storage.' },
-    ],
-    netrunner: [
-      { name: 'Compact Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'Concealable smart pistol.' },
-      { name: 'Neural Interface Deck', category: 'misc', description: 'Your personal hacking interface.' },
-      { name: 'Light Armor Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Low-profile armored clothing.' },
-      { name: 'Neural Stim', category: 'aid', quantity: 3, description: 'Boosts neural processing.' },
-      { name: 'Credstick', category: 'misc', description: 'Digital currency storage.' },
-    ],
-  },
-  
-  // Post-Apocalyptic
-  postapoc: {
-    default: [
-      { name: 'Hunting Rifle', category: 'weapons', weaponType: 'rifle', autoEquip: 'primaryWeapon', description: 'Well-worn but reliable hunting rifle.' },
-      { name: 'Machete', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Trusted blade for survival.' },
-      { name: 'Leather Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Worn leather jacket, patched many times.' },
-      { name: 'Bandages', category: 'aid', quantity: 3, description: 'Makeshift medical bandages.' },
-      { name: 'Canned Food', category: 'aid', quantity: 2, description: 'Pre-war canned goods.' },
-      { name: 'Scavenged Ammo', category: 'ammo', quantity: 20, description: 'Mixed rifle ammunition.' },
-    ],
-    survivor: [
-      { name: 'Shotgun', category: 'weapons', weaponType: 'shotgun', autoEquip: 'primaryWeapon', description: 'Sawed-off pump-action shotgun.' },
-      { name: 'Pipe Wrench', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Heavy tool, doubles as a weapon.' },
-      { name: 'Scrap Armor', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Jury-rigged metal plate armor.' },
-      { name: 'Gas Mask', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Filter mask for toxic areas.' },
-      { name: 'Med-X', category: 'aid', quantity: 2, description: 'Pre-war painkillers.' },
-      { name: 'Shotgun Shells', category: 'ammo', quantity: 24, description: '12 gauge buckshot.' },
-    ],
-  },
-  
-  // Fantasy
+  // ============================================================================
+  // FANTASY QUEST
+  // Role: Aspiring adventurer (young knight/warrior chosen by prophecy)
+  // ============================================================================
   fantasy: {
     default: [
-      { name: 'Longsword', category: 'weapons', weaponType: 'melee', autoEquip: 'primaryWeapon', description: 'A well-balanced steel longsword.' },
-      { name: 'Leather Armor', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Supple leather armor, good for mobility.' },
-      { name: 'Health Potion', category: 'aid', quantity: 2, description: 'Restores vitality when consumed.' },
-      { name: 'Coin Purse', category: 'misc', description: 'Contains your gold coins.' },
+      { name: 'Longsword', category: 'weapons', weaponType: 'melee', autoEquip: 'primaryWeapon', description: 'A well-balanced steel longsword, faithful companion of any aspiring adventurer.' },
+      { name: 'Wooden Shield', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'A sturdy wooden shield for defense in melee combat.' },
+      { name: 'Dagger', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'A small backup blade for utility or close quarters.' },
+      { name: 'Chainmail Shirt', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Interlocking metal rings providing solid body protection.' },
+      { name: 'Travel Clothes', category: 'apparel', apparelType: 'legs', autoEquip: 'legs', description: 'Simple but durable clothing worn beneath armor.' },
+      { name: 'Leather Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Sturdy boots for long journeys on foot.' },
+      { name: 'Adventurer\'s Backpack', category: 'misc', description: 'A reliable pack holding your essential gear.' },
+      { name: 'Rope (50 ft)', category: 'misc', description: 'Fifty feet of hempen rope for climbing or binding.' },
+      { name: 'Torches', category: 'misc', quantity: 3, description: 'Oil-soaked torches for lighting dark places.' },
+      { name: 'Flint and Steel', category: 'misc', description: 'For starting fires in the wilderness.' },
+      { name: 'Rations', category: 'aid', quantity: 5, description: 'Dried meat and hardtack for sustenance on the road.' },
+      { name: 'Waterskin', category: 'aid', description: 'Leather waterskin, currently full.' },
+      { name: 'Health Potion', category: 'aid', quantity: 2, description: 'A ruby-red elixir that restores vitality.' },
+      { name: 'Prophecy Map', category: 'keyItems', description: 'An ancient map tied to the prophecy that set you on this path.' },
+      { name: 'Coin Purse', category: 'misc', description: 'Contains a modest amount of gold coins.' },
     ],
     warrior: [
       { name: 'Bastard Sword', category: 'weapons', weaponType: 'melee', autoEquip: 'primaryWeapon', description: 'A heavy two-handed sword.' },
@@ -127,25 +80,196 @@ export const STARTING_GEAR: Record<string, GenreStartingGear> = {
     ],
   },
   
-  // Sci-Fi
+  // ============================================================================
+  // SPACE EXPLORER (Sci-Fi)
+  // Role: Starship crew member (scout/science officer on exploration vessel)
+  // ============================================================================
   scifi: {
     default: [
-      { name: 'Plasma Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'Standard issue energy weapon.' },
-      { name: 'Enviro-Suit', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Light environmental protection suit.' },
-      { name: 'MediGel', category: 'aid', quantity: 2, description: 'Quick-healing medical gel.' },
-      { name: 'Energy Cell', category: 'ammo', quantity: 3, description: 'Universal energy ammunition.' },
+      { name: 'Energy Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'High-powered laser sidearm with rechargeable power cell.' },
+      { name: 'Spare Battery Pack', category: 'ammo', quantity: 2, description: 'Replacement power cells for energy weapons.' },
+      { name: 'Utility Knife', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Compact multitool knife for emergencies and repairs.' },
+      { name: 'EVA Spacesuit', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Standard issue spacesuit rated for EVA, provides life support and radiation protection.' },
+      { name: 'EVA Helmet', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Sealed helmet with HUD display and integrated flashlight.' },
+      { name: 'EVA Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Pressurized gloves maintaining dexterity in vacuum.' },
+      { name: 'Mag Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Magnetic boots for zero-G maneuvering.' },
+      { name: 'Handheld Scanner', category: 'misc', description: 'Tricorder-style device for environmental analysis and lifeform detection.' },
+      { name: 'Communicator', category: 'misc', description: 'Wrist-mounted radio for ship contact.' },
+      { name: 'First Aid Medkit', category: 'aid', description: 'Standard medical supplies for treating injuries in the field.' },
+      { name: 'Grappling Tether', category: 'misc', description: 'Emergency tether for zero-G maneuvering and rescue.' },
+      { name: 'MediGel', category: 'aid', quantity: 2, description: 'Quick-healing medical gel application.' },
     ],
   },
   
-  // Western
+  // ============================================================================
+  // DETECTIVE MYSTERY (Noir)
+  // Role: Hard-boiled private investigator
+  // ============================================================================
+  mystery: {
+    default: [
+      { name: 'Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'A trusty six-shot revolver carried in a shoulder holster.' },
+      { name: 'Snub-nose Backup', category: 'weapons', weaponType: 'revolver', autoEquip: 'sidearm', description: 'A small backup pistol tucked in an ankle holster.' },
+      { name: '.38 Special Rounds', category: 'ammo', quantity: 24, description: 'Ammunition for your revolvers.' },
+      { name: 'Trench Coat', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'A heavy trench coat that conceals your weapon and shields from the rain.' },
+      { name: 'Fedora', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'A classic felt fedora, signature of the trade.' },
+      { name: 'Notepad', category: 'keyItems', description: 'For recording clues, witness statements, and observations.' },
+      { name: 'Pen', category: 'misc', description: 'A reliable ballpoint for taking notes.' },
+      { name: 'Pocket Flashlight', category: 'misc', description: 'For snooping in dark alleys and crime scenes.' },
+      { name: 'Camera', category: 'misc', description: 'Period-appropriate camera for clandestine evidence photos.' },
+      { name: 'Lockpick Set', category: 'misc', description: 'For surreptitious entry when the law isn\'t watching.' },
+      { name: 'Handcuffs', category: 'misc', description: 'Standard restraints for apprehending suspects.' },
+      { name: 'Detective Badge', category: 'keyItems', description: 'Your professional credentials.' },
+      { name: 'Business Cards', category: 'misc', description: 'Your contact information for clients.' },
+    ],
+    detective: [
+      { name: 'Service Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'Police-issue .38 special.' },
+      { name: 'Detective Badge', category: 'keyItems', description: 'Your official credentials.' },
+      { name: 'Notepad', category: 'keyItems', description: 'Case notes and observations.' },
+      { name: 'Handcuffs', category: 'misc', description: 'Standard issue restraints.' },
+      { name: '.38 Rounds', category: 'ammo', quantity: 18, description: 'Revolver ammunition.' },
+    ],
+  },
+  noir: {
+    default: [
+      { name: 'Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'A trusty six-shot revolver carried in a shoulder holster.' },
+      { name: 'Switchblade', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'A concealed blade for emergencies.' },
+      { name: '.38 Special Rounds', category: 'ammo', quantity: 24, description: 'Ammunition for your revolver.' },
+      { name: 'Trench Coat', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'A heavy trench coat, essential for the streets.' },
+      { name: 'Fedora', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'A classic felt fedora.' },
+      { name: 'Notepad', category: 'keyItems', description: 'For recording clues and observations.' },
+      { name: 'Pocket Flashlight', category: 'misc', description: 'For snooping in dark alleys.' },
+      { name: 'Lockpick Set', category: 'misc', description: 'For when doors won\'t open on their own.' },
+    ],
+  },
+  
+  // ============================================================================
+  // SURVIVAL HORROR
+  // Role: Lone survivor (security guard/researcher in abandoned facility)
+  // ============================================================================
+  horror: {
+    default: [
+      { name: 'Handgun', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'A basic pistol with limited ammunition - use wisely.' },
+      { name: '9mm Rounds', category: 'ammo', quantity: 15, description: 'Precious ammunition. Every shot counts.' },
+      { name: 'Crowbar', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'A heavy metal crowbar - weapon and tool for prying doors.' },
+      { name: 'Security Uniform', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Standard facility uniform, minimal protection.' },
+      { name: 'Work Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Sturdy boots for treading carefully.' },
+      { name: 'Flashlight', category: 'misc', description: 'Your lifeline in the darkness. Don\'t let the batteries die.' },
+      { name: 'Spare Batteries', category: 'misc', quantity: 2, description: 'Extra batteries for the flashlight.' },
+      { name: 'First Aid Kit', category: 'aid', description: 'Bandages and antiseptic for treating wounds.' },
+      { name: 'Walkie-Talkie', category: 'misc', description: 'Communication device - mostly static and ominous sounds.' },
+      { name: 'Staff Keycard', category: 'keyItems', description: 'Your facility access card. Security Level 2.' },
+    ],
+  },
+  
+  // ============================================================================
+  // HIGH SEAS ADVENTURE (Pirate)
+  // Role: Pirate captain on a treasure hunt
+  // ============================================================================
+  pirate: {
+    default: [
+      { name: 'Cutlass', category: 'weapons', weaponType: 'melee', autoEquip: 'primaryWeapon', description: 'A trusty curved sword ideal for close-quarters duels on deck.' },
+      { name: 'Flintlock Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'sidearm', description: 'Single-shot black powder pistol for ranged attacks.' },
+      { name: 'Boot Dagger', category: 'weapons', weaponType: 'melee', description: 'A small blade tucked in your boot as backup.' },
+      { name: 'Black Powder', category: 'ammo', quantity: 10, description: 'Gunpowder and shot for your flintlock.' },
+      { name: 'Leather Coat', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'A thick leather coat offering weather protection and style.' },
+      { name: 'Tricorn Hat', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'A classic captain\'s tricorn, battered but proud.' },
+      { name: 'Leather Bracers', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Simple leather bracers for minor protection.' },
+      { name: 'Sea Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Salt-stained boots with good grip on wet decks.' },
+      { name: 'Compass', category: 'misc', description: 'For navigation across the open sea.' },
+      { name: 'Spyglass', category: 'misc', description: 'A brass telescope for spotting distant ships or islands.' },
+      { name: 'Treasure Map', category: 'keyItems', description: 'An old chart marking X where the treasure lies. Guard it well.' },
+      { name: 'Rope Coil', category: 'misc', description: 'Useful for boarding actions or securing prisoners.' },
+      { name: 'Coin Pouch', category: 'misc', description: 'Pieces of eight for bribes and tavern visits.' },
+      { name: 'Bottle of Rum', category: 'aid', description: 'For medicinal purposes, of course.' },
+      { name: 'Ship\'s Logbook', category: 'keyItems', description: 'Your record of the voyage and crew manifest.' },
+    ],
+  },
+  
+  // ============================================================================
+  // NEON DYSTOPIA (Cyberpunk)
+  // Role: Street mercenary (edgerunner blending hacking and combat)
+  // ============================================================================
+  cyberpunk: {
+    default: [
+      { name: 'Heavy Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'Chrome-plated high-caliber handgun with smart-targeting link.' },
+      { name: 'Tactical Katana', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Mono-edge blade for silent takedowns. A street samurai\'s signature.' },
+      { name: '12mm Rounds', category: 'ammo', quantity: 30, description: 'Heavy pistol ammunition.' },
+      { name: 'Armored Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Kevlar-lined trench coat fitting the neon-noir aesthetic.' },
+      { name: 'Ballistic Weave Pants', category: 'apparel', apparelType: 'legs', autoEquip: 'legs', description: 'Armored pants with hidden plating.' },
+      { name: 'Combat Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Steel-toed boots with grip soles.' },
+      { name: 'Tactical Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Smart-linked gloves for weapon interface.' },
+      { name: 'Cyberdeck', category: 'misc', description: 'Portable netrunning rig for jacking into the Net and bypassing security.' },
+      { name: 'Agent', category: 'misc', description: 'High-tech smartphone for comms and data access.' },
+      { name: 'Electronic Lockpick', category: 'misc', description: 'Bypass tool for cracking maglocks and security panels.' },
+      { name: 'Stim Injector', category: 'aid', quantity: 2, description: 'Combat stim for emergency healing and reflex boost.' },
+      { name: 'Credstick', category: 'misc', description: 'Digital currency storage with your eurodollars.' },
+    ],
+    netrunner: [
+      { name: 'Compact Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'primaryWeapon', description: 'Concealable smart pistol.' },
+      { name: 'Neural Interface Deck', category: 'misc', description: 'Your personal hacking interface.' },
+      { name: 'Light Armor Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Low-profile armored clothing.' },
+      { name: 'Neural Stim', category: 'aid', quantity: 3, description: 'Boosts neural processing.' },
+      { name: 'Credstick', category: 'misc', description: 'Digital currency storage.' },
+    ],
+  },
+  
+  // ============================================================================
+  // THEATER OF WAR (Military)
+  // Role: Frontline infantry soldier
+  // ============================================================================
+  war: {
+    default: [
+      { name: 'Assault Rifle', category: 'weapons', weaponType: 'assaultRifle', autoEquip: 'primaryWeapon', description: 'Standard issue service rifle with full-auto capability.' },
+      { name: 'Service Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'sidearm', description: '9mm sidearm as backup weapon.' },
+      { name: 'Combat Knife', category: 'weapons', weaponType: 'melee', description: 'Bayonet-style knife for close combat and utility.' },
+      { name: '5.56 NATO Rounds', category: 'ammo', quantity: 90, description: 'Standard rifle ammunition in three magazines.' },
+      { name: '9mm Rounds', category: 'ammo', quantity: 30, description: 'Pistol ammunition.' },
+      { name: 'Frag Grenades', category: 'ammo', quantity: 2, description: 'M67 fragmentation grenades.' },
+      { name: 'Ballistic Vest', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Improved Outer Tactical Vest with ceramic plates.' },
+      { name: 'Kevlar Helmet', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Standard issue combat helmet with NVG mount.' },
+      { name: 'Tactical Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Reinforced tactical gloves.' },
+      { name: 'Combat Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Steel-toed military boots.' },
+      { name: 'Field Radio', category: 'misc', description: 'Walkie-talkie for squad and command communication.' },
+      { name: 'IFAK', category: 'aid', description: 'Individual First Aid Kit with bandages, tourniquets, and morphine.' },
+      { name: 'Canteen', category: 'aid', description: 'Military canteen with fresh water.' },
+      { name: 'MRE', category: 'aid', quantity: 2, description: 'Meal Ready to Eat - combat rations.' },
+      { name: 'Entrenching Tool', category: 'misc', description: 'Folding shovel for digging foxholes.' },
+      { name: 'Binoculars', category: 'misc', description: 'For scouting enemy positions.' },
+    ],
+    soldier: [
+      { name: 'M4 Carbine', category: 'weapons', weaponType: 'assaultRifle', autoEquip: 'primaryWeapon', description: 'Reliable assault rifle, fully automatic capable.' },
+      { name: 'M9 Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'sidearm', description: 'Standard sidearm, 9mm.' },
+      { name: 'Body Armor', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Full ballistic protection.' },
+      { name: 'Combat Helmet', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Advanced combat helmet with NVG mount.' },
+      { name: 'Tactical Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Reinforced tactical gloves.' },
+      { name: 'Combat Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Steel-toed military boots.' },
+      { name: 'First Aid Kit', category: 'aid', quantity: 3, description: 'Military-grade medical supplies.' },
+      { name: '5.56 NATO Rounds', category: 'ammo', quantity: 90, description: 'Standard assault rifle ammunition.' },
+      { name: '9mm Rounds', category: 'ammo', quantity: 30, description: 'Pistol ammunition.' },
+    ],
+  },
+  
+  // ============================================================================
+  // FRONTIER JUSTICE (Western)
+  // Role: Gunslinger (drifting cowboy or local sheriff)
+  // ============================================================================
   western: {
     default: [
-      { name: 'Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'A trusty six-shooter.' },
-      { name: 'Bowie Knife', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Large hunting knife.' },
-      { name: 'Leather Duster', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Long leather coat for trail riding.' },
-      { name: 'Cowboy Hat', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Wide-brimmed felt hat.' },
-      { name: 'Whiskey Flask', category: 'aid', quantity: 1, description: 'For courage or medicinal purposes.' },
-      { name: '.45 Rounds', category: 'ammo', quantity: 24, description: 'Revolver ammunition.' },
+      { name: 'Colt Peacemaker', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'The iconic Colt Single Action Army - a .45 caliber six-shooter.' },
+      { name: 'Winchester Repeater', category: 'weapons', weaponType: 'rifle', autoEquip: 'sidearm', description: 'Lever-action rifle for longer range engagements.' },
+      { name: 'Bowie Knife', category: 'weapons', weaponType: 'melee', description: 'Large hunting knife for utility and close combat.' },
+      { name: '.45 Colt Rounds', category: 'ammo', quantity: 36, description: 'Revolver ammunition.' },
+      { name: '.44-40 Rounds', category: 'ammo', quantity: 20, description: 'Rifle ammunition.' },
+      { name: 'Cowboy Hat', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Wide-brimmed felt hat against sun and dust.' },
+      { name: 'Duster Coat', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Long leather duster for trail protection.' },
+      { name: 'Leather Gloves', category: 'apparel', apparelType: 'hands', autoEquip: 'hands', description: 'Work gloves for riding and shooting.' },
+      { name: 'Cowboy Boots', category: 'apparel', apparelType: 'feet', autoEquip: 'feet', description: 'Heeled boots with spurs for riding.' },
+      { name: 'Lariat Rope', category: 'misc', description: 'A lasso for catching horses, cattle, or outlaws.' },
+      { name: 'Canteen', category: 'aid', description: 'Water for long rides across the prairie.' },
+      { name: 'Tinderbox', category: 'misc', description: 'Matches for starting campfires.' },
+      { name: 'Dried Jerky', category: 'aid', quantity: 3, description: 'Trail provisions.' },
+      { name: 'Bedroll', category: 'misc', description: 'For camping under the stars.' },
+      { name: 'Deck of Cards', category: 'misc', description: 'For passing time in saloons.' },
     ],
     gunslinger: [
       { name: 'Peacemaker', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'Legendary Colt single-action revolver.' },
@@ -156,61 +280,63 @@ export const STARTING_GEAR: Record<string, GenreStartingGear> = {
     ],
   },
   
-  // Horror
-  horror: {
-    default: [
-      { name: 'Flashlight', category: 'misc', description: 'Your only defense against the dark.' },
-      { name: 'Pocket Knife', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'A small folding knife.' },
-      { name: 'First Aid Kit', category: 'aid', quantity: 1, description: 'Basic medical supplies.' },
-      { name: 'Cell Phone', category: 'misc', description: 'Low battery, weak signal.' },
-    ],
-  },
-  
-  // Mystery
-  mystery: {
-    default: [
-      { name: 'Notebook', category: 'keyItems', description: 'For recording clues and observations.' },
-      { name: 'Magnifying Glass', category: 'misc', description: 'For examining evidence.' },
-      { name: 'Pen', category: 'misc', description: 'A reliable ballpoint pen.' },
-      { name: 'Business Cards', category: 'misc', description: 'Your professional credentials.' },
-    ],
-    detective: [
-      { name: 'Service Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'Police-issue .38 special.' },
-      { name: 'Detective Badge', category: 'keyItems', description: 'Your official credentials.' },
-      { name: 'Notebook', category: 'keyItems', description: 'Case notes and observations.' },
-      { name: 'Handcuffs', category: 'misc', description: 'Standard issue restraints.' },
-      { name: '.38 Rounds', category: 'ammo', quantity: 18, description: 'Revolver ammunition.' },
-    ],
-  },
-  
-  // Pirate
-  pirate: {
-    default: [
-      { name: 'Cutlass', category: 'weapons', weaponType: 'melee', autoEquip: 'primaryWeapon', description: 'A curved pirate sword.' },
-      { name: 'Flintlock Pistol', category: 'weapons', weaponType: 'pistol', autoEquip: 'sidearm', description: 'Single-shot black powder pistol.' },
-      { name: 'Tricorn Hat', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Classic pirate hat.' },
-      { name: 'Rum Bottle', category: 'aid', quantity: 1, description: 'For courage on the high seas.' },
-      { name: 'Black Powder', category: 'ammo', quantity: 10, description: 'Ammunition for flintlock.' },
-    ],
-  },
-  
-  // Cosmic Horror
-  cosmic_horror: {
-    default: [
-      { name: 'Journal', category: 'keyItems', description: 'Your personal journal of strange occurrences.' },
-      { name: 'Lantern', category: 'misc', description: 'An oil lantern against the darkness.' },
-      { name: 'Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'A small-caliber revolver.' },
-      { name: 'Laudanum', category: 'aid', quantity: 1, description: 'To calm the nerves... and the visions.' },
-    ],
-  },
-  
-  // Modern Life (Slice of Life)
+  // ============================================================================
+  // MODERN LIFE (Slice of Life)
+  // Role: Everyday urban character (professional/student)
+  // ============================================================================
   modern_life: {
     default: [
-      { name: 'Smartphone', category: 'misc', description: 'Your connection to the world.' },
-      { name: 'Wallet', category: 'misc', description: 'Contains cash and cards.' },
-      { name: 'Keys', category: 'keyItems', description: 'Home and car keys.' },
-      { name: 'Coffee Thermos', category: 'aid', quantity: 1, description: 'Hot coffee for energy.' },
+      { name: 'Smartphone', category: 'misc', description: 'Your connection to the world - communication, camera, maps, flashlight, and more.' },
+      { name: 'Wallet', category: 'misc', description: 'Contains ID, credit cards, and some cash.' },
+      { name: 'Keys', category: 'keyItems', description: 'House keys, apartment keys, and car or office keys.' },
+      { name: 'Laptop', category: 'misc', description: 'For work and personal use, carried in your bag.' },
+      { name: 'Backpack', category: 'misc', description: 'Everyday carry bag for your essentials.' },
+      { name: 'Notebook', category: 'misc', description: 'For jotting down thoughts and notes.' },
+      { name: 'Pen', category: 'misc', description: 'A reliable ballpoint.' },
+      { name: 'Transit Card', category: 'misc', description: 'Public transportation pass.' },
+      { name: 'Water Bottle', category: 'aid', description: 'Reusable water bottle for hydration.' },
+      { name: 'Coffee Thermos', category: 'aid', description: 'Hot coffee for energy throughout the day.' },
+      { name: 'Pepper Spray', category: 'misc', description: 'A small canister for personal safety (hopefully never needed).' },
+    ],
+  },
+  
+  // ============================================================================
+  // POST-APOCALYPTIC
+  // Role: Wasteland survivor
+  // ============================================================================
+  postapoc: {
+    default: [
+      { name: 'Hunting Rifle', category: 'weapons', weaponType: 'rifle', autoEquip: 'primaryWeapon', description: 'Well-worn but reliable hunting rifle.' },
+      { name: 'Machete', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Trusted blade for survival.' },
+      { name: 'Leather Jacket', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Worn leather jacket, patched many times.' },
+      { name: 'Bandages', category: 'aid', quantity: 3, description: 'Makeshift medical bandages.' },
+      { name: 'Canned Food', category: 'aid', quantity: 2, description: 'Pre-war canned goods.' },
+      { name: 'Scavenged Ammo', category: 'ammo', quantity: 20, description: 'Mixed rifle ammunition.' },
+    ],
+    survivor: [
+      { name: 'Shotgun', category: 'weapons', weaponType: 'shotgun', autoEquip: 'primaryWeapon', description: 'Sawed-off pump-action shotgun.' },
+      { name: 'Pipe Wrench', category: 'weapons', weaponType: 'melee', autoEquip: 'sidearm', description: 'Heavy tool, doubles as a weapon.' },
+      { name: 'Scrap Armor', category: 'apparel', apparelType: 'torso', autoEquip: 'torso', description: 'Jury-rigged metal plate armor.' },
+      { name: 'Gas Mask', category: 'apparel', apparelType: 'headwear', autoEquip: 'head', description: 'Filter mask for toxic areas.' },
+      { name: 'Med-X', category: 'aid', quantity: 2, description: 'Pre-war painkillers.' },
+      { name: 'Shotgun Shells', category: 'ammo', quantity: 24, description: '12 gauge buckshot.' },
+    ],
+  },
+  
+  // ============================================================================
+  // COSMIC HORROR
+  // Role: Investigator of the unknown
+  // ============================================================================
+  cosmic_horror: {
+    default: [
+      { name: 'Revolver', category: 'weapons', weaponType: 'revolver', autoEquip: 'primaryWeapon', description: 'A small-caliber revolver. Whether it can stop what lurks in the dark is uncertain.' },
+      { name: '.32 Rounds', category: 'ammo', quantity: 18, description: 'Revolver ammunition.' },
+      { name: 'Oil Lantern', category: 'misc', description: 'An old oil lantern against the encroaching darkness.' },
+      { name: 'Lantern Oil', category: 'misc', quantity: 2, description: 'Fuel for the lantern.' },
+      { name: 'Journal', category: 'keyItems', description: 'Your personal journal documenting strange occurrences and creeping madness.' },
+      { name: 'Pen', category: 'misc', description: 'For recording your findings... while you still can.' },
+      { name: 'Laudanum', category: 'aid', quantity: 1, description: 'To calm the nerves... and quiet the visions.' },
+      { name: 'Old Tome', category: 'keyItems', description: 'A weathered book of forbidden knowledge that started this nightmare.' },
     ],
   },
 };
