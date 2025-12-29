@@ -1135,6 +1135,17 @@ export function AdventureGame() {
                 isOpening,
               };
             })(),
+            // === DIRECTOR MODE - DM manipulation and narrative steering ===
+            directorContext: settings.directorSettings ? {
+              enabled: settings.directorSettings.enabled,
+              rawGame: settings.directorSettings.rawGame,
+              mode: settings.directorSettings.mode,
+              directorType: settings.directorSettings.directorType,
+              tightness: settings.directorSettings.tightness,
+              cruelty: settings.directorSettings.cruelty,
+              weirdness: settings.directorSettings.weirdness,
+              guidance: settings.directorSettings.guidance,
+            } : undefined,
           }),
         }
       );
@@ -1358,6 +1369,17 @@ export function AdventureGame() {
               spawnPacket: null,
               isOpening: false,
             },
+            // Director context for zone transitions
+            directorContext: settings.directorSettings ? {
+              enabled: settings.directorSettings.enabled,
+              rawGame: settings.directorSettings.rawGame,
+              mode: settings.directorSettings.mode,
+              directorType: settings.directorSettings.directorType,
+              tightness: settings.directorSettings.tightness,
+              cruelty: settings.directorSettings.cruelty,
+              weirdness: settings.directorSettings.weirdness,
+              guidance: settings.directorSettings.guidance,
+            } : undefined,
           }),
         }
       );
@@ -1474,6 +1496,17 @@ export function AdventureGame() {
                   isOpening: true,
                 };
               })(),
+              // Director context for initial narrative
+              directorContext: settings.directorSettings ? {
+                enabled: settings.directorSettings.enabled,
+                rawGame: settings.directorSettings.rawGame,
+                mode: settings.directorSettings.mode,
+                directorType: settings.directorSettings.directorType,
+                tightness: settings.directorSettings.tightness,
+                cruelty: settings.directorSettings.cruelty,
+                weirdness: settings.directorSettings.weirdness,
+                guidance: settings.directorSettings.guidance,
+              } : undefined,
             }),
           }
         );
