@@ -1637,12 +1637,46 @@ export function AdventureGame() {
       const inventoryResult = processStoryInventorySync(narrative, inventory);
       if (inventoryResult.added.length > 0) {
         console.log(`[StoryInv] Items added: ${inventoryResult.added.length}, noted drops: ${inventoryResult.dropped.length}`);
-        // Show toast notification for picked up items
-        const itemList = inventoryResult.added.slice(0, 3).join(', ');
-        const moreText = inventoryResult.added.length > 3 ? ` +${inventoryResult.added.length - 3} more` : '';
-        toast.success(`Acquired: ${itemList}${moreText}`, {
-          duration: 3000,
-          description: 'Items added to inventory',
+        
+        // Group items by category for category-specific toasts
+        const byCategory: Record<string, string[]> = {};
+        inventoryResult.added.forEach(item => {
+          const cat = item.category || 'misc';
+          if (!byCategory[cat]) byCategory[cat] = [];
+          byCategory[cat].push(item.name);
+        });
+        
+        // Show category-specific toasts with different styles
+        const categoryConfig: Record<string, { icon: string; style: 'success' | 'info' | 'warning'; label: string }> = {
+          weapons: { icon: '⚔️', style: 'warning', label: 'Weapon acquired' },
+          apparel: { icon: '🛡️', style: 'info', label: 'Gear acquired' },
+          aid: { icon: '💊', style: 'success', label: 'Supplies acquired' },
+          ammo: { icon: '🔫', style: 'info', label: 'Ammo acquired' },
+          keyItems: { icon: '🔑', style: 'warning', label: 'Key item acquired' },
+          misc: { icon: '📦', style: 'info', label: 'Item acquired' },
+        };
+        
+        Object.entries(byCategory).forEach(([category, items]) => {
+          const config = categoryConfig[category] || categoryConfig.misc;
+          const itemList = items.slice(0, 2).join(', ');
+          const moreText = items.length > 2 ? ` +${items.length - 2} more` : '';
+          
+          if (config.style === 'warning') {
+            toast.warning(`${config.icon} ${itemList}${moreText}`, {
+              duration: 4000,
+              description: config.label,
+            });
+          } else if (config.style === 'success') {
+            toast.success(`${config.icon} ${itemList}${moreText}`, {
+              duration: 3000,
+              description: config.label,
+            });
+          } else {
+            toast.info(`${config.icon} ${itemList}${moreText}`, {
+              duration: 3000,
+              description: config.label,
+            });
+          }
         });
       }
       
