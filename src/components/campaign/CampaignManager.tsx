@@ -7,7 +7,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '@/contexts/CampaignContext';
 import { CampaignMetadata, MAX_CAMPAIGNS } from '@/types/campaign';
-import { formatPlayTime, formatLastPlayed, canCreateCampaign, loadCampaign as loadCampaignData } from '@/lib/campaignStorage';
+import { formatPlayTime, formatLastPlayed, canCreateCampaign, loadCampaign as loadCampaignData, nuclearWipe, getStorageStats } from '@/lib/campaignStorage';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +35,8 @@ import {
   AlertTriangle,
   Sparkles,
   FileWarning,
+  Bomb,
+  HardDrive,
 } from 'lucide-react';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
@@ -81,6 +83,11 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [showAskAIModal, setShowAskAIModal] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
+  
+  // Nuclear wipe state
+  const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
+  const [nuclearStep, setNuclearStep] = useState(0); // 0: initial, 1: confirm, 2: final
+  const [storageStats, setStorageStats] = useState<ReturnType<typeof getStorageStats> | null>(null);
   
   const canCreate = canCreateCampaign();
   
@@ -222,6 +229,32 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     e.target.value = '';
   }, [importCampaign]);
   
+  // Handle opening nuclear wipe dialog
+  const handleOpenNuclearWipe = useCallback(() => {
+    setStorageStats(getStorageStats());
+    setShowNuclearConfirm(true);
+    setNuclearStep(0);
+  }, []);
+  
+  // Handle nuclear wipe execution
+  const handleNuclearWipe = useCallback(() => {
+    if (nuclearStep === 0) {
+      setNuclearStep(1);
+    } else if (nuclearStep === 1) {
+      setNuclearStep(2);
+    } else if (nuclearStep === 2) {
+      const result = nuclearWipe('CONFIRM_WIPE');
+      if (result.success) {
+        toast.success(`Deleted ${result.deletedCount} storage entries. Reloading...`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        toast.error(result.error || 'Failed to wipe data');
+      }
+    }
+  }, [nuclearStep]);
+  
   // Sort campaigns by last updated
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
   
@@ -304,6 +337,35 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
             ))}
           </div>
         )}
+        
+        {/* Danger Zone */}
+        <div className="mt-12 pt-8 border-t border-destructive/20">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
+          </div>
+          <Card className="bg-destructive/5 border-destructive/20 p-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-medium text-foreground flex items-center gap-2">
+                  <Bomb className="h-4 w-4" />
+                  Delete All Data
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Permanently delete all campaigns, saves, and game data. This cannot be undone.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={handleOpenNuclearWipe}
+                className="gap-2 shrink-0"
+              >
+                <Trash2 className="h-4 w-4" />
+                Wipe All Data
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
       
       {/* Delete Confirmation Dialog */}
@@ -376,6 +438,78 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
         onRecovered={handleRecovered}
         onSwitchToRecovery={handleSwitchToRecovery}
       />
+      
+      {/* Nuclear Wipe Confirmation Dialog */}
+      <Dialog open={showNuclearConfirm} onOpenChange={(open) => {
+        if (!open) {
+          setShowNuclearConfirm(false);
+          setNuclearStep(0);
+        }
+      }}>
+        <DialogContent className="border-destructive/50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Bomb className="h-5 w-5" />
+              {nuclearStep === 0 && 'Delete All Game Data?'}
+              {nuclearStep === 1 && 'Are You Sure?'}
+              {nuclearStep === 2 && 'Final Warning!'}
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              {nuclearStep === 0 && (
+                <>
+                  <p>This will permanently delete:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>All {campaigns.length} campaign(s)</li>
+                    <li>All saved progress and checkpoints</li>
+                    <li>All character data and inventories</li>
+                    <li>All settings and preferences</li>
+                  </ul>
+                  {storageStats && (
+                    <div className="flex items-center gap-2 text-xs mt-2 p-2 bg-muted rounded">
+                      <HardDrive className="h-4 w-4" />
+                      <span>Using {(storageStats.totalBytes / 1024).toFixed(1)} KB across {storageStats.gameKeys} storage entries</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {nuclearStep === 1 && (
+                <p className="text-destructive font-medium">
+                  This action cannot be undone. All your campaigns and progress will be lost forever.
+                  Click again to confirm you understand.
+                </p>
+              )}
+              {nuclearStep === 2 && (
+                <div className="text-center py-4">
+                  <p className="text-lg font-bold text-destructive">LAST CHANCE</p>
+                  <p className="text-sm mt-2">
+                    After this, there is no going back. The page will reload and all data will be gone.
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowNuclearConfirm(false);
+                setNuclearStep(0);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleNuclearWipe}
+              className="gap-2"
+            >
+              {nuclearStep === 0 && 'Yes, Delete Everything'}
+              {nuclearStep === 1 && 'I Understand, Continue'}
+              {nuclearStep === 2 && '🔥 WIPE ALL DATA 🔥'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

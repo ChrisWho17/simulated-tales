@@ -543,26 +543,220 @@ export function clearInventoryForCampaign(campaignId: string): void {
 }
 
 // ============================================================================
+// STORAGE INTEGRITY & CLEANUP
+// ============================================================================
+
+/**
+ * Nuclear wipe - removes ALL game data from localStorage
+ * Use with extreme caution - this is irreversible
+ */
+export function nuclearWipe(confirmationCode: string): { success: boolean; deletedCount?: number; error?: string } {
+  // Safety check
+  if (confirmationCode !== 'CONFIRM_WIPE') {
+    return { success: false, error: 'Confirmation required: pass "CONFIRM_WIPE"' };
+  }
+  
+  console.log('[NUCLEAR] Starting complete data wipe...');
+  
+  // Find all game-related keys
+  const keysToDelete: string[] = [];
+  const prefixes = ['lwe_', 'simtales_', 'untold-'];
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && prefixes.some(prefix => key.startsWith(prefix))) {
+      keysToDelete.push(key);
+    }
+  }
+  
+  // Delete them all
+  keysToDelete.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`[NUCLEAR] Removed: ${key}`);
+  });
+  
+  // Reinitialize clean state
+  localStorage.setItem(CAMPAIGN_INDEX_KEY, JSON.stringify([]));
+  
+  console.log(`[NUCLEAR] Deleted ${keysToDelete.length} keys, storage reinitialized`);
+  
+  return { success: true, deletedCount: keysToDelete.length };
+}
+
+/**
+ * Perform startup cleanup to fix orphaned data and integrity issues
+ * Should be called once when the app initializes
+ */
+export function performStartupCleanup(): { cleaned: number; issues: string[] } {
+  console.log('[STARTUP] Running storage integrity check...');
+  const issues: string[] = [];
+  let cleaned = 0;
+  
+  // Get campaign index
+  const index = loadCampaignIndex();
+  const indexIds = new Set(index.map(c => c.id));
+  
+  // Step 1: Check each campaign in index actually exists
+  const validCampaigns: CampaignMetadata[] = [];
+  for (const campaign of index) {
+    const key = `${CAMPAIGN_STORAGE_PREFIX}${campaign.id}`;
+    const exists = localStorage.getItem(key);
+    if (!exists) {
+      issues.push(`Removed orphaned index entry: ${campaign.id}`);
+      cleaned++;
+    } else {
+      validCampaigns.push(campaign);
+    }
+  }
+  
+  // Update index if changed
+  if (validCampaigns.length !== index.length) {
+    saveCampaignIndex(validCampaigns);
+  }
+  
+  // Step 2: Find orphaned campaign data (has data but not in index)
+  const allKeys = Object.keys(localStorage);
+  const campaignDataKeys = allKeys.filter(k => k.startsWith(CAMPAIGN_STORAGE_PREFIX));
+  
+  for (const key of campaignDataKeys) {
+    const id = key.replace(CAMPAIGN_STORAGE_PREFIX, '');
+    if (!indexIds.has(id)) {
+      // This campaign data exists but isn't in the index - orphaned
+      console.log(`[CLEANUP] Found orphaned campaign data: ${key}`);
+      localStorage.removeItem(key);
+      
+      // Also remove related data
+      localStorage.removeItem(`${INVENTORY_STORAGE_PREFIX}${id}`);
+      localStorage.removeItem(`${GAME_STATE_STORAGE_PREFIX}${id}`);
+      
+      issues.push(`Removed orphaned campaign data: ${id}`);
+      cleaned++;
+    }
+  }
+  
+  // Step 3: Find orphaned inventory data
+  const inventoryKeys = allKeys.filter(k => k.startsWith(INVENTORY_STORAGE_PREFIX));
+  for (const key of inventoryKeys) {
+    const id = key.replace(INVENTORY_STORAGE_PREFIX, '');
+    if (!indexIds.has(id)) {
+      console.log(`[CLEANUP] Removing orphaned inventory: ${key}`);
+      localStorage.removeItem(key);
+      issues.push(`Removed orphaned inventory: ${id}`);
+      cleaned++;
+    }
+  }
+  
+  // Step 4: Find orphaned game state data
+  const gameStateKeys = allKeys.filter(k => k.startsWith(GAME_STATE_STORAGE_PREFIX));
+  for (const key of gameStateKeys) {
+    const id = key.replace(GAME_STATE_STORAGE_PREFIX, '');
+    if (!indexIds.has(id)) {
+      console.log(`[CLEANUP] Removing orphaned game state: ${key}`);
+      localStorage.removeItem(key);
+      issues.push(`Removed orphaned game state: ${id}`);
+      cleaned++;
+    }
+  }
+  
+  // Step 5: Verify active campaign still exists
+  const activeId = getActiveCampaignId();
+  if (activeId && !indexIds.has(activeId)) {
+    console.log(`[CLEANUP] Active campaign ${activeId} no longer exists, clearing`);
+    setActiveCampaignId(null);
+    issues.push(`Cleared invalid active campaign reference`);
+    cleaned++;
+  }
+  
+  console.log(`[STARTUP] Cleanup complete. Cleaned ${cleaned} items.`);
+  if (issues.length > 0) {
+    console.log('[STARTUP] Issues fixed:', issues);
+  }
+  
+  return { cleaned, issues };
+}
+
+/**
+ * Verify a campaign has been completely deleted
+ * Returns true if no traces remain
+ */
+export function verifyCampaignDeleted(campaignId: string): boolean {
+  const allKeys = Object.keys(localStorage);
+  const remainingKeys = allKeys.filter(k => k.includes(campaignId));
+  
+  if (remainingKeys.length > 0) {
+    console.error(`[VERIFY] Campaign ${campaignId} still has ${remainingKeys.length} keys:`, remainingKeys);
+    return false;
+  }
+  
+  // Also check index
+  const index = loadCampaignIndex();
+  if (index.some(c => c.id === campaignId)) {
+    console.error(`[VERIFY] Campaign ${campaignId} still in index`);
+    return false;
+  }
+  
+  console.log(`[VERIFY] Campaign ${campaignId} completely removed`);
+  return true;
+}
+
+/**
+ * Get storage usage statistics
+ */
+export function getStorageStats(): { 
+  totalKeys: number; 
+  gameKeys: number; 
+  totalBytes: number;
+  campaigns: { id: string; name: string; bytes: number }[];
+} {
+  const allKeys = Object.keys(localStorage);
+  const prefixes = ['lwe_', 'simtales_', 'untold-'];
+  const gameKeys = allKeys.filter(k => prefixes.some(p => k.startsWith(p)));
+  
+  let totalBytes = 0;
+  gameKeys.forEach(k => {
+    totalBytes += (localStorage.getItem(k)?.length || 0) * 2; // UTF-16 = 2 bytes per char
+  });
+  
+  const index = loadCampaignIndex();
+  const campaigns = index.map(c => {
+    const key = `${CAMPAIGN_STORAGE_PREFIX}${c.id}`;
+    const bytes = (localStorage.getItem(key)?.length || 0) * 2;
+    return { id: c.id, name: c.name, bytes };
+  });
+  
+  return {
+    totalKeys: allKeys.length,
+    gameKeys: gameKeys.length,
+    totalBytes,
+    campaigns,
+  };
+}
+
+// ============================================================================
 // DEBUG UTILITIES
 // ============================================================================
 
 export function debugCampaignStorage(): void {
   const allKeys = Object.keys(localStorage).filter(k => 
-    k.startsWith('lwe_') || k.startsWith('simtales_')
+    k.startsWith('lwe_') || k.startsWith('simtales_') || k.startsWith('untold-')
   );
   
   console.log('=== Campaign Storage Debug ===');
   console.log('Active campaign:', getActiveCampaignId());
-  console.log('Campaign index:', loadCampaignIndex().map(c => c.id));
+  console.log('Campaign index:', loadCampaignIndex().map(c => ({ id: c.id, name: c.name })));
   console.log('Storage keys:');
   allKeys.forEach(k => {
     const size = localStorage.getItem(k)?.length || 0;
     console.log(`  ${k}: ${size} bytes`);
   });
+  console.log('Stats:', getStorageStats());
   console.log('==============================');
 }
 
-// Expose debug function globally for console access
+// Expose debug functions globally for console access
 if (typeof window !== 'undefined') {
   (window as any).debugCampaignStorage = debugCampaignStorage;
+  (window as any).nuclearWipe = nuclearWipe;
+  (window as any).performStartupCleanup = performStartupCleanup;
+  (window as any).getStorageStats = getStorageStats;
 }
