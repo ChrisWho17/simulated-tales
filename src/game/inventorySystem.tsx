@@ -1,4 +1,5 @@
 import React, { useState, useCallback, createContext, useContext, useReducer, useEffect } from 'react';
+import { populateWeaponData, getCompatibleModsArray, ALL_MODS, WeaponMod as WMod } from './weaponModsSystem';
 
 // ============================================================================
 // CONSTANTS & TYPES
@@ -366,29 +367,28 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
       const { item, quantity = 1 } = action.payload;
       
       // AUTO-ASSIGN EQUIP SLOTS if missing
-      const itemWithSlots = ensureEquipSlots(item);
+      let processedItem = ensureEquipSlots(item);
       
-      const existingIndex = state.items.findIndex(i => i.id === itemWithSlots.id && i.stackable);
+      // AUTO-POPULATE weapon data (stats, compatibleSlots, etc.) if it's a weapon
+      if (processedItem.category === 'weapons') {
+        processedItem = populateWeaponData(processedItem) as typeof processedItem;
+      }
+      
+      const existingIndex = state.items.findIndex(i => i.id === processedItem.id && i.stackable);
       
       let newItems: InventoryItem[];
-      if (existingIndex !== -1 && itemWithSlots.stackable) {
+      if (existingIndex !== -1 && processedItem.stackable) {
         newItems = state.items.map((i, idx) => 
           idx === existingIndex ? { ...i, quantity: i.quantity + quantity } : i
         );
       } else {
-        // Initialize weapon condition if it's a weapon
-        let newItem: InventoryItem = { ...itemWithSlots, quantity, instanceId: `${itemWithSlots.id}-${timestamp}` } as InventoryItem;
-        if (itemWithSlots.category === 'weapons' && !itemWithSlots.condition) {
-          newItem.condition = {
-            barrelWear: 0,
-            carbonBuildup: 0,
-            springFatigue: 0,
-            riflingWear: 0,
-            roundsFired: 0,
-            lastMaintenance: timestamp,
-          };
-          newItem.mods = itemWithSlots.mods || {};
-        }
+        // Create new item with instanceId
+        let newItem: InventoryItem = { 
+          ...processedItem, 
+          quantity, 
+          instanceId: `${processedItem.id}-${timestamp}` 
+        } as InventoryItem;
+        
         newItems = [...state.items, newItem];
       }
       
@@ -398,10 +398,10 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
         settings: { ...state.settings, currentWeight: calculateWeight(newItems) },
         lastAction: {
           type: 'ADD',
-          item: itemWithSlots,
+          item: processedItem,
           quantity,
           timestamp,
-          narrativeHook: `picked up ${quantity > 1 ? `${quantity}x ` : ''}${itemWithSlots.name}`,
+          narrativeHook: `picked up ${quantity > 1 ? `${quantity}x ` : ''}${processedItem.name}`,
         },
       };
     }
@@ -1557,7 +1557,26 @@ function ArsenalScreen({ weapon, onClose, availableMods = [] }: ArsenalScreenPro
   
   const currentWeapon = inv.state.items.find(i => i.instanceId === weapon.instanceId) || weapon;
   const isEquipped = inv.isEquipped(weapon.instanceId);
-  const getModsForSlot = (slotId: string) => availableMods.filter(mod => mod.slot === slotId && currentWeapon.mods?.[slotId]?.id !== mod.id);
+  
+  // Get mods from weaponModsSystem if not passed, based on weapon's compatible slots
+  const weaponMods = availableMods.length > 0 
+    ? availableMods 
+    : getCompatibleModsArray(currentWeapon) as WeaponMod[];
+  
+  const getModsForSlot = (slotId: string) => weaponMods.filter(mod => 
+    mod.slot === slotId && currentWeapon.mods?.[slotId]?.id !== mod.id
+  );
+  
+  // Get compatible slots for this weapon (from weapon data or derive from type)
+  const compatibleSlots = currentWeapon.compatibleSlots || ['optic', 'muzzle', 'grip', 'magazine'];
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[ARSENAL] Weapon:', currentWeapon.name);
+    console.log('[ARSENAL] Stats:', currentWeapon.stats);
+    console.log('[ARSENAL] Compatible slots:', compatibleSlots);
+    console.log('[ARSENAL] Available mods:', weaponMods.length);
+  }, [currentWeapon, weaponMods]);
   
   return (
     <div style={{ position: 'fixed', inset: 0, background: s.bg, zIndex: 200, display: 'flex', flexDirection: 'column' }}>
@@ -1609,14 +1628,16 @@ function ArsenalScreen({ weapon, onClose, availableMods = [] }: ArsenalScreenPro
           <h4 style={{ color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ color: s.cyan }}>⚙️</span>Modifications
           </h4>
-          {Object.values(WEAPON_MOD_SLOTS)
-            .filter(slot => currentWeapon.compatibleSlots?.includes(slot.id) ?? true)
-            .map(slot => (
-              <ModSlot key={slot.id} slot={slot} currentMod={currentWeapon.mods?.[slot.id]}
-                availableMods={getModsForSlot(slot.id)}
-                onAttach={(mod) => handleAttachMod(slot.id, mod)}
-                onDetach={() => handleDetachMod(slot.id)} />
-            ))}
+          {compatibleSlots.map(slotId => {
+            const slotDef = WEAPON_MOD_SLOTS[slotId.toUpperCase() as keyof typeof WEAPON_MOD_SLOTS] || 
+              { id: slotId, label: slotId.charAt(0).toUpperCase() + slotId.slice(1), icon: '•' };
+            return (
+              <ModSlot key={slotId} slot={slotDef} currentMod={currentWeapon.mods?.[slotId]}
+                availableMods={getModsForSlot(slotId)}
+                onAttach={(mod) => handleAttachMod(slotId, mod)}
+                onDetach={() => handleDetachMod(slotId)} />
+            );
+          })}
         </div>
         
         {/* Condition Panel */}

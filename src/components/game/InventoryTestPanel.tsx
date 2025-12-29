@@ -1,33 +1,46 @@
 import React, { useState } from 'react';
 import { useInventory, InventoryScreen, InventoryItem } from '@/game/inventorySystem';
+import { createWeapon, createPistol, createRifle, createShotgun } from '@/game/weaponModsSystem';
 import { Button } from '@/components/ui/button';
 
-// Sample items for testing equip slots
-const SAMPLE_ITEMS: Partial<InventoryItem>[] = [
-  {
-    id: 'pistol-9mm',
+// Sample items for testing - using weapon generators for proper stats/mods
+const SAMPLE_WEAPONS = [
+  createPistol({
+    id: 'pistol-m9',
     name: 'M9 Beretta',
-    description: 'A reliable 9mm sidearm',
-    category: 'weapons',
-    type: 'pistol',
-    icon: '🔫',
-    weight: 2.1,
-    value: 450,
-    equipSlots: ['primaryWeapon', 'sidearm'], // Can go in either slot
-    stats: { damage: 35, accuracy: 70, fireRate: 60, range: 40, stability: 65, handling: 80 },
-  },
-  {
+    description: 'A reliable 9mm sidearm used by military forces worldwide.',
+    rarity: 'common',
+  }),
+  createPistol({
+    id: 'pistol-1911',
+    name: 'Colt 1911',
+    description: 'Classic .45 ACP pistol with stopping power.',
+    rarity: 'uncommon',
+    caliber: '.45 ACP',
+  }),
+  createRifle({
     id: 'rifle-ar15',
     name: 'AR-15 Rifle',
-    description: 'Semi-automatic rifle, 5.56mm',
-    category: 'weapons',
-    type: 'rifle',
-    icon: '🎯',
-    weight: 7.5,
-    value: 1200,
-    equipSlots: ['primaryWeapon'], // Primary only
-    stats: { damage: 55, accuracy: 75, fireRate: 45, range: 80, stability: 70, handling: 55 },
-  },
+    description: 'Semi-automatic rifle chambered in 5.56mm.',
+    rarity: 'uncommon',
+    caliber: '5.56x45mm',
+  }),
+  createShotgun({
+    id: 'shotgun-mossberg',
+    name: 'Mossberg 500',
+    description: 'Pump-action shotgun, reliable and powerful.',
+    rarity: 'common',
+  }),
+  createWeapon({
+    id: 'sniper-m24',
+    name: 'M24 Sniper',
+    description: 'Bolt-action precision rifle for long-range engagements.',
+    weaponType: 'sniper',
+    rarity: 'rare',
+  }),
+];
+
+const SAMPLE_APPAREL: Partial<InventoryItem>[] = [
   {
     id: 'combat-helmet',
     name: 'Combat Helmet',
@@ -128,6 +141,9 @@ const SAMPLE_ITEMS: Partial<InventoryItem>[] = [
   },
 ];
 
+// Combined sample items
+const SAMPLE_ITEMS = [...SAMPLE_WEAPONS, ...SAMPLE_APPAREL];
+
 export function InventoryTestPanel() {
   const inventory = useInventory();
   const [showInventory, setShowInventory] = useState(false);
@@ -150,7 +166,6 @@ export function InventoryTestPanel() {
   };
 
   const clearInventory = () => {
-    // Drop all items
     inventory.state.items.forEach(item => {
       inventory.dropItem(item.instanceId);
     });
