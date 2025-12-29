@@ -728,17 +728,24 @@ export function AdventureGame() {
     
     setIsGeneratingScene(true);
     try {
+      // Get recent story entries for context
+      const recentStoryContent = story.slice(-5).map(e => e.content);
+      const lastPlayerAction = story.filter(e => e.role === 'user').slice(-1)[0]?.content;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sceneDescription: description.slice(0, 500),
+            sceneDescription: description.slice(0, 800),
+            recentStory: recentStoryContent,
+            playerAction: lastPlayerAction,
             style: scenarioSelection?.genre || 'fantasy',
-            mood: trigger.type === 'combat_start' ? 'intense' : 
-                  trigger.type === 'dramatic_moment' ? 'dramatic' :
+            mood: trigger.type === 'combat_start' ? 'combat' : 
+                  trigger.type === 'dramatic_moment' ? 'intense' :
                   trigger.type === 'romantic_scene' ? 'romantic' : 'atmospheric',
+            location: trigger.location || undefined,
           }),
         }
       );
@@ -1847,13 +1854,22 @@ export function AdventureGame() {
 
     setGeneratingImageFor(entryId);
     try {
+      // Get story context around this entry
+      const entryIndex = story.findIndex(e => e.id === entryId);
+      const contextStart = Math.max(0, entryIndex - 3);
+      const recentStoryContent = story.slice(contextStart, entryIndex + 1).map(e => e.content);
+      const lastPlayerAction = story.slice(0, entryIndex + 1)
+        .filter(e => e.role === 'user').slice(-1)[0]?.content;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            sceneDescription: entry.content.slice(0, 500),
+            sceneDescription: entry.content.slice(0, 800),
+            recentStory: recentStoryContent,
+            playerAction: lastPlayerAction,
             style: scenarioSelection?.genre || 'fantasy',
           }),
         }

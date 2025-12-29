@@ -7,8 +7,12 @@ const corsHeaders = {
 
 interface SceneImageRequest {
   sceneDescription: string;
+  recentStory?: string[];
+  playerAction?: string;
   style?: string;
   mood?: string;
+  era?: string;
+  location?: string;
 }
 
 // Genre-specific style descriptions for scene illustrations
@@ -38,12 +42,12 @@ const SCENE_GENRE_STYLES: Record<string, { style: string; atmosphere: string }> 
     atmosphere: 'city streets, modern interiors, everyday locations, natural lighting'
   },
   war: {
-    style: 'war photography aesthetic, gritty realism, dramatic shadows',
-    atmosphere: 'battlefields, military installations, trenches, smoke and debris'
+    style: 'war photography aesthetic, gritty realism, dramatic shadows, battlefield chaos',
+    atmosphere: 'battlefields, military vehicles, explosions, smoke and debris, soldiers'
   },
   ww2: {
-    style: 'World War 2 era, period-accurate details, sepia undertones',
-    atmosphere: '1940s environments, bunkers, wartorn Europe, military equipment'
+    style: 'World War 2 era, period-accurate military equipment, sepia undertones, war documentary',
+    atmosphere: '1940s battlefields, tanks, bunkers, wartorn Europe, military combat, period weapons'
   },
   horror: {
     style: 'dark horror atmosphere, unsettling shadows, Gothic elements',
@@ -106,8 +110,86 @@ const MOOD_MODIFIERS: Record<string, string> = {
   epic: 'grand scale, sweeping vistas, heroic composition',
   dark: 'low key lighting, oppressive shadows, ominous mood',
   hopeful: 'golden hour lighting, warm colors, uplifting composition',
-  melancholic: 'muted colors, overcast, emotional weight, solitude'
+  melancholic: 'muted colors, overcast, emotional weight, solitude',
+  intense: 'action scene, explosive energy, dynamic angles, combat intensity',
+  combat: 'battlefield chaos, weapons fire, destruction, military action'
 };
+
+// Use AI to extract the precise visual scene from story context
+async function extractSceneWithAI(
+  sceneDescription: string,
+  recentStory: string[],
+  playerAction: string | undefined,
+  genre: string,
+  era: string | undefined,
+  location: string | undefined,
+  apiKey: string
+): Promise<string> {
+  const storyContext = recentStory.slice(-5).join('\n\n');
+  
+  const prompt = `You are a scene description extractor for an AI image generator. Analyze the story context and extract the EXACT visual scene that should be illustrated.
+
+GENRE: ${genre}
+${era ? `ERA: ${era}` : ''}
+${location ? `CURRENT LOCATION: ${location}` : ''}
+
+RECENT STORY:
+${storyContext}
+
+${playerAction ? `PLAYER'S LATEST ACTION: ${playerAction}` : ''}
+
+CURRENT SCENE TO ILLUSTRATE:
+${sceneDescription}
+
+TASK: Extract a precise, visual description of what is happening RIGHT NOW in this scene. Focus on:
+1. The EXACT action taking place (combat, conversation, exploration, etc.)
+2. Specific objects, vehicles, weapons being used (tanks, guns, swords, etc.)
+3. The environment/setting where this is happening
+4. Any characters visible and what they're doing
+5. Weather, lighting, time of day
+
+DO NOT describe generic fantasy/castle scenes unless that's actually in the story.
+DO NOT add elements not present in the story.
+BE SPECIFIC about military equipment, vehicles, weapons if mentioned.
+
+Respond with ONLY a single paragraph (2-4 sentences) describing the exact visual scene. No explanations.`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 300,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('AI scene extraction failed:', response.status);
+      return sceneDescription;
+    }
+
+    const data = await response.json();
+    const extractedScene = data.choices?.[0]?.message?.content?.trim();
+    
+    if (extractedScene && extractedScene.length > 20) {
+      console.log('AI extracted scene:', extractedScene.slice(0, 100) + '...');
+      return extractedScene;
+    }
+    
+    return sceneDescription;
+  } catch (error) {
+    console.error('AI scene extraction error:', error);
+    return sceneDescription;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -115,11 +197,36 @@ serve(async (req) => {
   }
 
   try {
-    const { sceneDescription, style = 'fantasy', mood = 'atmospheric' } = await req.json() as SceneImageRequest;
+    const { 
+      sceneDescription, 
+      recentStory = [],
+      playerAction,
+      style = 'fantasy', 
+      mood = 'atmospheric',
+      era,
+      location 
+    } = await req.json() as SceneImageRequest;
     
     const TOGETHER_API_KEY = Deno.env.get('TOGETHER_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    
     if (!TOGETHER_API_KEY) {
       throw new Error('TOGETHER_API_KEY is not configured');
+    }
+
+    // Use AI to extract the precise scene if we have context and API key
+    let finalSceneDescription = sceneDescription;
+    if (LOVABLE_API_KEY && (recentStory.length > 0 || playerAction)) {
+      console.log('Using AI to analyze story context for scene extraction...');
+      finalSceneDescription = await extractSceneWithAI(
+        sceneDescription,
+        recentStory,
+        playerAction,
+        style,
+        era,
+        location,
+        LOVABLE_API_KEY
+      );
     }
 
     // Get genre-specific style or fallback to fantasy
@@ -129,20 +236,23 @@ serve(async (req) => {
     // Build a detailed prompt for scene illustration
     const imagePrompt = `masterpiece, best quality, ultra detailed digital painting, cinematic scene illustration, wide landscape composition, ${genreStyle.style}, ${moodModifier}
 
-Scene: ${sceneDescription}
+Scene: ${finalSceneDescription}
 
 Environment details: ${genreStyle.atmosphere}
+${era ? `Historical era: ${era}` : ''}
+${location ? `Location type: ${location}` : ''}
 
-Style: highly detailed background art, concept art quality, professional illustration, volumetric lighting, atmospheric perspective, 16:9 aspect ratio composition, environmental storytelling, immersive scene, no characters in extreme foreground, scenic vista, establishing shot quality
+Style: highly detailed background art, concept art quality, professional illustration, volumetric lighting, atmospheric perspective, 16:9 aspect ratio composition, environmental storytelling, immersive scene, scenic vista, establishing shot quality
 
-Negative: blurry, low quality, text, watermark, signature, UI elements, close-up portrait, single character focus, amateur, pixelated`;
+Negative: blurry, low quality, text, watermark, signature, UI elements, amateur, pixelated, wrong era, anachronistic elements`;
 
     console.log('Generating scene image with FLUX for style:', style, 'mood:', mood);
-    console.log('Prompt preview:', imagePrompt.slice(0, 150) + '...');
+    console.log('Final scene description:', finalSceneDescription.slice(0, 150) + '...');
+    console.log('Prompt preview:', imagePrompt.slice(0, 200) + '...');
 
     // Use 16:9 dimensions that are multiples of 32
-    const width = 1408; // 1408 / 32 = 44
-    const height = 800; // 800 / 32 = 25 (close to 16:9 ratio)
+    const width = 1408;
+    const height = 800;
     
     const response = await fetch('https://api.together.xyz/v1/images/generations', {
       method: 'POST',
