@@ -15,11 +15,11 @@ export async function generatePortraitWithFlux(prompt: string): Promise<string> 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell',
+      model: 'black-forest-labs/FLUX.1.1-pro',
       prompt: prompt,
       width: 768,
       height: 1024,
-      steps: 12,
+      steps: 28,
       n: 1,
       response_format: 'url',
     }),
