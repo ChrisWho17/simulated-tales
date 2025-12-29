@@ -252,6 +252,20 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     if (selectedHybridTraits.length > 0) {
       (character as any).hybridTraits = selectedHybridTraits;
     }
+    // Add appearance data for consistent scene illustrations
+    (character as any).gender = appearance.simple?.gender || 'male';
+    (character as any).build = appearance.simple?.build || 'average';
+    (character as any).height = appearance.simple?.height || 'average';
+    (character as any).hairColor = appearance.detailed?.hairColor || 'brown';
+    (character as any).hairStyle = appearance.detailed?.hairStyle || 'short';
+    (character as any).eyeColor = appearance.detailed?.eyeColor || 'brown';
+    (character as any).skinTone = appearance.detailed?.skinTone || 'medium';
+    (character as any).role = classData?.name?.toLowerCase() || selectedClass;
+    (character as any).details = [
+      ...(appearance.detailed?.distinguishingFeatures || []),
+      ...(appearance.detailed?.accessories || []),
+    ];
+    
     onComplete(character, scenario);
   };
 

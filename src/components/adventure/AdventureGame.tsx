@@ -9,6 +9,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
+import { buildCharacterVisualProfile, CharacterVisualProfile } from '@/lib/characterConsistentIllustration';
 import { playerStateManager } from '@/game/playerStateManager';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
@@ -350,6 +351,22 @@ export function AdventureGame() {
         diceMode: loadDiceMode(),
       });
       
+      // Rebuild character visual profile from saved character data
+      const playerAny = migratedPlayer as any;
+      const restoredVisualProfile = buildCharacterVisualProfile({
+        name: migratedPlayer.name,
+        gender: playerAny.gender || 'male',
+        role: playerAny.role || migratedPlayer.classId || 'soldier',
+        build: playerAny.build,
+        skinTone: playerAny.skinTone,
+        hairColor: playerAny.hairColor,
+        hairStyle: playerAny.hairStyle,
+        eyeColor: playerAny.eyeColor,
+        details: playerAny.details,
+      }, campaign.meta.primaryGenre || 'fantasy');
+      setCharacterVisualProfile(restoredVisualProfile);
+      console.log('[Character Visual] Restored visual profile from campaign');
+      
       // Restore world bible if available
       if (campaign.worldBible) {
         restoreWorldBible(JSON.stringify(campaign.worldBible));
@@ -399,6 +416,21 @@ export function AdventureGame() {
               genreTitle: savedGenre,
               diceMode: loadDiceMode(),
             });
+            
+            // Rebuild character visual profile from localStorage character
+            const charAny = char as any;
+            const restoredVisualProfile = buildCharacterVisualProfile({
+              name: char.name,
+              gender: charAny.gender || 'male',
+              role: charAny.role || char.classId || 'soldier',
+              build: charAny.build,
+              skinTone: charAny.skinTone,
+              hairColor: charAny.hairColor,
+              hairStyle: charAny.hairStyle,
+              eyeColor: charAny.eyeColor,
+              details: charAny.details,
+            }, savedGenre as GameGenre);
+            setCharacterVisualProfile(restoredVisualProfile);
           }
           setPhase('playing');
           return;
@@ -572,6 +604,7 @@ export function AdventureGame() {
   const lastIllustrationTick = useRef<number>(0);
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
+  const [characterVisualProfile, setCharacterVisualProfile] = useState<CharacterVisualProfile | null>(null);
   
   // Retry mechanism for failed AI calls
   const [lastFailedAction, setLastFailedAction] = useState<{
@@ -729,8 +762,13 @@ export function AdventureGame() {
     setIsGeneratingScene(true);
     try {
       // Get recent story entries for context (last 10 for better understanding)
-      const recentStoryContent = story.slice(-10).map(e => e.content);
-      const lastPlayerAction = story.filter(e => e.role === 'user').slice(-1)[0]?.content;
+      const recentStory = story.slice(-10);
+      const lastNarratorMessage = recentStory.filter(e => e.role === 'narrator').slice(-1)[0]?.content || description;
+      const lastPlayerAction = recentStory.filter(e => e.role === 'user').slice(-1)[0]?.content || '';
+      const messageHistory = recentStory.slice(0, -2).map(e => ({
+        role: e.role as 'narrator' | 'user' | 'system',
+        content: e.content,
+      }));
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
@@ -738,14 +776,12 @@ export function AdventureGame() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sceneDescription: description.slice(0, 800),
-            recentStory: recentStoryContent,
-            playerAction: lastPlayerAction,
-            style: scenarioSelection?.genre || 'fantasy',
-            mood: trigger.type === 'combat_start' ? 'combat' : 
-                  trigger.type === 'dramatic_moment' ? 'intense' :
-                  trigger.type === 'romantic_scene' ? 'romantic' : 'atmospheric',
-            location: trigger.location || undefined,
+            lastNarratorMessage: lastNarratorMessage.slice(0, 800),
+            lastUserAction: lastPlayerAction,
+            messageHistory,
+            characterProfile: characterVisualProfile,
+            genre: scenarioSelection?.genre || 'fantasy',
+            currentLocation: trigger.location || undefined,
           }),
         }
       );
@@ -759,7 +795,7 @@ export function AdventureGame() {
     } finally {
       setIsGeneratingScene(false);
     }
-  }, [isGeneratingScene, scenarioSelection]);
+  }, [isGeneratingScene, scenarioSelection, characterVisualProfile, story]);
 
   // Check for scene illustration triggers
   const checkSceneTriggers = useCallback((eventType: string, content: string) => {
@@ -1559,6 +1595,22 @@ export function AdventureGame() {
     setPhase('playing');
     setIsLoading(true);
     
+    // Build and store character visual profile for consistent scene illustrations
+    const charAny = char as any;
+    const visualProfile = buildCharacterVisualProfile({
+      name: char.name,
+      gender: charAny.gender || 'male',
+      role: charAny.role || char.classId || 'soldier',
+      build: charAny.build,
+      skinTone: charAny.skinTone,
+      hairColor: charAny.hairColor,
+      hairStyle: charAny.hairStyle,
+      eyeColor: charAny.eyeColor,
+      details: charAny.details,
+    }, scenarioSelection.genre || 'fantasy');
+    setCharacterVisualProfile(visualProfile);
+    console.log('[Character Visual] Built visual profile:', visualProfile.fullVisualDescription.slice(0, 100) + '...');
+    
     try {
       // Initialize campaign memory for new adventure
       const campaignId = `campaign_${char.name}_${Date.now()}`;
@@ -1857,9 +1909,13 @@ export function AdventureGame() {
       // Get story context around this entry (up to 10 messages)
       const entryIndex = story.findIndex(e => e.id === entryId);
       const contextStart = Math.max(0, entryIndex - 9);
-      const recentStoryContent = story.slice(contextStart, entryIndex + 1).map(e => e.content);
-      const lastPlayerAction = story.slice(0, entryIndex + 1)
-        .filter(e => e.role === 'user').slice(-1)[0]?.content;
+      const recentStory = story.slice(contextStart, entryIndex + 1);
+      const lastNarratorMessage = recentStory.filter(e => e.role === 'narrator').slice(-1)[0]?.content || entry.content;
+      const lastPlayerAction = recentStory.filter(e => e.role === 'user').slice(-1)[0]?.content || '';
+      const messageHistory = recentStory.slice(0, -2).map(e => ({
+        role: e.role as 'narrator' | 'user' | 'system',
+        content: e.content,
+      }));
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
@@ -1867,10 +1923,11 @@ export function AdventureGame() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            sceneDescription: entry.content.slice(0, 800),
-            recentStory: recentStoryContent,
-            playerAction: lastPlayerAction,
-            style: scenarioSelection?.genre || 'fantasy',
+            lastNarratorMessage: lastNarratorMessage.slice(0, 800),
+            lastUserAction: lastPlayerAction,
+            messageHistory,
+            characterProfile: characterVisualProfile,
+            genre: scenarioSelection?.genre || 'fantasy',
           }),
         }
       );
@@ -1885,7 +1942,7 @@ export function AdventureGame() {
     } finally {
       setGeneratingImageFor(undefined);
     }
-  }, [story, scenarioSelection]);
+  }, [story, scenarioSelection, characterVisualProfile]);
 
   // Restart game
   const handleRestart = useCallback(() => {
