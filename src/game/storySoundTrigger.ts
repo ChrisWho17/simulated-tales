@@ -90,13 +90,26 @@ class StorySoundTrigger {
     'ambient.fire_crackling': ['element_fire', 'ambience_campsite'],
     'ambient.water_stream': ['element_water', 'ambience_riverside'],
     
-    // UI
+    // UI - Generated sounds from database
     'ui.notification': ['ui_notification'],
-    'ui.click': ['ui_click'],
+    'ui.click': ['ui_buttons/click_soft'],
+    'ui.click_soft': ['ui_buttons/click_soft'],
+    'ui.toggle_on': ['ui_buttons/click_toggle_on'],
+    'ui.toggle_off': ['ui_buttons/click_toggle_off'],
     'ui.success': ['ui_success'],
     'ui.error': ['ui_error'],
     'ui.level_up': ['magic_heal', 'ui_success'],
-    'ui.item_acquired': ['chest_open', 'coins_jingle']
+    'ui.item_acquired': ['ui_resources/coins_pickup', 'chest_open'],
+    'ui.coins_pickup': ['ui_resources/coins_pickup'],
+    'ui.coins_drop': ['ui_resources/coins_drop'],
+    'ui.coins_count': ['ui_resources/coins_count'],
+    'ui.bag_open': ['ui_inventory/bag_open'],
+    'ui.bag_close': ['ui_inventory/bag_close'],
+    'ui.item_drop': ['ui_inventory/item_drop'],
+    'ui.equip_accessory': ['ui_equip/equip_accessory'],
+    'ui.equip_clothing': ['ui_equip/equip_clothing'],
+    'ui.equip_helmet': ['ui_equip/equip_helmet'],
+    'ui.unequip_weapon': ['ui_equip/unequip_weapon']
   };
   
   // ═══════════════════════════════════════════════════════════

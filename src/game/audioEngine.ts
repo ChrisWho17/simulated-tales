@@ -52,16 +52,16 @@ class GameAudioEngine {
   };
   
   // Volume settings (0-1) with proper gain staging
-  // Weather loud, others as background noise
+  // All channels set to subtle levels - noticeable but not intrusive
   public volumes: AudioVolumes = {
-    master: 0.6,
-    ambience: 0.15,
-    weather: 0.5,
+    master: 0.5,
+    ambience: 0.20,
+    weather: 0.25,
     effects: 0.25,
-    voice: 0.4,
-    dramatic: 0.2,
-    music: 0.2,
-    ui: 0.3
+    voice: 0.40,
+    dramatic: 0.20,
+    music: 0.20,
+    ui: 0.25
   };
   
   // Active audio sources
