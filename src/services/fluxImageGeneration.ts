@@ -19,7 +19,7 @@ export async function generatePortraitWithFlux(prompt: string): Promise<string> 
       prompt: prompt,
       width: 768,
       height: 1024,
-      steps: 4,
+      steps: 12,
       n: 1,
       response_format: 'url',
     }),

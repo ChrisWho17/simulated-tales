@@ -162,10 +162,11 @@ async function generateWithTogetherAI(prompt: string, negativePrompt: string): P
       model: 'black-forest-labs/FLUX.1-schnell',
       prompt,
       negative_prompt: negativePrompt,
-      width: 512,
-      height: 768,
-      steps: 4,
+      width: 768,
+      height: 1024,
+      steps: 12,
       n: 1,
+      response_format: 'url',
     }),
   });
 

@@ -243,8 +243,12 @@ const BUILD_STYLES: Record<string, string> = {
   slim: 'slim slender build, thin frame',
   stocky: 'stocky sturdy build, compact powerful',
   large: 'large heavy build, big frame, intimidating size',
+  heavyset: 'heavyset large build, broad heavy frame, imposing presence',
+  curvy: 'curvy hourglass figure, full bust, wide hips, narrow waist, voluptuous feminine silhouette',
   petite: 'petite small frame, delicate build',
   tall: 'tall imposing height, long limbs',
+  thick: 'thick curvy build, full figured, soft curves',
+  lithe: 'lithe graceful build, elegant slender, dancer physique',
 };
 
 const SKIN_TONES: Record<string, string> = {
@@ -545,10 +549,11 @@ async function generateWithTogetherAI(prompt: string, negativePrompt: string): P
       model: 'black-forest-labs/FLUX.1-schnell',
       prompt,
       negative_prompt: negativePrompt,
-      width: 512,
-      height: 768,
-      steps: 4,
+      width: 768,
+      height: 1024,
+      steps: 12,
       n: 1,
+      response_format: 'url',
     }),
   });
 
