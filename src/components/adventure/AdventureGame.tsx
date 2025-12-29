@@ -53,6 +53,7 @@ import {
 } from '@/game/pressureClockSystem';
 // Inventory system integration
 import { useInventory } from '@/game/inventorySystem';
+import { buildInventoryContextForAI } from '@/game/storyInventoryBridge';
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -185,24 +186,6 @@ function buildBlendedFallbackOpening(
   opening += `In this ${primaryFlavor.tone} world, ${primaryFlavor.atmosphere}. The path ahead was uncertain, but the first step waited to be taken.`;
   
   return opening;
-}
-
-// Helper to build inventory context for AI
-function buildInventoryContext(items: Array<{ name: string; category: string; quantity: number }>): string {
-  if (!items || items.length === 0) return 'Player inventory is empty.';
-  
-  const byCategory: Record<string, string[]> = {};
-  for (const item of items) {
-    const cat = item.category || 'misc';
-    if (!byCategory[cat]) byCategory[cat] = [];
-    byCategory[cat].push(item.quantity > 1 ? `${item.name} (x${item.quantity})` : item.name);
-  }
-  
-  const parts: string[] = [];
-  for (const [cat, catItems] of Object.entries(byCategory)) {
-    parts.push(`${cat}: ${catItems.join(', ')}`);
-  }
-  return `Player inventory: ${parts.join('; ')}`;
 }
 
 // Helper to build background NPC actions context for AI
@@ -1039,9 +1022,9 @@ export function AdventureGame() {
             unreliableInfoContext: unreliableInfoPayload,
             // Location and zone context
             locationContext: locationContextPayload,
-            // === CONSISTENCY SYSTEMS ===
+// === CONSISTENCY SYSTEMS ===
             consistencyContext: {
-              objectOwnership: buildInventoryContext(inventory.state.items),
+              objectOwnership: buildInventoryContextForAI(inventory.state),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
@@ -1256,9 +1239,9 @@ export function AdventureGame() {
             genreContract: worldBible?.contractSummary || null,
             narratorConfig: settings.narratorConfig,
             locationContext: locationTransitionContext,
-            // Include consistency context for zone transitions too
+// Include consistency context for zone transitions too
             consistencyContext: {
-              objectOwnership: buildInventoryContext(inventory.state.items),
+              objectOwnership: buildInventoryContextForAI(inventory.state),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
