@@ -66,6 +66,14 @@ import { livingWorldAudio } from '@/game/livingWorldAudio';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+// Inventory system integration
+import { 
+  useInventory, 
+  InventoryScreen, 
+  CATEGORIES,
+  InventoryItem as InvItem 
+} from '@/game/inventorySystem';
+
 interface StoryEntry {
   id: string;
   role: 'user' | 'narrator';
@@ -112,6 +120,41 @@ interface GameMechanics {
   chapterEnd?: boolean;
   relationshipMoments?: RelationshipMomentData[];
   milestoneChanges?: MilestoneChangeData[];
+}
+
+// Helper to categorize items based on name
+function categorizeItem(itemName: string): string {
+  const name = itemName.toLowerCase();
+  
+  // Weapons
+  if (/sword|blade|axe|bow|pistol|rifle|gun|knife|dagger|staff|wand|mace|hammer|spear/.test(name)) {
+    return 'weapons';
+  }
+  // Apparel
+  if (/armor|helm|helmet|boots|gloves|cloak|robe|vest|jacket|hat|mask|shield/.test(name)) {
+    return 'apparel';
+  }
+  // Aid
+  if (/potion|bandage|medkit|health|heal|food|water|drink|stim|inject/.test(name)) {
+    return 'aid';
+  }
+  // Ammo
+  if (/ammo|bullet|arrow|bolt|cartridge|shell|magazine|clip/.test(name)) {
+    return 'ammo';
+  }
+  // Key items
+  if (/key|letter|note|map|document|badge|id|pass|token|artifact|relic/.test(name)) {
+    return 'keyItems';
+  }
+  // Default to misc
+  return 'misc';
+}
+
+// Helper to determine if item is stackable
+function isStackableItem(itemName: string): boolean {
+  const name = itemName.toLowerCase();
+  // Consumables, ammo, and common materials are stackable
+  return /potion|bandage|medkit|ammo|bullet|arrow|bolt|coin|gem|food|water|drink|herb|material/.test(name);
 }
 
 interface AdventureDisplayProps {
@@ -223,7 +266,8 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
   
-  // Note: Inventory notification system will be added when new inventory system is provided
+  // Inventory system integration
+  const inventory = useInventory();
   
   // Audio system integration
   const { 
@@ -622,11 +666,53 @@ export function AdventureDisplay({
       : [];
     const droppedItems = pendingMechanics.itemsDropped || [];
     
-    // Note: Inventory processing will be added when new inventory system is provided
-    if (lootItems.length > 0 || droppedItems.length > 0) {
-      console.log('[AdventureDisplay] Inventory changes pending new system:');
-      console.log('  - Loot:', lootItems);
-      console.log('  - Drops:', droppedItems);
+    // Process loot pickups through inventory system
+    if (lootItems.length > 0) {
+      console.log('[AdventureDisplay] Processing loot pickup:', lootItems);
+      for (const itemName of lootItems) {
+        // Convert string item name to inventory item
+        const newItem: Partial<InvItem> = {
+          id: `item_${itemName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+          name: itemName,
+          category: categorizeItem(itemName),
+          description: `A ${itemName} found during your adventure.`,
+          weight: 1,
+          value: 10,
+          quantity: 1,
+          stackable: isStackableItem(itemName),
+        };
+        inventory.addItem(newItem as InvItem, 1);
+        toast({
+          title: `Found: ${itemName}`,
+          description: "Added to inventory",
+          duration: 2500,
+        });
+      }
+      hasStatChanges = true;
+    }
+    
+    // Process item drops through inventory system
+    if (droppedItems.length > 0) {
+      console.log('[AdventureDisplay] Processing item drops:', droppedItems);
+      for (const itemName of droppedItems) {
+        // Find the item in inventory by name (fuzzy match)
+        const item = inventory.state.items.find(i => 
+          i.name.toLowerCase() === itemName.toLowerCase() ||
+          i.name.toLowerCase().includes(itemName.toLowerCase()) ||
+          itemName.toLowerCase().includes(i.name.toLowerCase())
+        );
+        if (item) {
+          inventory.dropItem(item.instanceId);
+          toast({
+            title: `Dropped: ${item.name}`,
+            description: "Removed from inventory",
+            duration: 2500,
+          });
+          hasStatChanges = true;
+        } else {
+          console.warn(`[AdventureDisplay] Item to drop not found: ${itemName}`);
+        }
+      }
     }
 
     // Apply XP through leveling system
@@ -1916,7 +2002,12 @@ export function AdventureDisplay({
         </div>
       )}
       
-      {/* Note: Inventory notifications will be added when new inventory system is provided */}
+      {/* Inventory Screen Modal */}
+      <InventoryScreen 
+        isOpen={showInventory} 
+        onClose={() => setShowInventory(false)} 
+        availableMods={[]} 
+      />
     </div>
   );
 }

@@ -51,7 +51,8 @@ import {
 import {
   getPressureAtmosphere,
 } from '@/game/pressureClockSystem';
-// Note: Inventory system imports will be added when new inventory system is provided
+// Inventory system integration
+import { useInventory } from '@/game/inventorySystem';
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -186,6 +187,24 @@ function buildBlendedFallbackOpening(
   return opening;
 }
 
+// Helper to build inventory context for AI
+function buildInventoryContext(items: Array<{ name: string; category: string; quantity: number }>): string {
+  if (!items || items.length === 0) return 'Player inventory is empty.';
+  
+  const byCategory: Record<string, string[]> = {};
+  for (const item of items) {
+    const cat = item.category || 'misc';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(item.quantity > 1 ? `${item.name} (x${item.quantity})` : item.name);
+  }
+  
+  const parts: string[] = [];
+  for (const [cat, catItems] of Object.entries(byCategory)) {
+    parts.push(`${cat}: ${catItems.join(', ')}`);
+  }
+  return `Player inventory: ${parts.join('; ')}`;
+}
+
 // Helper to build background NPC actions context for AI
 function buildBackgroundNPCActionsContext(
   memContext: any,
@@ -280,6 +299,9 @@ export function AdventureGame() {
   
   // Campaign context (optional - may not be available)
   const campaignContext = useCampaignOptional();
+  
+  // Inventory system integration
+  const inventory = useInventory();
   
   // Initial loading state - quick initialization
   const [initialLoading, setInitialLoading] = useState(true);
@@ -1019,8 +1041,7 @@ export function AdventureGame() {
             locationContext: locationContextPayload,
             // === CONSISTENCY SYSTEMS ===
             consistencyContext: {
-              // Note: Inventory context will be added when new inventory system is provided
-              objectOwnership: '',
+              objectOwnership: buildInventoryContext(inventory.state.items),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
@@ -1237,7 +1258,7 @@ export function AdventureGame() {
             locationContext: locationTransitionContext,
             // Include consistency context for zone transitions too
             consistencyContext: {
-              objectOwnership: '', // Note: Will be added when new inventory system is provided
+              objectOwnership: buildInventoryContext(inventory.state.items),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },

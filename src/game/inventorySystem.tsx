@@ -514,6 +514,22 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
       };
     }
     
+    // LOAD_STATE - For restoring inventory from save
+    case 'LOAD_STATE': {
+      const loaded = action.payload;
+      return {
+        ...state,
+        items: loaded.items || [],
+        equipped: loaded.equipped || createInitialState().equipped,
+        settings: { 
+          ...state.settings, 
+          ...loaded.settings,
+          currentWeight: calculateWeight(loaded.items || []),
+        },
+        lastAction: null,
+      };
+    }
+    
     default:
       return state;
   }
