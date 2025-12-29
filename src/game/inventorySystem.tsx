@@ -14,12 +14,15 @@ export const CATEGORIES = {
 };
 
 export const EQUIP_SLOTS = {
-  PRIMARY_WEAPON: { id: 'primaryWeapon', label: 'Primary', accepts: ['weapon'] },
-  SIDEARM: { id: 'sidearm', label: 'Sidearm', accepts: ['weapon'] },
-  HEAD: { id: 'head', label: 'Head', accepts: ['headwear'] },
-  TORSO: { id: 'torso', label: 'Torso', accepts: ['armor'] },
-  ACCESSORY_1: { id: 'accessory1', label: 'Accessory 1', accepts: ['accessory'] },
-  ACCESSORY_2: { id: 'accessory2', label: 'Accessory 2', accepts: ['accessory'] },
+  PRIMARY_WEAPON: { id: 'primaryWeapon', label: 'Primary Weapon', accepts: ['weapon', 'rifle', 'shotgun'] },
+  SIDEARM: { id: 'sidearm', label: 'Sidearm', accepts: ['weapon', 'pistol', 'handgun'] },
+  HEAD: { id: 'head', label: 'Head', accepts: ['headwear', 'helmet', 'hat'] },
+  TORSO: { id: 'torso', label: 'Torso', accepts: ['armor', 'clothing', 'vest', 'jacket'] },
+  HANDS: { id: 'hands', label: 'Hands', accepts: ['gloves', 'handwear'] },
+  LEGS: { id: 'legs', label: 'Legs', accepts: ['pants', 'legArmor', 'legwear'] },
+  FEET: { id: 'feet', label: 'Feet', accepts: ['footwear', 'boots', 'shoes'] },
+  ACCESSORY_1: { id: 'accessory1', label: 'Accessory 1', accepts: ['accessory', 'misc', 'jewelry'] },
+  ACCESSORY_2: { id: 'accessory2', label: 'Accessory 2', accepts: ['accessory', 'misc', 'jewelry'] },
 };
 
 // Weapon modification slots
@@ -113,6 +116,9 @@ export interface EquippedState {
   sidearm: string | null;
   head: string | null;
   torso: string | null;
+  hands: string | null;
+  legs: string | null;
+  feet: string | null;
   accessory1: string | null;
   accessory2: string | null;
 }
@@ -157,6 +163,9 @@ export const createInitialState = (): InventoryState => ({
     sidearm: null,
     head: null,
     torso: null,
+    hands: null,
+    legs: null,
+    feet: null,
     accessory1: null,
     accessory2: null,
   },
@@ -318,15 +327,36 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
     case ACTIONS.EQUIP_ITEM: {
       const { instanceId, slot } = action.payload;
       const item = state.items.find(i => i.instanceId === instanceId);
-      if (!item) return state;
       
+      if (!item) {
+        console.error('[EQUIP] Item not found:', instanceId);
+        return state;
+      }
+      
+      // Validate slot exists in equipped state
+      if (!(slot in state.equipped)) {
+        console.error(`[EQUIP] Slot "${slot}" does not exist in equipped state. Valid slots:`, Object.keys(state.equipped));
+        return state;
+      }
+      
+      // Validate item can be equipped to this slot
+      if (item.equipSlots && !item.equipSlots.includes(slot)) {
+        console.error(`[EQUIP] Item "${item.name}" cannot equip to slot "${slot}". Valid slots:`, item.equipSlots);
+        return state;
+      }
+      
+      // Unequip from any current slot first
       let newEquipped = { ...state.equipped };
       Object.keys(newEquipped).forEach(s => {
         if (newEquipped[s as keyof EquippedState] === instanceId) {
           (newEquipped as any)[s] = null;
         }
       });
+      
+      // Equip to new slot
       (newEquipped as any)[slot] = instanceId;
+      
+      console.log(`[EQUIP] ✅ "${item.name}" → ${slot}`);
       
       return {
         ...state,
@@ -910,12 +940,30 @@ interface ItemActionModalProps {
   onArsenal: () => void;
   isEquipped: boolean;
   equippedSlot?: string;
+  equippedState: EquippedState;
 }
 
-function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onArsenal, isEquipped, equippedSlot }: ItemActionModalProps) {
+function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onArsenal, isEquipped, equippedSlot, equippedState }: ItemActionModalProps) {
   const [useDescription, setUseDescription] = useState('');
   const canEquip = item.equipSlots && item.equipSlots.length > 0;
   const isWeapon = item.category === 'weapons';
+  
+  // Smart equip - find first empty slot or use first valid slot
+  const handleEquip = () => {
+    if (!item.equipSlots || item.equipSlots.length === 0) {
+      console.error('[EQUIP] Item has no valid equip slots');
+      return;
+    }
+    
+    // If single slot, use it directly
+    if (item.equipSlots.length === 1) {
+      onEquip(item.equipSlots[0]);
+    } else {
+      // Multiple slots - find first empty slot
+      const firstEmptySlot = item.equipSlots.find(slotId => !equippedState[slotId as keyof EquippedState]);
+      onEquip(firstEmptySlot || item.equipSlots[0]);
+    }
+  };
   
   return (
     <div style={{
@@ -1025,7 +1073,7 @@ function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onA
         {/* Action Buttons */}
         <div style={{ padding: '0 20px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {canEquip && !isEquipped && (
-            <button onClick={() => onEquip(item.equipSlots![0])} style={{
+            <button onClick={handleEquip} style={{
               flex: 1,
               padding: '12px',
               background: s.cyanMuted,
@@ -1519,7 +1567,8 @@ export function InventoryScreen({ isOpen, onClose, availableMods = [] }: Invento
       {selectedItem && (
         <ItemActionModal item={selectedItem} onClose={() => setSelectedItem(null)}
           onUse={handleUse} onDrop={handleDrop} onEquip={handleEquip} onUnequip={handleUnequip} onArsenal={handleArsenal}
-          isEquipped={inv.isEquipped(selectedItem.instanceId)} equippedSlot={inv.getEquippedSlot(selectedItem.instanceId)} />
+          isEquipped={inv.isEquipped(selectedItem.instanceId)} equippedSlot={inv.getEquippedSlot(selectedItem.instanceId)}
+          equippedState={inv.state.equipped} />
       )}
     </div>
   );
