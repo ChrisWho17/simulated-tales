@@ -9,11 +9,11 @@ import {
   lockNPCIdentity,
   getRegisteredNPC,
 } from './npcIdentityRegistry';
-import {
-  findObjectByName,
-  transferObject,
-  getObjectOwner,
-} from './objectRegistrySystem';
+// Note: Inventory system imports will be added when new inventory system is provided
+// Stub functions for now
+function findObjectByName(name: string): any { return null; }
+function transferObject(...args: any[]): void {}
+function getObjectOwner(id: string): any { return null; }
 
 // ============= TYPES =============
 

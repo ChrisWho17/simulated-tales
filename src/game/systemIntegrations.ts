@@ -10,7 +10,12 @@ import {
   seedNPCRelationshipFromReputation,
   getPlayerRelationship 
 } from './unifiedRelationshipStore';
-import { transferObject, getObject, getObjectOwner, getInventory } from './objectRegistrySystem';
+// Note: Inventory system imports will be added when new inventory system is provided
+// Stub functions for now
+function transferObject(...args: any[]): void {}
+function getObject(id: string): any { return null; }
+function getObjectOwner(id: string): any { return null; }
+function getInventory(type: string, id: string): any[] { return []; }
 import { processNeedDecay, checkDesperation, NEED_EFFECTS } from './needsSystem';
 import { PlayerNeeds } from '@/types/lifeSim';
 import { WorldReputation, getReputationLevel } from './reputationSystem';
