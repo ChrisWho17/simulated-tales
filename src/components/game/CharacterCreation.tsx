@@ -96,38 +96,31 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          appearance: character.appearance,
-          basicInfo: character.basicInfo,
-          background: character.background,
-          personality: character.personality,
-          additionalFeaturesEnabled: adultContentEnabled,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
-          toast.error('Rate limit exceeded', { description: 'Please try again in a moment.' });
-        } else if (response.status === 402) {
-          toast.error('Usage limit reached', { description: 'Please add credits to continue.' });
-        } else {
-          toast.error('Failed to generate portrait', { description: errorData.error });
-        }
-        return;
-      }
-
-      const data = await response.json();
-      setPortraitUrl(data.imageUrl);
+      const { generatePortraitWithFlux } = await import('@/services/fluxImageGeneration');
+      const { buildPortraitPrompt } = await import('@/utils/portraitPrompts');
+      
+      // Build character appearance data
+      const characterData = {
+        gender: character.basicInfo.gender || 'male',
+        build: character.appearance.bodyType || 'average',
+        height: character.appearance.height || 'average',
+        hairColor: character.appearance.hairColor || 'brown',
+        hairStyle: character.appearance.hairLength || 'medium',
+        eyeColor: character.appearance.eyeColor || 'brown',
+        skinTone: character.appearance.skinTone || 'medium',
+      };
+      
+      const prompt = buildPortraitPrompt(characterData, 'modern', 'neutral');
+      console.log('[FLUX] Generating portrait with prompt:', prompt);
+      
+      const imageUrl = await generatePortraitWithFlux(prompt);
+      setPortraitUrl(imageUrl);
       toast.success('Portrait generated!');
     } catch (error) {
       console.error('Error generating portrait:', error);
-      toast.error('Failed to generate portrait');
+      toast.error('Failed to generate portrait', { 
+        description: error instanceof Error ? error.message : 'Unknown error' 
+      });
     } finally {
       setIsGeneratingPortrait(false);
     }
