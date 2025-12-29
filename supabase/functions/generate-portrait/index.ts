@@ -155,17 +155,21 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
 
     console.log("Portrait prompt prepared, using reference:", !!referenceImageUrl);
 
+    // Log the request for debugging
+    const requestBody = {
+      model: "google/gemini-2.5-flash-image-preview",
+      messages,
+      modalities: ["image", "text"],
+    };
+    console.log("Sending request to AI gateway with modalities:", requestBody.modalities);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages,
-        modalities: ["image", "text"],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -211,7 +215,9 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
     
     if (!imageUrl) {
       console.error("No image in response. Full response:", JSON.stringify(data));
-      throw new Error("No image generated");
+      // The model sometimes returns text describing it will generate an image but doesn't include one
+      // This can happen with certain prompts that may trigger content guidelines
+      throw new Error("No image generated - the AI model did not produce an image for this request");
     }
 
     return new Response(JSON.stringify({ 
