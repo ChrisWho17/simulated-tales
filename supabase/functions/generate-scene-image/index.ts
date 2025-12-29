@@ -125,35 +125,61 @@ async function extractSceneWithAI(
   location: string | undefined,
   apiKey: string
 ): Promise<string> {
-  // Use all provided story context (up to 10 messages)
-  const storyContext = recentStory.join('\n\n');
+  // Separate current scene from backstory context
+  const backstoryContext = recentStory.slice(0, -1).join('\n---\n');
+  const currentScene = recentStory.length > 0 ? recentStory[recentStory.length - 1] : sceneDescription;
   
-  const prompt = `You are a scene description extractor for an AI image generator. Analyze the story context and extract the EXACT visual scene that should be illustrated.
+  // Genre-specific visual focus
+  const genreVisualFocus: Record<string, string> = {
+    fantasy: 'magic, creatures, medieval architecture, enchanted items, mystical lighting',
+    medieval: 'castles, knights, period weapons, torchlit scenes, stone architecture',
+    cyberpunk: 'neon lights, cybernetics, megacities, holograms, rain-slicked chrome',
+    scifi: 'spaceships, aliens, futuristic tech, planets, space stations',
+    postapoc: 'ruins, wasteland, scavenged gear, overgrown cities, survival equipment',
+    war: 'military vehicles, soldiers, explosions, trenches, battlefield debris',
+    ww2: 'WW2 tanks (Sherman, Tiger, Panzer), 1940s military gear, period uniforms, warplanes, bunkers',
+    horror: 'shadows, decay, monsters, unsettling environments, dark atmosphere',
+    western: 'horses, revolvers, saloons, desert, frontier towns',
+    noir: 'fedoras, rain, streetlights, shadowy figures, 1940s urban',
+    modern: 'contemporary settings, modern vehicles, urban environments',
+    pirate: 'ships, treasure, ports, tropical islands, naval combat',
+    zombie: 'undead, barricades, abandoned cities, survival gear',
+    vampire: 'Gothic architecture, moonlight, elegant decay, dark romance',
+    steampunk: 'brass machinery, airships, Victorian fashion, clockwork',
+    spy: 'gadgets, exotic locations, sleek vehicles, covert operations'
+  };
 
-GENRE: ${genre}
-${era ? `ERA: ${era}` : ''}
-${location ? `CURRENT LOCATION: ${location}` : ''}
+  const visualFocus = genreVisualFocus[genre.toLowerCase()] || 'detailed environment and action';
 
-RECENT STORY:
-${storyContext}
+  const prompt = `You are a precise visual scene extractor for ${genre.toUpperCase()} genre image generation.
 
-${playerAction ? `PLAYER'S LATEST ACTION: ${playerAction}` : ''}
+GENRE VISUAL ELEMENTS TO PRIORITIZE: ${visualFocus}
 
-CURRENT SCENE TO ILLUSTRATE:
-${sceneDescription}
+${backstoryContext ? `BACKSTORY (for context only, do NOT illustrate these):
+${backstoryContext}
+---` : ''}
 
-TASK: Extract a precise, visual description of what is happening RIGHT NOW in this scene. Focus on:
-1. The EXACT action taking place (combat, conversation, exploration, etc.)
-2. Specific objects, vehicles, weapons being used (tanks, guns, swords, etc.)
-3. The environment/setting where this is happening
-4. Any characters visible and what they're doing
-5. Weather, lighting, time of day
+CURRENT SCENE TO ILLUSTRATE (this is what happened NOW):
+${currentScene}
 
-DO NOT describe generic fantasy/castle scenes unless that's actually in the story.
-DO NOT add elements not present in the story.
-BE SPECIFIC about military equipment, vehicles, weapons if mentioned.
+${playerAction ? `PLAYER'S ACTION THAT TRIGGERED THIS: ${playerAction}` : ''}
+${location ? `LOCATION: ${location}` : ''}
 
-Respond with ONLY a single paragraph (2-4 sentences) describing the exact visual scene. No explanations.`;
+YOUR TASK:
+Extract ONLY what is visually happening in the CURRENT SCENE. Be extremely specific about:
+
+1. EXACT ACTION: What is physically happening right now? (e.g., "a soldier firing an anti-tank rifle at a Sherman tank's exposed flank")
+2. SPECIFIC OBJECTS: Name exact vehicles, weapons, items (e.g., "M4 Sherman tank", "Panzerfaust", "Thompson submachine gun")
+3. ENVIRONMENT: Where exactly is this? (e.g., "bombed-out French village street", "dense forest clearing")
+4. WEATHER/TIME: If mentioned (e.g., "overcast morning", "smoke-filled dusk")
+
+DO NOT:
+- Add generic ${genre} elements not in the story (no random castles, dragons, etc.)
+- Describe past events from backstory
+- Add characters or elements not mentioned
+- Use vague descriptions
+
+OUTPUT: One precise paragraph (2-3 sentences max) describing ONLY the current visual moment. Be specific to THIS story.`;
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -167,8 +193,7 @@ Respond with ONLY a single paragraph (2-4 sentences) describing the exact visual
         messages: [
           { role: 'user', content: prompt }
         ],
-        max_tokens: 300,
-        temperature: 0.3,
+        max_tokens: 250,
       }),
     });
 
@@ -181,7 +206,7 @@ Respond with ONLY a single paragraph (2-4 sentences) describing the exact visual
     const extractedScene = data.choices?.[0]?.message?.content?.trim();
     
     if (extractedScene && extractedScene.length > 20) {
-      console.log('AI extracted scene:', extractedScene.slice(0, 100) + '...');
+      console.log('AI extracted scene:', extractedScene);
       return extractedScene;
     }
     
