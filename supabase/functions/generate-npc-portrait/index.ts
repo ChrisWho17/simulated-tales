@@ -148,7 +148,7 @@ async function generateWithTogetherAI(prompt: string, negativePrompt: string): P
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell-Free',
+      model: 'black-forest-labs/FLUX.1-schnell',
       prompt,
       negative_prompt: negativePrompt,
       width: 512,
