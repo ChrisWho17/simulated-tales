@@ -43,6 +43,12 @@ const OOC_PATTERNS = [
   // Mechanical reminders
   /\(Remember to[^)]+\)/gi,
   /\[Remember:[^\]]+\]/gi,
+  
+  // Delta ledger sections (internal tracking, not for display)
+  /---INVENTORY_DELTA---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
+  /---STATE_DELTA---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
+  /---NEXT_HOOKS---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
+  /---NEXT_CHOICES---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
 ];
 
 // Patterns for lines that should be completely removed
@@ -56,6 +62,23 @@ const REMOVE_LINE_PATTERNS = [
   /^The format for/i,
   /^When the player/i,
   /^Please provide/i,
+  // Delta ledger headers and content lines
+  /^---INVENTORY_DELTA---/i,
+  /^---STATE_DELTA---/i,
+  /^---NEXT_HOOKS---/i,
+  /^---NEXT_CHOICES---/i,
+  /^Added:/i,
+  /^Removed:/i,
+  /^Used\/Consumed:/i,
+  /^Notes:/i,
+  /^New facts:/i,
+  /^Injuries\/Conditions:/i,
+  /^Relationships\/Reputation:/i,
+  /^Flags\/Clocks:/i,
+  /^\d+\)\s+\[.*hook/i,
+  /^\d+\)\s+.*neutralize/i,
+  /^\d+\)\s+.*Engage/i,
+  /^\d+\)\s+.*Ascertain/i,
 ];
 
 /**

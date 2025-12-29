@@ -48,7 +48,6 @@ STATE + INVENTORY LOCK (NO DRIFT):
 - Starting inventory is authoritative.
 - You may NOT add items unless the character acquires them in-scene via a clear event.
 - You may NOT remove items unless used, lost, or traded in-scene.
-- At the end of EVERY response, output the DELTA LEDGER (see format below).
 
 FAIL-SAFE:
 - If you are unsure whether something exists in inventory: assume it does NOT and ask via an in-world check.
@@ -382,8 +381,6 @@ Structure requirements:
 5) OBSTACLE/THREAT (2 paragraphs): A direct complication + a looming consequence.
 6) HOOKS (1 paragraph): Reveal 2 unresolved threads that persist.
 
-Then output the DELTA LEDGER.
-
 CRITICAL: Mention each starting inventory item at least once in natural context (seeing, carrying, checking, counting). Show the weight and presence of gear. Do not add new items.
 
 Example of role-locked, sensory, inventory-anchored writing:
@@ -411,8 +408,6 @@ Structure requirements:
 4) CHOICE MOMENT (1 paragraph): Present the new decision point.
 5) HOOKS UPDATE (1 paragraph): Which threads advance, which simmer.
 
-Then output the DELTA LEDGER.
-
 Keep role lens active. Show inventory items when relevant (reloading, checking supplies, equipment status).
 `;
 
@@ -439,8 +434,7 @@ export function buildNarrativeContract(
   // Add appropriate scene template
   contract += '\n\n' + (isOpening ? GRAND_OPENING_TEMPLATE : CONTINUATION_TEMPLATE);
   
-  // Add delta ledger instructions
-  contract += '\n\n' + DELTA_LEDGER_INSTRUCTIONS;
+  // Delta ledger removed - it was cluttering the display
   
   return contract;
 }
