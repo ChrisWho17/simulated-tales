@@ -53,7 +53,14 @@ import {
 } from '@/game/pressureClockSystem';
 // Inventory system integration
 import { useInventory } from '@/game/inventorySystem';
-import { buildInventoryContextForAI, processStoryInventorySync } from '@/game/storyInventoryBridge';
+import { buildInventoryContextForAI, processStoryInventorySync, getGenreClasses } from '@/game/storyInventoryBridge';
+import { 
+  UNIVERSAL_NARRATIVE_RULES, 
+  GENRE_BIBLE, 
+  buildSpawnPacket, 
+  formatSpawnPacket,
+  DELTA_LEDGER_INSTRUCTIONS,
+} from '@/game/narrativeContract';
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -1051,6 +1058,32 @@ export function AdventureGame() {
             },
             // === NPC PERSONALITY CONTEXT - Archetype-driven dialogue ===
             npcPersonalityContext: npcPersonalityPayload,
+            // === NARRATIVE CONTRACT - Deep immersion rules, spawn packet, delta ledger ===
+            narrativeContractContext: (() => {
+              const isOpening = history.length === 0;
+              const characterClass = activeChar.classId || 'default';
+              const characterInventory = inventory.state.items.map(i => ({
+                name: i.name,
+                quantity: i.quantity || 1,
+              }));
+              
+              // Build spawn packet for opening scene
+              const spawnPacket = isOpening ? buildSpawnPacket(
+                scenarioSelection?.scenario || scenario,
+                genre,
+                characterClass,
+                activeChar.name,
+                characterInventory,
+                playerLocation.zoneName || 'Unknown Location'
+              ) : null;
+              
+              return {
+                universalRules: UNIVERSAL_NARRATIVE_RULES,
+                genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
+                spawnPacket: spawnPacket ? formatSpawnPacket(spawnPacket) : null,
+                isOpening,
+              };
+            })(),
           }),
         }
       );
@@ -1239,11 +1272,18 @@ export function AdventureGame() {
             genreContract: worldBible?.contractSummary || null,
             narratorConfig: settings.narratorConfig,
             locationContext: locationTransitionContext,
-// Include consistency context for zone transitions too
+            // Include consistency context for zone transitions too
             consistencyContext: {
               objectOwnership: buildInventoryContextForAI(inventory.state),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
+            },
+            // Narrative contract for immersive zone transitions
+            narrativeContractContext: {
+              universalRules: UNIVERSAL_NARRATIVE_RULES,
+              genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[scenarioSelection.genre] || GENRE_BIBLE['fantasy']}`,
+              spawnPacket: null,
+              isOpening: false,
             },
           }),
         }
@@ -1337,6 +1377,30 @@ export function AdventureGame() {
               adultContent: settings.adultContent,
               genreContract: worldBible?.contractSummary || null,
               narratorConfig: settings.narratorConfig,
+              // Narrative contract for immersive opening scene
+              narrativeContractContext: (() => {
+                const characterClass = character.classId || 'default';
+                const characterInventory = (character.inventory || []).map(i => ({
+                  name: i.name,
+                  quantity: i.quantity || 1,
+                }));
+                
+                const spawnPacket = buildSpawnPacket(
+                  scenarioSelection.scenario,
+                  scenarioSelection.genre,
+                  characterClass,
+                  character.name,
+                  characterInventory,
+                  'Starting Location'
+                );
+                
+                return {
+                  universalRules: UNIVERSAL_NARRATIVE_RULES,
+                  genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[scenarioSelection.genre] || GENRE_BIBLE['fantasy']}`,
+                  spawnPacket: formatSpawnPacket(spawnPacket),
+                  isOpening: true,
+                };
+              })(),
             }),
           }
         );
