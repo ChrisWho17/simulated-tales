@@ -190,11 +190,27 @@ DO NOT include: excessive gore, modern logos or brands, out-of-genre elements`;
 
     const data = await response.json();
     console.log("Portrait generation response received for:", name, emotionVariant ? `(${emotionVariant})` : '');
+    console.log("Response structure:", JSON.stringify(data).slice(0, 500));
     
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Try multiple possible response formats
+    let imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    // Fallback: check if image is directly in the content
+    if (!imageUrl && data.choices?.[0]?.message?.content) {
+      const content = data.choices[0].message.content;
+      // Check if content contains a base64 image data URL
+      if (typeof content === 'string' && content.startsWith('data:image')) {
+        imageUrl = content;
+      }
+    }
+    
+    // Fallback: check for image_url directly on message
+    if (!imageUrl && data.choices?.[0]?.message?.image_url?.url) {
+      imageUrl = data.choices[0].message.image_url.url;
+    }
     
     if (!imageUrl) {
-      console.error("No image in response");
+      console.error("No image in response. Full response:", JSON.stringify(data));
       throw new Error("No image generated");
     }
 
