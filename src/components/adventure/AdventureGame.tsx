@@ -53,7 +53,7 @@ import {
 } from '@/game/pressureClockSystem';
 // Inventory system integration
 import { useInventory } from '@/game/inventorySystem';
-import { buildInventoryContextForAI } from '@/game/storyInventoryBridge';
+import { buildInventoryContextForAI, processStoryInventorySync } from '@/game/storyInventoryBridge';
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -1627,10 +1627,16 @@ export function AdventureGame() {
         campaignContext.addNarrativeEntry(narratorEntry);
       }
       
-      // === NPC AUTO-REGISTRATION: Detect and register NPCs from narrative ===
+// === NPC AUTO-REGISTRATION: Detect and register NPCs from narrative ===
       const npcResult = processNarrativeForNPCs(narrative, currentTurn, character.name);
       if (npcResult.registered.length > 0) {
         console.log(`[NPCAutoReg] Registered ${npcResult.registered.length} NPCs:`, npcResult.registered);
+      }
+      
+      // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
+      const inventoryResult = processStoryInventorySync(narrative, inventory);
+      if (inventoryResult.added.length > 0 || inventoryResult.dropped.length > 0) {
+        console.log(`[StoryInv] Items added: ${inventoryResult.added.length}, noted drops: ${inventoryResult.dropped.length}`);
       }
       
       // Process action for identity anchors and advance time
@@ -1643,7 +1649,7 @@ export function AdventureGame() {
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
