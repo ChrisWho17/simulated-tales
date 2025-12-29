@@ -1633,10 +1633,17 @@ export function AdventureGame() {
         console.log(`[NPCAutoReg] Registered ${npcResult.registered.length} NPCs:`, npcResult.registered);
       }
       
-      // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
+// === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
       const inventoryResult = processStoryInventorySync(narrative, inventory);
-      if (inventoryResult.added.length > 0 || inventoryResult.dropped.length > 0) {
+      if (inventoryResult.added.length > 0) {
         console.log(`[StoryInv] Items added: ${inventoryResult.added.length}, noted drops: ${inventoryResult.dropped.length}`);
+        // Show toast notification for picked up items
+        const itemList = inventoryResult.added.slice(0, 3).join(', ');
+        const moreText = inventoryResult.added.length > 3 ? ` +${inventoryResult.added.length - 3} more` : '';
+        toast.success(`Acquired: ${itemList}${moreText}`, {
+          duration: 3000,
+          description: 'Items added to inventory',
+        });
       }
       
       // Process action for identity anchors and advance time
