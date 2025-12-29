@@ -55,8 +55,8 @@ import {
   buildObjectOwnershipContext,
   validateObjectRegistry,
   repairObjectRegistry,
-  syncCharacterInventoryToRegistry,
 } from '@/game/objectRegistrySystem';
+import { buildInventoryContext } from '@/game/campaignInventorySystem';
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -332,10 +332,7 @@ export function AdventureGame() {
       // Migrate character health if needed (for old characters with low HP)
       const migratedPlayer = migrateCharacterHealth(campaign.player);
       
-      // Sync character inventory to object registry for command palette
-      if (migratedPlayer.inventory && migratedPlayer.inventory.length > 0) {
-        syncCharacterInventoryToRegistry(migratedPlayer.inventory, 0);
-      }
+      // Character inventory is now stored in campaign.player - no global sync needed
       
       setCharacter(migratedPlayer);
       setStory(campaign.narrativeHistory);
@@ -384,10 +381,7 @@ export function AdventureGame() {
           // Migrate character health if needed (for old characters with low HP)
           char = migrateCharacterHealth(char);
           
-          // Sync character inventory to object registry for command palette
-          if (char.inventory && char.inventory.length > 0) {
-            syncCharacterInventoryToRegistry(char.inventory, 0);
-          }
+          // Character inventory is stored with character - no global sync needed
           
           setCharacter(char);
           setStory(storyData);
@@ -1037,7 +1031,8 @@ export function AdventureGame() {
             locationContext: locationContextPayload,
             // === CONSISTENCY SYSTEMS ===
             consistencyContext: {
-              objectOwnership: buildObjectOwnershipContext(),
+              // Use character inventory directly for campaign isolation
+              objectOwnership: buildInventoryContext(activeChar.inventory),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
@@ -1254,7 +1249,7 @@ export function AdventureGame() {
             locationContext: locationTransitionContext,
             // Include consistency context for zone transitions too
             consistencyContext: {
-              objectOwnership: buildObjectOwnershipContext(),
+              objectOwnership: buildInventoryContext(character.inventory),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
@@ -1740,10 +1735,7 @@ export function AdventureGame() {
       // Migrate character health if needed (for old characters with low HP)
       const migratedCharacter = migrateCharacterHealth(gameData.character);
       
-      // Sync character inventory to object registry for command palette
-      if (migratedCharacter.inventory && migratedCharacter.inventory.length > 0) {
-        syncCharacterInventoryToRegistry(migratedCharacter.inventory, 0);
-      }
+      // Character inventory is stored with character - no global sync needed
       
       setStory(gameData.story);
       setCharacter(migratedCharacter);
@@ -1870,6 +1862,7 @@ export function AdventureGame() {
         onMoodChange={handleMoodChange}
         weatherState={weatherState}
         onWeatherStateChange={setWeatherState}
+        campaignId={campaignContext?.activeCampaignId || 'default_campaign'}
       />
     );
   }
