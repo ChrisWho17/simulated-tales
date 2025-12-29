@@ -305,16 +305,23 @@ export function processItemsDropped(
   let inventory = [...currentInventory];
   const changes: InventoryChange[] = [];
   
+  console.log(`[CampaignInventory] Processing ${droppedItems.length} drops for campaign: ${campaignId}`);
+  
   for (const itemName of droppedItems) {
+    console.log(`[CampaignInventory] Attempting to drop: "${itemName}"`);
     const result = removeItemFromInventory(inventory, itemName, 1, campaignId);
     if (result.success) {
       inventory = result.updatedInventory;
       if (result.change) {
         changes.push(result.change);
+        console.log(`[CampaignInventory] Successfully dropped: "${result.change.itemName}"`);
       }
+    } else {
+      console.warn(`[CampaignInventory] Failed to drop "${itemName}": ${result.error}`);
     }
   }
   
+  console.log(`[CampaignInventory] Drop processing complete. ${changes.length} items dropped.`);
   return { updatedInventory: inventory, changes };
 }
 
