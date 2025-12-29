@@ -6,40 +6,21 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// CHARACTER VISUAL PROFILE
+// TYPES
 // ============================================================================
 
 interface CharacterVisualProfile {
   name: string;
   gender: 'male' | 'female' | 'nonbinary';
-  physicalDescription: {
-    build: string;
-    skinTone: string;
-  };
-  hair: {
-    color: string;
-    style: string;
-    length?: string;
-  };
-  eyes: {
-    color: string;
-  };
-  facialFeatures: {
-    scars?: string;
-    tattoos?: string;
-    beard?: string;
-    other?: string;
-  };
-  modifications?: {
-    cybernetics?: string;
-    other?: string;
-  };
+  physicalDescription: { build: string; skinTone: string };
+  hair: { color: string; style: string; length?: string };
+  eyes: { color: string };
+  facialFeatures: { scars?: string; tattoos?: string; beard?: string; other?: string };
+  modifications?: { cybernetics?: string; other?: string };
   role: string;
   roleAppearance: string;
   fullVisualDescription: string;
 }
-
-type InvolvementLevel = 'none' | 'background' | 'participant' | 'focus';
 
 interface SceneImageRequest {
   lastNarratorMessage?: string;
@@ -52,18 +33,10 @@ interface SceneImageRequest {
   timeOfDay?: string;
   weather?: string;
   npcsPresent?: Array<{ name: string; description: string; currentActivity?: string }>;
-  
-  // Legacy fields
+  // Legacy
   playerCharacter?: {
-    name?: string;
-    gender?: string;
-    role?: string;
-    build?: string;
-    hairColor?: string;
-    hairStyle?: string;
-    skinTone?: string;
-    eyeColor?: string;
-    details?: string[];
+    name?: string; gender?: string; role?: string; build?: string;
+    hairColor?: string; hairStyle?: string; skinTone?: string; eyeColor?: string; details?: string[];
   };
   sceneDescription?: string;
   recentStory?: string[];
@@ -71,524 +44,369 @@ interface SceneImageRequest {
   style?: string;
 }
 
-// ============================================================================
-// GENRE ENVIRONMENT STYLES (Environment focused)
-// ============================================================================
-
-const GENRE_ENVIRONMENT_STYLES: Record<string, {
-  artStyle: string;
-  environmentFocus: string;
-  lighting: string;
-  colorPalette: string;
-  atmosphericEffects: string[];
-  worldDetails: string[];
-}> = {
-  modern: {
-    artStyle: 'photorealistic modern urban, cinematic wide shot',
-    environmentFocus: 'urban cityscape, modern architecture, streets and buildings',
-    lighting: 'realistic natural lighting with urban light sources',
-    colorPalette: 'muted earth tones, concrete grays, urban colors',
-    atmosphericEffects: ['city smog', 'street lights', 'traffic', 'crowds'],
-    worldDetails: ['vehicles', 'signage', 'power lines', 'construction', 'debris'],
-  },
-  cyberpunk: {
-    artStyle: 'cyberpunk neon noir, wide establishing shot',
-    environmentFocus: 'neon-lit megacity streets, towering buildings, urban density',
-    lighting: 'neon lighting reflecting on wet surfaces, volumetric light',
-    colorPalette: 'neon pinks, electric blues, deep purples, rain-slicked chrome',
-    atmosphericEffects: ['neon signs', 'holographic ads', 'rain', 'steam vents'],
-    worldDetails: ['flying vehicles', 'screens everywhere', 'crowded streets', 'corporate logos'],
-  },
-  postapoc: {
-    artStyle: 'post-apocalyptic desolation, wide environmental shot',
-    environmentFocus: 'ruined civilization, overgrown decay, wasteland vistas',
-    lighting: 'harsh sun through dust, orange apocalyptic haze',
-    colorPalette: 'rust oranges, dusty browns, faded colors, decay',
-    atmosphericEffects: ['dust clouds', 'ash', 'toxic fog', 'fire smoke'],
-    worldDetails: ['rusted vehicles', 'collapsed buildings', 'overgrown plants', 'makeshift shelters'],
-  },
-  postapocalyptic: {
-    artStyle: 'post-apocalyptic desolation, wide environmental shot',
-    environmentFocus: 'ruined civilization, overgrown decay, wasteland vistas',
-    lighting: 'harsh sun through dust, orange apocalyptic haze',
-    colorPalette: 'rust oranges, dusty browns, faded colors, decay',
-    atmosphericEffects: ['dust clouds', 'ash', 'toxic fog', 'fire smoke'],
-    worldDetails: ['rusted vehicles', 'collapsed buildings', 'overgrown plants', 'makeshift shelters'],
-  },
-  scifi: {
-    artStyle: 'science fiction vista, cinematic wide angle',
-    environmentFocus: 'futuristic architecture, advanced technology, alien environments',
-    lighting: 'clean technological lighting, holographic glow',
-    colorPalette: 'clean whites, metallic silver, holographic blue accents',
-    atmosphericEffects: ['energy fields', 'holographic displays', 'ship trails', 'force fields'],
-    worldDetails: ['advanced vehicles', 'robots', 'floating platforms', 'energy conduits'],
-  },
-  ww2: {
-    artStyle: '1940s wartime documentary style, wide battlefield shot',
-    environmentFocus: 'war-torn European landscape, military installations, battlefields',
-    lighting: 'overcast wartime lighting, explosion flashes, fire glow',
-    colorPalette: 'desaturated sepia, military olive, mud browns',
-    atmosphericEffects: ['smoke', 'explosions', 'fog of war', 'artillery fire'],
-    worldDetails: ['tanks', 'trenches', 'destroyed buildings', 'military equipment', 'barbed wire'],
-  },
-  war: {
-    artStyle: 'war photography aesthetic, gritty realism, wide battlefield',
-    environmentFocus: 'active battlefield, military positions, combat zones',
-    lighting: 'harsh directional light, explosion flashes',
-    colorPalette: 'muted greens, browns, grays, fire oranges',
-    atmosphericEffects: ['smoke', 'debris', 'explosions', 'battlefield chaos'],
-    worldDetails: ['military vehicles', 'fortifications', 'destroyed equipment', 'craters'],
-  },
-  medieval: {
-    artStyle: 'epic fantasy landscape, sweeping wide shot',
-    environmentFocus: 'medieval architecture, castles, villages, wilderness',
-    lighting: 'dramatic fantasy lighting, torchlight, magical glow',
-    colorPalette: 'rich earth tones, stone grays, forest greens, torch orange',
-    atmosphericEffects: ['torchlight', 'mist', 'magical particles', 'smoke from chimneys'],
-    worldDetails: ['horses', 'carts', 'market stalls', 'banners', 'peasants working'],
-  },
-  fantasy: {
-    artStyle: 'high fantasy epic vista, sweeping landscape',
-    environmentFocus: 'magical landscapes, enchanted forests, mystical structures',
-    lighting: 'dramatic fantasy lighting, ethereal glow',
-    colorPalette: 'rich golds, deep blues, mystical purples',
-    atmosphericEffects: ['magic particles', 'mist', 'ethereal glow', 'floating lights'],
-    worldDetails: ['magical creatures', 'enchanted objects', 'mystical architecture', 'ancient ruins'],
-  },
-  horror: {
-    artStyle: 'dark horror atmosphere, unsettling wide shot',
-    environmentFocus: 'decrepit locations, shadows, twisted environments',
-    lighting: 'low-key horror lighting, deep shadows, sickly highlights',
-    colorPalette: 'desaturated, sickly greens, blood reds, oppressive darkness',
-    atmosphericEffects: ['fog', 'darkness', 'flickering lights', 'decay'],
-    worldDetails: ['abandoned objects', 'blood stains', 'broken things', 'unsettling shapes'],
-  },
-  western: {
-    artStyle: 'classic western vista, sweeping landscape',
-    environmentFocus: 'dusty frontier towns, desert landscapes, saloons',
-    lighting: 'harsh desert sun, golden hour warmth',
-    colorPalette: 'warm browns, dusty oranges, sunset reds, weathered wood',
-    atmosphericEffects: ['dust', 'tumbleweeds', 'heat haze', 'gun smoke'],
-    worldDetails: ['horses', 'wagons', 'wooden buildings', 'cacti', 'hitching posts'],
-  },
-  noir: {
-    artStyle: 'film noir 1940s detective style, moody wide shot',
-    environmentFocus: 'rain-slicked city streets, shadowy alleys, dimly lit interiors',
-    lighting: 'high contrast, venetian blind shadows',
-    colorPalette: 'black and white tones, deep shadows',
-    atmosphericEffects: ['rain', 'neon signs', 'cigarette smoke', 'street lamps'],
-    worldDetails: ['vintage cars', 'street lamps', 'wet pavement', 'shadows'],
-  },
-  victorian: {
-    artStyle: 'victorian era steampunk, atmospheric wide shot',
-    environmentFocus: 'Victorian streets, gaslit architecture, industrial machinery',
-    lighting: 'gaslight glow, fog-filtered',
-    colorPalette: 'brass and copper, deep burgundy, forest green',
-    atmosphericEffects: ['steam', 'fog', 'gaslight', 'chimney smoke'],
-    worldDetails: ['carriages', 'factory smoke', 'clockwork', 'ornate buildings'],
-  },
-  steampunk: {
-    artStyle: 'Victorian steampunk, brass and copper, wide vista',
-    environmentFocus: 'brass machinery, Victorian industrial, clockwork city',
-    lighting: 'warm gaslight, steam-filled',
-    colorPalette: 'brass gold, copper, dark wood, leather',
-    atmosphericEffects: ['steam', 'gears', 'brass machinery', 'smoke'],
-    worldDetails: ['airships', 'clockwork automatons', 'pipes', 'Victorian architecture'],
-  },
-  zombie: {
-    artStyle: 'zombie apocalypse, urban decay, wide environmental',
-    environmentFocus: 'abandoned cities, overrun streets, survivor camps',
-    lighting: 'overcast grey atmosphere',
-    colorPalette: 'desaturated greens, grays, blood reds',
-    atmosphericEffects: ['decay', 'abandoned buildings', 'danger', 'fire smoke'],
-    worldDetails: ['abandoned cars', 'barricades', 'graffiti', 'shambling figures in distance'],
-  },
-  pirate: {
-    artStyle: 'golden age of piracy, seafaring vista',
-    environmentFocus: 'open seas, island harbors, ship decks, port towns',
-    lighting: 'tropical sunlight, stormy skies',
-    colorPalette: 'ocean blues, weathered wood, gold accents',
-    atmosphericEffects: ['sea spray', 'ship rigging', 'tropical clouds', 'cannon smoke'],
-    worldDetails: ['sailing ships', 'palm trees', 'treasure', 'dock workers'],
-  },
-};
-
-// ============================================================================
-// SCENE COMPOSITION BY TYPE (Environment primary)
-// ============================================================================
-
-const SCENE_COMPOSITIONS: Record<string, {
-  framing: string;
-  camera: string;
-  focus: string;
-  characterPlacement: string;
-}> = {
-  environment: {
-    framing: 'wide establishing shot showcasing the environment',
-    camera: 'wide angle lens, environment fills frame, deep depth of field',
-    focus: 'environment and atmosphere are the subject',
-    characterPlacement: 'if visible, small figure in environment showing scale',
-  },
-  event: {
-    framing: 'dynamic wide shot capturing the event unfolding',
-    camera: 'action-oriented angle, captures the scope',
-    focus: 'the event itself is the subject',
-    characterPlacement: 'characters as participants in larger event',
-  },
-  action: {
-    framing: 'dynamic action shot with environment context',
-    camera: 'dramatic angle showing both action and surroundings',
-    focus: 'the conflict or action within the space',
-    characterPlacement: 'characters engaged in action, environment frames them',
-  },
-  social: {
-    framing: 'scene showing social dynamics and setting',
-    camera: 'medium-wide shot showing people and place',
-    focus: 'the social environment and interactions',
-    characterPlacement: 'multiple figures, crowd dynamics',
-  },
-  personal: {
-    framing: 'intimate moment within larger context',
-    camera: 'medium shot with environment visible',
-    focus: 'emotional moment with environmental storytelling',
-    characterPlacement: 'character more prominent but still within world',
-  },
-  combat: {
-    framing: 'dynamic combat scene with environment context',
-    camera: 'dramatic angle capturing conflict and surroundings',
-    focus: 'the battle within the environment',
-    characterPlacement: 'combatants active, environment as battleground',
-  },
-  exploration: {
-    framing: 'establishing shot showing location',
-    camera: 'wide angle with environment as subject',
-    focus: 'the location and its atmosphere',
-    characterPlacement: 'small figure if visible, emphasizing scale',
-  },
-};
-
-// ============================================================================
-// PLAYER VISIBILITY BY INVOLVEMENT LEVEL
-// ============================================================================
-
-const PLAYER_VISIBILITY: Record<InvolvementLevel, {
-  include: boolean;
-  prominence: string;
-  detail: string;
-}> = {
-  none: {
-    include: false,
-    prominence: 'not visible in frame',
-    detail: 'player character is not in this scene',
-  },
-  background: {
-    include: true,
-    prominence: 'in background or edge of frame, not the focus',
-    detail: 'recognizable but not detailed, part of the scene',
-  },
-  participant: {
-    include: true,
-    prominence: 'in midground, one of several elements',
-    detail: 'visible and identifiable, sharing focus with environment',
-  },
-  focus: {
-    include: true,
-    prominence: 'in foreground, but environment still visible',
-    detail: 'detailed and clear, but world context maintained',
-  },
-};
-
-// ============================================================================
-// INVOLVEMENT DETECTION
-// ============================================================================
-
-function detectPlayerInvolvement(narratorMessage: string, userAction: string): {
-  level: InvolvementLevel;
-  action: string | null;
-  position: 'foreground' | 'midground' | 'background' | 'not_visible';
-} {
-  const narratorLower = narratorMessage.toLowerCase();
-  const actionLower = userAction.toLowerCase();
-  
-  // NONE: Player is observing, not present
-  const noneIndicators = [
-    'you see in the distance', 'you notice from afar', 'you watch as',
-    'you observe', 'from your vantage', 'you hear', 'somewhere nearby',
-    'in another room', 'meanwhile', 'elsewhere', 'you remain hidden',
-    'you stay back', 'you keep your distance',
-  ];
-  
-  if (noneIndicators.some(ind => narratorLower.includes(ind))) {
-    return { level: 'none', action: null, position: 'not_visible' };
-  }
-  
-  const passiveActions = [
-    'i watch', 'i look', 'i observe', 'i wait', 'i listen', 'i hide',
-    'i stay', 'i remain', 'look around', 'survey', 'examine from',
-  ];
-  
-  if (passiveActions.some(pa => actionLower.includes(pa))) {
-    return { level: 'none', action: 'observing', position: 'not_visible' };
-  }
-  
-  // FOCUS: Deeply personal moments
-  const focusIndicators = [
-    'you collapse', 'you fall to your knees', 'pain overwhelms',
-    'you realize', 'tears', 'you scream', 'death', 'dying',
-    'you hold the', 'you clutch', 'your vision', 'you feel yourself',
-  ];
-  
-  if (focusIndicators.some(ind => narratorLower.includes(ind))) {
-    const actionMatch = userAction.match(/^i\s+(.+?)(?:\.|$)/i);
-    return { level: 'focus', action: actionMatch?.[1] || 'experiencing', position: 'foreground' };
-  }
-  
-  // PARTICIPANT: Active engagement
-  const participantIndicators = [
-    'you attack', 'you fire', 'you shoot', 'you strike', 'you fight',
-    'you say', 'you speak', 'you ask', 'you tell', 'you shout',
-    'you grab', 'you take', 'you pick up', 'you open', 'you use',
-    'you help', 'you push', 'you pull', 'you throw', 'you dodge',
-    'you run', 'you sprint', 'you jump', 'you climb', 'you dive',
-  ];
-  
-  const participantActions = [
-    'i attack', 'i shoot', 'i fire', 'i fight', 'i strike',
-    'i say', 'i speak', 'i ask', 'i tell', 'i talk',
-    'i grab', 'i take', 'i use', 'i open', 'i help',
-    'i run', 'i sprint', 'i dodge', 'i jump', 'i throw',
-  ];
-  
-  if (participantIndicators.some(ind => narratorLower.includes(ind)) ||
-      participantActions.some(pa => actionLower.includes(pa))) {
-    const actionMatch = userAction.match(/^i\s+(.+?)(?:\.|$)/i);
-    return { level: 'participant', action: actionMatch?.[1] || 'engaging', position: 'midground' };
-  }
-  
-  // BACKGROUND: Player present but not the focus
-  const backgroundIndicators = [
-    'you walk', 'you move through', 'you pass by', 'you enter', 'you exit',
-    'you stand', 'you sit', 'you lean', 'around you', 'you find yourself',
-    'you make your way', 'you continue', 'you head', 'you approach',
-  ];
-  
-  if (backgroundIndicators.some(ind => narratorLower.includes(ind))) {
-    const actionMatch = userAction.match(/^i\s+(.+?)(?:\.|$)/i);
-    return { level: 'background', action: actionMatch?.[1] || 'moving through', position: 'background' };
-  }
-  
-  // Default: background presence
-  return { level: 'background', action: 'present', position: 'background' };
+interface SceneEssence {
+  coreAction: string;
+  momentType: 'quiet' | 'tense' | 'action' | 'discovery' | 'social' | 'transition' | 'emotional' | 'environmental';
+  visualElements: string[];
+  setting: string;
+  atmosphereWords: string[];
+  playerDoing: string | null;
+  others: string[];
+  objects: string[];
+  sensoryDetails: string[];
 }
 
 // ============================================================================
-// SCENE TYPE DETECTION
+// RANDOM UTILITY
 // ============================================================================
 
-function detectSceneType(narratorMessage: string, userAction: string): string {
-  const context = `${narratorMessage} ${userAction}`.toLowerCase();
-  
-  const personalIndicators = ['you feel', 'you realize', 'memory', 'you remember', 'emotion', 'tears', 'heart'];
-  if (personalIndicators.some(ind => context.includes(ind))) return 'personal';
-  
-  const combatIndicators = ['fight', 'attack', 'shoot', 'fire', 'strike', 'battle', 'combat', 'explosion', 'tank', 'shell'];
-  if (combatIndicators.some(ind => context.includes(ind))) return 'combat';
-  
-  const actionIndicators = ['run', 'jump', 'climb', 'dodge', 'chase', 'escape'];
-  if (actionIndicators.some(ind => context.includes(ind))) return 'action';
-  
-  const socialIndicators = ['says', 'speaks', 'asks', 'tells', 'conversation', 'crowd', 'people', 'gather'];
-  if (socialIndicators.some(ind => context.includes(ind))) return 'social';
-  
-  const eventIndicators = ['suddenly', 'alarm', 'sirens', 'commotion', 'happening'];
-  if (eventIndicators.some(ind => context.includes(ind))) return 'event';
-  
-  return 'environment';
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function pickMultiple<T>(arr: T[], min: number, max: number): T[] {
+  const count = Math.floor(Math.random() * (max - min + 1)) + min;
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
 }
 
 // ============================================================================
-// WORLD ELEMENTS EXTRACTION
+// SCENE ESSENCE EXTRACTION
 // ============================================================================
 
-function extractWorldElements(narratorMessage: string): {
-  worldEvent: string;
-  environmentDetails: string[];
-  activeElements: string[];
-} {
-  const worldEventPatterns = [
-    /(?:the\s+)?(\w+(?:\s+\w+)?)\s+(?:is|are)\s+(\w+ing[^.]*)/gi,
-    /(?:around you,?\s*)([^.]+)/gi,
-    /(?:in the distance,?\s*)([^.]+)/gi,
+function extractSceneEssence(
+  narratorMessage: string,
+  userAction: string,
+  history: Array<{ role: string; content: string }> = []
+): SceneEssence {
+  const combined = `${narratorMessage} ${userAction}`;
+  const lowerCombined = combined.toLowerCase();
+
+  // Extract core action
+  let coreAction = '';
+  const actionPatterns = [
+    /(?:you\s+)(\w+(?:\s+\w+){0,4})/gi,
+    /(?:the\s+\w+\s+)(\w+s?\s+[^.]+)/gi,
+    /(?:suddenly,?\s*)([^.]+)/gi,
+    /(?:there(?:'s| is)\s+)([^.]+)/gi,
   ];
-  
-  const activeElements: string[] = [];
-  let worldEvent = 'the scene unfolds';
-  
-  for (const pattern of worldEventPatterns) {
-    let match;
-    while ((match = pattern.exec(narratorMessage)) !== null) {
-      if (match[1] && !match[1].toLowerCase().includes('you')) {
-        activeElements.push(match[0].trim());
-        if (worldEvent === 'the scene unfolds') {
-          worldEvent = match[0];
-        }
-      }
+
+  for (const pattern of actionPatterns) {
+    const match = pattern.exec(narratorMessage);
+    if (match && match[1]) {
+      coreAction = match[1].trim();
+      break;
     }
   }
-  
-  const environmentDetails: string[] = [];
-  const envPatterns = [
-    /(?:the\s+)?(street|road|building|room|corridor|sky|rain|fog|smoke|fire|lights?|shadows?|walls?)[^,.]*/gi,
-    /(?:broken|ruined|destroyed|abandoned|empty|crowded|busy|quiet|dark|bright|wet|dusty)[^,.]*/gi,
-  ];
-  
-  for (const pattern of envPatterns) {
-    let match;
-    while ((match = pattern.exec(narratorMessage)) !== null) {
-      environmentDetails.push(match[0].trim());
+  if (!coreAction) coreAction = narratorMessage.split(/[.!?]/)[0].trim();
+
+  // Determine moment type
+  let momentType: SceneEssence['momentType'] = 'environmental';
+  const momentIndicators: Record<SceneEssence['momentType'], string[]> = {
+    action: ['fight', 'attack', 'shoot', 'fire', 'run', 'chase', 'dodge', 'explosion', 'combat', 'battle', 'sprint', 'jump', 'crash'],
+    tense: ['careful', 'danger', 'threat', 'watch', 'listen', 'quiet', 'sneak', 'hide', 'wait', 'shadows', 'nervous', 'uneasy'],
+    quiet: ['rest', 'sleep', 'peaceful', 'calm', 'still', 'silent', 'empty', 'alone', 'reflect', 'remember'],
+    discovery: ['find', 'discover', 'notice', 'see', 'reveal', 'uncover', 'realize', 'learn', 'spot', 'strange'],
+    social: ['say', 'speak', 'talk', 'ask', 'tell', 'crowd', 'people', 'gather', 'meeting', 'conversation'],
+    transition: ['enter', 'exit', 'leave', 'arrive', 'move', 'travel', 'walk', 'head', 'continue', 'approach'],
+    emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock'],
+    environmental: ['rain', 'wind', 'sun', 'storm', 'landscape', 'city', 'building', 'street', 'forest'],
+  };
+
+  for (const [type, indicators] of Object.entries(momentIndicators)) {
+    if (indicators.some(ind => lowerCombined.includes(ind))) {
+      momentType = type as SceneEssence['momentType'];
+      break;
     }
   }
-  
+
+  // Extract visual elements
+  const visualElements: string[] = [];
+  const visualPatterns = [
+    /(?:the|a|an)\s+(\w+(?:\s+\w+)?)\s+(?:is|are|stands?|lies?|hangs?)/gi,
+    /(?:broken|ruined|old|new|large|small|dark|bright)\s+(\w+)/gi,
+    /(\w+)\s+(?:everywhere|around|nearby|ahead|behind)/gi,
+  ];
+  for (const pattern of visualPatterns) {
+    let match;
+    while ((match = pattern.exec(combined)) !== null) {
+      if (match[1] && match[1].length > 2) visualElements.push(match[1].trim());
+    }
+  }
+
+  // Extract setting
+  let setting = 'the area';
+  const settingPatterns = [
+    /(?:in|inside|within|at)\s+(?:the|a)?\s*([^,.!?]+)/i,
+    /(?:the|a)\s+(street|room|building|forest|city|town|base|camp|ruins|wasteland|market|alley|corridor|hall)[^,.!?]*/i,
+  ];
+  for (const pattern of settingPatterns) {
+    const match = combined.match(pattern);
+    if (match) { setting = (match[1] || match[0]).trim(); break; }
+  }
+  for (let i = history.length - 1; i >= Math.max(0, history.length - 4); i--) {
+    const msg = history[i];
+    if (msg.role === 'narrator') {
+      const locMatch = msg.content.match(/(?:in|at|inside)\s+(?:the|a)\s+([^,.!?]+)/i);
+      if (locMatch && setting === 'the area') { setting = locMatch[1].trim(); break; }
+    }
+  }
+
+  // Extract atmosphere words
+  const atmosphereWords: string[] = [];
+  const atmospherePatterns = [
+    /\b(dark|bright|dim|shadowy|lit|glowing|flickering)\b/gi,
+    /\b(cold|hot|warm|freezing|humid|dry)\b/gi,
+    /\b(quiet|loud|noisy|silent|echoing|rumbling)\b/gi,
+    /\b(crowded|empty|busy|desolate|abandoned|lively)\b/gi,
+    /\b(tense|peaceful|chaotic|eerie|welcoming|hostile)\b/gi,
+  ];
+  for (const pattern of atmospherePatterns) {
+    let match;
+    while ((match = pattern.exec(combined)) !== null) atmosphereWords.push(match[1].toLowerCase());
+  }
+
+  // What is player doing?
+  let playerDoing: string | null = null;
+  const actionMatch = userAction.match(/^i\s+(.+?)(?:\.|$)/i);
+  if (actionMatch) {
+    const action = actionMatch[1].toLowerCase();
+    const invisibleActions = ['think', 'wonder', 'consider', 'decide', 'remember', 'feel', 'hope', 'wish'];
+    const observeActions = ['watch', 'look', 'observe', 'listen', 'wait', 'hide', 'stay'];
+    if (!invisibleActions.some(a => action.includes(a)) && !observeActions.some(a => action.includes(a))) {
+      playerDoing = action;
+    }
+  }
+  const narratorPlayerAction = narratorMessage.match(/you\s+(\w+(?:\s+\w+){0,3})/i);
+  if (narratorPlayerAction && !playerDoing) {
+    const action = narratorPlayerAction[1].toLowerCase();
+    if (!['see', 'notice', 'hear', 'feel', 'sense', 'realize'].includes(action.split(' ')[0])) {
+      playerDoing = action;
+    }
+  }
+
+  // Extract others
+  const others: string[] = [];
+  const otherPatterns = [
+    /(?:the|a|an)\s+(soldier|guard|man|woman|figure|stranger|merchant|officer|creature|beast|group|crowd|people)[s]?/gi,
+    /(\w+)\s+(?:says?|speaks?|shouts?|attacks?|approaches?|stands?)/gi,
+  ];
+  for (const pattern of otherPatterns) {
+    let match;
+    while ((match = pattern.exec(narratorMessage)) !== null) {
+      const other = match[1];
+      if (other && !['you', 'your'].includes(other.toLowerCase())) others.push(other);
+    }
+  }
+
+  // Extract objects
+  const objects: string[] = [];
+  const objectPatterns = [
+    /(?:the|a|an)\s+(door|window|table|chair|weapon|gun|knife|box|crate|vehicle|car|body|corpse|terminal|screen|sign|poster)[s]?/gi,
+  ];
+  for (const pattern of objectPatterns) {
+    let match;
+    while ((match = pattern.exec(combined)) !== null) objects.push(match[1]);
+  }
+
+  // Extract sensory details
+  const sensoryDetails: string[] = [];
+  const sensoryPatterns = [
+    /(?:smell|stench|odor|scent)\s+of\s+([^,.]+)/gi,
+    /(?:sound|noise)\s+of\s+([^,.]+)/gi,
+    /\b(rain|wind|thunder|gunfire|screams|music|silence|smoke|dust|blood)\b/gi,
+  ];
+  for (const pattern of sensoryPatterns) {
+    let match;
+    while ((match = pattern.exec(combined)) !== null) sensoryDetails.push(match[1] || match[0]);
+  }
+
   return {
-    worldEvent,
-    environmentDetails: [...new Set(environmentDetails)].slice(0, 5),
-    activeElements: [...new Set(activeElements)].slice(0, 4),
+    coreAction,
+    momentType,
+    visualElements: [...new Set(visualElements)].slice(0, 6),
+    setting,
+    atmosphereWords: [...new Set(atmosphereWords)],
+    playerDoing,
+    others: [...new Set(others)].slice(0, 4),
+    objects: [...new Set(objects)].slice(0, 5),
+    sensoryDetails: [...new Set(sensoryDetails)].slice(0, 4),
   };
 }
 
 // ============================================================================
-// LOCATION ANALYSIS
+// COMPOSITION VARIATIONS
 // ============================================================================
 
-function analyzeLocation(narratorMessage: string, currentLocation?: string): {
-  type: string;
-  specific: string;
-  scale: string;
-} {
-  const context = narratorMessage.toLowerCase();
-  
-  let type = 'exterior';
-  if (/\b(room|building|interior|inside|corridor|hallway|office|bunker|shelter)\b/.test(context)) {
-    type = 'interior';
-  } else if (/\b(car|truck|vehicle|tank|ship|plane|helicopter)\b/.test(context)) {
-    type = 'vehicle';
-  }
-  
-  let specific = currentLocation || 'the scene';
-  const locMatch = narratorMessage.match(/(?:in|at|inside|outside|through)\s+(?:the|a)?\s*([^,.!?]+)/i);
-  if (locMatch) specific = locMatch[1].trim();
-  
-  let scale = 'street';
-  if (/\b(vast|sprawling|city|district|horizon|landscape|wasteland)\b/.test(context)) {
-    scale = 'landscape';
-  } else if (/\b(building|warehouse|facility)\b/.test(context)) {
-    scale = 'building';
-  } else if (/\b(room|office|cell|chamber)\b/.test(context)) {
-    scale = 'room';
-  }
-  
-  return { type, specific, scale };
-}
+const CAMERA_ANGLES = {
+  wide: ['wide establishing shot', 'sweeping wide angle view', 'panoramic vista', 'extreme wide shot showing scale'],
+  medium: ['medium wide shot', 'environmental medium shot', 'balanced composition showing scene', 'mid-range framing'],
+  dynamic: ['dutch angle adding tension', 'dramatic low angle', 'high angle looking down', 'asymmetric dynamic composition'],
+  intimate: ['close environmental shot', 'tight framing on details', 'intimate scene composition', 'focused close view'],
+};
+
+const LIGHTING_VARIATIONS = {
+  natural: ['natural ambient lighting', 'soft diffused daylight', 'harsh direct sunlight with deep shadows', 'golden hour warm light'],
+  dramatic: ['dramatic chiaroscuro lighting', 'harsh contrast lighting', 'single strong light source', 'rim lighting silhouettes'],
+  atmospheric: ['volumetric light rays', 'hazy atmospheric lighting', 'god rays through dust', 'foggy diffused glow'],
+  artificial: ['fluorescent harsh lighting', 'neon color cast', 'mixed artificial sources', 'flickering unstable light'],
+  night: ['moonlight and shadows', 'scattered artificial lights in darkness', 'low-key nighttime lighting', 'fire/explosion illumination'],
+};
+
+const ATMOSPHERE_ADDITIONS = {
+  particles: ['dust particles floating in air', 'ash drifting down', 'rain droplets visible', 'smoke wisps', 'sparks floating', 'debris in wind'],
+  weather: ['rain puddles reflecting', 'wet surfaces glistening', 'fog rolling through', 'heat haze distortion', 'wind-blown elements'],
+  environmental: ['distant activity visible', 'background movement', 'environmental storytelling details', 'signs of recent events', 'lived-in world details'],
+};
+
+const COMPOSITION_FOCUS = {
+  environment: ['environment dominates frame', 'architecture and space as subject', 'landscape fills the view', 'setting is the story'],
+  event: ['action captured mid-moment', 'event unfolding in frame', 'dynamic moment frozen', 'narrative beat visualized'],
+  mood: ['atmosphere is palpable', 'mood conveyed through visuals', 'emotional resonance in composition'],
+  detail: ['specific details tell the story', 'meaningful objects prominent', 'visual clues for narrative'],
+};
 
 // ============================================================================
-// ATMOSPHERE ANALYSIS
+// GENRE STYLE BANKS
 // ============================================================================
 
-function analyzeAtmosphere(narratorMessage: string, timeOverride?: string, weatherOverride?: string): {
-  timeOfDay: string | null;
-  weather: string | null;
-  mood: string;
-  lighting: string;
-} {
-  const context = narratorMessage.toLowerCase();
-  
-  let timeOfDay: string | null = timeOverride || null;
-  if (!timeOfDay) {
-    if (/\b(dawn|sunrise|morning)\b/.test(context)) timeOfDay = 'dawn';
-    else if (/\b(noon|midday|afternoon)\b/.test(context)) timeOfDay = 'day';
-    else if (/\b(dusk|sunset|evening|twilight)\b/.test(context)) timeOfDay = 'dusk';
-    else if (/\b(night|dark|midnight)\b/.test(context)) timeOfDay = 'night';
-  }
-  
-  let weather: string | null = weatherOverride || null;
-  if (!weather) {
-    if (/\b(rain|raining|storm)\b/.test(context)) weather = 'rain';
-    else if (/\b(snow|snowing|blizzard)\b/.test(context)) weather = 'snow';
-    else if (/\b(fog|mist|haze)\b/.test(context)) weather = 'fog';
-  }
-  
-  let mood = 'neutral';
-  if (/\b(tense|danger|threat|ominous)\b/.test(context)) mood = 'tense';
-  else if (/\b(peaceful|calm|quiet)\b/.test(context)) mood = 'peaceful';
-  else if (/\b(chaos|frantic)\b/.test(context)) mood = 'chaotic';
-  else if (/\b(eerie|creepy|unsettling)\b/.test(context)) mood = 'eerie';
-  else if (/\b(busy|bustling|crowded)\b/.test(context)) mood = 'busy';
-  else if (/\b(empty|desolate|abandoned)\b/.test(context)) mood = 'desolate';
-  
-  let lighting = 'natural ambient lighting';
-  if (timeOfDay === 'night') lighting = 'nighttime darkness with scattered light sources';
-  else if (timeOfDay === 'dawn') lighting = 'soft golden morning light';
-  else if (timeOfDay === 'dusk') lighting = 'warm orange sunset light with long shadows';
-  else if (weather === 'fog') lighting = 'diffused foggy lighting';
-  else if (weather === 'rain') lighting = 'overcast gray light, wet reflections';
-  else if (mood === 'tense') lighting = 'harsh dramatic shadows';
-  
-  return { timeOfDay, weather, mood, lighting };
-}
-
-// ============================================================================
-// EXTRACT NPC ACTIVITY
-// ============================================================================
-
-function extractNPCActivity(narratorMessage: string, knownNPCs?: Array<{ name: string; description: string; currentActivity?: string }>): Array<{
-  description: string;
-  action: string;
-  prominence: string;
-}> {
-  const npcs: Array<{ description: string; action: string; prominence: string }> = [];
-  
-  const npcPatterns = [
-    /(?:the\s+)?(\w+)\s+(?:is|stands?|sits?|walks?|runs?|speaks?|says?|looks?|watches?)\s+([^.]+)/gi,
-    /(?:a|an|the)\s+(soldier|guard|civilian|man|woman|figure|person|stranger|officer)\s+([^.]+)/gi,
-  ];
-  
-  for (const pattern of npcPatterns) {
-    let match;
-    while ((match = pattern.exec(narratorMessage)) !== null) {
-      const name = match[1];
-      const action = match[2] || match[0];
-      
-      if (name.toLowerCase() === 'you' || name.toLowerCase() === 'your') continue;
-      
-      let prominence = 'midground';
-      if (action.length > 30 || narratorMessage.indexOf(match[0]) < 50) {
-        prominence = 'foreground';
-      } else if (narratorMessage.indexOf(match[0]) > narratorMessage.length * 0.7) {
-        prominence = 'background';
-      }
-      
-      npcs.push({ description: name, action: action.trim(), prominence });
-    }
-  }
-  
-  // Add known NPCs if mentioned
-  if (knownNPCs) {
-    for (const npc of knownNPCs) {
-      if (narratorMessage.toLowerCase().includes(npc.name.toLowerCase())) {
-        const existing = npcs.find(n => n.description.toLowerCase() === npc.name.toLowerCase());
-        if (!existing) {
-          npcs.push({
-            description: npc.description || npc.name,
-            action: npc.currentActivity || 'present',
-            prominence: 'midground',
-          });
-        }
-      }
-    }
-  }
-  
-  return npcs.slice(0, 4);
-}
+const GENRE_STYLES: Record<string, {
+  baseStyles: string[];
+  colorPalettes: string[];
+  environmentTypes: string[];
+  atmosphericElements: string[];
+  worldDetails: string[];
+  lightingPreferences: string[];
+}> = {
+  modern: {
+    baseStyles: ['modern urban realism', 'contemporary gritty aesthetic', 'photorealistic modern setting'],
+    colorPalettes: ['muted earth tones and urban grays', 'concrete and steel colors', 'military greens and tans'],
+    environmentTypes: ['urban streets and buildings', 'modern city environment', 'industrial urban landscape'],
+    atmosphericElements: ['city smog', 'vehicle exhaust', 'street steam', 'rain on pavement', 'urban debris'],
+    worldDetails: ['parked vehicles', 'street signs', 'power lines', 'graffiti', 'civilians'],
+    lightingPreferences: ['natural', 'artificial', 'dramatic'],
+  },
+  cyberpunk: {
+    baseStyles: ['cyberpunk neon noir', 'high-tech dystopian aesthetic', 'neo-noir futurism', 'rain-slicked neon future'],
+    colorPalettes: ['neon pink and cyan on dark', 'electric blue and magenta', 'chrome and neon reflections'],
+    environmentTypes: ['neon-lit megacity streets', 'towering corporate arcologies', 'high-tech slums'],
+    atmosphericElements: ['neon signs everywhere', 'holographic advertisements', 'steam from vents', 'constant rain'],
+    worldDetails: ['flying vehicles', 'augmented people', 'robots', 'street vendors', 'hackers'],
+    lightingPreferences: ['atmospheric', 'artificial', 'night'],
+  },
+  postapoc: {
+    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization'],
+    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones'],
+    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland'],
+    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires'],
+    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers'],
+    lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+  },
+  postapocalyptic: {
+    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization'],
+    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones'],
+    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland'],
+    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires'],
+    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers'],
+    lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+  },
+  scifi: {
+    baseStyles: ['science fiction vista', 'clean futuristic aesthetic', 'sleek technological environment'],
+    colorPalettes: ['clean whites and chrome', 'holographic blue accents', 'high-tech metallic tones'],
+    environmentTypes: ['space station interior', 'futuristic city', 'alien landscape'],
+    atmosphericElements: ['holographic displays', 'energy fields', 'artificial atmosphere'],
+    worldDetails: ['robots', 'drones', 'holographic interfaces', 'advanced vehicles'],
+    lightingPreferences: ['artificial', 'natural', 'dramatic'],
+  },
+  ww2: {
+    baseStyles: ['1940s wartime documentary', 'World War 2 historical', 'wartime grit and authenticity'],
+    colorPalettes: ['desaturated sepia tones', 'military olive and brown', 'mud and blood colors'],
+    environmentTypes: ['war-torn European village', 'battlefield trenches', 'bombed city ruins'],
+    atmosphericElements: ['smoke from explosions', 'fog of war', 'rain and mud', 'artillery fire'],
+    worldDetails: ['period vehicles', 'soldiers', 'sandbags', 'barbed wire', 'rubble'],
+    lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+  },
+  war: {
+    baseStyles: ['war photography aesthetic', 'gritty military realism', 'battlefield chaos'],
+    colorPalettes: ['muted greens and browns', 'smoke and fire colors', 'mud and blood tones'],
+    environmentTypes: ['active battlefield', 'military positions', 'combat zones'],
+    atmosphericElements: ['smoke', 'debris', 'explosions', 'tracer fire'],
+    worldDetails: ['military vehicles', 'fortifications', 'destroyed equipment', 'soldiers'],
+    lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+  },
+  medieval: {
+    baseStyles: ['epic medieval fantasy', 'dark fantasy aesthetic', 'gritty medieval realism'],
+    colorPalettes: ['rich earth tones and gold', 'deep forest greens', 'torchlit warm oranges'],
+    environmentTypes: ['castle and fortress', 'medieval village', 'dark forest'],
+    atmosphericElements: ['torch smoke', 'morning mist', 'firelight flicker', 'rain'],
+    worldDetails: ['horses', 'carts', 'market stalls', 'peasants', 'banners'],
+    lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+  },
+  fantasy: {
+    baseStyles: ['high fantasy epic vista', 'magical realm aesthetic', 'mythical grandeur'],
+    colorPalettes: ['rich jewel tones', 'magical purples and golds', 'ethereal blues and silvers'],
+    environmentTypes: ['magical landscapes', 'enchanted forests', 'mystical structures', 'ancient ruins'],
+    atmosphericElements: ['magical particles', 'ethereal mist', 'glowing runes', 'floating elements'],
+    worldDetails: ['mythical creatures', 'ancient ruins', 'magical flora', 'arcane symbols'],
+    lightingPreferences: ['atmospheric', 'dramatic', 'natural'],
+  },
+  horror: {
+    baseStyles: ['dark horror atmosphere', 'survival horror aesthetic', 'psychological dread'],
+    colorPalettes: ['desaturated sickly tones', 'deep shadows and pale highlights', 'blood red accents'],
+    environmentTypes: ['abandoned building', 'dark forest', 'decrepit facility'],
+    atmosphericElements: ['thick fog', 'unnatural shadows', 'flickering lights', 'decay'],
+    worldDetails: ['abandoned objects', 'mysterious stains', 'broken things', 'unsettling shapes'],
+    lightingPreferences: ['night', 'atmospheric', 'dramatic'],
+  },
+  western: {
+    baseStyles: ['classic western vista', 'frontier aesthetic', 'dusty cowboy realism'],
+    colorPalettes: ['warm browns and oranges', 'dusty desert tones', 'sunset reds and golds'],
+    environmentTypes: ['dusty frontier town', 'desert landscape', 'saloon interior'],
+    atmosphericElements: ['dust', 'tumbleweeds', 'heat haze', 'gun smoke'],
+    worldDetails: ['horses', 'wagons', 'wooden buildings', 'cacti', 'cowboys'],
+    lightingPreferences: ['natural', 'dramatic', 'atmospheric'],
+  },
+  noir: {
+    baseStyles: ['film noir 1940s', 'moody detective aesthetic', 'black and white crime drama'],
+    colorPalettes: ['black and white tones', 'deep shadows', 'high contrast'],
+    environmentTypes: ['rain-slicked city streets', 'shadowy alleys', 'dimly lit interiors'],
+    atmosphericElements: ['rain', 'neon signs', 'cigarette smoke', 'venetian blind shadows'],
+    worldDetails: ['vintage cars', 'street lamps', 'wet pavement', 'fedoras'],
+    lightingPreferences: ['dramatic', 'night', 'atmospheric'],
+  },
+  victorian: {
+    baseStyles: ['victorian era aesthetic', 'gaslight atmosphere', 'period drama realism'],
+    colorPalettes: ['brass and copper tones', 'deep burgundy', 'sepia and brown'],
+    environmentTypes: ['Victorian streets', 'gaslit architecture', 'industrial factories'],
+    atmosphericElements: ['steam', 'fog', 'gaslight', 'chimney smoke'],
+    worldDetails: ['carriages', 'factory smoke', 'clockwork', 'ornate buildings'],
+    lightingPreferences: ['atmospheric', 'natural', 'dramatic'],
+  },
+  steampunk: {
+    baseStyles: ['Victorian steampunk', 'brass and copper aesthetic', 'clockwork fantasy'],
+    colorPalettes: ['brass gold', 'copper', 'dark wood', 'leather brown'],
+    environmentTypes: ['brass machinery city', 'Victorian industrial', 'airship deck'],
+    atmosphericElements: ['steam', 'gears turning', 'brass machinery', 'pressure valves'],
+    worldDetails: ['airships', 'clockwork automatons', 'pipes', 'goggles'],
+    lightingPreferences: ['atmospheric', 'artificial', 'dramatic'],
+  },
+  pirate: {
+    baseStyles: ['golden age of piracy', 'seafaring adventure', 'caribbean swashbuckler'],
+    colorPalettes: ['ocean blues', 'weathered wood', 'gold accents', 'tropical greens'],
+    environmentTypes: ['open seas', 'island harbors', 'ship decks', 'port towns'],
+    atmosphericElements: ['sea spray', 'ship rigging', 'tropical clouds', 'cannon smoke'],
+    worldDetails: ['sailing ships', 'palm trees', 'treasure', 'dock workers'],
+    lightingPreferences: ['natural', 'dramatic', 'atmospheric'],
+  },
+  zombie: {
+    baseStyles: ['zombie apocalypse', 'urban decay horror', 'survival horror'],
+    colorPalettes: ['desaturated greens', 'grays', 'blood reds', 'decay browns'],
+    environmentTypes: ['abandoned cities', 'overrun streets', 'survivor camps'],
+    atmosphericElements: ['decay', 'abandoned buildings', 'fire smoke', 'blood splatter'],
+    worldDetails: ['abandoned cars', 'barricades', 'graffiti', 'shambling figures'],
+    lightingPreferences: ['atmospheric', 'dramatic', 'night'],
+  },
+};
 
 // ============================================================================
 // LEGACY CHARACTER PROFILE BUILDER
@@ -596,79 +414,62 @@ function extractNPCActivity(narratorMessage: string, knownNPCs?: Array<{ name: s
 
 function buildLegacyCharacterProfile(char: SceneImageRequest['playerCharacter']): CharacterVisualProfile | null {
   if (!char || !char.name) return null;
-  
-  const buildDescriptions: Record<string, string> = {
-    athletic: 'athletic muscular build with toned physique',
-    lean: 'lean agile build with wiry muscles',
-    muscular: 'heavily muscular imposing build',
-    stocky: 'stocky sturdy build',
-    slim: 'slim slender build',
-    average: 'average build',
+
+  const buildDescs: Record<string, string> = {
+    athletic: 'athletic muscular build', lean: 'lean agile build', muscular: 'heavily muscular build',
+    stocky: 'stocky sturdy build', slim: 'slim slender build', average: 'average build',
   };
-  
-  const skinToneDescriptions: Record<string, string> = {
+  const skinDescs: Record<string, string> = {
     pale: 'pale fair skin', light: 'light skin tone', medium: 'medium skin tone',
     tan: 'tanned skin', olive: 'olive skin tone', brown: 'brown skin tone', dark: 'dark skin tone',
   };
-  
-  const hairColorDescriptions: Record<string, string> = {
+  const hairColorDescs: Record<string, string> = {
     black: 'jet black hair', brown: 'brown hair', darkBrown: 'dark brown hair',
     blonde: 'blonde hair', red: 'red auburn hair', white: 'white silver hair', gray: 'gray hair',
   };
-  
-  const hairStyleDescriptions: Record<string, string> = {
+  const hairStyleDescs: Record<string, string> = {
     short: 'short cropped hair', military: 'military buzz cut', shaved: 'shaved bald head',
     long: 'long flowing hair', ponytail: 'hair tied in tactical ponytail', messy: 'messy unkempt hair',
   };
-  
-  const eyeColorDescriptions: Record<string, string> = {
+  const eyeColorDescs: Record<string, string> = {
     brown: 'deep brown eyes', blue: 'bright blue eyes', green: 'striking green eyes',
     hazel: 'hazel eyes', gray: 'steel gray eyes',
   };
-  
   const roleAppearances: Record<string, string> = {
-    soldier: 'wearing military tactical gear, combat vest, armed',
-    medic: 'wearing combat medic gear with red cross armband',
-    sniper: 'wearing ghillie suit elements and camouflage',
-    heavy: 'wearing heavy reinforced armor with machine gun',
-    tank: 'wearing tanker jacket with oil stains, tanker helmet with goggles',
-    pilot: 'wearing flight suit with patches',
-    officer: 'wearing decorated officer uniform with rank insignia',
-    knight: 'wearing ornate plate armor',
-    rogue: 'wearing dark leather armor',
-    mage: 'wearing armored battle robes',
+    soldier: 'wearing military tactical gear, armed', medic: 'wearing combat medic gear with red cross',
+    sniper: 'wearing ghillie suit elements', heavy: 'wearing heavy reinforced armor',
+    tank: 'wearing tanker jacket with oil stains', pilot: 'wearing flight suit with patches',
+    officer: 'wearing decorated officer uniform', knight: 'wearing ornate plate armor',
+    rogue: 'wearing dark leather armor', mage: 'wearing armored battle robes',
     survivor: 'wearing scavenged makeshift armor',
   };
-  
+
   const details = char.details || [];
   const facialFeatures: CharacterVisualProfile['facialFeatures'] = {};
   if (details.includes('scars')) facialFeatures.scars = 'visible battle scars on face';
   if (details.includes('tattoos')) facialFeatures.tattoos = 'military tattoos visible';
-  if (details.includes('beard')) facialFeatures.beard = 'tactical beard with stubble';
-  else facialFeatures.beard = 'clean shaven';
-  
+  facialFeatures.beard = details.includes('beard') ? 'tactical beard with stubble' : 'clean shaven';
+
   const modifications: CharacterVisualProfile['modifications'] = {};
   if (details.includes('cybernetics')) modifications.cybernetics = 'visible cybernetic augmentations';
   if (details.includes('eyepatch')) modifications.other = 'eye patch over one eye';
-  
-  const buildDesc = buildDescriptions[char.build || 'athletic'] || 'athletic build';
-  const skinDesc = skinToneDescriptions[char.skinTone || 'medium'] || 'medium skin tone';
-  const hairColorDesc = hairColorDescriptions[char.hairColor || 'brown'] || 'brown hair';
-  const hairStyleDesc = hairStyleDescriptions[char.hairStyle || 'short'] || 'short hair';
-  const eyeColorDesc = eyeColorDescriptions[char.eyeColor || 'brown'] || 'brown eyes';
+
+  const buildDesc = buildDescs[char.build || 'athletic'] || 'athletic build';
+  const skinDesc = skinDescs[char.skinTone || 'medium'] || 'medium skin tone';
+  const hairColorDesc = hairColorDescs[char.hairColor || 'brown'] || 'brown hair';
+  const hairStyleDesc = hairStyleDescs[char.hairStyle || 'short'] || 'short hair';
+  const eyeColorDesc = eyeColorDescs[char.eyeColor || 'brown'] || 'brown eyes';
   const roleAppearance = roleAppearances[char.role || 'soldier'] || 'wearing tactical gear';
-  
-  const genderDesc = char.gender === 'female' 
-    ? 'woman with feminine features' : char.gender === 'male' ? 'man with masculine features' : 'person';
-  
+
+  const genderDesc = char.gender === 'female' ? 'woman with feminine features' : char.gender === 'male' ? 'man with masculine features' : 'person';
   const facialFeaturesDesc = Object.values(facialFeatures).filter(Boolean).join(', ');
   const modificationsDesc = Object.values(modifications).filter(Boolean).join(', ');
-  
+
   const fullVisualDescription = [
     genderDesc, buildDesc, skinDesc, `${hairColorDesc} in ${hairStyleDesc}`,
     eyeColorDesc, facialFeaturesDesc, modificationsDesc, roleAppearance,
   ].filter(Boolean).join(', ');
-  
+
   return {
     name: char.name,
     gender: (char.gender as 'male' | 'female' | 'nonbinary') || 'male',
@@ -684,127 +485,165 @@ function buildLegacyCharacterProfile(char: SceneImageRequest['playerCharacter'])
 }
 
 // ============================================================================
-// MAIN PROMPT BUILDER (ENVIRONMENT FIRST)
+// BUILD PROMPT WITH CONTROLLED RANDOMNESS (v2)
 // ============================================================================
 
-function buildWorldIllustrationPrompt(
+function buildIllustrationPrompt(
   request: SceneImageRequest,
   characterProfile: CharacterVisualProfile | null
-): string {
-  const genre = request.genre || request.style || 'fantasy';
+): { prompt: string; negativePrompt: string; debug: any } {
+  const genre = (request.genre || request.style || 'fantasy').toLowerCase();
   const narratorMessage = request.lastNarratorMessage || request.sceneDescription || '';
   const userAction = request.lastUserAction || request.playerAction || '';
-  
+  const history = request.messageHistory || [];
+
+  // Extract scene essence
+  const essence = extractSceneEssence(narratorMessage, userAction, history);
+  console.log('Scene essence:', essence.momentType, '-', essence.coreAction.slice(0, 50));
+
   // Get genre style
-  const genreStyle = GENRE_ENVIRONMENT_STYLES[genre.toLowerCase()] || GENRE_ENVIRONMENT_STYLES.fantasy;
-  
-  // Detect player involvement
-  const involvement = detectPlayerInvolvement(narratorMessage, userAction);
-  console.log('Player involvement:', involvement.level);
-  
-  // Detect scene type
-  const sceneType = detectSceneType(narratorMessage, userAction);
-  const composition = SCENE_COMPOSITIONS[sceneType] || SCENE_COMPOSITIONS.environment;
-  
-  // Get player visibility
-  const playerVis = PLAYER_VISIBILITY[involvement.level];
-  
-  // Extract world elements
-  const worldElements = extractWorldElements(narratorMessage);
-  
-  // Analyze location
-  const location = analyzeLocation(narratorMessage, request.currentLocation);
-  
-  // Analyze atmosphere
-  const atmosphere = analyzeAtmosphere(narratorMessage, request.timeOfDay, request.weather);
-  
-  // Extract NPCs
-  const npcs = extractNPCActivity(narratorMessage, request.npcsPresent);
-  
-  // Build environment description (PRIMARY FOCUS)
-  const environmentDesc = [
-    genreStyle.environmentFocus,
-    `setting: ${location.specific}`,
-    location.type === 'interior' ? 'interior space' : 'exterior environment',
-    `scale: ${location.scale} view`,
-    worldElements.environmentDetails.slice(0, 3).join(', '),
-  ].filter(Boolean).join(', ');
-  
-  // Build atmosphere description
-  const atmosphereDesc = [
-    atmosphere.lighting,
-    atmosphere.timeOfDay ? `${atmosphere.timeOfDay} time` : '',
-    atmosphere.weather ? `${atmosphere.weather} weather` : '',
-    `${atmosphere.mood} mood`,
-    genreStyle.atmosphericEffects[Math.floor(Math.random() * genreStyle.atmosphericEffects.length)],
-  ].filter(Boolean).join(', ');
-  
-  // Build world activity
-  const worldActivityDesc = [
-    worldElements.worldEvent,
-    worldElements.activeElements.slice(0, 2).join(', '),
-    genreStyle.worldDetails[Math.floor(Math.random() * genreStyle.worldDetails.length)],
-  ].filter(Boolean).join(', ');
-  
-  // Build NPC descriptions
-  const npcDesc = npcs.length > 0
-    ? npcs.map(npc => `${npc.prominence}: ${npc.description} ${npc.action}`).join(', ')
-    : '';
-  
-  // Build player description ONLY if involved
-  let playerDesc = '';
-  if (playerVis.include && characterProfile && involvement.action) {
-    let charDesc = '';
-    
-    if (involvement.level === 'background') {
-      // Minimal description
-      charDesc = `distant figure, ${characterProfile.gender}, ${characterProfile.hair.color} hair, ${characterProfile.roleAppearance.split(',')[0]}`;
-    } else if (involvement.level === 'participant') {
-      // Medium description
-      charDesc = `${characterProfile.gender}, ${characterProfile.physicalDescription.build}, ${characterProfile.hair.color} ${characterProfile.hair.style}, ${characterProfile.roleAppearance}`;
-    } else if (involvement.level === 'focus') {
-      // Full description
-      charDesc = characterProfile.fullVisualDescription;
-    }
-    
-    playerDesc = `${playerVis.prominence}: ${charDesc}, ${involvement.action}`;
+  const genreStyle = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
+
+  const baseStyle = pick(genreStyle.baseStyles);
+  const colorPalette = pick(genreStyle.colorPalettes);
+  const envType = pick(genreStyle.environmentTypes);
+
+  // Determine composition based on moment type with randomness
+  let cameraOptions: string[];
+  switch (essence.momentType) {
+    case 'action':
+      cameraOptions = Math.random() > 0.3 ? CAMERA_ANGLES.dynamic : CAMERA_ANGLES.medium;
+      break;
+    case 'quiet':
+    case 'environmental':
+      cameraOptions = Math.random() > 0.4 ? CAMERA_ANGLES.wide : CAMERA_ANGLES.medium;
+      break;
+    case 'emotional':
+    case 'discovery':
+      cameraOptions = Math.random() > 0.5 ? CAMERA_ANGLES.intimate : CAMERA_ANGLES.medium;
+      break;
+    default:
+      cameraOptions = pick([CAMERA_ANGLES.wide, CAMERA_ANGLES.medium, CAMERA_ANGLES.dynamic]);
   }
-  
-  // Assemble prompt with ENVIRONMENT FIRST
-  const promptParts = [
-    'masterpiece, best quality, highly detailed digital illustration',
-    'photorealistic style, dramatic cinematic lighting, 8k resolution',
-    genreStyle.artStyle,
-    composition.framing,
-    composition.camera,
-    composition.focus,
-    
-    // ENVIRONMENT FIRST (primary subject)
-    `PRIMARY FOCUS - ENVIRONMENT: ${environmentDesc}`,
-    
-    // World activity
-    worldActivityDesc ? `WORLD ACTIVITY: ${worldActivityDesc}` : '',
-    
-    // Atmosphere
-    `ATMOSPHERE: ${atmosphereDesc}`,
-    genreStyle.lighting,
-    `color palette: ${genreStyle.colorPalette}`,
-    
-    // NPCs (often more prominent than player)
-    npcDesc ? `OTHER CHARACTERS: ${npcDesc}` : '',
-    
-    // Player LAST and only if involved
-    playerDesc ? `PLAYER (${playerVis.prominence}): ${playerDesc}` : '',
-    playerVis.include ? composition.characterPlacement : 'no player character visible in frame',
-    
-    // Final quality
-    'cinematic composition, environmental storytelling, intricate world details',
-  ];
-  
-  const positive = promptParts.filter(Boolean).join(', ');
-  const negative = 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime, illustration';
-  
-  return `${positive}\n\nNegative: ${negative}`;
+  const cameraAngle = pick(cameraOptions);
+
+  const focusOptions = Object.keys(COMPOSITION_FOCUS) as Array<keyof typeof COMPOSITION_FOCUS>;
+  const focusType = pick(focusOptions);
+  const compositionFocus = pick(COMPOSITION_FOCUS[focusType]);
+
+  // Determine lighting
+  let lightingCategory: keyof typeof LIGHTING_VARIATIONS;
+  if (request.timeOfDay === 'night' || essence.atmosphereWords.includes('dark')) {
+    lightingCategory = 'night';
+  } else if (essence.momentType === 'action' || essence.momentType === 'tense') {
+    lightingCategory = Math.random() > 0.4 ? 'dramatic' : 'atmospheric';
+  } else if (request.weather === 'fog' || request.weather === 'rain') {
+    lightingCategory = 'atmospheric';
+  } else {
+    lightingCategory = pick(genreStyle.lightingPreferences) as keyof typeof LIGHTING_VARIATIONS;
+  }
+  const lighting = pick(LIGHTING_VARIATIONS[lightingCategory]);
+
+  // Build atmosphere
+  const atmosphereElements: string[] = [];
+  if (request.weather) atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.weather, 1, 2));
+  if (Math.random() > 0.4) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.particles));
+  if (Math.random() > 0.3) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.environmental));
+  atmosphereElements.push(...pickMultiple(genreStyle.atmosphericElements, 1, 2));
+  if (essence.sensoryDetails.length > 0) atmosphereElements.push(...essence.sensoryDetails.slice(0, 2));
+
+  // Determine player visibility
+  let playerVisible = false;
+  let playerDescription = '';
+  let playerProminence = '';
+
+  if (essence.playerDoing && characterProfile) {
+    playerVisible = true;
+    const prominenceRoll = Math.random();
+
+    if (essence.momentType === 'emotional' || essence.momentType === 'discovery') {
+      if (prominenceRoll > 0.3) {
+        playerProminence = 'in midground, part of the scene';
+        playerDescription = `figure: ${characterProfile.gender}, ${characterProfile.hair.color} hair, ${characterProfile.roleAppearance.split(',')[0]}, ${essence.playerDoing}`;
+      } else {
+        playerProminence = 'visible in scene';
+        playerDescription = `${characterProfile.gender} figure ${essence.playerDoing}`;
+      }
+    } else if (essence.momentType === 'action') {
+      playerProminence = pick(['in the action', 'mid-combat', 'engaged in scene']);
+      playerDescription = `${characterProfile.gender}, ${characterProfile.roleAppearance.split(',')[0]}, ${essence.playerDoing}`;
+    } else {
+      if (prominenceRoll > 0.5) {
+        playerProminence = 'visible in background';
+        playerDescription = `distant figure ${essence.playerDoing}`;
+      } else {
+        playerProminence = 'part of the scene';
+        playerDescription = `${characterProfile.gender} figure ${essence.playerDoing}`;
+      }
+    }
+  } else if (characterProfile && Math.random() > 0.7 && essence.momentType !== 'environmental') {
+    playerVisible = true;
+    playerProminence = 'barely visible in frame';
+    playerDescription = 'distant figure observing';
+  }
+
+  console.log('Player involvement:', playerVisible ? playerProminence : 'not visible');
+
+  // Build world activity
+  const worldActivity: string[] = [];
+  if (essence.others.length > 0) {
+    worldActivity.push(...essence.others.slice(0, 2).map(o => `${o} ${pick(['present', 'visible', 'in scene'])}`));
+  }
+  worldActivity.push(...pickMultiple(genreStyle.worldDetails, 1, 3));
+
+  // Assemble prompt
+  const promptParts: string[] = [];
+
+  promptParts.push(pick(['masterpiece, best quality, highly detailed', 'exceptional quality, intricate details', 'masterwork, superb detail']));
+  promptParts.push('digital illustration, cinematic, photorealistic');
+  promptParts.push(baseStyle);
+  promptParts.push(cameraAngle);
+  promptParts.push(compositionFocus);
+
+  const sceneDescription = [
+    essence.coreAction,
+    `setting: ${request.currentLocation || essence.setting}`,
+    essence.visualElements.slice(0, 3).join(', '),
+  ].filter(Boolean).join(', ');
+
+  promptParts.push(`SCENE: ${sceneDescription}`);
+  promptParts.push(envType);
+
+  if (essence.objects.length > 0) promptParts.push(`details: ${essence.objects.slice(0, 3).join(', ')}`);
+  if (worldActivity.length > 0) promptParts.push(`world: ${worldActivity.slice(0, 3).join(', ')}`);
+  if (playerVisible && playerDescription) promptParts.push(`${playerProminence}: ${playerDescription}`);
+
+  promptParts.push(lighting);
+  promptParts.push(`atmosphere: ${atmosphereElements.slice(0, 3).join(', ')}`);
+  promptParts.push(`palette: ${colorPalette}`);
+
+  if (request.timeOfDay) {
+    const timeDescs: Record<string, string[]> = {
+      dawn: ['early morning light', 'sunrise glow'], day: ['daylight', 'midday sun'],
+      dusk: ['sunset colors', 'twilight'], night: ['nighttime', 'moonlit'],
+    };
+    promptParts.push(pick(timeDescs[request.timeOfDay] || ['']));
+  }
+
+  if (request.weather) {
+    const weatherDescs: Record<string, string[]> = {
+      rain: ['rain falling', 'wet environment'], snow: ['snow falling', 'winter scene'], fog: ['fog obscuring', 'misty'],
+    };
+    promptParts.push(pick(weatherDescs[request.weather] || ['']));
+  }
+
+  promptParts.push('environmental storytelling, 8k resolution');
+
+  return {
+    prompt: promptParts.filter(Boolean).join(', '),
+    negativePrompt: 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime',
+    debug: { essence, playerVisible, focusType },
+  };
 }
 
 // ============================================================================
@@ -818,26 +657,21 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as SceneImageRequest;
-    
     const TOGETHER_API_KEY = Deno.env.get('TOGETHER_API_KEY');
-    
-    if (!TOGETHER_API_KEY) {
-      throw new Error('TOGETHER_API_KEY is not configured');
-    }
 
-    // Get story context
+    if (!TOGETHER_API_KEY) throw new Error('TOGETHER_API_KEY is not configured');
+
+    // Normalize request
     let lastNarratorMessage = requestData.lastNarratorMessage || '';
-    let lastUserAction = requestData.lastUserAction || requestData.playerAction || '';
-    
-    // Handle legacy format
-    if (!lastNarratorMessage && requestData.recentStory && requestData.recentStory.length > 0) {
+    const lastUserAction = requestData.lastUserAction || requestData.playerAction || '';
+
+    if (!lastNarratorMessage && requestData.recentStory?.length) {
       lastNarratorMessage = requestData.recentStory[requestData.recentStory.length - 1] || '';
     }
     if (!lastNarratorMessage && requestData.sceneDescription) {
       lastNarratorMessage = requestData.sceneDescription;
     }
-    
-    // Ensure we have the messages in the request
+
     requestData.lastNarratorMessage = lastNarratorMessage;
     requestData.lastUserAction = lastUserAction;
 
@@ -849,19 +683,17 @@ serve(async (req) => {
       hasLegacyCharacter: !!requestData.playerCharacter,
     });
 
-    // Get character profile (prefer new format, fall back to legacy)
     const characterProfile = requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter);
-    
+
     if (characterProfile) {
       console.log('Using character profile:', characterProfile.fullVisualDescription.slice(0, 100) + '...');
     }
-    
-    // Build the world-focused prompt
-    const imagePrompt = buildWorldIllustrationPrompt(requestData, characterProfile);
 
-    console.log('Final prompt preview:', imagePrompt.slice(0, 600) + '...');
+    const { prompt, negativePrompt, debug } = buildIllustrationPrompt(requestData, characterProfile);
+    const finalPrompt = `${prompt}\n\nNegative: ${negativePrompt}`;
 
-    // Generate image with FLUX
+    console.log('Final prompt preview:', finalPrompt.slice(0, 600) + '...');
+
     const response = await fetch('https://api.together.xyz/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -870,7 +702,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'black-forest-labs/FLUX.1.1-pro',
-        prompt: imagePrompt,
+        prompt: finalPrompt,
         width: 1408,
         height: 800,
         steps: 28,
@@ -882,21 +714,21 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Together.AI API error:', response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
+
       if (response.status === 402 || response.status === 401) {
         return new Response(JSON.stringify({ error: 'API limit reached', imageUrl: null }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      
+
       throw new Error(`Image API error: ${response.status}`);
     }
 
@@ -916,10 +748,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in generate-scene-image:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Unable to generate scene image',
-      imageUrl: null 
-    }), {
+    return new Response(JSON.stringify({ error: 'Unable to generate scene image', imageUrl: null }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
