@@ -573,6 +573,14 @@ export function AdventureGame() {
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
   
+  // Retry mechanism for failed AI calls
+  const [lastFailedAction, setLastFailedAction] = useState<{
+    action: string;
+    diceRoll?: any;
+    storySnapshot: StoryEntry[];
+  } | null>(null);
+  const [retryRequested, setRetryRequested] = useState(false);
+  
   // Mood state for narrative integration
   const [currentMood, setCurrentMood] = useState<CoreMoodType>(() => {
     try {
@@ -1203,7 +1211,29 @@ export function AdventureGame() {
     } catch (error) {
       // Network or parsing error - generate local fallback to maintain immersion
       console.error('Error generating narrative:', error);
-      toast.error('Failed to reach AI. Using fallback narrative.');
+      
+      // Store the failed action for retry (if this was a player action)
+      if (playerAction) {
+        setLastFailedAction({
+          action: playerAction,
+          diceRoll: diceRoll,
+          storySnapshot: history.slice(0, -1), // Story before the player action was added
+        });
+        
+        toast.error('Failed to reach AI', {
+          description: 'Tap "Retry" to try again',
+          duration: 10000,
+          action: {
+            label: 'Retry',
+            onClick: () => {
+              setRetryRequested(true);
+            },
+          },
+        });
+      } else {
+        toast.error('Failed to reach AI. Using fallback narrative.');
+      }
+      
       return getContextualFallback(scenarioSelection?.genre);
     } finally {
       // === RACE CONDITION FIX: Always release lock ===
@@ -1755,6 +1785,60 @@ export function AdventureGame() {
       checkSceneTriggers('observation', narrative);
     }
   }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory]);
+
+  // Retry last failed action
+  const retryLastAction = useCallback(async () => {
+    if (!lastFailedAction || !character || !scenarioSelection) return;
+    
+    const { action, diceRoll, storySnapshot } = lastFailedAction;
+    
+    // Clear the failed action first
+    setLastFailedAction(null);
+    
+    // Restore story to before the failed action's player entry was added
+    // Then add the player entry again
+    const playerEntry: StoryEntry = {
+      id: `user_${Date.now()}`,
+      role: 'user',
+      content: action,
+      timestamp: Date.now(),
+    };
+    
+    const updatedStory = [...storySnapshot, playerEntry];
+    setStory(updatedStory);
+    
+    toast.info('Retrying...');
+    
+    // Try to generate narrative again
+    const narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+    if (narrative) {
+      const narratorEntry: StoryEntry = {
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: narrative,
+        timestamp: Date.now(),
+      };
+      const finalStory = [...updatedStory, narratorEntry];
+      setStory(finalStory);
+      saveData(finalStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+      
+      // Add to campaign narrative
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(playerEntry);
+        campaignContext.addNarrativeEntry(narratorEntry);
+      }
+      
+      toast.success('AI connected successfully');
+    }
+  }, [lastFailedAction, character, scenarioSelection, generateNarrative, saveData, campaignContext]);
+
+  // Effect to handle retry when requested via toast action
+  useEffect(() => {
+    if (retryRequested && lastFailedAction) {
+      setRetryRequested(false);
+      retryLastAction();
+    }
+  }, [retryRequested, lastFailedAction, retryLastAction]);
 
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
