@@ -147,12 +147,22 @@ export function buildPortraitPrompt(
     ? 'androgynous features, ambiguous gender presentation, attractive face'
     : 'male, handsome masculine features, strong jawline, detailed realistic face';
   
-  // Physical attributes with more detail
+  // Physical attributes with more detail - expanded build types
   const build = character.build || 'athletic';
-  const buildDesc = build === 'muscular' ? 'muscular athletic build, toned physique, strong arms'
-    : build === 'slim' ? 'slim athletic build, lean physique'
-    : build === 'large' ? 'large powerful build, imposing physique'
-    : 'athletic fit build, toned physique';
+  const BUILD_DESCRIPTIONS: Record<string, string> = {
+    muscular: 'muscular athletic build, toned physique, strong arms, defined muscles',
+    slim: 'slim athletic build, lean physique, slender frame',
+    large: 'large powerful build, imposing physique, broad frame',
+    heavyset: 'heavyset large build, broad heavy frame, imposing presence',
+    curvy: 'curvy hourglass figure, full bust, wide hips, narrow waist, voluptuous feminine silhouette',
+    thick: 'thick curvy build, full figured, soft curves',
+    lithe: 'lithe graceful build, elegant slender, dancer physique',
+    athletic: 'athletic fit build, toned physique',
+    average: 'average build, normal proportions',
+    stocky: 'stocky sturdy build, compact powerful',
+    petite: 'petite small frame, delicate build',
+  };
+  const buildDesc = BUILD_DESCRIPTIONS[build] || BUILD_DESCRIPTIONS.athletic;
   
   const hairColor = character.hairColor || 'brown';
   const hairStyle = character.hairStyle || character.hairLength || 'short';
