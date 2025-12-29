@@ -1,6 +1,7 @@
 // Sound Preloader - Loads cached sounds from Supabase storage on game start
 import { supabase } from '@/integrations/supabase/client';
 import { audioEngine } from './audioEngine';
+import { findMappingForSound, type GeneratedSoundMapping } from './generatedSoundMappings';
 
 export interface CachedSound {
   id: string;
@@ -9,6 +10,8 @@ export interface CachedSound {
   public_url: string;
   prompt: string;
   duration_seconds: number | null;
+  // Mapped audio settings from generatedSoundMappings
+  mapping?: GeneratedSoundMapping;
 }
 
 export interface PreloadProgress {
@@ -27,14 +30,12 @@ class SoundPreloader {
   private isPreloaded = false;
   private progressCallbacks: Set<ProgressCallback> = new Set();
   private priorityCategories = [
-    // Combat & action sounds - load first
-    'combat', 'gun', 'explosion',
+    // Weather sounds - load first for atmosphere
+    'weather_clear', 'weather_rain', 'weather_storm', 'weather_wind', 'weather_snow', 'weather_fog', 'weather_hail',
     // UI & feedback sounds
-    'ui', 'notification',
-    // Common ambient
-    'footsteps', 'door',
-    // Environment
-    'weather', 'ambience'
+    'ui_buttons', 'ui_equip', 'ui_inventory', 'ui_resources',
+    // Fallback to generic categories
+    'weather', 'ui', 'ambience'
   ];
 
   /**
@@ -177,6 +178,12 @@ class SoundPreloader {
         return true;
       }
 
+      // Find and attach the mapping for this sound
+      const mapping = findMappingForSound(sound.category, sound.filename);
+      if (mapping) {
+        sound.mapping = mapping;
+      }
+
       // Load into audio engine
       await audioEngine.loadAudio(sound.public_url, soundKey);
       this.loadedSounds.set(soundKey, sound);
@@ -210,11 +217,9 @@ class SoundPreloader {
       .filter(s => s.category === category || s.category.startsWith(category) || category.startsWith(s.category));
     
     if (matches.length === 0) {
-      console.warn(`[SoundPreloader] No matches for category "${category}". Loaded categories:`, this.getLoadedCategories());
       return null;
     }
     
-    console.log(`[SoundPreloader] Found ${matches.length} sounds for category "${category}"`);
     return matches[Math.floor(Math.random() * matches.length)];
   }
 
@@ -255,7 +260,21 @@ class SoundPreloader {
   }
 
   /**
-   * Play a sound by category (picks random variation)
+   * Get a sound by its key
+   */
+  getSound(soundKey: string): CachedSound | null {
+    return this.loadedSounds.get(soundKey) || null;
+  }
+
+  /**
+   * Get all loaded sounds
+   */
+  getAllSounds(): CachedSound[] {
+    return Array.from(this.loadedSounds.values());
+  }
+
+  /**
+   * Play a sound by category (picks random variation) with proper mapping volumes
    */
   async playFromCategory(
     category: string, 
@@ -263,23 +282,95 @@ class SoundPreloader {
   ): Promise<boolean> {
     const sound = this.getRandomFromCategory(category);
     if (!sound) {
-      console.warn(`[SoundPreloader] No sounds found for category: ${category}`);
       return false;
     }
 
     const soundKey = this.getSoundKey(sound);
+    const mapping = sound.mapping;
+    
+    // Use mapping volume if available, otherwise use subtle default (0.2)
+    const baseVolume = mapping?.volume ?? 0.2;
+    const finalVolume = (options?.volume ?? 1) * baseVolume;
     
     try {
       await audioEngine.playSound(soundKey, {
-        channel: 'effects',
-        volume: options?.volume ?? 1,
-        pitch: options?.pitch ?? 1
+        channel: mapping?.channel ?? 'effects',
+        volume: finalVolume,
+        pitch: options?.pitch ?? 1,
+        echo: mapping?.echo,
+        echoDelay: mapping?.echoDelay,
+        echoDecay: mapping?.echoDecay,
+        lowpass: mapping?.lowpass
       });
       return true;
     } catch (error) {
       console.warn(`[SoundPreloader] Failed to play ${soundKey}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Play a specific sound by its key with proper mapping volumes
+   */
+  async playSound(
+    soundKey: string,
+    options?: { volume?: number; pitch?: number }
+  ): Promise<boolean> {
+    const sound = this.loadedSounds.get(soundKey);
+    if (!sound) {
+      return false;
+    }
+
+    const mapping = sound.mapping;
+    
+    // Use mapping volume if available, otherwise use subtle default (0.2)
+    const baseVolume = mapping?.volume ?? 0.2;
+    const finalVolume = (options?.volume ?? 1) * baseVolume;
+    
+    try {
+      if (mapping?.loop) {
+        await audioEngine.playLoop(soundKey, {
+          channel: mapping.channel,
+          volume: finalVolume,
+          fadeIn: mapping.fadeIn ?? 2,
+          lowpass: mapping.lowpass
+        });
+      } else {
+        await audioEngine.playSound(soundKey, {
+          channel: mapping?.channel ?? 'effects',
+          volume: finalVolume,
+          pitch: options?.pitch ?? 1,
+          echo: mapping?.echo,
+          echoDelay: mapping?.echoDelay,
+          echoDecay: mapping?.echoDecay,
+          lowpass: mapping?.lowpass
+        });
+      }
+      return true;
+    } catch (error) {
+      console.warn(`[SoundPreloader] Failed to play ${soundKey}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Play a weather sound based on condition
+   */
+  async playWeatherSound(condition: string): Promise<boolean> {
+    const sounds = this.findSounds(condition);
+    if (sounds.length === 0) {
+      // Try partial match
+      const partialMatches = Array.from(this.loadedSounds.values())
+        .filter(s => s.category.startsWith('weather_'));
+      
+      if (partialMatches.length === 0) return false;
+      
+      const sound = partialMatches[Math.floor(Math.random() * partialMatches.length)];
+      return this.playSound(this.getSoundKey(sound));
+    }
+    
+    const sound = sounds[Math.floor(Math.random() * sounds.length)];
+    return this.playSound(this.getSoundKey(sound));
   }
 
   /**
