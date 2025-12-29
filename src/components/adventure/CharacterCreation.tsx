@@ -245,18 +245,16 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     // Add custom class data if using a custom class
     if (customClass && selectedClass === customClass.id) {
       (character as any).customClass = customClass;
-      // Apply custom class stat bonuses
-      Object.entries(customClass.statBonuses).forEach(([stat, bonus]) => {
-        if (bonus > 0 && character.stats[stat as keyof typeof character.stats] !== undefined) {
-          character.stats[stat as keyof typeof character.stats] += bonus;
-        }
-      });
-      // Replace abilities with custom class abilities
-      (character as any).abilities = customClass.abilities;
+      // Note: stat bonuses are already applied in createGenreCharacter via classData
+      // Note: abilities are already set in createGenreCharacter via classData
     }
     // Add custom gear if modified
     if (customGear) {
       (character as any).customStartingGear = customGear;
+    }
+    // Add selected hybrid traits
+    if (selectedHybridTraits.length > 0) {
+      (character as any).hybridTraits = selectedHybridTraits;
     }
     onComplete(character, scenario);
   };
@@ -843,7 +841,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
                   const base = 8;
                   const allocated = statAllocation[stat] || 0;
-                  const classBonus = blendedClasses.find(c => c.id === selectedClass)?.statBonuses[stat] || 0;
+                  // Check custom class first, then blended classes
+                  const classBonus = (customClass && selectedClass === customClass.id)
+                    ? (customClass.statBonuses[stat] || 0)
+                    : (blendedClasses.find(c => c.id === selectedClass)?.statBonuses[stat] || 0);
                   const bgBonus = blendedBackgrounds.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
                   const total = base + allocated + classBonus + bgBonus;
                   const modifier = getStatModifier(total);
