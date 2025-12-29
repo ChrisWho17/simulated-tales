@@ -613,3 +613,898 @@ export function deserializeInventoryState(json: string): InventoryState {
     return createInitialState();
   }
 }
+
+// ============================================================================
+// STYLES
+// ============================================================================
+
+const s = {
+  bg: '#0a0a0f',
+  bgSecondary: '#12121a',
+  bgTertiary: '#1a1a25',
+  bgQuaternary: '#222230',
+  accent: '#8b5cf6',
+  accentHover: '#a78bfa',
+  accentMuted: 'rgba(139, 92, 246, 0.2)',
+  cyan: '#22d3ee',
+  cyanMuted: 'rgba(34, 211, 238, 0.15)',
+  text: '#e4e4e7',
+  textMuted: '#71717a',
+  textDim: '#52525b',
+  border: '#27272a',
+  borderLight: '#3f3f46',
+  danger: '#ef4444',
+  dangerMuted: 'rgba(239, 68, 68, 0.15)',
+  success: '#22c55e',
+  successMuted: 'rgba(34, 197, 94, 0.15)',
+  warning: '#f59e0b',
+  warningMuted: 'rgba(245, 158, 11, 0.15)',
+  orange: '#f97316',
+};
+
+// ============================================================================
+// SHARED COMPONENTS
+// ============================================================================
+
+function EquippedBadge() {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: '18px', height: '18px', borderRadius: '4px',
+      background: `linear-gradient(135deg, ${s.cyan}, ${s.accent})`,
+      color: '#fff', fontSize: '10px', fontWeight: '700', marginLeft: '8px',
+      boxShadow: `0 0 8px ${s.cyan}40`,
+    }}>E</span>
+  );
+}
+
+interface ConditionBarProps {
+  condition: number;
+  showLabel?: boolean;
+  size?: 'normal' | 'small';
+}
+
+function ConditionBar({ condition, showLabel = true, size = 'normal' }: ConditionBarProps) {
+  const color = getConditionColor(condition);
+  const label = getConditionLabel(condition);
+  const height = size === 'small' ? '3px' : '6px';
+  
+  return (
+    <div>
+      {showLabel && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
+          <span style={{ color: s.textMuted }}>CONDITION</span>
+          <span style={{ color }}>{label} ({condition}%)</span>
+        </div>
+      )}
+      <div style={{ height, background: s.bgTertiary, borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${condition}%`,
+          background: `linear-gradient(90deg, ${color}, ${color}aa)`,
+          borderRadius: '2px',
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// UI COMPONENTS
+// ============================================================================
+
+interface EquipSlotsPanelProps {
+  equipped: EquippedState;
+  items: InventoryItem[];
+  onSlotClick: (slotId: string, item: InventoryItem) => void;
+}
+
+function EquipSlotsPanel({ equipped, items, onSlotClick }: EquipSlotsPanelProps) {
+  const getEquippedItem = (slotId: string): InventoryItem | null => {
+    const instanceId = equipped[slotId as keyof EquippedState];
+    return instanceId ? items.find(i => i.instanceId === instanceId) || null : null;
+  };
+  
+  return (
+    <div style={{ background: s.bgSecondary, borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+      <h3 style={{ color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: s.cyan }}>⚡</span>Equipped
+      </h3>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+        {Object.entries(EQUIP_SLOTS).map(([key, slot]) => {
+          const item = getEquippedItem(slot.id);
+          return (
+            <button key={slot.id} onClick={() => item && onSlotClick(slot.id, item)} style={{
+              padding: '10px 12px',
+              background: item ? s.cyanMuted : s.bgTertiary,
+              border: `1px solid ${item ? s.cyan + '40' : s.border}`,
+              borderRadius: '6px',
+              cursor: item ? 'pointer' : 'default',
+              textAlign: 'left',
+            }}>
+              <div style={{ color: s.textDim, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{slot.label}</div>
+              <div style={{ color: item ? s.cyan : s.textDim, fontSize: '12px', fontWeight: item ? '500' : '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {item ? item.name : '—'}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface WeightBarProps {
+  current: number;
+  max: number;
+  enabled: boolean;
+}
+
+function WeightBar({ current, max, enabled }: WeightBarProps) {
+  if (!enabled) return null;
+  const percentage = Math.min((current / max) * 100, 100);
+  const isOverweight = current > max;
+  
+  return (
+    <div style={{ padding: '12px 16px', background: s.bgSecondary, borderTop: `1px solid ${s.border}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
+        <span style={{ color: s.textMuted }}>CARRY WEIGHT</span>
+        <span style={{ color: isOverweight ? s.danger : s.text }}>{current.toFixed(1)} / {max} lbs</span>
+      </div>
+      <div style={{ height: '4px', background: s.bgTertiary, borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${percentage}%`,
+          background: isOverweight ? s.danger : percentage > 80 ? s.warning : `linear-gradient(90deg, ${s.accent}, ${s.cyan})`,
+          borderRadius: '2px',
+          transition: 'width 0.3s ease',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+interface CategoryDropdownProps {
+  category: { id: string; label: string; icon: string; color: string };
+  items: InventoryItem[];
+  onItemClick: (item: InventoryItem) => void;
+  equippedItems: string[];
+}
+
+function CategoryDropdown({ category, items, onItemClick, equippedItems }: CategoryDropdownProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  const categoryItems = items.filter(item => item.category === category.id);
+  const itemCount = categoryItems.reduce((sum, item) => sum + item.quantity, 0);
+  
+  if (categoryItems.length === 0) return null;
+  
+  return (
+    <div style={{ marginBottom: '4px' }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: isOpen ? s.bgTertiary : 'transparent',
+        border: 'none',
+        borderLeft: `3px solid ${category.color}`,
+        cursor: 'pointer',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px' }}>{category.icon}</span>
+          <span style={{ color: s.text, fontSize: '14px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            {category.label}
+          </span>
+          <span style={{ color: s.textMuted, fontSize: '12px', background: s.bgSecondary, padding: '2px 8px', borderRadius: '10px' }}>
+            {itemCount}
+          </span>
+        </div>
+        <span style={{ color: s.textMuted, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+      </button>
+      
+      {isOpen && (
+        <div style={{ background: s.bgSecondary, borderLeft: `3px solid ${category.color}20` }}>
+          {categoryItems.map(item => (
+            <ItemRow key={item.instanceId} item={item} isEquipped={equippedItems.includes(item.instanceId)}
+              categoryColor={category.color} onClick={() => onItemClick(item)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ItemRowProps {
+  item: InventoryItem;
+  isEquipped: boolean;
+  categoryColor: string;
+  onClick: () => void;
+}
+
+function ItemRow({ item, isEquipped, categoryColor, onClick }: ItemRowProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const condition = item.category === 'weapons' ? calculateWeaponCondition(item) : null;
+  
+  return (
+    <button onClick={onClick} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '10px 16px 10px 28px',
+        background: isHovered ? (isEquipped ? s.cyanMuted : s.accentMuted) : 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${s.border}`,
+        cursor: 'pointer',
+      }}>
+      <div style={{
+        width: '36px',
+        height: '36px',
+        borderRadius: '6px',
+        background: `linear-gradient(135deg, ${categoryColor}30, ${categoryColor}10)`,
+        border: `1px solid ${categoryColor}40`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: '12px',
+        fontSize: '18px',
+        position: 'relative',
+      }}>
+        {item.icon || '•'}
+        {condition !== null && (
+          <div style={{
+            position: 'absolute',
+            bottom: '-2px',
+            right: '-2px',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            background: getConditionColor(condition),
+            border: `2px solid ${s.bgSecondary}`,
+          }} />
+        )}
+      </div>
+      
+      <div style={{ flex: 1, textAlign: 'left' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{ color: isEquipped ? s.cyan : s.text, fontSize: '14px', fontWeight: isEquipped ? '600' : '400' }}>
+            {item.name}
+          </span>
+          {isEquipped && <EquippedBadge />}
+          {item.quantity > 1 && <span style={{ color: s.textMuted, fontSize: '12px', marginLeft: '8px' }}>×{item.quantity}</span>}
+        </div>
+        {item.description && <span style={{ color: s.textDim, fontSize: '11px', display: 'block', marginTop: '2px' }}>{item.description}</span>}
+      </div>
+      
+      {(item.weight ?? 0) > 0 && <span style={{ color: s.textMuted, fontSize: '11px', marginLeft: '12px' }}>{((item.weight ?? 0) * item.quantity).toFixed(1)} lbs</span>}
+    </button>
+  );
+}
+
+interface ItemActionModalProps {
+  item: InventoryItem;
+  onClose: () => void;
+  onUse: (description: string) => void;
+  onDrop: () => void;
+  onEquip: (slot: string) => void;
+  onUnequip: (slot: string) => void;
+  onArsenal: () => void;
+  isEquipped: boolean;
+  equippedSlot?: string;
+}
+
+function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onArsenal, isEquipped, equippedSlot }: ItemActionModalProps) {
+  const [useDescription, setUseDescription] = useState('');
+  const canEquip = item.equipSlots && item.equipSlots.length > 0;
+  const isWeapon = item.category === 'weapons';
+  
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0, 0, 0, 0.75)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    }}>
+      <div style={{
+        background: `${s.bg}f0`,
+        border: `1px solid ${s.border}`,
+        borderRadius: '12px',
+        width: '90%',
+        maxWidth: '400px',
+        overflow: 'hidden',
+        boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px ${s.accent}20`,
+      }}>
+        {/* Header */}
+        <div style={{ padding: '20px', borderBottom: `1px solid ${s.border}`, background: s.bgSecondary }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '8px',
+                background: `linear-gradient(135deg, ${s.accent}30, ${s.accent}10)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+              }}>{item.icon || '📦'}</div>
+              <div>
+                <h3 style={{ color: s.text, fontSize: '18px', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center' }}>
+                  {item.name}{isEquipped && <EquippedBadge />}
+                </h3>
+                <span style={{ color: s.textMuted, fontSize: '12px', textTransform: 'uppercase' }}>{item.type || item.category}</span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '6px',
+              border: 'none',
+              background: s.bgTertiary,
+              color: s.textMuted,
+              cursor: 'pointer',
+              fontSize: '18px',
+            }}>✕</button>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px' }}>
+            {(item.weight ?? 0) > 0 && <span style={{ color: s.textMuted }}>Weight: <span style={{ color: s.text }}>{item.weight} lbs</span></span>}
+            {(item.value ?? 0) > 0 && <span style={{ color: s.textMuted }}>Value: <span style={{ color: s.warning }}>${item.value}</span></span>}
+            {item.quantity > 1 && <span style={{ color: s.textMuted }}>Qty: <span style={{ color: s.text }}>{item.quantity}</span></span>}
+          </div>
+          
+          {isWeapon && item.condition && (
+            <div style={{ marginTop: '12px' }}>
+              <ConditionBar condition={calculateWeaponCondition(item)} size="small" />
+            </div>
+          )}
+        </div>
+        
+        {item.description && (
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}`, color: s.textMuted, fontSize: '13px', lineHeight: '1.5' }}>
+            {item.description}
+          </div>
+        )}
+        
+        {/* Use Section */}
+        <div style={{ padding: '20px' }}>
+          <label style={{ display: 'block', color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+            How do you want to use this?
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input type="text" value={useDescription} onChange={(e) => setUseDescription(e.target.value)}
+              placeholder={`Use ${item.name} to...`}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: s.bgTertiary,
+                border: `1px solid ${s.border}`,
+                borderRadius: '8px',
+                color: s.text,
+                fontSize: '14px',
+                outline: 'none',
+              }} />
+            <button onClick={() => { if (useDescription.trim()) onUse(useDescription); }}
+              disabled={!useDescription.trim()}
+              style={{
+                padding: '12px 20px',
+                background: useDescription.trim() ? `linear-gradient(135deg, ${s.accent}, ${s.accentHover})` : s.bgTertiary,
+                border: 'none',
+                borderRadius: '8px',
+                color: useDescription.trim() ? '#fff' : s.textDim,
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: useDescription.trim() ? 'pointer' : 'not-allowed',
+              }}>Use</button>
+          </div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div style={{ padding: '0 20px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {canEquip && !isEquipped && (
+            <button onClick={() => onEquip(item.equipSlots![0])} style={{
+              flex: 1,
+              padding: '12px',
+              background: s.cyanMuted,
+              border: `1px solid ${s.cyan}40`,
+              borderRadius: '8px',
+              color: s.cyan,
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}>⚡ Equip</button>
+          )}
+          
+          {isEquipped && equippedSlot && (
+            <button onClick={() => onUnequip(equippedSlot)} style={{
+              flex: 1,
+              padding: '12px',
+              background: s.bgTertiary,
+              border: `1px solid ${s.border}`,
+              borderRadius: '8px',
+              color: s.textMuted,
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}>↩ Unequip</button>
+          )}
+          
+          {isWeapon && (
+            <button onClick={onArsenal} style={{
+              flex: 1,
+              padding: '12px',
+              background: s.warningMuted,
+              border: `1px solid ${s.warning}40`,
+              borderRadius: '8px',
+              color: s.warning,
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}>🔧 Arsenal</button>
+          )}
+          
+          <button onClick={onDrop} style={{
+            padding: '12px 16px',
+            background: s.dangerMuted,
+            border: `1px solid ${s.danger}30`,
+            borderRadius: '8px',
+            color: s.danger,
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+          }}>↓ Drop</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// ARSENAL / WEAPON EDITOR COMPONENTS
+// ============================================================================
+
+interface WeaponStatsProps {
+  weapon: InventoryItem;
+}
+
+function WeaponStats({ weapon }: WeaponStatsProps) {
+  const stats = weapon.stats || {};
+  const mods = weapon.mods || {};
+  
+  const getModifiedStat = (baseStat: number, statKey: string): number => {
+    let modified = baseStat;
+    Object.values(mods).forEach(mod => {
+      if (mod?.statModifiers?.[statKey]) {
+        modified += mod.statModifiers[statKey];
+      }
+    });
+    return modified;
+  };
+  
+  const statItems = [
+    { key: 'damage', label: 'Damage', base: stats.damage || 0, icon: '💥' },
+    { key: 'accuracy', label: 'Accuracy', base: stats.accuracy || 0, icon: '🎯' },
+    { key: 'fireRate', label: 'Fire Rate', base: stats.fireRate || 0, icon: '⚡' },
+    { key: 'range', label: 'Range', base: stats.range || 0, icon: '📏' },
+    { key: 'stability', label: 'Stability', base: stats.stability || 0, icon: '🔒' },
+    { key: 'handling', label: 'Handling', base: stats.handling || 0, icon: '✋' },
+  ];
+  
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+      {statItems.map(stat => {
+        const modified = getModifiedStat(stat.base, stat.key);
+        const diff = modified - stat.base;
+        
+        return (
+          <div key={stat.key} style={{
+            padding: '10px 12px',
+            background: s.bgTertiary,
+            borderRadius: '6px',
+            border: `1px solid ${s.border}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '12px' }}>{stat.icon}</span>
+              <span style={{ color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {stat.label}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ color: s.text, fontSize: '18px', fontWeight: '600' }}>{modified}</span>
+              {diff !== 0 && (
+                <span style={{ color: diff > 0 ? s.success : s.danger, fontSize: '12px', fontWeight: '500' }}>
+                  {diff > 0 ? '+' : ''}{diff}
+                </span>
+              )}
+            </div>
+            <div style={{ marginTop: '6px', height: '3px', background: s.bgSecondary, borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(modified, 100)}%`,
+                background: diff > 0 ? s.success : diff < 0 ? s.danger : s.accent,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+interface WeaponConditionPanelProps {
+  weapon: InventoryItem;
+  detailLevel: string;
+  onMaintain: (type: string) => void;
+}
+
+function WeaponConditionPanel({ weapon, detailLevel, onMaintain }: WeaponConditionPanelProps) {
+  const condition = weapon.condition ?? {
+    barrelWear: 0,
+    carbonBuildup: 0,
+    springFatigue: 0,
+    riflingWear: 0,
+    roundsFired: 0,
+    lastMaintenance: 0,
+  };
+  const overallCondition = calculateWeaponCondition(weapon);
+  
+  const showDetailed = detailLevel === WEAPON_DETAIL_LEVELS.GUN_NUT || 
+                       detailLevel === WEAPON_DETAIL_LEVELS.GUN_NUT_PLUS;
+  const showFull = detailLevel === WEAPON_DETAIL_LEVELS.GUN_NUT_PLUS;
+  
+  const conditionItems = [
+    { key: 'carbonBuildup', label: 'Carbon Buildup', value: condition.carbonBuildup, inverted: true },
+    { key: 'barrelWear', label: 'Barrel Wear', value: condition.barrelWear, inverted: true },
+    { key: 'springFatigue', label: 'Spring Fatigue', value: condition.springFatigue, inverted: true },
+    { key: 'riflingWear', label: 'Rifling Wear', value: condition.riflingWear, inverted: true },
+  ];
+  
+  return (
+    <div style={{ background: s.bgSecondary, borderRadius: '8px', padding: '16px', border: `1px solid ${s.border}` }}>
+      <h4 style={{
+        color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase',
+        letterSpacing: '1px', marginBottom: '16px', marginTop: 0,
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <span style={{ color: s.warning }}>🔧</span>Weapon Condition
+      </h4>
+      
+      <div style={{ marginBottom: '16px' }}>
+        <ConditionBar condition={overallCondition} />
+      </div>
+      
+      {showDetailed && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ color: s.textDim, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+            Detailed Breakdown
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {conditionItems.map(item => {
+              const displayValue = item.inverted ? 100 - item.value : item.value;
+              const color = getConditionColor(displayValue);
+              
+              return (
+                <div key={item.key}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '11px' }}>
+                    <span style={{ color: s.textMuted }}>{item.label}</span>
+                    <span style={{ color }}>{item.value.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ height: '4px', background: s.bgTertiary, borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${item.value}%`,
+                      background: item.value > 50 ? s.danger : item.value > 25 ? s.warning : s.success,
+                      transition: 'width 0.3s ease',
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {showFull && (
+        <div style={{ padding: '12px', background: s.bgTertiary, borderRadius: '6px', marginBottom: '16px', fontSize: '11px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+            <div>
+              <span style={{ color: s.textDim }}>Rounds Fired: </span>
+              <span style={{ color: s.text }}>{condition.roundsFired || 0}</span>
+            </div>
+            <div>
+              <span style={{ color: s.textDim }}>Last Service: </span>
+              <span style={{ color: s.text }}>
+                {condition.lastMaintenance ? new Date(condition.lastMaintenance).toLocaleDateString() : 'Never'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div style={{ color: s.textDim, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+        Maintenance
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        <button onClick={() => onMaintain('clean')} style={{
+          padding: '8px 14px', background: s.bgTertiary, border: `1px solid ${s.border}`,
+          borderRadius: '6px', color: s.text, fontSize: '12px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px',
+        }}>🧹 Clean</button>
+        <button onClick={() => onMaintain('oil')} style={{
+          padding: '8px 14px', background: s.bgTertiary, border: `1px solid ${s.border}`,
+          borderRadius: '6px', color: s.text, fontSize: '12px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px',
+        }}>🛢️ Oil</button>
+        <button onClick={() => onMaintain('fullService')} style={{
+          padding: '8px 14px', background: s.accentMuted, border: `1px solid ${s.accent}40`,
+          borderRadius: '6px', color: s.accent, fontSize: '12px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px',
+        }}>🔧 Full Service</button>
+        {showFull && (condition.springFatigue ?? 0) > 50 && (
+          <button onClick={() => onMaintain('replaceSpring')} style={{
+            padding: '8px 14px', background: s.warningMuted, border: `1px solid ${s.warning}40`,
+            borderRadius: '6px', color: s.warning, fontSize: '12px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px',
+          }}>🔄 Replace Spring</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ModSlotProps {
+  slot: { id: string; label: string; icon: string };
+  currentMod: WeaponMod | null | undefined;
+  availableMods: WeaponMod[];
+  onAttach: (mod: WeaponMod) => void;
+  onDetach: () => void;
+}
+
+function ModSlot({ slot, currentMod, availableMods, onAttach, onDetach }: ModSlotProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <div style={{ marginBottom: '8px' }}>
+      <button onClick={() => setIsExpanded(!isExpanded)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 14px', background: currentMod ? s.cyanMuted : s.bgTertiary,
+        border: `1px solid ${currentMod ? s.cyan + '40' : s.border}`,
+        borderRadius: isExpanded ? '6px 6px 0 0' : '6px', cursor: 'pointer',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px', opacity: 0.7 }}>{slot.icon}</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ color: s.textMuted, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{slot.label}</div>
+            <div style={{ color: currentMod ? s.cyan : s.textDim, fontSize: '13px', fontWeight: currentMod ? '500' : '400' }}>
+              {currentMod ? currentMod.name : 'Empty'}
+            </div>
+          </div>
+        </div>
+        <span style={{ color: s.textMuted, fontSize: '12px', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+      </button>
+      
+      {isExpanded && (
+        <div style={{ background: s.bgSecondary, border: `1px solid ${s.border}`, borderTop: 'none', borderRadius: '0 0 6px 6px', padding: '8px' }}>
+          {currentMod && (
+            <button onClick={() => { onDetach(); setIsExpanded(false); }} style={{
+              width: '100%', padding: '10px 12px', marginBottom: '8px',
+              background: s.dangerMuted, border: `1px solid ${s.danger}30`,
+              borderRadius: '4px', color: s.danger, fontSize: '12px', cursor: 'pointer', textAlign: 'left',
+            }}>✕ Remove {currentMod.name}</button>
+          )}
+          
+          {availableMods.length > 0 ? availableMods.map(mod => (
+            <button key={mod.id} onClick={() => { onAttach(mod); setIsExpanded(false); }} style={{
+              width: '100%', padding: '10px 12px', marginBottom: '4px',
+              background: s.bgTertiary, border: `1px solid ${s.border}`,
+              borderRadius: '4px', color: s.text, fontSize: '12px', cursor: 'pointer',
+              textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span>{mod.name}</span>
+              {mod.statModifiers && (
+                <span style={{ color: s.success, fontSize: '10px' }}>
+                  {Object.entries(mod.statModifiers).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`).join(', ')}
+                </span>
+              )}
+            </button>
+          )) : (
+            <div style={{ padding: '12px', color: s.textDim, fontSize: '12px', textAlign: 'center' }}>
+              No compatible mods available
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ArsenalScreenProps {
+  weapon: InventoryItem;
+  onClose: () => void;
+  availableMods?: WeaponMod[];
+}
+
+function ArsenalScreen({ weapon, onClose, availableMods = [] }: ArsenalScreenProps) {
+  const inv = useInventory();
+  const detailLevel = inv.state.settings.weaponDetailLevel;
+  
+  const handleMaintain = (type: string) => inv.maintainWeapon(weapon.instanceId, type);
+  const handleAttachMod = (slot: string, mod: WeaponMod) => inv.attachMod(weapon.instanceId, slot, mod);
+  const handleDetachMod = (slot: string) => inv.detachMod(weapon.instanceId, slot);
+  
+  const currentWeapon = inv.state.items.find(i => i.instanceId === weapon.instanceId) || weapon;
+  const isEquipped = inv.isEquipped(weapon.instanceId);
+  const getModsForSlot = (slotId: string) => availableMods.filter(mod => mod.slot === slotId && currentWeapon.mods?.[slotId]?.id !== mod.id);
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: s.bg, zIndex: 200, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}`, background: s.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={onClose} style={{
+          display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+          background: 'transparent', border: 'none', color: s.textMuted, fontSize: '14px', cursor: 'pointer',
+        }}>← Back to Inventory</button>
+        <h2 style={{ color: s.warning, fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          🔧 Arsenal
+        </h2>
+        <div style={{ width: '100px' }} />
+      </div>
+      
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        {/* Weapon Header */}
+        <div style={{ background: s.bgSecondary, borderRadius: '12px', padding: '20px', marginBottom: '16px', border: `1px solid ${s.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '10px',
+              background: `linear-gradient(135deg, ${s.warning}30, ${s.warning}10)`,
+              border: `1px solid ${s.warning}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px',
+            }}>{currentWeapon.icon || '🔫'}</div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ color: s.text, fontSize: '20px', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center' }}>
+                {currentWeapon.name}{isEquipped && <EquippedBadge />}
+              </h3>
+              <div style={{ color: s.textMuted, fontSize: '12px', marginTop: '4px' }}>
+                {currentWeapon.weaponType || 'Firearm'} • {currentWeapon.caliber || '9mm'}
+              </div>
+            </div>
+          </div>
+          <ConditionBar condition={calculateWeaponCondition(currentWeapon)} size="small" showLabel={false} />
+        </div>
+        
+        {/* Stats Panel */}
+        <div style={{ background: s.bgSecondary, borderRadius: '8px', padding: '16px', marginBottom: '16px', border: `1px solid ${s.border}` }}>
+          <h4 style={{ color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', marginTop: 0 }}>
+            Weapon Stats
+          </h4>
+          <WeaponStats weapon={currentWeapon} />
+        </div>
+        
+        {/* Modifications Panel */}
+        <div style={{ background: s.bgSecondary, borderRadius: '8px', padding: '16px', marginBottom: '16px', border: `1px solid ${s.border}` }}>
+          <h4 style={{ color: s.text, fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: s.cyan }}>⚙️</span>Modifications
+          </h4>
+          {Object.values(WEAPON_MOD_SLOTS)
+            .filter(slot => currentWeapon.compatibleSlots?.includes(slot.id) ?? true)
+            .map(slot => (
+              <ModSlot key={slot.id} slot={slot} currentMod={currentWeapon.mods?.[slot.id]}
+                availableMods={getModsForSlot(slot.id)}
+                onAttach={(mod) => handleAttachMod(slot.id, mod)}
+                onDetach={() => handleDetachMod(slot.id)} />
+            ))}
+        </div>
+        
+        {/* Condition Panel */}
+        {inv.state.settings.equipmentWearEnabled && (
+          <WeaponConditionPanel weapon={currentWeapon} detailLevel={detailLevel} onMaintain={handleMaintain} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN INVENTORY SCREEN
+// ============================================================================
+
+export interface InventoryScreenProps {
+  isOpen: boolean;
+  onClose: () => void;
+  availableMods?: WeaponMod[];
+}
+
+export function InventoryScreen({ isOpen, onClose, availableMods = [] }: InventoryScreenProps) {
+  const inv = useInventory();
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [arsenalWeapon, setArsenalWeapon] = useState<InventoryItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const equippedIds = Object.values(inv.state.equipped).filter(Boolean) as string[];
+  const filteredItems = searchQuery
+    ? inv.state.items.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : inv.state.items;
+  
+  const handleUse = (desc: string) => { 
+    if (selectedItem) {
+      inv.useItem(selectedItem.instanceId, desc); 
+      setSelectedItem(null); 
+      onClose(); 
+    }
+  };
+  const handleDrop = () => { 
+    if (selectedItem) {
+      inv.dropItem(selectedItem.instanceId); 
+      setSelectedItem(null); 
+    }
+  };
+  const handleEquip = (slot: string) => { 
+    if (selectedItem) {
+      inv.equipItem(selectedItem.instanceId, slot); 
+      setSelectedItem(null); 
+    }
+  };
+  const handleUnequip = (slot: string) => { 
+    inv.unequipItem(slot); 
+    setSelectedItem(null); 
+  };
+  const handleArsenal = () => { 
+    setArsenalWeapon(selectedItem); 
+    setSelectedItem(null); 
+  };
+  
+  if (!isOpen) return null;
+  
+  if (arsenalWeapon) {
+    return <ArsenalScreen weapon={arsenalWeapon} onClose={() => setArsenalWeapon(null)} availableMods={availableMods} />;
+  }
+  
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: s.bg, zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: s.bgSecondary }}>
+        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'transparent', border: 'none', color: s.textMuted, fontSize: '14px', cursor: 'pointer' }}>
+          ← Back
+        </button>
+        <h2 style={{ color: s.text, fontSize: '16px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', margin: 0 }}>Inventory</h2>
+        <div style={{ color: s.textMuted, fontSize: '12px' }}>{inv.state.items.length} items</div>
+      </div>
+      
+      {/* Search */}
+      <div style={{ padding: '12px 16px', background: s.bg }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: s.bgSecondary, border: `1px solid ${s.border}`, borderRadius: '8px' }}>
+          <span style={{ color: s.textDim }}>🔍</span>
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search inventory..."
+            style={{ flex: 1, background: 'transparent', border: 'none', color: s.text, fontSize: '14px', outline: 'none' }} />
+          {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: s.textDim, cursor: 'pointer' }}>✕</button>}
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
+        <EquipSlotsPanel equipped={inv.state.equipped} items={inv.state.items} onSlotClick={(_, item) => item && setSelectedItem(item)} />
+        {Object.values(CATEGORIES).map(cat => (
+          <CategoryDropdown key={cat.id} category={cat} items={filteredItems} onItemClick={setSelectedItem} equippedItems={equippedIds} />
+        ))}
+      </div>
+      
+      <WeightBar current={inv.state.settings.currentWeight} max={inv.state.settings.maxCapacity} enabled={inv.state.settings.weightSystemEnabled} />
+      
+      {selectedItem && (
+        <ItemActionModal item={selectedItem} onClose={() => setSelectedItem(null)}
+          onUse={handleUse} onDrop={handleDrop} onEquip={handleEquip} onUnequip={handleUnequip} onArsenal={handleArsenal}
+          isEquipped={inv.isEquipped(selectedItem.instanceId)} equippedSlot={inv.getEquippedSlot(selectedItem.instanceId)} />
+      )}
+    </div>
+  );
+}
