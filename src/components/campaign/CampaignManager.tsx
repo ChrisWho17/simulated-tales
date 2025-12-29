@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '@/contexts/CampaignContext';
 import { CampaignMetadata, MAX_CAMPAIGNS } from '@/types/campaign';
 import { formatPlayTime, formatLastPlayed, canCreateCampaign, loadCampaign as loadCampaignData, nuclearWipe, getStorageStats } from '@/lib/campaignStorage';
+import { needsMigration, migrateAllData, MigrationResult } from '@/lib/campaignMigration';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { MigrationPrompt } from './MigrationPrompt';
 import {
   Dialog,
   DialogContent,
@@ -68,6 +70,23 @@ interface CampaignManagerProps {
 export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManagerProps) {
   const { campaigns, loadCampaign, deleteCampaign, duplicateCampaign, exportCampaign, importCampaign, activeCampaignId } = useCampaign();
   
+  // Migration state - check on mount if old data needs migrating
+  const [showMigration, setShowMigration] = useState(() => needsMigration());
+  
+  // Handle migration complete
+  const handleMigrationComplete = useCallback((result: MigrationResult) => {
+    setShowMigration(false);
+    if (result.migratedCount > 0) {
+      // Refresh page to reload campaigns
+      window.location.reload();
+    }
+  }, []);
+  
+  // Handle skip migration
+  const handleSkipMigration = useCallback(() => {
+    setShowMigration(false);
+  }, []);
+  
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<CampaignMetadata | null>(null);
   
@@ -90,6 +109,16 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const [storageStats, setStorageStats] = useState<ReturnType<typeof getStorageStats> | null>(() => getStorageStats());
   
   const canCreate = canCreateCampaign();
+  
+  // Show migration prompt if old data exists
+  if (showMigration) {
+    return (
+      <MigrationPrompt
+        onComplete={handleMigrationComplete}
+        onSkip={handleSkipMigration}
+      />
+    );
+  }
   
   // Handle continue/load campaign with recovery
   const handleContinue = useCallback((campaign: CampaignMetadata) => {
