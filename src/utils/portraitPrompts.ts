@@ -1,104 +1,106 @@
 // Portrait Prompt Builder for FLUX.1 Schnell
+// Optimized for realistic, waist-up character portraits with detailed environments
 
-// Core style - defines the look
-export const STYLE_BASE = `masterpiece, best quality, highly detailed digital illustration, semi-realistic anime style, dramatic cinematic lighting, portrait, upper body shot, looking at viewer, detailed face, intricate details, 8k resolution`;
+// Core style - realistic digital art, waist-up framing
+export const STYLE_BASE = `masterpiece, best quality, ultra detailed digital painting, realistic style, cinematic lighting, dramatic atmosphere, waist-up shot, three-quarter view, looking at viewer, highly detailed face and eyes, intricate clothing details, professional illustration, 8k resolution, volumetric lighting, depth of field`;
 
-export const NEGATIVE_PROMPT = `worst quality, low quality, blurry, bad anatomy, bad hands, missing fingers, extra fingers, watermark, signature, text, logo, cropped, out of frame, duplicate, deformed, disfigured, ugly, cartoon, 3d render, plastic`;
+export const NEGATIVE_PROMPT = `worst quality, low quality, blurry, bad anatomy, bad hands, missing fingers, extra fingers, watermark, signature, text, logo, cropped, out of frame, duplicate, deformed, disfigured, ugly, anime, cartoon, 3d render, plastic, cgi, simple background, plain background, white background`;
 
 export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
   modern: {
-    style: 'modern military tactical, urban warfare, kevlar vest, tactical harness, combat gear',
-    backgrounds: ['destroyed urban environment with smoke', 'warzone cityscape with fire', 'military base at dawn', 'smoky battlefield'],
+    style: 'modern military tactical gear, realistic combat equipment, kevlar body armor, tactical vest with pouches, military radio, combat harness, worn battle gear, dust and grime',
+    backgrounds: ['dramatic warzone with explosions and smoke in background', 'destroyed urban battlefield with burning buildings', 'military forward operating base at golden hour', 'intense combat zone with debris and fire', 'smoky battlefield with distant explosions'],
   },
   war: {
-    style: 'military combat gear, tactical equipment, battle-worn uniform, dog tags, military insignia',
-    backgrounds: ['warzone battlefield with smoke', 'military forward operating base', 'destroyed urban combat zone', 'trench warfare scene'],
+    style: 'military combat uniform, tactical body armor, ammunition pouches, combat webbing, military radio equipment, dog tags, battle-worn gear with realistic wear and tear',
+    backgrounds: ['epic warzone battlefield with explosions and black smoke', 'burning urban combat zone with destroyed vehicles', 'intense firefight scene with tracer rounds', 'military base under attack with dramatic lighting', 'trench warfare with artillery explosions'],
   },
   cyberpunk: {
-    style: 'cyberpunk aesthetic, neon lights, cybernetic augmentations, high-tech armor, holographic elements',
-    backgrounds: ['neon-lit megacity at night', 'cyberpunk alleyway with rain', 'high-tech facility'],
+    style: 'cyberpunk tactical gear, glowing cybernetic augmentations, high-tech body armor with neon accents, holographic HUD elements, chrome cybernetic limbs, futuristic weapons',
+    backgrounds: ['neon-lit cyberpunk megacity at night with rain and holograms', 'dark cyberpunk alleyway with neon signs and steam', 'high-tech corporate facility with holographic displays', 'dystopian cityscape with massive neon advertisements'],
   },
   postapoc: {
-    style: 'post-apocalyptic, weathered gear, scrap armor, dust and grime, survival equipment',
-    backgrounds: ['wasteland desert with ruins', 'ruined overgrown city', 'abandoned facility'],
+    style: 'post-apocalyptic scavenged armor, makeshift tactical gear, weathered leather and metal, survival equipment, gas mask, improvised weapons, dust and dirt',
+    backgrounds: ['desolate wasteland with ruined city skyline', 'overgrown abandoned city with nature reclaiming buildings', 'dusty desert wasteland with wrecked vehicles', 'radioactive ruins with ominous sky'],
   },
   scifi: {
-    style: 'sci-fi military, futuristic armor, energy weapons, sleek helmet, advanced materials',
-    backgrounds: ['spaceship bridge interior', 'alien planet surface', 'space station corridor'],
+    style: 'advanced sci-fi power armor, futuristic tactical suit, energy shields, high-tech helmet with HUD, sleek military equipment, glowing power cells',
+    backgrounds: ['massive spaceship bridge with holographic displays', 'alien planet surface with strange atmosphere', 'futuristic space station interior', 'epic space battle visible through viewport'],
   },
   ww2: {
-    style: '1940s military, world war 2 era, period accurate uniform, vintage equipment',
-    backgrounds: ['European battlefield trenches', 'war-torn village', 'bunker interior'],
+    style: '1940s military uniform, period-accurate combat gear, M1 helmet, vintage military equipment, leather boots, canvas webbing, historical accuracy',
+    backgrounds: ['World War 2 European battlefield with trenches', 'bombed French village with rubble', 'D-Day beach with obstacles', 'underground bunker with maps and radio equipment'],
   },
   medieval: {
-    style: 'medieval fantasy, plate armor, chainmail, leather straps, heraldic symbols, battle-worn',
-    backgrounds: ['castle courtyard at sunset', 'medieval battlefield', 'dark forest'],
+    style: 'realistic medieval plate armor, chainmail underneath, leather straps and buckles, heraldic symbols, battle-damaged metal, sword and shield',
+    backgrounds: ['epic medieval castle siege with catapults', 'dark enchanted forest with mystical fog', 'bloody medieval battlefield with fallen warriors', 'grand castle throne room with banners'],
   },
   fantasy: {
-    style: 'high fantasy, magical attire, enchanted accessories, mystical aura',
-    backgrounds: ['ancient magical forest', 'fantasy castle interior', 'mystical realm'],
+    style: 'high fantasy armor and robes, magical enchanted equipment, glowing runes and symbols, mystical accessories, elaborate fantasy weapons',
+    backgrounds: ['ancient magical forest with glowing particles', 'epic fantasy castle with dramatic sky', 'mystical realm with floating islands', 'dragon lair with treasure'],
   },
   horror: {
-    style: 'dark horror aesthetic, survival gear, blood-stained, gritty realism',
-    backgrounds: ['abandoned hospital corridor', 'fog-shrouded graveyard', 'decrepit mansion'],
+    style: 'survival horror gear, blood-stained clothing, improvised weapons, torn and dirty attire, fearful or determined expression, flashlight or lantern',
+    backgrounds: ['abandoned hospital corridor with flickering lights', 'fog-shrouded graveyard at night', 'decrepit haunted mansion interior', 'dark forest with ominous shadows'],
   },
   western: {
-    style: 'wild west era, cowboy attire, dusty leather, period weapons',
-    backgrounds: ['dusty frontier town', 'desert canyon at sunset', 'saloon interior'],
+    style: 'authentic wild west attire, dusty leather duster, cowboy hat, period-accurate revolvers, worn boots, bandolier',
+    backgrounds: ['dusty frontier town main street at high noon', 'dramatic desert canyon at sunset', 'old western saloon interior', 'vast prairie with storm approaching'],
   },
   noir: {
-    style: 'film noir aesthetic, 1940s detective attire, dramatic shadows, moody lighting',
-    backgrounds: ['rainy city street at night', 'smoky detective office', 'dimly lit bar'],
+    style: 'classic film noir attire, 1940s fedora and trench coat, dramatic shadows on face, vintage firearms, cigarette smoke',
+    backgrounds: ['rainy noir city street with neon signs', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with single streetlight'],
   },
   survival: {
-    style: 'survival gear, weathered clothing, makeshift equipment, resourceful appearance',
-    backgrounds: ['wilderness campsite', 'abandoned shelter', 'harsh environment'],
+    style: 'rugged survival gear, weathered outdoor clothing, backpack with supplies, hunting equipment, practical tools',
+    backgrounds: ['wilderness campsite in dense forest', 'abandoned mountain cabin', 'harsh winter environment', 'dense jungle with ancient ruins'],
   },
 };
 
 export const ROLE_STYLES: Record<string, string> = {
-  soldier: 'infantry soldier, assault rifle, tactical vest, combat helmet, dog tags',
-  medic: 'combat medic, red cross armband, medical backpack, first aid equipment, blood-stained gloves',
-  sniper: 'sniper specialist, ghillie elements, scoped rifle, camouflage face paint',
-  heavy: 'heavy weapons specialist, large machine gun, ammo belts, reinforced armor',
-  engineer: 'combat engineer, tool belt, welding goggles, grease-stained uniform',
-  pilot: 'fighter pilot, flight suit, aviator helmet, oxygen mask',
-  tank: 'tank commander, tanker helmet with goggles, leather jacket, oil stains, intercom headset',
-  officer: 'military officer, decorated uniform, medals on chest, command presence',
-  scout: 'recon scout, light tactical gear, binoculars, stealth equipment',
-  spec_ops: 'special forces operator, night vision on helmet, suppressed weapon, black tactical gear',
-  knight: 'armored knight, ornate plate armor, family crest, noble bearing',
-  rogue: 'rogue assassin, dark leather armor, hidden blades, hood',
-  mage: 'battle mage, arcane symbols glowing, magical staff, armored robes',
-  survivor: 'apocalypse survivor, makeshift armor, scavenged gear',
-  mercenary: 'professional mercenary, mixed military gear, no insignia',
-  ranger: 'wilderness ranger, bow and quiver, forest cloak, animal fur trim',
-  paladin: 'holy paladin, ornate blessed armor, divine symbols, righteous aura',
-  berserker: 'berserker warrior, war paint, massive weapon, scarred muscular',
-  detective: 'hardboiled detective, long coat, badge visible, world-weary',
-  criminal: 'hardened criminal, street clothes, concealed weapon, dangerous',
-  scientist: 'field scientist, lab coat over tactical gear, data pad, goggles',
-  rebel: 'resistance fighter, improvised gear, revolutionary symbols, defiant',
+  soldier: 'infantry soldier holding assault rifle, full tactical vest with ammunition pouches, combat helmet with goggles, dog tags visible, knee pads, combat boots, military radio on shoulder',
+  medic: 'combat medic with red cross armband, large medical backpack with supplies visible, first aid pouches on vest, blood-stained tactical gloves, medical scissors in pouch, radio equipment',
+  sniper: 'sniper specialist in ghillie suit elements, holding scoped sniper rifle, camouflage face paint, spotting scope, tactical vest with spare magazines, low profile helmet',
+  heavy: 'heavy weapons specialist carrying large machine gun, ammunition belts draped across chest, reinforced body armor with extra plating, heavy duty gloves, knee and elbow pads',
+  engineer: 'combat engineer with tool belt and equipment, welding goggles pushed up on forehead, grease-stained tactical uniform, explosives pouches, multitool on belt',
+  pilot: 'fighter pilot in full flight suit, aviator helmet with visor, oxygen mask around neck, flight patches on shoulders, survival vest with emergency gear',
+  tank: 'tank commander in tanker helmet with built-in goggles, leather tanker jacket with oil stains, intercom headset, binoculars around neck, pistol holster',
+  officer: 'military officer in decorated tactical uniform, command insignia visible, medals on chest, command radio, pistol in thigh holster, authoritative posture',
+  scout: 'recon scout in lightweight tactical gear, compact binoculars, suppressed carbine, camouflage pattern uniform, minimal equipment for mobility, range finder',
+  spec_ops: 'special forces operator in all-black tactical gear, night vision goggles mounted on helmet, suppressed rifle with attachments, tactical mask, advanced communication gear',
+  knight: 'armored knight in realistic battle-worn plate armor, chainmail visible at joints, family crest on breastplate, sword at hip, shield with heraldic design, noble bearing',
+  rogue: 'rogue assassin in dark leather armor with hood, multiple hidden blade sheaths, throwing knives on belt, grappling hook, lockpicks visible, mysterious dangerous appearance',
+  mage: 'battle mage in enchanted armored robes, glowing arcane symbols on clothing, ornate magical staff with crystal, mystical energy around hands, arcane tome at belt',
+  survivor: 'post-apocalyptic survivor in scavenged mismatched armor, makeshift weapon, gas mask hanging from neck, water canteen, survival tools, weathered determined appearance',
+  mercenary: 'professional mercenary in mixed high-quality tactical gear, no unit insignia, multiple weapons visible, expensive equipment, cold professional demeanor',
+  ranger: 'wilderness ranger with longbow and quiver, hooded forest cloak with animal fur trim, leather armor with leaf patterns, hunting knife, tracking equipment',
+  paladin: 'holy paladin in ornate blessed plate armor with divine symbols, glowing holy aura, sacred weapon, religious iconography, righteous determined expression',
+  berserker: 'berserker warrior with tribal war paint, massive two-handed weapon, scarred muscular exposed arms, bone and tooth trophies, fierce battle-ready expression',
+  detective: 'hardboiled detective in long trench coat, fedora hat, badge visible on belt, revolver in shoulder holster, cigarette, world-weary experienced expression',
+  criminal: 'hardened criminal in street clothes with concealed weapon bulge, facial scars, tattoos visible on neck and hands, dangerous intimidating presence',
+  scientist: 'field scientist in lab coat over tactical gear, data pad in hand, protective goggles, sample containers on belt, analytical focused expression',
+  rebel: 'resistance fighter in improvised tactical gear with revolutionary symbols, modified civilian weapons, passionate defiant expression, worn but determined appearance',
   // Class name mappings for common RPG classes
-  'infantry grunt': 'infantry soldier, assault rifle, tactical vest, combat helmet, dog tags',
-  'combat medic': 'combat medic, red cross armband, medical backpack, first aid equipment',
-  'heavy gunner': 'heavy weapons specialist, large machine gun, ammo belts, reinforced armor',
+  'infantry grunt': 'infantry soldier holding assault rifle, full tactical vest with ammunition pouches, combat helmet, dog tags, military radio, combat boots',
+  'combat medic': 'combat medic with red cross armband, large medical backpack, first aid pouches, blood-stained gloves, medical equipment visible',
+  'heavy gunner': 'heavy weapons specialist carrying large machine gun, ammunition belts across chest, reinforced body armor, heavy gloves',
+  adventurer: 'adventurer in practical traveling gear, versatile equipment, worn leather armor, various pouches and tools, ready for anything expression',
 };
 
 export const EMOTION_STYLES: Record<string, string> = {
-  neutral: 'neutral calm expression, steady professional gaze',
-  determined: 'determined fierce expression, intense focused eyes, set jaw',
-  combat: 'combat ready expression, aggressive battle stance, fierce',
-  wounded: 'wounded pained expression, blood on face, exhausted',
-  confident: 'confident slight smile, self-assured, victorious',
-  angry: 'angry furious expression, snarling rage',
-  serious: 'serious stoic expression, professional unreadable',
-  cold: 'cold emotionless expression, calculating predatory',
-  smirk: 'confident smirk, cocky expression, knowing look',
-  happy: 'warm genuine smile, bright happy expression',
-  sad: 'melancholic expression, distant gaze, sorrow',
-  scared: 'fearful expression, wide eyes, tense',
-  tired: 'exhausted tired expression, bags under eyes, weary',
+  neutral: 'neutral confident expression, steady professional gaze, calm composure',
+  determined: 'determined fierce expression, intense focused eyes, set jaw, unwavering resolve',
+  combat: 'combat ready aggressive expression, battle stance, fierce warrior intensity, adrenaline',
+  wounded: 'wounded pained expression, blood on face, exhausted but fighting, battle damage visible',
+  confident: 'confident slight smirk, self-assured victorious expression, knowing superiority',
+  angry: 'angry furious expression, snarling rage, intense burning eyes, aggressive',
+  serious: 'serious stoic expression, professional unreadable, military bearing',
+  cold: 'cold emotionless expression, calculating predatory gaze, dangerous calm',
+  smirk: 'confident smirk, cocky knowing expression, playful danger',
+  happy: 'warm genuine smile, bright happy expression, relaxed posture',
+  sad: 'melancholic expression, distant thousand-yard stare, deep sorrow',
+  scared: 'fearful expression, wide eyes, tense body language, survival instinct',
+  tired: 'exhausted tired expression, bags under eyes, weary but determined',
 };
 
 export interface CharacterAppearance {
@@ -138,33 +140,38 @@ export function buildPortraitPrompt(
     roleStyle = ROLE_STYLES[character.role.toLowerCase()] || '';
   }
   
-  // Gender
+  // Gender with more realistic descriptors
   const gender = character.gender?.toLowerCase() === 'female'
-    ? 'female, feminine features, beautiful face, soft cheekbones'
+    ? 'female, beautiful feminine features, detailed realistic face, soft cheekbones, full lips'
     : character.gender?.toLowerCase() === 'nonbinary'
-    ? 'androgynous features, ambiguous gender presentation'
-    : 'male, masculine features, strong jawline';
+    ? 'androgynous features, ambiguous gender presentation, attractive face'
+    : 'male, handsome masculine features, strong jawline, detailed realistic face';
   
-  // Physical attributes
+  // Physical attributes with more detail
   const build = character.build || 'athletic';
+  const buildDesc = build === 'muscular' ? 'muscular athletic build, toned physique, strong arms'
+    : build === 'slim' ? 'slim athletic build, lean physique'
+    : build === 'large' ? 'large powerful build, imposing physique'
+    : 'athletic fit build, toned physique';
+  
   const hairColor = character.hairColor || 'brown';
   const hairStyle = character.hairStyle || character.hairLength || 'short';
-  const eyeColor = character.eyeColor ? `${character.eyeColor} eyes` : '';
+  const eyeColor = character.eyeColor ? `striking ${character.eyeColor} eyes with detail` : '';
   const skinTone = character.skinTone ? `${character.skinTone} skin tone` : '';
   
-  // Optional details
+  // Optional details - enhanced for realism
   const details: string[] = [];
   if (character.hasTattoos || character.details?.includes('tattoos')) {
-    details.push('military tattoos, sleeve tattoos');
+    details.push('detailed realistic tattoos, sleeve tattoos on arms, military or meaningful tattoo designs');
   }
   if (character.hasScars || character.details?.includes('scars')) {
-    details.push('facial scars, battle damage');
+    details.push('realistic battle scars, healed wounds visible on skin');
   }
   if (character.hasCybernetics || character.details?.includes('cybernetics')) {
-    details.push('cybernetic augmentations');
+    details.push('detailed cybernetic augmentations, chrome mechanical parts, glowing tech elements');
   }
   if (character.hasBeard || character.details?.includes('beard')) {
-    details.push('tactical beard, stubble');
+    details.push('well-groomed tactical beard, facial hair with detail');
   }
   if (character.customDescription) {
     details.push(character.customDescription);
@@ -173,15 +180,15 @@ export function buildPortraitPrompt(
   return [
     STYLE_BASE,
     gender,
-    `${build} build`,
+    buildDesc,
     skinTone,
-    `${hairColor} ${hairStyle} hair`,
+    `${hairColor} ${hairStyle} hair with realistic detail`,
     eyeColor,
     roleStyle,
     genreConfig.style,
     emotionStyle,
     details.join(', '),
-    `background: ${background}`,
+    `dramatic background: ${background}`,
   ].filter(Boolean).join(', ');
 }
 
