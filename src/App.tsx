@@ -7,6 +7,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { InventoryProvider, InventoryAction } from "@/game/inventorySystem";
 import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySync";
+import { migrateStorageKeys } from "@/lib/campaignStorageMigration";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
@@ -15,6 +16,9 @@ import InventoryTest from "./pages/InventoryTest";
 import SoundGeneratorPage from "./pages/SoundGenerator";
 import SoundSeederPage from "./pages/SoundSeeder";
 import "@/styles/untold-story-engine.css";
+
+// Run storage migration on app startup
+migrateStorageKeys();
 
 const queryClient = new QueryClient();
 
