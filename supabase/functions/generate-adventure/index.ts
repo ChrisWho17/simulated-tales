@@ -363,12 +363,17 @@ CRITICAL - HEALTH/DAMAGE SYSTEM (MANDATORY):
 When the player takes damage from ANY source, you MUST include: [DAMAGE:amount]
 When the player heals from ANY source, you MUST include: [HEAL:amount]
 
-DAMAGE EXAMPLES:
-- Player gets hit in combat → [DAMAGE:8] (include in your response)
+IMPORTANT: [DAMAGE:X] means the PLAYER loses X health points. Do NOT use this when:
+- The player picks up or acquires a weapon (that's [LOOT:], not damage)
+- Describing a weapon's potential damage output (that's descriptive text, not player damage)
+- The player successfully attacks an enemy (enemies taking damage doesn't affect player HP)
+
+ONLY use [DAMAGE:X] when the PLAYER CHARACTER is HURT:
+- Player gets hit in combat → [DAMAGE:8]
 - Player falls and hurts themselves → [DAMAGE:4]
 - Player is poisoned → [DAMAGE:6]
-- Enemy attacks successfully → [DAMAGE:12]
-- Environmental hazard → [DAMAGE:5]
+- Enemy attacks the player successfully → [DAMAGE:12]
+- Environmental hazard hurts the player → [DAMAGE:5]
 
 HEAL EXAMPLES:
 - Player uses healing potion → [HEAL:15]
