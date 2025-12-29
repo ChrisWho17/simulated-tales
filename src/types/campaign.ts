@@ -9,6 +9,7 @@ import { GameGenre } from './genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { CampaignMemoryStore } from './campaignMemory';
 import { WeatherState } from '@/game/weatherSystem';
+import { DirectorSettings } from '@/game/directorModeSystem';
 
 // ============================================================================
 // CAMPAIGN METADATA (for index)
@@ -128,6 +129,7 @@ export interface CampaignData {
   settings?: {
     adultContent?: boolean;
     cheatMode?: boolean;
+    directorSettings?: DirectorSettings;
   };
 }
 

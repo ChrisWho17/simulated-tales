@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
@@ -9,6 +9,7 @@ import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
+import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
 import { COLOR_PRESETS } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
 import { useAudioSystem } from '@/hooks/useAudioSystem';
+import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorModeSystem';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   currentCharacterName 
 }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
+  const campaignContext = useCampaignOptional();
   const { 
     initialized: audioInitialized,
     muted: audioMuted,
@@ -50,6 +53,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director' | 'weather'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  
+  // Get director settings from campaign if available, otherwise use global settings
+  const currentDirectorSettings = useMemo((): DirectorSettings => {
+    if (campaignContext?.activeCampaign?.settings?.directorSettings) {
+      return campaignContext.activeCampaign.settings.directorSettings;
+    }
+    return settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS;
+  }, [campaignContext?.activeCampaign?.settings?.directorSettings, settings.directorSettings]);
+  
+  // Update director settings - saves to campaign if active, otherwise global
+  const handleDirectorSettingsUpdate = (newDirectorSettings: DirectorSettings) => {
+    if (campaignContext?.activeCampaign) {
+      // Update campaign-specific settings
+      campaignContext.updateCampaign({
+        settings: {
+          ...campaignContext.activeCampaign.settings,
+          directorSettings: newDirectorSettings,
+        },
+      });
+    } else {
+      // Fall back to global settings
+      updateSettings({ directorSettings: newDirectorSettings });
+    }
+  };
   
   // Load saves when tab changes to saves
   useEffect(() => {
@@ -749,8 +776,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* Director Tab */}
           {activeTab === 'director' && (
             <DirectorSettingsTab
-              directorSettings={settings.directorSettings}
-              onUpdate={(directorSettings) => updateSettings({ directorSettings })}
+              directorSettings={currentDirectorSettings}
+              onUpdate={handleDirectorSettingsUpdate}
             />
           )}
           

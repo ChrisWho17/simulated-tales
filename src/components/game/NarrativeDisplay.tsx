@@ -124,7 +124,7 @@ export function NarrativeDisplay({
         ref={containerRef}
         className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
       >
-        <div className="p-6 space-y-6 font-narrative text-lg leading-relaxed">
+        <div className="p-6 space-y-6 font-narrative text-xl leading-relaxed">
           {events.length === 0 ? (
             <div className="animate-fade-in text-center py-12">
               <p className="text-muted-foreground italic">
