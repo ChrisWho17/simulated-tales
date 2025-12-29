@@ -1,8 +1,8 @@
 // Portrait Prompt Builder for FLUX.1 Schnell
 // Optimized for realistic, waist-up character portraits with detailed environments
 
-// Core style - realistic digital art, waist-up framing
-export const STYLE_BASE = `masterpiece, best quality, ultra detailed digital painting, realistic style, cinematic lighting, dramatic atmosphere, waist-up shot, three-quarter view, looking at viewer, highly detailed face and eyes, intricate clothing details, professional illustration, 8k resolution, volumetric lighting, depth of field`;
+// Core style - realistic digital art, knees-up framing with visible environment
+export const STYLE_BASE = `masterpiece, best quality, ultra detailed digital painting, realistic style, cinematic lighting, dramatic atmosphere, three-quarter body shot from knees up, full environment visible in background, character in foreground with detailed background scenery, looking at viewer, highly detailed face and eyes, intricate clothing and gear details, professional illustration, 8k resolution, volumetric lighting, depth of field, wide shot composition`;
 
 export const NEGATIVE_PROMPT = `worst quality, low quality, blurry, bad anatomy, bad hands, missing fingers, extra fingers, watermark, signature, text, logo, cropped, out of frame, duplicate, deformed, disfigured, ugly, anime, cartoon, 3d render, plastic, cgi, simple background, plain background, white background`;
 
