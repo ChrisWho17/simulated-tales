@@ -188,6 +188,19 @@ interface LocationTransitionContext {
   locationHistory?: string; // Brief recent location history
 }
 
+// ============= DIRECTOR MODE CONTEXT =============
+
+interface DirectorContext {
+  enabled: boolean;
+  rawGame: boolean;
+  mode: 'fun' | 'easy' | 'medium' | 'hard';
+  directorType: string;
+  tightness: number;
+  cruelty: 'soft' | 'honest' | 'brutal';
+  weirdness: 'grounded' | 'spicy' | 'unhinged';
+  guidance: 'none' | 'light' | 'coach';
+}
+
 interface AdventureRequest {
   scenario: string;
   playerAction?: string;
@@ -271,6 +284,8 @@ interface AdventureRequest {
     spawnPacket: string;        // Role + gear + immediate context
     isOpening: boolean;         // Whether this is the first scene
   };
+  // NEW: DIRECTOR MODE - DM manipulation and narrative steering
+  directorContext?: DirectorContext;
 }
 
 // ============= NPC PERSONALITY SYSTEM =============
@@ -615,6 +630,120 @@ ${detailInstructions[config.detailLevel] || detailInstructions['MODERATE']}`;
   return output;
 }
 
+// ============= DIRECTOR TYPE PROFILES =============
+
+const DIRECTOR_TYPES: Record<string, { name: string; description: string; category: string; tags: string[]; styleNotes: string[] }> = {
+  // Story & Pacing
+  cinematic: { name: 'Cinematic Director', description: 'Big scenes, clean pacing, dramatic reveals', category: 'story', tags: ['Drama', 'Action', 'Blockbuster'], styleNotes: ['Likes cliffhangers', 'Avoids dead air', 'Scene transitions feel like cuts'] },
+  tight_editor: { name: 'Tight Editor', description: 'Shorter outputs, fast turns, minimal fluff', category: 'story', tags: ['Mobile', 'Quick', 'Efficient'], styleNotes: ['Brevity is king', 'Every word counts', 'Skip transitions'] },
+  slow_burn: { name: 'Slow Burn Auteur', description: 'Subtle tension, atmosphere, longer build-ups', category: 'story', tags: ['Atmospheric', 'Dramatic', 'Payoff'], styleNotes: ['Low frequency twists', 'High payoff moments', 'Let scenes breathe'] },
+  montage_maker: { name: 'Montage Maker', description: 'Compresses travel and downtime into punchy sequences', category: 'story', tags: ['Travel', 'Downtime', 'Training'], styleNotes: ['Great for wait/rest/train', 'Time skips feel earned'] },
+  // Player-Freedom
+  sandbox: { name: 'Sandbox Facilitator', description: 'Player-led, low steering, sim-first', category: 'freedom', tags: ['Exploration', 'Freedom', 'Sim'], styleNotes: ['DM intervenes to keep things moving', 'World reacts, rarely initiates'] },
+  yes_and: { name: 'Yes-And Improviser', description: 'High creativity budget, embraces player ideas', category: 'freedom', tags: ['Roleplay', 'Creative', 'Chaotic'], styleNotes: ['Great for wild roleplay', 'Build on player proposals'] },
+  choice_architect: { name: 'Choice Architect', description: 'Always presents 2–4 meaningful options', category: 'freedom', tags: ['Branching', 'Decisions', 'Clarity'], styleNotes: ['Choices feel distinct', 'Consequences are telegraphed'] },
+  hands_off: { name: 'Hands-Off Observer', description: 'Minimal narration, lots of world motion', category: 'freedom', tags: ['Minimal', 'Immersive', 'Sim'], styleNotes: ['World evolves, you notice it', 'Sparse but meaningful narration'] },
+  red_velvet: { name: 'Red Velvet', description: 'Intimate romance, sensual narratives, consensual adult interactions', category: 'freedom', tags: ['Romance', 'Sensual', 'Passion', 'Consent'], styleNotes: ['Desire is the compass, consent is the map', 'NPCs communicate openly about attraction', 'Emotional connection drives encounters', 'Mutual desire unlocks story beats', 'Sensual scenes feel natural, not forced'] },
+  // Challenge & Consequence
+  old_school: { name: 'Old-School Referee', description: 'Rules, checks, resource tracking', category: 'challenge', tags: ['Classic', 'Crunchy', 'Fair'], styleNotes: ['Fair but unforgiving', 'Rules are consistent'] },
+  survival_warden: { name: 'Survival Warden', description: 'Scarcity, injuries matter, time pressure', category: 'challenge', tags: ['Survival', 'Horror', 'Hardcore'], styleNotes: ['Small mistakes snowball', 'Resources are precious'] },
+  tactician: { name: 'Tactician', description: 'Combat clarity, positioning language, threat logic', category: 'challenge', tags: ['Combat', 'Strategy', 'Military'], styleNotes: ['Great for WW2, sci-fi, survival', 'Tactical options clear'] },
+  punishment_accountant: { name: 'Punishment Accountant', description: 'Consequences are consistent and remembered', category: 'challenge', tags: ['Consequences', 'Memory', 'Fair'], styleNotes: ['Not mean, just relentlessly honest', 'Everything is tracked'] },
+  // Mystery & Mindgame
+  mystery_keeper: { name: 'Mystery Keeper', description: 'Clue economy, controlled reveals, avoids info dumps', category: 'mystery', tags: ['Detective', 'Noir', 'Investigation'], styleNotes: ['Keeps notes like a detective', 'Information is currency'] },
+  conspiracy_weaver: { name: 'Conspiracy Weaver', description: 'Everything connects, patterns emerge', category: 'mystery', tags: ['Thriller', 'Cyberpunk', 'Paranoia'], styleNotes: ['Great for modern thriller', 'Red herrings carefully placed'] },
+  puzzle_master: { name: 'Puzzle Master', description: 'Locks and keys, riddles, mechanisms', category: 'mystery', tags: ['Puzzles', 'Dungeon', 'Escape'], styleNotes: ['Always gives partial progress', 'No hard stuck moments'] },
+  truth_serum: { name: 'Truth Serum', description: 'Forces clarity: what you know, what you assume', category: 'mystery', tags: ['Clarity', 'Logic', 'Precision'], styleNotes: ['Great for preventing confusion', 'Facts clearly labeled'] },
+  // Social & Relationship
+  romance_writer: { name: 'Romance Writer', description: 'Emotional beats, relationship momentum, subtext', category: 'social', tags: ['Romance', 'Drama', 'Character'], styleNotes: ['NPCs feel human', 'Not pushy about romance', 'Subtext matters'] },
+  drama_producer: { name: 'Drama Producer', description: 'Social friction, jealousy, alliances, reputation', category: 'social', tags: ['Drama', 'Politics', 'Intrigue'], styleNotes: ['Choices become social consequences', 'NPCs remember slights'] },
+  courtroom_arbitrator: { name: 'Courtroom Arbitrator', description: 'Negotiation, arguments, persuasion battles', category: 'social', tags: ['Debate', 'Law', 'Persuasion'], styleNotes: ['Makes talking feel like combat', 'Arguments have weight'] },
+  community_sim: { name: 'Community Sim Host', description: 'NPC routines, gossip, factions, schedules', category: 'social', tags: ['Cozy', 'Slice-of-Life', 'Community'], styleNotes: ['Living world director', 'NPCs have lives'] },
+  // Vibe & Tone
+  horror_curator: { name: 'Horror Curator', description: 'Dread, sensory focus, unease beats', category: 'vibe', tags: ['Horror', 'Psychological', 'Tension'], styleNotes: ['Uses silence as a weapon', 'Sensory details matter'] },
+  comedic_goblin: { name: 'Comedic Timing Goblin', description: 'Quick punchlines, absurd coincidences, funny NPC chatter', category: 'vibe', tags: ['Comedy', 'Absurd', 'Light'], styleNotes: ['Still respects stakes when it matters', 'Timing is everything'] },
+  poet_narrator: { name: 'Poet-Narrator', description: 'Beautiful language, mood-heavy scenes, symbolic details', category: 'vibe', tags: ['Fantasy', 'Literary', 'Dreamlike'], styleNotes: ['Great for fantasy, dreamlike, romance', 'Prose matters'] },
+  noir_narrator: { name: 'Noir Narrator', description: 'Grit, cynicism, moral ambiguity, slow reveals', category: 'vibe', tags: ['Noir', 'Crime', 'Gritty'], styleNotes: ['Perfect for modern crime', 'Everyone has secrets'] },
+};
+
+function formatDirectorContext(director: DirectorContext): string {
+  if (director.rawGame || !director.enabled) {
+    return `\n\n=== DIRECTOR MODE: RAW GAME ===
+No narrative steering beyond core rules.
+- Player actions create reactions, world responds naturally
+- No pacing nudges or artificial DM pressure
+- Core simulation runs, DM stays hands-off
+- Consequences emerge organically from player choices
+- No guiding hand pushing toward specific outcomes`;
+  }
+  
+  const typeProfile = DIRECTOR_TYPES[director.directorType];
+  if (!typeProfile) {
+    return ''; // Unknown type, skip
+  }
+  
+  // Personality descriptions
+  const crueltyDesc: Record<string, string> = {
+    soft: 'Merciful - hints at danger, pulls punches when needed',
+    honest: 'Fair - consequences match actions, no free passes or unfair hits',
+    brutal: 'Ruthless - small mistakes have teeth, the world does not forgive',
+  };
+  
+  const weirdnessDesc: Record<string, string> = {
+    grounded: 'Realistic - plausible events, grounded logic',
+    spicy: 'Quirky - strange NPCs, unusual situations, memorable moments',
+    unhinged: 'Wild - fever dream logic, absurd events, reality bends',
+  };
+  
+  const guidanceDesc: Record<string, string> = {
+    none: 'Silent - no hints, player discovers through trial and error',
+    light: 'Subtle - environmental hints, NPC suggestions when stuck',
+    coach: 'Active - clear options presented, gentle steering when lost',
+  };
+  
+  return `\n\n=== DIRECTOR MODE: ${typeProfile.name.toUpperCase()} ===
+Mode: ${director.mode.toUpperCase()}
+Director Type: ${typeProfile.name}
+Description: ${typeProfile.description}
+Tightness: ${Math.round(director.tightness * 100)}% (${director.tightness < 0.3 ? 'Player-led sandbox' : director.tightness < 0.6 ? 'Balanced storytelling' : director.tightness < 0.85 ? 'Director guides pacing' : 'Full DM control'})
+
+Category: ${typeProfile.category.toUpperCase()}
+Tags: ${typeProfile.tags.join(', ')}
+
+DIRECTOR STYLE NOTES:
+${typeProfile.styleNotes.map(note => `• ${note}`).join('\n')}
+
+PERSONALITY SETTINGS:
+• Cruelty: ${director.cruelty.toUpperCase()} - ${crueltyDesc[director.cruelty] || 'Fair consequences'}
+• Weirdness: ${director.weirdness.toUpperCase()} - ${weirdnessDesc[director.weirdness] || 'Grounded events'}
+• Guidance: ${director.guidance.toUpperCase()} - ${guidanceDesc[director.guidance] || 'Subtle hints'}
+
+DIRECTOR RULES:
+${director.mode === 'fun' ? `• Fun Mode: Be playful and permissive. Cinematic chaos is welcome.
+• High fail-forward - failures create new opportunities, not dead ends.
+• Generous with resources and hints.
+• Invention budget is HIGH - embrace wild player ideas.` : ''}
+${director.mode === 'easy' ? `• Easy Mode: Forgiving consequences, generous hints.
+• Strong fail-forward - every failure opens a new door.
+• Resources are plentiful, scarcity is rare.
+• Guide players subtly toward success.` : ''}
+${director.mode === 'medium' ? `• Medium Mode: Balanced consequences matter.
+• Moderate fail-forward - failures have costs but create content.
+• Resources require management, scarcity exists but isn't crushing.
+• Let players make meaningful mistakes.` : ''}
+${director.mode === 'hard' ? `• Hard Mode: High stakes, low safety net.
+• Limited fail-forward - failures have real, lasting consequences.
+• Resources are scarce, every decision matters.
+• The world is dangerous and unforgiving.` : ''}
+
+CRITICAL DIRECTOR COMMANDS:
+- Player must initiate direct NPC engagement (unless dire circumstances)
+- Ambient world events may occur but must not demand immediate response
+- No retcons - respect established facts and narrative state
+- Every player action creates change, reaction, or pressure
+- Match your narrative style to the director type: ${typeProfile.styleNotes[0] || 'Be evocative'}`;
+}
+
 function formatCharacterContext(character: CharacterData): string {
   const getModifier = (stat: number) => Math.floor((stat - 10) / 2);
   const formatMod = (mod: number) => mod >= 0 ? `+${mod}` : `${mod}`;
@@ -651,7 +780,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, weatherContext, livingWorldContext, narrativeContractContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, weatherContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -664,6 +793,12 @@ serve(async (req) => {
     // Add narrator configuration (voice, detail level, etc.)
     if (narratorConfig) {
       systemContent += formatNarratorStyle(narratorConfig);
+    }
+    
+    // === DIRECTOR MODE - DM manipulation and narrative steering ===
+    // This affects pacing, difficulty, and narrative style
+    if (directorContext) {
+      systemContent += formatDirectorContext(directorContext);
     }
     
     // Add genre contract if provided (World Bible enforcement)
