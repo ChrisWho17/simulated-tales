@@ -11,6 +11,7 @@ import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS, parseGenreTagsFromText, stripGenreTagsFromText } from '@/lib/genreDetection';
 import { DiceMode, DICE_MODES, saveDiceMode } from '@/game/diceSystem';
 import { Switch } from '@/components/ui/switch';
+import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
