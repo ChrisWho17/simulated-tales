@@ -67,6 +67,8 @@ export const ACTIONS = {
   // Campaign isolation
   CLEAR_INVENTORY: 'CLEAR_INVENTORY',
   LOAD_STATE: 'LOAD_STATE',
+  // UI feedback
+  CLEAR_RECENTLY_ADDED: 'CLEAR_RECENTLY_ADDED',
 };
 
 // ============================================================================
@@ -294,6 +296,7 @@ export interface InventoryState {
   equipped: EquippedState;
   settings: InventorySettings;
   lastAction: InventoryAction | null;
+  recentlyAddedItems: string[]; // Instance IDs of recently added items (for highlight)
 }
 
 // ============================================================================
@@ -321,6 +324,7 @@ export const createInitialState = (): InventoryState => ({
     equipmentWearEnabled: true,
   },
   lastAction: null,
+  recentlyAddedItems: [],
 });
 
 // ============================================================================
@@ -366,7 +370,7 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
   const timestamp = Date.now();
   
   switch (action.type) {
-    case ACTIONS.ADD_ITEM: {
+case ACTIONS.ADD_ITEM: {
       const { item, quantity = 1 } = action.payload;
       
       // AUTO-ASSIGN EQUIP SLOTS if missing
@@ -380,25 +384,34 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
       const existingIndex = state.items.findIndex(i => i.id === processedItem.id && i.stackable);
       
       let newItems: InventoryItem[];
+      let addedInstanceId: string;
+      
       if (existingIndex !== -1 && processedItem.stackable) {
+        // Stacking - use existing instanceId
+        addedInstanceId = state.items[existingIndex].instanceId;
         newItems = state.items.map((i, idx) => 
           idx === existingIndex ? { ...i, quantity: i.quantity + quantity } : i
         );
       } else {
         // Create new item with instanceId
+        addedInstanceId = `${processedItem.id}-${timestamp}`;
         let newItem: InventoryItem = { 
           ...processedItem, 
           quantity, 
-          instanceId: `${processedItem.id}-${timestamp}` 
+          instanceId: addedInstanceId 
         } as InventoryItem;
         
         newItems = [...state.items, newItem];
       }
       
+      // Add to recently added items (for visual highlight)
+      const updatedRecentlyAdded = [...state.recentlyAddedItems, addedInstanceId];
+      
       return {
         ...state,
         items: newItems,
         settings: { ...state.settings, currentWeight: calculateWeight(newItems) },
+        recentlyAddedItems: updatedRecentlyAdded,
         lastAction: {
           type: 'ADD',
           item: processedItem,
@@ -698,7 +711,7 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
       };
     }
     
-    // CLEAR_INVENTORY - Reset to empty state (CRITICAL for campaign isolation)
+// CLEAR_INVENTORY - Reset to empty state (CRITICAL for campaign isolation)
     case ACTIONS.CLEAR_INVENTORY:
     case 'CLEAR_INVENTORY': {
       console.log('[INVENTORY] Clearing all items for campaign switch');
@@ -724,6 +737,25 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
           currentWeight: calculateWeight(loaded.items || []),
         },
         lastAction: null,
+        recentlyAddedItems: [], // Clear on load
+      };
+    }
+    
+    // CLEAR_RECENTLY_ADDED - Clear the highlight flags
+    case ACTIONS.CLEAR_RECENTLY_ADDED:
+    case 'CLEAR_RECENTLY_ADDED': {
+      const { instanceId } = action.payload || {};
+      if (instanceId) {
+        // Clear specific item
+        return {
+          ...state,
+          recentlyAddedItems: state.recentlyAddedItems.filter(id => id !== instanceId),
+        };
+      }
+      // Clear all
+      return {
+        ...state,
+        recentlyAddedItems: [],
       };
     }
     
@@ -768,6 +800,17 @@ export function InventoryProvider({ children, onNarrativeAction }: InventoryProv
       onNarrativeAction(state.lastAction);
     }
   }, [state.lastAction, onNarrativeAction]);
+  
+  // Auto-clear "new" highlight after 5 seconds
+  useEffect(() => {
+    if (state.recentlyAddedItems.length === 0) return;
+    
+    const timer = setTimeout(() => {
+      dispatch({ type: ACTIONS.CLEAR_RECENTLY_ADDED, payload: {} });
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, [state.recentlyAddedItems]);
   
   const value: InventoryContextType = {
     state,
@@ -984,12 +1027,14 @@ interface CategoryDropdownProps {
   items: InventoryItem[];
   onItemClick: (item: InventoryItem) => void;
   equippedItems: string[];
+  recentlyAddedItems: string[];
 }
 
-function CategoryDropdown({ category, items, onItemClick, equippedItems }: CategoryDropdownProps) {
+function CategoryDropdown({ category, items, onItemClick, equippedItems, recentlyAddedItems }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(true);
   const categoryItems = items.filter(item => item.category === category.id);
   const itemCount = categoryItems.reduce((sum, item) => sum + item.quantity, 0);
+  const hasNewItems = categoryItems.some(item => recentlyAddedItems.includes(item.instanceId));
   
   if (categoryItems.length === 0) return null;
   
@@ -1014,6 +1059,17 @@ function CategoryDropdown({ category, items, onItemClick, equippedItems }: Categ
           <span style={{ color: s.textMuted, fontSize: '12px', background: s.bgSecondary, padding: '2px 8px', borderRadius: '10px' }}>
             {itemCount}
           </span>
+          {hasNewItems && (
+            <span style={{
+              fontSize: '10px',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: s.successMuted,
+              color: s.success,
+              fontWeight: '600',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }}>NEW</span>
+          )}
         </div>
         <span style={{ color: s.textMuted, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
       </button>
@@ -1021,8 +1077,14 @@ function CategoryDropdown({ category, items, onItemClick, equippedItems }: Categ
       {isOpen && (
         <div style={{ background: s.bgSecondary, borderLeft: `3px solid ${category.color}20` }}>
           {categoryItems.map(item => (
-            <ItemRow key={item.instanceId} item={item} isEquipped={equippedItems.includes(item.instanceId)}
-              categoryColor={category.color} onClick={() => onItemClick(item)} />
+            <ItemRow 
+              key={item.instanceId} 
+              item={item} 
+              isEquipped={equippedItems.includes(item.instanceId)}
+              isNew={recentlyAddedItems.includes(item.instanceId)}
+              categoryColor={category.color} 
+              onClick={() => onItemClick(item)} 
+            />
           ))}
         </div>
       )}
@@ -1033,13 +1095,21 @@ function CategoryDropdown({ category, items, onItemClick, equippedItems }: Categ
 interface ItemRowProps {
   item: InventoryItem;
   isEquipped: boolean;
+  isNew?: boolean;
   categoryColor: string;
   onClick: () => void;
 }
 
-function ItemRow({ item, isEquipped, categoryColor, onClick }: ItemRowProps) {
+function ItemRow({ item, isEquipped, isNew = false, categoryColor, onClick }: ItemRowProps) {
   const [isHovered, setIsHovered] = useState(false);
   const condition = item.category === 'weapons' ? calculateWeaponCondition(item) : null;
+  
+  // Determine background based on state priority: new > equipped > hover
+  const getBackground = () => {
+    if (isNew) return `linear-gradient(90deg, ${s.successMuted}, transparent)`;
+    if (isHovered) return isEquipped ? s.cyanMuted : s.accentMuted;
+    return 'transparent';
+  };
   
   return (
     <button onClick={onClick} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}
@@ -1048,23 +1118,30 @@ function ItemRow({ item, isEquipped, categoryColor, onClick }: ItemRowProps) {
         display: 'flex',
         alignItems: 'center',
         padding: '10px 16px 10px 28px',
-        background: isHovered ? (isEquipped ? s.cyanMuted : s.accentMuted) : 'transparent',
+        background: getBackground(),
         border: 'none',
         borderBottom: `1px solid ${s.border}`,
+        borderLeft: isNew ? `3px solid ${s.success}` : undefined,
         cursor: 'pointer',
+        transition: 'background 0.3s ease, border-left 0.3s ease',
+        animation: isNew ? 'fade-in 0.3s ease-out' : undefined,
       }}>
       <div style={{
         width: '36px',
         height: '36px',
         borderRadius: '6px',
-        background: `linear-gradient(135deg, ${categoryColor}30, ${categoryColor}10)`,
-        border: `1px solid ${categoryColor}40`,
+        background: isNew 
+          ? `linear-gradient(135deg, ${s.success}30, ${s.success}10)` 
+          : `linear-gradient(135deg, ${categoryColor}30, ${categoryColor}10)`,
+        border: `1px solid ${isNew ? s.success : categoryColor}40`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: '12px',
         fontSize: '18px',
         position: 'relative',
+        boxShadow: isNew ? `0 0 12px ${s.success}40` : undefined,
+        transition: 'box-shadow 0.3s ease, background 0.3s ease',
       }}>
         {item.icon || '•'}
         {condition !== null && (
@@ -1083,9 +1160,22 @@ function ItemRow({ item, isEquipped, categoryColor, onClick }: ItemRowProps) {
       
       <div style={{ flex: 1, textAlign: 'left' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ color: isEquipped ? s.cyan : s.text, fontSize: '14px', fontWeight: isEquipped ? '600' : '400' }}>
+          <span style={{ color: isNew ? s.success : isEquipped ? s.cyan : s.text, fontSize: '14px', fontWeight: isEquipped || isNew ? '600' : '400' }}>
             {item.name}
           </span>
+          {isNew && (
+            <span style={{
+              marginLeft: '8px',
+              fontSize: '9px',
+              padding: '1px 5px',
+              borderRadius: '3px',
+              background: s.success,
+              color: '#fff',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>NEW</span>
+          )}
           {isEquipped && <EquippedBadge />}
           {item.quantity > 1 && <span style={{ color: s.textMuted, fontSize: '12px', marginLeft: '8px' }}>×{item.quantity}</span>}
         </div>
@@ -1096,6 +1186,7 @@ function ItemRow({ item, isEquipped, categoryColor, onClick }: ItemRowProps) {
     </button>
   );
 }
+
 
 interface ItemActionModalProps {
   item: InventoryItem;
@@ -1745,8 +1836,8 @@ export function InventoryScreen({ isOpen, onClose, availableMods = [] }: Invento
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
         <EquipSlotsPanel equipped={inv.state.equipped} items={inv.state.items} onSlotClick={(_, item) => item && setSelectedItem(item)} />
-        {Object.values(CATEGORIES).map(cat => (
-          <CategoryDropdown key={cat.id} category={cat} items={filteredItems} onItemClick={setSelectedItem} equippedItems={equippedIds} />
+{Object.values(CATEGORIES).map(cat => (
+          <CategoryDropdown key={cat.id} category={cat} items={filteredItems} onItemClick={setSelectedItem} equippedItems={equippedIds} recentlyAddedItems={inv.state.recentlyAddedItems} />
         ))}
       </div>
       
