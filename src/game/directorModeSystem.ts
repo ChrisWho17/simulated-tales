@@ -11,7 +11,7 @@ export type DirectorType =
   // Story & Pacing
   | 'cinematic' | 'tight_editor' | 'slow_burn' | 'montage_maker'
   // Player-Freedom
-  | 'sandbox' | 'yes_and' | 'choice_architect' | 'hands_off'
+  | 'sandbox' | 'yes_and' | 'choice_architect' | 'hands_off' | 'red_velvet'
   // Challenge & Consequence
   | 'old_school' | 'survival_warden' | 'tactician' | 'punishment_accountant'
   // Mystery & Mindgame
@@ -193,6 +193,20 @@ export const DIRECTOR_TYPES: Record<DirectorType, DirectorTypeProfile> = {
     tags: ['Minimal', 'Immersive', 'Sim'],
     modifiers: { worldPush: 0.10, hints: -0.30, invention: -0.20 },
     styleNotes: ['World evolves, you notice it', 'Sparse but meaningful narration'],
+  },
+  red_velvet: {
+    name: 'Red Velvet',
+    description: 'Intimate romance, sensual narratives, consensual adult interactions',
+    category: 'freedom',
+    tags: ['Romance', 'Sensual', 'Passion', 'Consent'],
+    modifiers: { invention: 0.25, worldPush: -0.20, timePressure: -0.25, failForward: 0.20 },
+    styleNotes: [
+      'Desire is the compass, consent is the map',
+      'NPCs communicate openly about attraction',
+      'Emotional connection drives encounters',
+      'Mutual desire unlocks story beats',
+      'Sensual scenes feel natural, not forced',
+    ],
   },
 
   // Challenge & Consequence
