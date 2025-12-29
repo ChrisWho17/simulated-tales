@@ -125,7 +125,8 @@ async function extractSceneWithAI(
   location: string | undefined,
   apiKey: string
 ): Promise<string> {
-  const storyContext = recentStory.slice(-5).join('\n\n');
+  // Use all provided story context (up to 10 messages)
+  const storyContext = recentStory.join('\n\n');
   
   const prompt = `You are a scene description extractor for an AI image generator. Analyze the story context and extract the EXACT visual scene that should be illustrated.
 

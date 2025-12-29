@@ -728,8 +728,8 @@ export function AdventureGame() {
     
     setIsGeneratingScene(true);
     try {
-      // Get recent story entries for context
-      const recentStoryContent = story.slice(-5).map(e => e.content);
+      // Get recent story entries for context (last 10 for better understanding)
+      const recentStoryContent = story.slice(-10).map(e => e.content);
       const lastPlayerAction = story.filter(e => e.role === 'user').slice(-1)[0]?.content;
       
       const response = await fetch(
@@ -1854,9 +1854,9 @@ export function AdventureGame() {
 
     setGeneratingImageFor(entryId);
     try {
-      // Get story context around this entry
+      // Get story context around this entry (up to 10 messages)
       const entryIndex = story.findIndex(e => e.id === entryId);
-      const contextStart = Math.max(0, entryIndex - 3);
+      const contextStart = Math.max(0, entryIndex - 9);
       const recentStoryContent = story.slice(contextStart, entryIndex + 1).map(e => e.content);
       const lastPlayerAction = story.slice(0, entryIndex + 1)
         .filter(e => e.role === 'user').slice(-1)[0]?.content;
