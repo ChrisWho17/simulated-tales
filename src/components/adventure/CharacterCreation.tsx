@@ -188,7 +188,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     setIsGeneratingPortrait(true);
     try {
       const appearanceDesc = formatAppearanceForAI({ ...appearance, detailLevel }, genre);
-      const selectedClassData = genreData.classes.find(c => c.id === selectedClass);
+      // Check custom class first, then blended classes
+      const selectedClassData = customClass && selectedClass === customClass.id
+        ? { name: customClass.name, portraitHints: [], clothingStyle: undefined }
+        : blendedClasses.find(c => c.id === selectedClass);
       const className = selectedClassData?.name || selectedClass;
       
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
@@ -200,8 +203,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           genre,
           name,
           detailLevel,
-          portraitHints: selectedClassData?.portraitHints || [],
-          clothingStyle: selectedClassData?.clothingStyle || undefined,
+          portraitHints: (selectedClassData as any)?.portraitHints || [],
+          clothingStyle: (selectedClassData as any)?.clothingStyle || undefined,
         }),
       });
 
@@ -1017,8 +1020,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     <h3 className="font-semibold text-primary mb-2">Character Summary</h3>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div><span className="text-muted-foreground">Name:</span> {name}</div>
-                      <div><span className="text-muted-foreground">Role:</span> {genreData.classes.find(c => c.id === selectedClass)?.name}</div>
-                      <div><span className="text-muted-foreground">Background:</span> {genreData.backgrounds.find(b => b.id === selectedBackground)?.name}</div>
+                      <div><span className="text-muted-foreground">Role:</span> {
+                        customClass && selectedClass === customClass.id
+                          ? customClass.name
+                          : blendedClasses.find(c => c.id === selectedClass)?.name || selectedClass
+                      }</div>
+                      <div><span className="text-muted-foreground">Background:</span> {
+                        blendedBackgrounds.find(b => b.id === selectedBackground)?.name || selectedBackground
+                      }</div>
                       <div><span className="text-muted-foreground">Starting {genreData.currency}:</span> {genreData.startingCurrency}</div>
                     </div>
                   </div>
