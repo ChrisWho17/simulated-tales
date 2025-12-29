@@ -1028,9 +1028,10 @@ interface CategoryDropdownProps {
   onItemClick: (item: InventoryItem) => void;
   equippedItems: string[];
   recentlyAddedItems: string[];
+  onDismissNew: (instanceId: string) => void;
 }
 
-function CategoryDropdown({ category, items, onItemClick, equippedItems, recentlyAddedItems }: CategoryDropdownProps) {
+function CategoryDropdown({ category, items, onItemClick, equippedItems, recentlyAddedItems, onDismissNew }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(true);
   const categoryItems = items.filter(item => item.category === category.id);
   const itemCount = categoryItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -1083,7 +1084,8 @@ function CategoryDropdown({ category, items, onItemClick, equippedItems, recentl
               isEquipped={equippedItems.includes(item.instanceId)}
               isNew={recentlyAddedItems.includes(item.instanceId)}
               categoryColor={category.color} 
-              onClick={() => onItemClick(item)} 
+              onClick={() => onItemClick(item)}
+              onDismissNew={() => onDismissNew(item.instanceId)}
             />
           ))}
         </div>
@@ -1098,9 +1100,10 @@ interface ItemRowProps {
   isNew?: boolean;
   categoryColor: string;
   onClick: () => void;
+  onDismissNew?: () => void;
 }
 
-function ItemRow({ item, isEquipped, isNew = false, categoryColor, onClick }: ItemRowProps) {
+function ItemRow({ item, isEquipped, isNew = false, categoryColor, onClick, onDismissNew }: ItemRowProps) {
   const [isHovered, setIsHovered] = useState(false);
   const condition = item.category === 'weapons' ? calculateWeaponCondition(item) : null;
   
@@ -1164,17 +1167,34 @@ function ItemRow({ item, isEquipped, isNew = false, categoryColor, onClick }: It
             {item.name}
           </span>
           {isNew && (
-            <span style={{
-              marginLeft: '8px',
-              fontSize: '9px',
-              padding: '1px 5px',
-              borderRadius: '3px',
-              background: s.success,
-              color: '#fff',
-              fontWeight: '700',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}>NEW</span>
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismissNew?.();
+              }}
+              style={{
+                marginLeft: '8px',
+                fontSize: '9px',
+                padding: '1px 5px',
+                borderRadius: '3px',
+                background: s.success,
+                color: '#fff',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s, transform 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+                e.currentTarget.style.transform = 'scale(0.95)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Click to dismiss"
+            >NEW</span>
           )}
           {isEquipped && <EquippedBadge />}
           {item.quantity > 1 && <span style={{ color: s.textMuted, fontSize: '12px', marginLeft: '8px' }}>×{item.quantity}</span>}
@@ -1837,7 +1857,15 @@ export function InventoryScreen({ isOpen, onClose, availableMods = [] }: Invento
       <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
         <EquipSlotsPanel equipped={inv.state.equipped} items={inv.state.items} onSlotClick={(_, item) => item && setSelectedItem(item)} />
 {Object.values(CATEGORIES).map(cat => (
-          <CategoryDropdown key={cat.id} category={cat} items={filteredItems} onItemClick={setSelectedItem} equippedItems={equippedIds} recentlyAddedItems={inv.state.recentlyAddedItems} />
+          <CategoryDropdown 
+            key={cat.id} 
+            category={cat} 
+            items={filteredItems} 
+            onItemClick={setSelectedItem} 
+            equippedItems={equippedIds} 
+            recentlyAddedItems={inv.state.recentlyAddedItems}
+            onDismissNew={(instanceId) => inv.dispatch({ type: ACTIONS.CLEAR_RECENTLY_ADDED, payload: { instanceId } })}
+          />
         ))}
       </div>
       
