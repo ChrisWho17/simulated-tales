@@ -232,7 +232,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   };
 
   const handleComplete = () => {
-    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined);
+    // Resolve class and background from blended lists or custom class
+    let classData = customClass && selectedClass === customClass.id
+      ? { id: customClass.id, name: customClass.name, description: customClass.description, statBonuses: customClass.statBonuses, startingItems: [] as string[], abilities: customClass.abilities, portraitHints: [] as string[], clothingStyle: undefined }
+      : blendedClasses.find(c => c.id === selectedClass);
+    
+    const backgroundData = blendedBackgrounds.find(b => b.id === selectedBackground);
+    
+    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined, classData, backgroundData);
     // Add phobias to character data
     (character as any).phobias = selectedPhobias;
     // Add custom class data if using a custom class

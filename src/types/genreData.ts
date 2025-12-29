@@ -368,35 +368,58 @@ export function createGenreCharacter(
   traits: string[],
   statAllocation: Partial<CharacterStats>,
   genre: GameGenre,
-  portraitUrl?: string
+  portraitUrl?: string,
+  // Optional overrides for hybrid/custom classes
+  classOverride?: CharacterClass,
+  backgroundOverride?: CharacterBackground
 ): RPGCharacter & { portraitUrl?: string } {
   const genreData = GENRE_DATA[genre];
-  const characterClass = genreData.classes.find(c => c.id === classId)!;
-  const background = genreData.backgrounds.find(b => b.id === backgroundId)!;
+  // Use override if provided, otherwise look up in genre data
+  const characterClass = classOverride || genreData.classes.find(c => c.id === classId);
+  const background = backgroundOverride || genreData.backgrounds.find(b => b.id === backgroundId);
+
+  // Fallback defaults if class/background not found
+  const safeClass: CharacterClass = characterClass || {
+    id: classId,
+    name: classId,
+    description: 'Custom class',
+    statBonuses: {},
+    startingItems: [],
+    abilities: [],
+  };
+  
+  const safeBackground: CharacterBackground = background || {
+    id: backgroundId,
+    name: backgroundId,
+    description: 'Custom background',
+    statBonuses: {},
+    startingItems: [],
+    skills: [],
+  };
 
   const stats: CharacterStats = {
-    strength: 8 + (statAllocation.strength || 0) + (characterClass.statBonuses.strength || 0) + (background.statBonuses.strength || 0),
-    dexterity: 8 + (statAllocation.dexterity || 0) + (characterClass.statBonuses.dexterity || 0) + (background.statBonuses.dexterity || 0),
-    constitution: 8 + (statAllocation.constitution || 0) + (characterClass.statBonuses.constitution || 0) + (background.statBonuses.constitution || 0),
-    intelligence: 8 + (statAllocation.intelligence || 0) + (characterClass.statBonuses.intelligence || 0) + (background.statBonuses.intelligence || 0),
-    wisdom: 8 + (statAllocation.wisdom || 0) + (characterClass.statBonuses.wisdom || 0) + (background.statBonuses.wisdom || 0),
-    charisma: 8 + (statAllocation.charisma || 0) + (characterClass.statBonuses.charisma || 0) + (background.statBonuses.charisma || 0),
+    strength: 8 + (statAllocation.strength || 0) + (safeClass.statBonuses.strength || 0) + (safeBackground.statBonuses.strength || 0),
+    dexterity: 8 + (statAllocation.dexterity || 0) + (safeClass.statBonuses.dexterity || 0) + (safeBackground.statBonuses.dexterity || 0),
+    constitution: 8 + (statAllocation.constitution || 0) + (safeClass.statBonuses.constitution || 0) + (safeBackground.statBonuses.constitution || 0),
+    intelligence: 8 + (statAllocation.intelligence || 0) + (safeClass.statBonuses.intelligence || 0) + (safeBackground.statBonuses.intelligence || 0),
+    wisdom: 8 + (statAllocation.wisdom || 0) + (safeClass.statBonuses.wisdom || 0) + (safeBackground.statBonuses.wisdom || 0),
+    charisma: 8 + (statAllocation.charisma || 0) + (safeClass.statBonuses.charisma || 0) + (safeBackground.statBonuses.charisma || 0),
   };
 
   const maxHealth = calculateMaxHealth(stats, 1);
 
   const inventory: InventoryItem[] = [
-    ...characterClass.startingItems.map((item, idx) => ({
+    ...safeClass.startingItems.map((item, idx) => ({
       id: `class_${idx}`,
       name: item,
-      description: `Starting ${characterClass.name} equipment`,
+      description: `Starting ${safeClass.name} equipment`,
       quantity: 1,
       type: 'tool' as const,
     })),
-    ...background.startingItems.map((item, idx) => ({
+    ...safeBackground.startingItems.map((item, idx) => ({
       id: `bg_${idx}`,
       name: item,
-      description: `From your ${background.name} background`,
+      description: `From your ${safeBackground.name} background`,
       quantity: 1,
       type: 'tool' as const,
     })),
@@ -413,8 +436,8 @@ export function createGenreCharacter(
     experience: 0,
     level: 1,
     inventory,
-    abilities: [...characterClass.abilities],
-    skills: [...background.skills],
+    abilities: [...safeClass.abilities],
+    skills: [...safeBackground.skills],
     gold: genreData.startingCurrency,
     portraitUrl,
   };
