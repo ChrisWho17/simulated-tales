@@ -1,6 +1,6 @@
 // ============================================================================
 // CAMPAIGN INVENTORY SYNC - Bridges inventory state with campaign system
-// Ensures complete isolation between campaigns
+// Ensures complete isolation between campaigns AND initializes starting gear
 // ============================================================================
 
 import React, { useEffect, useRef, useCallback } from 'react';
@@ -10,6 +10,10 @@ import {
   saveInventoryForCampaign, 
   loadInventoryForCampaign 
 } from '@/lib/campaignStorage';
+import {
+  initializeStartingGear,
+  needsStartingGear,
+} from '@/game/storyInventoryBridge';
 
 interface CampaignInventorySyncProps {
   children: React.ReactNode;
@@ -22,10 +26,12 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
   const lastCampaignIdRef = useRef<string | null>(null);
   const isSyncingRef = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitializedGearRef = useRef<Set<string>>(new Set());
   
   const activeCampaignId = campaign?.activeCampaignId ?? null;
+  const activeCampaign = campaign?.activeCampaign ?? null;
   
-  // Load inventory when campaign changes
+  // Load inventory and initialize starting gear when campaign changes
   useEffect(() => {
     if (!inventory) return;
     
@@ -49,11 +55,11 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
       // Step 3: Load inventory for new campaign (if any)
       if (activeCampaignId) {
         const savedInventory = loadInventoryForCampaign(activeCampaignId);
-        if (savedInventory) {
+        if (savedInventory && (savedInventory as any).items?.length > 0) {
           inventory.dispatch({ type: ACTIONS.LOAD_STATE, payload: savedInventory });
           console.log(`[CampaignInventorySync] Loaded inventory for new campaign`);
         } else {
-          console.log(`[CampaignInventorySync] No saved inventory for new campaign - starting fresh`);
+          console.log(`[CampaignInventorySync] No saved inventory - will initialize starting gear`);
         }
       }
       
@@ -61,6 +67,36 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
       lastCampaignIdRef.current = activeCampaignId;
     }
   }, [activeCampaignId, inventory]);
+  
+  // Initialize starting gear for new campaigns with empty inventory
+  useEffect(() => {
+    if (!inventory || !activeCampaign || !activeCampaignId || isSyncingRef.current) return;
+    
+    // Check if we've already initialized gear for this campaign
+    if (hasInitializedGearRef.current.has(activeCampaignId)) return;
+    
+    // Check if inventory is empty and needs starting gear
+    if (needsStartingGear(inventory.state)) {
+      const genre = activeCampaign.meta?.primaryGenre || 'fantasy';
+      const playerClass = activeCampaign.player?.classId || 'default';
+      
+      console.log(`[CampaignInventorySync] Initializing starting gear for ${genre}/${playerClass}`);
+      
+      // Mark as initialized BEFORE adding items to prevent loops
+      hasInitializedGearRef.current.add(activeCampaignId);
+      
+      // Small delay to ensure state is settled
+      setTimeout(() => {
+        if (needsStartingGear(inventory.state)) {
+          initializeStartingGear(inventory, genre, playerClass);
+          console.log(`[CampaignInventorySync] Starting gear initialized`);
+        }
+      }, 100);
+    } else {
+      // Inventory already has items, mark as initialized
+      hasInitializedGearRef.current.add(activeCampaignId);
+    }
+  }, [activeCampaign, activeCampaignId, inventory, inventory?.state.items.length]);
   
   // Auto-save inventory when it changes (debounced)
   useEffect(() => {
