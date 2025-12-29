@@ -87,7 +87,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   // Nuclear wipe state
   const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
   const [nuclearStep, setNuclearStep] = useState(0); // 0: initial, 1: confirm, 2: final
-  const [storageStats, setStorageStats] = useState<ReturnType<typeof getStorageStats> | null>(null);
+  const [storageStats, setStorageStats] = useState<ReturnType<typeof getStorageStats> | null>(() => getStorageStats());
   
   const canCreate = canCreateCampaign();
   
@@ -173,6 +173,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     if (deleteConfirm) {
       deleteCampaign(deleteConfirm.id);
       setDeleteConfirm(null);
+      setStorageStats(getStorageStats()); // Refresh stats
       toast.success(`Deleted "${deleteConfirm.name}"`);
     }
   }, [deleteConfirm, deleteCampaign]);
@@ -182,6 +183,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     if (duplicateTarget && duplicateName.trim()) {
       const result = duplicateCampaign(duplicateTarget.id, duplicateName.trim());
       if (result) {
+        setStorageStats(getStorageStats()); // Refresh stats
         toast.success(`Created "${duplicateName.trim()}"`);
       } else {
         toast.error('Failed to duplicate campaign');
@@ -220,6 +222,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       const json = event.target?.result as string;
       const result = importCampaign(json);
       if (result) {
+        setStorageStats(getStorageStats()); // Refresh stats
         toast.success(`Imported "${result.meta.name}"`);
       } else {
         toast.error('Failed to import campaign');
@@ -268,9 +271,17 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               <Sparkles className="h-8 w-8 text-primary" />
               Your Campaigns
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {campaigns.length} of {MAX_CAMPAIGNS} campaign slots used
-            </p>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-muted-foreground">
+                {campaigns.length} of {MAX_CAMPAIGNS} campaign slots used
+              </p>
+              {storageStats && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                  <HardDrive className="h-3 w-3" />
+                  <span>{(storageStats.totalBytes / 1024).toFixed(1)} KB</span>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex gap-2">
