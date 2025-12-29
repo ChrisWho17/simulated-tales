@@ -61,7 +61,147 @@ export const ACTIONS = {
   SET_WEAPON_DETAIL_LEVEL: 'SET_WEAPON_DETAIL_LEVEL',
   TOGGLE_WEIGHT_SYSTEM: 'TOGGLE_WEIGHT_SYSTEM',
   SET_CAPACITY: 'SET_CAPACITY',
+  // Patching
+  PATCH_ITEMS: 'PATCH_ITEMS',
 };
+
+// ============================================================================
+// AUTO-ASSIGN EQUIP SLOTS
+// ============================================================================
+
+// Default equip slots by category
+const DEFAULT_EQUIP_SLOTS: Record<string, string[]> = {
+  weapons: ['primaryWeapon', 'sidearm'],
+  apparel: [], // Will be determined by type
+  aid: [],     // Consumables don't equip
+  misc: ['accessory1', 'accessory2'],
+  ammo: [],    // Ammo doesn't equip
+  keyItems: [],// Key items don't equip
+};
+
+// More specific slots by item type
+const EQUIP_SLOTS_BY_TYPE: Record<string, string[]> = {
+  // Weapons
+  'weapon': ['primaryWeapon', 'sidearm'],
+  'rifle': ['primaryWeapon'],
+  'shotgun': ['primaryWeapon'],
+  'smg': ['primaryWeapon', 'sidearm'],
+  'pistol': ['primaryWeapon', 'sidearm'],
+  'revolver': ['primaryWeapon', 'sidearm'],
+  'melee': ['primaryWeapon', 'sidearm'],
+  'knife': ['sidearm'],
+  'grenade': [],
+  
+  // Apparel
+  'headwear': ['head'],
+  'helmet': ['head'],
+  'hat': ['head'],
+  'torso': ['torso'],
+  'armor': ['torso'],
+  'vest': ['torso'],
+  'jacket': ['torso'],
+  'clothing': ['torso'],
+  'gloves': ['hands'],
+  'pants': ['legs'],
+  'legarmor': ['legs'],
+  'footwear': ['feet'],
+  'boots': ['feet'],
+  'shoes': ['feet'],
+  
+  // Accessories
+  'accessory': ['accessory1', 'accessory2'],
+  'misc': ['accessory1', 'accessory2'],
+  'radio': ['accessory1', 'accessory2'],
+  'watch': ['accessory1', 'accessory2'],
+};
+
+// Auto-assign equipSlots to an item if missing
+export function ensureEquipSlots<T extends Partial<InventoryItem>>(item: T): T {
+  // If item already has valid equipSlots, return as-is
+  if (item.equipSlots && Array.isArray(item.equipSlots) && item.equipSlots.length > 0) {
+    return item;
+  }
+  
+  let assignedSlots: string[] = [];
+  
+  // Try to determine slots from item type first (more specific)
+  if (item.type) {
+    const typeKey = item.type.toLowerCase();
+    if (EQUIP_SLOTS_BY_TYPE[typeKey]) {
+      assignedSlots = EQUIP_SLOTS_BY_TYPE[typeKey];
+    }
+  }
+  
+  // If no slots from type, try weaponType
+  if (assignedSlots.length === 0 && item.weaponType) {
+    const weaponTypeKey = item.weaponType.toLowerCase();
+    if (EQUIP_SLOTS_BY_TYPE[weaponTypeKey]) {
+      assignedSlots = EQUIP_SLOTS_BY_TYPE[weaponTypeKey];
+    }
+  }
+  
+  // If still no slots, fall back to category defaults
+  if (assignedSlots.length === 0 && item.category) {
+    assignedSlots = DEFAULT_EQUIP_SLOTS[item.category] || [];
+  }
+  
+  // Special case: if category is 'weapons' and still no slots, default to primary+sidearm
+  if (assignedSlots.length === 0 && item.category === 'weapons') {
+    assignedSlots = ['primaryWeapon', 'sidearm'];
+  }
+  
+  if (assignedSlots.length > 0) {
+    console.log(`[EQUIP SLOTS] Auto-assigned "${item.name}" → [${assignedSlots.join(', ')}]`);
+  }
+  
+  return {
+    ...item,
+    equipSlots: assignedSlots,
+  };
+}
+
+// Helper functions for creating items with proper slots
+export function createWeaponItem(baseData: Partial<InventoryItem>): Partial<InventoryItem> {
+  return ensureEquipSlots({
+    category: 'weapons',
+    stackable: false,
+    consumable: false,
+    weight: 3,
+    value: 50,
+    stats: {
+      damage: 50,
+      accuracy: 50,
+      fireRate: 50,
+      range: 50,
+      stability: 50,
+      handling: 50,
+    },
+    ...baseData,
+  });
+}
+
+export function createApparelItem(baseData: Partial<InventoryItem>): Partial<InventoryItem> {
+  return ensureEquipSlots({
+    category: 'apparel',
+    stackable: false,
+    consumable: false,
+    weight: 1,
+    value: 25,
+    ...baseData,
+  });
+}
+
+export function createConsumableItem(baseData: Partial<InventoryItem>): Partial<InventoryItem> {
+  return {
+    category: 'aid',
+    stackable: true,
+    consumable: true,
+    equipSlots: [], // Consumables don't equip
+    weight: 0.2,
+    value: 10,
+    ...baseData,
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -224,17 +364,21 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
   switch (action.type) {
     case ACTIONS.ADD_ITEM: {
       const { item, quantity = 1 } = action.payload;
-      const existingIndex = state.items.findIndex(i => i.id === item.id && i.stackable);
+      
+      // AUTO-ASSIGN EQUIP SLOTS if missing
+      const itemWithSlots = ensureEquipSlots(item);
+      
+      const existingIndex = state.items.findIndex(i => i.id === itemWithSlots.id && i.stackable);
       
       let newItems: InventoryItem[];
-      if (existingIndex !== -1 && item.stackable) {
+      if (existingIndex !== -1 && itemWithSlots.stackable) {
         newItems = state.items.map((i, idx) => 
           idx === existingIndex ? { ...i, quantity: i.quantity + quantity } : i
         );
       } else {
         // Initialize weapon condition if it's a weapon
-        let newItem: InventoryItem = { ...item, quantity, instanceId: `${item.id}-${timestamp}` };
-        if (item.category === 'weapons' && !item.condition) {
+        let newItem: InventoryItem = { ...itemWithSlots, quantity, instanceId: `${itemWithSlots.id}-${timestamp}` } as InventoryItem;
+        if (itemWithSlots.category === 'weapons' && !itemWithSlots.condition) {
           newItem.condition = {
             barrelWear: 0,
             carbonBuildup: 0,
@@ -243,7 +387,7 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
             roundsFired: 0,
             lastMaintenance: timestamp,
           };
-          newItem.mods = item.mods || {};
+          newItem.mods = itemWithSlots.mods || {};
         }
         newItems = [...state.items, newItem];
       }
@@ -254,11 +398,18 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
         settings: { ...state.settings, currentWeight: calculateWeight(newItems) },
         lastAction: {
           type: 'ADD',
-          item,
+          item: itemWithSlots,
           quantity,
           timestamp,
-          narrativeHook: `picked up ${quantity > 1 ? `${quantity}x ` : ''}${item.name}`,
+          narrativeHook: `picked up ${quantity > 1 ? `${quantity}x ` : ''}${itemWithSlots.name}`,
         },
+      };
+    }
+    
+    case ACTIONS.PATCH_ITEMS: {
+      return {
+        ...state,
+        items: action.payload.items,
       };
     }
     
