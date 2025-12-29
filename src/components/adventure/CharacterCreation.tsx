@@ -187,45 +187,41 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      const appearanceDesc = formatAppearanceForAI({ ...appearance, detailLevel }, genre);
-      // Check custom class first, then blended classes
+      const { generatePortraitWithFlux } = await import('@/services/fluxImageGeneration');
+      const { buildPortraitPrompt } = await import('@/utils/portraitPrompts');
+      
+      // Get class name for prompt
       const selectedClassData = customClass && selectedClass === customClass.id
-        ? { name: customClass.name, portraitHints: [], clothingStyle: undefined }
+        ? { name: customClass.name }
         : blendedClasses.find(c => c.id === selectedClass);
       const className = selectedClassData?.name || selectedClass;
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appearance: appearanceDesc,
-          characterClass: className,
-          genre,
-          name,
-          detailLevel,
-          portraitHints: (selectedClassData as any)?.portraitHints || [],
-          clothingStyle: (selectedClassData as any)?.clothingStyle || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 429) {
-          toast.error('Rate limit exceeded', { description: 'Please try again in a moment.' });
-        } else if (response.status === 402) {
-          toast.error('Usage limit reached', { description: 'Please add credits to continue.' });
-        } else {
-          toast.error('Failed to generate portrait', { description: errorData.error });
-        }
-        return;
-      }
-
-      const data = await response.json();
-      setPortraitUrl(data.imageUrl);
+      // Build character appearance data
+      const characterData = {
+        gender: appearance.simple?.gender || 'male',
+        build: appearance.simple?.build || 'average',
+        height: appearance.simple?.height || 'average',
+        hairColor: appearance.detailed?.hairColor || 'brown',
+        hairStyle: appearance.detailed?.hairStyle || 'short',
+        eyeColor: appearance.detailed?.eyeColor || 'brown',
+        skinTone: appearance.detailed?.skinTone || 'medium',
+        details: [
+          ...(appearance.detailed?.distinguishingFeatures || []),
+          ...(appearance.detailed?.accessories || []),
+        ],
+      };
+      
+      const prompt = buildPortraitPrompt(characterData, genre, 'neutral', className);
+      console.log('[FLUX] Generating portrait with prompt:', prompt);
+      
+      const imageUrl = await generatePortraitWithFlux(prompt);
+      setPortraitUrl(imageUrl);
       toast.success('Portrait generated!');
     } catch (error) {
       console.error('Error generating portrait:', error);
-      toast.error('Failed to generate portrait');
+      toast.error('Failed to generate portrait', { 
+        description: error instanceof Error ? error.message : 'Unknown error' 
+      });
     } finally {
       setIsGeneratingPortrait(false);
     }
