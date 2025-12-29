@@ -51,11 +51,7 @@ import {
 import {
   getPressureAtmosphere,
 } from '@/game/pressureClockSystem';
-import {
-  buildObjectOwnershipContext,
-  validateObjectRegistry,
-  repairObjectRegistry,
-} from '@/game/objectRegistrySystem';
+// Note: objectRegistrySystem imports removed - using campaign-isolated inventory system instead
 import { buildInventoryContext } from '@/game/campaignInventorySystem';
 import {
   buildNPCIdentityContext,
@@ -642,6 +638,7 @@ export function AdventureGame() {
   }, [settings.languageSettings]);
   
   // === PERIODIC VALIDATION: Run every 5 turns to catch drift ===
+  // Note: Object registry validation removed - using campaign-isolated inventory system
   const lastValidationTurn = useRef<number>(0);
   useEffect(() => {
     const currentTurn = campaignMemory?.campaign.currentTick || 0;
@@ -652,14 +649,6 @@ export function AdventureGame() {
     
     console.log(`[Consistency Validation] Running at turn ${currentTurn}...`);
     
-    // Validate object registry
-    const objectErrors = validateObjectRegistry();
-    if (objectErrors.length > 0) {
-      console.warn('[Consistency] Object registry errors detected:', objectErrors);
-      repairObjectRegistry(objectErrors);
-      toast.info(`Fixed ${objectErrors.length} object consistency issue(s)`, { duration: 3000 });
-    }
-    
     // Validate NPC relationships
     const npcErrors = validateNPCRelationships();
     if (npcErrors.length > 0) {
@@ -668,7 +657,7 @@ export function AdventureGame() {
       toast.info(`Fixed ${npcErrors.length} NPC consistency issue(s)`, { duration: 3000 });
     }
     
-    if (objectErrors.length === 0 && npcErrors.length === 0) {
+    if (npcErrors.length === 0) {
       console.log('[Consistency Validation] No issues found.');
     }
   }, [campaignMemory?.campaign.currentTick]);
