@@ -207,12 +207,23 @@ export interface CampaignContextType {
 }
 
 // ============================================================================
-// STORAGE KEYS
+// STORAGE KEYS - Complete isolation per campaign
 // ============================================================================
 
-export const CAMPAIGN_STORAGE_PREFIX = 'simtales_campaign_';
-export const CAMPAIGN_INDEX_KEY = 'simtales_campaign_index';
-export const ACTIVE_CAMPAIGN_KEY = 'simtales_active_campaign';
+export const CAMPAIGN_STORAGE_PREFIX = 'lwe_campaign_';
+export const CAMPAIGN_INDEX_KEY = 'lwe_campaign_index';
+export const ACTIVE_CAMPAIGN_KEY = 'lwe_active_campaign_id';
+export const INVENTORY_STORAGE_PREFIX = 'lwe_inventory_';
+export const GAME_STATE_STORAGE_PREFIX = 'lwe_gamestate_';
 export const MAX_CAMPAIGNS = 20;
 export const MAX_CHECKPOINTS = 5;
 export const AUTO_SAVE_INTERVAL = 60000; // 60 seconds
+
+// Get all storage keys for a campaign
+export function getCampaignStorageKeys(campaignId: string): string[] {
+  return [
+    `${CAMPAIGN_STORAGE_PREFIX}${campaignId}`,
+    `${INVENTORY_STORAGE_PREFIX}${campaignId}`,
+    `${GAME_STATE_STORAGE_PREFIX}${campaignId}`,
+  ];
+}

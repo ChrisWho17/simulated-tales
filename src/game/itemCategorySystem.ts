@@ -518,43 +518,36 @@ export function generateItemFromStory(
 }
 
 // ============================================================================
-// INVENTORY STATE PERSISTENCE
+// INVENTORY STATE PERSISTENCE - DEPRECATED
+// Use campaignStorage.ts functions instead for campaign-scoped storage
+// These functions are kept for legacy compatibility but should not be used
 // ============================================================================
 
+/** @deprecated Use saveInventoryForCampaign from campaignStorage.ts */
 export const INVENTORY_STORAGE_KEY = 'game_inventory_state';
 
+/** @deprecated Use saveInventoryForCampaign from campaignStorage.ts */
 export function saveInventoryState(state: InventoryState): void {
-  try {
-    const serialized = JSON.stringify({
-      items: state.items,
-      equipped: state.equipped,
-      settings: state.settings,
-      savedAt: Date.now(),
-    });
-    localStorage.setItem(INVENTORY_STORAGE_KEY, serialized);
-    console.log('[INVENTORY] State saved:', state.items.length, 'items');
-  } catch (error) {
-    console.error('[INVENTORY] Failed to save state:', error);
-  }
+  console.warn('[INVENTORY] saveInventoryState is deprecated - use saveInventoryForCampaign instead');
+  // No-op - inventory is now saved per-campaign by CampaignInventorySync
 }
 
+/** @deprecated Use loadInventoryForCampaign from campaignStorage.ts */
 export function loadInventoryState(): InventoryState | null {
-  try {
-    const serialized = localStorage.getItem(INVENTORY_STORAGE_KEY);
-    if (!serialized) return null;
-    
-    const saved = JSON.parse(serialized);
-    console.log('[INVENTORY] State loaded:', saved.items?.length, 'items');
-    return saved;
-  } catch (error) {
-    console.error('[INVENTORY] Failed to load state:', error);
-    return null;
+  console.warn('[INVENTORY] loadInventoryState is deprecated - use loadInventoryForCampaign instead');
+  // Check for legacy data and warn
+  const legacy = localStorage.getItem(INVENTORY_STORAGE_KEY);
+  if (legacy) {
+    console.warn('[INVENTORY] Found legacy inventory data - should be migrated to campaign-scoped storage');
   }
+  return null;
 }
 
+/** @deprecated Inventory is now cleared per-campaign */
 export function clearInventoryState(): void {
+  // Clean up legacy key if it exists
   localStorage.removeItem(INVENTORY_STORAGE_KEY);
-  console.log('[INVENTORY] State cleared');
+  console.log('[INVENTORY] Legacy storage key cleared');
 }
 
 // ============================================================================

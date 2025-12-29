@@ -7,3 +7,4 @@ export { SavesDropdown } from './SavesDropdown';
 export { SaveRecoveryModal } from './SaveRecoveryModal';
 export { RecoveryHistoryPanel } from './RecoveryHistoryPanel';
 export { AskAIHelpModal } from './AskAIHelpModal';
+export { CampaignInventorySync } from './CampaignInventorySync';
