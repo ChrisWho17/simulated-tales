@@ -1386,22 +1386,23 @@ export function AdventureDisplay({
 
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
-        <div className="flex items-center justify-between px-2 py-1">
-          {/* All icons in a single row, evenly spaced */}
-          <div className="flex items-center justify-between w-full">
-            <h1 
-              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text"
-              data-text="UNTOLD"
-            >
-              UNTOLD
-            </h1>
-            
+        <div className="flex items-center justify-between px-2 py-1 gap-1">
+          {/* Title */}
+          <h1 
+            className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0"
+            data-text="UNTOLD"
+          >
+            UNTOLD
+          </h1>
+          
+          {/* Toolbar buttons - grouped together with no-shrink */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
             {/* Weather Button */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`h-7 w-7 frosted-button ${
+              className={`h-7 w-7 flex-shrink-0 frosted-button ${
                 weatherState.current === 'storm' ? 'text-yellow-400' : 
                 weatherState.current === 'rain' ? 'text-blue-400' : 
                 weatherState.current === 'fog' ? 'text-violet-400' : 
@@ -1434,7 +1435,7 @@ export function AdventureDisplay({
             
             {/* Audio Status Indicator */}
             <div 
-              className="h-7 w-7 flex items-center justify-center"
+              className="h-7 w-7 flex-shrink-0 flex items-center justify-center"
               title={
                 !audioInitialized ? 'Click to enable audio' :
                 !soundsReady ? `Loading sounds: ${preloadProgress?.loaded || 0}/${preloadProgress?.total || 0}` :
@@ -1455,7 +1456,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowCharacterSheet(true)}
-              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Character Sheet"
             >
               <ScrollText className="w-4 h-4" />
@@ -1466,21 +1467,23 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowInventory(true)}
-              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Inventory (Ctrl+I)"
             >
               <Backpack className="w-4 h-4" />
             </Button>
             
             {/* Saves Dropdown */}
-            <SavesDropdown />
+            <div className="flex-shrink-0">
+              <SavesDropdown />
+            </div>
             
             {/* Settings */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowSettings(true)}
-              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Settings"
             >
               <Sliders className="w-4 h-4" />
@@ -1491,7 +1494,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={onRestart}
-              className="h-7 w-7 frosted-button text-muted-foreground/70 hover:text-destructive"
+              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
               title="New Adventure"
             >
               <RotateCcw className="w-4 h-4" />
