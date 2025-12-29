@@ -264,6 +264,13 @@ interface AdventureRequest {
   weatherContext?: WeatherContext;
   // LIVING WORLD CONTEXT - Properties, rivals, factions
   livingWorldContext?: LivingWorldContext;
+  // NEW: NARRATIVE CONTRACT - Universal rules, genre bible, spawn packet
+  narrativeContractContext?: {
+    universalRules: string;     // Hard rules for every scene (minimum paragraphs, sensory detail, etc.)
+    genreBible: string;         // Genre-specific tone and rails
+    spawnPacket: string;        // Role + gear + immediate context
+    isOpening: boolean;         // Whether this is the first scene
+  };
 }
 
 // ============= NPC PERSONALITY SYSTEM =============
@@ -639,7 +646,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, weatherContext, livingWorldContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, weatherContext, livingWorldContext, narrativeContractContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -664,6 +671,89 @@ CRITICAL: You MUST stay within this genre contract.
 - Use the ESCALATION MENU to raise stakes appropriately
 - Adapt your vocabulary, tone, and elements to match the genre
 - If you need to increase drama, choose from the escalation options, NOT from other genres`;
+    }
+    
+    // === NARRATIVE CONTRACT - Universal rules, genre bible, spawn packet ===
+    // This is the PRIMARY depth enforcement system - fixes "one-liner syndrome"
+    if (narrativeContractContext) {
+      // Add universal rules first (most important)
+      if (narrativeContractContext.universalRules) {
+        systemContent += `\n\n${narrativeContractContext.universalRules}`;
+      }
+      
+      // Add genre bible (genre-specific rails)
+      if (narrativeContractContext.genreBible) {
+        systemContent += `\n\n${narrativeContractContext.genreBible}`;
+      }
+      
+      // Add spawn packet (role + gear + context)
+      if (narrativeContractContext.spawnPacket) {
+        systemContent += `\n\n${narrativeContractContext.spawnPacket}`;
+      }
+      
+      // Add scene structure requirements based on whether this is opening or continuation
+      if (narrativeContractContext.isOpening) {
+        systemContent += `\n\n===== SCENE STRUCTURE REQUIREMENTS (GRAND OPENING) =====
+
+Write Scene 1 using the RULES + GENRE_BIBLE + SPAWN_PACKET.
+
+Structure requirements:
+1) COLD OPEN (1 paragraph): Drop into motion or tension immediately. No throat-clearing.
+2) GROUNDING (2 paragraphs): Environment + sensory + genre details; show the world moving.
+3) ROLE LENS (1 paragraph): What the role notices, what they fear, what they plan.
+4) IMMEDIATE OBJECTIVE (1 paragraph): What must be done in the next 5 minutes and why.
+5) OBSTACLE/THREAT (2 paragraphs): A direct complication + a looming consequence.
+6) HOOKS (1 paragraph): Reveal 2 unresolved threads that persist.
+
+Then output the DELTA LEDGER.
+
+CRITICAL: Mention each starting inventory item at least once in natural context (seeing, carrying, checking, counting). Show the weight and presence of gear. Do not add new items.
+
+Example of role-locked, sensory, inventory-anchored writing:
+
+BAD: "You have a rifle."
+GOOD: "Your rifle's sling bites your shoulder through wet fabric. You thumb the mag, feel the rounds seated, then realize your hands are shaking anyway."
+
+BAD: "You wait in the forest."
+GOOD: "Rainwater drips from oak leaves onto your hood, each drop a cold tap of patience. Somewhere ahead, where the mist thickens between black trees, something moves without the rhythm of wind."`;
+      } else {
+        systemContent += `\n\n===== SCENE STRUCTURE REQUIREMENTS (CONTINUATION) =====
+
+Continue the story using the RULES + GENRE_BIBLE.
+
+Structure requirements:
+1) CONSEQUENCE (1-2 paragraphs): Show immediate result of player action with sensory detail.
+2) WORLD MOTION (1-2 paragraphs): The world reacts; NPCs act; environment shifts.
+3) COMPLICATION (1-2 paragraphs): New obstacle or escalation emerges.
+4) CHOICE MOMENT (1 paragraph): Present the new decision point.
+5) HOOKS UPDATE (1 paragraph): Which threads advance, which simmer.
+
+Keep role lens active. Show inventory items when relevant (reloading, checking supplies, equipment status).`;
+      }
+      
+      // Add delta ledger instructions
+      systemContent += `\n\n===== DELTA LEDGER (REQUIRED AT END OF EVERY RESPONSE) =====
+
+At the end of EVERY response, you MUST output this exact structure:
+
+---INVENTORY_DELTA---
+Added: (none OR list items acquired this scene)
+Removed: (none OR list items lost/given away)
+Used/Consumed: (none OR list items expended)
+Notes: (brief context if any changes occurred)
+
+---STATE_DELTA---
+New facts: (established world/character truths)
+Injuries/Conditions: (physical state changes)
+Relationships/Reputation: (social changes)
+Flags/Clocks: (story triggers, time pressure)
+
+---NEXT_HOOKS---
+1) [immediate hook - what must be addressed now]
+2) [looming hook - consequence if delayed]
+
+If NOTHING changed, you must still output the structure with "(none)" entries.
+This is MANDATORY. No exceptions. No empty sections.`;
     }
     
     // === WEATHER CONTEXT - CRITICAL FOR UI SYNC ===
