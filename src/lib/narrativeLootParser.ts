@@ -90,49 +90,176 @@ const MEDIUM_CONFIDENCE_DROP_PATTERNS = [
   /you\s+(?:stash|hide|conceal)\s+(?:your\s+|the\s+|a\s+|an\s+)?([A-Za-z][a-zA-Z\s-]+?)(?:\s+behind|\s+under|\s+in)/gi,
 ];
 
-// Items to exclude (common false positives)
+// Items to exclude (common false positives) - EXTENSIVE list to prevent garbage items
 const EXCLUDED_WORDS = new Set([
-  'you', 'your', 'the', 'and', 'but', 'or', 'for', 'with', 'from',
-  'moment', 'breath', 'step', 'look', 'glance', 'opportunity',
-  'chance', 'time', 'position', 'stance', 'aim', 'shot', 'action',
+  // Articles and conjunctions
+  'you', 'your', 'the', 'and', 'but', 'or', 'for', 'with', 'from', 'into', 'onto',
+  'a', 'an', 'this', 'that', 'these', 'those', 'it', 'its', 'they', 'their',
+  
+  // Common verbs and verb forms
+  'are', 'is', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+  'do', 'does', 'did', 'will', 'would', 'could', 'should', 'might', 'may',
+  'can', 'must', 'shall', 'get', 'got', 'getting', 'take', 'taking', 'took',
+  
+  // Common adjectives
+  'high', 'low', 'big', 'small', 'long', 'short', 'old', 'new', 'good', 'bad',
+  'dark', 'light', 'quick', 'slow', 'hot', 'cold', 'warm', 'cool',
+  
+  // Body parts
+  'head', 'hand', 'hands', 'arm', 'arms', 'eyes', 'eye', 'face', 'foot', 'feet',
+  'leg', 'legs', 'body', 'finger', 'fingers', 'shoulder', 'shoulders',
+  
+  // Abstract concepts
+  'moment', 'breath', 'step', 'look', 'glance', 'opportunity', 'chance', 
+  'time', 'position', 'stance', 'aim', 'shot', 'action', 'way', 'place',
+  'voice', 'words', 'word', 'thought', 'thoughts', 'idea', 'ideas',
+  'guard', 'grip', 'attention', 'focus', 'composure', 'balance', 'control',
+  'silence', 'noise', 'sound', 'sight', 'feeling', 'sense',
+  
+  // Common phrases that get matched
   'deep breath', 'few steps', 'closer look', 'moment to', 'step forward',
-  'head', 'hand', 'hands', 'arm', 'arms', 'eyes', 'voice', 'words',
-  'guard', 'grip', 'attention', 'focus', 'composure',
+  'way out', 'way in', 'long time', 'short time', 'same time',
+  
+  // Location/environment words that aren't items
+  'hideout', 'hideaway', 'shelter', 'location', 'area', 'zone', 'district',
+  'street', 'alley', 'road', 'path', 'corridor', 'hallway', 'room', 'hall',
+  'building', 'structure', 'place', 'spot', 'corner', 'side', 'edge',
+  'city', 'town', 'village', 'settlement', 'outpost', 'camp', 'base',
+  'midtown', 'downtown', 'uptown', 'suburb', 'slum', 'district',
+  
+  // Narrative/sentence fragments
+  'anonymous', 'temporary', 'permanent', 'suddenly', 'quickly', 'slowly',
+  'carefully', 'quietly', 'loudly', 'gently', 'roughly', 'softly',
+  'away', 'forward', 'backward', 'around', 'through', 'across', 'along',
+  'glimmering', 'shimmering', 'glowing', 'flickering', 'pulsing',
+  'neon', 'light', 'lights', 'glow', 'shadow', 'shadows', 'darkness',
+  
+  // Common story words that get picked up
+  'bait', 'trap', 'lure', 'trick', 'plan', 'scheme', 'plot',
+  'target', 'goal', 'objective', 'mission', 'quest', 'job', 'task',
+  'problem', 'trouble', 'issue', 'situation', 'circumstance',
+  'danger', 'threat', 'risk', 'hazard', 'warning', 'sign',
+  'clue', 'hint', 'lead', 'trail', 'track', 'trace',
+  
+  // People/roles (not items)
+  'person', 'people', 'man', 'woman', 'guy', 'gal', 'kid', 'child',
+  'guard', 'soldier', 'officer', 'cop', 'criminal', 'thief', 'bandit',
+  'stranger', 'friend', 'enemy', 'ally', 'contact', 'informant',
+  
+  // Actions/states
+  'attack', 'defense', 'move', 'movement', 'rest', 'sleep', 'wake',
+  'fight', 'flight', 'run', 'walk', 'talk', 'conversation',
 ]);
 
-// Common item categories that should be captured
+// Common item categories that should be captured - more specific
 const ITEM_KEYWORDS = [
-  'rifle', 'pistol', 'gun', 'weapon', 'sword', 'knife', 'dagger', 'blade',
-  'key', 'potion', 'scroll', 'amulet', 'ring', 'necklace', 'bracelet',
-  'armor', 'shield', 'helmet', 'boots', 'gloves', 'cloak', 'robe',
-  'gold', 'coins', 'gem', 'jewel', 'diamond', 'ruby', 'emerald',
-  'book', 'tome', 'letter', 'note', 'map', 'document', 'photograph',
-  'food', 'ration', 'bread', 'water', 'flask', 'bottle',
-  'torch', 'lantern', 'rope', 'grapple', 'hook', 'tools',
-  'bag', 'pouch', 'backpack', 'sack', 'container', 'box', 'chest',
-  'ammo', 'ammunition', 'magazine', 'clip', 'rounds', 'bullets',
-  'medkit', 'bandage', 'medicine', 'syringe', 'stimpak',
-  'grenade', 'explosive', 'bomb', 'mine',
-  'radio', 'headset', 'phone', 'communicator', 'device', 'gadget',
+  // Weapons
+  'rifle', 'pistol', 'gun', 'revolver', 'shotgun', 'sniper', 'smg', 'carbine',
+  'sword', 'knife', 'dagger', 'blade', 'axe', 'mace', 'hammer', 'spear', 'bow',
+  'crossbow', 'staff', 'wand', 'katana', 'machete', 'crowbar', 'bat', 'club',
+  
+  // Jewelry/accessories
+  'amulet', 'ring', 'necklace', 'bracelet', 'pendant', 'earring', 'brooch',
+  'locket', 'charm', 'talisman', 'medallion', 'circlet', 'crown', 'tiara',
+  
+  // Armor/clothing
+  'armor', 'shield', 'helmet', 'boots', 'gloves', 'cloak', 'robe', 'vest',
+  'jacket', 'coat', 'pants', 'mask', 'goggles', 'visor', 'gauntlet',
+  
+  // Valuables
+  'gold', 'coins', 'gem', 'jewel', 'diamond', 'ruby', 'emerald', 'sapphire',
+  'pearl', 'crystal', 'ingot', 'bar', 'treasure', 'loot', 'cash', 'credits',
+  
+  // Documents
+  'book', 'tome', 'letter', 'note', 'map', 'document', 'photograph', 'photo',
+  'journal', 'diary', 'scroll', 'blueprint', 'schematic', 'manual', 'file',
+  'keycard', 'passcard', 'badge', 'id', 'passport', 'license', 'permit',
+  
+  // Consumables
+  'potion', 'elixir', 'tonic', 'serum', 'antidote', 'cure',
+  'food', 'ration', 'bread', 'meat', 'fruit', 'drink', 'beverage',
+  'water', 'flask', 'bottle', 'canteen', 'vial', 'syringe', 'injector',
+  'medkit', 'bandage', 'medicine', 'stimpak', 'stimpack', 'healthpack',
+  
+  // Tools/equipment
+  'torch', 'lantern', 'flashlight', 'lamp', 'candle',
+  'rope', 'grapple', 'hook', 'lockpick', 'toolkit', 'wrench', 'screwdriver',
+  'binoculars', 'scope', 'scanner', 'detector', 'sensor',
+  'bag', 'pouch', 'backpack', 'sack', 'container', 'box', 'chest', 'crate',
+  'holster', 'sheath', 'scabbard', 'quiver',
+  
+  // Ammo/explosives
+  'ammo', 'ammunition', 'magazine', 'clip', 'rounds', 'bullets', 'shells',
+  'grenade', 'explosive', 'bomb', 'mine', 'dynamite', 'c4', 'charge',
+  'arrow', 'bolt', 'dart', 'cartridge',
+  
+  // Tech/electronics
+  'radio', 'headset', 'phone', 'communicator', 'device', 'gadget', 'terminal',
+  'chip', 'drive', 'disk', 'module', 'component', 'battery', 'cell',
+  'implant', 'augment', 'cyberdeck', 'neural', 'interface',
+  
+  // Misc items
   'cigarettes', 'lighter', 'matches', 'supplies',
+  'key', 'keys', 'lockbox', 'safe',
+  'artifact', 'relic', 'antique', 'curio', 'trinket',
 ];
+
+// Words that should NEVER be items, even if they pass other checks
+const HARD_EXCLUSIONS = new Set([
+  'temporary hideout', 'anonymous', 'bait', 'are high', 'you away',
+  'glimmering neon', 'part of your equipment', 'your equipment',
+]);
 
 function isLikelyItem(text: string): boolean {
   const lower = text.toLowerCase().trim();
   
-  // Check if it's in the excluded words
-  if (EXCLUDED_WORDS.has(lower)) return false;
+  // Hard exclusions - definitely not items
+  if (HARD_EXCLUSIONS.has(lower)) return false;
   
-  // Check if it contains item keywords
-  for (const keyword of ITEM_KEYWORDS) {
-    if (lower.includes(keyword)) return true;
+  // Check if it starts with excluded words (sentence fragments)
+  if (lower.startsWith('you ') || lower.startsWith('are ') || lower.startsWith('is ') ||
+      lower.startsWith('the ') || lower.startsWith('a ') || lower.startsWith('an ') ||
+      lower.startsWith('from ') || lower.startsWith('to ') || lower.startsWith('in ') ||
+      lower.startsWith('with ') || lower.startsWith('by ') || lower.startsWith('for ')) {
+    return false;
   }
   
-  // Check if it's capitalized and reasonable length (proper noun item)
-  if (text.length >= 3 && text.length <= 50 && /^[A-Z]/.test(text)) {
-    // Filter out sentence fragments
-    const wordCount = text.split(/\s+/).length;
-    if (wordCount <= 5) return true;
+  // Check if entire text is in excluded words
+  if (EXCLUDED_WORDS.has(lower)) return false;
+  
+  // Check if it's a single common word
+  const words = lower.split(/\s+/);
+  if (words.length === 1 && EXCLUDED_WORDS.has(words[0])) return false;
+  
+  // Check if ALL words are excluded
+  if (words.every(w => EXCLUDED_WORDS.has(w))) return false;
+  
+  // Too many words = probably a sentence fragment
+  if (words.length > 4) return false;
+  
+  // Single words must have item keywords to be valid
+  if (words.length === 1) {
+    // Single word items must be recognized keywords or proper nouns with keywords
+    const hasKeyword = ITEM_KEYWORDS.some(kw => lower.includes(kw));
+    if (!hasKeyword) return false;
+  }
+  
+  // Check if it contains item keywords - this is now required for 2+ word items too
+  const hasKeyword = ITEM_KEYWORDS.some(kw => lower.includes(kw));
+  if (hasKeyword) return true;
+  
+  // Only accept multi-word items that are capitalized and look like proper nouns
+  // AND don't contain excluded words
+  if (text.length >= 4 && text.length <= 40 && /^[A-Z]/.test(text)) {
+    // Must have at least one capitalized word that isn't excluded
+    const capitalWords = text.split(/\s+/).filter(w => /^[A-Z]/.test(w));
+    const nonExcludedCapitals = capitalWords.filter(w => !EXCLUDED_WORDS.has(w.toLowerCase()));
+    if (nonExcludedCapitals.length >= 1 && words.length <= 3) {
+      // Additional check: should look like an item name, not a description
+      // Item names typically don't have verbs in them
+      const hasVerb = /ing$|ed$|ly$/.test(lower);
+      if (!hasVerb) return true;
+    }
   }
   
   return false;
