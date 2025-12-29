@@ -60,6 +60,11 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
+import { 
+  applyInventoryChangesToCharacter, 
+  getItemIcon,
+  logInventoryState 
+} from '@/game/campaignInventorySystem';
 import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS, generateWeatherForecast, ForecastEntry } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
@@ -141,6 +146,8 @@ interface AdventureDisplayProps {
   // Weather state lifted from parent for AI sync
   weatherState?: WeatherState;
   onWeatherStateChange?: (state: WeatherState) => void;
+  // Campaign ID for inventory isolation
+  campaignId?: string;
 }
 
 export function AdventureDisplay({
@@ -167,6 +174,7 @@ export function AdventureDisplay({
   onMoodChange,
   weatherState: externalWeatherState,
   onWeatherStateChange,
+  campaignId = 'default_campaign',
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -621,91 +629,41 @@ export function AdventureDisplay({
       });
     }
 
-    // Apply loot to inventory (now supports multiple items)
-    if (pendingMechanics.lootGained) {
-      const lootItems = Array.isArray(pendingMechanics.lootGained) 
-        ? pendingMechanics.lootGained 
-        : [pendingMechanics.lootGained];
-      
-      console.log('[AdventureDisplay] Processing loot:', lootItems);
-      
-      // Helper to determine item icon based on name
-      const getItemIcon = (itemName: string) => {
-        const name = itemName.toLowerCase();
-        if (name.includes('sword') || name.includes('blade') || name.includes('dagger') || name.includes('axe') || name.includes('weapon')) return '⚔️';
-        if (name.includes('key')) return '🗝️';
-        if (name.includes('potion') || name.includes('elixir') || name.includes('flask')) return '🧪';
-        if (name.includes('gem') || name.includes('jewel') || name.includes('diamond') || name.includes('ruby') || name.includes('emerald')) return '💎';
-        if (name.includes('scroll') || name.includes('book') || name.includes('tome') || name.includes('letter')) return '📜';
-        if (name.includes('ring') || name.includes('amulet') || name.includes('necklace')) return '💍';
-        if (name.includes('coin') || name.includes('gold') || name.includes('silver')) return '🪙';
-        if (name.includes('armor') || name.includes('shield') || name.includes('helm')) return '🛡️';
-        if (name.includes('food') || name.includes('bread') || name.includes('meat')) return '🍖';
-        if (name.includes('bow') || name.includes('arrow')) return '🏹';
-        if (name.includes('staff') || name.includes('wand') || name.includes('rod')) return '🪄';
-        if (name.includes('map')) return '🗺️';
-        if (name.includes('torch') || name.includes('lantern')) return '🔦';
-        return '✨'; // Default sparkle for misc items
-      };
-      
-      for (const lootName of lootItems) {
-        const existingItemIndex = updatedCharacter.inventory.findIndex(
-          item => item.name.toLowerCase() === lootName.toLowerCase()
-        );
-        if (existingItemIndex !== -1) {
-          // Update existing item quantity
-          const newInventory = [...updatedCharacter.inventory];
-          newInventory[existingItemIndex] = {
-            ...newInventory[existingItemIndex],
-            quantity: newInventory[existingItemIndex].quantity + 1
-          };
-          updatedCharacter.inventory = newInventory;
-        } else {
-          // Create new inventory item with required fields
-          const newItem: InventoryItem = {
-            id: `loot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: lootName,
-            description: `A ${lootName.toLowerCase()} found during your adventure.`,
-            quantity: 1,
-            type: 'treasure' // Default type for dynamically acquired items
-          };
-          updatedCharacter.inventory = [...updatedCharacter.inventory, newItem];
-        }
-        
-        const itemIcon = getItemIcon(lootName);
-        
-        // Trigger animated notification
-        notifyItemAdded(lootName, 1, itemIcon);
-      }
-      hasStatChanges = true;
-    }
+    // === INVENTORY CHANGES - Using campaign-isolated inventory system ===
+    const lootItems = pendingMechanics.lootGained 
+      ? (Array.isArray(pendingMechanics.lootGained) ? pendingMechanics.lootGained : [pendingMechanics.lootGained])
+      : [];
+    const droppedItems = pendingMechanics.itemsDropped || [];
     
-    // Remove dropped items from inventory (NEW - fixes item duplication bug)
-    if (pendingMechanics.itemsDropped && pendingMechanics.itemsDropped.length > 0) {
-      for (const droppedItemName of pendingMechanics.itemsDropped) {
-        const itemIndex = updatedCharacter.inventory.findIndex(
-          item => item.name.toLowerCase() === droppedItemName.toLowerCase()
-        );
-        
-        if (itemIndex !== -1) {
-          const item = updatedCharacter.inventory[itemIndex];
-          if (item.quantity > 1) {
-            // Reduce quantity by 1
-            const newInventory = [...updatedCharacter.inventory];
-            newInventory[itemIndex] = { ...item, quantity: item.quantity - 1 };
-            updatedCharacter.inventory = newInventory;
-          } else {
-            // Remove item entirely
-            updatedCharacter.inventory = updatedCharacter.inventory.filter((_, i) => i !== itemIndex);
-          }
-          
-          // Trigger animated notification for removal
-          notifyItemRemoved(droppedItemName);
-          hasStatChanges = true;
-        } else {
-          console.warn(`[ItemDrop] Item "${droppedItemName}" not found in inventory to remove`);
-        }
+    if (lootItems.length > 0 || droppedItems.length > 0) {
+      console.log('[AdventureDisplay] Processing inventory changes:');
+      console.log('  - Loot:', lootItems);
+      console.log('  - Drops:', droppedItems);
+      logInventoryState(updatedCharacter.inventory, 'Before');
+      
+      // Apply all inventory changes through the isolated system
+      const inventoryResult = applyInventoryChangesToCharacter(
+        updatedCharacter,
+        lootItems,
+        droppedItems,
+        campaignId
+      );
+      
+      updatedCharacter = inventoryResult.updatedCharacter;
+      
+      // Trigger notifications for added items
+      for (const change of inventoryResult.addedChanges) {
+        const icon = getItemIcon(change.itemName);
+        notifyItemAdded(change.itemName, change.quantity, icon);
       }
+      
+      // Trigger notifications for removed items
+      for (const change of inventoryResult.removedChanges) {
+        notifyItemRemoved(change.itemName);
+      }
+      
+      logInventoryState(updatedCharacter.inventory, 'After');
+      hasStatChanges = true;
     }
 
     // Apply XP through leveling system
