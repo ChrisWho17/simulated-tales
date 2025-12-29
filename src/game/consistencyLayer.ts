@@ -6,7 +6,7 @@
 import { NPC, GameState } from '@/types/game';
 import { eventBus, KnowledgeEvent } from './eventBus';
 import { getPlayerRelationship, syncFromNPC, syncToNPC } from './unifiedRelationshipStore';
-import { getInventory, getObject, transferObject } from './objectRegistrySystem';
+// Note: Inventory system imports will be added when new inventory system is provided
 
 // ============= CONSISTENCY RULES =============
 
@@ -239,24 +239,8 @@ export function checkRelationshipConsistency(npcs: NPC[], tick: number): Consist
  */
 export function checkInventoryConsistency(claimedItems: string[], ownerId: string, tick: number): ConsistencyViolation[] {
   const violations: ConsistencyViolation[] = [];
-  const actualInventory = getInventory('player', 'player');
-  const actualItemNames = actualInventory.map(i => i.name.toLowerCase());
-  
-  for (const claimed of claimedItems) {
-    if (!actualItemNames.some(name => name.includes(claimed.toLowerCase()))) {
-      violations.push({
-        id: `inv_mismatch_${claimed}`,
-        type: 'INVENTORY_MISMATCH',
-        severity: 'error',
-        description: `Claimed item \"${claimed}\" not found in ${ownerId}'s inventory`,
-        autoFixable: false,
-        entities: [ownerId],
-        timestamp: Date.now(),
-        tick,
-      });
-    }
-  }
-  
+  // Note: Inventory checking will be re-implemented when new inventory system is provided
+  console.log('[ConsistencyLayer] Inventory check skipped - awaiting new inventory system');
   return violations;
 }
 

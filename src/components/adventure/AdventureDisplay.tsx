@@ -41,11 +41,9 @@ import {
 import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
-import { InventoryCommandPalette } from '@/components/game/InventoryCommandPalette';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
-import { InventoryNotification, useInventoryNotifications } from '@/components/game/InventoryNotification';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
 import { 
@@ -60,11 +58,6 @@ import {
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
-import { 
-  applyInventoryChangesToCharacter, 
-  getItemIcon,
-  logInventoryState 
-} from '@/game/campaignInventorySystem';
 import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS, generateWeatherForecast, ForecastEntry } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
@@ -230,13 +223,7 @@ export function AdventureDisplay({
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const { toast } = useToast();
   
-  // Inventory notification system
-  const { 
-    changes: inventoryChanges, 
-    addItem: notifyItemAdded, 
-    removeItem: notifyItemRemoved, 
-    handleProcessed: handleNotificationProcessed 
-  } = useInventoryNotifications();
+  // Note: Inventory notification system will be added when new inventory system is provided
   
   // Audio system integration
   const { 
@@ -635,35 +622,11 @@ export function AdventureDisplay({
       : [];
     const droppedItems = pendingMechanics.itemsDropped || [];
     
+    // Note: Inventory processing will be added when new inventory system is provided
     if (lootItems.length > 0 || droppedItems.length > 0) {
-      console.log('[AdventureDisplay] Processing inventory changes:');
+      console.log('[AdventureDisplay] Inventory changes pending new system:');
       console.log('  - Loot:', lootItems);
       console.log('  - Drops:', droppedItems);
-      logInventoryState(updatedCharacter.inventory, 'Before');
-      
-      // Apply all inventory changes through the isolated system
-      const inventoryResult = applyInventoryChangesToCharacter(
-        updatedCharacter,
-        lootItems,
-        droppedItems,
-        campaignId
-      );
-      
-      updatedCharacter = inventoryResult.updatedCharacter;
-      
-      // Trigger notifications for added items
-      for (const change of inventoryResult.addedChanges) {
-        const icon = getItemIcon(change.itemName);
-        notifyItemAdded(change.itemName, change.quantity, icon);
-      }
-      
-      // Trigger notifications for removed items
-      for (const change of inventoryResult.removedChanges) {
-        notifyItemRemoved(change.itemName);
-      }
-      
-      logInventoryState(updatedCharacter.inventory, 'After');
-      hasStatChanges = true;
     }
 
     // Apply XP through leveling system
@@ -879,7 +842,7 @@ export function AdventureDisplay({
       // Clear mechanics after applying non-dice changes
       onClearMechanics();
     }
-  }, [pendingMechanics, diceMode, gameContext, character, onUpdateCharacter, toast, notifyItemAdded, notifyItemRemoved]);
+  }, [pendingMechanics, diceMode, gameContext, character, onUpdateCharacter, toast]);
 
   // Map pending roll stat to action type
   const statToActionType = (stat: string): string => {
@@ -1731,16 +1694,7 @@ export function AdventureDisplay({
         onSelectChoice={handleLevelUpChoice}
       />
       
-      {/* Inventory Command Palette */}
-      <InventoryCommandPalette
-        open={showInventory}
-        onOpenChange={setShowInventory}
-        onUseItem={(itemName, intention) => {
-          // Send item usage to the AI as a player action with the item context
-          const actionText = `[Uses ${itemName}]: ${intention}`;
-          onPlayerAction(actionText);
-        }}
-      />
+      {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       
       {/* Event Bus Debug Panel - show if enabled in settings or cheat mode */}
       {(cheatMode || (gameContext?.settings?.showEventBusDebug ?? false)) && <EventBusDebugPanel />}
@@ -1962,12 +1916,7 @@ export function AdventureDisplay({
         </div>
       )}
       
-      {/* Inventory change notifications */}
-      <InventoryNotification 
-        changes={inventoryChanges} 
-        onChangeProcessed={handleNotificationProcessed}
-        position="bottom-right"
-      />
+      {/* Note: Inventory notifications will be added when new inventory system is provided */}
     </div>
   );
 }

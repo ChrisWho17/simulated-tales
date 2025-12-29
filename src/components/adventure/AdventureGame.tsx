@@ -51,8 +51,7 @@ import {
 import {
   getPressureAtmosphere,
 } from '@/game/pressureClockSystem';
-// Note: objectRegistrySystem imports removed - using campaign-isolated inventory system instead
-import { buildInventoryContext } from '@/game/campaignInventorySystem';
+// Note: Inventory system imports will be added when new inventory system is provided
 import {
   buildNPCIdentityContext,
   validateNPCRelationships,
@@ -1020,8 +1019,8 @@ export function AdventureGame() {
             locationContext: locationContextPayload,
             // === CONSISTENCY SYSTEMS ===
             consistencyContext: {
-              // Use character inventory directly for campaign isolation
-              objectOwnership: buildInventoryContext(activeChar.inventory),
+              // Note: Inventory context will be added when new inventory system is provided
+              objectOwnership: '',
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
@@ -1238,7 +1237,7 @@ export function AdventureGame() {
             locationContext: locationTransitionContext,
             // Include consistency context for zone transitions too
             consistencyContext: {
-              objectOwnership: buildInventoryContext(character.inventory),
+              objectOwnership: '', // Note: Will be added when new inventory system is provided
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
             },
