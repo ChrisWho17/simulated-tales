@@ -45,6 +45,7 @@ export interface ScenarioSelection {
   genreTitle: string;
   diceMode: DiceMode;
   genreContract?: GenreContractConfig;
+  characterClass?: string;
 }
 
 interface AdventureCreatorProps {
@@ -207,8 +208,19 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
   const [primaryGenre, setPrimaryGenre] = useState<GameGenre>('fantasy');
   const [secondaryGenres, setSecondaryGenres] = useState<SecondaryGenre[]>([]);
   const [hardLock, setHardLock] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<string>('default');
 
   const allGenres = getAllGenres();
+  
+  // Get available classes for the current primary genre
+  const availableClasses = useMemo(() => {
+    return getGenreClasses(primaryGenre);
+  }, [primaryGenre]);
+  
+  // Reset class selection when genre changes
+  useEffect(() => {
+    setSelectedClass('default');
+  }, [primaryGenre]);
 
   // Available genres for secondary selection (exclude primary and already selected)
   const availableSecondaryGenres = useMemo(() => {
@@ -288,7 +300,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       genre: random.genre, 
       genreTitle: getGenreTitle(random.genre), 
       diceMode: selectedDiceMode,
-      genreContract: { primaryGenre: random.genre, secondaryGenres: [], hardLock: false }
+      genreContract: { primaryGenre: random.genre, secondaryGenres: [], hardLock: false },
+      characterClass: 'default'
     });
   };
 
@@ -299,7 +312,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       genre: preset.genre, 
       genreTitle: preset.title, 
       diceMode: selectedDiceMode,
-      genreContract: { primaryGenre: preset.genre, secondaryGenres: [], hardLock: false }
+      genreContract: { primaryGenre: preset.genre, secondaryGenres: [], hardLock: false },
+      characterClass: selectedClass
     });
   };
 
@@ -318,7 +332,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
         genre: primaryGenre, 
         genreTitle: getGenreTitle(primaryGenre),
         diceMode: selectedDiceMode,
-        genreContract: finalContract
+        genreContract: finalContract,
+        characterClass: selectedClass
       });
     }
   };
@@ -382,6 +397,36 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 </Select>
               </div>
 
+              {/* Character Class Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Sword className="w-4 h-4 text-primary" />
+                  Character Class
+                </label>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger className="w-full bg-background/50 border-primary/30">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{availableClasses.find(c => c.id === selectedClass)?.icon || '🎭'}</span>
+                        <span>{availableClasses.find(c => c.id === selectedClass)?.name || 'Default'}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClasses.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{cls.icon}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{cls.name}</span>
+                            <span className="text-xs text-muted-foreground">{cls.description}</span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Hard Lock Toggle */}
               <div className="flex items-center justify-between pt-3 border-t border-border/30">
@@ -455,14 +500,18 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
             <Button
               onClick={() => {
                 const genreName = allGenres.find(g => g.id === primaryGenre)?.name || primaryGenre;
-                const defaultScenario = `Begin a ${genreName.toLowerCase()} adventure.`;
+                const className = availableClasses.find(c => c.id === selectedClass)?.name || '';
+                const defaultScenario = className && selectedClass !== 'default'
+                  ? `Begin a ${genreName.toLowerCase()} adventure as a ${className.toLowerCase()}.`
+                  : `Begin a ${genreName.toLowerCase()} adventure.`;
                 saveDiceMode(selectedDiceMode);
                 onSelect({
                   scenario: defaultScenario,
                   genre: primaryGenre,
                   genreTitle: getGenreTitle(primaryGenre),
                   diceMode: selectedDiceMode,
-                  genreContract
+                  genreContract,
+                  characterClass: selectedClass
                 });
               }}
               disabled={isLoading}
@@ -470,7 +519,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
               className="w-full mt-3 bg-background/30 border-primary/30 hover:bg-primary/10"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Quick Start with {allGenres.find(g => g.id === primaryGenre)?.name}
+              Quick Start as {availableClasses.find(c => c.id === selectedClass)?.name || 'Adventurer'}
               {secondaryGenres.length > 0 && ` + ${secondaryGenres.length} blend${secondaryGenres.length > 1 ? 's' : ''}`}
             </Button>
 

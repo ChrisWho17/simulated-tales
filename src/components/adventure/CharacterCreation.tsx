@@ -34,6 +34,7 @@ interface CharacterCreationProps {
   onBack: () => void;
   isLoading: boolean;
   secondaryGenres?: SecondaryGenre[];
+  defaultClass?: string;
 }
 
 type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | 'traits' | 'phobias' | 'portrait';
@@ -56,7 +57,7 @@ const AVAILABLE_PHOBIAS = [
 
 const STAT_POINT_POOL = 15;
 
-export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading, secondaryGenres = [] }: CharacterCreationProps) {
+export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading, secondaryGenres = [], defaultClass }: CharacterCreationProps) {
   const genreData = GENRE_DATA[genre];
   
   // Use blended data when secondary genres are present
@@ -89,7 +90,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   
   const [step, setStep] = useState<CreationStep>('name');
   const [name, setName] = useState('');
-  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>(defaultClass || '');
   const [selectedBackground, setSelectedBackground] = useState<string>('');
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [selectedPhobias, setSelectedPhobias] = useState<string[]>([]);

@@ -1868,6 +1868,7 @@ export function AdventureGame() {
         onBack={handleBackToScenario}
         isLoading={isLoading}
         secondaryGenres={scenarioSelection.genreContract?.secondaryGenres}
+        defaultClass={scenarioSelection.characterClass}
       />
     );
   }
