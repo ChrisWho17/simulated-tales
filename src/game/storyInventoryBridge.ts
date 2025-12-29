@@ -481,11 +481,16 @@ export function parseStoryForDroppedItems(storyText: string): string[] {
 // STORY-INVENTORY SYNC PROCESSOR
 // ============================================================================
 
+export interface InventorySyncResult {
+  added: Array<{ name: string; category: string }>;
+  dropped: string[];
+}
+
 export function processStoryInventorySync(
   newStoryText: string,
   inventory: InventoryDispatcher
-): { added: string[]; dropped: string[] } {
-  const result = { added: [] as string[], dropped: [] as string[] };
+): InventorySyncResult {
+  const result: InventorySyncResult = { added: [], dropped: [] };
   
   // Parse for new items
   const pickedUp = parseStoryForItems(newStoryText);
@@ -499,7 +504,7 @@ export function processStoryInventorySync(
     });
     
     inventory.dispatch({ type: 'ADD_ITEM', payload: { item, quantity: 1 } });
-    result.added.push(itemName);
+    result.added.push({ name: itemName, category: detection.category });
     console.log(`[STORY→INV] Added: ${itemName} (${detection.category})`);
   });
   
