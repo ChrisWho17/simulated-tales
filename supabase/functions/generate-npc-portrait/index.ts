@@ -16,15 +16,17 @@ const PORTRAIT_STYLE_BASE = [
   'realistic style',
   'cinematic lighting',
   'dramatic atmosphere',
-  'waist-up shot',
-  'three-quarter view',
+  'three-quarter body shot from knees up',
+  'full environment visible in background',
+  'character in foreground with detailed background scenery',
   'looking at viewer',
   'highly detailed face and eyes',
-  'intricate clothing details',
+  'intricate clothing and gear details',
   'professional illustration',
   '8k resolution',
   'volumetric lighting',
   'depth of field',
+  'wide shot composition',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
