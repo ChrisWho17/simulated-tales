@@ -26,6 +26,8 @@ import {
   getActiveCampaignId,
   setActiveCampaignId,
   canCreateCampaign,
+  performStartupCleanup,
+  verifyCampaignDeleted,
 } from '@/lib/campaignStorage';
 import { WorldBible } from '@/game/worldBible/types';
 import { RPGCharacter } from '@/types/rpgCharacter';
@@ -58,6 +60,18 @@ interface CampaignProviderProps {
 }
 
 export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) => {
+  // Run startup cleanup ONCE on mount
+  const hasRunCleanup = useRef(false);
+  useEffect(() => {
+    if (!hasRunCleanup.current) {
+      hasRunCleanup.current = true;
+      const result = performStartupCleanup();
+      if (result.cleaned > 0) {
+        console.log(`[Campaign] Startup cleanup fixed ${result.cleaned} issues`);
+      }
+    }
+  }, []);
+  
   // Campaign list
   const [campaigns, setCampaigns] = useState<CampaignMetadata[]>(() => loadCampaignIndex());
   
@@ -242,7 +256,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     console.log('[Campaign] Unloaded and state cleared');
   }, [activeCampaign, isDirty, saveNow, refreshCampaigns]);
   
-  // Delete campaign - Use proper full delete
+  // Delete campaign - Use proper full delete with verification
   const deleteCampaignFunc = useCallback((campaignId: string) => {
     console.log(`[Campaign] Starting delete: ${campaignId}`);
     
@@ -256,6 +270,19 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     
     // Perform the full delete (removes all related keys)
     deleteCampaignData(campaignId);
+    
+    // Verify deletion was successful
+    const verified = verifyCampaignDeleted(campaignId);
+    if (!verified) {
+      console.error(`[Campaign] Delete verification failed for ${campaignId}, forcing cleanup`);
+      // Force remove any remaining keys
+      const allKeys = Object.keys(localStorage);
+      allKeys.filter(k => k.includes(campaignId)).forEach(k => {
+        localStorage.removeItem(k);
+        console.log(`[Campaign] Force removed: ${k}`);
+      });
+    }
+    
     refreshCampaigns();
     console.log(`[Campaign] Delete complete: ${campaignId}`);
   }, [activeCampaign, refreshCampaigns]);
