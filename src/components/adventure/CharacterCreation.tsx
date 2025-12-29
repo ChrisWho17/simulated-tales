@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,12 +19,15 @@ import {
 import { 
   ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
-  Eye, Crosshair, Zap, Blend
+  Eye, Crosshair, Zap, Blend, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SecondaryGenre } from './AdventureCreator';
 import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
 import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
+import { CustomClassBuilder, CustomClassData } from './CustomClassBuilder';
+import { StartingGearEditor } from './StartingGearEditor';
+import { StartingGearItem } from '@/game/storyInventoryBridge';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -110,6 +113,23 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   // Portrait state
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  
+  // Custom class state
+  const [showCustomClassBuilder, setShowCustomClassBuilder] = useState(false);
+  const [customClass, setCustomClass] = useState<CustomClassData | null>(null);
+  
+  // Starting gear customization
+  const [customGear, setCustomGear] = useState<StartingGearItem[] | null>(null);
+  
+  const handleGearChange = useCallback((gear: StartingGearItem[]) => {
+    setCustomGear(gear);
+  }, []);
+  
+  const handleCustomClassComplete = useCallback((data: CustomClassData) => {
+    setCustomClass(data);
+    setSelectedClass(data.id);
+    setShowCustomClassBuilder(false);
+  }, []);
 
   const pointsSpent = Object.values(statAllocation).reduce((sum, val) => sum + (val || 0), 0);
   const pointsRemaining = STAT_POINT_POOL - pointsSpent;
@@ -212,6 +232,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined);
     // Add phobias to character data
     (character as any).phobias = selectedPhobias;
+    // Add custom class data if using a custom class
+    if (customClass && selectedClass === customClass.id) {
+      (character as any).customClass = customClass;
+      // Apply custom class stat bonuses
+      Object.entries(customClass.statBonuses).forEach(([stat, bonus]) => {
+        if (bonus > 0 && character.stats[stat as keyof typeof character.stats] !== undefined) {
+          character.stats[stat as keyof typeof character.stats] += bonus;
+        }
+      });
+      // Replace abilities with custom class abilities
+      (character as any).abilities = customClass.abilities;
+    }
+    // Add custom gear if modified
+    if (customGear) {
+      (character as any).customStartingGear = customGear;
+    }
     onComplete(character, scenario);
   };
 
@@ -601,60 +637,134 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           {/* Class Step */}
           {step === 'class' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-primary">Choose your role</h2>
-                {hybridClassCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
-                    <Blend className="w-3 h-3" />
-                    +{hybridClassCount} hybrid roles
-                  </span>
-                )}
-              </div>
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="grid gap-3">
-                  {blendedClasses.map((charClass) => {
-                    const isHybrid = !genreData.classes.some(c => c.id === charClass.id);
-                    return (
-                      <button
-                        key={charClass.id}
-                        onClick={() => setSelectedClass(charClass.id)}
-                        className={`w-full p-4 rounded-lg text-left transition-all ${
-                          selectedClass === charClass.id 
-                            ? 'bg-primary/20 border-2 border-primary' 
-                            : isHybrid 
-                              ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
-                              : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="text-primary mt-0.5">{getClassIcon(charClass.id)}</div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-foreground">{charClass.name}</h3>
-                              {isHybrid && (
-                                <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                  Hybrid
+              {showCustomClassBuilder ? (
+                <CustomClassBuilder
+                  genre={genre}
+                  secondaryGenres={secondaryGenres}
+                  onComplete={handleCustomClassComplete}
+                  onCancel={() => setShowCustomClassBuilder(false)}
+                />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-primary">Choose your role</h2>
+                    <div className="flex items-center gap-2">
+                      {hybridClassCount > 0 && (
+                        <span className="flex items-center gap-1 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
+                          <Blend className="w-3 h-3" />
+                          +{hybridClassCount} hybrid roles
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <ScrollArea className="h-[350px] pr-4">
+                    <div className="grid gap-3">
+                      {/* Custom Class Option */}
+                      {customClass && (
+                        <button
+                          onClick={() => setSelectedClass(customClass.id)}
+                          className={`w-full p-4 rounded-lg text-left transition-all ${
+                            selectedClass === customClass.id 
+                              ? 'bg-primary/20 border-2 border-primary' 
+                              : 'bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/30 hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="text-primary mt-0.5"><Sparkles className="w-5 h-5" /></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-foreground">{customClass.name}</h3>
+                                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  Custom
                                 </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">{charClass.description}</p>
-                            <div className="flex gap-4 mt-2 text-xs text-primary/80">
-                              <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {charClass.abilities.map(ability => (
-                                <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                  {ability}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">{customClass.description}</p>
+                              <div className="flex gap-4 mt-2 text-xs text-primary/80">
+                                <span>
+                                  +{Object.entries(customClass.statBonuses)
+                                    .filter(([_, v]) => v > 0)
+                                    .map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`)
+                                    .join(', +') || 'No bonuses'}
                                 </span>
-                              ))}
+                              </div>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {customClass.abilities.map(ability => (
+                                  <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                    {ability}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+                        </button>
+                      )}
+                      
+                      {blendedClasses.map((charClass) => {
+                        const isHybrid = !genreData.classes.some(c => c.id === charClass.id);
+                        return (
+                          <button
+                            key={charClass.id}
+                            onClick={() => setSelectedClass(charClass.id)}
+                            className={`w-full p-4 rounded-lg text-left transition-all ${
+                              selectedClass === charClass.id 
+                                ? 'bg-primary/20 border-2 border-primary' 
+                                : isHybrid 
+                                  ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
+                                  : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="text-primary mt-0.5">{getClassIcon(charClass.id)}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-foreground">{charClass.name}</h3>
+                                  {isHybrid && (
+                                    <span className="text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                      Hybrid
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">{charClass.description}</p>
+                                <div className="flex gap-4 mt-2 text-xs text-primary/80">
+                                  <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {charClass.abilities.map(ability => (
+                                    <span key={ability} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                      {ability}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                  
+                  {/* Create Custom Class Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCustomClassBuilder(true)}
+                    className="w-full gap-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/10"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Custom Class
+                  </Button>
+                  
+                  {/* Starting Gear Editor */}
+                  {selectedClass && (
+                    <StartingGearEditor
+                      genre={genre}
+                      characterClass={customClass && selectedClass === customClass.id ? 'default' : selectedClass}
+                      onGearChange={handleGearChange}
+                      initialGear={customGear || undefined}
+                    />
+                  )}
+                </>
+              )}
             </div>
           )}
 
