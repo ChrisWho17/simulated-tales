@@ -6,21 +6,25 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// PORTRAIT STYLE CONSTANTS (shared with character portraits)
+// PORTRAIT STYLE CONSTANTS - Realistic waist-up portraits
 // ============================================================================
 
 const PORTRAIT_STYLE_BASE = [
   'masterpiece',
-  'best quality', 
-  'highly detailed digital illustration',
-  'semi-realistic anime style',
-  'dramatic cinematic lighting',
-  'portrait',
-  'upper body shot',
+  'best quality',
+  'ultra detailed digital painting',
+  'realistic style',
+  'cinematic lighting',
+  'dramatic atmosphere',
+  'waist-up shot',
+  'three-quarter view',
   'looking at viewer',
-  'detailed face',
-  'intricate details',
+  'highly detailed face and eyes',
+  'intricate clothing details',
+  'professional illustration',
   '8k resolution',
+  'volumetric lighting',
+  'depth of field',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
@@ -41,9 +45,14 @@ const PORTRAIT_NEGATIVE = [
   'deformed',
   'disfigured',
   'ugly',
+  'anime',
   'cartoon',
   '3d render',
   'plastic',
+  'cgi',
+  'simple background',
+  'plain background',
+  'white background',
 ].join(', ');
 
 // ============================================================================
