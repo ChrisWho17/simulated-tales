@@ -62,18 +62,26 @@ const PORTRAIT_NEGATIVE = [
 // ============================================================================
 
 const GENRE_STYLES: Record<string, string> = {
-  modern: 'modern urban setting, contemporary clothing, realistic style',
-  cyberpunk: 'cyberpunk aesthetic, neon lights, chrome cybernetic augmentations, futuristic',
-  postapoc: 'post-apocalyptic, weathered gear, dust and grime, survival aesthetic',
-  scifi: 'sci-fi aesthetic, futuristic clothing, advanced technology, clean tech',
-  fantasy: 'high fantasy, magical realm, medieval fantasy attire, mystical aura',
-  medieval: 'medieval fantasy, historical clothing, rustic setting',
-  horror: 'dark horror aesthetic, moody lighting, unsettling atmosphere',
-  western: 'wild west aesthetic, frontier era clothing, dusty setting',
-  noir: 'film noir aesthetic, 1940s style, dramatic shadows',
-  mystery: 'noir detective style, 1940s aesthetic, dramatic lighting',
-  pirate: 'golden age of piracy, nautical attire, Caribbean adventure',
-  ww2: '1940s military, world war 2 era, period accurate',
+  modern: 'modern military tactical gear, contemporary combat equipment, urban environment background',
+  war: 'military combat uniform, tactical body armor, warzone battlefield background',
+  cyberpunk: 'cyberpunk tactical gear, neon lights, chrome cybernetic augmentations, neon-lit megacity background',
+  postapoc: 'post-apocalyptic scavenged gear, weathered leather and metal, wasteland ruins background',
+  scifi: 'advanced sci-fi power armor, futuristic tech, spaceship or alien world background',
+  fantasy: 'high fantasy armor and robes, magical enchanted equipment, mystical forest or castle background',
+  medieval: 'realistic medieval plate armor, chainmail, castle or battlefield background',
+  horror: 'survival horror gear, blood-stained clothing, abandoned dark location background',
+  western: 'wild west attire, leather duster, cowboy hat, frontier town or desert background',
+  noir: 'film noir attire, 1940s fedora and trench coat, rainy city street background',
+  mystery: 'detective attire, 1940s style, dramatic shadows, noir office background',
+  pirate: 'golden age pirate attire, captain coat, tricorn hat, ship deck or tropical cove background',
+  ww2: '1940s military uniform, period-accurate gear, WW2 battlefield background',
+  survival: 'rugged survival gear, outdoor clothing, wilderness campsite background',
+  steampunk: 'Victorian steampunk attire, brass goggles, clockwork gadgets, industrial city background',
+  apocalypse: 'post-apocalyptic survivor gear, scavenged armor, nuclear wasteland background',
+  vampire: 'gothic vampire aristocrat attire, Victorian dark elegance, gothic castle background',
+  zombie: 'zombie apocalypse survivor gear, blood-stained, overrun city background',
+  superhero: 'superhero costume, dramatic heroic pose, city skyline background',
+  spy: 'sleek spy attire, tactical stealth gear, casino or secret base background',
 };
 
 // ============================================================================

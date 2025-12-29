@@ -8,19 +8,19 @@ export const NEGATIVE_PROMPT = `worst quality, low quality, blurry, bad anatomy,
 
 export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
   modern: {
-    style: 'modern military tactical gear, realistic combat equipment, kevlar body armor, tactical vest with pouches, military radio, combat harness, worn battle gear, dust and grime',
+    style: 'modern military tactical gear, realistic combat equipment, kevlar body armor, tactical vest with pouches, military radio, combat harness, worn battle gear',
     backgrounds: ['dramatic warzone with explosions and smoke in background', 'destroyed urban battlefield with burning buildings', 'military forward operating base at golden hour', 'intense combat zone with debris and fire', 'smoky battlefield with distant explosions'],
   },
   war: {
-    style: 'military combat uniform, tactical body armor, ammunition pouches, combat webbing, military radio equipment, dog tags, battle-worn gear with realistic wear and tear',
+    style: 'military combat uniform, tactical body armor, ammunition pouches, combat webbing, military radio equipment, dog tags, battle-worn gear',
     backgrounds: ['epic warzone battlefield with explosions and black smoke', 'burning urban combat zone with destroyed vehicles', 'intense firefight scene with tracer rounds', 'military base under attack with dramatic lighting', 'trench warfare with artillery explosions'],
   },
   cyberpunk: {
-    style: 'cyberpunk tactical gear, glowing cybernetic augmentations, high-tech body armor with neon accents, holographic HUD elements, chrome cybernetic limbs, futuristic weapons',
+    style: 'cyberpunk tactical gear, glowing cybernetic augmentations, high-tech body armor with neon accents, holographic HUD elements, chrome cybernetic limbs',
     backgrounds: ['neon-lit cyberpunk megacity at night with rain and holograms', 'dark cyberpunk alleyway with neon signs and steam', 'high-tech corporate facility with holographic displays', 'dystopian cityscape with massive neon advertisements'],
   },
   postapoc: {
-    style: 'post-apocalyptic scavenged armor, makeshift tactical gear, weathered leather and metal, survival equipment, gas mask, improvised weapons, dust and dirt',
+    style: 'post-apocalyptic scavenged armor, makeshift tactical gear, weathered leather and metal, survival equipment, gas mask, improvised weapons',
     backgrounds: ['desolate wasteland with ruined city skyline', 'overgrown abandoned city with nature reclaiming buildings', 'dusty desert wasteland with wrecked vehicles', 'radioactive ruins with ominous sky'],
   },
   scifi: {
@@ -28,7 +28,7 @@ export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[]
     backgrounds: ['massive spaceship bridge with holographic displays', 'alien planet surface with strange atmosphere', 'futuristic space station interior', 'epic space battle visible through viewport'],
   },
   ww2: {
-    style: '1940s military uniform, period-accurate combat gear, M1 helmet, vintage military equipment, leather boots, canvas webbing, historical accuracy',
+    style: '1940s military uniform, period-accurate combat gear, M1 helmet, vintage military equipment, leather boots, canvas webbing',
     backgrounds: ['World War 2 European battlefield with trenches', 'bombed French village with rubble', 'D-Day beach with obstacles', 'underground bunker with maps and radio equipment'],
   },
   medieval: {
@@ -40,7 +40,7 @@ export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[]
     backgrounds: ['ancient magical forest with glowing particles', 'epic fantasy castle with dramatic sky', 'mystical realm with floating islands', 'dragon lair with treasure'],
   },
   horror: {
-    style: 'survival horror gear, blood-stained clothing, improvised weapons, torn and dirty attire, fearful or determined expression, flashlight or lantern',
+    style: 'survival horror gear, blood-stained clothing, improvised weapons, torn and dirty attire, flashlight or lantern',
     backgrounds: ['abandoned hospital corridor with flickering lights', 'fog-shrouded graveyard at night', 'decrepit haunted mansion interior', 'dark forest with ominous shadows'],
   },
   western: {
@@ -51,9 +51,41 @@ export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[]
     style: 'classic film noir attire, 1940s fedora and trench coat, dramatic shadows on face, vintage firearms, cigarette smoke',
     backgrounds: ['rainy noir city street with neon signs', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with single streetlight'],
   },
+  mystery: {
+    style: 'classic film noir attire, 1940s fedora and trench coat, dramatic shadows on face, vintage firearms',
+    backgrounds: ['rainy noir city street with neon signs', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with single streetlight'],
+  },
+  pirate: {
+    style: 'golden age pirate attire, weathered captain coat, tricorn hat, cutlass and flintlock pistol, sea-worn appearance',
+    backgrounds: ['ship deck during dramatic storm', 'tropical island cove at sunset', 'port tavern with candlelight', 'treasure cave with gold'],
+  },
   survival: {
     style: 'rugged survival gear, weathered outdoor clothing, backpack with supplies, hunting equipment, practical tools',
     backgrounds: ['wilderness campsite in dense forest', 'abandoned mountain cabin', 'harsh winter environment', 'dense jungle with ancient ruins'],
+  },
+  steampunk: {
+    style: 'Victorian steampunk attire, brass goggles, clockwork mechanisms, leather and copper accessories, steam-powered gadgets',
+    backgrounds: ['Victorian industrial city with steam and smoke', 'airship deck above clouds', 'clockwork laboratory with gears', 'steampunk factory interior'],
+  },
+  apocalypse: {
+    style: 'post-apocalyptic survivor gear, scavenged armor pieces, makeshift weapons, gas mask, weathered practical clothing',
+    backgrounds: ['nuclear wasteland with ruined buildings', 'abandoned highway with wrecked vehicles', 'survivor camp in ruins', 'toxic environment with hazmat zones'],
+  },
+  vampire: {
+    style: 'gothic vampire aristocrat attire, Victorian dark elegance, pale complexion, blood-red accents, mysterious dangerous',
+    backgrounds: ['gothic castle interior at night', 'moonlit graveyard with mist', 'Victorian ballroom with candles', 'dark forest with pale moonlight'],
+  },
+  zombie: {
+    style: 'zombie apocalypse survivor gear, reinforced clothing, improvised armor, blood-stained, desperate determined',
+    backgrounds: ['overrun city streets with abandoned cars', 'barricaded building interior', 'deserted shopping mall', 'foggy highway with shambling figures'],
+  },
+  superhero: {
+    style: 'superhero costume with cape or tactical suit, symbol on chest, dramatic heroic pose, powerful confident',
+    backgrounds: ['city skyline at sunset', 'rooftop overlooking metropolis', 'secret base interior', 'dramatic sky with clouds'],
+  },
+  spy: {
+    style: 'sleek spy attire, tailored suit or tactical stealth gear, concealed weapons, sophisticated gadgets, mysterious',
+    backgrounds: ['casino interior with lights', 'secret underground base', 'exotic foreign location', 'high-tech surveillance room'],
   },
 };
 
