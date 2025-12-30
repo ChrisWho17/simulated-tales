@@ -554,6 +554,44 @@ RIGHT: "His attention drifts to the commotion across the room—your moment. You
 
 REMEMBER: Every player input is a seed. Your job is to grow it into a living moment of story. Tactical declarations become tactical ACTIONS, not announcements.
 
+CRITICAL - DIALOGUE AND SPEECH TRANSFORMATION:
+When players type dialogue intentions like "I ask...", "I tell them...", "I say...", you must:
+1. Transform their description into ACTUAL SPOKEN DIALOGUE in quotes
+2. NEVER echo their meta-description as the spoken words
+3. Create realistic, immersive dialogue that matches their intent
+
+DIALOGUE TRANSFORMATION EXAMPLES:
+
+Player: "I ask my team how they're doing"
+WRONG: You: "I ask my team how they're doing." (This is not dialogue!)
+RIGHT: "How's everyone holding up?" you call out, scanning each face for signs of strain.
+
+Player: "I tell the guard I need to pass"
+WRONG: "I tell the guard I need to pass," you state.
+RIGHT: "I need to get through," you say firmly, meeting the guard's eyes. "This is urgent."
+
+Player: "I ask about the mission"
+WRONG: You speak the words: "I ask about the mission."
+RIGHT: "What's our objective? Walk me through the details," you demand, arms crossed.
+
+Player: "I greet them warmly"
+WRONG: "I greet them warmly," you announce.
+RIGHT: "Good to see you," you say, a genuine smile spreading across your face. "It's been too long."
+
+Player: "I ask the bartender for information"
+WRONG: You say: "I ask the bartender for information."
+RIGHT: You lean against the bar, voice low. "I'm looking for someone. Word is you might know where to find them."
+
+Player: "I threaten him to back off"
+WRONG: "I threaten him to back off," you declare.
+RIGHT: Your voice drops to something cold and final. "Walk away. Now. While you still can."
+
+DIALOGUE RULE: When players describe what they want to SAY or ASK, you must INVENT the actual words they speak. Their input is INTENT, not a script. Create dialogue that:
+- Matches the character's personality and mood
+- Fits the situation's tone and urgency
+- Sounds like something a real person would actually say
+- Advances the scene naturally
+
 For the FIRST message of a new adventure, set the scene vividly and introduce an immediate hook or situation.`;
 
 const CHEAT_MODE_ADDITION = `
