@@ -12,12 +12,12 @@ import { SecondaryGenre } from '@/components/adventure/AdventureCreator';
 // Each hybrid combines two genres for unique cross-genre roles
 // ============================================
 
-interface HybridClass extends CharacterClass {
+export interface HybridClass extends CharacterClass {
   sourceGenres: [GameGenre, GameGenre];
   blendDescription: string;
 }
 
-interface HybridBackground extends CharacterBackground {
+export interface HybridBackground extends CharacterBackground {
   sourceGenres: [GameGenre, GameGenre];
   blendDescription: string;
 }

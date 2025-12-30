@@ -3,7 +3,8 @@
 // Fixes: Story mentions items but inventory is empty
 // ============================================================================
 
-import { GameGenre } from '@/types/genreData';
+import { GameGenre, GENRE_DATA } from '@/types/genreData';
+import { CharacterClass } from '@/types/rpgCharacter';
 import { 
   detectItemType, 
   GeneratedItem,
@@ -17,6 +18,8 @@ import {
   DEFAULT_CALIBERS 
 } from './weaponModsSystem';
 import { InventoryItem, InventoryState, EquippedState } from './inventorySystem';
+import { SecondaryGenre } from '@/components/adventure/AdventureCreator';
+import { getBlendedClasses, HybridClass } from './genreBlendSystem';
 
 // ============================================================================
 // STARTING GEAR DEFINITIONS BY GENRE
@@ -128,9 +131,47 @@ export const GENRE_CLASSES: Record<string, GenreClassOption[]> = {
   ],
 };
 
-// Get available classes for a genre
-export function getGenreClasses(genre: string): GenreClassOption[] {
-  return GENRE_CLASSES[genre] || GENRE_CLASSES['fantasy'] || [];
+// Get available classes for a genre (with optional secondary genres for hybrids)
+export function getGenreClasses(genre: string, secondaryGenres?: SecondaryGenre[]): GenreClassOption[] {
+  const baseClasses = GENRE_CLASSES[genre] || GENRE_CLASSES['fantasy'] || [];
+  
+  // If no secondary genres, just return base classes
+  if (!secondaryGenres || secondaryGenres.length === 0) {
+    return baseClasses;
+  }
+  
+  // Get blended classes including hybrids
+  const blendedClasses = getBlendedClasses(genre as GameGenre, secondaryGenres);
+  
+  // Convert CharacterClass to GenreClassOption format for hybrid classes
+  const hybridOptions: GenreClassOption[] = blendedClasses
+    .filter(cls => !baseClasses.some(base => base.id === cls.id))
+    .map(cls => {
+      // Determine icon based on class abilities or name
+      let icon = '⚔️';
+      const name = cls.name.toLowerCase();
+      if (name.includes('mage') || name.includes('tech') || name.includes('sorcerer')) icon = '🔮';
+      else if (name.includes('rogue') || name.includes('shadow') || name.includes('assassin')) icon = '🗝️';
+      else if (name.includes('medic') || name.includes('healer') || name.includes('cleric')) icon = '💊';
+      else if (name.includes('pilot') || name.includes('captain') || name.includes('marshal')) icon = '🚀';
+      else if (name.includes('ghost') || name.includes('cursed') || name.includes('phantom')) icon = '👻';
+      else if (name.includes('pirate') || name.includes('corsair') || name.includes('buccaneer')) icon = '🏴‍☠️';
+      else if (name.includes('cyber') || name.includes('net') || name.includes('hacker')) icon = '💻';
+      else if (name.includes('witch') || name.includes('warlock') || name.includes('occult')) icon = '🔮';
+      else if (name.includes('detective') || name.includes('investigator')) icon = '🔍';
+      else if (name.includes('knight') || name.includes('warrior') || name.includes('soldier')) icon = '⚔️';
+      else if (name.includes('ranger') || name.includes('hunter') || name.includes('tracker')) icon = '🏹';
+      else if (name.includes('druid') || name.includes('nature') || name.includes('shaman')) icon = '🌿';
+      
+      return {
+        id: cls.id,
+        name: cls.name,
+        description: cls.description,
+        icon
+      };
+    });
+  
+  return [...baseClasses, ...hybridOptions];
 }
 
 export const STARTING_GEAR: Record<string, GenreStartingGear> = {

@@ -212,10 +212,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
   const allGenres = getAllGenres();
   
-  // Get available classes for the current primary genre
+  // Get available classes for the current primary genre (including hybrids when secondary genres selected)
   const availableClasses = useMemo(() => {
-    return getGenreClasses(primaryGenre);
-  }, [primaryGenre]);
+    return getGenreClasses(primaryGenre, secondaryGenres);
+  }, [primaryGenre, secondaryGenres]);
   
   // Reset class selection when genre changes
   useEffect(() => {
