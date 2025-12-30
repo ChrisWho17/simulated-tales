@@ -46,7 +46,7 @@ interface SceneImageRequest {
 
 interface SceneEssence {
   coreAction: string;
-  momentType: 'quiet' | 'tense' | 'action' | 'discovery' | 'social' | 'transition' | 'emotional' | 'environmental' | 'romantic';
+  momentType: 'quiet' | 'tense' | 'action' | 'discovery' | 'social' | 'transition' | 'emotional' | 'environmental' | 'romantic' | 'casual' | 'intimate' | 'everyday';
   visualElements: string[];
   setting: string;
   atmosphereWords: string[];
@@ -57,6 +57,10 @@ interface SceneEssence {
   romanticContext?: {
     intimacyLevel: 'tender' | 'passionate' | 'playful' | 'longing';
     focusElements: string[];
+  };
+  casualContext?: {
+    activityType: 'social' | 'personal' | 'work' | 'leisure' | 'domestic';
+    mood: 'relaxed' | 'busy' | 'focused' | 'playful';
   };
 }
 
@@ -138,6 +142,12 @@ function extractSceneEssence(
     transition: ['enter', 'exit', 'leave', 'arrive', 'move', 'travel', 'walk', 'head', 'continue', 'approach', 'go to', 'head to', 'step into', 'open door', 'walk through'],
     emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock', 'comfort'],
     romantic: ['kiss', 'embrace', 'hold hands', 'caress', 'cuddle', 'snuggle', 'lean close', 'whisper', 'gaze into', 'love', 'affection', 'tender', 'romantic', 'intimate', 'brush lips', 'stroke hair', 'touch cheek', 'pull close', 'wrap arms', 'nuzzle', 'sway together', 'dance together', 'rest head', 'intertwine', 'passion', 'longing', 'desire', 'flirt', 'wink', 'blush', 'smile softly', 'heart flutter'],
+    // Everyday casual activities
+    casual: ['drink', 'eat', 'coffee', 'tea', 'beer', 'wine', 'meal', 'food', 'breakfast', 'lunch', 'dinner', 'snack', 'smoke', 'cigarette', 'read', 'book', 'newspaper', 'write', 'draw', 'play cards', 'dice', 'gamble', 'bet', 'shop', 'buy', 'sell', 'trade', 'bargain', 'work', 'fix', 'repair', 'clean', 'wash', 'cook', 'bake', 'brew'],
+    // Personal care and domestic moments
+    everyday: ['morning', 'wake up', 'get dressed', 'undress', 'change clothes', 'bath', 'shower', 'swim', 'exercise', 'stretch', 'train', 'practice', 'groom', 'shave', 'brush', 'comb', 'put on', 'take off', 'pack', 'unpack', 'tidy', 'organize'],
+    // Intimate but non-romantic personal moments
+    intimate: ['confide', 'share secret', 'open up', 'vulnerable', 'trust', 'comfort', 'hug', 'pat back', 'shoulder to cry', 'listen closely', 'understand', 'empathize', 'support', 'encourage', 'reassure', 'care for', 'tend to', 'nurse', 'bandage', 'heal'],
     environmental: ['rain', 'wind', 'sun', 'storm', 'landscape', 'city', 'building', 'street', 'forest', 'look around', 'survey'],
   };
 
@@ -316,6 +326,39 @@ function extractSceneEssence(
     console.log('Romantic context detected:', intimacyLevel, focusElements.slice(0, 3));
   }
 
+  // ========================================
+  // CASUAL/EVERYDAY CONTEXT DETECTION
+  // ========================================
+  let casualContext: SceneEssence['casualContext'] | undefined;
+  
+  if (momentType === 'casual' || momentType === 'everyday' || momentType === 'intimate') {
+    let activityType: 'social' | 'personal' | 'work' | 'leisure' | 'domestic' = 'leisure';
+    let mood: 'relaxed' | 'busy' | 'focused' | 'playful' = 'relaxed';
+    
+    // Determine activity type
+    const socialKeywords = ['drink', 'toast', 'chat', 'laugh', 'party', 'gather', 'celebrate', 'share', 'together'];
+    const personalKeywords = ['bath', 'shower', 'groom', 'dress', 'undress', 'change', 'exercise', 'stretch', 'wake'];
+    const workKeywords = ['work', 'repair', 'fix', 'build', 'forge', 'craft', 'write', 'study', 'research'];
+    const domesticKeywords = ['cook', 'clean', 'wash', 'tidy', 'organize', 'bake', 'brew', 'prepare'];
+    
+    if (socialKeywords.some(k => lowerCombined.includes(k))) {
+      activityType = 'social';
+      mood = Math.random() > 0.5 ? 'playful' : 'relaxed';
+    } else if (personalKeywords.some(k => lowerCombined.includes(k))) {
+      activityType = 'personal';
+      mood = 'relaxed';
+    } else if (workKeywords.some(k => lowerCombined.includes(k))) {
+      activityType = 'work';
+      mood = Math.random() > 0.5 ? 'focused' : 'busy';
+    } else if (domesticKeywords.some(k => lowerCombined.includes(k))) {
+      activityType = 'domestic';
+      mood = 'relaxed';
+    }
+    
+    casualContext = { activityType, mood };
+    console.log('Casual context detected:', activityType, mood);
+  }
+
   // Debug log with actual content
   console.log('Extracted player action:', playerDoing || 'none');
   console.log('Extracted setting:', setting);
@@ -332,6 +375,7 @@ function extractSceneEssence(
     objects: [...new Set(objects)].slice(0, 5),
     sensoryDetails: [...new Set(sensoryDetails)].slice(0, 4),
     romanticContext,
+    casualContext,
   };
 }
 
@@ -345,6 +389,8 @@ const CAMERA_ANGLES = {
   dynamic: ['dutch angle adding tension', 'dramatic low angle', 'high angle looking down', 'asymmetric dynamic composition'],
   intimate: ['close environmental shot', 'tight framing on details', 'intimate scene composition', 'focused close view'],
   romantic: ['soft focus intimate framing', 'close two-shot composition', 'tender moment captured', 'artistic romantic portrait style'],
+  casual: ['comfortable medium shot', 'slice of life framing', 'candid moment composition', 'natural everyday perspective'],
+  everyday: ['observational documentary style', 'lived-in scene framing', 'casual activity captured', 'natural lifestyle shot'],
 };
 
 const LIGHTING_VARIATIONS = {
@@ -354,6 +400,8 @@ const LIGHTING_VARIATIONS = {
   artificial: ['fluorescent harsh lighting', 'neon color cast', 'mixed artificial sources', 'flickering unstable light'],
   night: ['moonlight and shadows', 'scattered artificial lights in darkness', 'low-key nighttime lighting', 'fire/explosion illumination'],
   romantic: ['soft golden hour glow', 'warm candlelight ambiance', 'dreamy backlit silhouettes', 'gentle moonlight romance', 'soft diffused intimate lighting'],
+  casual: ['comfortable ambient lighting', 'warm interior glow', 'natural window light', 'cozy lamp light'],
+  everyday: ['morning light through windows', 'afternoon sun', 'practical mixed lighting', 'natural everyday illumination'],
 };
 
 const ATMOSPHERE_ADDITIONS = {
@@ -361,6 +409,8 @@ const ATMOSPHERE_ADDITIONS = {
   weather: ['rain puddles reflecting', 'wet surfaces glistening', 'fog rolling through', 'heat haze distortion', 'wind-blown elements'],
   environmental: ['distant activity visible', 'background movement', 'environmental storytelling details', 'signs of recent events', 'lived-in world details'],
   romantic: ['soft bokeh background', 'gentle lens flare', 'flower petals drifting', 'warm color wash', 'dreamy soft focus edges'],
+  casual: ['steam from drinks', 'smoke wisps', 'comfortable clutter', 'lived-in details', 'natural imperfections'],
+  everyday: ['daily life in motion', 'background activity', 'ambient sounds implied', 'comfortable atmosphere'],
 };
 
 const COMPOSITION_FOCUS = {
@@ -369,6 +419,8 @@ const COMPOSITION_FOCUS = {
   mood: ['atmosphere is palpable', 'mood conveyed through visuals', 'emotional resonance in composition'],
   detail: ['specific details tell the story', 'meaningful objects prominent', 'visual clues for narrative'],
   connection: ['two figures as focal point', 'emotional bond visualized', 'intimate moment between characters', 'shared space and connection'],
+  activity: ['activity as focal point', 'task being performed', 'hands and objects in focus', 'process captured'],
+  lifestyle: ['slice of life moment', 'everyday beauty captured', 'candid natural scene', 'authentic moment frozen'],
 };
 
 // ============================================================================
@@ -382,134 +434,219 @@ const GENRE_STYLES: Record<string, {
   atmosphericElements: string[];
   worldDetails: string[];
   lightingPreferences: string[];
+  everydayActivities: string[];
+  socialDynamics: string[];
+  intimateMoments: string[];
+  casualInteractions: string[];
+  environmentalLife: string[];
 }> = {
   modern: {
-    baseStyles: ['modern urban realism', 'contemporary gritty aesthetic', 'photorealistic modern setting'],
-    colorPalettes: ['muted earth tones and urban grays', 'concrete and steel colors', 'military greens and tans'],
-    environmentTypes: ['urban streets and buildings', 'modern city environment', 'industrial urban landscape'],
-    atmosphericElements: ['city smog', 'vehicle exhaust', 'street steam', 'rain on pavement', 'urban debris'],
-    worldDetails: ['parked vehicles', 'street signs', 'power lines', 'graffiti', 'civilians'],
+    baseStyles: ['modern urban realism', 'contemporary gritty aesthetic', 'photorealistic modern setting', 'slice of life urban'],
+    colorPalettes: ['muted earth tones and urban grays', 'concrete and steel colors', 'military greens and tans', 'coffee shop warm browns'],
+    environmentTypes: ['urban streets and buildings', 'modern city environment', 'industrial urban landscape', 'cozy apartment interior'],
+    atmosphericElements: ['city smog', 'vehicle exhaust', 'street steam', 'rain on pavement', 'urban debris', 'morning sunlight through blinds'],
+    worldDetails: ['parked vehicles', 'street signs', 'power lines', 'graffiti', 'civilians', 'coffee cups', 'smartphones'],
     lightingPreferences: ['natural', 'artificial', 'dramatic'],
+    everydayActivities: ['drinking coffee', 'checking phone', 'walking dog', 'jogging in park', 'reading newspaper', 'grocery shopping', 'waiting for bus', 'enjoying street food'],
+    socialDynamics: ['friends chatting at cafe', 'coworkers on lunch break', 'couple holding hands', 'neighbors greeting', 'strangers sharing umbrella', 'bartender serving drinks'],
+    intimateMoments: ['quiet moment at window', 'comfortable silence together', 'cooking dinner together', 'watching sunset from rooftop', 'lazy morning in bed', 'slow dancing in kitchen'],
+    casualInteractions: ['waving hello', 'sharing earbuds', 'splitting a meal', 'pointing at something interesting', 'laughing at joke', 'helping with groceries'],
+    environmentalLife: ['birds on power lines', 'street cats', 'food vendors preparing', 'baristas making coffee', 'people rushing to work'],
   },
   cyberpunk: {
-    baseStyles: ['cyberpunk neon noir', 'high-tech dystopian aesthetic', 'neo-noir futurism', 'rain-slicked neon future'],
-    colorPalettes: ['neon pink and cyan on dark', 'electric blue and magenta', 'chrome and neon reflections'],
-    environmentTypes: ['neon-lit megacity streets', 'towering corporate arcologies', 'high-tech slums'],
-    atmosphericElements: ['neon signs everywhere', 'holographic advertisements', 'steam from vents', 'constant rain'],
-    worldDetails: ['flying vehicles', 'augmented people', 'robots', 'street vendors', 'hackers'],
+    baseStyles: ['cyberpunk neon noir', 'high-tech dystopian aesthetic', 'neo-noir futurism', 'rain-slicked neon future', 'blade runner atmosphere'],
+    colorPalettes: ['neon pink and cyan on dark', 'electric blue and magenta', 'chrome and neon reflections', 'holographic rainbow on black'],
+    environmentTypes: ['neon-lit megacity streets', 'towering corporate arcologies', 'high-tech slums', 'underground hacker dens', 'chrome nightclubs'],
+    atmosphericElements: ['neon signs everywhere', 'holographic advertisements', 'steam from vents', 'constant rain', 'data streams visible', 'AR overlays'],
+    worldDetails: ['flying vehicles', 'augmented people', 'robots', 'street vendors', 'hackers', 'chrome implants glowing', 'holographic pets'],
     lightingPreferences: ['atmospheric', 'artificial', 'night'],
+    everydayActivities: ['interfacing with neural jack', 'browsing AR displays', 'ordering synth-food', 'charging cybernetics', 'streaming consciousness', 'upgrading implants at clinic'],
+    socialDynamics: ['hackers sharing data', 'cyber-enhanced dancers', 'dealers in shadows', 'corpo workers on break', 'street racers meeting', 'netrunners collaborating'],
+    intimateMoments: ['sharing neural link', 'rain-soaked embrace under neon', 'quiet moment in capsule hotel', 'watching city lights together', 'syncing heartbeats via implant'],
+    casualInteractions: ['bumping fists with chrome hands', 'sharing bootleg software', 'exchanging crypto', 'checking each others mods', 'discussing latest corpo scandal'],
+    environmentalLife: ['maintenance drones buzzing', 'holographic koi swimming', 'street food sizzling', 'neon flickering', 'AR advertisements following people'],
   },
   postapoc: {
-    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization'],
-    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones'],
-    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland'],
-    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires'],
-    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers'],
+    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization', 'hope among ruins'],
+    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones', 'desert sunset golds'],
+    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland', 'survivor settlement', 'reclaimed greenhouse'],
+    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires', 'creeping vegetation on ruins'],
+    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers', 'water collectors', 'jury-rigged solar panels'],
     lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+    everydayActivities: ['purifying water', 'tending rooftop garden', 'repairing gear', 'trading at market', 'standing watch', 'cooking over campfire', 'scavenging for parts'],
+    socialDynamics: ['sharing rations around fire', 'teaching children to read', 'trading stories of before', 'community meal preparation', 'guards changing shift'],
+    intimateMoments: ['watching stars from ruins', 'sharing last cigarette', 'quiet moment after long journey', 'finding beauty in wasteland flower', 'comfort after nightmare'],
+    casualInteractions: ['sharing found food', 'checking each others gear', 'drawing map in dirt', 'teaching survival skills', 'repairing clothes together'],
+    environmentalLife: ['crows circling', 'mutant plants growing', 'wild dogs scavenging', 'wind through broken buildings', 'rust flaking in breeze'],
   },
   postapocalyptic: {
-    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization'],
-    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones'],
-    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland'],
-    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires'],
-    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers'],
+    baseStyles: ['post-apocalyptic desolation', 'wasteland survivor aesthetic', 'ruined civilization', 'hope among ruins'],
+    colorPalettes: ['rust oranges and dusty browns', 'faded sun-bleached colors', 'ash and ember tones', 'desert sunset golds'],
+    environmentTypes: ['ruined cityscape', 'overgrown urban decay', 'desert wasteland', 'survivor settlement', 'reclaimed greenhouse'],
+    atmosphericElements: ['dust storms', 'ash fall', 'toxic clouds', 'smoke from fires', 'creeping vegetation on ruins'],
+    worldDetails: ['rusted vehicles', 'collapsed buildings', 'makeshift shelters', 'scavengers', 'water collectors', 'jury-rigged solar panels'],
     lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+    everydayActivities: ['purifying water', 'tending rooftop garden', 'repairing gear', 'trading at market', 'standing watch', 'cooking over campfire', 'scavenging for parts'],
+    socialDynamics: ['sharing rations around fire', 'teaching children to read', 'trading stories of before', 'community meal preparation', 'guards changing shift'],
+    intimateMoments: ['watching stars from ruins', 'sharing last cigarette', 'quiet moment after long journey', 'finding beauty in wasteland flower', 'comfort after nightmare'],
+    casualInteractions: ['sharing found food', 'checking each others gear', 'drawing map in dirt', 'teaching survival skills', 'repairing clothes together'],
+    environmentalLife: ['crows circling', 'mutant plants growing', 'wild dogs scavenging', 'wind through broken buildings', 'rust flaking in breeze'],
   },
   scifi: {
-    baseStyles: ['science fiction vista', 'clean futuristic aesthetic', 'sleek technological environment'],
-    colorPalettes: ['clean whites and chrome', 'holographic blue accents', 'high-tech metallic tones'],
-    environmentTypes: ['space station interior', 'futuristic city', 'alien landscape'],
-    atmosphericElements: ['holographic displays', 'energy fields', 'artificial atmosphere'],
-    worldDetails: ['robots', 'drones', 'holographic interfaces', 'advanced vehicles'],
+    baseStyles: ['science fiction vista', 'clean futuristic aesthetic', 'sleek technological environment', 'optimistic space age'],
+    colorPalettes: ['clean whites and chrome', 'holographic blue accents', 'high-tech metallic tones', 'starfield blacks with accent lights'],
+    environmentTypes: ['space station interior', 'futuristic city', 'alien landscape', 'starship bridge', 'biodome habitat'],
+    atmosphericElements: ['holographic displays', 'energy fields', 'artificial atmosphere', 'zero-g particles floating', 'climate-controlled mist'],
+    worldDetails: ['robots', 'drones', 'holographic interfaces', 'advanced vehicles', 'alien flora', 'transparent lifts'],
     lightingPreferences: ['artificial', 'natural', 'dramatic'],
+    everydayActivities: ['reviewing star charts', 'exercising in low-g', 'eating synthesized meal', 'video calling across galaxies', 'calibrating equipment', 'meditation in observation deck'],
+    socialDynamics: ['crew playing zero-g sports', 'scientists debating discovery', 'pilots sharing stories', 'aliens and humans mingling', 'diplomatic reception'],
+    intimateMoments: ['watching nebula together', 'floating embrace in zero-g', 'quiet in observation lounge', 'first contact moment', 'sharing oxygen after rescue'],
+    casualInteractions: ['comparing alien souvenirs', 'trying exotic alien cuisine', 'teaching alien customs', 'fixing equipment together', 'betting on asteroid races'],
+    environmentalLife: ['robots maintaining systems', 'alien pets moving about', 'plants in hydroponics', 'artificial gravity adjustments', 'stars moving past viewports'],
   },
   ww2: {
-    baseStyles: ['1940s wartime documentary', 'World War 2 historical', 'wartime grit and authenticity'],
-    colorPalettes: ['desaturated sepia tones', 'military olive and brown', 'mud and blood colors'],
-    environmentTypes: ['war-torn European village', 'battlefield trenches', 'bombed city ruins'],
-    atmosphericElements: ['smoke from explosions', 'fog of war', 'rain and mud', 'artillery fire'],
-    worldDetails: ['period vehicles', 'soldiers', 'sandbags', 'barbed wire', 'rubble'],
+    baseStyles: ['1940s wartime documentary', 'World War 2 historical', 'wartime grit and authenticity', 'band of brothers realism'],
+    colorPalettes: ['desaturated sepia tones', 'military olive and brown', 'mud and blood colors', 'vintage photograph warmth'],
+    environmentTypes: ['war-torn European village', 'battlefield trenches', 'bombed city ruins', 'military camp', 'countryside farmhouse'],
+    atmosphericElements: ['smoke from explosions', 'fog of war', 'rain and mud', 'artillery fire', 'morning mist over fields'],
+    worldDetails: ['period vehicles', 'soldiers', 'sandbags', 'barbed wire', 'rubble', 'propaganda posters', 'ration tins'],
     lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+    everydayActivities: ['writing letters home', 'playing cards in barracks', 'cleaning rifle', 'sharing cigarettes', 'eating from mess kit', 'reading mail from home'],
+    socialDynamics: ['soldiers singing together', 'medic treating wounded', 'officers planning mission', 'locals sharing bread', 'troops joking before battle'],
+    intimateMoments: ['farewell before deployment', 'nurse comforting soldier', 'reading letter by candlelight', 'reunion embrace', 'finding photograph of loved one'],
+    casualInteractions: ['lighting buddys cigarette', 'sharing chocolate ration', 'teaching local phrases', 'playing harmonica for group', 'trading war souvenirs'],
+    environmentalLife: ['chickens in village yard', 'horses pulling supplies', 'children playing in ruins', 'laundry drying on line', 'farmers continuing work'],
   },
   war: {
-    baseStyles: ['war photography aesthetic', 'gritty military realism', 'battlefield chaos'],
-    colorPalettes: ['muted greens and browns', 'smoke and fire colors', 'mud and blood tones'],
-    environmentTypes: ['active battlefield', 'military positions', 'combat zones'],
-    atmosphericElements: ['smoke', 'debris', 'explosions', 'tracer fire'],
-    worldDetails: ['military vehicles', 'fortifications', 'destroyed equipment', 'soldiers'],
+    baseStyles: ['war photography aesthetic', 'gritty military realism', 'battlefield chaos', 'modern combat documentary'],
+    colorPalettes: ['muted greens and browns', 'smoke and fire colors', 'mud and blood tones', 'night vision green'],
+    environmentTypes: ['active battlefield', 'military positions', 'combat zones', 'forward operating base', 'urban warfare setting'],
+    atmosphericElements: ['smoke', 'debris', 'explosions', 'tracer fire', 'helicopter downwash', 'dust kicked up'],
+    worldDetails: ['military vehicles', 'fortifications', 'destroyed equipment', 'soldiers', 'medics', 'supply crates'],
     lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+    everydayActivities: ['field maintenance on weapons', 'eating MREs', 'setting up comms', 'patrolling perimeter', 'writing in journal', 'checking maps'],
+    socialDynamics: ['squad briefing', 'medic training others', 'soldiers arm wrestling', 'sharing photos from home', 'memorial for fallen'],
+    intimateMoments: ['video call with family', 'quiet prayer before mission', 'buddy checking wounds', 'moment of silence at sunset', 'receiving care package'],
+    casualInteractions: ['fist bumping after mission', 'sharing energy drink', 'showing off tattoo', 'debating sports teams', 'teaching local kids soccer'],
+    environmentalLife: ['stray dogs near base', 'local civilians cautiously watching', 'vendors near safe zone', 'birds startled by explosions', 'goats wandering ruins'],
   },
   medieval: {
-    baseStyles: ['epic medieval fantasy', 'dark fantasy aesthetic', 'gritty medieval realism'],
-    colorPalettes: ['rich earth tones and gold', 'deep forest greens', 'torchlit warm oranges'],
-    environmentTypes: ['castle and fortress', 'medieval village', 'dark forest'],
-    atmosphericElements: ['torch smoke', 'morning mist', 'firelight flicker', 'rain'],
-    worldDetails: ['horses', 'carts', 'market stalls', 'peasants', 'banners'],
+    baseStyles: ['epic medieval fantasy', 'dark fantasy aesthetic', 'gritty medieval realism', 'historical drama'],
+    colorPalettes: ['rich earth tones and gold', 'deep forest greens', 'torchlit warm oranges', 'castle stone grays'],
+    environmentTypes: ['castle and fortress', 'medieval village', 'dark forest', 'bustling market square', 'tavern interior'],
+    atmosphericElements: ['torch smoke', 'morning mist', 'firelight flicker', 'rain', 'woodsmoke from chimneys'],
+    worldDetails: ['horses', 'carts', 'market stalls', 'peasants', 'banners', 'chickens in streets', 'hanging herbs'],
     lightingPreferences: ['natural', 'atmospheric', 'dramatic'],
+    everydayActivities: ['blacksmith hammering', 'bread baking', 'horses being brushed', 'clothes being washed in stream', 'children playing with sticks', 'ale being poured'],
+    socialDynamics: ['merchants haggling', 'bards performing', 'nobles feasting', 'peasants gossiping at well', 'guards changing watch'],
+    intimateMoments: ['dancing at festival', 'stolen kiss behind tavern', 'braiding lovers hair', 'sharing cloak in rain', 'midnight meeting in garden'],
+    casualInteractions: ['toasting with tankards', 'arm wrestling at table', 'examining merchants wares', 'feeding horse treats', 'sharing bread and cheese'],
+    environmentalLife: ['dogs chasing chickens', 'cats hunting mice', 'pigeons on rooftops', 'smoke rising from village', 'sheep grazing hillside'],
   },
   fantasy: {
-    baseStyles: ['high fantasy epic vista', 'magical realm aesthetic', 'mythical grandeur'],
-    colorPalettes: ['rich jewel tones', 'magical purples and golds', 'ethereal blues and silvers'],
-    environmentTypes: ['magical landscapes', 'enchanted forests', 'mystical structures', 'ancient ruins'],
-    atmosphericElements: ['magical particles', 'ethereal mist', 'glowing runes', 'floating elements'],
-    worldDetails: ['mythical creatures', 'ancient ruins', 'magical flora', 'arcane symbols'],
+    baseStyles: ['high fantasy epic vista', 'magical realm aesthetic', 'mythical grandeur', 'enchanted world wonder'],
+    colorPalettes: ['rich jewel tones', 'magical purples and golds', 'ethereal blues and silvers', 'fairy tale colors'],
+    environmentTypes: ['magical landscapes', 'enchanted forests', 'mystical structures', 'ancient ruins', 'crystal caverns'],
+    atmosphericElements: ['magical particles', 'ethereal mist', 'glowing runes', 'floating elements', 'fairy lights'],
+    worldDetails: ['mythical creatures', 'ancient ruins', 'magical flora', 'arcane symbols', 'floating islands', 'crystal formations'],
     lightingPreferences: ['atmospheric', 'dramatic', 'natural'],
+    everydayActivities: ['brewing potions', 'reading ancient tomes', 'practicing spellwork', 'tending magical garden', 'enchanting items', 'feeding familiar'],
+    socialDynamics: ['wizards debating arcana', 'elves and dwarves trading', 'apprentice learning from master', 'festival of the moons', 'council of races meeting'],
+    intimateMoments: ['watching fireflies together', 'sharing magical revelation', 'dancing under enchanted stars', 'healing touch lingering', 'promise under fairy ring'],
+    casualInteractions: ['sharing exotic tea', 'admiring magical trinket', 'playful spell exchange', 'debating best dragon breed', 'trying unusual magical food'],
+    environmentalLife: ['fairies tending flowers', 'magical creatures grazing', 'animated brooms sweeping', 'crystal chimes singing', 'enchanted fountain flowing'],
   },
   horror: {
-    baseStyles: ['dark horror atmosphere', 'survival horror aesthetic', 'psychological dread'],
-    colorPalettes: ['desaturated sickly tones', 'deep shadows and pale highlights', 'blood red accents'],
-    environmentTypes: ['abandoned building', 'dark forest', 'decrepit facility'],
-    atmosphericElements: ['thick fog', 'unnatural shadows', 'flickering lights', 'decay'],
-    worldDetails: ['abandoned objects', 'mysterious stains', 'broken things', 'unsettling shapes'],
+    baseStyles: ['dark horror atmosphere', 'survival horror aesthetic', 'psychological dread', 'gothic tension'],
+    colorPalettes: ['desaturated sickly tones', 'deep shadows and pale highlights', 'blood red accents', 'moonlit blues'],
+    environmentTypes: ['abandoned building', 'dark forest', 'decrepit facility', 'haunted mansion', 'foggy cemetery'],
+    atmosphericElements: ['thick fog', 'unnatural shadows', 'flickering lights', 'decay', 'cobwebs'],
+    worldDetails: ['abandoned objects', 'mysterious stains', 'broken things', 'unsettling shapes', 'old photographs'],
     lightingPreferences: ['night', 'atmospheric', 'dramatic'],
+    everydayActivities: ['reading by candlelight', 'exploring with flashlight', 'locking doors nervously', 'researching old legends', 'checking shadows', 'setting up protective wards'],
+    socialDynamics: ['survivors huddling together', 'investigating strange sounds', 'sharing ghost stories', 'comforting after nightmare', 'planning escape route'],
+    intimateMoments: ['holding hands in darkness', 'protective embrace', 'whispered comfort', 'finding each other after fear', 'trust built through terror'],
+    casualInteractions: ['nervous laughter at false alarm', 'sharing flashlight battery', 'checking on each other', 'passing food in hiding', 'signaling all clear'],
+    environmentalLife: ['crows watching', 'rats scurrying', 'wind rattling windows', 'shadows moving', 'candles guttering'],
   },
   western: {
-    baseStyles: ['classic western vista', 'frontier aesthetic', 'dusty cowboy realism'],
-    colorPalettes: ['warm browns and oranges', 'dusty desert tones', 'sunset reds and golds'],
-    environmentTypes: ['dusty frontier town', 'desert landscape', 'saloon interior'],
-    atmosphericElements: ['dust', 'tumbleweeds', 'heat haze', 'gun smoke'],
-    worldDetails: ['horses', 'wagons', 'wooden buildings', 'cacti', 'cowboys'],
+    baseStyles: ['classic western vista', 'frontier aesthetic', 'dusty cowboy realism', 'golden age western'],
+    colorPalettes: ['warm browns and oranges', 'dusty desert tones', 'sunset reds and golds', 'weathered leather colors'],
+    environmentTypes: ['dusty frontier town', 'desert landscape', 'saloon interior', 'canyon vista', 'ranch homestead'],
+    atmosphericElements: ['dust', 'tumbleweeds', 'heat haze', 'gun smoke', 'campfire smoke'],
+    worldDetails: ['horses', 'wagons', 'wooden buildings', 'cacti', 'cowboys', 'water troughs', 'hitching posts'],
     lightingPreferences: ['natural', 'dramatic', 'atmospheric'],
+    everydayActivities: ['playing poker', 'tending horses', 'drinking whiskey at bar', 'rolling cigarette', 'playing harmonica', 'branding cattle', 'cleaning pistol'],
+    socialDynamics: ['cowboys swapping tales', 'poker game in saloon', 'sheriff making rounds', 'ranchers at cattle auction', 'prospectors sharing claims'],
+    intimateMoments: ['dancing at hoedown', 'watching sunset from porch', 'riding double on horse', 'meeting at watering hole', 'stealing kiss behind barn'],
+    casualInteractions: ['tipping hat in greeting', 'buying round of drinks', 'examining horse teeth', 'comparing revolvers', 'trading trail advice'],
+    environmentalLife: ['vultures circling', 'lizards on rocks', 'horses at trough', 'saloon piano playing', 'dogs sleeping in shade'],
   },
   noir: {
-    baseStyles: ['film noir 1940s', 'moody detective aesthetic', 'black and white crime drama'],
-    colorPalettes: ['black and white tones', 'deep shadows', 'high contrast'],
-    environmentTypes: ['rain-slicked city streets', 'shadowy alleys', 'dimly lit interiors'],
-    atmosphericElements: ['rain', 'neon signs', 'cigarette smoke', 'venetian blind shadows'],
-    worldDetails: ['vintage cars', 'street lamps', 'wet pavement', 'fedoras'],
+    baseStyles: ['film noir 1940s', 'moody detective aesthetic', 'black and white crime drama', 'hardboiled atmosphere'],
+    colorPalettes: ['black and white tones', 'deep shadows', 'high contrast', 'cigarette amber and whiskey gold'],
+    environmentTypes: ['rain-slicked city streets', 'shadowy alleys', 'dimly lit interiors', 'jazz club', 'private eye office'],
+    atmosphericElements: ['rain', 'neon signs', 'cigarette smoke', 'venetian blind shadows', 'steam from grates'],
+    worldDetails: ['vintage cars', 'street lamps', 'wet pavement', 'fedoras', 'cigarette holders', 'rotary phones'],
     lightingPreferences: ['dramatic', 'night', 'atmospheric'],
+    everydayActivities: ['nursing whiskey at bar', 'reading newspaper', 'typing report', 'examining photographs', 'listening to jazz', 'reviewing case files'],
+    socialDynamics: ['informant meeting in shadows', 'jazz band performing', 'bartender polishing glasses', 'couples slow dancing', 'poker in back room'],
+    intimateMoments: ['lighting her cigarette', 'slow dance at jazz club', 'lingering glance across room', 'whispered secrets at bar', 'rain-soaked confession'],
+    casualInteractions: ['passing envelope under table', 'sharing newspaper', 'nodding to regular', 'bumming cigarette', 'leaving generous tip'],
+    environmentalLife: ['rain streaming down windows', 'neon reflecting in puddles', 'smoke curling to ceiling', 'jazz drifting from club', 'cats in alley'],
   },
   victorian: {
-    baseStyles: ['victorian era aesthetic', 'gaslight atmosphere', 'period drama realism'],
-    colorPalettes: ['brass and copper tones', 'deep burgundy', 'sepia and brown'],
-    environmentTypes: ['Victorian streets', 'gaslit architecture', 'industrial factories'],
-    atmosphericElements: ['steam', 'fog', 'gaslight', 'chimney smoke'],
-    worldDetails: ['carriages', 'factory smoke', 'clockwork', 'ornate buildings'],
+    baseStyles: ['victorian era aesthetic', 'gaslight atmosphere', 'period drama realism', 'Dickensian detail'],
+    colorPalettes: ['brass and copper tones', 'deep burgundy', 'sepia and brown', 'foggy gray-greens'],
+    environmentTypes: ['Victorian streets', 'gaslit architecture', 'industrial factories', 'opulent parlor', 'London fog'],
+    atmosphericElements: ['steam', 'fog', 'gaslight', 'chimney smoke', 'coal dust'],
+    worldDetails: ['carriages', 'factory smoke', 'clockwork', 'ornate buildings', 'street vendors', 'flower girls'],
     lightingPreferences: ['atmospheric', 'natural', 'dramatic'],
+    everydayActivities: ['taking afternoon tea', 'reading by fireplace', 'writing letters', 'embroidery by window', 'playing piano', 'tending garden'],
+    socialDynamics: ['society gathering in parlor', 'servants bustling below stairs', 'gentlemen at club', 'ladies promenading in park', 'street urchins playing'],
+    intimateMoments: ['waltz at ball', 'brushed hands over teacups', 'secret glance at opera', 'walk in moonlit garden', 'carriage ride confession'],
+    casualInteractions: ['tipping hat to lady', 'discussing weather', 'sharing cab in rain', 'admiring pocket watch', 'sampling tea selection'],
+    environmentalLife: ['horses pulling carriages', 'newsboys calling headlines', 'flower sellers on corners', 'lamp lighters at dusk', 'pigeons on rooftops'],
   },
   steampunk: {
-    baseStyles: ['Victorian steampunk', 'brass and copper aesthetic', 'clockwork fantasy'],
-    colorPalettes: ['brass gold', 'copper', 'dark wood', 'leather brown'],
-    environmentTypes: ['brass machinery city', 'Victorian industrial', 'airship deck'],
-    atmosphericElements: ['steam', 'gears turning', 'brass machinery', 'pressure valves'],
-    worldDetails: ['airships', 'clockwork automatons', 'pipes', 'goggles'],
+    baseStyles: ['Victorian steampunk', 'brass and copper aesthetic', 'clockwork fantasy', 'retro-futuristic Victorian'],
+    colorPalettes: ['brass gold', 'copper', 'dark wood', 'leather brown', 'steam cloud whites'],
+    environmentTypes: ['brass machinery city', 'Victorian industrial', 'airship deck', 'inventors workshop', 'clocktower interior'],
+    atmosphericElements: ['steam', 'gears turning', 'brass machinery', 'pressure valves', 'coal smoke'],
+    worldDetails: ['airships', 'clockwork automatons', 'pipes', 'goggles', 'mechanical limbs', 'pressure gauges'],
     lightingPreferences: ['atmospheric', 'artificial', 'dramatic'],
+    everydayActivities: ['adjusting goggles', 'calibrating instruments', 'polishing brass', 'reading steam gauge', 'winding clockwork', 'testing invention'],
+    socialDynamics: ['inventors comparing gadgets', 'airship crew working together', 'mechanics debating designs', 'aristocrats with gadgets', 'street vendors of curiosities'],
+    intimateMoments: ['fixing partners clockwork heart', 'dancing amid steam and gears', 'watching sunset from airship', 'sharing discovery excitement', 'first flight together'],
+    casualInteractions: ['examining new invention', 'trading spare parts', 'comparing pocket watches', 'showing off augmentation', 'sharing technical schematics'],
+    environmentalLife: ['clockwork birds singing', 'steam venting rhythmically', 'gears turning in walls', 'automatons performing tasks', 'dirigibles passing overhead'],
   },
   pirate: {
-    baseStyles: ['golden age of piracy', 'seafaring adventure', 'caribbean swashbuckler'],
-    colorPalettes: ['ocean blues', 'weathered wood', 'gold accents', 'tropical greens'],
-    environmentTypes: ['open seas', 'island harbors', 'ship decks', 'port towns'],
-    atmosphericElements: ['sea spray', 'ship rigging', 'tropical clouds', 'cannon smoke'],
-    worldDetails: ['sailing ships', 'palm trees', 'treasure', 'dock workers'],
+    baseStyles: ['golden age of piracy', 'seafaring adventure', 'caribbean swashbuckler', 'treasure island adventure'],
+    colorPalettes: ['ocean blues', 'weathered wood', 'gold accents', 'tropical greens', 'sunset oranges'],
+    environmentTypes: ['open seas', 'island harbors', 'ship decks', 'port towns', 'hidden cove'],
+    atmosphericElements: ['sea spray', 'ship rigging', 'tropical clouds', 'cannon smoke', 'salt mist'],
+    worldDetails: ['sailing ships', 'palm trees', 'treasure', 'dock workers', 'exotic birds', 'rum barrels'],
     lightingPreferences: ['natural', 'dramatic', 'atmospheric'],
+    everydayActivities: ['swabbing deck', 'navigating by stars', 'drinking rum', 'mending sails', 'fishing off stern', 'playing dice', 'singing sea shanties'],
+    socialDynamics: ['crew sharing grog', 'captain at wheel', 'pirates dividing plunder', 'tavern arm wrestling', 'merchants negotiating'],
+    intimateMoments: ['watching stars at sea', 'dancing in port tavern', 'sharing sunset at bow', 'first landfall together', 'promise to return'],
+    casualInteractions: ['comparing scars', 'teaching knot tying', 'sharing exotic fruit', 'betting on cards', 'trading port stories'],
+    environmentalLife: ['dolphins following ship', 'parrots on shoulders', 'gulls circling masts', 'crabs on beach', 'fish jumping at bow'],
   },
   zombie: {
-    baseStyles: ['zombie apocalypse', 'urban decay horror', 'survival horror'],
-    colorPalettes: ['desaturated greens', 'grays', 'blood reds', 'decay browns'],
-    environmentTypes: ['abandoned cities', 'overrun streets', 'survivor camps'],
-    atmosphericElements: ['decay', 'abandoned buildings', 'fire smoke', 'blood splatter'],
-    worldDetails: ['abandoned cars', 'barricades', 'graffiti', 'shambling figures'],
+    baseStyles: ['zombie apocalypse', 'urban decay horror', 'survival horror', 'walking dead atmosphere'],
+    colorPalettes: ['desaturated greens', 'grays', 'blood reds', 'decay browns', 'sickly yellows'],
+    environmentTypes: ['abandoned cities', 'overrun streets', 'survivor camps', 'barricaded buildings', 'quarantine zones'],
+    atmosphericElements: ['decay', 'abandoned buildings', 'fire smoke', 'blood splatter', 'overgrown vegetation'],
+    worldDetails: ['abandoned cars', 'barricades', 'graffiti', 'shambling figures', 'supply caches', 'warning signs'],
     lightingPreferences: ['atmospheric', 'dramatic', 'night'],
+    everydayActivities: ['fortifying shelter', 'rationing supplies', 'keeping watch', 'sharpening weapons', 'searching for food', 'treating wounds', 'planning supply run'],
+    socialDynamics: ['survivors voting on decisions', 'teaching combat skills', 'grieving lost companions', 'celebrating small victories', 'arguing over resources'],
+    intimateMoments: ['comfort after close call', 'dancing in safe room', 'sharing last meal together', 'watch duty together', 'finding hope in each other'],
+    casualInteractions: ['trading supplies', 'sharing food finds', 'showing off zombie kill count', 'comparing survival gear', 'telling stories of before'],
+    environmentalLife: ['rats scurrying', 'crows on corpses', 'plants reclaiming buildings', 'distant groans', 'fires burning in distance'],
   },
 };
 
