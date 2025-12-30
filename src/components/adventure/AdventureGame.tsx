@@ -1543,7 +1543,7 @@ export function AdventureGame() {
     // Set the dice mode in the game context
     setDiceMode(selection.diceMode);
     
-    // Convert secondary genres from percentage (0-30) to decimal (0-0.30) for World Bible
+    // Convert secondary genres from percentage (0-50) to decimal (0-0.50) for World Bible
     const secondaryGenreBlends = (selection.genreContract?.secondaryGenres || []).map(sg => ({
       genreId: sg.genreId,
       blendStrength: sg.blendStrength / 100, // Convert percentage to decimal
