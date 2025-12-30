@@ -4,10 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle } from 'lucide-react';
 import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
 import { InputFormatGuide, InputHint } from './InputFormatGuide';
+import { EmotionPicker } from './EmotionPicker';
+import { CoreMoodType } from '@/game/moodSystem';
+import { GameGenre } from '@/types/genreData';
 
 interface PlayerInputProps {
-  onSubmit: (command: string) => void;
+  onSubmit: (command: string, emotionalTone?: CoreMoodType | null) => void;
   disabled?: boolean;
+  currentMood?: CoreMoodType;
+  genre?: GameGenre;
+  enableEmotionPicker?: boolean;
 }
 
 const quickActions = [
@@ -18,10 +24,17 @@ const quickActions = [
   { label: 'Help', command: 'help', icon: HelpCircle },
 ];
 
-export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
+export function PlayerInput({ 
+  onSubmit, 
+  disabled,
+  currentMood = 'neutral',
+  genre = 'fantasy',
+  enableEmotionPicker = true
+}: PlayerInputProps) {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [selectedEmotion, setSelectedEmotion] = useState<CoreMoodType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -40,10 +53,13 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
     e.preventDefault();
     if (!input.trim() || disabled) return;
     
-    onSubmit(input.trim());
+    // Pass the emotional tone (null means auto-use character mood)
+    onSubmit(input.trim(), selectedEmotion);
     setHistory(prev => [...prev, input.trim()]);
     setHistoryIndex(-1);
     setInput('');
+    // Reset emotion selection after submit (auto for next message)
+    setSelectedEmotion(null);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -70,7 +86,7 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
   return (
     <div className="border-t border-border bg-card/50 backdrop-blur-sm p-3 sm:p-4">
       {/* Quick Actions */}
-      <div className="flex gap-1.5 sm:gap-2 mb-3 flex-wrap">
+      <div className="flex gap-1.5 sm:gap-2 mb-3 flex-wrap items-center">
         {quickActions.map(({ label, command, icon: Icon }) => (
           <Button
             key={command}
@@ -84,6 +100,19 @@ export function PlayerInput({ onSubmit, disabled }: PlayerInputProps) {
             <span className="hidden sm:inline">{label}</span>
           </Button>
         ))}
+        
+        {/* Emotion Picker - shows after quick actions */}
+        {enableEmotionPicker && (
+          <div className="ml-auto">
+            <EmotionPicker
+              currentMood={currentMood}
+              genre={genre}
+              selectedEmotion={selectedEmotion}
+              onEmotionSelect={setSelectedEmotion}
+              disabled={disabled}
+            />
+          </div>
+        )}
       </div>
       
       {/* Main Input */}
