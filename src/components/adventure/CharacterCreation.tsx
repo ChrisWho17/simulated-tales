@@ -266,6 +266,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       ...(appearance.detailed?.accessories || []),
     ];
     
+    // Add full appearance data for adult content (18+) - stored separately for AI context
+    (character as any).fullAppearance = appearance.full;
+    (character as any).tieredAppearance = appearance;
+    
+    // Generate full appearance description for AI using the formatAppearanceForAI helper
+    (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
+    
     onComplete(character, scenario);
   };
 
