@@ -63,6 +63,10 @@ import {
   DELTA_LEDGER_INSTRUCTIONS,
 } from '@/game/narrativeContract';
 import {
+  generateImmersiveOpening,
+  getQuickGenreFallback,
+} from '@/game/openingNarrativeGenerator';
+import {
   buildNPCIdentityContext,
   validateNPCRelationships,
   repairNPCRelationships,
@@ -146,54 +150,10 @@ function formatEmotionalContext(
 
 import { GameMechanics } from './types';
 
-// Genre-specific fallback openings with blend support - moved outside component for reuse
+// SecondaryGenreBlend interface kept for type compatibility
 interface SecondaryGenreBlend {
   genreId: string;
   blendStrength: number;
-}
-
-const GENRE_FLAVORS: Record<string, { tone: string; element: string; atmosphere: string }> = {
-  fantasy: { tone: 'mystical', element: 'ancient magic hummed in the air', atmosphere: 'wonder and destiny' },
-  scifi: { tone: 'technological', element: 'systems hummed with data', atmosphere: 'vast unknowns awaited' },
-  horror: { tone: 'dread-filled', element: 'shadows seemed to watch', atmosphere: 'unease crept through every moment' },
-  mystery: { tone: 'enigmatic', element: 'secrets lurked beneath the surface', atmosphere: 'truth waited to be uncovered' },
-  pirate: { tone: 'adventurous', element: 'salt spray and distant horizons called', atmosphere: 'fortune and danger intertwined' },
-  western: { tone: 'rugged', element: 'dust and determination defined the land', atmosphere: 'survival demanded grit' },
-  cyberpunk: { tone: 'neon-drenched', element: 'data streams and chrome glinted', atmosphere: 'the megacorps controlled everything' },
-  postapoc: { tone: 'desolate', element: 'ruins of the old world stood silent', atmosphere: 'every day was a fight' },
-  war: { tone: 'tense', element: 'the calm before battle hung heavy', atmosphere: 'duty called without mercy' },
-  cosmic_horror: { tone: 'insignificant', element: 'vast incomprehensible forces stirred', atmosphere: 'sanity was a fragile thing' },
-  modern_life: { tone: 'relatable', element: 'the hum of city life surrounded everything', atmosphere: 'dreams and reality intertwined' },
-};
-
-function buildBlendedFallbackOpening(
-  primaryGenre: string, 
-  charName: string, 
-  scenario: string,
-  secondaryGenres: SecondaryGenreBlend[]
-): string {
-  const primaryFlavor = GENRE_FLAVORS[primaryGenre] || { tone: 'uncertain', element: 'possibilities unfolded', atmosphere: 'adventure awaited' };
-  
-  // Build base opening with primary genre
-  let opening = `${charName} stood at a crossroads where ${primaryFlavor.element}. `;
-  
-  // Blend in secondary genres proportionally
-  if (secondaryGenres.length > 0) {
-    const blendedElements: string[] = [];
-    for (const sg of secondaryGenres) {
-      const flavor = GENRE_FLAVORS[sg.genreId];
-      if (flavor && sg.blendStrength > 0.1) { // Only include if >10% blend
-        blendedElements.push(flavor.element);
-      }
-    }
-    if (blendedElements.length > 0) {
-      opening += `Here, ${blendedElements.slice(0, 2).join(' and ')}. `;
-    }
-  }
-  
-  opening += `In this ${primaryFlavor.tone} world, ${primaryFlavor.atmosphere}. The path ahead was uncertain, but the first step waited to be taken.`;
-  
-  return opening;
 }
 
 // Helper to build background NPC actions context for AI
@@ -1524,12 +1484,12 @@ export function AdventureGame() {
         const data = await response.json();
         console.log('[AdventureGame] Received narrative response:', !!data.narrative);
         
-        const narrativeContent = data.narrative || buildBlendedFallbackOpening(
-          scenarioSelection.genre, 
-          character.name, 
-          scenarioSelection.scenario,
-          secondaryGenres
-        );
+        const narrativeContent = data.narrative || generateImmersiveOpening({
+          character,
+          genre: scenarioSelection.genre,
+          scenario: scenarioSelection.scenario,
+          secondaryGenres,
+        });
         
         const newStory: StoryEntry[] = [{
           id: `narrator_${Date.now()}`,
@@ -1550,12 +1510,12 @@ export function AdventureGame() {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
         
         // Use genre-specific fallback (always works, never blocks)
-        const fallbackContent = buildBlendedFallbackOpening(
-          scenarioSelection.genre,
-          character.name,
-          scenarioSelection.scenario,
-          secondaryGenres
-        );
+        const fallbackContent = generateImmersiveOpening({
+          character,
+          genre: scenarioSelection.genre,
+          scenario: scenarioSelection.scenario,
+          secondaryGenres,
+        });
         
         const fallbackStory: StoryEntry[] = [{
           id: `narrator_${Date.now()}`,
@@ -1680,12 +1640,12 @@ export function AdventureGame() {
       }
       
       // Create story entry (use blended fallback if narrative generation failed)
-      const narrativeContent = narrative || buildBlendedFallbackOpening(
-        scenarioSelection.genre || 'fantasy',
-        char.name,
-        scenarioSelection.scenario,
-        worldBible?.secondaryGenres || []
-      );
+      const narrativeContent = narrative || generateImmersiveOpening({
+        character: char,
+        genre: scenarioSelection.genre || 'fantasy',
+        scenario: scenarioSelection.scenario,
+        secondaryGenres: worldBible?.secondaryGenres || [],
+      });
       const newStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
@@ -1707,12 +1667,12 @@ export function AdventureGame() {
       const fallbackStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
-        content: buildBlendedFallbackOpening(
-          scenarioSelection.genre || 'fantasy',
-          char.name,
-          scenarioSelection.scenario,
-          worldBible?.secondaryGenres || []
-        ),
+        content: generateImmersiveOpening({
+          character: char,
+          genre: scenarioSelection.genre || 'fantasy',
+          scenario: scenarioSelection.scenario,
+          secondaryGenres: worldBible?.secondaryGenres || [],
+        }),
         timestamp: Date.now(),
       }];
       setStory(fallbackStory);
