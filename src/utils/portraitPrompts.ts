@@ -155,6 +155,11 @@ export interface CharacterAppearance {
   hasCybernetics?: boolean;
   hasBeard?: boolean;
   customDescription?: string;
+  // Full appearance (18+) options
+  bustSize?: string;
+  hipWidth?: string;
+  muscleDefinition?: string;
+  intimateDetails?: string;
 }
 
 export function buildPortraitPrompt(
@@ -219,6 +224,52 @@ export function buildPortraitPrompt(
   if (character.hasBeard || character.details?.includes('beard')) {
     details.push('well-groomed tactical beard, facial hair with detail');
   }
+  
+  // Full appearance (18+) customizations - bust, hips, muscle, intimate details
+  if (character.bustSize && character.bustSize !== 'medium') {
+    const bustDescriptions: Record<string, string> = {
+      'flat': 'flat chest, small bust',
+      'small': 'small bust, petite chest',
+      'large': 'large bust, full chest, prominent cleavage',
+      'very large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
+      'very_large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
+    };
+    if (bustDescriptions[character.bustSize]) {
+      details.push(bustDescriptions[character.bustSize]);
+    }
+  }
+  
+  if (character.hipWidth && character.hipWidth !== 'average') {
+    const hipDescriptions: Record<string, string> = {
+      'narrow': 'narrow hips, slim waist',
+      'wide': 'wide hips, curvy waist, hourglass figure',
+      'very wide': 'very wide hips, extremely curvy, thick thighs, voluptuous hourglass',
+      'very_wide': 'very wide hips, extremely curvy, thick thighs, voluptuous hourglass',
+    };
+    if (hipDescriptions[character.hipWidth]) {
+      details.push(hipDescriptions[character.hipWidth]);
+    }
+  }
+  
+  if (character.muscleDefinition && character.muscleDefinition !== 'toned') {
+    const muscleDescriptions: Record<string, string> = {
+      'none': 'soft body, no visible muscle',
+      'light': 'lightly toned, subtle muscle definition',
+      'defined': 'defined muscles, visible abs, toned arms',
+      'athletic': 'athletic muscular, visible abs, toned arms',
+      'very muscular': 'heavily muscular, bodybuilder physique, prominent muscles',
+      'bodybuilder': 'heavily muscular, bodybuilder physique, prominent muscles',
+    };
+    if (muscleDescriptions[character.muscleDefinition]) {
+      details.push(muscleDescriptions[character.muscleDefinition]);
+    }
+  }
+  
+  // Custom intimate details - clothing, features, etc. (PRIORITIZED - user's custom input)
+  if (character.intimateDetails && character.intimateDetails.trim()) {
+    details.push(character.intimateDetails.trim());
+  }
+  
   if (character.customDescription) {
     details.push(character.customDescription);
   }
