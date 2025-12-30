@@ -286,6 +286,14 @@ export function AdventureGame() {
   const needsInitialNarrative = useRef<boolean>(false);
   const hasInitialized = useRef<boolean>(false);
   
+  // === WORLD REGENERATION & LOCK SYSTEM ===
+  // Track if the starting world is locked (after regeneration or 2nd player action)
+  const [worldLocked, setWorldLocked] = useState<boolean>(false);
+  // Track the locked opening narrative for fallback
+  const [lockedOpening, setLockedOpening] = useState<string | null>(null);
+  // Count player actions to know when to lock world
+  const playerActionCount = useRef<number>(0);
+  
   // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
     // Skip if not done loading or already initialized
@@ -781,33 +789,38 @@ export function AdventureGame() {
     }
   }, [generateSceneIllustration, settings.sceneIllustrations]);
 
-  const generateNarrative = useCallback(async (
+  // === RETRY WITH REDUCED CONTEXT HELPER ===
+  // Retry levels: 0 = full context, 1 = reduced, 2 = minimal, 3 = basic only
+  const generateNarrativeWithRetry = useCallback(async (
     scenario: string,
     playerAction?: string,
     history: StoryEntry[] = [],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean
-  ) => {
+    skipLoadingState?: boolean,
+    retryLevel: number = 0
+  ): Promise<string | null> => {
     const activeChar = char || character;
     if (!activeChar) return null;
+    
+    const genre = scenarioSelection?.genre || 'fantasy';
     
     // === RACE CONDITION FIX: Validate state before generation ===
     const generationState = {
       character: activeChar,
       worldBible: worldBible,
       scenario: scenario,
-      genre: scenarioSelection?.genre || null,
+      genre: genre,
     };
     
     const stateValidation = validateGenerationState(generationState);
     if (!stateValidation.ready) {
       console.warn('[generateNarrative] State not ready, using fallback. Missing:', stateValidation.missing);
-      return getContextualFallback(scenarioSelection?.genre);
+      return getContextualFallback(genre);
     }
     
     // === RACE CONDITION FIX: Acquire generation lock ===
-    const requestId = `gen_${Date.now()}`;
+    const requestId = `gen_${Date.now()}_r${retryLevel}`;
     const lockAcquired = await acquireGenerationLock(requestId);
     if (!lockAcquired) {
       console.warn('[generateNarrative] Could not acquire lock, request cancelled');
@@ -817,6 +830,11 @@ export function AdventureGame() {
     // Only manage loading state if not handled by caller
     if (!skipLoadingState) {
       setIsLoading(true);
+    }
+    
+    // Log retry attempt
+    if (retryLevel > 0) {
+      console.log(`[generateNarrative] Retry attempt ${retryLevel} with reduced context`);
     }
 
     try {
@@ -1011,111 +1029,130 @@ export function AdventureGame() {
         activeConsequences: activeConsequences.map(c => c.description),
       };
 
+      // === RETRY LEVEL CONTEXT REDUCTION ===
+      // retryLevel 0: full context
+      // retryLevel 1: drop living world, pressure, motivation, memory bites
+      // retryLevel 2: also drop NPC psychology, ripples, unreliable info, consistency
+      // retryLevel 3: minimal - just scenario, character, and basic narrative contract
+      
+      const includeAdvancedContext = retryLevel === 0;
+      const includeIntermediateContext = retryLevel <= 1;
+      const includeBasicContext = retryLevel <= 2;
+      
+      const requestBody: Record<string, any> = {
+        scenario: enhancedScenario,
+        playerAction: cleanedPlayerAction,
+        conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
+        cheatMode,
+        character: activeChar,
+        diceRoll,
+        // Pass adult content setting for NSFW control
+        adultContent: settings.adultContent,
+        // Pass character appearance description for narrative (includes adult details when enabled)
+        characterAppearance: (activeChar as any).appearanceDescription || null,
+        // Pass narrator style configuration
+        narratorConfig: settings.narratorConfig,
+        // Pass dice mode for roll frequency
+        diceMode: diceMode,
+        // === NARRATIVE CONTRACT - Always include (core requirement) ===
+        narrativeContractContext: (() => {
+          const isOpening = history.length === 0;
+          const characterClass = activeChar.classId || 'default';
+          const characterInventory = inventory.state.items.map(i => ({
+            name: i.name,
+            quantity: i.quantity || 1,
+          }));
+          
+          // Build spawn packet for opening scene
+          const spawnPacket = isOpening ? buildSpawnPacket(
+            scenarioSelection?.scenario || scenario,
+            genre,
+            characterClass,
+            activeChar.name,
+            characterInventory,
+            playerLocation.zoneName || 'Unknown Location'
+          ) : null;
+          
+          return {
+            universalRules: UNIVERSAL_NARRATIVE_RULES,
+            genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
+            spawnPacket: spawnPacket ? formatSpawnPacket(spawnPacket) : null,
+            isOpening,
+          };
+        })(),
+      };
+      
+      // === BASIC CONTEXT (retryLevel <= 2) ===
+      if (includeBasicContext) {
+        requestBody.memoryContext = formattedMemory.fullContext ? formattedMemory : undefined;
+        requestBody.emotionalContext = emotionalContext;
+        requestBody.genreContract = worldBible?.contractSummary || null;
+        requestBody.toneContext = toneContextPayload;
+        requestBody.languageContext = languageContextPayload;
+        requestBody.locationContext = locationContextPayload;
+        
+        // Director context
+        if (settings.directorSettings) {
+          requestBody.directorContext = {
+            enabled: settings.directorSettings.enabled,
+            rawGame: settings.directorSettings.rawGame,
+            mode: settings.directorSettings.mode,
+            directorType: settings.directorSettings.directorType,
+            tightness: settings.directorSettings.tightness,
+            cruelty: settings.directorSettings.cruelty,
+            weirdness: settings.directorSettings.weirdness,
+            guidance: settings.directorSettings.guidance,
+          };
+        }
+      }
+      
+      // === INTERMEDIATE CONTEXT (retryLevel <= 1) ===
+      if (includeIntermediateContext) {
+        requestBody.npcPsychologyContext = npcPsychologyPayload;
+        requestBody.rippleContext = ripplePayload;
+        requestBody.unreliableInfoContext = unreliableInfoPayload;
+        requestBody.consistencyContext = {
+          objectOwnership: buildInventoryContextForAI(inventory.state),
+          npcIdentity: buildNPCIdentityContext(),
+          playerCorrections: buildPlayerCorrectionsContext(),
+          moveSyncState: buildMoveSyncContextForAI(),
+        };
+        requestBody.npcPersonalityContext = npcPersonalityPayload;
+        
+        // Weather context
+        if (settings.enableWeatherEffects) {
+          requestBody.weatherContext = {
+            current: weatherState.current,
+            intensity: weatherState.intensity > 1.2 ? 'intense' : weatherState.intensity < 0.7 ? 'mild' : 'moderate',
+            name: WEATHER_CONFIGS[weatherState.current]?.name || weatherState.current,
+            narrativeContext: getWeatherNarrativeContext(weatherState),
+            effects: formatWeatherEffectsForAI(weatherState),
+          };
+        }
+      }
+      
+      // === ADVANCED CONTEXT (retryLevel === 0 only) ===
+      if (includeAdvancedContext) {
+        requestBody.backgroundNPCActionsContext = backgroundNPCActionsPayload;
+        requestBody.pressureClockContext = pressureClockPayload;
+        requestBody.npcMotivationContext = npcMotivationPayload;
+        requestBody.memoryBiteContext = memoryBitePayload;
+        requestBody.livingWorldContext = {
+          propertyContext: PropertySystem.buildPropertyContext(),
+          rivalContext: RivalSystem.buildRivalContext(),
+          factionContext: FactionSystem.buildFactionContext(),
+          fullContext: buildLivingWorldContext(),
+        };
+      }
+      
+      console.log(`[generateNarrative] Request body size: ${JSON.stringify(requestBody).length} chars (retryLevel: ${retryLevel})`);
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            scenario: enhancedScenario,
-            playerAction: cleanedPlayerAction,
-            conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
-            cheatMode,
-            character: activeChar,
-            diceRoll,
-            memoryContext: formattedMemory.fullContext ? formattedMemory : undefined,
-            emotionalContext,
-            // Pass genre contract summary for AI awareness
-            genreContract: worldBible?.contractSummary || null,
-            // Pass adult content setting for NSFW control
-            adultContent: settings.adultContent,
-            // Pass character appearance description for narrative (includes adult details when enabled)
-            characterAppearance: (activeChar as any).appearanceDescription || null,
-            // Pass narrator style configuration
-            narratorConfig: settings.narratorConfig,
-            // Pass tone adaptation context
-            toneContext: toneContextPayload,
-            // Pass language barrier context
-            languageContext: languageContextPayload,
-            // Pass dice mode for roll frequency
-            diceMode: diceMode,
-            // === NEW SYSTEMS ===
-            // NPC Psychology (grudges, debts, relationships)
-            npcPsychologyContext: npcPsychologyPayload,
-            // Ripple effects and world state
-            rippleContext: ripplePayload,
-            // Unreliable information and rumors
-            unreliableInfoContext: unreliableInfoPayload,
-            // Location and zone context
-            locationContext: locationContextPayload,
-// === CONSISTENCY SYSTEMS ===
-            consistencyContext: {
-              objectOwnership: buildInventoryContextForAI(inventory.state),
-              npcIdentity: buildNPCIdentityContext(),
-              playerCorrections: buildPlayerCorrectionsContext(),
-              moveSyncState: buildMoveSyncContextForAI(),
-            },
-            // === LIVING WORLD: Background NPC actions ===
-            backgroundNPCActionsContext: backgroundNPCActionsPayload,
-            // === PHASE 10: Pressure, Motivation, Memory Bites ===
-            pressureClockContext: pressureClockPayload,
-            npcMotivationContext: npcMotivationPayload,
-            memoryBiteContext: memoryBitePayload,
-            // === WEATHER CONTEXT - Critical for narrative consistency ===
-            weatherContext: settings.enableWeatherEffects ? {
-              current: weatherState.current,
-              intensity: weatherState.intensity > 1.2 ? 'intense' : weatherState.intensity < 0.7 ? 'mild' : 'moderate',
-              name: WEATHER_CONFIGS[weatherState.current]?.name || weatherState.current,
-              narrativeContext: getWeatherNarrativeContext(weatherState),
-              effects: formatWeatherEffectsForAI(weatherState),
-            } : null,
-            // === LIVING WORLD ENGINE - Properties, Rivals, Factions ===
-            livingWorldContext: {
-              propertyContext: PropertySystem.buildPropertyContext(),
-              rivalContext: RivalSystem.buildRivalContext(),
-              factionContext: FactionSystem.buildFactionContext(),
-              fullContext: buildLivingWorldContext(),
-            },
-            // === NPC PERSONALITY CONTEXT - Archetype-driven dialogue ===
-            npcPersonalityContext: npcPersonalityPayload,
-            // === NARRATIVE CONTRACT - Deep immersion rules, spawn packet, delta ledger ===
-            narrativeContractContext: (() => {
-              const isOpening = history.length === 0;
-              const characterClass = activeChar.classId || 'default';
-              const characterInventory = inventory.state.items.map(i => ({
-                name: i.name,
-                quantity: i.quantity || 1,
-              }));
-              
-              // Build spawn packet for opening scene
-              const spawnPacket = isOpening ? buildSpawnPacket(
-                scenarioSelection?.scenario || scenario,
-                genre,
-                characterClass,
-                activeChar.name,
-                characterInventory,
-                playerLocation.zoneName || 'Unknown Location'
-              ) : null;
-              
-              return {
-                universalRules: UNIVERSAL_NARRATIVE_RULES,
-                genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
-                spawnPacket: spawnPacket ? formatSpawnPacket(spawnPacket) : null,
-                isOpening,
-              };
-            })(),
-            // === DIRECTOR MODE - DM manipulation and narrative steering ===
-            directorContext: settings.directorSettings ? {
-              enabled: settings.directorSettings.enabled,
-              rawGame: settings.directorSettings.rawGame,
-              mode: settings.directorSettings.mode,
-              directorType: settings.directorSettings.directorType,
-              tightness: settings.directorSettings.tightness,
-              cruelty: settings.directorSettings.cruelty,
-              weirdness: settings.directorSettings.weirdness,
-              guidance: settings.directorSettings.guidance,
-            } : undefined,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -1267,6 +1304,59 @@ export function AdventureGame() {
       }
     }
   }, [character, cheatMode, campaignMemory, getCampaignContext, currentMood, settings.enableMoodSystem, settings.adultContent, scenarioSelection?.genre, getEnhancedPromptWithContract, validateContent, worldBible, toneState, languageState, sceneNPCs, worldState, narrativeQueue, activeRumors, playerLocation, activeConsequences]);
+
+  // === WRAPPER: generateNarrative with automatic retry on failure ===
+  // This wraps generateNarrativeWithRetry and handles automatic retry with reduced context
+  const generateNarrative = useCallback(async (
+    scenario: string,
+    playerAction?: string,
+    history: StoryEntry[] = [],
+    diceRoll?: any,
+    char?: RPGCharacter,
+    skipLoadingState?: boolean
+  ): Promise<string | null> => {
+    const MAX_RETRIES = 3;
+    
+    for (let retryLevel = 0; retryLevel <= MAX_RETRIES; retryLevel++) {
+      try {
+        const result = await generateNarrativeWithRetry(
+          scenario,
+          playerAction,
+          history,
+          diceRoll,
+          char,
+          skipLoadingState,
+          retryLevel
+        );
+        
+        // If we got a valid narrative (not a fallback), return it
+        if (result && !result.includes('The moment stretches') && !result.includes('You pause')) {
+          return result;
+        }
+        
+        // If we got any result on the first try, use it
+        if (retryLevel === 0 && result) {
+          return result;
+        }
+        
+        // Otherwise continue to next retry level with reduced context
+        console.log(`[generateNarrative] Attempt ${retryLevel + 1} returned fallback, trying with reduced context...`);
+        
+      } catch (error) {
+        console.error(`[generateNarrative] Attempt ${retryLevel + 1} failed:`, error);
+        
+        // If this was the last retry, return fallback
+        if (retryLevel === MAX_RETRIES) {
+          return getContextualFallback(scenarioSelection?.genre);
+        }
+        
+        // Otherwise continue to next retry level
+        console.log(`[generateNarrative] Retrying with reduced context (level ${retryLevel + 1})...`);
+      }
+    }
+    
+    return getContextualFallback(scenarioSelection?.genre);
+  }, [generateNarrativeWithRetry, scenarioSelection?.genre]);
 
   // === ZONE TRANSITION HANDLER ===
   // Generates narrative description when player moves to a new zone
@@ -1752,6 +1842,17 @@ export function AdventureGame() {
       }
     }
 
+    // === WORLD LOCK: Increment player action count and lock after 2nd action ===
+    playerActionCount.current += 1;
+    if (playerActionCount.current >= 2 && !worldLocked) {
+      console.log('[WorldLock] Locking world after 2nd player action');
+      setWorldLocked(true);
+      // Store current opening as fallback
+      if (story.length > 0 && story[0].role === 'narrator' && !lockedOpening) {
+        setLockedOpening(story[0].content);
+      }
+    }
+
     const playerEntry: StoryEntry = {
       id: `user_${Date.now()}`,
       role: 'user',
@@ -1985,6 +2086,106 @@ export function AdventureGame() {
     localStorage.removeItem(GENRE_KEY);
   }, []);
 
+  // === REGENERATE WORLD: Generate a new opening narrative ===
+  // Only available before the world is locked (before 2nd player action)
+  const handleRegenerateWorld = useCallback(async () => {
+    if (!character || !scenarioSelection || worldLocked) {
+      toast.error('World is locked and cannot be regenerated');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      console.log('[RegenerateWorld] Generating new opening narrative...');
+      
+      // Get secondary genres from world bible for fallback
+      const secondaryGenres = worldBible?.secondaryGenres || [];
+      const genre = scenarioSelection.genre;
+      
+      const TIMEOUT_MS = 12000; // 12 second timeout for regeneration
+      
+      const fetchPromise = fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario: scenarioSelection.scenario,
+            conversationHistory: [],
+            character: character,
+            adultContent: settings.adultContent,
+            genreContract: worldBible?.contractSummary || null,
+            narratorConfig: settings.narratorConfig,
+            // Minimal context for regeneration (more likely to succeed)
+            narrativeContractContext: {
+              universalRules: UNIVERSAL_NARRATIVE_RULES,
+              genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
+              spawnPacket: formatSpawnPacket(buildSpawnPacket(
+                scenarioSelection.scenario,
+                genre,
+                character.classId || 'default',
+                character.name,
+                (character.inventory || []).map(i => ({ name: i.name, quantity: i.quantity || 1 })),
+                'Starting Location'
+              )),
+              isOpening: true,
+            },
+          }),
+        }
+      );
+      
+      const timeoutPromise = new Promise<Response>((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
+      );
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      const narrativeContent = data.narrative || generateImmersiveOpening({
+        character,
+        genre,
+        scenario: scenarioSelection.scenario,
+        secondaryGenres,
+      });
+      
+      // Replace the story with new opening
+      const newStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: narrativeContent,
+        timestamp: Date.now(),
+      }];
+      
+      setStory(newStory);
+      saveData(newStory, character, scenarioSelection.scenario, genre);
+      
+      // Sync to campaign
+      if (campaignContext?.syncNarrativeHistory) {
+        campaignContext.syncNarrativeHistory(newStory);
+      }
+      
+      // Lock the world immediately after regeneration
+      setWorldLocked(true);
+      setLockedOpening(narrativeContent);
+      playerActionCount.current = 0; // Reset count since we're starting fresh
+      
+      toast.success('World regenerated! This is now your starting point.');
+      console.log('[RegenerateWorld] Successfully regenerated and locked world');
+      
+    } catch (error) {
+      console.error('[RegenerateWorld] Failed:', error);
+      toast.error('Failed to regenerate world. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [character, scenarioSelection, worldLocked, worldBible, settings.adultContent, settings.narratorConfig, saveData, campaignContext]);
+
   // Rollback story to a specific entry (discard everything after)
   // IMPORTANT: Cancel pending generation and block during active generation
   const handleRollbackToEntry = useCallback((entryIndex: number) => {
@@ -2153,6 +2354,8 @@ export function AdventureGame() {
         weatherState={weatherState}
         onWeatherStateChange={setWeatherState}
         campaignId={campaignContext?.activeCampaignId || 'default_campaign'}
+        onRegenerateWorld={!worldLocked && story.length === 1 ? handleRegenerateWorld : undefined}
+        canRegenerateWorld={!worldLocked && story.length === 1 && !isLoading}
       />
     );
   }
