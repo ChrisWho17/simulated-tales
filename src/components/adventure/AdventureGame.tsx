@@ -123,6 +123,12 @@ import {
   isGenerationInProgress
 } from '@/lib/narrativeGuard';
 import { detectMissingLootTags, detectMissingDropTags } from '@/lib/narrativeLootParser';
+import { 
+  runMoveSync, 
+  initializeMoveSyncState, 
+  buildMoveSyncContextForAI,
+  getMoveSyncState,
+} from '@/game/moveSyncSystem';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -1045,6 +1051,7 @@ export function AdventureGame() {
               objectOwnership: buildInventoryContextForAI(inventory.state),
               npcIdentity: buildNPCIdentityContext(),
               playerCorrections: buildPlayerCorrectionsContext(),
+              moveSyncState: buildMoveSyncContextForAI(),
             },
             // === LIVING WORLD: Background NPC actions ===
             backgroundNPCActionsContext: backgroundNPCActionsPayload,
@@ -1561,6 +1568,16 @@ export function AdventureGame() {
     });
     console.log(`[World Bible] Created for genre: ${selection.genreContract?.primaryGenre || selection.genre} with ${secondaryGenreBlends.length} secondary genres`);
     
+    // Initialize Move Sync state for per-action tracking
+    initializeMoveSyncState({
+      primaryGenre: (selection.genreContract?.primaryGenre || selection.genre) as GameGenre,
+      secondaryGenres: secondaryGenreBlends.map(sg => ({
+        genre: sg.genreId as GameGenre,
+        strength: Math.round(sg.blendStrength * 100),
+      })),
+    });
+    console.log(`[MoveSync] Initialized for ${selection.genreContract?.primaryGenre || selection.genre}`);
+    
     // Skip color selection if already chosen before
     if (selectedColorId) {
       setPhase('character');
@@ -1831,6 +1848,23 @@ export function AdventureGame() {
         const updatedMemory = processActionForIdentity(campaignMemory, action, narrative, currentTurn);
         updateCampaignMemory(updatedMemory);
         advanceCampaignTime(1); // Each action is 1 tick
+      }
+      
+      // === MOVE SYNC: Parse narrative for environment/player/genre state ===
+      const moveSyncResult = runMoveSync(
+        narrative,
+        character.name,
+        currentTurn,
+        {
+          primaryGenre: (worldBible?.primaryGenre || scenarioSelection?.genre) as GameGenre,
+          secondaryGenres: worldBible?.secondaryGenres?.map(sg => ({
+            genre: sg.genreId as GameGenre,
+            strength: Math.round(sg.blendStrength * 100),
+          })),
+        }
+      );
+      if (moveSyncResult.genreViolations.length > 0) {
+        console.log(`[MoveSync] Genre violations detected: ${moveSyncResult.genreViolations.length}`);
       }
       
       // Check for scene illustration triggers
