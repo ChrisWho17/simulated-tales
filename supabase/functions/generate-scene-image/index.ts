@@ -12,9 +12,81 @@ const corsHeaders = {
 interface DetectedItem {
   original: string;
   emphasized: string;
-  category: 'weapon' | 'object' | 'color' | 'creature' | 'character' | 'environment' | 'style';
+  category: 'weapon' | 'object' | 'color' | 'creature' | 'character' | 'environment' | 'style' | 'gesture';
   confidence: number;
 }
+
+// ============================================================================
+// ROCKER SALUTE / DEVIL HORNS GESTURE DETECTION
+// ============================================================================
+
+/**
+ * Rocker Salute / Devil Horns / Metal Horns
+ * 
+ * The iconic hand gesture of rock and metal culture:
+ * - Index finger and pinky extended upward
+ * - Middle and ring fingers curled into palm
+ * - Thumb either tucked across curled fingers or extended
+ * 
+ * Also known as: "The Horns", "Devil Horns", "Metal Horns", "Mano Cornuta",
+ * "Sign of the Horns", "Rock on", "Hook 'em Horns"
+ * Popularized by Ronnie James Dio in heavy metal
+ */
+const ROCKER_SALUTE_PATTERNS = [
+  // Direct references
+  /\b(rocker\s*salute|rock\s*salute|metal\s*salute)\b/gi,
+  /\b(devil\s*horns?|metal\s*horns?|rock\s*horns?|the\s*horns?)\b/gi,
+  /\b(sign\s*of\s*(the\s*)?horns?|horns?\s*sign|horned\s*hand)\b/gi,
+  /\b(mano\s*cornuta|corna|cornuto)\b/gi,
+  
+  // Action phrases
+  /\b(throw(ing|s)?\s*(up\s*)?(the\s*)?(horns?|metal|devil))\b/gi,
+  /\b(flash(ing|es)?\s*(the\s*)?(horns?|metal|devil))\b/gi,
+  /\b(raise[sd]?\s*(the\s*)?(horns?|metal))\b/gi,
+  /\b(rock(ing)?\s*on|rocks?\s*out)\b/gi,
+  /\b(hook\s*'?em\s*horns?)\b/gi,
+  
+  // Finger descriptions
+  /\b(index\s*and\s*pinky\s*(fingers?\s*)?(extended|up|raised))\b/gi,
+  /\b(pinky\s*and\s*index\s*(fingers?\s*)?(extended|up|raised))\b/gi,
+  
+  // Cultural references
+  /\b(dio\s*salute|ronnie\s*(james\s*)?dio\s*gesture)\b/gi,
+  /\b(headbanger('s)?\s*(salute|gesture|sign))\b/gi,
+  /\b(metalhead\s*(salute|gesture|sign))\b/gi
+];
+
+const ROCKER_SALUTE_EMPHASIS = {
+  base: '((rocker salute hand gesture)), ((devil horns hand sign)), index finger and pinky finger extended upward, middle and ring fingers curled into palm, iconic metal gesture',
+  anatomyDetails: 'correct hand anatomy, five fingers clearly visible, proper finger positioning, realistic hand proportions',
+  styleVariants: {
+    aggressive: 'aggressive rocker salute, powerful gesture, intense expression, rock attitude',
+    casual: 'casual devil horns, relaxed rock gesture, friendly metal salute',
+    triumphant: 'triumphant horns raised high, victory metal salute, celebratory rock gesture',
+    subtle: 'subtle horn gesture, understated metal acknowledgment, cool rocker sign'
+  },
+  contextual: {
+    concert: 'concert crowd throwing horns, live music atmosphere, stage lighting',
+    portrait: 'portrait with rocker salute, character making devil horns gesture',
+    action: 'dynamic rocker salute pose, energetic metal gesture, movement captured'
+  }
+};
+
+// Other gesture patterns
+const GESTURE_PATTERNS = [
+  /\b(peace\s*sign|victory\s*sign|v\s*sign|two\s*fingers?\s*up)\b/gi,
+  /\b(thumbs?\s*up|thumbs?\s*down|thumb\s*gesture)\b/gi,
+  /\b(pointing\s*(finger|hand)?|finger\s*point(ing)?)\b/gi,
+  /\b(raised?\s*fist|power\s*fist|clenched\s*fist)\b/gi,
+  /\b(waving\s*(hand)?|hand\s*wave|wave\s*gesture)\b/gi,
+  /\b(ok\s*sign|okay\s*gesture|a-?ok)\b/gi,
+  /\b(military\s*salute|salut(ing|e))\b/gi,
+  /\b(crossed?\s*arms?|arms?\s*crossed?|folded\s*arms?)\b/gi,
+  /\b(hands?\s*on\s*hips?|akimbo)\b/gi,
+  /\b(pray(ing)?\s*hands?|hands?\s*together|namaste)\b/gi,
+  /\b(shrug(ging)?|shoulders?\s*(shrug|raised))\b/gi,
+  /\b(clap(ping)?|applau(se|ding))\b/gi
+];
 
 // Color mappings for emphasis
 const COLOR_VARIANTS: Record<string, string[]> = {
@@ -34,37 +106,59 @@ const COLOR_VARIANTS: Record<string, string[]> = {
 
 // Weapon patterns for detection
 const WEAPON_PATTERNS = [
-  // Handguns
   /\b(m\d+[a-z]?\d*)\s*(handgun|pistol|revolver)?\b/gi,
   /\b(glock|beretta|colt|sig\s*sauer|smith\s*&?\s*wesson|walther)\s*\d*\b/gi,
   /\b(\d+mm|\.\d+|9mm|45acp|40sw)\s*(pistol|handgun|revolver)?\b/gi,
-  // Rifles
   /\b(ar-?\d+|ak-?\d+|m-?\d+|m1[a-z]?\d*)\s*(rifle|carbine)?\b/gi,
   /\b(sniper|assault|hunting|battle)\s*rifle\b/gi,
-  // Shotguns
   /\b(remington|mossberg|benelli)?\s*\d*\s*shotgun\b/gi,
   /\b(pump|semi-auto|double[- ]barrel)\s*shotgun\b/gi,
-  // Melee
   /\b(katana|machete|combat\s*knife|tactical\s*knife|bowie\s*knife)\b/gi,
   /\b(longsword|broadsword|claymore|rapier|scimitar)\b/gi,
-  // Sci-fi/Fantasy
   /\b(laser|plasma|energy|ion)\s*(pistol|rifle|cannon|sword|blade)\b/gi,
   /\b(lightsaber|force\s*blade|beam\s*sword)\b/gi
 ];
 
 // Specific item patterns (non-weapon)
 const ITEM_PATTERNS = [
-  // Flowers
   /\b(red|blue|purple|yellow|white|pink|orange)\s*(flower|flowers|rose|roses|tulip|tulips|lily|lilies|orchid|orchids|daisy|daisies)\b/gi,
-  // Vehicles
   /\b(car|truck|motorcycle|bike|helicopter|plane|ship|boat|starship|hover\s*car|hover\s*bike)\b/gi,
-  // Clothing
   /\b(dress|suit|armor|coat|jacket|hat|boots|gloves|cloak|cape|robe|uniform)\b/gi,
-  // Tech
   /\b(computer|phone|tablet|robot|drone|mech|hologram|terminal|screen)\b/gi,
-  // Food/Drink
-  /\b(coffee|tea|beer|wine|whiskey|ale|mead|potion|drink|meal|food|bread|meat)\b/gi
+  /\b(coffee|tea|beer|wine|whiskey|ale|mead|potion|drink|meal|food|bread|meat)\b/gi,
+  /\b(guitar|bass|drums?|keyboard|microphone|amp(lifier)?)\b/gi
 ];
+
+/**
+ * Determines the style/mood variant for rocker salute based on context
+ */
+function getRockerSaluteStyle(input: string): keyof typeof ROCKER_SALUTE_EMPHASIS.styleVariants {
+  const lowerInput = input.toLowerCase();
+  if (lowerInput.includes('aggressive') || lowerInput.includes('intense') || lowerInput.includes('angry') || lowerInput.includes('scream')) {
+    return 'aggressive';
+  }
+  if (lowerInput.includes('triumphant') || lowerInput.includes('victory') || lowerInput.includes('celebration') || lowerInput.includes('winning')) {
+    return 'triumphant';
+  }
+  if (lowerInput.includes('subtle') || lowerInput.includes('quiet') || lowerInput.includes('understated') || lowerInput.includes('cool')) {
+    return 'subtle';
+  }
+  return 'casual';
+}
+
+/**
+ * Determines the contextual setting for rocker salute
+ */
+function getRockerSaluteContext(input: string): keyof typeof ROCKER_SALUTE_EMPHASIS.contextual {
+  const lowerInput = input.toLowerCase();
+  if (lowerInput.includes('concert') || lowerInput.includes('stage') || lowerInput.includes('crowd') || lowerInput.includes('show') || lowerInput.includes('gig')) {
+    return 'concert';
+  }
+  if (lowerInput.includes('action') || lowerInput.includes('dynamic') || lowerInput.includes('movement') || lowerInput.includes('jump')) {
+    return 'action';
+  }
+  return 'portrait';
+}
 
 /**
  * Detects and extracts specific items from user input for emphasis
@@ -72,10 +166,52 @@ const ITEM_PATTERNS = [
 function detectItems(input: string): DetectedItem[] {
   const items: DetectedItem[] = [];
   
+  // PRIORITY: Detect Rocker Salute / Devil Horns gestures first
+  for (const pattern of ROCKER_SALUTE_PATTERNS) {
+    let match: RegExpExecArray | null;
+    const patternCopy = new RegExp(pattern.source, pattern.flags);
+    while ((match = patternCopy.exec(input)) !== null) {
+      if (!items.some(i => i.category === 'gesture')) {
+        const styleVariant = getRockerSaluteStyle(input);
+        const contextVariant = getRockerSaluteContext(input);
+        
+        const emphasis = [
+          ROCKER_SALUTE_EMPHASIS.base,
+          ROCKER_SALUTE_EMPHASIS.anatomyDetails,
+          ROCKER_SALUTE_EMPHASIS.styleVariants[styleVariant],
+          ROCKER_SALUTE_EMPHASIS.contextual[contextVariant]
+        ].join(', ');
+        
+        items.push({
+          original: match[0],
+          emphasized: emphasis,
+          category: 'gesture',
+          confidence: 0.98
+        });
+      }
+    }
+  }
+  
+  // Detect other gestures
+  for (const pattern of GESTURE_PATTERNS) {
+    let match: RegExpExecArray | null;
+    const patternCopy = new RegExp(pattern.source, pattern.flags);
+    while ((match = patternCopy.exec(input)) !== null) {
+      if (!items.some(i => i.original.toLowerCase() === match![0].toLowerCase())) {
+        items.push({
+          original: match[0],
+          emphasized: `((${match[0]})), clear hand gesture, accurate ${match[0]} pose, proper hand anatomy`,
+          category: 'gesture',
+          confidence: 0.9
+        });
+      }
+    }
+  }
+  
   // Detect colors with objects
   for (const [baseColor, variants] of Object.entries(COLOR_VARIANTS)) {
     const colorPattern = new RegExp(`\\b(${baseColor}|${variants.join('|')})\\s+(\\w+)\\b`, 'gi');
-    let match;
+    let match: RegExpExecArray | null;
     while ((match = colorPattern.exec(input)) !== null) {
       items.push({
         original: match[0],
@@ -88,7 +224,7 @@ function detectItems(input: string): DetectedItem[] {
   
   // Detect weapons
   for (const pattern of WEAPON_PATTERNS) {
-    let match;
+    let match: RegExpExecArray | null;
     const patternCopy = new RegExp(pattern.source, pattern.flags);
     while ((match = patternCopy.exec(input)) !== null) {
       items.push({
