@@ -6,6 +6,261 @@ const corsHeaders = {
 };
 
 // ============================================================================
+// ITEM DETECTION & EMPHASIS SYSTEM
+// ============================================================================
+
+interface DetectedItem {
+  original: string;
+  emphasized: string;
+  category: 'weapon' | 'object' | 'color' | 'creature' | 'character' | 'environment' | 'style';
+  confidence: number;
+}
+
+// Color mappings for emphasis
+const COLOR_VARIANTS: Record<string, string[]> = {
+  red: ['crimson', 'scarlet', 'ruby', 'blood red', 'vermillion', 'cherry red'],
+  blue: ['azure', 'cobalt', 'sapphire', 'navy', 'cerulean', 'royal blue', 'sky blue'],
+  green: ['emerald', 'forest green', 'jade', 'olive', 'lime', 'mint', 'sage'],
+  yellow: ['golden', 'amber', 'canary', 'lemon', 'mustard', 'sunflower'],
+  purple: ['violet', 'lavender', 'amethyst', 'plum', 'magenta', 'grape'],
+  orange: ['tangerine', 'coral', 'peach', 'rust', 'burnt orange', 'apricot'],
+  pink: ['rose', 'blush', 'salmon', 'fuchsia', 'hot pink', 'coral pink'],
+  black: ['onyx', 'jet black', 'obsidian', 'coal black', 'midnight black'],
+  white: ['ivory', 'pearl', 'snow white', 'cream', 'alabaster', 'bone white'],
+  brown: ['chestnut', 'mahogany', 'chocolate', 'coffee', 'bronze', 'tan'],
+  gray: ['silver', 'slate', 'charcoal', 'ash gray', 'gunmetal', 'stone gray'],
+  gold: ['golden', 'gilded', 'burnished gold', 'bright gold', 'antique gold']
+};
+
+// Weapon patterns for detection
+const WEAPON_PATTERNS = [
+  // Handguns
+  /\b(m\d+[a-z]?\d*)\s*(handgun|pistol|revolver)?\b/gi,
+  /\b(glock|beretta|colt|sig\s*sauer|smith\s*&?\s*wesson|walther)\s*\d*\b/gi,
+  /\b(\d+mm|\.\d+|9mm|45acp|40sw)\s*(pistol|handgun|revolver)?\b/gi,
+  // Rifles
+  /\b(ar-?\d+|ak-?\d+|m-?\d+|m1[a-z]?\d*)\s*(rifle|carbine)?\b/gi,
+  /\b(sniper|assault|hunting|battle)\s*rifle\b/gi,
+  // Shotguns
+  /\b(remington|mossberg|benelli)?\s*\d*\s*shotgun\b/gi,
+  /\b(pump|semi-auto|double[- ]barrel)\s*shotgun\b/gi,
+  // Melee
+  /\b(katana|machete|combat\s*knife|tactical\s*knife|bowie\s*knife)\b/gi,
+  /\b(longsword|broadsword|claymore|rapier|scimitar)\b/gi,
+  // Sci-fi/Fantasy
+  /\b(laser|plasma|energy|ion)\s*(pistol|rifle|cannon|sword|blade)\b/gi,
+  /\b(lightsaber|force\s*blade|beam\s*sword)\b/gi
+];
+
+// Specific item patterns (non-weapon)
+const ITEM_PATTERNS = [
+  // Flowers
+  /\b(red|blue|purple|yellow|white|pink|orange)\s*(flower|flowers|rose|roses|tulip|tulips|lily|lilies|orchid|orchids|daisy|daisies)\b/gi,
+  // Vehicles
+  /\b(car|truck|motorcycle|bike|helicopter|plane|ship|boat|starship|hover\s*car|hover\s*bike)\b/gi,
+  // Clothing
+  /\b(dress|suit|armor|coat|jacket|hat|boots|gloves|cloak|cape|robe|uniform)\b/gi,
+  // Tech
+  /\b(computer|phone|tablet|robot|drone|mech|hologram|terminal|screen)\b/gi,
+  // Food/Drink
+  /\b(coffee|tea|beer|wine|whiskey|ale|mead|potion|drink|meal|food|bread|meat)\b/gi
+];
+
+/**
+ * Detects and extracts specific items from user input for emphasis
+ */
+function detectItems(input: string): DetectedItem[] {
+  const items: DetectedItem[] = [];
+  
+  // Detect colors with objects
+  for (const [baseColor, variants] of Object.entries(COLOR_VARIANTS)) {
+    const colorPattern = new RegExp(`\\b(${baseColor}|${variants.join('|')})\\s+(\\w+)\\b`, 'gi');
+    let match;
+    while ((match = colorPattern.exec(input)) !== null) {
+      items.push({
+        original: match[0],
+        emphasized: `((${match[0]})), exact color: ${baseColor}, vibrant ${baseColor} hue`,
+        category: 'color',
+        confidence: 0.9
+      });
+    }
+  }
+  
+  // Detect weapons
+  for (const pattern of WEAPON_PATTERNS) {
+    let match;
+    const patternCopy = new RegExp(pattern.source, pattern.flags);
+    while ((match = patternCopy.exec(input)) !== null) {
+      items.push({
+        original: match[0],
+        emphasized: `((${match[0]})), detailed weapon, accurate ${match[0]} design, realistic details`,
+        category: 'weapon',
+        confidence: 0.95
+      });
+    }
+  }
+  
+  // Detect other specific items
+  for (const pattern of ITEM_PATTERNS) {
+    let match: RegExpExecArray | null;
+    const patternCopy = new RegExp(pattern.source, pattern.flags);
+    while ((match = patternCopy.exec(input)) !== null) {
+      if (!items.some(i => i.original.toLowerCase() === match![0].toLowerCase())) {
+        items.push({
+          original: match[0],
+          emphasized: `((${match[0]})), detailed ${match[0]}, accurate depiction`,
+          category: 'object',
+          confidence: 0.85
+        });
+      }
+    }
+  }
+  
+  return items;
+}
+
+// ============================================================================
+// GENRE KEYWORD BANKS (Comprehensive)
+// ============================================================================
+
+const GENRE_KEYWORD_BANKS: Record<string, {
+  environment: string[];
+  atmosphere: string[];
+  items: string[];
+  characters: string[];
+  style: string[];
+}> = {
+  medieval: {
+    environment: ['castle', 'fortress', 'tavern', 'village', 'kingdom', 'dungeon', 'throne room', 'cobblestone streets', 'thatched roof', 'stone walls', 'moat', 'drawbridge', 'great hall', 'blacksmith forge', 'market square', 'cathedral', 'monastery', 'watchtower', 'ramparts', 'courtyard', 'stables', 'armory'],
+    atmosphere: ['torchlit', 'candlelit', 'misty morning', 'golden hour', 'dramatic shadows', 'medieval ambiance', 'rustic', 'ancient', 'weathered stone', 'moss-covered', 'battle-scarred', 'regal', 'mystical', 'enchanted', 'foreboding'],
+    items: ['longsword', 'broadsword', 'dagger', 'crossbow', 'longbow', 'war hammer', 'battle axe', 'mace', 'flail', 'halberd', 'pike', 'shield', 'chainmail', 'plate armor', 'leather armor', 'helmet', 'gauntlets', 'greaves', 'goblet', 'chalice', 'tome', 'scroll', 'quill', 'wax seal', 'banner', 'crown', 'scepter', 'amulet', 'ring', 'potion bottle', 'herbs'],
+    characters: ['knight', 'peasant', 'noble', 'king', 'queen', 'wizard', 'witch', 'blacksmith', 'merchant', 'bard', 'monk', 'nun', 'squire', 'herald', 'huntsman', 'stable hand', 'serving wench', 'court jester', 'alchemist'],
+    style: ['oil painting style', 'illuminated manuscript', 'tapestry art', 'classical realism', 'romantic era painting', 'pre-raphaelite']
+  },
+  modern: {
+    environment: ['city street', 'apartment', 'office building', 'suburban home', 'coffee shop', 'nightclub', 'restaurant', 'shopping mall', 'parking garage', 'hospital', 'police station', 'courtroom', 'school', 'university', 'gym', 'park', 'beach', 'highway', 'gas station', 'convenience store', 'warehouse'],
+    atmosphere: ['neon lights', 'fluorescent lighting', 'natural daylight', 'overcast', 'rainy day', 'sunny afternoon', 'urban gritty', 'clean modern', 'cozy', 'sterile', 'lived-in', 'bustling', 'quiet suburban', 'downtown busy'],
+    items: ['smartphone', 'laptop', 'car keys', 'wallet', 'credit card', 'coffee cup', 'briefcase', 'backpack', 'sunglasses', 'wristwatch', 'headphones', 'tablet', 'television', 'microwave', 'refrigerator', 'desk lamp', 'office chair', 'filing cabinet', 'whiteboard', 'printer', 'handgun', 'pistol', 'revolver', 'rifle', 'shotgun', 'tactical knife', 'baton', 'taser'],
+    characters: ['businessman', 'office worker', 'student', 'teacher', 'doctor', 'nurse', 'police officer', 'firefighter', 'chef', 'waiter', 'bartender', 'mechanic', 'construction worker', 'athlete', 'artist', 'musician'],
+    style: ['photorealistic', 'contemporary photography', 'urban photography', 'lifestyle photography', 'documentary style', 'cinematic']
+  },
+  cyberpunk: {
+    environment: ['megacity', 'neon-lit alley', 'corporate tower', 'underground club', 'black market', 'hacker den', 'chrome bar', 'rooftop garden', 'slums', 'elevated highway', 'holographic billboard district', 'data center', 'cybernetic clinic', 'virtual reality arcade', 'smuggler hideout'],
+    atmosphere: ['neon-soaked', 'rain-slicked streets', 'holographic advertisements', 'perpetual night', 'smog-filled sky', 'electric blue glow', 'pink neon', 'harsh contrast lighting', 'dystopian', 'high-tech low-life', 'corporate sterile', 'underground grimy', 'digital noise'],
+    items: ['cyberdeck', 'neural interface', 'holographic display', 'smart gun', 'plasma pistol', 'laser rifle', 'EMP grenade', 'hacking tool', 'augmented reality glasses', 'cybernetic arm', 'synthetic eye', 'data chip', 'credstick', 'hover bike', 'drone', 'nano-injector', 'chrome arm', 'cybernetic eye', 'neural implant', 'subdermal armor', 'reflex booster', 'LED tattoos'],
+    characters: ['netrunner', 'street samurai', 'corporate executive', 'fixer', 'smuggler', 'bounty hunter', 'tech specialist', 'mercenary', 'hacker', 'synth dealer', 'black market doc', 'gang member'],
+    style: ['cyberpunk aesthetic', 'blade runner style', 'neon noir', 'futuristic digital art', 'sci-fi concept art', 'synthwave art']
+  },
+  postapocalyptic: {
+    environment: ['ruined city', 'abandoned building', 'wasteland', 'bunker', 'settlement', 'scrapyard', 'toxic swamp', 'crumbling highway', 'overgrown mall', 'military base ruins', 'collapsed bridge', 'survivor camp', 'radiation zone', 'desert wasteland', 'flooded streets'],
+    atmosphere: ['dust-filled air', 'orange hazed sky', 'desolate', 'eerie quiet', 'harsh sunlight', 'perpetual overcast', 'radioactive glow', 'nature reclaiming', 'crumbling decay', 'survival desperation', 'makeshift repairs', 'scavenged aesthetics'],
+    items: ['gas mask', 'radiation suit', 'makeshift weapon', 'scrap armor', 'water canteen', 'canned food', 'med kit', 'geiger counter', 'survival knife', 'pipe rifle', 'molotov cocktail', 'crowbar', 'flashlight', 'sleeping bag', 'rope', 'duct tape', 'toolbox', 'sawed-off shotgun', 'machete', 'baseball bat with nails', 'crossbow', 'hunting rifle', 'improvised spear'],
+    characters: ['wasteland wanderer', 'scavenger', 'raider', 'settlement leader', 'caravan guard', 'mutant', 'scientist survivor', 'mechanic', 'doctor', 'trader', 'cult member', 'bounty hunter'],
+    style: ['post-apocalyptic art', 'fallout style', 'mad max aesthetic', 'gritty realism', 'survival horror', 'wasteland concept art']
+  },
+  fantasy: {
+    environment: ['enchanted forest', 'magical tower', 'elven city', 'dwarven mine', 'dragon lair', 'fairy glen', 'crystal cave', 'floating island', 'ancient ruins', 'magical academy', 'sacred grove', 'demon realm', 'celestial palace', 'underwater kingdom', 'witch cottage'],
+    atmosphere: ['magical glow', 'ethereal mist', 'starlit', 'aurora borealis', 'golden sunbeams', 'mystical fog', 'bioluminescent', 'enchanted', 'otherworldly', 'divine radiance', 'dark magic aura', 'primal nature'],
+    items: ['magic wand', 'staff', 'spellbook', 'crystal ball', 'enchanted sword', 'magic ring', 'flying carpet', 'potion', 'scroll', 'rune stone', 'amulet', 'orb', 'magical gem', 'fairy dust', 'dragon scale', 'phoenix feather', 'unicorn horn', 'enchanted mirror'],
+    characters: ['wizard', 'witch', 'sorcerer', 'paladin', 'ranger', 'druid', 'bard', 'rogue', 'cleric', 'warlock', 'necromancer', 'elementalist', 'beast tamer', 'enchanter', 'archmage', 'dragon', 'unicorn', 'phoenix', 'griffin', 'fairy', 'elf', 'dwarf', 'orc', 'goblin', 'troll'],
+    style: ['fantasy art', 'high fantasy illustration', 'magical realism', 'fairy tale art', 'epic fantasy', 'dark fantasy']
+  },
+  scifi: {
+    environment: ['space station', 'starship bridge', 'alien planet', 'moon base', 'terraformed world', 'asteroid mining facility', 'orbital habitat', 'hyperspace', 'alien ruins', 'research lab', 'cryo bay', 'cargo hold', 'engineering deck', 'observation deck'],
+    atmosphere: ['zero gravity', 'sterile white', 'bioluminescent alien', 'starfield', 'nebula backdrop', 'planetary rings', 'artificial lighting', 'holographic displays', 'clean futuristic', 'deep space isolation', 'alien atmosphere', 'harsh vacuum'],
+    items: ['laser pistol', 'plasma rifle', 'energy sword', 'force field', 'teleporter', 'hologram projector', 'scanner', 'communicator', 'space suit', 'jetpack', 'gravity boots', 'neural link', 'stasis pod', 'med bay scanner', 'star map', 'power cell', 'starship', 'shuttle', 'fighter craft', 'mech suit'],
+    characters: ['space captain', 'pilot', 'engineer', 'scientist', 'marine', 'alien diplomat', 'bounty hunter', 'smuggler', 'colonist', 'android', 'AI hologram', 'medic', 'xenobiologist'],
+    style: ['sci-fi concept art', 'space opera', 'hard science fiction', 'retro futurism', 'clean sci-fi', 'alien aesthetic']
+  },
+  horror: {
+    environment: ['haunted house', 'abandoned asylum', 'dark forest', 'cemetery', 'crypt', 'morgue', 'cursed village', 'fog-shrouded moor', 'decrepit mansion', 'underground tunnel', 'sacrificial altar', 'nightmare realm', 'twisted carnival', 'blood-stained room'],
+    atmosphere: ['oppressive darkness', 'flickering lights', 'thick fog', 'moonlit', 'blood red', 'sickly green', 'shadow-filled', 'claustrophobic', 'unsettling', 'dread-inducing', 'decay and rot', 'supernatural chill'],
+    items: ['candelabra', 'ouija board', 'cursed doll', 'ancient tome', 'ritual knife', 'pentagram', 'skull', 'coffin', 'chains', 'medical tools', 'bloody weapon', 'haunted photograph', 'creepy music box', 'voodoo doll', 'crystal pendant'],
+    characters: ['ghost', 'demon', 'vampire', 'werewolf', 'zombie', 'witch', 'eldritch horror', 'shadow creature', 'possessed human', 'serial killer', 'cult leader', 'mad scientist'],
+    style: ['horror art', 'gothic horror', 'psychological horror', 'dark surrealism', 'nightmare fuel', 'eldritch art']
+  },
+  western: {
+    environment: ['dusty town', 'saloon', 'desert canyon', 'frontier settlement', 'ranch', 'gold mine', 'train station', 'sheriff office', 'bank', 'general store', 'livery stable', 'cemetery boot hill', 'campfire under stars', 'river crossing', 'mountain pass'],
+    atmosphere: ['golden hour desert', 'high noon harsh light', 'dusty wind', 'sunset silhouette', 'rustic frontier', 'lawless', 'weathered wood', 'tumbleweeds', 'heat shimmer', 'starlit prairie'],
+    items: ['revolver', 'rifle', 'shotgun', 'lasso', 'cowboy hat', 'boots', 'spurs', 'bandana', 'saddle', 'horseshoe', 'whiskey bottle', 'poker chips', 'wanted poster', 'sheriff badge', 'bowie knife', 'dynamite', 'gold nugget', 'oil lamp'],
+    characters: ['cowboy', 'outlaw', 'sheriff', 'deputy', 'saloon girl', 'bartender', 'blacksmith', 'prospector', 'bounty hunter', 'Native American', 'cavalry soldier', 'ranch hand', 'gambler', 'preacher'],
+    style: ['western art', 'spaghetti western', 'frontier painting', 'cowboy illustration', 'old west photography style']
+  },
+  noir: {
+    environment: ['rainy city street', 'detective office', 'smoky bar', 'jazz club', 'back alley', 'warehouse', 'docks', 'luxury penthouse', 'seedy motel', 'interrogation room', 'gambling den', 'newsroom'],
+    atmosphere: ['high contrast shadows', 'venetian blind lighting', 'cigarette smoke', 'rain-slicked streets', 'neon sign glow', 'black and white', 'moody lighting', 'mystery atmosphere', 'femme fatale ambiance', 'danger lurking', '1940s aesthetic'],
+    items: ['fedora', 'trench coat', 'cigarette', 'whiskey glass', 'revolver', 'typewriter', 'newspaper', 'magnifying glass', 'evidence folder', 'camera', 'telephone', 'briefcase with money', 'switchblade'],
+    characters: ['private detective', 'femme fatale', 'corrupt cop', 'mob boss', 'informant', 'nightclub singer', 'journalist', 'politician', 'wealthy widow', 'hired muscle', 'mysterious stranger'],
+    style: ['film noir', 'classic noir photography', 'hardboiled detective', 'neo-noir', 'chiaroscuro lighting', 'dramatic shadows']
+  },
+  steampunk: {
+    environment: ['victorian city', 'airship dock', 'clockwork factory', 'inventor workshop', 'brass-fitted mansion', 'underground laboratory', 'steam train', 'gear-filled chamber', 'observatory', 'automaton factory', 'sky pirate ship', 'coal-powered plant'],
+    atmosphere: ['brass and copper tones', 'steam clouds', 'gas lamp lighting', 'industrial revolution', 'victorian elegance', 'mechanical wonder', 'coal smoke', 'gear mechanisms visible', 'retrofuturistic'],
+    items: ['pocket watch', 'goggles', 'brass telescope', 'steam pistol', 'clockwork device', 'mechanical arm', 'airship', 'top hat', 'corset', 'cane sword', 'ray gun', 'aether device', 'difference engine', 'pneumatic tube', 'dirigible'],
+    characters: ['inventor', 'airship captain', 'engineer', 'aristocrat', 'street urchin', 'automaton', 'sky pirate', 'mad scientist', 'clockwork mechanic', 'adventurer', 'society lady'],
+    style: ['steampunk art', 'victorian sci-fi', 'brass age aesthetic', 'clockpunk', 'industrial fantasy', 'retrofuturism']
+  }
+};
+
+/**
+ * Get genre keywords and enhance prompt with them
+ */
+function enhanceWithGenreKeywords(input: string, genre: string): { enhanced: string; keywordsUsed: string[] } {
+  const normalizedGenre = genre.toLowerCase().replace(/[-_\s]/g, '');
+  const genreMap: Record<string, string> = {
+    'postapoc': 'postapocalyptic',
+    'scifi': 'scifi',
+    'sci-fi': 'scifi',
+    'sciencefiction': 'scifi',
+  };
+  
+  const mappedGenre = genreMap[normalizedGenre] || normalizedGenre;
+  const bank = GENRE_KEYWORD_BANKS[mappedGenre];
+  
+  if (!bank) {
+    return { enhanced: input, keywordsUsed: [] };
+  }
+  
+  const keywordsUsed: string[] = [];
+  
+  // Add 1-2 random environment keywords if not already present
+  const envKeyword = bank.environment[Math.floor(Math.random() * bank.environment.length)];
+  if (!input.toLowerCase().includes(envKeyword.toLowerCase())) {
+    keywordsUsed.push(envKeyword);
+  }
+  
+  // Add 1-2 random atmosphere keywords
+  const atmKeywords = bank.atmosphere.sort(() => Math.random() - 0.5).slice(0, 2);
+  keywordsUsed.push(...atmKeywords.filter(k => !input.toLowerCase().includes(k.toLowerCase())));
+  
+  // Add 1 style keyword
+  const styleKeyword = bank.style[Math.floor(Math.random() * bank.style.length)];
+  if (!input.toLowerCase().includes(styleKeyword.toLowerCase())) {
+    keywordsUsed.push(styleKeyword);
+  }
+  
+  // Enhance the input with detected items
+  const detectedItems = detectItems(input);
+  let enhanced = input;
+  
+  for (const item of detectedItems) {
+    enhanced = enhanced.replace(
+      new RegExp(item.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+      item.emphasized
+    );
+  }
+  
+  if (keywordsUsed.length > 0) {
+    enhanced += `, GENRE ATMOSPHERE: ${keywordsUsed.join(', ')}`;
+  }
+  
+  console.log('Genre keywords applied:', keywordsUsed.slice(0, 4));
+  console.log('Items detected and emphasized:', detectedItems.length);
+  
+  return { enhanced, keywordsUsed };
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
