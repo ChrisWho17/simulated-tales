@@ -64,7 +64,12 @@ export type GameEventType =
   // System events
   | 'GAME_TICK'
   | 'SAVE_CREATED'
-  | 'GAME_LOADED';
+  | 'GAME_LOADED'
+  // Move sync events
+  | 'MOVE_SYNC_COMPLETE'
+  | 'ENVIRONMENT_CHANGED'
+  | 'PLAYER_STATE_CHANGED'
+  | 'GENRE_VIOLATION_DETECTED';
 
 // ============= EVENT PAYLOAD INTERFACES =============
 
