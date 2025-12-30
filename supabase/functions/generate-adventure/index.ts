@@ -273,6 +273,8 @@ interface AdventureRequest {
   npcPersonalityContext?: NPCPersonalityContext;
   // NEW: Storied Loot - Items with history, not just stats
   storiedLootEnabled?: boolean;
+  // NEW: NPC Accents - Regional dialects and speech patterns
+  enableNPCAccents?: boolean;
   // WEATHER CONTEXT - Ensures story narrative matches displayed weather
   weatherContext?: WeatherContext;
   // LIVING WORLD CONTEXT - Properties, rivals, factions
@@ -339,8 +341,123 @@ interface VoiceSignatureContext {
     usesContractions: boolean;
     tell: string;
     nervousHabit?: string;
+    accent?: string; // Regional accent type
   }>;
 }
+
+// ============= NPC ACCENT MODIFIERS =============
+// Regional accents and dialects for immersive NPC dialogue
+
+const ACCENT_MODIFIERS: Record<string, { greeting: string; flavor: string; verbal_tic: string; examples: string[] }> = {
+  southern: { 
+    greeting: "Well now, stranger", 
+    flavor: "drawled with a honeyed cadence",
+    verbal_tic: "y'all",
+    examples: ["I reckon y'all might want to hear this", "Bless your heart", "Well, I'll be"]
+  },
+  brooklyn: { 
+    greeting: "Hey, pal", 
+    flavor: "spoke in sharp, clipped tones",
+    verbal_tic: "fuggedaboutit",
+    examples: ["Listen here", "I'm walkin' here", "Whatsa matter wit' you?"]
+  },
+  british_posh: { 
+    greeting: "I say, good day", 
+    flavor: "enunciated with precise diction",
+    verbal_tic: "quite so",
+    examples: ["Rather unfortunate", "Frightfully sorry", "Jolly good"]
+  },
+  cockney: { 
+    greeting: "Oi, mate", 
+    flavor: "spoke with rough London charm",
+    verbal_tic: "right then",
+    examples: ["Blimey!", "Bob's your uncle", "Have a butcher's"]
+  },
+  irish: { 
+    greeting: "Top of the mornin'", 
+    flavor: "lilted with musical rhythm",
+    verbal_tic: "to be sure",
+    examples: ["Ah, grand so", "Jaysus!", "Fair play to ya"]
+  },
+  scottish: { 
+    greeting: "Ach, well met", 
+    flavor: "rolled their Rs with highland pride",
+    verbal_tic: "aye",
+    examples: ["Och, dinnae fash yerself", "Bonnie good day", "Nae bother"]
+  },
+  texan: { 
+    greeting: "Howdy, partner", 
+    flavor: "drawled slow and deliberate",
+    verbal_tic: "reckon",
+    examples: ["I tell you what", "Fixin' to", "Might could be"]
+  },
+  russian: { 
+    greeting: "Comrade", 
+    flavor: "spoke with hard consonants",
+    verbal_tic: "da",
+    examples: ["Is simple, yes?", "This is way things are", "We make deal, yes?"]
+  },
+  french: { 
+    greeting: "Bonjour, mon ami", 
+    flavor: "purred with continental elegance",
+    verbal_tic: "mais oui",
+    examples: ["C'est la vie", "How you say...", "Magnifique!"]
+  },
+  german: { 
+    greeting: "Guten tag", 
+    flavor: "spoke with precise efficiency",
+    verbal_tic: "ja",
+    examples: ["Is very logical", "We have procedure for this", "Naturally"]
+  },
+  japanese: { 
+    greeting: "Greetings, honored one", 
+    flavor: "spoke with formal courtesy",
+    verbal_tic: "hai",
+    examples: ["If you please", "Most humble apologies", "It would be my honor"]
+  },
+  jamaican: { 
+    greeting: "Wha gwaan", 
+    flavor: "lilted with island rhythm",
+    verbal_tic: "ya know",
+    examples: ["Everyting irie", "No problem, mon", "Respect"]
+  },
+  new_york: { 
+    greeting: "Hey, how you doin'", 
+    flavor: "talked fast and direct",
+    verbal_tic: "you know what I'm sayin'",
+    examples: ["Get outta here", "I'm just sayin'", "Forget about it"]
+  },
+  australian: { 
+    greeting: "G'day mate", 
+    flavor: "spoke with laid-back inflection",
+    verbal_tic: "no worries",
+    examples: ["She'll be right", "Fair dinkum", "Good on ya"]
+  },
+  midwest: { 
+    greeting: "Oh, hey there", 
+    flavor: "spoke with friendly warmth",
+    verbal_tic: "ope",
+    examples: ["Don'tcha know", "You betcha", "Oh for Pete's sake"]
+  },
+  nordic: {
+    greeting: "Hail, traveler",
+    flavor: "spoke with a stoic, measured cadence",
+    verbal_tic: "so it is",
+    examples: ["The gods favor the bold", "A cold day for such work", "This is the way"]
+  },
+  italian: {
+    greeting: "Ciao, amico",
+    flavor: "spoke with passionate gesticulation",
+    verbal_tic: "capisce",
+    examples: ["Mama mia!", "Is beautiful, no?", "Family is everything"]
+  },
+  spanish: {
+    greeting: "Hola, amigo",
+    flavor: "spoke with warm, rolling rhythm",
+    verbal_tic: "mira",
+    examples: ["Ay caramba!", "Es verdad", "No te preocupes"]
+  },
+};
 
 const SYSTEM_PROMPT = `You are an immersive AI Game Master and storyteller for a text-based RPG adventure game. You combine rich, literary narrative prose with tabletop RPG mechanics.
 
@@ -1508,6 +1625,33 @@ VOICE SIGNATURE RULES:
 - Players should recognize NPCs by speech alone
 - Consistency creates character
 - Premium immersion = every character sounds DISTINCT`;
+    }
+    
+    // ============= NPC ACCENT SYSTEM (Regional Dialects) =============
+    if (enableNPCAccents !== false && voiceSignatureContext?.npcSignatures) {
+      const npcsWithAccents = voiceSignatureContext.npcSignatures.filter(sig => sig.accent);
+      if (npcsWithAccents.length > 0) {
+        systemContent += `\n\n=== NPC REGIONAL ACCENTS - CONSISTENT DIALECT FLAVOR ===
+NPCs with regional accents should maintain CONSISTENT speech patterns throughout ALL their dialogue:
+
+${npcsWithAccents.map(sig => {
+  const accent = ACCENT_MODIFIERS[sig.accent || ''];
+  if (!accent) return '';
+  return `**${sig.npcName}** - ${sig.accent?.replace('_', ' ').toUpperCase()} accent
+  • Greeting style: "${accent.greeting}"
+  • Speech flavor: ${accent.flavor}
+  • Verbal tic to use: "${accent.verbal_tic}"
+  • Example phrases: ${accent.examples.map(e => `"${e}"`).join(', ')}`;
+}).filter(Boolean).join('\n\n')}
+
+ACCENT RULES - CRITICAL FOR IMMERSION:
+- Use the verbal tic naturally (every few lines, not every sentence)
+- Flavor descriptions with regional speech patterns
+- Greetings should reflect their regional style
+- Consistency is KEY - once an accent is established, maintain it
+- Example phrases can be adapted but should keep the regional feel
+- Accents add CHARACTER, not caricature - keep it respectful`;
+      }
     }
     
     // ============= NPC PERSONALITY TEMPLATE SYSTEM (Archetype-Driven Dialogue) =============

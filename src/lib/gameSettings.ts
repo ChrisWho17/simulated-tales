@@ -109,6 +109,9 @@ export interface GameSettings {
   enableXPSystem: boolean;             // Experience and leveling
   enableInventoryWeight: boolean;      // Inventory capacity limits
   
+  // NPC Speech settings
+  enableNPCAccents: boolean;           // NPCs speak with regional accents/dialects
+  
   // Adrenaline system
   enableAdrenalineSystem?: boolean;    // Hidden wounds under stress
   
@@ -204,6 +207,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   enableReputationSystem: true,
   enableXPSystem: true,
   enableInventoryWeight: true,
+  
+  // NPC Speech settings
+  enableNPCAccents: true,
   
   // Adrenaline system
   enableAdrenalineSystem: true,

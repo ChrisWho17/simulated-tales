@@ -701,10 +701,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Languages className="w-4 h-4 text-[var(--accent-secondary)]" />
-                  <h3 className="text-sm font-medium">Language & Translation</h3>
+                  <h3 className="text-sm font-medium">Language & Speech</h3>
                 </div>
                 
                 <div className="space-y-2 pl-1">
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">NPC Accents & Dialects</span>
+                      <p className="text-xs text-muted-foreground">NPCs speak with regional accents and verbal tics</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableNPCAccents ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableNPCAccents: checked })}
+                    />
+                  </div>
+                  
                   <div className="flex items-center justify-between py-2">
                     <div>
                       <span className="text-sm">Show Translations</span>
