@@ -62,7 +62,8 @@ const PORTRAIT_NEGATIVE = [
 // ============================================================================
 
 const GENRE_STYLES: Record<string, string> = {
-  modern: 'modern military tactical gear, contemporary combat equipment, urban environment background',
+  modern: 'modern contemporary casual clothing, everyday civilian attire, stylish casual outfit, modern city environment background',
+  'modern-life': 'modern contemporary casual clothing, everyday civilian attire, stylish casual outfit, modern city environment background',
   war: 'military combat uniform, tactical body armor, warzone battlefield background',
   cyberpunk: 'cyberpunk tactical gear, neon lights, chrome cybernetic augmentations, neon-lit megacity background',
   postapoc: 'post-apocalyptic scavenged gear, weathered leather and metal, wasteland ruins background',
