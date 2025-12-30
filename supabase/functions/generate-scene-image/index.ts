@@ -734,6 +734,201 @@ function buildIllustrationPrompt(
 }
 
 // ============================================================================
+// CONTENT SOFTENING FOR MODERATION RETRIES
+// ============================================================================
+
+// Progressive softening levels - each level removes more intense elements
+const CONTENT_SOFTENING = {
+  // Level 1: Replace graphic terms with mild alternatives
+  level1: {
+    replacements: [
+      // Violence softening
+      [/\bblood\b/gi, 'red stains'],
+      [/\bbloody\b/gi, 'stained'],
+      [/\bcorpse\b/gi, 'fallen figure'],
+      [/\bdead body\b/gi, 'still form'],
+      [/\bkill\b/gi, 'defeat'],
+      [/\bkilled\b/gi, 'defeated'],
+      [/\bmurder\b/gi, 'conflict'],
+      [/\bstab\b/gi, 'strike'],
+      [/\bslash\b/gi, 'swing'],
+      [/\bwound\b/gi, 'injury'],
+      [/\bwounded\b/gi, 'injured'],
+      [/\bgore\b/gi, 'damage'],
+      [/\bviolent\b/gi, 'intense'],
+      [/\bbrutal\b/gi, 'fierce'],
+      // Horror softening
+      [/\bmonster\b/gi, 'creature'],
+      [/\bhorror\b/gi, 'tension'],
+      [/\bterrifying\b/gi, 'unsettling'],
+      [/\bscreaming?\b/gi, 'calling out'],
+      [/\btorture\b/gi, 'restraint'],
+      [/\bdemon\b/gi, 'dark figure'],
+      [/\bmutilated\b/gi, 'damaged'],
+      [/\bdecaying?\b/gi, 'aged'],
+      [/\brotting\b/gi, 'weathered'],
+    ],
+    additions: ['dramatic lighting', 'cinematic composition'],
+  },
+  
+  // Level 2: More aggressive softening + artistic framing
+  level2: {
+    replacements: [
+      [/\bblood|bloody|gore\b/gi, ''],
+      [/\bcorpse|dead body|body\b/gi, 'figure'],
+      [/\bkill|murder|attack|stab|slash\b/gi, 'confront'],
+      [/\bwound|injury|hurt\b/gi, ''],
+      [/\bmonster|creature|beast|demon\b/gi, 'shadow'],
+      [/\bscream|terror|horror\b/gi, 'tension'],
+      [/\bfear|afraid|terrified\b/gi, 'cautious'],
+      [/\bdark|darkness\b/gi, 'dim'],
+      [/\bdeath|dying|dead\b/gi, 'still'],
+      [/\bflesh|skin\b/gi, 'form'],
+      [/\beyes|eyeless\b/gi, 'features'],
+      [/\bclaws|fangs|teeth\b/gi, 'silhouette'],
+    ],
+    additions: ['artistic interpretation', 'atmospheric mood piece', 'stylized illustration'],
+  },
+  
+  // Level 3: Maximum softening - focus on environment and mood only
+  level3: {
+    replacements: [
+      // Remove character-focused elements entirely
+      [/ACTION:.*?\./gi, ''],
+      [/PLAYER:.*?\./gi, ''],
+      [/character\s+\w+/gi, ''],
+      [/figure\s+\w+/gi, ''],
+      // Remove any remaining intensity
+      [/\b(blood|gore|wound|injury|death|kill|murder|attack|horror|terror|scream|monster|demon|creature|beast|corpse|body)\b/gi, ''],
+    ],
+    additions: [
+      'environmental mood piece',
+      'no characters visible',
+      'atmospheric landscape',
+      'empty scene with dramatic lighting',
+      'focus on environment only',
+    ],
+  },
+};
+
+function softenPrompt(originalPrompt: string, level: 1 | 2 | 3): string {
+  const config = CONTENT_SOFTENING[`level${level}`];
+  let softened = originalPrompt;
+  
+  // Apply replacements
+  for (const [pattern, replacement] of config.replacements) {
+    softened = softened.replace(pattern as RegExp, replacement as string);
+  }
+  
+  // Clean up double spaces and commas
+  softened = softened.replace(/\s+/g, ' ').replace(/,\s*,/g, ',').replace(/,\s*\./g, '.').trim();
+  
+  // Add softening additions
+  const additions = config.additions.join(', ');
+  softened = `${softened}, ${additions}`;
+  
+  console.log(`Softened prompt (level ${level}):`, softened.slice(0, 200) + '...');
+  
+  return softened;
+}
+
+function enhanceNegativePrompt(original: string, level: 1 | 2 | 3): string {
+  const additions = {
+    1: ', graphic violence, explicit content',
+    2: ', violence, gore, blood, explicit content, disturbing imagery',
+    3: ', violence, gore, blood, explicit, disturbing, graphic, injury, death, weapons, combat, NSFW',
+  };
+  return original + additions[level];
+}
+
+// ============================================================================
+// IMAGE GENERATION WITH RETRY LOGIC
+// ============================================================================
+
+async function generateImageWithRetry(
+  prompt: string,
+  negativePrompt: string,
+  apiKey: string,
+  maxRetries: number = 3
+): Promise<{ imageUrl: string | null; error?: string; softeningLevel: number }> {
+  let currentPrompt = prompt;
+  let currentNegative = negativePrompt;
+  let softeningLevel = 0;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const finalPrompt = `${currentPrompt}\n\nNegative: ${currentNegative}`;
+    
+    console.log(`Image generation attempt ${attempt + 1}/${maxRetries + 1} (softening level: ${softeningLevel})`);
+    
+    const response = await fetch('https://api.together.xyz/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'black-forest-labs/FLUX.1.1-pro',
+        prompt: finalPrompt,
+        width: 1408,
+        height: 800,
+        steps: 28,
+        n: 1,
+        response_format: 'url',
+      }),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const imageUrl = data.data?.[0]?.url;
+      if (imageUrl) {
+        console.log(`Image generated successfully at softening level ${softeningLevel}`);
+        return { imageUrl, softeningLevel };
+      }
+      return { imageUrl: null, error: 'No image URL in response', softeningLevel };
+    }
+    
+    // Handle specific error codes
+    if (response.status === 429) {
+      console.log('Rate limited, not retrying');
+      return { imageUrl: null, error: 'Rate limit exceeded', softeningLevel };
+    }
+    
+    if (response.status === 402 || response.status === 401) {
+      console.log('API limit reached, not retrying');
+      return { imageUrl: null, error: 'API limit reached', softeningLevel };
+    }
+    
+    // Check for content moderation rejection
+    const errorText = await response.text();
+    console.error('API error:', response.status, errorText);
+    
+    const isContentRejection = response.status === 422 && 
+      (errorText.toLowerCase().includes('nsfw') || 
+       errorText.toLowerCase().includes('content') ||
+       errorText.toLowerCase().includes('safety') ||
+       errorText.toLowerCase().includes('moderation'));
+    
+    if (isContentRejection && attempt < maxRetries) {
+      // Apply next level of softening
+      softeningLevel = (attempt + 1) as 1 | 2 | 3;
+      console.log(`Content rejected, applying softening level ${softeningLevel}`);
+      currentPrompt = softenPrompt(prompt, softeningLevel as 1 | 2 | 3);
+      currentNegative = enhanceNegativePrompt(negativePrompt, softeningLevel as 1 | 2 | 3);
+      continue;
+    }
+    
+    // Non-content error or max retries reached
+    if (!isContentRejection) {
+      return { imageUrl: null, error: `API error: ${response.status}`, softeningLevel };
+    }
+  }
+  
+  // All retries exhausted
+  console.log('All retry attempts exhausted, returning environment-only fallback attempt');
+  return { imageUrl: null, error: 'Content moderation failed after all retries', softeningLevel: 3 };
+}
+
+// ============================================================================
 // SERVE
 // ============================================================================
 
@@ -777,59 +972,39 @@ serve(async (req) => {
     }
 
     const { prompt, negativePrompt, debug } = buildIllustrationPrompt(requestData, characterProfile);
-    const finalPrompt = `${prompt}\n\nNegative: ${negativePrompt}`;
 
-    console.log('Final prompt preview:', finalPrompt.slice(0, 600) + '...');
+    console.log('Initial prompt preview:', prompt.slice(0, 600) + '...');
 
-    const response = await fetch('https://api.together.xyz/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${TOGETHER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'black-forest-labs/FLUX.1.1-pro',
-        prompt: finalPrompt,
-        width: 1408,
-        height: 800,
-        steps: 28,
-        n: 1,
-        response_format: 'url',
-      }),
-    });
+    // Use retry logic with progressive softening
+    const result = await generateImageWithRetry(prompt, negativePrompt, TOGETHER_API_KEY, 3);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Together.AI API error:', response.status, errorText);
-
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (response.status === 402 || response.status === 401) {
-        return new Response(JSON.stringify({ error: 'API limit reached', imageUrl: null }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      throw new Error(`Image API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const imageUrl = data.data?.[0]?.url;
-
-    if (!imageUrl) {
-      return new Response(JSON.stringify({ imageUrl: null }), {
+    if (result.error === 'Rate limit exceeded') {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
+        status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Scene image generated successfully');
-    return new Response(JSON.stringify({ imageUrl }), {
+    if (result.error === 'API limit reached') {
+      return new Response(JSON.stringify({ error: 'API limit reached', imageUrl: null }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!result.imageUrl) {
+      console.error('Failed to generate image after all retries:', result.error);
+      return new Response(JSON.stringify({ imageUrl: null, error: result.error }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Scene image generated successfully', { softeningLevel: result.softeningLevel });
+    return new Response(JSON.stringify({ 
+      imageUrl: result.imageUrl,
+      softeningApplied: result.softeningLevel > 0,
+      softeningLevel: result.softeningLevel,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
