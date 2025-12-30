@@ -586,11 +586,55 @@ Player: "I threaten him to back off"
 WRONG: "I threaten him to back off," you declare.
 RIGHT: Your voice drops to something cold and final. "Walk away. Now. While you still can."
 
+EMOTIONAL DIALOGUE TRANSFORMATION (CRITICAL):
+When players express emotional intentions, transform them into authentic emotional displays:
+
+Player: "I confess my feelings"
+WRONG: "I confess my feelings," you say nervously.
+RIGHT: Your heart pounds as the words spill out before you can stop them. "I've been wanting to tell you... I can't stop thinking about you. Every time you're near, I forget how to breathe."
+
+Player: "I express my anger"
+WRONG: You express your anger.
+RIGHT: Your fist slams the table, rattling everything on it. "Enough! I've listened to excuses and half-truths for too long. You want to know what I think? I think you're a coward."
+
+Player: "I tell them how scared I am"
+WRONG: "I tell them how scared I am," you admit.
+RIGHT: Your voice cracks, barely above a whisper. "I'm terrified. Every shadow, every sound... I keep seeing their faces. I don't know how much more of this I can take."
+
+Player: "I apologize sincerely"
+WRONG: "I apologize sincerely," you say.
+RIGHT: You lower your gaze, shame heavy in your chest. "I was wrong. What I did... there's no excuse. I hurt you, and I'm sorry. Truly."
+
+Player: "I try to comfort them"
+WRONG: You try to comfort them.
+RIGHT: Gently, you rest a hand on their shoulder. "Hey... look at me. We're going to get through this. Together. I'm not going anywhere."
+
+Player: "I declare my love"
+WRONG: "I declare my love," you announce.
+RIGHT: The words catch in your throat, then come tumbling out. "I love you. I've loved you since the moment we met. I don't care about the danger, the odds, any of it. Just... tell me I'm not too late."
+
+Player: "I break down crying"
+WRONG: You break down crying.
+RIGHT: It hits you all at once—everything you've been holding back. A sob tears from your chest as tears stream down your face. Your body shakes, and for once, you don't try to hide it.
+
+Player: "I laugh bitterly"
+WRONG: You laugh bitterly.
+RIGHT: A harsh, hollow laugh escapes you—more pain than humor. "Of course. Of course this is how it ends. Should've seen it coming."
+
+Player: "I show my gratitude"
+WRONG: "I show my gratitude," you say thankfully.
+RIGHT: You grip their hand tightly, meeting their eyes with fierce sincerity. "I owe you my life. I won't forget this. Ever."
+
+Player: "I reveal my secret"
+WRONG: You reveal your secret to them.
+RIGHT: You take a deep breath, steeling yourself. This is it. "There's something I've never told anyone. Not even myself, really. The truth is..." Your voice drops. "I'm not who you think I am."
+
 DIALOGUE RULE: When players describe what they want to SAY or ASK, you must INVENT the actual words they speak. Their input is INTENT, not a script. Create dialogue that:
 - Matches the character's personality and mood
 - Fits the situation's tone and urgency
 - Sounds like something a real person would actually say
 - Advances the scene naturally
+- USES THEIR CURRENT EMOTIONAL STATE to flavor the delivery (see EMOTIONAL CONTEXT below)
 
 For the FIRST message of a new adventure, set the scene vividly and introduce an immediate hook or situation.`;
 
@@ -1699,10 +1743,40 @@ CRITICAL: The player's character just said this. You must show:
 
 DO NOT just describe the act of speaking. Show the REACTION and RESPONSE.`;
         } else {
-          actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
+          // Check if this is a dialogue INTENT (I ask..., I tell..., I say to..., etc.)
+          const isDialogueIntent = /^(ask|tell|say|speak|confess|express|admit|reveal|declare|apologize|thank|greet|insult|threaten|beg|plead|explain|describe|mention|whisper|shout|yell|murmur|demand|request|suggest|propose|promise|warn|comfort|console|reassure|encourage|praise|criticize|mock|tease|flirt)/i.test(cleanedAction);
+          
+          if (isDialogueIntent) {
+            actionContent = `PLAYER DIALOGUE INTENT (transform this into actual spoken words, DO NOT echo this description):
+"${cleanedAction}"
+
+CRITICAL - DIALOGUE TRANSFORMATION REQUIRED:
+The player typed WHAT they want to say/do, not the actual words their character speaks.
+You MUST:
+1. INVENT the actual dialogue the character speaks - create realistic, immersive words
+2. Show the delivery with emotional body language
+3. Show how NPCs REACT to these words
+4. Advance the scene as a RESULT
+
+Example: If player typed "ask about the treasure" → Write: "So..." you lean forward, eyes sharp. "Word is there's something valuable hidden here. Care to enlighten me?"
+
+NEVER write: "I ask about the treasure" or "You say you want to ask about the treasure."`;
+
+            // Add emotional context if present
+            if (emotionalContext) {
+              actionContent += `\n\nEMOTIONAL DELIVERY: The character is currently feeling ${emotionalContext.currentMood}. Their dialogue should be ${emotionalContext.dialogueTone}. Show ${emotionalContext.physicalDescription} as they speak.`;
+            }
+          } else {
+            actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
 "${cleanedAction}"
 
 Write what happens as a result of this action. Transform it into evocative prose.`;
+
+            // Add emotional context for actions too
+            if (emotionalContext) {
+              actionContent += `\n\nEMOTIONAL STATE: The character performs this action ${emotionalContext.actionFlavor}. They are feeling ${emotionalContext.currentMood}. Show ${emotionalContext.physicalDescription}.`;
+            }
+          }
         }
         
         if (diceRoll) {
