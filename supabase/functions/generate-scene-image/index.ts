@@ -57,18 +57,24 @@ const ROCKER_SALUTE_PATTERNS = [
 ];
 
 const ROCKER_SALUTE_EMPHASIS = {
-  base: '((rocker salute hand gesture)), ((devil horns hand sign)), index finger and pinky finger extended upward, middle and ring fingers curled into palm, iconic metal gesture',
+  base: '((rocker salute hand gesture)), ((devil horns hand sign)), index finger and pinky finger extended upward, middle and ring fingers curled into palm, iconic gesture of acknowledgement and celebration',
   anatomyDetails: 'correct hand anatomy, five fingers clearly visible, proper finger positioning, realistic hand proportions',
   styleVariants: {
-    aggressive: 'aggressive rocker salute, powerful gesture, intense expression, rock attitude',
-    casual: 'casual devil horns, relaxed rock gesture, friendly metal salute',
-    triumphant: 'triumphant horns raised high, victory metal salute, celebratory rock gesture',
-    subtle: 'subtle horn gesture, understated metal acknowledgment, cool rocker sign'
+    aggressive: 'aggressive rocker salute, powerful gesture, intense expression, fierce attitude',
+    casual: 'casual devil horns, relaxed gesture, friendly acknowledgement salute',
+    triumphant: 'triumphant horns raised high, victory salute, celebratory gesture, moment of glory',
+    subtle: 'subtle horn gesture, understated acknowledgment, cool confident sign',
+    celebratory: 'celebratory devil horns, joyful gesture, excitement and triumph',
+    respectful: 'respectful horns gesture, acknowledging another, mutual recognition'
   },
   contextual: {
     concert: 'concert crowd throwing horns, live music atmosphere, stage lighting',
     portrait: 'portrait with rocker salute, character making devil horns gesture',
-    action: 'dynamic rocker salute pose, energetic metal gesture, movement captured'
+    action: 'dynamic rocker salute pose, energetic gesture, movement captured',
+    celebration: 'celebratory scene, moment of victory, joyful atmosphere',
+    greeting: 'acknowledgement gesture, mutual respect, recognition between characters',
+    battle: 'battle-ready stance with horns salute, warrior acknowledgment, fierce respect',
+    casual: 'casual everyday scene, relaxed environment, natural gesture'
   }
 };
 
@@ -134,11 +140,17 @@ const ITEM_PATTERNS = [
  */
 function getRockerSaluteStyle(input: string): keyof typeof ROCKER_SALUTE_EMPHASIS.styleVariants {
   const lowerInput = input.toLowerCase();
-  if (lowerInput.includes('aggressive') || lowerInput.includes('intense') || lowerInput.includes('angry') || lowerInput.includes('scream')) {
+  if (lowerInput.includes('aggressive') || lowerInput.includes('intense') || lowerInput.includes('angry') || lowerInput.includes('scream') || lowerInput.includes('fierce')) {
     return 'aggressive';
   }
-  if (lowerInput.includes('triumphant') || lowerInput.includes('victory') || lowerInput.includes('celebration') || lowerInput.includes('winning')) {
+  if (lowerInput.includes('triumphant') || lowerInput.includes('victory') || lowerInput.includes('winning') || lowerInput.includes('won') || lowerInput.includes('success')) {
     return 'triumphant';
+  }
+  if (lowerInput.includes('celebrat') || lowerInput.includes('party') || lowerInput.includes('happy') || lowerInput.includes('joy') || lowerInput.includes('excited')) {
+    return 'celebratory';
+  }
+  if (lowerInput.includes('respect') || lowerInput.includes('acknowledge') || lowerInput.includes('honor') || lowerInput.includes('salute') || lowerInput.includes('greeting')) {
+    return 'respectful';
   }
   if (lowerInput.includes('subtle') || lowerInput.includes('quiet') || lowerInput.includes('understated') || lowerInput.includes('cool')) {
     return 'subtle';
@@ -147,17 +159,27 @@ function getRockerSaluteStyle(input: string): keyof typeof ROCKER_SALUTE_EMPHASI
 }
 
 /**
- * Determines the contextual setting for rocker salute
+ * Determines the contextual setting for rocker salute - works in ANY scene type
  */
 function getRockerSaluteContext(input: string): keyof typeof ROCKER_SALUTE_EMPHASIS.contextual {
   const lowerInput = input.toLowerCase();
-  if (lowerInput.includes('concert') || lowerInput.includes('stage') || lowerInput.includes('crowd') || lowerInput.includes('show') || lowerInput.includes('gig')) {
+  if (lowerInput.includes('concert') || lowerInput.includes('stage') || lowerInput.includes('crowd') || lowerInput.includes('show') || lowerInput.includes('gig') || lowerInput.includes('music')) {
     return 'concert';
   }
-  if (lowerInput.includes('action') || lowerInput.includes('dynamic') || lowerInput.includes('movement') || lowerInput.includes('jump')) {
+  if (lowerInput.includes('action') || lowerInput.includes('dynamic') || lowerInput.includes('movement') || lowerInput.includes('jump') || lowerInput.includes('running')) {
     return 'action';
   }
-  return 'portrait';
+  if (lowerInput.includes('celebrat') || lowerInput.includes('victory') || lowerInput.includes('won') || lowerInput.includes('success') || lowerInput.includes('party')) {
+    return 'celebration';
+  }
+  if (lowerInput.includes('greet') || lowerInput.includes('acknowledge') || lowerInput.includes('meet') || lowerInput.includes('hello') || lowerInput.includes('respect')) {
+    return 'greeting';
+  }
+  if (lowerInput.includes('battle') || lowerInput.includes('fight') || lowerInput.includes('combat') || lowerInput.includes('warrior') || lowerInput.includes('war')) {
+    return 'battle';
+  }
+  // Default to casual for any other scene - works everywhere
+  return 'casual';
 }
 
 /**
