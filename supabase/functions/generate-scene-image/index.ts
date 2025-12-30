@@ -1726,9 +1726,10 @@ serve(async (req) => {
 
     if (!TOGETHER_API_KEY) throw new Error('TOGETHER_API_KEY is not configured');
 
-    // Normalize request
-    let lastNarratorMessage = requestData.lastNarratorMessage || '';
-    const lastUserAction = requestData.lastUserAction || requestData.playerAction || '';
+    // Normalize request - support both short and long keys
+    const reqAny = requestData as any;
+    let lastNarratorMessage = requestData.lastNarratorMessage || reqAny.narratorMessage || '';
+    const lastUserAction = requestData.lastUserAction || requestData.playerAction || reqAny.userAction || '';
 
     if (!lastNarratorMessage && requestData.recentStory?.length) {
       lastNarratorMessage = requestData.recentStory[requestData.recentStory.length - 1] || '';
