@@ -79,134 +79,172 @@ function extractSceneEssence(
   userAction: string,
   history: Array<{ role: string; content: string }> = []
 ): SceneEssence {
+  const lowerNarrator = narratorMessage.toLowerCase();
+  const lowerAction = userAction.toLowerCase();
   const combined = `${narratorMessage} ${userAction}`;
   const lowerCombined = combined.toLowerCase();
 
-  // Extract core action
-  let coreAction = '';
-  const actionPatterns = [
-    /(?:you\s+)(\w+(?:\s+\w+){0,4})/gi,
-    /(?:the\s+\w+\s+)(\w+s?\s+[^.]+)/gi,
-    /(?:suddenly,?\s*)([^.]+)/gi,
-    /(?:there(?:'s| is)\s+)([^.]+)/gi,
-  ];
-
-  for (const pattern of actionPatterns) {
-    const match = pattern.exec(narratorMessage);
-    if (match && match[1]) {
-      coreAction = match[1].trim();
-      break;
+  // PRIORITY 1: Extract what the player ACTUALLY did from their action
+  let playerDoing: string | null = null;
+  
+  // Clean the user action - remove "I " prefix and get the actual action
+  const actionClean = userAction.replace(/^i\s+/i, '').trim();
+  if (actionClean && actionClean.length > 2) {
+    // Filter out purely mental actions that aren't visual
+    const mentalOnly = ['think', 'wonder', 'consider', 'decide', 'remember', 'hope', 'wish', 'feel about'];
+    const isMentalOnly = mentalOnly.some(m => actionClean.toLowerCase().startsWith(m));
+    if (!isMentalOnly) {
+      playerDoing = actionClean;
     }
   }
-  if (!coreAction) coreAction = narratorMessage.split(/[.!?]/)[0].trim();
 
-  // Determine moment type
+  // PRIORITY 2: Build the core scene description from narrator's message
+  // Take the first 2-3 meaningful sentences that describe what's happening
+  const sentences = narratorMessage.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  let coreAction = '';
+  
+  // Build a scene summary from the narrator's actual words
+  if (sentences.length > 0) {
+    // Get the most descriptive sentences (avoid short filler)
+    const meaningfulSentences = sentences
+      .map(s => s.trim())
+      .filter(s => s.length > 20)
+      .slice(0, 2);
+    
+    if (meaningfulSentences.length > 0) {
+      coreAction = meaningfulSentences.join('. ');
+    } else {
+      coreAction = sentences[0].trim();
+    }
+  }
+  
+  // Limit core action length but keep it meaningful
+  if (coreAction.length > 200) {
+    coreAction = coreAction.slice(0, 200);
+  }
+
+  // Determine moment type from BOTH player action AND narrator response
   let momentType: SceneEssence['momentType'] = 'environmental';
   const momentIndicators: Record<SceneEssence['momentType'], string[]> = {
-    action: ['fight', 'attack', 'shoot', 'fire', 'run', 'chase', 'dodge', 'explosion', 'combat', 'battle', 'sprint', 'jump', 'crash'],
-    tense: ['careful', 'danger', 'threat', 'watch', 'listen', 'quiet', 'sneak', 'hide', 'wait', 'shadows', 'nervous', 'uneasy'],
-    quiet: ['rest', 'sleep', 'peaceful', 'calm', 'still', 'silent', 'empty', 'alone', 'reflect', 'remember'],
-    discovery: ['find', 'discover', 'notice', 'see', 'reveal', 'uncover', 'realize', 'learn', 'spot', 'strange'],
-    social: ['say', 'speak', 'talk', 'ask', 'tell', 'crowd', 'people', 'gather', 'meeting', 'conversation'],
-    transition: ['enter', 'exit', 'leave', 'arrive', 'move', 'travel', 'walk', 'head', 'continue', 'approach'],
-    emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock'],
-    environmental: ['rain', 'wind', 'sun', 'storm', 'landscape', 'city', 'building', 'street', 'forest'],
+    action: ['fight', 'attack', 'shoot', 'fire', 'run', 'chase', 'dodge', 'explosion', 'combat', 'battle', 'sprint', 'jump', 'crash', 'punch', 'kick', 'throw', 'swing', 'slash', 'stab', 'dive', 'roll', 'flip', 'climb', 'break', 'smash'],
+    tense: ['careful', 'danger', 'threat', 'watch', 'listen', 'sneak', 'hide', 'wait', 'shadows', 'nervous', 'uneasy', 'creep', 'stalk', 'prowl'],
+    quiet: ['rest', 'sleep', 'peaceful', 'calm', 'still', 'silent', 'empty', 'alone', 'reflect', 'relax', 'sit', 'lie down', 'meditate'],
+    discovery: ['find', 'discover', 'notice', 'reveal', 'uncover', 'realize', 'learn', 'spot', 'strange', 'examine', 'inspect', 'investigate', 'search', 'look at', 'pick up'],
+    social: ['say', 'speak', 'talk', 'ask', 'tell', 'crowd', 'people', 'gather', 'meeting', 'conversation', 'greet', 'introduce', 'wave', 'nod', 'shake hands'],
+    transition: ['enter', 'exit', 'leave', 'arrive', 'move', 'travel', 'walk', 'head', 'continue', 'approach', 'go to', 'head to', 'step into', 'open door', 'walk through'],
+    emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock', 'hug', 'embrace', 'kiss', 'comfort'],
+    environmental: ['rain', 'wind', 'sun', 'storm', 'landscape', 'city', 'building', 'street', 'forest', 'look around', 'survey'],
   };
 
+  // Check player action FIRST for moment type (more reliable indicator of current activity)
   for (const [type, indicators] of Object.entries(momentIndicators)) {
-    if (indicators.some(ind => lowerCombined.includes(ind))) {
+    if (indicators.some(ind => lowerAction.includes(ind))) {
       momentType = type as SceneEssence['momentType'];
       break;
     }
   }
+  
+  // If no match from player, check narrator
+  if (momentType === 'environmental') {
+    for (const [type, indicators] of Object.entries(momentIndicators)) {
+      if (indicators.some(ind => lowerNarrator.includes(ind))) {
+        momentType = type as SceneEssence['momentType'];
+        break;
+      }
+    }
+  }
 
-  // Extract visual elements
+  // Extract visual elements mentioned in the scene
   const visualElements: string[] = [];
   const visualPatterns = [
-    /(?:the|a|an)\s+(\w+(?:\s+\w+)?)\s+(?:is|are|stands?|lies?|hangs?)/gi,
-    /(?:broken|ruined|old|new|large|small|dark|bright)\s+(\w+)/gi,
+    /(?:the|a|an)\s+(\w+(?:\s+\w+)?)\s+(?:is|are|stands?|lies?|hangs?|floats?)/gi,
+    /(?:broken|ruined|old|new|large|small|dark|bright|glowing|shimmering)\s+(\w+)/gi,
     /(\w+)\s+(?:everywhere|around|nearby|ahead|behind)/gi,
+    /(?:see|notice|spot)\s+(?:a|an|the)?\s*(\w+(?:\s+\w+)?)/gi,
   ];
   for (const pattern of visualPatterns) {
     let match;
     while ((match = pattern.exec(combined)) !== null) {
-      if (match[1] && match[1].length > 2) visualElements.push(match[1].trim());
+      if (match[1] && match[1].length > 2 && !['you', 'your', 'the', 'and', 'but'].includes(match[1].toLowerCase())) {
+        visualElements.push(match[1].trim());
+      }
     }
   }
 
-  // Extract setting
-  let setting = 'the area';
-  const settingPatterns = [
-    /(?:in|inside|within|at)\s+(?:the|a)?\s*([^,.!?]+)/i,
-    /(?:the|a)\s+(street|room|building|forest|city|town|base|camp|ruins|wasteland|market|alley|corridor|hall)[^,.!?]*/i,
+  // Extract setting/location
+  let setting = '';
+  
+  // First check explicit location patterns
+  const locationPatterns = [
+    /(?:in|inside|within|at|into)\s+(?:the|a)?\s*([^,.!?]{4,40})/gi,
+    /(?:enter|arrive at|reach|approach)\s+(?:the|a)?\s*([^,.!?]{4,40})/gi,
+    /(?:the|a)\s+(pool|room|building|street|alley|hall|corridor|forest|city|town|base|camp|ruins|wasteland|market|bar|club|office|warehouse|factory|ship|station|platform)[^,.!?]*/gi,
   ];
-  for (const pattern of settingPatterns) {
+  
+  for (const pattern of locationPatterns) {
     const match = combined.match(pattern);
-    if (match) { setting = (match[1] || match[0]).trim(); break; }
-  }
-  for (let i = history.length - 1; i >= Math.max(0, history.length - 4); i--) {
-    const msg = history[i];
-    if (msg.role === 'narrator') {
-      const locMatch = msg.content.match(/(?:in|at|inside)\s+(?:the|a)\s+([^,.!?]+)/i);
-      if (locMatch && setting === 'the area') { setting = locMatch[1].trim(); break; }
+    if (match) {
+      setting = (match[1] || match[0]).trim().replace(/^(the|a|an)\s+/i, '');
+      break;
     }
   }
+  
+  // Check for water/pool specifically since that's a common miss
+  if (lowerCombined.includes('pool') || lowerCombined.includes('swim') || lowerCombined.includes('water') || lowerCombined.includes('dive')) {
+    if (!setting.includes('pool') && !setting.includes('water')) {
+      if (lowerCombined.includes('pool')) {
+        setting = setting ? `${setting} with pool` : 'pool area';
+      } else if (lowerCombined.includes('swim')) {
+        setting = setting ? `${setting} with water` : 'water/swimming area';
+      }
+    }
+  }
+  
+  if (!setting) setting = 'the scene';
 
   // Extract atmosphere words
   const atmosphereWords: string[] = [];
   const atmospherePatterns = [
-    /\b(dark|bright|dim|shadowy|lit|glowing|flickering)\b/gi,
-    /\b(cold|hot|warm|freezing|humid|dry)\b/gi,
-    /\b(quiet|loud|noisy|silent|echoing|rumbling)\b/gi,
-    /\b(crowded|empty|busy|desolate|abandoned|lively)\b/gi,
-    /\b(tense|peaceful|chaotic|eerie|welcoming|hostile)\b/gi,
+    /\b(dark|bright|dim|shadowy|lit|glowing|flickering|neon|luminous)\b/gi,
+    /\b(cold|hot|warm|freezing|humid|dry|steamy|icy)\b/gi,
+    /\b(quiet|loud|noisy|silent|echoing|rumbling|buzzing)\b/gi,
+    /\b(crowded|empty|busy|desolate|abandoned|lively|packed)\b/gi,
+    /\b(tense|peaceful|chaotic|eerie|welcoming|hostile|calm)\b/gi,
+    /\b(wet|damp|dry|dusty|misty|foggy|smoky)\b/gi,
   ];
   for (const pattern of atmospherePatterns) {
     let match;
-    while ((match = pattern.exec(combined)) !== null) atmosphereWords.push(match[1].toLowerCase());
-  }
-
-  // What is player doing?
-  let playerDoing: string | null = null;
-  const actionMatch = userAction.match(/^i\s+(.+?)(?:\.|$)/i);
-  if (actionMatch) {
-    const action = actionMatch[1].toLowerCase();
-    const invisibleActions = ['think', 'wonder', 'consider', 'decide', 'remember', 'feel', 'hope', 'wish'];
-    const observeActions = ['watch', 'look', 'observe', 'listen', 'wait', 'hide', 'stay'];
-    if (!invisibleActions.some(a => action.includes(a)) && !observeActions.some(a => action.includes(a))) {
-      playerDoing = action;
-    }
-  }
-  const narratorPlayerAction = narratorMessage.match(/you\s+(\w+(?:\s+\w+){0,3})/i);
-  if (narratorPlayerAction && !playerDoing) {
-    const action = narratorPlayerAction[1].toLowerCase();
-    if (!['see', 'notice', 'hear', 'feel', 'sense', 'realize'].includes(action.split(' ')[0])) {
-      playerDoing = action;
+    while ((match = pattern.exec(combined)) !== null) {
+      atmosphereWords.push(match[1].toLowerCase());
     }
   }
 
-  // Extract others
+  // Extract other characters/entities from narrator
   const others: string[] = [];
   const otherPatterns = [
-    /(?:the|a|an)\s+(soldier|guard|man|woman|figure|stranger|merchant|officer|creature|beast|group|crowd|people)[s]?/gi,
-    /(\w+)\s+(?:says?|speaks?|shouts?|attacks?|approaches?|stands?)/gi,
+    /(?:the|a|an)\s+(soldier|guard|man|woman|figure|stranger|merchant|officer|creature|beast|group|crowd|people|person|bartender|vendor|robot|android|cyborg|mutant)[s]?/gi,
+    /([A-Z][a-z]+)\s+(?:says?|speaks?|shouts?|attacks?|approaches?|stands?|looks?|turns?)/gi,
   ];
   for (const pattern of otherPatterns) {
     let match;
     while ((match = pattern.exec(narratorMessage)) !== null) {
       const other = match[1];
-      if (other && !['you', 'your'].includes(other.toLowerCase())) others.push(other);
+      if (other && !['you', 'your', 'the', 'They', 'She', 'He'].includes(other)) {
+        others.push(other);
+      }
     }
   }
 
   // Extract objects
   const objects: string[] = [];
   const objectPatterns = [
-    /(?:the|a|an)\s+(door|window|table|chair|weapon|gun|knife|box|crate|vehicle|car|body|corpse|terminal|screen|sign|poster)[s]?/gi,
+    /(?:the|a|an)\s+(door|window|table|chair|weapon|gun|knife|box|crate|vehicle|car|body|corpse|terminal|screen|sign|poster|bottle|glass|pool|water|fountain|statue|lamp|light)[s]?/gi,
   ];
   for (const pattern of objectPatterns) {
     let match;
-    while ((match = pattern.exec(combined)) !== null) objects.push(match[1]);
+    while ((match = pattern.exec(combined)) !== null) {
+      objects.push(match[1]);
+    }
   }
 
   // Extract sensory details
@@ -214,12 +252,19 @@ function extractSceneEssence(
   const sensoryPatterns = [
     /(?:smell|stench|odor|scent)\s+of\s+([^,.]+)/gi,
     /(?:sound|noise)\s+of\s+([^,.]+)/gi,
-    /\b(rain|wind|thunder|gunfire|screams|music|silence|smoke|dust|blood)\b/gi,
+    /\b(rain|wind|thunder|gunfire|screams|music|silence|smoke|dust|blood|chlorine|steam|splash|ripples)\b/gi,
   ];
   for (const pattern of sensoryPatterns) {
     let match;
-    while ((match = pattern.exec(combined)) !== null) sensoryDetails.push(match[1] || match[0]);
+    while ((match = pattern.exec(combined)) !== null) {
+      sensoryDetails.push(match[1] || match[0]);
+    }
   }
+
+  // Debug log with actual content
+  console.log('Extracted player action:', playerDoing || 'none');
+  console.log('Extracted setting:', setting);
+  console.log('Core scene:', coreAction.slice(0, 100));
 
   return {
     coreAction,
@@ -605,18 +650,56 @@ function buildIllustrationPrompt(
   promptParts.push(cameraAngle);
   promptParts.push(compositionFocus);
 
-  const sceneDescription = [
-    essence.coreAction,
-    `setting: ${request.currentLocation || essence.setting}`,
-    essence.visualElements.slice(0, 3).join(', '),
-  ].filter(Boolean).join(', ');
+  // BUILD SCENE DESCRIPTION FROM ACTUAL NARRATIVE
+  // Priority: Player action + what's actually happening in the story
+  const sceneDescriptionParts: string[] = [];
+  
+  // 1. Location/Setting (most important for visual accuracy)
+  const location = request.currentLocation || essence.setting;
+  if (location && location !== 'the scene') {
+    sceneDescriptionParts.push(`LOCATION: ${location}`);
+  }
+  
+  // 2. What the player is DOING (critical for matching the image to the action)
+  if (essence.playerDoing) {
+    sceneDescriptionParts.push(`ACTION: character ${essence.playerDoing}`);
+  }
+  
+  // 3. Core scene from narrator (what's actually happening)
+  if (essence.coreAction && essence.coreAction.length > 10) {
+    // Summarize the scene in visual terms
+    sceneDescriptionParts.push(`SCENE: ${essence.coreAction.slice(0, 150)}`);
+  }
+  
+  // 4. Visual elements
+  if (essence.visualElements.length > 0) {
+    sceneDescriptionParts.push(`ELEMENTS: ${essence.visualElements.slice(0, 4).join(', ')}`);
+  }
+  
+  // 5. Objects present
+  if (essence.objects.length > 0) {
+    sceneDescriptionParts.push(`OBJECTS: ${essence.objects.slice(0, 3).join(', ')}`);
+  }
 
-  promptParts.push(`SCENE: ${sceneDescription}`);
-  promptParts.push(envType);
+  promptParts.push(sceneDescriptionParts.join('. '));
+  
+  // Add genre environment only if it doesn't conflict with the actual scene
+  if (!essence.setting || essence.setting === 'the scene') {
+    promptParts.push(envType);
+  }
 
-  if (essence.objects.length > 0) promptParts.push(`details: ${essence.objects.slice(0, 3).join(', ')}`);
-  if (worldActivity.length > 0) promptParts.push(`world: ${worldActivity.slice(0, 3).join(', ')}`);
-  if (playerVisible && playerDescription) promptParts.push(`${playerProminence}: ${playerDescription}`);
+  if (worldActivity.length > 0 && essence.others.length > 0) {
+    promptParts.push(`CHARACTERS: ${essence.others.slice(0, 2).join(', ')}`);
+  }
+  
+  if (playerVisible && playerDescription) {
+    promptParts.push(`PLAYER: ${playerProminence}, ${playerDescription}`);
+  }
+
+  // Sensory details help with immersion
+  if (essence.sensoryDetails.length > 0) {
+    promptParts.push(`DETAILS: ${essence.sensoryDetails.slice(0, 3).join(', ')}`);
+  }
 
   promptParts.push(lighting);
   promptParts.push(`atmosphere: ${atmosphereElements.slice(0, 3).join(', ')}`);
@@ -639,10 +722,14 @@ function buildIllustrationPrompt(
 
   promptParts.push('environmental storytelling, 8k resolution');
 
+  const finalPrompt = promptParts.filter(Boolean).join(', ');
+  console.log('Built prompt with player action:', essence.playerDoing || 'none');
+  console.log('Built prompt with setting:', location);
+
   return {
-    prompt: promptParts.filter(Boolean).join(', '),
-    negativePrompt: 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime',
-    debug: { essence, playerVisible, focusType },
+    prompt: finalPrompt,
+    negativePrompt: 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime, wrong scene, incorrect action',
+    debug: { essence, playerVisible, focusType, playerAction: essence.playerDoing, setting: location },
   };
 }
 
