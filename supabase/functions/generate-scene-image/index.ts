@@ -57,24 +57,25 @@ const ROCKER_SALUTE_PATTERNS = [
 ];
 
 const ROCKER_SALUTE_EMPHASIS = {
-  base: '((rocker salute hand gesture)), ((devil horns hand sign)), index finger and pinky finger extended upward, middle and ring fingers curled into palm, iconic gesture of acknowledgement and celebration',
-  anatomyDetails: 'correct hand anatomy, five fingers clearly visible, proper finger positioning, realistic hand proportions',
+  // Precise anatomical description based on reference images
+  base: '((rocker salute hand gesture)), ((devil horns hand sign)), ((index finger and pinky finger extended straight upward like two horns)), ((middle finger and ring finger tightly curled down into palm)), thumb folded across curled fingers or tucked in, hand raised with palm facing outward or forward, iconic rock and metal gesture',
+  anatomyDetails: 'correct hand anatomy showing exactly five fingers, index and pinky pointing upward like horns, middle and ring fingers completely folded down touching palm, thumb position natural, realistic hand proportions, clear finger separation between extended fingers',
   styleVariants: {
-    aggressive: 'aggressive rocker salute, powerful gesture, intense expression, fierce attitude',
-    casual: 'casual devil horns, relaxed gesture, friendly acknowledgement salute',
-    triumphant: 'triumphant horns raised high, victory salute, celebratory gesture, moment of glory',
-    subtle: 'subtle horn gesture, understated acknowledgment, cool confident sign',
-    celebratory: 'celebratory devil horns, joyful gesture, excitement and triumph',
-    respectful: 'respectful horns gesture, acknowledging another, mutual recognition'
+    aggressive: 'aggressive rocker salute thrust forward, powerful devil horns gesture, intense fierce expression, metal attitude',
+    casual: 'casual relaxed devil horns, friendly acknowledgement gesture, easy natural hand position',
+    triumphant: 'triumphant horns raised high overhead, victory rocker salute, celebratory moment of glory',
+    subtle: 'subtle understated horn gesture at waist or chest level, cool confident acknowledgment',
+    celebratory: 'celebratory devil horns with joyful expression, excitement and triumph, party atmosphere',
+    respectful: 'respectful horns gesture extended toward another, acknowledging fellow rocker, mutual recognition and honor'
   },
   contextual: {
-    concert: 'concert crowd throwing horns, live music atmosphere, stage lighting',
-    portrait: 'portrait with rocker salute, character making devil horns gesture',
-    action: 'dynamic rocker salute pose, energetic gesture, movement captured',
-    celebration: 'celebratory scene, moment of victory, joyful atmosphere',
-    greeting: 'acknowledgement gesture, mutual respect, recognition between characters',
-    battle: 'battle-ready stance with horns salute, warrior acknowledgment, fierce respect',
-    casual: 'casual everyday scene, relaxed environment, natural gesture'
+    concert: 'concert crowd throwing devil horns, live music atmosphere, stage lighting, rock show energy',
+    portrait: 'portrait with rocker salute prominently displayed, character making clear devil horns gesture',
+    action: 'dynamic rocker salute in motion, energetic pose, gesture captured mid-throw',
+    celebration: 'celebratory victory scene, joyful atmosphere, triumphant moment',
+    greeting: 'acknowledgement between characters, mutual respect shown through horns gesture, recognition',
+    battle: 'battle-ready warrior throwing horns, fierce respect between combatants, pre-fight acknowledgment',
+    casual: 'casual everyday scene, natural relaxed environment, gesture feels organic and genuine'
   }
 };
 
