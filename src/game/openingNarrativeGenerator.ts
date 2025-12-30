@@ -116,6 +116,98 @@ const TRAIT_ACTIONS: Record<string, string[]> = {
   witty: ['found dark humor in the situation', 'suppressed a sardonic smile', 'quipped silently to themselves'],
   stoic: ['betrayed no emotion', 'remained impassive', 'endured as they always had'],
   optimistic: ['found hope in small things', 'smiled despite everything', 'knew better days would come'],
+  paranoid: ['checked over their shoulder for the third time', 'trusted nothing at face value', 'saw threats in every shadow'],
+  reckless: ['felt the rush of adrenaline building', 'lived for the chaos ahead', 'grinned at the danger'],
+  cynical: ['expected the worst—and was rarely disappointed', 'saw through the pretenses', 'kept expectations low'],
+  idealistic: ['believed in something greater', 'held fast to principles', 'refused to let darkness win'],
+  vengeful: ['remembered every slight', 'tasted bitter resolve', 'would see debts paid in full'],
+  calculating: ['weighed every variable', 'played the long game', 'emotion was a liability they couldn\'t afford'],
+  proud: ['would not be seen as weak', 'held their head high', 'dignity was non-negotiable'],
+  haunted: ['felt the ghosts of the past close', 'carried memories like scars', 'some wounds never heal'],
+  determined: ['set their jaw', 'nothing would stop them', 'failure was not an option'],
+  desperate: ['had nothing left to lose', 'backed into a corner', 'survival instinct screamed'],
+};
+
+// ============================================================================
+// ACCENT MODIFIERS (for NPC flavor in openings)
+// ============================================================================
+
+const ACCENT_MODIFIERS: Record<string, { greeting: string; flavor: string; verbal_tic: string }> = {
+  southern: { 
+    greeting: "Well now, stranger", 
+    flavor: "drawled with a honeyed cadence",
+    verbal_tic: "y'all" 
+  },
+  brooklyn: { 
+    greeting: "Hey, pal", 
+    flavor: "spoke in sharp, clipped tones",
+    verbal_tic: "fuggedaboutit" 
+  },
+  british_posh: { 
+    greeting: "I say, good day", 
+    flavor: "enunciated with precise diction",
+    verbal_tic: "quite so" 
+  },
+  cockney: { 
+    greeting: "Oi, mate", 
+    flavor: "spoke with rough London charm",
+    verbal_tic: "right then" 
+  },
+  irish: { 
+    greeting: "Top of the mornin'", 
+    flavor: "lilted with musical rhythm",
+    verbal_tic: "to be sure" 
+  },
+  scottish: { 
+    greeting: "Ach, well met", 
+    flavor: "rolled their Rs with highland pride",
+    verbal_tic: "aye" 
+  },
+  texan: { 
+    greeting: "Howdy, partner", 
+    flavor: "drawled slow and deliberate",
+    verbal_tic: "reckon" 
+  },
+  russian: { 
+    greeting: "Comrade", 
+    flavor: "spoke with hard consonants",
+    verbal_tic: "da" 
+  },
+  french: { 
+    greeting: "Bonjour, mon ami", 
+    flavor: "purred with continental elegance",
+    verbal_tic: "mais oui" 
+  },
+  german: { 
+    greeting: "Guten tag", 
+    flavor: "spoke with precise efficiency",
+    verbal_tic: "ja" 
+  },
+  japanese: { 
+    greeting: "Greetings, honored one", 
+    flavor: "spoke with formal courtesy",
+    verbal_tic: "hai" 
+  },
+  jamaican: { 
+    greeting: "Wha gwaan", 
+    flavor: "lilted with island rhythm",
+    verbal_tic: "ya know" 
+  },
+  new_york: { 
+    greeting: "Hey, how you doin'", 
+    flavor: "talked fast and direct",
+    verbal_tic: "you know what I'm sayin'" 
+  },
+  australian: { 
+    greeting: "G'day mate", 
+    flavor: "spoke with laid-back inflection",
+    verbal_tic: "no worries" 
+  },
+  midwest: { 
+    greeting: "Oh, hey there", 
+    flavor: "spoke with friendly warmth",
+    verbal_tic: "ope" 
+  },
 };
 
 // ============================================================================
@@ -486,6 +578,103 @@ const GENRE_ATMOSPHERES: Record<string, GenreAtmosphere> = {
       default: ['Life was what they made of it', 'Today was the first day of something new'],
     },
   },
+  steampunk: {
+    timeDescriptions: [
+      'Steam hissed from brass valves as the great clock struck the hour',
+      'Copper-tinted smog filtered the gaslight into amber dreams',
+      'Gears ground their eternal symphony in the factory district',
+      'The airship docks bustled with the commerce of empires',
+    ],
+    locationStarters: [
+      'in a city of iron and ambition where progress never rested',
+      'among the clanking machinery of the Industrial Revolution\'s apex',
+      'in the shadow of great clockwork towers that scraped the sooty sky',
+      'on cobblestones worn smooth by generations of brass automatons',
+    ],
+    sensoryDetails: [
+      'The scent of coal smoke and machine oil perfumed every breath',
+      'Pneumatic tubes whistled overhead, carrying messages across districts',
+      'Steam-powered carriages rumbled past, their pistons a mechanical heartbeat',
+      'Brass and copper gleamed through the perpetual haze',
+    ],
+    immediateHooks: [
+      'The mechanical heart in their chest ticked slightly faster—danger was near.',
+      'The encrypted punch cards had been worth killing for. Someone had.',
+      'The Artificers Guild wanted answers. Or silence. Whichever came first.',
+      'An automaton uprising was brewing in the lower factories.',
+    ],
+    classIntros: {
+      inventor: ['Gears and imagination—their only true currency', 'Every problem had a mechanical solution waiting to be discovered'],
+      aristocrat: ['Breeding and influence opened doors that money couldn\'t', 'The game of society was played with sharper blades than steel'],
+      airship_captain: ['The sky was their ocean, the clouds their domain', 'Freedom had an altitude requirement'],
+      mechanist: ['Metal spoke to them in ways flesh never could', 'Every machine had a soul, if you knew where to look'],
+      default: ['The age of steam waited for no one', 'Progress ground forward, and they with it'],
+    },
+  },
+  noir: {
+    timeDescriptions: [
+      'Rain streaked the neon signs into bleeding watercolors of vice',
+      'The city at 3 AM belonged to the desperate and the damned',
+      'Shadows stretched long under the single working streetlamp',
+      'Night had a way of revealing what daylight kept hidden',
+    ],
+    locationStarters: [
+      'in a city that had seen better decades and worse crimes',
+      'on streets that ran with rainwater and old sins',
+      'in the kind of neighborhood where questions got you hurt',
+      'at the edge of respectability, where the real business happened',
+    ],
+    sensoryDetails: [
+      'Cigarette smoke curled like accusations in the still air',
+      'Jazz leaked from a basement club, mournful and knowing',
+      'The click of heels on wet pavement echoed off empty windows',
+      'Cheap whiskey and expensive regrets—the cologne of the district',
+    ],
+    immediateHooks: [
+      'The dame walked in with legs up to here and a lie on her lips.',
+      'The corpse was still warm. So was the trail.',
+      'Someone was setting them up. The question was who, and more importantly, why.',
+      'The photograph showed something that should have stayed hidden.',
+    ],
+    classIntros: {
+      private_eye: ['Truth was their business, and business was lousy', 'Everyone lied; it was just a matter of finding the lie that mattered'],
+      femme_fatale: ['Beauty was a weapon; so was intellect', 'They\'d learned early that the world wasn\'t kind to the powerless'],
+      cop: ['The badge meant something once. Maybe it still could.', 'Justice and the law weren\'t always the same thing'],
+      default: ['The city had chewed up better people than them', 'But they were still standing. That counted for something.'],
+    },
+  },
+  survival: {
+    timeDescriptions: [
+      'The sun was merciless, baking the cracked earth without sympathy',
+      'Night brought cold that seeped into bones already exhausted',
+      'Storm clouds gathered on the horizon, promising violence',
+      'Dawn broke gray and uncertain over hostile terrain',
+    ],
+    locationStarters: [
+      'in a wilderness that didn\'t care if they lived or died',
+      'far from civilization, where nature wrote the only laws',
+      'on terrain that tested every skill they\'d ever learned',
+      'where the wrong decision meant a slow death',
+    ],
+    sensoryDetails: [
+      'Hunger was a constant companion, gnawing at reason',
+      'Every sound could mean predator or prey—vital to know which',
+      'Water sources were worth more than gold here',
+      'The body screamed protests that the mind had to override',
+    ],
+    immediateHooks: [
+      'The supplies were running low. Something had to change.',
+      'Tracks in the mud—something was hunting them.',
+      'Shelter was three hours away. The storm would arrive in two.',
+      'The signal fire had been spotted. Whether by rescuers or worse was yet unknown.',
+    ],
+    classIntros: {
+      survivalist: ['Nature was a harsh teacher, but fair', 'Every skill had been earned through suffering'],
+      hunter: ['The land provided, if you knew how to ask', 'Patience and precision kept bellies full'],
+      medic: ['Keeping people alive was harder without walls and supplies', 'Improvisation was as vital as any medical training'],
+      default: ['Survival wasn\'t about thriving—just one more day', 'The wild tested, and they would not be found wanting'],
+    },
+  },
 };
 
 // ============================================================================
@@ -631,10 +820,34 @@ export function generateImmersiveOpening(options: OpeningGeneratorOptions): stri
     scenarioHook = 'The heart wanted what it wanted. Logic had little say in the matter.';
   } else if (scenarioWords.includes('revenge') || scenarioWords.includes('vengeance') || scenarioWords.includes('justice')) {
     scenarioHook = 'The path of vengeance stretched before them, paved with both purpose and peril.';
+  } else if (scenarioWords.includes('heist') || scenarioWords.includes('steal') || scenarioWords.includes('rob')) {
+    scenarioHook = 'The plan was set. All that remained was execution—and escape.';
+  } else if (scenarioWords.includes('monster') || scenarioWords.includes('creature') || scenarioWords.includes('beast')) {
+    scenarioHook = 'Something unnatural had taken notice. Hunter and hunted were about to meet.';
+  } else if (scenarioWords.includes('betray') || scenarioWords.includes('trust') || scenarioWords.includes('ally')) {
+    scenarioHook = 'Trust had been broken. The question was whether it could be rebuilt—or revenged.';
+  } else if (scenarioWords.includes('politic') || scenarioWords.includes('power') || scenarioWords.includes('throne')) {
+    scenarioHook = 'The game of power had new pieces on the board. The stakes were everything.';
+  } else if (scenarioWords.includes('curse') || scenarioWords.includes('magic') || scenarioWords.includes('spell')) {
+    scenarioHook = 'Ancient forces were at play, and they cared nothing for mortal concerns.';
+  } else if (scenarioWords.includes('rescue') || scenarioWords.includes('save') || scenarioWords.includes('protect')) {
+    scenarioHook = 'Someone needed saving. Failure was not an option they could live with.';
+  } else if (scenarioWords.includes('explore') || scenarioWords.includes('discover') || scenarioWords.includes('unknown')) {
+    scenarioHook = 'The unexplored beckoned with promises of wonder and peril in equal measure.';
+  } else if (scenarioWords.includes('trade') || scenarioWords.includes('merchant') || scenarioWords.includes('deal')) {
+    scenarioHook = 'Business was about to be conducted. Whether fairly remained to be seen.';
   } else {
     scenarioHook = 'Whatever came next, they would face it. They had come too far to stop now.';
   }
   paragraphs.push(scenarioHook);
+  
+  // Optional: Add NPC flavor with accent if scenario hints at a meeting
+  if (scenarioWords.includes('meet') || scenarioWords.includes('contact') || scenarioWords.includes('informant') || scenarioWords.includes('stranger')) {
+    const accentKeys = Object.keys(ACCENT_MODIFIERS);
+    const randomAccent = accentKeys[Math.floor(Math.random() * accentKeys.length)];
+    const accent = ACCENT_MODIFIERS[randomAccent];
+    paragraphs.push(`A figure emerged from the shadows. "${accent.greeting}," they ${accent.flavor}. Someone who might have answers—or might bring more trouble.`);
+  }
   
   // Final paragraph: Ready for player input
   paragraphs.push('The moment stretched, pregnant with possibility. What happened next was up to them.');
