@@ -196,7 +196,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         : blendedClasses.find(c => c.id === selectedClass);
       const className = selectedClassData?.name || selectedClass;
       
-      // Build character appearance data
+      // Build character appearance data including full (18+) customizations
       const characterData = {
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
@@ -209,6 +209,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
+        // Full appearance (18+) options
+        bustSize: appearance.full?.bustSize,
+        hipWidth: appearance.full?.hipWidth,
+        muscleDefinition: appearance.full?.muscleDefinition,
+        intimateDetails: appearance.full?.intimateDetails,
       };
       
       const prompt = buildPortraitPrompt(characterData, genre, 'neutral', className);
