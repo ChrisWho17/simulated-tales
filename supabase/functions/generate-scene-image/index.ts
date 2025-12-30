@@ -46,7 +46,7 @@ interface SceneImageRequest {
 
 interface SceneEssence {
   coreAction: string;
-  momentType: 'quiet' | 'tense' | 'action' | 'discovery' | 'social' | 'transition' | 'emotional' | 'environmental';
+  momentType: 'quiet' | 'tense' | 'action' | 'discovery' | 'social' | 'transition' | 'emotional' | 'environmental' | 'romantic';
   visualElements: string[];
   setting: string;
   atmosphereWords: string[];
@@ -54,6 +54,10 @@ interface SceneEssence {
   others: string[];
   objects: string[];
   sensoryDetails: string[];
+  romanticContext?: {
+    intimacyLevel: 'tender' | 'passionate' | 'playful' | 'longing';
+    focusElements: string[];
+  };
 }
 
 // ============================================================================
@@ -132,7 +136,8 @@ function extractSceneEssence(
     discovery: ['find', 'discover', 'notice', 'reveal', 'uncover', 'realize', 'learn', 'spot', 'strange', 'examine', 'inspect', 'investigate', 'search', 'look at', 'pick up'],
     social: ['say', 'speak', 'talk', 'ask', 'tell', 'crowd', 'people', 'gather', 'meeting', 'conversation', 'greet', 'introduce', 'wave', 'nod', 'shake hands'],
     transition: ['enter', 'exit', 'leave', 'arrive', 'move', 'travel', 'walk', 'head', 'continue', 'approach', 'go to', 'head to', 'step into', 'open door', 'walk through'],
-    emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock', 'hug', 'embrace', 'kiss', 'comfort'],
+    emotional: ['feel', 'heart', 'tears', 'laugh', 'cry', 'anger', 'joy', 'grief', 'relief', 'shock', 'comfort'],
+    romantic: ['kiss', 'embrace', 'hold hands', 'caress', 'cuddle', 'snuggle', 'lean close', 'whisper', 'gaze into', 'love', 'affection', 'tender', 'romantic', 'intimate', 'brush lips', 'stroke hair', 'touch cheek', 'pull close', 'wrap arms', 'nuzzle', 'sway together', 'dance together', 'rest head', 'intertwine', 'passion', 'longing', 'desire', 'flirt', 'wink', 'blush', 'smile softly', 'heart flutter'],
     environmental: ['rain', 'wind', 'sun', 'storm', 'landscape', 'city', 'building', 'street', 'forest', 'look around', 'survey'],
   };
 
@@ -261,6 +266,56 @@ function extractSceneEssence(
     }
   }
 
+  // ========================================
+  // ROMANTIC CONTEXT DETECTION
+  // ========================================
+  let romanticContext: SceneEssence['romanticContext'] | undefined;
+  
+  if (momentType === 'romantic') {
+    // Determine intimacy level based on specific keywords
+    let intimacyLevel: 'tender' | 'passionate' | 'playful' | 'longing' = 'tender';
+    const focusElements: string[] = [];
+    
+    // Passionate indicators
+    const passionateKeywords = ['passion', 'desire', 'deeply', 'intensely', 'desperately', 'hungry', 'fire', 'burning', 'fierce'];
+    // Playful indicators
+    const playfulKeywords = ['playful', 'tease', 'wink', 'smirk', 'giggle', 'laugh', 'tickle', 'chase', 'flirt', 'mischievous'];
+    // Longing indicators
+    const longingKeywords = ['longing', 'yearn', 'miss', 'distant', 'gaze', 'dream', 'wish', 'hope', 'wait', 'separate'];
+    
+    if (passionateKeywords.some(k => lowerCombined.includes(k))) {
+      intimacyLevel = 'passionate';
+      focusElements.push('intense connection', 'close proximity', 'emotional intensity');
+    } else if (playfulKeywords.some(k => lowerCombined.includes(k))) {
+      intimacyLevel = 'playful';
+      focusElements.push('light-hearted moment', 'shared joy', 'spontaneous affection');
+    } else if (longingKeywords.some(k => lowerCombined.includes(k))) {
+      intimacyLevel = 'longing';
+      focusElements.push('emotional distance', 'yearning expression', 'bittersweet atmosphere');
+    } else {
+      focusElements.push('gentle moment', 'soft connection', 'quiet intimacy');
+    }
+    
+    // Extract romantic visual elements
+    const romanticVisualPatterns = [
+      /\b(hands?\s+(?:touching|holding|intertwined))\b/gi,
+      /\b(eyes?\s+(?:meeting|locked|gazing))\b/gi,
+      /\b(close\s+together|side\s+by\s+side|face\s+to\s+face)\b/gi,
+      /\b(sunset|moonlight|candlelight|starlight|firelight)\b/gi,
+      /\b(flowers|rose|petals)\b/gi,
+    ];
+    
+    for (const pattern of romanticVisualPatterns) {
+      let match;
+      while ((match = pattern.exec(combined)) !== null) {
+        focusElements.push(match[0].toLowerCase());
+      }
+    }
+    
+    romanticContext = { intimacyLevel, focusElements: [...new Set(focusElements)].slice(0, 5) };
+    console.log('Romantic context detected:', intimacyLevel, focusElements.slice(0, 3));
+  }
+
   // Debug log with actual content
   console.log('Extracted player action:', playerDoing || 'none');
   console.log('Extracted setting:', setting);
@@ -276,6 +331,7 @@ function extractSceneEssence(
     others: [...new Set(others)].slice(0, 4),
     objects: [...new Set(objects)].slice(0, 5),
     sensoryDetails: [...new Set(sensoryDetails)].slice(0, 4),
+    romanticContext,
   };
 }
 
@@ -288,6 +344,7 @@ const CAMERA_ANGLES = {
   medium: ['medium wide shot', 'environmental medium shot', 'balanced composition showing scene', 'mid-range framing'],
   dynamic: ['dutch angle adding tension', 'dramatic low angle', 'high angle looking down', 'asymmetric dynamic composition'],
   intimate: ['close environmental shot', 'tight framing on details', 'intimate scene composition', 'focused close view'],
+  romantic: ['soft focus intimate framing', 'close two-shot composition', 'tender moment captured', 'artistic romantic portrait style'],
 };
 
 const LIGHTING_VARIATIONS = {
@@ -296,12 +353,14 @@ const LIGHTING_VARIATIONS = {
   atmospheric: ['volumetric light rays', 'hazy atmospheric lighting', 'god rays through dust', 'foggy diffused glow'],
   artificial: ['fluorescent harsh lighting', 'neon color cast', 'mixed artificial sources', 'flickering unstable light'],
   night: ['moonlight and shadows', 'scattered artificial lights in darkness', 'low-key nighttime lighting', 'fire/explosion illumination'],
+  romantic: ['soft golden hour glow', 'warm candlelight ambiance', 'dreamy backlit silhouettes', 'gentle moonlight romance', 'soft diffused intimate lighting'],
 };
 
 const ATMOSPHERE_ADDITIONS = {
   particles: ['dust particles floating in air', 'ash drifting down', 'rain droplets visible', 'smoke wisps', 'sparks floating', 'debris in wind'],
   weather: ['rain puddles reflecting', 'wet surfaces glistening', 'fog rolling through', 'heat haze distortion', 'wind-blown elements'],
   environmental: ['distant activity visible', 'background movement', 'environmental storytelling details', 'signs of recent events', 'lived-in world details'],
+  romantic: ['soft bokeh background', 'gentle lens flare', 'flower petals drifting', 'warm color wash', 'dreamy soft focus edges'],
 };
 
 const COMPOSITION_FOCUS = {
@@ -309,6 +368,7 @@ const COMPOSITION_FOCUS = {
   event: ['action captured mid-moment', 'event unfolding in frame', 'dynamic moment frozen', 'narrative beat visualized'],
   mood: ['atmosphere is palpable', 'mood conveyed through visuals', 'emotional resonance in composition'],
   detail: ['specific details tell the story', 'meaningful objects prominent', 'visual clues for narrative'],
+  connection: ['two figures as focal point', 'emotional bond visualized', 'intimate moment between characters', 'shared space and connection'],
 };
 
 // ============================================================================
@@ -555,30 +615,41 @@ function buildIllustrationPrompt(
 
   // Determine composition based on moment type with randomness
   let cameraOptions: string[];
-  switch (essence.momentType) {
-    case 'action':
-      cameraOptions = Math.random() > 0.3 ? CAMERA_ANGLES.dynamic : CAMERA_ANGLES.medium;
-      break;
-    case 'quiet':
-    case 'environmental':
-      cameraOptions = Math.random() > 0.4 ? CAMERA_ANGLES.wide : CAMERA_ANGLES.medium;
-      break;
-    case 'emotional':
-    case 'discovery':
-      cameraOptions = Math.random() > 0.5 ? CAMERA_ANGLES.intimate : CAMERA_ANGLES.medium;
-      break;
-    default:
-      cameraOptions = pick([CAMERA_ANGLES.wide, CAMERA_ANGLES.medium, CAMERA_ANGLES.dynamic]);
+  let compositionFocus: string;
+  let focusType: string;
+  
+  // Special handling for romantic scenes
+  if (essence.momentType === 'romantic') {
+    cameraOptions = CAMERA_ANGLES.romantic;
+    focusType = 'connection';
+    compositionFocus = pick(COMPOSITION_FOCUS.connection);
+  } else {
+    switch (essence.momentType) {
+      case 'action':
+        cameraOptions = Math.random() > 0.3 ? CAMERA_ANGLES.dynamic : CAMERA_ANGLES.medium;
+        break;
+      case 'quiet':
+      case 'environmental':
+        cameraOptions = Math.random() > 0.4 ? CAMERA_ANGLES.wide : CAMERA_ANGLES.medium;
+        break;
+      case 'emotional':
+      case 'discovery':
+        cameraOptions = Math.random() > 0.5 ? CAMERA_ANGLES.intimate : CAMERA_ANGLES.medium;
+        break;
+      default:
+        cameraOptions = pick([CAMERA_ANGLES.wide, CAMERA_ANGLES.medium, CAMERA_ANGLES.dynamic]);
+    }
+    const focusOptions = Object.keys(COMPOSITION_FOCUS) as Array<keyof typeof COMPOSITION_FOCUS>;
+    focusType = pick(focusOptions);
+    compositionFocus = pick(COMPOSITION_FOCUS[focusType as keyof typeof COMPOSITION_FOCUS]);
   }
   const cameraAngle = pick(cameraOptions);
 
-  const focusOptions = Object.keys(COMPOSITION_FOCUS) as Array<keyof typeof COMPOSITION_FOCUS>;
-  const focusType = pick(focusOptions);
-  const compositionFocus = pick(COMPOSITION_FOCUS[focusType]);
-
-  // Determine lighting
+  // Determine lighting - romantic scenes get special treatment
   let lightingCategory: keyof typeof LIGHTING_VARIATIONS;
-  if (request.timeOfDay === 'night' || essence.atmosphereWords.includes('dark')) {
+  if (essence.momentType === 'romantic') {
+    lightingCategory = 'romantic';
+  } else if (request.timeOfDay === 'night' || essence.atmosphereWords.includes('dark')) {
     lightingCategory = 'night';
   } else if (essence.momentType === 'action' || essence.momentType === 'tense') {
     lightingCategory = Math.random() > 0.4 ? 'dramatic' : 'atmospheric';
@@ -589,8 +660,11 @@ function buildIllustrationPrompt(
   }
   const lighting = pick(LIGHTING_VARIATIONS[lightingCategory]);
 
-  // Build atmosphere
+  // Build atmosphere - romantic scenes get special atmosphere
   const atmosphereElements: string[] = [];
+  if (essence.momentType === 'romantic') {
+    atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.romantic, 2, 3));
+  }
   if (request.weather) atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.weather, 1, 2));
   if (Math.random() > 0.4) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.particles));
   if (Math.random() > 0.3) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.environmental));
@@ -601,8 +675,61 @@ function buildIllustrationPrompt(
   let playerVisible = false;
   let playerDescription = '';
   let playerProminence = '';
+  let romanticSceneDescription = '';
 
-  if (essence.playerDoing && characterProfile) {
+  // Special handling for romantic scenes - focus on the interaction
+  if (essence.momentType === 'romantic' && essence.romanticContext) {
+    playerVisible = true;
+    const rc = essence.romanticContext;
+    
+    // Build tasteful romantic scene description
+    const intimacyDescriptions = {
+      tender: ['gentle tender moment', 'soft affectionate connection', 'quiet intimate scene'],
+      passionate: ['intense emotional connection', 'passionate embrace', 'deeply connected moment'],
+      playful: ['playful romantic moment', 'lighthearted affection', 'joyful intimate exchange'],
+      longing: ['wistful romantic tension', 'yearning glance', 'bittersweet connection'],
+    };
+    
+    const actionMappings: Record<string, string> = {
+      'kiss': 'gentle kiss, faces close together',
+      'embrace': 'warm embrace, arms wrapped around each other',
+      'hold hands': 'hands intertwined, fingers laced together',
+      'caress': 'tender touch, soft caress',
+      'cuddle': 'cuddling close together, comfortable intimacy',
+      'lean close': 'leaning in close, foreheads nearly touching',
+      'gaze into': 'gazing deeply into each others eyes',
+      'whisper': 'whispering closely, lips near ear',
+      'dance together': 'dancing closely together, elegant movement',
+      'stroke hair': 'gentle fingers through hair, tender gesture',
+      'touch cheek': 'hand cupping cheek gently',
+      'pull close': 'pulling close together, intimate embrace',
+      'nuzzle': 'nuzzling affectionately, soft intimate moment',
+    };
+    
+    // Find matching action
+    let romanticAction = pick(intimacyDescriptions[rc.intimacyLevel]);
+    if (essence.playerDoing) {
+      for (const [key, desc] of Object.entries(actionMappings)) {
+        if (essence.playerDoing.toLowerCase().includes(key)) {
+          romanticAction = desc;
+          break;
+        }
+      }
+    }
+    
+    playerProminence = 'central focus of scene';
+    
+    // Build character description for romantic scene
+    if (characterProfile) {
+      const charBase = `${characterProfile.gender}, ${characterProfile.hair.color} hair`;
+      romanticSceneDescription = `ROMANTIC MOMENT: two figures, ${romanticAction}, ${charBase} visible, ${rc.focusElements.slice(0, 2).join(', ')}`;
+    } else {
+      romanticSceneDescription = `ROMANTIC MOMENT: two figures, ${romanticAction}, ${rc.focusElements.slice(0, 2).join(', ')}`;
+    }
+    
+    playerDescription = romanticSceneDescription;
+    console.log('Romantic scene detected:', rc.intimacyLevel, romanticAction);
+  } else if (essence.playerDoing && characterProfile) {
     playerVisible = true;
     const prominenceRoll = Math.random();
 
@@ -720,16 +847,29 @@ function buildIllustrationPrompt(
     promptParts.push(pick(weatherDescs[request.weather] || ['']));
   }
 
+  // Add romantic-specific quality modifiers
+  if (essence.momentType === 'romantic') {
+    promptParts.push('tasteful, artistic, elegant, PG-13, romantic art style');
+  }
+
   promptParts.push('environmental storytelling, 8k resolution');
 
   const finalPrompt = promptParts.filter(Boolean).join(', ');
   console.log('Built prompt with player action:', essence.playerDoing || 'none');
   console.log('Built prompt with setting:', location);
 
+  // Build negative prompt - enhanced for romantic scenes to ensure ToS compliance
+  let negativePrompt = 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime, wrong scene, incorrect action';
+  
+  if (essence.momentType === 'romantic') {
+    // Add explicit ToS-compliant negative prompts for romantic scenes
+    negativePrompt += ', NSFW, explicit, nudity, sexual, inappropriate, adult content, suggestive, revealing clothing, undressed, erotic, provocative, lewd';
+  }
+
   return {
     prompt: finalPrompt,
-    negativePrompt: 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime, wrong scene, incorrect action',
-    debug: { essence, playerVisible, focusType, playerAction: essence.playerDoing, setting: location },
+    negativePrompt,
+    debug: { essence, playerVisible, focusType, playerAction: essence.playerDoing, setting: location, romanticContext: essence.romanticContext },
   };
 }
 
