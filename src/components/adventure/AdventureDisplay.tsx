@@ -184,6 +184,9 @@ interface AdventureDisplayProps {
   onWeatherStateChange?: (state: WeatherState) => void;
   // Campaign ID for inventory isolation
   campaignId?: string;
+  // World regeneration - only available before first player action
+  onRegenerateWorld?: () => void;
+  canRegenerateWorld?: boolean;
 }
 
 export function AdventureDisplay({
@@ -211,6 +214,8 @@ export function AdventureDisplay({
   weatherState: externalWeatherState,
   onWeatherStateChange,
   campaignId = 'default_campaign',
+  onRegenerateWorld,
+  canRegenerateWorld = false,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
