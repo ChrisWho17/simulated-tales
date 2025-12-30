@@ -502,16 +502,16 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                     const maxForThis = MAX_SECONDARY_TOTAL - othersTotal;
                     
                     return (
-                      <div key={sg.genreId} className="flex items-center gap-3 p-2 rounded-lg bg-background/30 border border-border/30">
+                      <div key={sg.genreId} className="flex items-center gap-2 p-2 rounded-lg bg-background/30 border border-border/30">
                         <Select 
                           value={sg.genreId} 
                           onValueChange={(v) => handleSecondaryGenreChange(index, v as GameGenre)}
                         >
-                          <SelectTrigger className="w-36 bg-background/50 border-primary/30 h-8">
+                          <SelectTrigger className="w-20 bg-background/50 border-primary/30 h-8 px-2">
                             <SelectValue>
-                              <div className="flex items-center gap-2">
-                                <span>{GENRE_ICONS[sg.genreId]}</span>
-                                <span className="text-sm">{allGenres.find(g => g.id === sg.genreId)?.name}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">{GENRE_ICONS[sg.genreId]}</span>
+                                <span className="text-xs truncate">{allGenres.find(g => g.id === sg.genreId)?.name?.slice(0, 6)}</span>
                               </div>
                             </SelectValue>
                           </SelectTrigger>
@@ -529,16 +529,18 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                           </SelectContent>
                         </Select>
                         
-                        <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground w-6">0%</span>
                           <Slider
                             value={[sg.blendStrength]}
                             min={5}
                             max={maxForThis}
-                            step={5}
+                            step={1}
                             onValueChange={(v) => handleBlendStrengthChange(index, v)}
                             className="flex-1"
+                            dir="ltr"
                           />
-                          <span className="text-xs text-primary w-12 text-right font-medium">
+                          <span className="text-xs text-primary w-16 text-right font-medium">
                             {sg.blendStrength}% <span className="text-muted-foreground text-[10px]">{getBlendLabel(sg.blendStrength)}</span>
                           </span>
                         </div>
@@ -546,10 +548,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleRemoveSecondaryGenre(index)}
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     );
