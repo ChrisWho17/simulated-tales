@@ -163,6 +163,9 @@ export interface GameSettings {
   enableInventoryWeight: boolean;
   enableAdrenalineSystem: boolean;
   
+  // NPC Speech settings
+  enableNPCAccents: boolean;
+  
   // Developer/Debug toggles
   showEventBusDebug: boolean;
   
@@ -251,6 +254,9 @@ const defaultSettings: GameSettings = {
   enableXPSystem: true,
   enableInventoryWeight: true,
   enableAdrenalineSystem: false,
+  
+  // NPC Speech settings
+  enableNPCAccents: true,
   
   // Developer/Debug toggles
   showEventBusDebug: false,
