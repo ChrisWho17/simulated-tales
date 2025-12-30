@@ -250,13 +250,18 @@ export interface ParsedGenreTag {
 /**
  * Parse genre tags from text input. Supports formats like:
  * - "+horror" - adds horror as secondary genre with default 15% blend
- * - "+horror 25" or "+horror 25%" - adds horror with 25% blend
+ * - "+horror 25" or "+horror 25%" - adds horror with 25% blend (max 50%)
  * - "with horror" - adds horror as secondary
  * - "horror elements" - adds horror as secondary
+ * 
+ * Total secondary blend is capped at 50% (primary always gets at least 50%)
+ * Max 3 secondary genres supported
  */
 export function parseGenreTagsFromText(text: string, excludeGenre?: GameGenre): ParsedGenreTag[] {
   const tags: ParsedGenreTag[] = [];
   const lower = text.toLowerCase();
+  const MAX_SECONDARY_TOTAL = 50;
+  const MAX_SECONDARY_GENRES = 3;
   
   // Pattern 1: "+genre" or "+genre XX%" format
   const plusPattern = /\+\s*([a-z\-\s]+?)(?:\s+(\d+)%?)?(?=\s|$|[,.])/gi;
@@ -268,7 +273,8 @@ export function parseGenreTagsFromText(text: string, excludeGenre?: GameGenre): 
     const genre = GENRE_ALIASES[genreName];
     
     if (genre && genre !== excludeGenre && !tags.some(t => t.genre === genre)) {
-      const blend = blendStr ? Math.min(30, Math.max(0, parseInt(blendStr))) : 15;
+      // Cap individual blend at 50%, will be further capped by total limit
+      const blend = blendStr ? Math.min(50, Math.max(0, parseInt(blendStr))) : 15;
       tags.push({
         genre,
         name: getAllGenres().find(g => g.id === genre)?.name || genreName,
@@ -307,8 +313,20 @@ export function parseGenreTagsFromText(text: string, excludeGenre?: GameGenre): 
     }
   }
   
-  // Limit to 2 secondary genres
-  return tags.slice(0, 2);
+  // Limit to MAX_SECONDARY_GENRES and cap total at MAX_SECONDARY_TOTAL
+  const limited = tags.slice(0, MAX_SECONDARY_GENRES);
+  let totalBlend = 0;
+  const capped: ParsedGenreTag[] = [];
+  
+  for (const tag of limited) {
+    const remaining = MAX_SECONDARY_TOTAL - totalBlend;
+    if (remaining <= 0) break;
+    const cappedStrength = Math.min(tag.blendStrength, remaining);
+    capped.push({ ...tag, blendStrength: cappedStrength });
+    totalBlend += cappedStrength;
+  }
+  
+  return capped;
 }
 
 /**

@@ -28,9 +28,11 @@ import {
 } from '@/components/ui/select';
 
 // Genre Contract state shape
+// Primary genre is always 50% minimum (100% when hard locked)
+// Secondary genres can divide up to 50% total between up to 3 genres
 export interface SecondaryGenre {
   genreId: GameGenre;
-  blendStrength: number; // 0-30
+  blendStrength: number; // 0-50, total across all secondaries capped at 50
 }
 
 export interface GenreContractConfig {
@@ -109,8 +111,13 @@ const RANDOM_SCENARIOS: Array<{ text: string; genre: GameGenre }> = [
 const getBlendLabel = (value: number): string => {
   if (value <= 10) return 'Light';
   if (value <= 20) return 'Moderate';
-  return 'Strong';
+  if (value <= 35) return 'Strong';
+  return 'Heavy';
 };
+
+// Max total secondary genre weight (primary always gets at least 50%)
+const MAX_SECONDARY_TOTAL = 50;
+const MAX_SECONDARY_GENRES = 3;
 
 // Load Story Dropdown component - shows saved campaigns
 function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }) {
@@ -245,7 +252,18 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       }
     }
     
-    return combined.slice(0, 2); // Max 2 secondary genres
+    // Enforce max total of 50% across all secondaries
+    let totalBlend = 0;
+    const capped: SecondaryGenre[] = [];
+    for (const sg of combined.slice(0, MAX_SECONDARY_GENRES)) {
+      const remaining = MAX_SECONDARY_TOTAL - totalBlend;
+      if (remaining <= 0) break;
+      const cappedStrength = Math.min(sg.blendStrength, remaining);
+      capped.push({ ...sg, blendStrength: cappedStrength });
+      totalBlend += cappedStrength;
+    }
+    
+    return capped;
   }, [secondaryGenres, parsedGenreTags]);
 
   // Build genre contract config for display (uses effective secondary genres)
@@ -268,11 +286,19 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     return GENRE_DATA[primaryGenre];
   }, [primaryGenre, detectedWarEra]);
 
+  // Calculate remaining available blend strength
+  const usedBlendStrength = secondaryGenres.reduce((sum, sg) => sum + sg.blendStrength, 0);
+  const remainingBlendStrength = MAX_SECONDARY_TOTAL - usedBlendStrength;
+
   const handleAddSecondaryGenre = () => {
-    if (secondaryGenres.length >= 2 || availableSecondaryGenres.length === 0) return;
+    if (secondaryGenres.length >= MAX_SECONDARY_GENRES || availableSecondaryGenres.length === 0) return;
+    if (remainingBlendStrength <= 0) return; // No room for more blend
+    
+    // Default new genre to minimum of remaining or 15%
+    const defaultBlend = Math.min(15, remainingBlendStrength);
     setSecondaryGenres([...secondaryGenres, { 
       genreId: availableSecondaryGenres[0].id, 
-      blendStrength: 15 
+      blendStrength: defaultBlend 
     }]);
   };
 
@@ -288,7 +314,13 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
   const handleBlendStrengthChange = (index: number, value: number[]) => {
     const updated = [...secondaryGenres];
-    updated[index] = { ...updated[index], blendStrength: value[0] };
+    const newValue = value[0];
+    
+    // Calculate how much others are using
+    const othersTotal = updated.reduce((sum, sg, i) => i === index ? sum : sum + sg.blendStrength, 0);
+    const maxForThis = MAX_SECONDARY_TOTAL - othersTotal;
+    
+    updated[index] = { ...updated[index], blendStrength: Math.min(newValue, maxForThis) };
     setSecondaryGenres(updated);
   };
 
@@ -448,6 +480,103 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                   }}
                 />
               </div>
+
+              {/* Secondary Genres Section - Only show if not hard locked */}
+              {!hardLock && (
+                <div className="space-y-3 pt-3 border-t border-border/30">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-primary" />
+                      Secondary Genres (up to 50% total)
+                    </label>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Used: {usedBlendStrength}%</span>
+                      <span className="text-primary">/ 50%</span>
+                    </div>
+                  </div>
+                  
+                  {/* List of added secondary genres */}
+                  {secondaryGenres.map((sg, index) => {
+                    // Calculate max slider value for this genre
+                    const othersTotal = secondaryGenres.reduce((sum, s, i) => i === index ? sum : sum + s.blendStrength, 0);
+                    const maxForThis = MAX_SECONDARY_TOTAL - othersTotal;
+                    
+                    return (
+                      <div key={sg.genreId} className="flex items-center gap-3 p-2 rounded-lg bg-background/30 border border-border/30">
+                        <Select 
+                          value={sg.genreId} 
+                          onValueChange={(v) => handleSecondaryGenreChange(index, v as GameGenre)}
+                        >
+                          <SelectTrigger className="w-36 bg-background/50 border-primary/30 h-8">
+                            <SelectValue>
+                              <div className="flex items-center gap-2">
+                                <span>{GENRE_ICONS[sg.genreId]}</span>
+                                <span className="text-sm">{allGenres.find(g => g.id === sg.genreId)?.name}</span>
+                              </div>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[...availableSecondaryGenres, allGenres.find(g => g.id === sg.genreId)!]
+                              .filter(Boolean)
+                              .map((g) => (
+                                <SelectItem key={g.id} value={g.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{g.icon}</span>
+                                    <span>{g.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="flex-1 flex items-center gap-2">
+                          <Slider
+                            value={[sg.blendStrength]}
+                            min={5}
+                            max={maxForThis}
+                            step={5}
+                            onValueChange={(v) => handleBlendStrengthChange(index, v)}
+                            className="flex-1"
+                          />
+                          <span className="text-xs text-primary w-12 text-right font-medium">
+                            {sg.blendStrength}% <span className="text-muted-foreground text-[10px]">{getBlendLabel(sg.blendStrength)}</span>
+                          </span>
+                        </div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemoveSecondaryGenre(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Add Secondary Genre Button */}
+                  {secondaryGenres.length < MAX_SECONDARY_GENRES && remainingBlendStrength > 0 && availableSecondaryGenres.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddSecondaryGenre}
+                      className="w-full mt-2 bg-background/30 border-primary/30 hover:bg-primary/10"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Secondary Genre ({remainingBlendStrength}% remaining)
+                    </Button>
+                  )}
+                  
+                  {secondaryGenres.length === MAX_SECONDARY_GENRES && (
+                    <p className="text-xs text-muted-foreground text-center">Maximum {MAX_SECONDARY_GENRES} secondary genres reached</p>
+                  )}
+                  
+                  {remainingBlendStrength <= 0 && secondaryGenres.length > 0 && (
+                    <p className="text-xs text-amber-400 text-center">50% secondary blend limit reached</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -459,7 +588,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
               <Input
                 value={customScenario}
                 onChange={(e) => setCustomScenario(e.target.value)}
-                placeholder="Describe your scenario... (try '+horror' or '+mystery 20%' to blend genres)"
+                placeholder="Describe your scenario... (try '+horror 25%' or '+war 20% +mystery 15%' - up to 50% across 3 genres)"
                 className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
                 onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
                 disabled={isLoading}
