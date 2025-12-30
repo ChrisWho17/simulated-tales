@@ -1616,30 +1616,61 @@ export function AdventureDisplay({
                     {formatNarrativeContent(entry.content, index)}
                   </div>
                   
-                  {/* Generate Image Button */}
-                  {!entry.imageUrl && index === story.length - 1 && entry.role === 'narrator' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGenerateImage(entry.id);
-                      }}
-                      disabled={!!generatingImageFor}
-                      className="mt-4"
-                    >
-                      {generatingImageFor === entry.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="w-4 h-4 mr-2" />
-                          Illustrate Scene
-                        </>
+                  {/* Action Buttons Row - Generate Image & Regenerate World */}
+                  {index === story.length - 1 && entry.role === 'narrator' && (
+                    <div className="mt-4 flex justify-end gap-2 flex-wrap">
+                      {/* Regenerate World Button - Only on first narrator entry before any player action */}
+                      {canRegenerateWorld && story.length === 1 && onRegenerateWorld && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRegenerateWorld();
+                          }}
+                          disabled={isLoading}
+                          className="border-warning/50 text-warning hover:bg-warning/10 hover:border-warning"
+                          title="Generate a new opening scene (locks after your first action)"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Regenerating...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                              Regenerate World
+                            </>
+                          )}
+                        </Button>
                       )}
-                    </Button>
+                      
+                      {/* Generate Image Button */}
+                      {!entry.imageUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGenerateImage(entry.id);
+                          }}
+                          disabled={!!generatingImageFor}
+                        >
+                          {generatingImageFor === entry.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className="w-4 h-4 mr-2" />
+                              Illustrate Scene
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </Card>
               )}
