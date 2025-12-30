@@ -8,8 +8,12 @@ export const NEGATIVE_PROMPT = `worst quality, low quality, blurry, bad anatomy,
 
 export const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
   modern: {
-    style: 'modern military tactical gear, realistic combat equipment, kevlar body armor, tactical vest with pouches, military radio, combat harness, worn battle gear',
-    backgrounds: ['dramatic warzone with explosions and smoke in background', 'destroyed urban battlefield with burning buildings', 'military forward operating base at golden hour', 'intense combat zone with debris and fire', 'smoky battlefield with distant explosions'],
+    style: 'modern contemporary casual clothing, everyday civilian attire, realistic modern fashion, comfortable everyday wear, stylish casual outfit',
+    backgrounds: ['modern city street with shops and cafes', 'contemporary urban park with trees', 'modern office building interior', 'cozy coffee shop interior', 'suburban neighborhood street'],
+  },
+  'modern-life': {
+    style: 'modern contemporary casual clothing, everyday civilian attire, realistic modern fashion, comfortable everyday wear, stylish casual outfit',
+    backgrounds: ['modern city street with shops and cafes', 'contemporary urban park with trees', 'modern office building interior', 'cozy coffee shop interior', 'suburban neighborhood street'],
   },
   war: {
     style: 'military combat uniform, tactical body armor, ammunition pouches, combat webbing, military radio equipment, dog tags, battle-worn gear',
