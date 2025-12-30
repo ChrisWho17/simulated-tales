@@ -6,6 +6,162 @@ const corsHeaders = {
 };
 
 // ============================================================================
+// HAIKU LLM PREPROCESSING SYSTEM
+// ============================================================================
+
+const HAIKU_SYSTEM_PROMPT = `You are a visual scene extractor. Given GENRE, ACTION, and NARRATOR text, output a single image generation prompt (40-60 words).
+
+RULES:
+- Lead with environment/setting, never character faces
+- Include lighting and atmosphere
+- Use genre-appropriate visual language
+- Never include character names, only descriptors (the woman, the figure, the warrior)
+- Never include text/signs in prompts
+- Prefer wider shots over close-ups
+- Focus on the most visually striking moment
+
+OUTPUT FORMAT: Single paragraph, comma-separated: [genre style], [location], [time/lighting], [atmosphere], [composition], [subject action], [mood], [2-3 quality tokens like: cinematic lighting, atmospheric, detailed environment, concept art]
+
+GENRE VISUAL GUIDES:
+- Fantasy: medieval stone, torchlight, mystical mist, earth tones, painterly
+- Sci-Fi: spacecraft, holograms, sterile light, cool blues, chrome
+- Horror: decay, flickering light, deep shadows, desaturated, dread
+- Mystery: 1940s noir, rain-streaked, venetian blind shadows, high contrast
+- Pirate: ship decks, tropical sun, salt spray, weathered wood, caribbean blue
+- Western: dusty frontier, harsh sun, golden hour, isolation, earth browns
+- Cyberpunk: neon rain, holographic ads, pink/blue glow, overcrowded, dystopian
+- Post-Apocalyptic: ruins, overgrown, ash gray, rust, scavenged
+- War: trenches, muzzle flash, smoke, mud, military green
+- Modern Life: contemporary, fluorescent or natural light, everyday realism
+- Medieval: castle interiors, candlelit chambers, stone architecture, heraldic colors`;
+
+const genreStyleTokens: Record<string, string> = {
+  'fantasy': 'fantasy art, medieval aesthetic, painterly',
+  'sci-fi': 'sci-fi concept art, cinematic sci-fi, futuristic',
+  'scifi': 'sci-fi concept art, cinematic sci-fi, futuristic',
+  'horror': 'horror atmosphere, psychological horror, dread-filled',
+  'mystery': 'film noir, noir lighting, 1940s detective aesthetic',
+  'pirate': 'golden age of piracy, swashbuckler aesthetic, seafaring',
+  'western': 'western frontier, spaghetti western, wild west',
+  'cyberpunk': 'cyberpunk aesthetic, neon noir, blade runner style',
+  'post-apocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
+  'postapocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
+  'war': 'military realism, battlefield atmosphere, gritty warfare',
+  'modern': 'contemporary realism, slice of life, modern day',
+  'modern-life': 'contemporary realism, slice of life, modern day',
+  'medieval': 'medieval aesthetic, illuminated manuscript style, classical painting',
+  'steampunk': 'steampunk aesthetic, victorian industrial, brass and copper',
+  'noir': 'film noir, black and white aesthetic, hard shadows',
+  'romance': 'romantic atmosphere, soft lighting, intimate mood',
+  'supernatural': 'supernatural horror, ethereal lighting, otherworldly',
+};
+
+const genreNegativePrompts: Record<string, string> = {
+  'fantasy': 'modern elements, technology, cars, phones, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'sci-fi': 'medieval, magic wands, horses, primitive, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'scifi': 'medieval, magic wands, horses, primitive, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'horror': 'bright cheerful, cartoon, cute, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'mystery': 'bright colors, modern tech, casual, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'pirate': 'modern ships, technology, contemporary, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'western': 'modern vehicles, urban, technology, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'cyberpunk': 'nature, clean pristine, historical, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'post-apocalyptic': 'pristine, clean, thriving city, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'postapocalyptic': 'pristine, clean, thriving city, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'war': 'peaceful, clean uniforms, casual, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modern': 'fantasy elements, historical, futuristic tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modern-life': 'fantasy elements, historical, futuristic tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'medieval': 'modern elements, technology, cars, guns, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'steampunk': 'modern technology, clean minimal, digital screens, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'noir': 'bright colors, cartoon, fantasy elements, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'romance': 'violence, gore, horror, dark, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'supernatural': 'mundane, bright cheerful, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+};
+
+const DEFAULT_NEGATIVE = 'blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy, disfigured, poorly drawn, ugly, duplicate';
+
+/**
+ * Call Haiku via Lovable AI Gateway to extract an optimized image prompt
+ */
+async function extractPromptWithHaiku(
+  genre: string,
+  action: string | null,
+  narratorText: string
+): Promise<{ extractedPrompt: string | null; error?: string }> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!LOVABLE_API_KEY) {
+    console.log('LOVABLE_API_KEY not configured, skipping Haiku preprocessing');
+    return { extractedPrompt: null, error: 'API key not configured' };
+  }
+  
+  try {
+    console.log('Calling Haiku for prompt extraction...');
+    const startTime = Date.now();
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: HAIKU_SYSTEM_PROMPT },
+          { 
+            role: 'user', 
+            content: `GENRE: ${genre}\nACTION: ${action || 'none'}\nNARRATOR: ${narratorText.slice(0, 1500)}` 
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.7,
+      }),
+    });
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`Haiku response in ${elapsed}ms, status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Haiku API error:', response.status, errorText);
+      return { extractedPrompt: null, error: `API error: ${response.status}` };
+    }
+    
+    const data = await response.json();
+    const extractedPrompt = data.choices?.[0]?.message?.content?.trim();
+    
+    if (!extractedPrompt) {
+      console.error('No content in Haiku response');
+      return { extractedPrompt: null, error: 'Empty response' };
+    }
+    
+    console.log('Haiku extracted prompt:', extractedPrompt.slice(0, 200) + '...');
+    return { extractedPrompt };
+    
+  } catch (error) {
+    console.error('Haiku extraction error:', error);
+    return { extractedPrompt: null, error: String(error) };
+  }
+}
+
+/**
+ * Build the final prompt with genre style tokens and negative prompt
+ */
+function buildFinalPromptFromHaiku(
+  extractedPrompt: string,
+  genre: string
+): { prompt: string; negativePrompt: string } {
+  const normalizedGenre = genre.toLowerCase().replace(/[\s-]+/g, '-');
+  const styleTokens = genreStyleTokens[normalizedGenre] || genreStyleTokens['fantasy'] || '';
+  const negativePrompt = genreNegativePrompts[normalizedGenre] || DEFAULT_NEGATIVE;
+  
+  // Prepend genre style tokens to the extracted prompt
+  const prompt = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
+  
+  return { prompt, negativePrompt };
+}
+
+// ============================================================================
 // ITEM DETECTION & EMPHASIS SYSTEM
 // ============================================================================
 
@@ -1764,23 +1920,48 @@ serve(async (req) => {
     requestData.lastNarratorMessage = lastNarratorMessage;
     requestData.lastUserAction = lastUserAction;
 
+    const genre = (requestData.genre || requestData.style || 'fantasy').toLowerCase();
+
     console.log('Scene generation request:', {
-      genre: requestData.genre,
+      genre,
       hasNarratorMessage: !!lastNarratorMessage,
       hasUserAction: !!lastUserAction,
       hasCharacterProfile: !!requestData.characterProfile,
       hasLegacyCharacter: !!requestData.playerCharacter,
     });
 
-    const characterProfile = requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter);
-
-    if (characterProfile) {
-      console.log('Using character profile:', characterProfile.fullVisualDescription.slice(0, 100) + '...');
+    // ========================================================================
+    // HAIKU LLM PREPROCESSING - Extract optimized prompt before Flux
+    // ========================================================================
+    let prompt: string;
+    let negativePrompt: string;
+    let usedHaiku = false;
+    
+    const haikuResult = await extractPromptWithHaiku(genre, lastUserAction, lastNarratorMessage);
+    
+    if (haikuResult.extractedPrompt) {
+      // Use Haiku-extracted prompt with genre tokens
+      const haikuPrompt = buildFinalPromptFromHaiku(haikuResult.extractedPrompt, genre);
+      prompt = haikuPrompt.prompt;
+      negativePrompt = haikuPrompt.negativePrompt;
+      usedHaiku = true;
+      console.log('Using Haiku-extracted prompt:', prompt.slice(0, 400) + '...');
+    } else {
+      // Fallback to legacy prompt building
+      console.log('Haiku unavailable, using legacy prompt builder');
+      const characterProfile = requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter);
+      
+      if (characterProfile) {
+        console.log('Using character profile:', characterProfile.fullVisualDescription.slice(0, 100) + '...');
+      }
+      
+      const legacyPrompt = buildIllustrationPrompt(requestData, characterProfile);
+      prompt = legacyPrompt.prompt;
+      negativePrompt = legacyPrompt.negativePrompt;
     }
 
-    const { prompt, negativePrompt, debug } = buildIllustrationPrompt(requestData, characterProfile);
-
-    console.log('Initial prompt preview:', prompt.slice(0, 600) + '...');
+    console.log('Final prompt preview:', prompt.slice(0, 600) + '...');
+    console.log('Negative prompt:', negativePrompt.slice(0, 200) + '...');
 
     // Use retry logic with progressive softening
     const result = await generateImageWithRetry(prompt, negativePrompt, TOGETHER_API_KEY, 3);
@@ -1806,11 +1987,12 @@ serve(async (req) => {
       });
     }
 
-    console.log('Scene image generated successfully', { softeningLevel: result.softeningLevel });
+    console.log('Scene image generated successfully', { softeningLevel: result.softeningLevel, usedHaiku });
     return new Response(JSON.stringify({ 
       imageUrl: result.imageUrl,
       softeningApplied: result.softeningLevel > 0,
       softeningLevel: result.softeningLevel,
+      usedHaikuPreprocessing: usedHaiku,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
