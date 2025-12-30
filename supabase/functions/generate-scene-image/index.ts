@@ -755,12 +755,81 @@ function buildIllustrationPrompt(
   let compositionFocus: string;
   let focusType: string;
   
-  // Special handling for romantic scenes
+  // ========================================
+  // GENRE-ENHANCED SCENE TYPE HANDLING
+  // ========================================
+  
+  // Build genre-specific context for this scene type
+  let genreSceneContext: string[] = [];
+  
+  // Special handling for romantic scenes - blend with genre
   if (essence.momentType === 'romantic') {
     cameraOptions = CAMERA_ANGLES.romantic;
     focusType = 'connection';
     compositionFocus = pick(COMPOSITION_FOCUS.connection);
+    
+    // Add genre-specific intimate moments for immersion
+    if (genreStyle.intimateMoments && genreStyle.intimateMoments.length > 0) {
+      genreSceneContext.push(pick(genreStyle.intimateMoments));
+    }
+    // Add genre-specific environmental life as background
+    if (genreStyle.environmentalLife && genreStyle.environmentalLife.length > 0) {
+      genreSceneContext.push(pick(genreStyle.environmentalLife));
+    }
+    console.log('Romantic context enhanced with genre:', genre, genreSceneContext.slice(0, 2));
+    
+  } else if (essence.momentType === 'casual' || essence.momentType === 'everyday') {
+    cameraOptions = CAMERA_ANGLES.casual;
+    focusType = 'lifestyle';
+    compositionFocus = pick(COMPOSITION_FOCUS.lifestyle);
+    
+    // Add genre-specific everyday activities
+    if (genreStyle.everydayActivities && genreStyle.everydayActivities.length > 0) {
+      genreSceneContext.push(pick(genreStyle.everydayActivities));
+    }
+    // Add genre-specific casual interactions
+    if (genreStyle.casualInteractions && genreStyle.casualInteractions.length > 0) {
+      genreSceneContext.push(pick(genreStyle.casualInteractions));
+    }
+    // Add environmental life for ambiance
+    if (genreStyle.environmentalLife && genreStyle.environmentalLife.length > 0) {
+      genreSceneContext.push(pick(genreStyle.environmentalLife));
+    }
+    console.log('Casual context enhanced with genre:', genre, genreSceneContext.slice(0, 2));
+    
+  } else if (essence.momentType === 'intimate') {
+    cameraOptions = CAMERA_ANGLES.intimate;
+    focusType = 'connection';
+    compositionFocus = pick(COMPOSITION_FOCUS.connection);
+    
+    // Add genre-specific intimate moments (non-romantic emotional connection)
+    if (genreStyle.intimateMoments && genreStyle.intimateMoments.length > 0) {
+      genreSceneContext.push(pick(genreStyle.intimateMoments));
+    }
+    if (genreStyle.socialDynamics && genreStyle.socialDynamics.length > 0) {
+      genreSceneContext.push(pick(genreStyle.socialDynamics));
+    }
+    console.log('Intimate context enhanced with genre:', genre, genreSceneContext.slice(0, 2));
+    
+  } else if (essence.momentType === 'social') {
+    cameraOptions = CAMERA_ANGLES.medium;
+    focusType = 'event';
+    compositionFocus = pick(COMPOSITION_FOCUS.event);
+    
+    // Add genre-specific social dynamics
+    if (genreStyle.socialDynamics && genreStyle.socialDynamics.length > 0) {
+      genreSceneContext.push(pick(genreStyle.socialDynamics));
+    }
+    if (genreStyle.casualInteractions && genreStyle.casualInteractions.length > 0) {
+      genreSceneContext.push(pick(genreStyle.casualInteractions));
+    }
+    if (genreStyle.environmentalLife && genreStyle.environmentalLife.length > 0) {
+      genreSceneContext.push(pick(genreStyle.environmentalLife));
+    }
+    console.log('Social context enhanced with genre:', genre, genreSceneContext.slice(0, 2));
+    
   } else {
+    // Default scene type handling with genre backgrounds
     switch (essence.momentType) {
       case 'action':
         cameraOptions = Math.random() > 0.3 ? CAMERA_ANGLES.dynamic : CAMERA_ANGLES.medium;
@@ -779,13 +848,22 @@ function buildIllustrationPrompt(
     const focusOptions = Object.keys(COMPOSITION_FOCUS) as Array<keyof typeof COMPOSITION_FOCUS>;
     focusType = pick(focusOptions);
     compositionFocus = pick(COMPOSITION_FOCUS[focusType as keyof typeof COMPOSITION_FOCUS]);
+    
+    // Still add environmental life for all scenes for immersion
+    if (genreStyle.environmentalLife && genreStyle.environmentalLife.length > 0 && Math.random() > 0.5) {
+      genreSceneContext.push(pick(genreStyle.environmentalLife));
+    }
   }
   const cameraAngle = pick(cameraOptions);
 
-  // Determine lighting - romantic scenes get special treatment
+  // Determine lighting - scene type specific with genre influence
   let lightingCategory: keyof typeof LIGHTING_VARIATIONS;
   if (essence.momentType === 'romantic') {
     lightingCategory = 'romantic';
+  } else if (essence.momentType === 'casual' || essence.momentType === 'everyday') {
+    lightingCategory = pick(['casual', 'everyday', 'natural']) as keyof typeof LIGHTING_VARIATIONS;
+  } else if (essence.momentType === 'intimate') {
+    lightingCategory = Math.random() > 0.5 ? 'romantic' : 'atmospheric';
   } else if (request.timeOfDay === 'night' || essence.atmosphereWords.includes('dark')) {
     lightingCategory = 'night';
   } else if (essence.momentType === 'action' || essence.momentType === 'tense') {
@@ -797,15 +875,25 @@ function buildIllustrationPrompt(
   }
   const lighting = pick(LIGHTING_VARIATIONS[lightingCategory]);
 
-  // Build atmosphere - romantic scenes get special atmosphere
+  // Build atmosphere - scene type specific with genre elements
   const atmosphereElements: string[] = [];
+  
+  // Add scene-type specific atmosphere
   if (essence.momentType === 'romantic') {
     atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.romantic, 2, 3));
+  } else if (essence.momentType === 'casual' || essence.momentType === 'everyday') {
+    atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.casual, 1, 2));
+    atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.everyday, 1, 2));
+  } else if (essence.momentType === 'intimate') {
+    atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.romantic, 1, 2));
   }
+  
   if (request.weather) atmosphereElements.push(...pickMultiple(ATMOSPHERE_ADDITIONS.weather, 1, 2));
   if (Math.random() > 0.4) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.particles));
   if (Math.random() > 0.3) atmosphereElements.push(pick(ATMOSPHERE_ADDITIONS.environmental));
-  atmosphereElements.push(...pickMultiple(genreStyle.atmosphericElements, 1, 2));
+  
+  // Add genre-specific atmospheric elements for immersion
+  atmosphereElements.push(...pickMultiple(genreStyle.atmosphericElements, 2, 3));
   if (essence.sensoryDetails.length > 0) atmosphereElements.push(...essence.sensoryDetails.slice(0, 2));
 
   // Determine player visibility
@@ -947,6 +1035,11 @@ function buildIllustrationPrompt(
 
   promptParts.push(sceneDescriptionParts.join('. '));
   
+  // Add genre-specific scene context for immersion (romantic/casual/social/everyday)
+  if (genreSceneContext.length > 0) {
+    promptParts.push(`GENRE CONTEXT: ${genreSceneContext.join(', ')}`);
+  }
+  
   // Add genre environment only if it doesn't conflict with the actual scene
   if (!essence.setting || essence.setting === 'the scene') {
     promptParts.push(envType);
@@ -966,8 +1059,13 @@ function buildIllustrationPrompt(
   }
 
   promptParts.push(lighting);
-  promptParts.push(`atmosphere: ${atmosphereElements.slice(0, 3).join(', ')}`);
+  promptParts.push(`atmosphere: ${atmosphereElements.slice(0, 4).join(', ')}`);
   promptParts.push(`palette: ${colorPalette}`);
+  
+  // Add genre-specific world details for background immersion
+  if (genreStyle.worldDetails && genreStyle.worldDetails.length > 0) {
+    promptParts.push(`WORLD: ${pickMultiple(genreStyle.worldDetails, 2, 3).join(', ')}`);
+  }
 
   if (request.timeOfDay) {
     const timeDescs: Record<string, string[]> = {
@@ -984,9 +1082,15 @@ function buildIllustrationPrompt(
     promptParts.push(pick(weatherDescs[request.weather] || ['']));
   }
 
-  // Add romantic-specific quality modifiers
+  // Add scene-type specific quality modifiers
   if (essence.momentType === 'romantic') {
     promptParts.push('tasteful, artistic, elegant, PG-13, romantic art style');
+  } else if (essence.momentType === 'casual' || essence.momentType === 'everyday') {
+    promptParts.push('slice of life, authentic moment, natural scene, lived-in atmosphere');
+  } else if (essence.momentType === 'intimate') {
+    promptParts.push('emotional depth, genuine connection, meaningful moment');
+  } else if (essence.momentType === 'social') {
+    promptParts.push('lively interaction, authentic social moment, dynamic exchange');
   }
 
   promptParts.push('environmental storytelling, 8k resolution');
@@ -994,19 +1098,30 @@ function buildIllustrationPrompt(
   const finalPrompt = promptParts.filter(Boolean).join(', ');
   console.log('Built prompt with player action:', essence.playerDoing || 'none');
   console.log('Built prompt with setting:', location);
+  console.log('Genre context added:', genreSceneContext.length > 0 ? genreSceneContext.join(', ') : 'none');
 
-  // Build negative prompt - enhanced for romantic scenes to ensure ToS compliance
+  // Build negative prompt - enhanced for romantic/intimate scenes to ensure ToS compliance
   let negativePrompt = 'blurry, low quality, text, watermark, signature, UI elements, amateur, wrong era, cartoon, anime, wrong scene, incorrect action';
   
-  if (essence.momentType === 'romantic') {
-    // Add explicit ToS-compliant negative prompts for romantic scenes
+  if (essence.momentType === 'romantic' || essence.momentType === 'intimate') {
+    // Add explicit ToS-compliant negative prompts for romantic/intimate scenes
     negativePrompt += ', NSFW, explicit, nudity, sexual, inappropriate, adult content, suggestive, revealing clothing, undressed, erotic, provocative, lewd';
   }
 
   return {
     prompt: finalPrompt,
     negativePrompt,
-    debug: { essence, playerVisible, focusType, playerAction: essence.playerDoing, setting: location, romanticContext: essence.romanticContext },
+    debug: { 
+      essence, 
+      playerVisible, 
+      focusType, 
+      playerAction: essence.playerDoing, 
+      setting: location, 
+      romanticContext: essence.romanticContext,
+      casualContext: essence.casualContext,
+      genreSceneContext: genreSceneContext,
+      genre,
+    },
   };
 }
 
