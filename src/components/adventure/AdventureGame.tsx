@@ -1029,6 +1029,8 @@ export function AdventureGame() {
             genreContract: worldBible?.contractSummary || null,
             // Pass adult content setting for NSFW control
             adultContent: settings.adultContent,
+            // Pass character appearance description for narrative (includes adult details when enabled)
+            characterAppearance: (activeChar as any).appearanceDescription || null,
             // Pass narrator style configuration
             narratorConfig: settings.narratorConfig,
             // Pass tone adaptation context

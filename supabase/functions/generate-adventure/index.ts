@@ -220,6 +220,7 @@ interface AdventureRequest {
   reputationContext?: ReputationContext;
   genreContract?: string; // World Bible genre contract summary
   adultContent?: boolean; // 18+ content toggle
+  characterAppearance?: string; // Full appearance description for character (includes adult details when enabled)
   narratorConfig?: NarratorConfig; // Customizable narrator style
   toneContext?: ToneContext; // Tone adaptation system
   languageContext?: LanguageContext; // Language barrier system
@@ -943,11 +944,11 @@ CRITICAL DIRECTOR COMMANDS:
 - Match your narrative style to the director type: ${typeProfile.styleNotes[0] || 'Be evocative'}`;
 }
 
-function formatCharacterContext(character: CharacterData): string {
+function formatCharacterContext(character: CharacterData, characterAppearance?: string, adultContent?: boolean): string {
   const getModifier = (stat: number) => Math.floor((stat - 10) / 2);
   const formatMod = (mod: number) => mod >= 0 ? `+${mod}` : `${mod}`;
   
-  return `
+  let context = `
 PLAYER CHARACTER:
 Name: ${character.name}
 Class: ${character.classId} (Level ${character.level})
@@ -968,9 +969,32 @@ Gold: ${character.gold}
 Abilities: ${character.abilities.join(', ')}
 Skills: ${character.skills.join(', ')}
 
-Inventory: ${character.inventory.map(i => i.name + (i.quantity > 1 ? ` (x${i.quantity})` : '')).join(', ')}
+Inventory: ${character.inventory.map(i => i.name + (i.quantity > 1 ? ` (x${i.quantity})` : '')).join(', ')}`;
+
+  // Add physical appearance description
+  if (characterAppearance) {
+    context += `
+
+PHYSICAL APPEARANCE:
+${characterAppearance}`;
+    
+    // Add adult content styling instructions when enabled
+    if (adultContent) {
+      context += `
+
+APPEARANCE IN NARRATIVE:
+- When describing the character's body, use these physical details naturally
+- Include body type, build, and physical features when relevant to the scene
+- Physical descriptions can be sensual and detailed when appropriate
+- Reference muscle definition, body hair, and intimate details during romantic or physical scenes`;
+    }
+  }
+
+  context += `
 
 Use this character information to personalize the narrative and make mechanics relevant.`;
+  
+  return context;
 }
 
 serve(async (req) => {
@@ -979,7 +1003,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1176,7 +1200,7 @@ The game should feel like a tabletop RPG where dice determine most outcomes. Whe
     }
     
     if (character) {
-      systemContent += '\n\n' + formatCharacterContext(character);
+      systemContent += '\n\n' + formatCharacterContext(character, characterAppearance, adultContent);
     }
     if (emotionalContext) {
       systemContent += `\n\n=== CHARACTER EMOTIONAL STATE ===
