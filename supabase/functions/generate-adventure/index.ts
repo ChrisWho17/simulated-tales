@@ -1885,12 +1885,38 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       // CRITICAL: Structure player action as context, NOT as literal text to echo
       if (playerAction) {
         // Clean player input: remove leading "I" patterns that cause echo
-        const cleanedAction = playerAction.trim()
+        let cleanedAction = playerAction.trim()
           .replace(/^i\s+/i, '')  // Remove leading "I " 
           .replace(/^i$/i, 'pause');  // Handle bare "I" input
         
+        // CRITICAL: Strip parenthetical notation - these are STAGE DIRECTIONS, not speech
+        // Examples: "(I drop my gun)" → "drop my gun", "(slowly approach)" → "slowly approach"
+        const parentheticalMatch = cleanedAction.match(/^\((.+)\)$/);
+        if (parentheticalMatch) {
+          cleanedAction = parentheticalMatch[1].replace(/^i\s+/i, '').trim();
+        }
+        
+        // Also handle square brackets as stage directions: "[draws weapon]" → "draws weapon"
+        const bracketMatch = cleanedAction.match(/^\[(.+)\]$/);
+        if (bracketMatch) {
+          cleanedAction = bracketMatch[1].replace(/^i\s+/i, '').trim();
+        }
+        
         // Detect if this is dialogue/speech (wrapped in say: "..." or ask: "...")
         const isDialogueAction = /^(say|ask|tell|speak|shout|whisper):\s*["']/.test(cleanedAction);
+        
+        // CRITICAL: Detect SHORT IMPERATIVE COMMANDS that are ACTIONS, not speech
+        // These are tactical/directive phrases that the AI should NOT interpret as dialogue
+        // Examples: "spread more", "take cover", "advance", "hold position", "reload", "aim", etc.
+        const isShortImperativeCommand = (
+          cleanedAction.split(/\s+/).length <= 4 && // Short phrase
+          !cleanedAction.includes('"') && !cleanedAction.includes("'") && // No quotes
+          /^(spread|take|hold|advance|retreat|reload|aim|fire|shoot|move|run|walk|jump|climb|crouch|stand|sit|lie|duck|dodge|roll|throw|grab|drop|push|pull|kick|punch|slash|stab|block|parry|wait|pause|stop|go|hide|sneak|crawl|look|watch|observe|scan|search|check|examine|inspect|listen|smell|taste|touch|feel|open|close|lock|unlock|enter|exit|leave|follow|chase|flee|attack|defend|guard|protect|surrender|submit|continue|proceed|approach|back|step|turn|spin|flip|dive|lean|press|squeeze|lift|carry|drag|toss|catch|swing|strike|cut|slice|tear|rip|break|smash|crush|bend|twist|stretch|reach|point|wave|signal|gesture|nod|shake|shrug|bow|kneel|salute|charge|rush|sprint|dash|slow|speed|fast|quick|careful|quiet|loud|hard|soft|gentle|rough|tight|loose|deep|shallow|high|low|left|right|forward|backward|up|down|in|out|on|off|over|under|through|around|across|along|toward|away|back|steady|ready|steady|brace|tense|relax|focus|concentrate|gather|collect|assemble|disperse|split|merge|combine|separate|join|connect|disconnect|attach|detach|equip|unequip|draw|sheathe|load|unload|cock|release|trigger|engage|disengage|flank|surround|encircle|ambush|trap|lure|distract|divert|feint|fake|bluff|intimidate|taunt|provoke|challenge|dare|threaten|menace|scare|startle|surprise|shock|stun|paralyze|freeze|melt|burn|ignite|extinguish|light|darken|brighten|dim|silence|muffle|amplify|boost|weaken|strengthen|heal|cure|poison|infect|cleanse|purify|corrupt|taint|bless|curse|enchant|dispel|summon|banish|create|destroy|build|demolish|construct|deconstruct|repair|damage|fix|break|mend|patch|seal|unseal|lock|unlock|encrypt|decrypt|activate|deactivate|enable|disable|power|unpower|charge|discharge|refuel|empty|fill|drain|pour|spill|splash|spray|mist|fog|smoke|steam|evaporate|condense|freeze|thaw|heat|cool|warm|chill|dry|wet|soak|drench|drown|suffocate|choke|strangle|crush|squeeze|compress|expand|inflate|deflate|stretch|contract|extend|retract|protrude|recede|emerge|submerge|surface|sink|float|hover|glide|soar|plummet|ascend|descend|rise|fall|drop|catch|release|grip|grasp|clutch|clench|unclench|relax|tighten|loosen)\b/i.test(cleanedAction)
+        );
+        
+        // Detect parenthetical/stage direction style input (even without actual parentheses)
+        // These are descriptive actions, not dialogue
+        const isStageDirection = parentheticalMatch || bracketMatch;
         
         // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
         let actionContent: string;
@@ -1910,6 +1936,41 @@ CRITICAL: The player's character just said this. You must show:
 3. The scene's development as a RESULT of this dialogue
 
 DO NOT just describe the act of speaking. Show the REACTION and RESPONSE.`;
+
+        } else if (isShortImperativeCommand || isStageDirection) {
+          // SHORT COMMANDS and STAGE DIRECTIONS are PURE PHYSICAL ACTIONS - never speech
+          actionContent = `PLAYER PHYSICAL ACTION ONLY (this is a tactical/physical command - the character DOES this, they do NOT say it):
+"${cleanedAction}"
+
+CRITICAL - THIS IS NOT DIALOGUE:
+The player typed a short command or stage direction. This means the character PHYSICALLY PERFORMS this action.
+
+FORBIDDEN:
+- Do NOT have the character speak these words aloud
+- Do NOT write: "${character?.name || 'You'} says '${cleanedAction}'"
+- Do NOT write: "The words escape your lips: '${cleanedAction}'"
+- Do NOT interpret this as the character announcing their action
+- Do NOT use any variation of the character speaking these exact words
+
+REQUIRED:
+- Show the character DOING the action silently
+- Describe the physical motion, body language, environmental response
+- Transform "${cleanedAction}" into evocative narrative prose describing the ACTION
+- Show consequences and reactions from the environment/NPCs
+
+Example - If player typed "spread more":
+WRONG: You call out, "Spread more!" / You speak the words: "Spread more."
+RIGHT: You widen your stance, arms extending as you distribute your weight across a broader base. The movement is deliberate, tactical.
+
+Example - If player typed "drop my gun":
+WRONG: "Drop my gun," you declare, letting the weapon fall.
+RIGHT: Your fingers uncurl. The pistol clatters against the concrete, the sound sharp in the sudden silence. Every eye in the room tracks its fall.`;
+
+          // Add emotional context for physical actions
+          if (emotionalContext) {
+            actionContent += `\n\nEMOTIONAL STATE: The character performs this action ${emotionalContext.actionFlavor}. They are feeling ${emotionalContext.currentMood}. Show ${emotionalContext.physicalDescription}.`;
+          }
+
         } else {
           // Check if this is a dialogue INTENT (I ask..., I tell..., I say to..., etc.)
           const isDialogueIntent = /^(ask|tell|say|speak|confess|express|admit|reveal|declare|apologize|thank|greet|insult|threaten|beg|plead|explain|describe|mention|whisper|shout|yell|murmur|demand|request|suggest|propose|promise|warn|comfort|console|reassure|encourage|praise|criticize|mock|tease|flirt)/i.test(cleanedAction);
@@ -1938,7 +1999,9 @@ NEVER write: "I ask about the treasure" or "You say you want to ask about the tr
             actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
 "${cleanedAction}"
 
-Write what happens as a result of this action. Transform it into evocative prose.`;
+Write what happens as a result of this action. Transform it into evocative prose.
+IMPORTANT: This is a PHYSICAL/MENTAL action, NOT something the character says aloud.
+Do NOT have the character speak these words - show them DOING the action.`;
 
             // Add emotional context for actions too
             if (emotionalContext) {
