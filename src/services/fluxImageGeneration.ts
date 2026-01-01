@@ -1,35 +1,36 @@
-// FLUX.1 Schnell via Together.ai - Direct client-side implementation
-const TOGETHER_API_URL = 'https://api.together.xyz/v1/images/generations';
+// FLUX.1 Portrait Generation - Secure server-side implementation via edge function
+import { supabase } from '@/integrations/supabase/client';
 
 export async function generatePortraitWithFlux(prompt: string): Promise<string> {
-  const apiKey = import.meta.env.VITE_TOGETHER_API_KEY;
+  console.log('[Portrait] Calling edge function with prompt:', prompt.substring(0, 100) + '...');
   
-  if (!apiKey) {
-    throw new Error('Together API key not configured');
-  }
-  
-  const response = await fetch(TOGETHER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1.1-pro',
+  const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+    body: {
+      npc: {
+        id: `portrait-${Date.now()}`,
+        meta: {
+          name: 'Character',
+          description: 'Custom character portrait',
+        }
+      },
       prompt: prompt,
-      width: 768,
-      height: 1024,
-      steps: 28,
-      n: 1,
-      response_format: 'url',
-    }),
+      config: {
+        genre: 'modern',
+        emotion: 'neutral',
+      }
+    }
   });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Together API error: ${error.error?.message || response.status}`);
+
+  if (error) {
+    console.error('[Portrait] Edge function error:', error);
+    throw new Error(`Portrait generation failed: ${error.message}`);
   }
-  
-  const result = await response.json();
-  return result.data[0].url;
+
+  if (!data?.imageUrl) {
+    console.error('[Portrait] No image URL in response:', data);
+    throw new Error('No image generated');
+  }
+
+  console.log('[Portrait] Successfully generated portrait');
+  return data.imageUrl;
 }
