@@ -53,6 +53,45 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director' | 'weather'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  
+  // Clear all game data from localStorage
+  const handleClearAllData = () => {
+    if (!confirmClearAll) {
+      setConfirmClearAll(true);
+      setTimeout(() => setConfirmClearAll(false), 5000);
+      return;
+    }
+    
+    // Get all localStorage keys related to the game
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        // Match game-related keys
+        if (key.startsWith('campaign-') || 
+            key.startsWith('untold-') ||
+            key.startsWith('game-') ||
+            key.startsWith('auto-') ||
+            key.startsWith('manual-') ||
+            key.startsWith('npc-') ||
+            key.startsWith('inventory-') ||
+            key.includes('Campaign') ||
+            key.includes('Settings') ||
+            key.includes('Save')) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    
+    // Remove all matched keys
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    setConfirmClearAll(false);
+    
+    // Reload the page to reset all state
+    window.location.reload();
+  };
   
   // Get director settings from campaign if available, otherwise use global settings
   const currentDirectorSettings = useMemo((): DirectorSettings => {
@@ -443,6 +482,33 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       checked={settings.enableAdrenalineSystem ?? false}
                       onCheckedChange={(checked) => updateSettings({ enableAdrenalineSystem: checked })}
                     />
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="space-y-3 pt-4 border-t border-destructive/30">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5">
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Permanently delete all saved games, campaigns, and settings from this browser.
+                      This action cannot be undone.
+                    </p>
+                    <button
+                      onClick={handleClearAllData}
+                      className={cn(
+                        "w-full py-2 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2",
+                        confirmClearAll
+                          ? "bg-destructive text-destructive-foreground"
+                          : "border border-destructive/50 text-destructive hover:bg-destructive/10"
+                      )}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {confirmClearAll ? 'Click Again to Confirm' : 'Clear All Game Data'}
+                    </button>
                   </div>
                 </div>
               </div>
