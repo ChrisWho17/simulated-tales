@@ -1804,90 +1804,87 @@ function enhanceNegativePrompt(original: string, level: 1 | 2 | 3): string {
 }
 
 // ============================================================================
-// IMAGE GENERATION WITH RETRY LOGIC
+// LOVABLE AI IMAGE GENERATION WITH RETRY LOGIC
 // ============================================================================
 
 async function generateImageWithRetry(
   prompt: string,
   negativePrompt: string,
-  apiKey: string,
   maxRetries: number = 3
 ): Promise<{ imageUrl: string | null; error?: string; softeningLevel: number }> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    return { imageUrl: null, error: 'LOVABLE_API_KEY is not configured', softeningLevel: 0 };
+  }
+
   let currentPrompt = prompt;
-  let currentNegative = negativePrompt;
   let softeningLevel = 0;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const finalPrompt = `${currentPrompt}\n\nNegative: ${currentNegative}`;
-    
     console.log(`Image generation attempt ${attempt + 1}/${maxRetries + 1} (softening level: ${softeningLevel})`);
     
-    const response = await fetch('https://api.together.xyz/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'black-forest-labs/FLUX.1.1-pro',
-        prompt: finalPrompt,
-        width: 1408,
-        height: 800,
-        steps: 28,
-        n: 1,
-        response_format: 'url',
-      }),
-    });
+    const imagePrompt = `Generate a cinematic scene illustration: ${currentPrompt}. Wide shot, atmospheric, detailed environment, professional quality. Avoid: ${negativePrompt}`;
     
-    if (response.ok) {
-      const data = await response.json();
-      const imageUrl = data.data?.[0]?.url;
-      if (imageUrl) {
-        console.log(`Image generated successfully at softening level ${softeningLevel}`);
-        return { imageUrl, softeningLevel };
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image-preview',
+          messages: [
+            { role: 'user', content: imagePrompt }
+          ],
+          modalities: ['image', 'text'],
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        if (imageData) {
+          console.log(`Image generated successfully at softening level ${softeningLevel}`);
+          return { imageUrl: imageData, softeningLevel };
+        }
+        console.log('No image in response, retrying with softened prompt...');
       }
-      return { imageUrl: null, error: 'No image URL in response', softeningLevel };
-    }
-    
-    // Handle specific error codes
-    if (response.status === 429) {
-      console.log('Rate limited, not retrying');
-      return { imageUrl: null, error: 'Rate limit exceeded', softeningLevel };
-    }
-    
-    if (response.status === 402 || response.status === 401) {
-      console.log('API limit reached, not retrying');
-      return { imageUrl: null, error: 'API limit reached', softeningLevel };
-    }
-    
-    // Check for content moderation rejection
-    const errorText = await response.text();
-    console.error('API error:', response.status, errorText);
-    
-    const isContentRejection = response.status === 422 && 
-      (errorText.toLowerCase().includes('nsfw') || 
-       errorText.toLowerCase().includes('content') ||
-       errorText.toLowerCase().includes('safety') ||
-       errorText.toLowerCase().includes('moderation'));
-    
-    if (isContentRejection && attempt < maxRetries) {
-      // Apply next level of softening
-      softeningLevel = (attempt + 1) as 1 | 2 | 3;
-      console.log(`Content rejected, applying softening level ${softeningLevel}`);
-      currentPrompt = softenPrompt(prompt, softeningLevel as 1 | 2 | 3);
-      currentNegative = enhanceNegativePrompt(negativePrompt, softeningLevel as 1 | 2 | 3);
-      continue;
-    }
-    
-    // Non-content error or max retries reached
-    if (!isContentRejection) {
-      return { imageUrl: null, error: `API error: ${response.status}`, softeningLevel };
+      
+      // Handle specific error codes
+      if (response.status === 429) {
+        console.log('Rate limited, not retrying');
+        return { imageUrl: null, error: 'Rate limit exceeded', softeningLevel };
+      }
+      
+      if (response.status === 402) {
+        console.log('Usage limit reached, not retrying');
+        return { imageUrl: null, error: 'API limit reached', softeningLevel };
+      }
+      
+      // Check for content rejection
+      const errorText = await response.text();
+      console.error('API error:', response.status, errorText);
+      
+      if (attempt < maxRetries) {
+        // Apply next level of softening
+        softeningLevel = (attempt + 1) as 1 | 2 | 3;
+        console.log(`Applying softening level ${softeningLevel}`);
+        currentPrompt = softenPrompt(prompt, softeningLevel as 1 | 2 | 3);
+        continue;
+      }
+    } catch (error) {
+      console.error('Request error:', error);
+      if (attempt >= maxRetries) {
+        return { imageUrl: null, error: `Request failed: ${error}`, softeningLevel };
+      }
     }
   }
   
   // All retries exhausted
-  console.log('All retry attempts exhausted, returning environment-only fallback attempt');
-  return { imageUrl: null, error: 'Content moderation failed after all retries', softeningLevel: 3 };
+  console.log('All retry attempts exhausted');
+  return { imageUrl: null, error: 'Image generation failed after all retries', softeningLevel: 3 };
 }
 
 // ============================================================================
@@ -1901,9 +1898,9 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as SceneImageRequest;
-    const TOGETHER_API_KEY = Deno.env.get('TOGETHER_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!TOGETHER_API_KEY) throw new Error('TOGETHER_API_KEY is not configured');
+    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
 
     // Normalize request - support both short and long keys
     const reqAny = requestData as any;
@@ -1964,7 +1961,7 @@ serve(async (req) => {
     console.log('Negative prompt:', negativePrompt.slice(0, 200) + '...');
 
     // Use retry logic with progressive softening
-    const result = await generateImageWithRetry(prompt, negativePrompt, TOGETHER_API_KEY, 3);
+    const result = await generateImageWithRetry(prompt, negativePrompt, 3);
 
     if (result.error === 'Rate limit exceeded') {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
