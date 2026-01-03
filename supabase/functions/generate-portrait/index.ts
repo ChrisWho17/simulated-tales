@@ -546,6 +546,99 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
 }
 
 // ============================================================================
+// LOCKED REFERENCE PROMPT BUILDER (for gameplay regeneration with character lock)
+// ============================================================================
+
+function buildLockedReferencePrompt(body: any) {
+  const { 
+    customPrompt,
+    gender, 
+    build, 
+    skinTone, 
+    hairColor, 
+    hairStyle, 
+    eyeColor, 
+    details, 
+    characterClass,
+    genre,
+    portraitHints,
+    environmentContext 
+  } = body;
+  
+  // If a custom prompt is provided (from the locked reference system), use it
+  if (customPrompt) {
+    return { prompt: customPrompt, negative_prompt: PORTRAIT_NEGATIVE };
+  }
+  
+  // Otherwise build from structured data
+  const genreConfig = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
+  
+  const genderStr = GENDER_STYLES[gender || 'male'] || GENDER_STYLES.male;
+  const buildStr = BUILD_STYLES[build || 'athletic'] || BUILD_STYLES.athletic;
+  const skinStr = SKIN_TONES[skinTone || 'medium'] || SKIN_TONES.medium;
+  const hairStyleStr = HAIR_STYLES[hairStyle || 'short'] || HAIR_STYLES.short;
+  const hairColorStr = HAIR_COLORS[hairColor || 'brown'] || HAIR_COLORS.brown;
+  const eyeColorStr = EYE_COLORS[eyeColor || 'brown'] || EYE_COLORS.brown;
+  
+  // Map class to role
+  const classLower = (characterClass || '').toLowerCase();
+  let role = 'warrior';
+  for (const key of Object.keys(ROLE_STYLES)) {
+    if (classLower.includes(key)) {
+      role = key;
+      break;
+    }
+  }
+  const roleStr = ROLE_STYLES[role] || ROLE_STYLES.warrior;
+  
+  // Build details string
+  const detailsStr = (details || [])
+    .map((d: string) => DETAIL_OPTIONS[d] || d)
+    .filter(Boolean)
+    .join(', ');
+  
+  // Handle environment context for mood
+  let emotionStr = EMOTION_STYLES.neutral;
+  if (environmentContext?.mood) {
+    emotionStr = EMOTION_STYLES[environmentContext.mood] || EMOTION_STYLES.neutral;
+  }
+  
+  // Build environment background from context
+  let background = '';
+  if (environmentContext) {
+    const bgParts = [];
+    if (environmentContext.weather) bgParts.push(environmentContext.weather + ' weather');
+    if (environmentContext.location) bgParts.push(environmentContext.location);
+    if (environmentContext.isInCombat) bgParts.push('combat atmosphere, intense action');
+    background = bgParts.length > 0 ? bgParts.join(', ') : '';
+  }
+  if (!background) {
+    background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
+  }
+  
+  const promptParts = [
+    PORTRAIT_STYLE_BASE,
+    genderStr,
+    buildStr,
+    skinStr,
+    `${hairColorStr}, ${hairStyleStr}`,
+    eyeColorStr,
+    roleStr,
+    genreConfig.style,
+    emotionStr,
+    detailsStr,
+    portraitHints?.join(', ') || '',
+    background ? `background: ${background}` : '',
+    'CRITICAL: Maintain exact same facial features and body type as character reference',
+  ].filter(Boolean);
+  
+  return {
+    prompt: promptParts.join(', '),
+    negative_prompt: PORTRAIT_NEGATIVE,
+  };
+}
+
+// ============================================================================
 // MAIN HANDLER
 // ============================================================================
 
@@ -556,13 +649,21 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { name, appearance, characterClass, genre, emotionVariant } = body;
+    const { name, appearance, characterClass, genre, emotionVariant, customPrompt, gender } = body;
 
     console.log("Portrait generation request for:", name || "Unknown");
     console.log("Genre:", genre, "Class:", characterClass, "Emotion:", emotionVariant);
-
-    // Build prompt from request data
-    const promptData = buildLegacyPrompt(body);
+    
+    let promptData;
+    
+    // Check if this is a gameplay regeneration with locked reference
+    if (customPrompt || gender) {
+      console.log("Using locked character reference for portrait generation");
+      promptData = buildLockedReferencePrompt(body);
+    } else {
+      // Legacy mode - parse from appearance string
+      promptData = buildLegacyPrompt(body);
+    }
 
     console.log("Final prompt:", promptData.prompt.substring(0, 400) + "...");
 

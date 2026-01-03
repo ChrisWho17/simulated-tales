@@ -10,6 +10,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { 
+  loadPlayerPortraitReference, 
+  buildGameplayPortraitPrompt,
+  savePlayerPortraitUrl 
+} from '@/game/playerPortraitReference';
 import { ModifierDisplay, calculateEffectiveStats } from './ModifierDisplay';
 import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
 import { MoodHistoryDropdown } from '@/components/game/MoodHistoryDropdown';
@@ -184,10 +189,20 @@ function LevelUpModal({
 // Simple Portrait Display Component
 function PortraitDisplay({ 
   character,
-  onUpdatePortrait 
+  onUpdatePortrait,
+  genre,
+  environmentContext
 }: { 
   character: RPGCharacter & { portraitUrl?: string };
   onUpdatePortrait: (url: string) => void;
+  genre?: GameGenre;
+  environmentContext?: {
+    location?: string;
+    weather?: string;
+    timeOfDay?: string;
+    mood?: string;
+    isInCombat?: boolean;
+  };
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const charClass = findClassAcrossGenres(character.classId);
@@ -195,16 +210,54 @@ function PortraitDisplay({
   const handleRegeneratePortrait = async () => {
     setIsGenerating(true);
     try {
-      const response = await supabase.functions.invoke('generate-portrait', {
-        body: {
+      // Load the locked character reference from character creation
+      const portraitReference = loadPlayerPortraitReference();
+      
+      let prompt: string;
+      let requestBody: any;
+      
+      if (portraitReference) {
+        // Use the locked reference with current environment context
+        console.log('[Portrait] Using locked character reference for regeneration');
+        prompt = buildGameplayPortraitPrompt(portraitReference, environmentContext);
+        
+        requestBody = {
+          // Pass the pre-built prompt that uses locked reference
+          customPrompt: prompt,
+          // Also pass structured data for the edge function
+          appearance: portraitReference.fullVisualDescription,
+          characterClass: charClass?.name || portraitReference.className || 'Adventurer',
+          genre: portraitReference.genre || genre || 'fantasy',
+          name: character.name,
+          detailLevel: 'detailed',
+          portraitHints: portraitReference.portraitHints || charClass?.portraitHints || [],
+          // Character reference data
+          gender: portraitReference.gender,
+          build: portraitReference.build,
+          skinTone: portraitReference.skinTone,
+          hairColor: portraitReference.hairColor,
+          hairStyle: portraitReference.hairStyle,
+          eyeColor: portraitReference.eyeColor,
+          details: portraitReference.details,
+          // Environment context for scene adaptation
+          environmentContext: environmentContext,
+        };
+      } else {
+        // Fallback to basic generation (shouldn't happen in normal gameplay)
+        console.log('[Portrait] No locked reference found, using basic generation');
+        requestBody = {
           appearance: `Character portrait for ${character.name}, a Level ${character.level} ${charClass?.name || 'adventurer'}. Heroic, confident expression.`,
           characterClass: charClass?.name || 'Adventurer',
-          genre: 'fantasy',
+          genre: genre || 'fantasy',
           name: character.name,
           detailLevel: 'detailed',
           portraitHints: charClass?.portraitHints || [],
           clothingStyle: charClass?.clothingStyle,
-        }
+        };
+      }
+
+      const response = await supabase.functions.invoke('generate-portrait', {
+        body: requestBody
       });
 
       if (response.error) {
@@ -214,7 +267,9 @@ function PortraitDisplay({
       const url = response.data?.imageUrl;
       if (url) {
         onUpdatePortrait(url);
-        toast.success('Portrait updated!');
+        // Save the new portrait URL
+        savePlayerPortraitUrl(url);
+        toast.success('Portrait updated with current environment!');
       }
     } catch (error) {
       console.error('Failed to regenerate portrait:', error);
@@ -246,9 +301,10 @@ function PortraitDisplay({
         <Button
           variant="outline"
           size="sm"
-          className="absolute bottom-2 right-2 h-8 text-xs"
+          className="absolute bottom-2 right-2 h-8 text-xs gap-1"
           onClick={handleRegeneratePortrait}
           disabled={isGenerating}
+          title="Regenerate portrait with current environment"
         >
           {isGenerating ? (
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -257,6 +313,9 @@ function PortraitDisplay({
           )}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground text-center">
+        Regenerates with your character + current scene
+      </p>
     </div>
   );
 }
@@ -365,6 +424,12 @@ export function CharacterSheet({
               <PortraitDisplay 
                 character={character}
                 onUpdatePortrait={handlePortraitUpdate}
+                genre={genre}
+                environmentContext={{
+                  weather: weatherState?.current,
+                  mood: currentMood,
+                  isInCombat: false,
+                }}
               />
 
               {/* Weather & Temperature Section */}
