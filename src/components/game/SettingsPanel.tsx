@@ -76,6 +76,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             key.startsWith('manual-') ||
             key.startsWith('npc-') ||
             key.startsWith('inventory-') ||
+            key.startsWith('player-portrait-') ||
+            key.startsWith('character-visual-') ||
             key.includes('Campaign') ||
             key.includes('Settings') ||
             key.includes('Save')) {

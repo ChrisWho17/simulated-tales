@@ -22,6 +22,7 @@ import {
   Eye, Crosshair, Zap, Blend, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
 import { SecondaryGenre } from './AdventureCreator';
 import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
 import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
@@ -277,6 +278,37 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     
     // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
+    
+    // Save the locked portrait reference for gameplay regeneration
+    savePlayerPortraitReference(
+      {
+        name,
+        gender: appearance.simple?.gender || 'male',
+        build: appearance.simple?.build || 'average',
+        height: appearance.simple?.height || 'average',
+        skinTone: appearance.detailed?.skinTone || 'medium',
+        hairColor: appearance.detailed?.hairColor || 'brown',
+        hairStyle: appearance.detailed?.hairStyle || 'short',
+        eyeColor: appearance.detailed?.eyeColor || 'brown',
+        role: classData?.name?.toLowerCase() || selectedClass,
+        details: [
+          ...(appearance.detailed?.distinguishingFeatures || []),
+          ...(appearance.detailed?.accessories || []),
+        ],
+        tieredAppearance: appearance,
+        appearanceDescription: formatAppearanceForAI(appearance, genre),
+      },
+      genre,
+      classData?.name,
+      classData?.portraitHints
+    );
+    
+    // Save the portrait URL if generated
+    if (portraitUrl) {
+      savePlayerPortraitUrl(portraitUrl);
+    }
+    
+    console.log('[CharacterCreation] Saved portrait reference for consistent regeneration');
     
     onComplete(character, scenario);
   };
