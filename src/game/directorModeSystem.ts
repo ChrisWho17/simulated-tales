@@ -9,7 +9,7 @@ export type DirectiveMode = 'fun' | 'easy' | 'medium' | 'hard';
 
 export type DirectorType = 
   // Story & Pacing
-  | 'cinematic' | 'tight_editor' | 'slow_burn' | 'montage_maker'
+  | 'cinematic' | 'tight_editor' | 'slow_burn' | 'montage_maker' | 'revenge_arc'
   // Player-Freedom
   | 'sandbox' | 'yes_and' | 'choice_architect' | 'hands_off' | 'red_velvet'
   // Challenge & Consequence
@@ -20,6 +20,17 @@ export type DirectorType =
   | 'romance_writer' | 'drama_producer' | 'courtroom_arbitrator' | 'community_sim'
   // Vibe & Tone
   | 'horror_curator' | 'comedic_goblin' | 'poet_narrator' | 'noir_narrator';
+
+// ============= NARRATOR VOICE TYPES FOR DIRECTORS =============
+export type DirectorNarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR' | 'VENGEFUL' | 'THEATRICAL' | 'INTIMATE' | 'CLINICAL';
+
+export interface DirectorNarratorProfile {
+  voice: DirectorNarratorVoice;
+  detailLevel: 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
+  emotionalLeakage: boolean;
+  narrativeHooks: string[];
+  openingStyle: string;
+}
 
 export type PersonalityLevel = 'soft' | 'honest' | 'brutal';
 export type WeirdnessLevel = 'grounded' | 'spicy' | 'unhinged';
@@ -159,6 +170,20 @@ export const DIRECTOR_TYPES: Record<DirectorType, DirectorTypeProfile> = {
     tags: ['Travel', 'Downtime', 'Training'],
     modifiers: { timePressure: 0.15, worldPush: -0.05 },
     styleNotes: ['Great for wait/rest/train', 'Time skips feel earned'],
+  },
+  revenge_arc: {
+    name: 'Revenge Arc Director',
+    description: 'Vendetta-driven narrative, tracking grudges to their conclusion',
+    category: 'story',
+    tags: ['Vendetta', 'Payback', 'Justice', 'Obsession'],
+    modifiers: { consequence: 0.20, worldPush: 0.15, invention: 0.15, timePressure: 0.10 },
+    styleNotes: [
+      'The world owes you a debt, and you will collect',
+      'Every enemy has a name, a face, a weakness',
+      'Victories are bittersweet, defeats fuel determination',
+      'The journey matters—but the ending will be reckoning',
+      'Memory is a weapon; grudges are sharpened daily',
+    ],
   },
 
   // Player-Freedom
@@ -588,4 +613,266 @@ export function getDirectorTypesByCategory(category: keyof typeof DIRECTOR_TYPE_
   return Object.entries(DIRECTOR_TYPES)
     .filter(([_, profile]) => profile.category === category)
     .map(([id]) => id as DirectorType);
+}
+
+// ============= DIRECTOR → NARRATOR PERSONALITY MAPPING =============
+
+export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorProfile> = {
+  // Story & Pacing
+  cinematic: {
+    voice: 'THEATRICAL',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Cliffhangers at scene breaks', 'Dramatic reveals timed perfectly', 'Scene transitions feel like film cuts'],
+    openingStyle: 'The camera finds you in medias res, already in motion, already in peril. The world unfolds like a blockbuster—every moment matters, every choice echoes.',
+  },
+  tight_editor: {
+    voice: 'CLINICAL',
+    detailLevel: 'SPARSE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Brevity is power', 'No wasted words', 'Action over description'],
+    openingStyle: 'You arrive. The situation is clear. Time to move.',
+  },
+  slow_burn: {
+    voice: 'LITERARY',
+    detailLevel: 'DENSE',
+    emotionalLeakage: true,
+    narrativeHooks: ['Tension builds imperceptibly', 'Small details foreshadow', 'Patience rewards the attentive'],
+    openingStyle: 'Something is wrong. You can taste it in the air—a wrongness beneath the ordinary. The world holds its breath, and so do you.',
+  },
+  montage_maker: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Time flows like a training montage', 'Skip the boring parts', 'Summarize to significance'],
+    openingStyle: 'Days blur together—training, preparation, waiting. When it matters, time slows. This is one of those moments.',
+  },
+  revenge_arc: {
+    voice: 'VENGEFUL',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Every enemy is named and remembered', 'Setbacks fuel determination', 'The reckoning is inevitable'],
+    openingStyle: 'They took everything from you. Your peace. Your purpose. Your people. But they left you alive—their first mistake, and their last. This is where the debt begins to be paid.',
+  },
+  
+  // Player-Freedom
+  sandbox: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['The world waits for your decision', 'No rails, only consequences', 'You make the story'],
+    openingStyle: 'The world stretches before you, indifferent to your presence. No quest markers. No destiny. Only possibility.',
+  },
+  yes_and: {
+    voice: 'THEATRICAL',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Every idea finds a home', 'Chaos is opportunity', 'Reality bends to creativity'],
+    openingStyle: 'Reality is more flexible than most believe. You\'ve always known this. Today, you prove it.',
+  },
+  choice_architect: {
+    voice: 'OMNISCIENT',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Choices are clearly framed', 'Consequences are telegraphed', 'Every path has meaning'],
+    openingStyle: 'Three paths lie before you—each leading somewhere different, each closing doors behind it. Choose.',
+  },
+  hands_off: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'SPARSE',
+    emotionalLeakage: false,
+    narrativeHooks: ['The world moves without you', 'Minimal narration, maximum immersion', 'You are a visitor here'],
+    openingStyle: 'You are here. The world continues its business. What you do next is your concern.',
+  },
+  red_velvet: {
+    voice: 'INTIMATE',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Desire guides the narrative', 'Emotional connection deepens', 'Sensuality is an art form'],
+    openingStyle: 'The room is warm. The atmosphere electric. Eyes meet across the space, and something unspoken passes between you.',
+  },
+  
+  // Challenge & Consequence
+  old_school: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Rules are consistent', 'Fairness over drama', 'Consequences are earned'],
+    openingStyle: 'The dungeon awaits. Your torch burns low. Your supplies are counted. The odds are what they are.',
+  },
+  survival_warden: {
+    voice: 'CLINICAL',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Every resource matters', 'Injuries accumulate', 'Survival is the goal'],
+    openingStyle: 'Hunger gnaws. Cold bites. Your supplies won\'t last. In this place, staying alive is victory enough.',
+  },
+  tactician: {
+    voice: 'CLINICAL',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Positioning matters', 'Tactical options clear', 'Combat is chess'],
+    openingStyle: 'The battlefield takes shape. Cover to the left. High ground ahead. Hostiles: three visible, possibly more. Make your move.',
+  },
+  punishment_accountant: {
+    voice: 'SARDONIC',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Everything is tracked', 'Debts are remembered', 'Fairness is brutal'],
+    openingStyle: 'The ledger doesn\'t forget. Neither does the world. Let\'s see where you stand.',
+  },
+  
+  // Mystery & Mindgame
+  mystery_keeper: {
+    voice: 'UNRELIABLE',
+    detailLevel: 'RICH',
+    emotionalLeakage: false,
+    narrativeHooks: ['Information is currency', 'Clues hide in plain sight', 'Nothing is coincidence'],
+    openingStyle: 'Something doesn\'t add up. The details that should fit... don\'t. And you\'re the only one who seems to notice.',
+  },
+  conspiracy_weaver: {
+    voice: 'UNRELIABLE',
+    detailLevel: 'DENSE',
+    emotionalLeakage: true,
+    narrativeHooks: ['Everything connects', 'Paranoia is wisdom', 'Trust is dangerous'],
+    openingStyle: 'They\'re watching. They\'ve always been watching. The question isn\'t whether the conspiracy exists—it\'s how deep it goes.',
+  },
+  puzzle_master: {
+    voice: 'OMNISCIENT',
+    detailLevel: 'RICH',
+    emotionalLeakage: false,
+    narrativeHooks: ['Locks have keys', 'Patterns reveal answers', 'Progress is always possible'],
+    openingStyle: 'The mechanism waits. Complex, ancient, beautiful. Somewhere in its design lies the answer. Find it.',
+  },
+  truth_serum: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'SPARSE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Facts are labeled clearly', 'Assumptions are challenged', 'Clarity above all'],
+    openingStyle: 'Here is what you know. Here is what you assume. Here is where they diverge.',
+  },
+  
+  // Social & Relationship
+  romance_writer: {
+    voice: 'INTIMATE',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['NPCs feel human', 'Subtext matters', 'Hearts are complicated'],
+    openingStyle: 'Their eyes meet yours across the room. Something passes between you—unspoken, unnamed, undeniable.',
+  },
+  drama_producer: {
+    voice: 'THEATRICAL',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Social friction creates heat', 'Alliances shift', 'Reputation is everything'],
+    openingStyle: 'The whispers stop when you enter. Everyone has an opinion about you here. Not all of them are kind.',
+  },
+  courtroom_arbitrator: {
+    voice: 'OBJECTIVE',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: false,
+    narrativeHooks: ['Arguments have structure', 'Persuasion is combat', 'Words have weight'],
+    openingStyle: 'The case is before you. Evidence on both sides. Everyone\'s watching how you\'ll argue.',
+  },
+  community_sim: {
+    voice: 'LITERARY',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['NPCs have lives', 'Gossip flows naturally', 'The community breathes'],
+    openingStyle: 'Morning light filters through familiar streets. Neighbors wave. The baker\'s already at work. Another day in a place that knows your name.',
+  },
+  
+  // Vibe & Tone
+  horror_curator: {
+    voice: 'UNRELIABLE',
+    detailLevel: 'DENSE',
+    emotionalLeakage: true,
+    narrativeHooks: ['Dread builds slowly', 'Senses become weapons', 'Fear is the point'],
+    openingStyle: 'Something is wrong with the silence. Too empty. Too complete. As if the world itself is holding its breath—waiting for you to look behind you.',
+  },
+  comedic_goblin: {
+    voice: 'SARDONIC',
+    detailLevel: 'MODERATE',
+    emotionalLeakage: true,
+    narrativeHooks: ['Timing is everything', 'Stakes feel light', 'Life is absurd'],
+    openingStyle: 'Well. This is fine. Everything is absolutely, completely fine. Narrator note: it is not, in fact, fine.',
+  },
+  poet_narrator: {
+    voice: 'LITERARY',
+    detailLevel: 'DENSE',
+    emotionalLeakage: true,
+    narrativeHooks: ['Beauty in everything', 'Prose breathes', 'Language is music'],
+    openingStyle: 'There is a moment—between heartbeats, between breaths—where the world hangs suspended in amber light. This is such a moment. This is your beginning.',
+  },
+  noir_narrator: {
+    voice: 'NOIR',
+    detailLevel: 'RICH',
+    emotionalLeakage: true,
+    narrativeHooks: ['Shadows have secrets', 'Everyone lies', 'The city is cruel'],
+    openingStyle: 'The rain hasn\'t stopped in three days. Neither have the lies. This city chews up the honest and spits out the survivors. You\'re still here. Make of that what you will.',
+  },
+};
+
+/**
+ * Get the narrator profile for a specific director type
+ */
+export function getDirectorNarratorProfile(directorType: DirectorType): DirectorNarratorProfile {
+  return DIRECTOR_NARRATOR_PROFILES[directorType];
+}
+
+/**
+ * Build narrator prompt block for AI based on director type
+ */
+export function buildDirectorNarratorPrompt(settings: DirectorSettings): string {
+  if (!settings.enabled || settings.rawGame) {
+    return '';
+  }
+  
+  const narratorProfile = DIRECTOR_NARRATOR_PROFILES[settings.directorType];
+  const typeProfile = DIRECTOR_TYPES[settings.directorType];
+  
+  const voiceInstructions: Record<DirectorNarratorVoice, string> = {
+    'OBJECTIVE': 'Report events factually without emotional coloring. Use precise, measured language.',
+    'LITERARY': 'Employ rich metaphor and layered sensory detail. Let prose breathe with rhythm and cadence.',
+    'SARDONIC': 'Observe with dry wit and subtle irony. Find the absurdity in every circumstance.',
+    'UNRELIABLE': 'Filter reality through potentially distorted perception. Hint at truths the narrator cannot fully see.',
+    'OMNISCIENT': 'Know all but reveal only what serves the story. Occasionally foreshadow coming events.',
+    'NOIR': 'Paint in shadows and moral ambiguity. Every face hides a motive, every alley a secret.',
+    'VENGEFUL': 'Every injustice is catalogued. Every enemy is named. The narrative burns with cold purpose toward inevitable reckoning.',
+    'THEATRICAL': 'Life is a stage and every moment deserves its spotlight. Drama lives in the pauses, the reveals, the beats.',
+    'INTIMATE': 'Close the distance. Focus on the personal, the tender, the vulnerable. Connection is the currency.',
+    'CLINICAL': 'Efficient. Precise. No wasted words. The facts speak; emotion is for the reader to supply.',
+  };
+  
+  const detailInstructions: Record<string, string> = {
+    'SPARSE': 'Minimal description. Let gaps speak. Each word earns its place.',
+    'MODERATE': 'Balance description with forward momentum. Paint enough to see, not so much to slow.',
+    'RICH': 'Layer sensory details to build atmosphere. Immerse the reader in every scene.',
+    'DENSE': 'Miss nothing. Every surface tells a story. The world is thick with meaning.',
+  };
+  
+  return `
+## DIRECTOR NARRATOR PERSONALITY: ${typeProfile.name.toUpperCase()}
+
+NARRATOR VOICE: ${narratorProfile.voice}
+${voiceInstructions[narratorProfile.voice]}
+
+DETAIL LEVEL: ${narratorProfile.detailLevel}
+${detailInstructions[narratorProfile.detailLevel]}
+
+${narratorProfile.emotionalLeakage ? 'EMOTIONAL BLEED: ENABLED - Allow the player character\'s emotional state to color perception.' : 'EMOTIONAL BLEED: DISABLED - Maintain narrative distance from character emotions.'}
+
+DIRECTOR STYLE NOTES:
+${typeProfile.styleNotes.map(note => `• ${note}`).join('\n')}
+
+NARRATIVE HOOKS TO USE:
+${narratorProfile.narrativeHooks.map(hook => `• ${hook}`).join('\n')}
+`;
+}
+
+/**
+ * Get the opening narrative style for a director type
+ */
+export function getDirectorOpeningStyle(directorType: DirectorType): string {
+  return DIRECTOR_NARRATOR_PROFILES[directorType].openingStyle;
 }
