@@ -339,17 +339,13 @@ export function GameUI() {
   // Message navigation for scroll-to-message functionality
   const messageNav = useMessageNavigation();
   
-  // Audio system integration
+  // Audio system integration - weather only
   const {
     initialized: audioInitialized,
     muted: audioMuted,
-    soundsReady,
     initializeAudio,
     syncWeather,
-    processNarrative,
-    playUISound,
-    playSoundFromCategory,
-    setLocation: setAudioLocation,
+    setIndoors: setAudioIndoors,
   } = useAudioSystem();
   
   // Track if audio has been initialized this session
@@ -376,7 +372,7 @@ export function GameUI() {
       setWeather(prev => {
         const newWeather = updateWeather(prev, gameState.time.season, 1);
         // Sync weather audio when weather updates
-        if (audioInitialized && !audioMuted && soundsReady) {
+        if (audioInitialized && !audioMuted) {
           const timePeriod = getTimePeriod(gameState.time.hour) as 'day' | 'night' | 'dawn' | 'dusk';
           syncWeather(newWeather, timePeriod);
         }
@@ -384,15 +380,15 @@ export function GameUI() {
       });
     }, 60000); // Check every minute
     return () => clearInterval(interval);
-  }, [gameState.time.season, gameState.time.hour, audioInitialized, audioMuted, soundsReady, syncWeather]);
+  }, [gameState.time.season, gameState.time.hour, audioInitialized, audioMuted, syncWeather]);
   
   // Sync weather audio on initial load and weather changes
   useEffect(() => {
-    if (audioInitialized && !audioMuted && soundsReady) {
+    if (audioInitialized && !audioMuted) {
       const timePeriod = getTimePeriod(gameState.time.hour) as 'day' | 'night' | 'dawn' | 'dusk';
       syncWeather(weather, timePeriod);
     }
-  }, [weather, audioInitialized, audioMuted, soundsReady, syncWeather, gameState.time.hour]);
+  }, [weather, audioInitialized, audioMuted, syncWeather, gameState.time.hour]);
   
   // Tick adrenaline system for decay and wound reveals
   useEffect(() => {
@@ -425,15 +421,12 @@ export function GameUI() {
           }));
         }
         toast.error(firstWound.message);
-        // Play pain sound for wound reveal
-        if (audioInitialized && !audioMuted && soundsReady) {
-          playSoundFromCategory('human_grunt', { volume: 0.6 });
-        }
+        // Sound removed - weather only mode
         setTimeout(() => setAdrenalineEvent(null), 4000);
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [adrenalineState, gameState.lifeSim, audioInitialized, audioMuted, soundsReady, playSoundFromCategory]);
+  }, [adrenalineState, gameState.lifeSim, audioInitialized, audioMuted]);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
@@ -562,9 +555,6 @@ export function GameUI() {
     // Quest journal command
     if (lowerInput === 'journal' || lowerInput === 'quests' || lowerInput === 'j') {
       setShowQuestJournal(true);
-      if (audioInitialized && !audioMuted && soundsReady) {
-        playUISound('click');
-      }
       setIsProcessing(false);
       return;
     }
@@ -632,11 +622,6 @@ export function GameUI() {
       setActiveCombat(encounter);
       setCombatNPC(targetNPC);
       
-      // Play combat initiation sound
-      if (audioInitialized && !audioMuted && soundsReady) {
-        playSoundFromCategory('combat_sword', { volume: 0.7 });
-      }
-      
       setDisplayEvents(prev => [...prev, {
         id: `combat_start_${Date.now()}`,
         type: 'combat' as const,
@@ -686,11 +671,10 @@ export function GameUI() {
       const locationId = newState.player.currentLocation;
       const timePeriod = getTimePeriod(newState.time.hour) as 'morning' | 'afternoon' | 'evening' | 'night';
       
-      // Play footstep sound for movement
-      if (audioInitialized && !audioMuted && soundsReady) {
-        playSoundFromCategory('footsteps_stone', { volume: 0.4 });
-        // Update audio location context
-        setAudioLocation(locationId);
+      // Update indoor status for weather attenuation
+      if (audioInitialized) {
+        const isIndoors = locationId.includes('indoor') || locationId.includes('building') || locationId.includes('house');
+        setAudioIndoors(isIndoors);
       }
       
       // Warn about dangerous locations
@@ -715,10 +699,6 @@ export function GameUI() {
             const result = updateObjectiveProgress(questLog, questId, obj.id, 1);
             setQuestLog(result.questLog);
             if (result.message) {
-              // Play quest progress sound
-              if (audioInitialized && !audioMuted && soundsReady) {
-                playUISound('notification');
-              }
               events.push({
                 id: `quest_${Date.now()}`,
                 type: 'system' as const,
@@ -795,11 +775,6 @@ export function GameUI() {
             
             setActiveCombat(encounter);
             setCombatNPC(hostileEncounter.npc);
-            
-            // Play ambush sound
-            if (audioInitialized && !audioMuted && soundsReady) {
-              playSoundFromCategory('combat_sword', { volume: 0.8 });
-            }
             
             toast.error('You\'ve been ambushed!', { 
               description: `A ${hostileEncounter.npc.meta.occupation} attacks you!` 
@@ -1244,14 +1219,9 @@ export function GameUI() {
       toast.error('You have died', { description: deathState.causeOfDeath });
     }
     
-    // Process dialogue events to add NPC portraits AND trigger narrative sounds
+    // Process dialogue events to add NPC portraits (sounds removed - weather only)
     const eventsWithPortraits = await Promise.all(
       events.map(async (event) => {
-        // Process narrative text for sound triggers
-        if (audioInitialized && !audioMuted && soundsReady) {
-          processNarrative(event.content);
-        }
-        
         if (event.type === 'dialogue' && event.involvedNPCs && event.involvedNPCs.length > 0) {
           const npcId = event.involvedNPCs[0];
           const npc = newState.npcs[npcId];
@@ -1270,7 +1240,7 @@ export function GameUI() {
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog, audioInitialized, audioMuted, soundsReady, processNarrative, playSoundFromCategory, playUISound, setAudioLocation, initializeAudio]);
+  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog, audioInitialized, audioMuted, initializeAudio, setAudioIndoors]);
   
   // Combat handlers
   const handleCombatEnd = useCallback((outcome: CombatOutcome, updatedEncounter: CombatEncounter) => {
