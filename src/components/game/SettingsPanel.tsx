@@ -105,7 +105,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   
   // Update director settings - saves to campaign if active, otherwise global
   const handleDirectorSettingsUpdate = (newDirectorSettings: DirectorSettings) => {
+    const isChangingMode = currentDirectorSettings.mode !== newDirectorSettings.mode;
+    const isChangingType = currentDirectorSettings.directorType !== newDirectorSettings.directorType;
+    
     if (campaignContext?.activeCampaign) {
+      // Check if mid-campaign swap is allowed for mode/type changes
+      if ((isChangingMode || isChangingType) && !currentDirectorSettings.allowMidCampaignSwap) {
+        console.warn('Mid-campaign swap disabled, blocking mode/type change');
+        return;
+      }
+      
       // Update campaign-specific settings
       campaignContext.updateCampaign({
         settings: {
