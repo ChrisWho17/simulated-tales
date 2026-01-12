@@ -274,14 +274,11 @@ export function AdventureDisplay({
   // Inventory system integration
   const inventory = useInventory();
   
-  // Audio system integration
+  // Audio system integration - weather only
   const { 
     initialized: audioInitialized, 
     syncWeather, 
-    processNarrative,
-    initializeAudio,
-    preloadProgress,
-    soundsReady
+    initializeAudio
   } = useAudioSystem();
   
   // Get weather settings from game context (must come after gameContext declaration)
@@ -389,22 +386,10 @@ export function AdventureDisplay({
         setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
       }
       
-      // Process narrative for sound triggers using LivingWorldAudio
-      const latestEntry = story[story.length - 1];
-      if (latestEntry?.role === 'narrator' && enableStorySounds && audioInitialized) {
-        // Use the unified LivingWorldAudio API for comprehensive audio processing
-        livingWorldAudio.processNarrative(latestEntry.content).then(result => {
-          if (result.sounds.length > 0) {
-            console.log('[AdventureDisplay] Triggered sounds:', result.sounds);
-          }
-          if (result.locationChanged) {
-            console.log('[AdventureDisplay] Location changed to:', result.locationChanged);
-          }
-        });
-      }
+      // Sound triggers removed - weather only mode
     }
     previousStoryLength.current = story.length;
-  }, [story.length, isAtBottom, weatherMode, enableStorySounds, audioInitialized, processNarrative, story]);
+  }, [story.length, isAtBottom, weatherMode, audioInitialized, story]);
 
   // Sync weather sounds with weather state
   useEffect(() => {
@@ -1438,21 +1423,15 @@ export function AdventureDisplay({
               )}
             </Button>
             
-            {/* Audio Status Indicator */}
+            {/* Audio Status Indicator - Weather Only */}
             <div 
               className="h-7 w-7 flex-shrink-0 flex items-center justify-center"
-              title={
-                !audioInitialized ? 'Click to enable audio' :
-                !soundsReady ? `Loading sounds: ${preloadProgress?.loaded || 0}/${preloadProgress?.total || 0}` :
-                'Audio ready'
-              }
+              title={audioInitialized ? 'Weather audio active' : 'Click to enable audio'}
             >
-              {!audioInitialized ? (
-                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
-              ) : !soundsReady ? (
-                <Volume2 className="w-4 h-4 text-primary/50 animate-pulse" />
-              ) : (
+              {audioInitialized ? (
                 <Volume2 className="w-4 h-4 text-green-400/70" />
+              ) : (
+                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
               )}
             </div>
             

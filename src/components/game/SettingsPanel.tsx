@@ -40,15 +40,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { 
     initialized: audioInitialized,
     muted: audioMuted,
-    volumes: audioVolumes,
     unlocked: audioUnlocked,
-    soundsReady,
-    preloadProgress,
+    weatherVolume,
     initializeAudio,
-    setMasterVolume,
-    setChannelVolume,
-    toggleMute,
-    playSoundFromCategory
+    setWeatherVolume,
+    toggleMute
   } = useAudioSystem();
   const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director' | 'weather'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
@@ -1091,232 +1087,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 />
               </div>
               
-              {/* Sound Loading Status */}
-              {audioInitialized && preloadProgress && !preloadProgress.isComplete && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                  <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-blue-400">Loading Sounds...</span>
-                    <p className="text-xs text-muted-foreground">
-                      {preloadProgress.loaded} / {preloadProgress.total} ({preloadProgress.currentCategory})
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {audioInitialized && soundsReady && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <Volume2 className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-green-500">Sounds loaded and ready</span>
-                </div>
-              )}
-              
+              {/* Weather Volume - Simplified */}
               {settings.soundEnabled && audioInitialized && (
                 <>
-                  {/* Test Sound Button */}
-                  <button
-                    onClick={() => playSoundFromCategory('ui_click')}
-                    className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border border-primary/40 
-                               bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-all"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                    <span className="text-sm">Test Sound</span>
-                  </button>
-                  
-                  {/* Master Volume */}
-                  {/* Master Volume */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Master Volume</span>
+                      <span className="text-sm font-medium">Weather Ambient Volume</span>
                       <span className="text-xs text-[var(--accent-secondary)]">
-                        {Math.round(audioVolumes.master * 100)}%
+                        {Math.round(weatherVolume * 100)}%
                       </span>
                     </div>
                     <Slider
-                      value={[audioVolumes.master * 100]}
+                      value={[weatherVolume * 100]}
                       min={0}
                       max={100}
                       step={1}
-                      onValueChange={([value]) => setMasterVolume(value / 100)}
+                      onValueChange={([value]) => setWeatherVolume(value / 100)}
                       className="w-full"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Low background noise matching current weather conditions
+                    </p>
                   </div>
                   
-                  {/* Channel Volumes */}
-                  <div className="space-y-4 pt-2 border-t border-border/30">
-                    <h3 className="text-sm font-medium flex items-center gap-2">
-                      <Music className="w-4 h-4 text-[var(--accent-secondary)]" />
-                      Channel Volumes
-                    </h3>
-                    
-                    {/* Ambience */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Ambience</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.ambience * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.ambience * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('ambience', value / 100)}
-                        className="w-full"
-                      />
+                  {/* Weather Sound Toggle */}
+                  <div className="flex items-center justify-between py-2 border-t border-border/30 pt-4">
+                    <div>
+                      <span className="text-sm">Weather Sounds</span>
+                      <p className="text-xs text-muted-foreground">Rain, thunder, wind ambience</p>
                     </div>
-                    
-                    {/* Effects */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Effects</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.effects * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.effects * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('effects', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    {/* Music */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Music</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.music * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.music * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('music', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    {/* UI */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">UI Sounds</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.ui * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.ui * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('ui', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    {/* Weather */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Weather</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.weather * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.weather * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('weather', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    {/* Voice */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Voice</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.voice * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.voice * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('voice', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    {/* Dramatic */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Dramatic</span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(audioVolumes.dramatic * 100)}%
-                        </span>
-                      </div>
-                      <Slider
-                        value={[audioVolumes.dramatic * 100]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([value]) => setChannelVolume('dramatic', value / 100)}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  {/* Sound Type Toggles */}
-                  <div className="space-y-3 pt-2 border-t border-border/30">
-                    <h3 className="text-sm font-medium">Sound Categories</h3>
-                    
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <span className="text-sm">Weather Sounds</span>
-                        <p className="text-xs text-muted-foreground">Rain, thunder, wind ambience</p>
-                      </div>
-                      <Switch 
-                        checked={settings.audioSettings?.enableWeatherSounds ?? true}
-                        onCheckedChange={(checked) => updateSettings({ 
-                          audioSettings: { ...settings.audioSettings, enableWeatherSounds: checked }
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <span className="text-sm">Story Sounds</span>
-                        <p className="text-xs text-muted-foreground">Combat, doors, ambient effects</p>
-                      </div>
-                      <Switch 
-                        checked={settings.audioSettings?.enableStorySounds ?? true}
-                        onCheckedChange={(checked) => updateSettings({ 
-                          audioSettings: { ...settings.audioSettings, enableStorySounds: checked }
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <span className="text-sm">UI Sounds</span>
-                        <p className="text-xs text-muted-foreground">Clicks, notifications, feedback</p>
-                      </div>
-                      <Switch 
-                        checked={settings.audioSettings?.enableUISounds ?? true}
-                        onCheckedChange={(checked) => updateSettings({ 
-                          audioSettings: { ...settings.audioSettings, enableUISounds: checked }
-                        })}
-                      />
-                    </div>
+                    <Switch 
+                      checked={settings.audioSettings?.enableWeatherSounds ?? true}
+                      onCheckedChange={(checked) => updateSettings({ 
+                        audioSettings: { ...settings.audioSettings, enableWeatherSounds: checked }
+                      })}
+                    />
                   </div>
                 </>
               )}

@@ -25,16 +25,11 @@ export interface LanguageSettings {
   playerKnownLanguages: string[];   // Languages the player character knows
 }
 
-// Audio settings
+// Audio settings - Simplified to weather-only ambient sounds
 export interface AudioSettings {
   masterVolume: number;      // 0-100
-  ambienceVolume: number;    // 0-100
-  effectsVolume: number;     // 0-100
-  musicVolume: number;       // 0-100
-  uiVolume: number;          // 0-100
+  weatherVolume: number;     // 0-100 - Low background weather ambient
   enableWeatherSounds: boolean;
-  enableStorySounds: boolean;
-  enableUISounds: boolean;
 }
 
 // Gun Nut depth levels
@@ -139,14 +134,9 @@ export const DEFAULT_LANGUAGE_SETTINGS: LanguageSettings = {
 };
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
-  masterVolume: 80,
-  ambienceVolume: 60,
-  effectsVolume: 90,
-  musicVolume: 40,
-  uiVolume: 50,
+  masterVolume: 50,
+  weatherVolume: 25,  // Low background noise
   enableWeatherSounds: true,
-  enableStorySounds: true,
-  enableUISounds: true,
 };
 
 export const DEFAULT_INDEPTH_SETTINGS: InDepthSettings = {

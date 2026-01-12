@@ -1,13 +1,10 @@
-// Audio System Hook - Manages audio initialization and state
+// Audio System Hook - Simplified to weather-only ambient sounds
 import { useState, useEffect, useCallback } from 'react';
-import { audioEngine, AudioEngineState, AudioVolumes, AudioChannel } from '@/game/audioEngine';
+import { audioEngine, AudioEngineState, AudioVolumes } from '@/game/audioEngine';
 import { weatherSoundManager } from '@/game/weatherSoundManager';
-import { storySoundTrigger } from '@/game/storySoundTrigger';
-import { acousticEnvironmentSystem, AcousticSpace, LocationAcoustics } from '@/game/acousticEnvironmentSystem';
-import { soundPreloader, PreloadProgress, CachedSound } from '@/game/soundPreloader';
 import { WeatherType } from '@/game/weatherSystem';
 
-// Simple weather state interface that works with both weather systems
+// Simple weather state interface
 interface SimpleWeatherState {
   current: WeatherType;
   intensity: number | 'light' | 'moderate' | 'heavy';
@@ -16,26 +13,13 @@ interface SimpleWeatherState {
 interface UseAudioSystemReturn {
   initialized: boolean;
   muted: boolean;
-  volumes: AudioVolumes;
   unlocked: boolean;
-  acousticSpace: AcousticSpace;
-  isIndoors: boolean;
-  preloadProgress: PreloadProgress | null;
-  soundsReady: boolean;
+  weatherVolume: number;
   initializeAudio: () => Promise<void>;
-  preloadSounds: (options?: { priorityOnly?: boolean; categories?: string[] }) => Promise<void>;
-  setMasterVolume: (volume: number) => void;
-  setChannelVolume: (channel: AudioChannel, volume: number) => void;
+  setWeatherVolume: (volume: number) => void;
   toggleMute: () => void;
   syncWeather: (weatherState: SimpleWeatherState, timeOfDay?: 'day' | 'night' | 'dawn' | 'dusk') => void;
-  processNarrative: (text: string) => string[];
-  playUISound: (sound: 'click' | 'notification' | 'success' | 'error' | 'level_up' | 'item_acquired') => void;
-  playSoundFromCategory: (category: string, options?: { volume?: number; pitch?: number }) => Promise<boolean>;
-  findSounds: (searchTerm: string) => CachedSound[];
-  getLoadedCategories: () => string[];
   setIndoors: (isIndoors: boolean) => void;
-  setLocation: (locationType: string) => void;
-  getAcoustics: () => LocationAcoustics;
   stopAll: () => void;
 }
 
@@ -45,114 +29,63 @@ export function useAudioSystem(): UseAudioSystemReturn {
     muted: false,
     unlocked: false,
     volumes: {
-      master: 0.8,
-      ambience: 0.6,
-      effects: 0.9,
-      music: 0.4,
-      ui: 0.5,
-      weather: 0.7,
-      voice: 0.9,
-      dramatic: 0.8
+      master: 0.5,
+      ambience: 0.25,
+      effects: 0,
+      music: 0,
+      ui: 0,
+      weather: 0.25,
+      voice: 0,
+      dramatic: 0
     }
   });
 
-  const [acousticSpace, setAcousticSpace] = useState<AcousticSpace>('outdoor');
-  const [isIndoorsState, setIsIndoorsState] = useState(false);
-  const [preloadProgress, setPreloadProgress] = useState<PreloadProgress | null>(null);
-  const [soundsReady, setSoundsReady] = useState(false);
+  const [weatherVolume, setWeatherVolumeState] = useState(0.25);
 
   // Subscribe to audio engine state changes
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe((newState) => {
       setState(newState);
     });
-
-    // Set initial state
     setState(audioEngine.getState());
-
     return unsubscribe;
   }, []);
 
-  // Subscribe to acoustic environment changes
-  useEffect(() => {
-    const unsubscribe = acousticEnvironmentSystem.subscribe((acoustics) => {
-      setAcousticSpace(acoustics.space);
-      setIsIndoorsState(acoustics.space === 'indoor' || acoustics.space === 'underground');
-    });
-
-    // Set initial acoustic state
-    setAcousticSpace(acousticEnvironmentSystem.getAcousticSpace());
-    setIsIndoorsState(acousticEnvironmentSystem.isIndoors());
-
-    return unsubscribe;
-  }, []);
-
-  // Subscribe to preload progress
-  useEffect(() => {
-    const unsubscribe = soundPreloader.onProgress((progress) => {
-      setPreloadProgress(progress);
-      if (progress.isComplete) {
-        setSoundsReady(true);
-      }
-    });
-
-    // Check if already preloaded
-    setSoundsReady(soundPreloader.isReady());
-
-    return unsubscribe;
-  }, []);
-
-  // Initialize audio on first user interaction - now also preloads sounds
+  // Initialize audio on first user interaction
   const initializeAudio = useCallback(async () => {
     await audioEngine.ensureContext();
+    // Set low volumes for weather-only mode
+    audioEngine.setMasterVolume(0.5);
+    audioEngine.setChannelVolume('weather', 0.25);
+    audioEngine.setChannelVolume('ambience', 0.25);
+    // Disable all other channels
+    audioEngine.setChannelVolume('effects', 0);
+    audioEngine.setChannelVolume('music', 0);
+    audioEngine.setChannelVolume('ui', 0);
+    audioEngine.setChannelVolume('voice', 0);
+    audioEngine.setChannelVolume('dramatic', 0);
     setState(audioEngine.getState());
-    
-    // Automatically preload sounds after audio context is ready
-    console.log('[AudioSystem] Audio initialized, preloading sounds...');
-    try {
-      await soundPreloader.preloadAll({ priorityOnly: true });
-      console.log('[AudioSystem] Priority sounds preloaded');
-      
-      // Load remaining sounds in background
-      soundPreloader.preloadAll().then(() => {
-        console.log('[AudioSystem] All sounds preloaded');
-      });
-    } catch (error) {
-      console.error('[AudioSystem] Failed to preload sounds:', error);
-    }
+    console.log('[AudioSystem] Initialized - weather-only mode');
   }, []);
 
-  // Preload sounds from storage (can be called manually for specific categories)
-  const preloadSounds = useCallback(async (options?: { 
-    priorityOnly?: boolean; 
-    categories?: string[] 
-  }) => {
-    if (!state.initialized) {
-      await initializeAudio();
-    }
-    await soundPreloader.preloadAll(options);
-  }, [state.initialized, initializeAudio]);
-
-  // Volume controls
-  const setMasterVolume = useCallback((volume: number) => {
-    audioEngine.setMasterVolume(volume);
-  }, []);
-
-  const setChannelVolume = useCallback((channel: AudioChannel, volume: number) => {
-    audioEngine.setChannelVolume(channel, volume);
+  // Weather volume control
+  const setWeatherVolume = useCallback((volume: number) => {
+    const clampedVolume = Math.max(0, Math.min(1, volume));
+    audioEngine.setChannelVolume('weather', clampedVolume);
+    audioEngine.setChannelVolume('ambience', clampedVolume);
+    setWeatherVolumeState(clampedVolume);
   }, []);
 
   const toggleMute = useCallback(() => {
     audioEngine.toggleMute();
   }, []);
 
-  // Weather sync - works with both weatherSystem.ts and worldEventsSystem.ts WeatherState types
+  // Weather sync - the only sound that plays
   const syncWeather = useCallback((
     weatherState: SimpleWeatherState,
     timeOfDay: 'day' | 'night' | 'dawn' | 'dusk' = 'day'
   ) => {
     if (state.initialized && !state.muted) {
-      // Convert intensity to number if it's a string
       const intensity = typeof weatherState.intensity === 'string' 
         ? { light: 0.3, moderate: 0.5, heavy: 0.8 }[weatherState.intensity] || 0.5
         : weatherState.intensity;
@@ -164,100 +97,29 @@ export function useAudioSystem(): UseAudioSystemReturn {
     }
   }, [state.initialized, state.muted]);
 
-  // Narrative processing (now with automatic location detection)
-  const processNarrative = useCallback((text: string): string[] => {
-    if (state.initialized && !state.muted) {
-      return storySoundTrigger.processNarrativeText(text);
-    }
-    return [];
-  }, [state.initialized, state.muted]);
-
-  // UI sounds
-  const playUISound = useCallback((
-    sound: 'click' | 'notification' | 'success' | 'error' | 'level_up' | 'item_acquired'
-  ) => {
-    if (state.initialized && !state.muted) {
-      storySoundTrigger.playUISound(sound);
-    }
-  }, [state.initialized, state.muted]);
-
-  // Play sound from preloaded category
-  const playSoundFromCategory = useCallback(async (
-    category: string,
-    options?: { volume?: number; pitch?: number }
-  ): Promise<boolean> => {
-    if (!state.initialized || state.muted) return false;
-    return soundPreloader.playFromCategory(category, options);
-  }, [state.initialized, state.muted]);
-
-  // Find sounds by search term
-  const findSounds = useCallback((searchTerm: string): CachedSound[] => {
-    return soundPreloader.findSounds(searchTerm);
-  }, []);
-
-  // Get loaded categories
-  const getLoadedCategories = useCallback((): string[] => {
-    return soundPreloader.getLoadedCategories();
-  }, []);
-
-  // Indoor/outdoor (legacy support - now use setLocation instead)
+  // Indoor/outdoor for weather attenuation
   const setIndoors = useCallback((isIndoors: boolean) => {
     if (state.initialized) {
       weatherSoundManager.setIndoors(isIndoors);
-      // Also update acoustic environment
-      if (isIndoors) {
-        acousticEnvironmentSystem.setLocation('indoor');
-      } else {
-        acousticEnvironmentSystem.setLocation('outdoor');
-      }
     }
   }, [state.initialized]);
-
-  // Set location with full acoustic environment update
-  const setLocation = useCallback((locationType: string) => {
-    acousticEnvironmentSystem.setLocation(locationType);
-    storySoundTrigger.setLocationAmbience(locationType);
-    
-    // Also update weather manager
-    const isIndoors = acousticEnvironmentSystem.isIndoors();
-    weatherSoundManager.setIndoors(isIndoors);
-  }, []);
-
-  // Get current acoustics
-  const getAcoustics = useCallback(() => {
-    return acousticEnvironmentSystem.getAcoustics();
-  }, []);
 
   // Stop all sounds
   const stopAll = useCallback(() => {
     audioEngine.stopAll();
     weatherSoundManager.stop();
-    storySoundTrigger.stopAll();
   }, []);
 
   return {
     initialized: state.initialized,
     muted: state.muted,
-    volumes: state.volumes,
     unlocked: state.unlocked,
-    acousticSpace,
-    isIndoors: isIndoorsState,
-    preloadProgress,
-    soundsReady,
+    weatherVolume,
     initializeAudio,
-    preloadSounds,
-    setMasterVolume,
-    setChannelVolume,
+    setWeatherVolume,
     toggleMute,
     syncWeather,
-    processNarrative,
-    playUISound,
-    playSoundFromCategory,
-    findSounds,
-    getLoadedCategories,
     setIndoors,
-    setLocation,
-    getAcoustics,
     stopAll
   };
 }
