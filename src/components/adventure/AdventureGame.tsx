@@ -5,6 +5,7 @@ import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
+import { NarratorSettingsModal } from './NarratorSettingsModal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
@@ -129,6 +130,13 @@ import {
   buildMoveSyncContextForAI,
   getMoveSyncState,
 } from '@/game/moveSyncSystem';
+import {
+  DirectorSettings,
+  DEFAULT_DIRECTOR_SETTINGS,
+  buildDirectorPromptBlock,
+  buildDirectorNarratorPrompt,
+  getDirectorOpeningStyle,
+} from '@/game/directorModeSystem';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -208,7 +216,7 @@ function buildBackgroundNPCActionsContext(
   return uniqueActions.length > 0 ? { actions: uniqueActions } : undefined;
 }
 
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'narrator' | 'playing';
 
 const STORY_KEY = 'untold-adventure-story';
 const CHARACTER_KEY = 'untold-adventure-character';
@@ -293,6 +301,12 @@ export function AdventureGame() {
   const [lockedOpening, setLockedOpening] = useState<string | null>(null);
   // Count player actions to know when to lock world
   const playerActionCount = useRef<number>(0);
+  
+  // === DIRECTOR/NARRATOR SETTINGS ===
+  // Stores the chosen director settings for this campaign
+  const [directorSettings, setDirectorSettings] = useState<DirectorSettings>(DEFAULT_DIRECTOR_SETTINGS);
+  // Pending character awaiting narrator settings confirmation
+  const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
   
   // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
@@ -1091,17 +1105,18 @@ export function AdventureGame() {
         requestBody.languageContext = languageContextPayload;
         requestBody.locationContext = locationContextPayload;
         
-        // Director context
-        if (settings.directorSettings) {
+        // Director context - use local directorSettings (set during narrator phase) or fall back to settings
+        const activeDirectorSettings = directorSettings || settings.directorSettings;
+        if (activeDirectorSettings) {
           requestBody.directorContext = {
-            enabled: settings.directorSettings.enabled,
-            rawGame: settings.directorSettings.rawGame,
-            mode: settings.directorSettings.mode,
-            directorType: settings.directorSettings.directorType,
-            tightness: settings.directorSettings.tightness,
-            cruelty: settings.directorSettings.cruelty,
-            weirdness: settings.directorSettings.weirdness,
-            guidance: settings.directorSettings.guidance,
+            enabled: activeDirectorSettings.enabled,
+            rawGame: activeDirectorSettings.rawGame,
+            mode: activeDirectorSettings.mode,
+            directorType: activeDirectorSettings.directorType,
+            tightness: activeDirectorSettings.tightness,
+            cruelty: activeDirectorSettings.cruelty,
+            weirdness: activeDirectorSettings.weirdness,
+            guidance: activeDirectorSettings.guidance,
           };
         }
       }
@@ -1684,15 +1699,34 @@ export function AdventureGame() {
     setPhase('character');
   }, []);
 
-  // Step 2: Character creation complete -> start game directly (no loadout)
+  // Step 2: Character creation complete -> show narrator settings before starting
   const handleCharacterComplete = useCallback(async (char: RPGCharacter & { portraitUrl?: string }, scenario: string) => {
     if (!scenarioSelection) {
       console.error('[AdventureGame] handleCharacterComplete called without scenarioSelection');
       return;
     }
     
+    // Store character temporarily and show narrator settings modal
+    setPendingCharacter(char);
+    setPhase('narrator');
+    console.log('[AdventureGame] Character created, showing narrator settings');
+  }, [scenarioSelection]);
+
+  // Step 3: Narrator settings confirmed -> start game
+  const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
+    const char = pendingCharacter;
+    if (!char || !scenarioSelection) {
+      console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
+      return;
+    }
+    
+    // Store the director settings
+    setDirectorSettings(settings);
+    
+    // Clear pending character
+    setPendingCharacter(null);
+    
     // CRITICAL: Set character and transition to playing phase immediately
-    // This prevents falling back to AdventureCreator during async operations
     setCharacter(char);
     setPhase('playing');
     setIsLoading(true);
@@ -1749,12 +1783,24 @@ export function AdventureGame() {
       }
       
       // Create story entry (use blended fallback if narrative generation failed)
-      const narrativeContent = narrative || generateImmersiveOpening({
-        character: char,
-        genre: scenarioSelection.genre || 'fantasy',
-        scenario: scenarioSelection.scenario,
-        secondaryGenres: worldBible?.secondaryGenres || [],
-      });
+      // Use director-specific opening style if available
+      const directorOpening = settings.enabled && !settings.rawGame 
+        ? getDirectorOpeningStyle(settings.directorType)
+        : undefined;
+      // If AI narrative failed and we have a director opening, use that as the opening
+      const narrativeContent = narrative || (directorOpening 
+        ? `${directorOpening}\n\n${generateImmersiveOpening({
+            character: char,
+            genre: scenarioSelection.genre || 'fantasy',
+            scenario: scenarioSelection.scenario,
+            secondaryGenres: worldBible?.secondaryGenres || [],
+          })}`
+        : generateImmersiveOpening({
+            character: char,
+            genre: scenarioSelection.genre || 'fantasy',
+            scenario: scenarioSelection.scenario,
+            secondaryGenres: worldBible?.secondaryGenres || [],
+          }));
       const newStory: StoryEntry[] = [{
         id: `narrator_${Date.now()}`,
         role: 'narrator',
@@ -1769,7 +1815,7 @@ export function AdventureGame() {
         campaignContext.addNarrativeEntry(newStory[0]);
       }
       
-      console.log('[AdventureGame] Character created, game ready');
+      console.log('[AdventureGame] Character created with director settings, game ready');
     } catch (error) {
       console.error('[AdventureGame] Character complete failed:', error);
       // Create fallback story so game can proceed
@@ -1789,7 +1835,12 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+
+  // Handler for skipping narrator settings
+  const handleNarratorSkip = useCallback(() => {
+    handleNarratorConfirm(DEFAULT_DIRECTOR_SETTINGS);
+  }, [handleNarratorConfirm]);
 
 
 
@@ -2324,7 +2375,17 @@ export function AdventureGame() {
     );
   }
 
-
+  // Phase 2.5: Narrator settings selection
+  if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
+    return (
+      <NarratorSettingsModal
+        open={true}
+        onClose={handleNarratorSkip}
+        onConfirm={handleNarratorConfirm}
+        initialSettings={directorSettings}
+      />
+    );
+  }
 
   // Phase 3: Playing
   if (phase === 'playing' && character) {
