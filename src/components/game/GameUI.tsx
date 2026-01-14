@@ -339,10 +339,7 @@ export function GameUI() {
   // Message navigation for scroll-to-message functionality
   const messageNav = useMessageNavigation();
   
-  // Audio system integration - weather only
-  const {
-    initialized: audioInitialized,
-  // Audio system removed - no sound in game
+  // Audio system fully removed - no sound in game
   
   // Save memories when they change
   useEffect(() => {
@@ -359,29 +356,13 @@ export function GameUI() {
     localStorage.setItem('living-world-adrenaline', JSON.stringify(adrenalineState));
   }, [adrenalineState]);
   
-  // Update weather periodically AND sync audio
+  // Update weather periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      setWeather(prev => {
-        const newWeather = updateWeather(prev, gameState.time.season, 1);
-        // Sync weather audio when weather updates
-        if (audioInitialized && !audioMuted) {
-          const timePeriod = getTimePeriod(gameState.time.hour) as 'day' | 'night' | 'dawn' | 'dusk';
-          syncWeather(newWeather, timePeriod);
-        }
-        return newWeather;
-      });
+      setWeather(prev => updateWeather(prev, gameState.time.season, 1));
     }, 60000); // Check every minute
     return () => clearInterval(interval);
-  }, [gameState.time.season, gameState.time.hour, audioInitialized, audioMuted, syncWeather]);
-  
-  // Sync weather audio on initial load and weather changes
-  useEffect(() => {
-    if (audioInitialized && !audioMuted) {
-      const timePeriod = getTimePeriod(gameState.time.hour) as 'day' | 'night' | 'dawn' | 'dusk';
-      syncWeather(weather, timePeriod);
-    }
-  }, [weather, audioInitialized, audioMuted, syncWeather, gameState.time.hour]);
+  }, [gameState.time.season]);
   
   // Tick adrenaline system for decay and wound reveals
   useEffect(() => {
@@ -414,12 +395,11 @@ export function GameUI() {
           }));
         }
         toast.error(firstWound.message);
-        // Sound removed - weather only mode
         setTimeout(() => setAdrenalineEvent(null), 4000);
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [adrenalineState, gameState.lifeSim, audioInitialized, audioMuted]);
+  }, [adrenalineState, gameState.lifeSim]);
   
   const handleCharacterComplete = useCallback((character: CharacterData) => {
     localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
@@ -534,13 +514,7 @@ export function GameUI() {
   }, []);
   
   const handleCommand = useCallback(async (input: string) => {
-    // Initialize audio on first user interaction (browser autoplay policy)
-    if (!audioInitializedRef.current && !audioInitialized) {
-      audioInitializedRef.current = true;
-      initializeAudio().then(() => {
-        console.log('[GameUI] Audio system initialized on first command');
-      });
-    }
+    // Audio system removed - no sound in game
     
     // Handle RPG system commands before normal processing
     const lowerInput = input.toLowerCase().trim();
@@ -664,11 +638,7 @@ export function GameUI() {
       const locationId = newState.player.currentLocation;
       const timePeriod = getTimePeriod(newState.time.hour) as 'morning' | 'afternoon' | 'evening' | 'night';
       
-      // Update indoor status for weather attenuation
-      if (audioInitialized) {
-        const isIndoors = locationId.includes('indoor') || locationId.includes('building') || locationId.includes('house');
-        setAudioIndoors(isIndoors);
-      }
+      // Audio system removed - no indoor/outdoor audio tracking
       
       // Warn about dangerous locations
       const dangerInfo = dangerousLocations[locationId];
@@ -1233,7 +1203,7 @@ export function GameUI() {
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog, audioInitialized, audioMuted, initializeAudio, setAudioIndoors]);
+  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog]);
   
   // Combat handlers
   const handleCombatEnd = useCallback((outcome: CombatOutcome, updatedEncounter: CombatEncounter) => {
