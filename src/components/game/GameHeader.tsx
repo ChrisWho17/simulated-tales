@@ -10,6 +10,7 @@ import {
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { AdrenalineBar } from './AdrenalineBar';
 import { AdrenalineSystemState } from '@/game/adrenalineSystem';
+import { CloudSyncIndicator } from '@/components/cloud/CloudSyncIndicator';
 
 interface ExtendedCharacter extends RPGCharacter {
   id?: string;
@@ -107,6 +108,7 @@ export function GameHeader({
       </div>
       
       <div className="flex items-center gap-2">
+        <CloudSyncIndicator />
         {onOpenCharacterSheet && (
           <Tooltip>
             <TooltipTrigger asChild>

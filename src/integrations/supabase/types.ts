@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      cloud_saves: {
+        Row: {
+          campaign_id: string
+          campaign_name: string
+          chapter_count: number
+          character_level: number
+          character_name: string
+          checksum: string
+          created_at: string
+          id: string
+          last_synced_at: string
+          play_time: number
+          primary_genre: string
+          save_data: Json
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          campaign_id: string
+          campaign_name: string
+          chapter_count?: number
+          character_level?: number
+          character_name: string
+          checksum: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          play_time?: number
+          primary_genre: string
+          save_data: Json
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          campaign_id?: string
+          campaign_name?: string
+          chapter_count?: number
+          character_level?: number
+          character_name?: string
+          checksum?: string
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          play_time?: number
+          primary_genre?: string
+          save_data?: Json
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       generated_sounds: {
         Row: {
           category: string
@@ -65,6 +119,33 @@ export type Database = {
           id?: string
           npc_id?: string
           portrait_url?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
