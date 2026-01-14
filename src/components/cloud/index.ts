@@ -3,3 +3,4 @@ export { AuthModal } from './AuthModal';
 export { CloudSyncPanel } from './CloudSyncPanel';
 export { CloudConflictModal } from './CloudConflictModal';
 export { CloudSyncIndicator } from './CloudSyncIndicator';
+export { CampaignSyncStatus } from './CampaignSyncStatus';

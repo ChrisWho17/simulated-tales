@@ -3,7 +3,7 @@
 // Integrated with save recovery for automatic error handling
 // ============================================================================
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '@/contexts/CampaignContext';
 import { CampaignMetadata, MAX_CAMPAIGNS } from '@/types/campaign';
@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MigrationPrompt } from './MigrationPrompt';
+import { CampaignSyncStatus, CloudSyncIndicator } from '@/components/cloud';
+import { useAuth } from '@/hooks/useAuth';
+import { CloudSyncService } from '@/services/cloudSyncService';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +42,7 @@ import {
   FileWarning,
   Bomb,
   HardDrive,
+  Cloud,
 } from 'lucide-react';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
@@ -69,6 +73,7 @@ interface CampaignManagerProps {
 
 export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManagerProps) {
   const { campaigns, loadCampaign, deleteCampaign, duplicateCampaign, exportCampaign, importCampaign, activeCampaignId } = useCampaign();
+  const { isAuthenticated } = useAuth();
   
   // Migration state - check on mount if old data needs migrating
   const [showMigration, setShowMigration] = useState(() => needsMigration());
@@ -107,6 +112,13 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
   const [nuclearStep, setNuclearStep] = useState(0); // 0: initial, 1: confirm, 2: final
   const [storageStats, setStorageStats] = useState<ReturnType<typeof getStorageStats> | null>(() => getStorageStats());
+  
+  // Refresh cloud sync status on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      CloudSyncService.refreshSyncedCampaigns();
+    }
+  }, [isAuthenticated]);
   
   const canCreate = canCreateCampaign();
   
@@ -314,6 +326,8 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
           </div>
           
           <div className="flex gap-2">
+            <CloudSyncIndicator variant="badge" />
+            
             <Button
               variant="outline"
               size="sm"
@@ -600,6 +614,7 @@ function CampaignCard({
             <Badge variant="outline" className={genreColor}>
               {campaign.primaryGenre}
             </Badge>
+            <CampaignSyncStatus campaignId={campaign.id} variant="badge" />
           </div>
         </div>
         
