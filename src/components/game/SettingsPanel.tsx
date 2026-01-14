@@ -3,7 +3,8 @@ import {
   X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
-  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard
+  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
+  FileText, Upload
 } from 'lucide-react';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
@@ -18,6 +19,8 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
 import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorModeSystem';
+import { SaveCodeModal } from '@/components/campaign/SaveCodeModal';
+import { CampaignData } from '@/types/campaign';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -41,6 +44,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [showSaveCodeModal, setShowSaveCodeModal] = useState(false);
+  const [saveCodeMode, setSaveCodeMode] = useState<'export' | 'import'>('export');
   
   // Clear all game data from localStorage
   const handleClearAllData = () => {
@@ -933,6 +938,45 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   )}
                 </>
               )}
+              
+              {/* Save Code Section - Ultimate Fallback */}
+              <div className="space-y-3 pt-4 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Save Codes</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Export your progress as a text code you can save anywhere. Works even if browser storage fails.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSaveCodeMode('export');
+                      setShowSaveCodeModal(true);
+                    }}
+                    disabled={!campaignContext?.activeCampaign}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors text-sm",
+                      campaignContext?.activeCampaign
+                        ? "border-primary/40 hover:border-primary/60 hover:bg-primary/5"
+                        : "border-border/30 opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <Download className="w-4 h-4" />
+                    Get Save Code
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSaveCodeMode('import');
+                      setShowSaveCodeModal(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-border/40 hover:border-border/60 hover:bg-muted/30 transition-colors text-sm"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Load Save Code
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           
@@ -1260,6 +1304,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </button>
         </div>
       </div>
+      
+      {/* Save Code Modal */}
+      <SaveCodeModal
+        open={showSaveCodeModal}
+        onClose={() => setShowSaveCodeModal(false)}
+        mode={saveCodeMode}
+        campaign={campaignContext?.activeCampaign}
+        onImport={(campaign: CampaignData) => {
+          // Import campaign through campaign context
+          if (campaignContext?.importCampaign) {
+            campaignContext.importCampaign(JSON.stringify(campaign));
+          }
+          setShowSaveCodeModal(false);
+        }}
+      />
     </div>
   );
 };
