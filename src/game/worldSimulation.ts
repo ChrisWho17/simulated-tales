@@ -380,17 +380,10 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     };
   }
   
-  // 0.5 Initialize ambient system if not already done
+  // Ambient system simplified - no audio, minimal overhead
   if (!ambientInitialized) {
-    const genre = (state as any).genre || (state as any).gameGenre || 'modern';
-    initializeUnifiedAmbient(genre);
+    initializeUnifiedAmbient();
     ambientInitialized = true;
-  } else {
-    // Update genre if it changed
-    const currentGenre = (state as any).genre || (state as any).gameGenre;
-    if (currentGenre) {
-      setAmbientGenre(currentGenre);
-    }
   }
   
   // 1. Move NPCs according to schedules (already in simulateNPCs)
@@ -595,24 +588,24 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
     }
   }
   
-  // 3. Process ambient events (unified chatter + micro-events)
+  // 3. Process ambient events (simplified - no audio)
   try {
-    ambientResult = processAmbientTick(updatedState);
-    if (ambientResult.emitted && ambientResult.entry) {
-      // Add ambient event to world events for logging
-      worldEvents.push({
-        id: `we_ambient_${Date.now()}`,
-        tick: state.time.tick,
-        type: ambientResult.type === 'chatter' ? 'social' : 'environmental',
-        description: ambientResult.entry.text,
-        involvedEntities: ambientResult.entry.involvedNPCs || [],
-        location: (state as any).currentLocation || 'unknown',
-        visibility: 'witnessed',
-        consequences: [],
-      });
-      
-      // Add to summary for narrative context
-      summary.push(`[Ambient] ${ambientResult.entry.text}`);
+    ambientResult = processAmbientTick();
+    if (ambientResult.newEntries.length > 0) {
+      // Add ambient entries to world events for logging
+      for (const entry of ambientResult.newEntries) {
+        worldEvents.push({
+          id: `we_ambient_${entry.id}`,
+          tick: state.time.tick,
+          type: entry.type === 'chatter' ? 'social' : 'environmental',
+          description: entry.text,
+          involvedEntities: entry.involvedNPCs || [],
+          location: (state as any).currentLocation || 'unknown',
+          visibility: 'witnessed',
+          consequences: [],
+        });
+        summary.push(`[Ambient] ${entry.text}`);
+      }
     }
     
     // Get current ambient feed for UI
@@ -623,7 +616,7 @@ export function worldTick(state: GameState, previousState?: GameState): WorldTic
   }
   
   // 4. Check for random events (fallback if no ambient emitted)
-  if (!ambientResult?.emitted && Math.random() < 0.03) { // Reduced chance since ambient handles this
+  if (ambientResult?.newEntries.length === 0 && Math.random() < 0.03) { // Reduced chance since ambient handles this
     const randomEvents = [
       { desc: 'A cold wind blows through the area', type: 'environmental' as const },
       { desc: 'Distant sounds echo in the distance', type: 'environmental' as const },

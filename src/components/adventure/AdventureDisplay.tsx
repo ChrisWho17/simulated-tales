@@ -378,32 +378,10 @@ export function AdventureDisplay({
         setWeatherState(prev => tickWeather(prev, weatherTickRef.current));
       }
       
-      // Sound triggers removed - weather only mode
+      // Sound system fully removed
     }
     previousStoryLength.current = story.length;
-  }, [story.length, isAtBottom, weatherMode, audioInitialized, story]);
-
-  // Sync weather sounds with weather state
-  useEffect(() => {
-    if (audioInitialized && enableWeatherSounds && weatherEnabled) {
-      syncWeather(weatherState);
-    }
-  }, [weatherState, audioInitialized, enableWeatherSounds, weatherEnabled, syncWeather]);
-  
-  // Initialize audio on first user interaction
-  useEffect(() => {
-    const handleFirstInteraction = () => {
-      initializeAudio();
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-    document.addEventListener('click', handleFirstInteraction, { once: true });
-    document.addEventListener('keydown', handleFirstInteraction, { once: true });
-    return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-  }, [initializeAudio]);
+  }, [story.length, isAtBottom, weatherMode, story, setWeatherState]);
 
   // Scroll to bottom handler
   const scrollToBottom = useCallback(() => {
@@ -1415,17 +1393,7 @@ export function AdventureDisplay({
               )}
             </Button>
             
-            {/* Audio Status Indicator - Weather Only */}
-            <div 
-              className="h-7 w-7 flex-shrink-0 flex items-center justify-center"
-              title={audioInitialized ? 'Weather audio active' : 'Click to enable audio'}
-            >
-              {audioInitialized ? (
-                <Volume2 className="w-4 h-4 text-green-400/70" />
-              ) : (
-                <VolumeX className="w-4 h-4 text-muted-foreground/50" />
-              )}
-            </div>
+            {/* Audio indicator removed - no sound in game */}
             
             {/* Character Sheet Button */}
             <Button
