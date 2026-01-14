@@ -61,8 +61,7 @@ import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
 import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS, generateWeatherForecast, ForecastEntry } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
 import { WeatherParticles } from '@/components/ui/weather-particles';
-import { useAudioSystem } from '@/hooks/useAudioSystem';
-import { livingWorldAudio } from '@/game/livingWorldAudio';
+// Audio system removed - no sound in game
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -274,12 +273,7 @@ export function AdventureDisplay({
   // Inventory system integration
   const inventory = useInventory();
   
-  // Audio system integration - weather only
-  const { 
-    initialized: audioInitialized, 
-    syncWeather, 
-    initializeAudio
-  } = useAudioSystem();
+  // Audio system removed - no sound in game
   
   // Get weather settings from game context (must come after gameContext declaration)
   const weatherEnabled = gameContext?.settings?.enableWeatherEffects ?? true;
@@ -287,8 +281,6 @@ export function AdventureDisplay({
   const manualWeatherType = gameContext?.settings?.manualWeatherType as WeatherType | undefined;
   const manualWeatherIntensity = gameContext?.settings?.manualWeatherIntensity;
   const showWeatherParticles = gameContext?.settings?.showWeatherParticles ?? true;
-  const enableWeatherSounds = gameContext?.settings?.audioSettings?.enableWeatherSounds ?? true;
-  const enableStorySounds = gameContext?.settings?.audioSettings?.enableStorySounds ?? true;
   
   // Game loop for adrenaline system with player health for Director priority
   const [gameLoopState, gameLoopActions] = useGameLoop({

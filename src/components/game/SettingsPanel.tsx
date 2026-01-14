@@ -17,7 +17,6 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
-import { useAudioSystem } from '@/hooks/useAudioSystem';
 import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorModeSystem';
 
 interface SettingsPanelProps {
@@ -37,16 +36,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
-  const { 
-    initialized: audioInitialized,
-    muted: audioMuted,
-    unlocked: audioUnlocked,
-    weatherVolume,
-    initializeAudio,
-    setWeatherVolume,
-    toggleMute
-  } = useAudioSystem();
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'audio' | 'features' | 'director' | 'weather'>('gameplay');
+  // Audio system removed - no sound in game
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -197,7 +188,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'saves', 'display', 'audio'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'saves', 'display'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1013,124 +1004,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <span>Instant</span>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Audio Tab */}
-          {activeTab === 'audio' && (
-            <div className="space-y-6">
-              {/* Audio Status Indicator */}
-              {!audioUnlocked && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <VolumeX className="w-4 h-4 text-amber-500" />
-                  <div>
-                    <span className="text-sm font-medium text-amber-500">Audio Locked</span>
-                    <p className="text-xs text-muted-foreground">
-                      Click anywhere on the page to unlock audio playback
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {audioUnlocked && !audioInitialized && (
-                <button
-                  onClick={initializeAudio}
-                  className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary/40 
-                             bg-primary/5 hover:bg-primary/10 hover:border-primary/60 transition-all group"
-                >
-                  <Headphones className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <span className="font-medium text-sm text-primary">Enable Audio</span>
-                    <p className="text-xs text-muted-foreground">Click to initialize the audio system</p>
-                  </div>
-                </button>
-              )}
-              
-              {audioUnlocked && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <Volume2 className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-green-500">Audio unlocked and ready</span>
-                </div>
-              )}
-              
-              {/* Master Sound Toggle */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  {settings.soundEnabled && !audioMuted ? (
-                    <Volume2 className="w-4 h-4 text-[var(--accent-secondary)]" />
-                  ) : (
-                    <VolumeX className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  <div>
-                    <span className="text-sm font-medium">Sound Effects</span>
-                    <p className="text-xs text-muted-foreground">Enable all game sounds</p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={settings.soundEnabled && !audioMuted}
-                  onCheckedChange={async (checked) => {
-                    updateSettings({ soundEnabled: checked });
-                    if (checked) {
-                      // Initialize and preload sounds when enabling
-                      if (!audioInitialized) {
-                        await initializeAudio();
-                      }
-                      if (audioMuted) {
-                        toggleMute();
-                      }
-                    } else {
-                      if (!audioMuted) {
-                        toggleMute();
-                      }
-                    }
-                  }}
-                />
-              </div>
-              
-              {/* Weather Volume - Simplified */}
-              {settings.soundEnabled && audioInitialized && (
-                <>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Weather Ambient Volume</span>
-                      <span className="text-xs text-[var(--accent-secondary)]">
-                        {Math.round(weatherVolume * 100)}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={[weatherVolume * 100]}
-                      min={0}
-                      max={100}
-                      step={1}
-                      onValueChange={([value]) => setWeatherVolume(value / 100)}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Low background noise matching current weather conditions
-                    </p>
-                  </div>
-                  
-                  {/* Weather Sound Toggle */}
-                  <div className="flex items-center justify-between py-2 border-t border-border/30 pt-4">
-                    <div>
-                      <span className="text-sm">Weather Sounds</span>
-                      <p className="text-xs text-muted-foreground">Rain, thunder, wind ambience</p>
-                    </div>
-                    <Switch 
-                      checked={settings.audioSettings?.enableWeatherSounds ?? true}
-                      onCheckedChange={(checked) => updateSettings({ 
-                        audioSettings: { ...settings.audioSettings, enableWeatherSounds: checked }
-                      })}
-                    />
-                  </div>
-                </>
-              )}
-              
-              {!audioInitialized && (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                  Click "Enable Audio" to access volume controls
-                </p>
-              )}
             </div>
           )}
           

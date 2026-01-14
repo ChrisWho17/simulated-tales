@@ -1,9 +1,20 @@
+// Ambient Feed - Simplified version without sound system dependencies
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Sparkles, Eye, EyeOff } from 'lucide-react';
-import { getUnifiedAmbientFeed, UnifiedAmbientEntry } from '@/game/unifiedAmbientSystem';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+// Simplified ambient entry type (without sound system)
+interface AmbientEntry {
+  id: string;
+  text: string;
+  type: 'micro_event' | 'chatter';
+  category?: string;
+  timestamp: number;
+  involvedNPCs?: string[];
+  containsHook?: boolean;
+}
 
 interface AmbientFeedProps {
   className?: string;
@@ -20,19 +31,9 @@ export function AmbientFeed({
   autoHide = true,
   autoHideDelay = 8000,
 }: AmbientFeedProps) {
-  const [entries, setEntries] = useState<UnifiedAmbientEntry[]>([]);
+  const [entries, setEntries] = useState<AmbientEntry[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [lastInteraction, setLastInteraction] = useState(Date.now());
-
-  // Poll for new entries
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const feed = getUnifiedAmbientFeed();
-      setEntries(feed.slice(-maxVisible * 2)); // Keep some buffer
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [maxVisible]);
 
   // Auto-hide after inactivity
   useEffect(() => {
@@ -46,17 +47,6 @@ export function AmbientFeed({
 
     return () => clearTimeout(timeout);
   }, [lastInteraction, autoHide, autoHideDelay, collapsed]);
-
-  // Update last interaction when new entries arrive
-  useEffect(() => {
-    if (entries.length > 0) {
-      setLastInteraction(Date.now());
-      if (collapsed && entries.length > 0) {
-        // Show briefly when new content arrives
-        setCollapsed(false);
-      }
-    }
-  }, [entries.length]);
 
   const positionClasses = {
     'bottom-left': 'bottom-4 left-4',
@@ -107,7 +97,7 @@ export function AmbientFeed({
           >
             <AnimatePresence mode="popLayout">
               {visibleEntries.map((entry) => (
-                <AmbientEntry key={entry.id} entry={entry} />
+                <AmbientEntryItem key={entry.id} entry={entry} />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -117,15 +107,15 @@ export function AmbientFeed({
   );
 }
 
-interface AmbientEntryProps {
-  entry: UnifiedAmbientEntry;
+interface AmbientEntryItemProps {
+  entry: AmbientEntry;
 }
 
-function AmbientEntry({ entry }: AmbientEntryProps) {
+function AmbientEntryItem({ entry }: AmbientEntryItemProps) {
   const isChatter = entry.type === 'chatter';
   const age = Date.now() - entry.timestamp;
-  const fadeStart = 15000; // Start fading at 15s
-  const fadeEnd = 30000; // Fully faded at 30s
+  const fadeStart = 15000;
+  const fadeEnd = 30000;
   const opacity = age < fadeStart ? 1 : Math.max(0.3, 1 - (age - fadeStart) / (fadeEnd - fadeStart));
 
   return (
@@ -142,7 +132,6 @@ function AmbientEntry({ entry }: AmbientEntryProps) {
           : 'bg-secondary/10 border-secondary/20'
       )}
     >
-      {/* Header */}
       <div className="flex items-center gap-1.5 mb-1">
         {isChatter ? (
           <MessageCircle className="h-3 w-3 text-primary/70" />
@@ -154,12 +143,10 @@ function AmbientEntry({ entry }: AmbientEntryProps) {
         </span>
       </div>
 
-      {/* Content */}
       <p className="text-xs text-foreground/80 leading-relaxed">
         {entry.text}
       </p>
 
-      {/* Speaker info for chatter */}
       {isChatter && entry.involvedNPCs && entry.involvedNPCs.length > 0 && (
         <div className="mt-1 flex items-center gap-1">
           <span className="text-[9px] text-muted-foreground/50 italic">
@@ -168,7 +155,6 @@ function AmbientEntry({ entry }: AmbientEntryProps) {
         </div>
       )}
 
-      {/* Hook indicator for micro-events */}
       {!isChatter && entry.containsHook && (
         <div className="mt-1.5 pt-1.5 border-t border-border/30">
           <p className="text-[10px] text-muted-foreground/60 italic">

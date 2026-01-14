@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { GameState, GameEvent, NPC } from '@/types/game';
 import { CharacterData, SPAWN_POINTS } from '@/types/characterCreation';
 import { useMessageNavigation } from '@/hooks/useMessageNavigation';
-import { useAudioSystem } from '@/hooks/useAudioSystem';
+// Audio system removed - no sound in game
 import { 
   createInitialGameState, 
   processAction, 
@@ -342,14 +342,7 @@ export function GameUI() {
   // Audio system integration - weather only
   const {
     initialized: audioInitialized,
-    muted: audioMuted,
-    initializeAudio,
-    syncWeather,
-    setIndoors: setAudioIndoors,
-  } = useAudioSystem();
-  
-  // Track if audio has been initialized this session
-  const audioInitializedRef = useRef(false);
+  // Audio system removed - no sound in game
   
   // Save memories when they change
   useEffect(() => {
