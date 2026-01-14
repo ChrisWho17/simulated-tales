@@ -13,8 +13,6 @@ import Campaigns from "./pages/Campaigns";
 import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
-import SoundGeneratorPage from "./pages/SoundGenerator";
-import SoundSeederPage from "./pages/SoundSeeder";
 import "@/styles/untold-story-engine.css";
 
 // Run storage migration on app startup
@@ -47,8 +45,6 @@ const App = () => (
                   <Route path="/play" element={<Index />} />
                   <Route path="/loadout-test" element={<LoadoutTest />} />
                   <Route path="/inventory-test" element={<InventoryTest />} />
-                  <Route path="/sound-generator" element={<SoundGeneratorPage />} />
-                  <Route path="/sound-seeder" element={<SoundSeederPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

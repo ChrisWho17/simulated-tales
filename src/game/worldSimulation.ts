@@ -5,15 +5,15 @@ import { getTimePeriod } from './gameEngine';
 import { detectBreakpoints, analyzeNPCRelationships, simulateRelationshipEvolution, tickWorldEvolution, initializeWorldEvolution, Breakpoint } from './advancedDynamics';
 import { addStress, relieveStress, getStressTier, checkTraumaTrigger, processPsychologicalTick, createDefaultPsychState } from './psychologicalSystem';
 import { processConsequences, createConsequence, Consequence, getDayPhase, getEnvironmentalEffects } from './consequenceSystem';
-import { 
-  initializeUnifiedAmbient, 
-  processAmbientTick, 
-  getUnifiedAmbientFeed,
-  setAmbientGenre,
-  type UnifiedAmbientEntry,
-  type AmbientTickResult,
-} from './unifiedAmbientSystem';
-import { 
+// Unified ambient system removed - no sound in game
+// Placeholder types for compatibility
+type UnifiedAmbientEntry = { id: string; text: string; type: string; category?: string; timestamp: number; involvedNPCs?: string[]; containsHook?: boolean };
+type AmbientTickResult = { newEntries: UnifiedAmbientEntry[]; activeChatter: any[] };
+const initializeUnifiedAmbient = () => {};
+const processAmbientTick = (): AmbientTickResult => ({ newEntries: [], activeChatter: [] });
+const getUnifiedAmbientFeed = (): UnifiedAmbientEntry[] => [];
+const setAmbientGenre = () => {};
+import {
   npcWeatherReactionSystem, 
   NPCWeatherPersonality,
   WeatherImpact,
