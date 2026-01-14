@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import { User, Session, AuthError, Provider } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AuthState {
@@ -16,6 +16,7 @@ export interface AuthState {
 export interface AuthActions {
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: Provider) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
 }
@@ -87,6 +88,23 @@ export function useAuth(): AuthState & AuthActions {
     }
   }, []);
 
+  const signInWithOAuth = useCallback(async (
+    provider: Provider
+  ): Promise<{ error: AuthError | null }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      return { error };
+    } catch (err) {
+      console.error('[Auth] OAuth sign in error:', err);
+      return { error: err as AuthError };
+    }
+  }, []);
+
   const signOut = useCallback(async (): Promise<void> => {
     try {
       await supabase.auth.signOut();
@@ -116,6 +134,7 @@ export function useAuth(): AuthState & AuthActions {
     isAuthenticated: !!user,
     signUp,
     signIn,
+    signInWithOAuth,
     signOut,
     resetPassword,
   };

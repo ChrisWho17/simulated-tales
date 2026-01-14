@@ -141,7 +141,7 @@ export function loadCampaign(campaignId: string): CampaignData | null {
   }
 }
 
-export function saveCampaign(campaign: CampaignData): void {
+export function saveCampaign(campaign: CampaignData, autoSyncToCloud: boolean = true): void {
   try {
     // Capture current NPC registry state for this campaign
     const npcRegistry = getNPCRegistry();
@@ -187,6 +187,15 @@ export function saveCampaign(campaign: CampaignData): void {
     
     saveCampaignIndex(index);
     console.log(`[Campaign Storage] Saved campaign: ${campaign.meta.name}`);
+    
+    // Auto-sync to cloud if enabled (async, non-blocking)
+    if (autoSyncToCloud) {
+      import('@/services/cloudSyncService').then(({ CloudSyncService }) => {
+        CloudSyncService.autoSyncCampaign(campaign.id);
+      }).catch(err => {
+        console.warn('[Campaign Storage] Cloud sync import failed:', err);
+      });
+    }
   } catch (e) {
     console.error(`[Campaign Storage] Failed to save campaign:`, e);
   }

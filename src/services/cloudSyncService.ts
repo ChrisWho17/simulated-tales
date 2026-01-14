@@ -88,6 +88,8 @@ class CloudSyncServiceClass {
   private syncStatus: SyncStatus = 'idle';
   private lastSyncTime: number | null = null;
   private statusCallbacks: Set<(status: SyncStatus) => void> = new Set();
+  private autoSyncEnabled: boolean = true;
+  private syncedCampaigns: Set<string> = new Set();
 
   // Get current sync status
   getStatus(): SyncStatus {
@@ -97,6 +99,27 @@ class CloudSyncServiceClass {
   // Get last sync time
   getLastSyncTime(): number | null {
     return this.lastSyncTime;
+  }
+
+  // Check if auto-sync is enabled
+  isAutoSyncEnabled(): boolean {
+    return this.autoSyncEnabled;
+  }
+
+  // Enable/disable auto-sync
+  setAutoSync(enabled: boolean): void {
+    this.autoSyncEnabled = enabled;
+    console.log(`[CloudSync] Auto-sync ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  // Check if a campaign is synced to cloud
+  isCampaignSynced(campaignId: string): boolean {
+    return this.syncedCampaigns.has(campaignId);
+  }
+
+  // Get synced campaign IDs
+  getSyncedCampaignIds(): Set<string> {
+    return new Set(this.syncedCampaigns);
   }
 
   // Subscribe to status changes
@@ -138,6 +161,9 @@ class CloudSyncServiceClass {
         console.error('[CloudSync] Error listing saves:', error);
         return [];
       }
+
+      // Update synced campaigns set
+      this.syncedCampaigns = new Set((data || []).map(s => s.campaign_id));
 
       return data || [];
     } catch (e) {
@@ -186,11 +212,29 @@ class CloudSyncServiceClass {
         return { success: false, error: error.message };
       }
 
+      // Mark campaign as synced
+      this.syncedCampaigns.add(campaignId);
       console.log(`[CloudSync] Uploaded campaign: ${campaign.meta.name}`);
       return { success: true };
     } catch (e) {
       console.error('[CloudSync] Failed to upload:', e);
       return { success: false, error: 'Upload failed' };
+    }
+  }
+
+  // Auto-sync a campaign after local save (called automatically)
+  async autoSyncCampaign(campaignId: string): Promise<void> {
+    if (!this.autoSyncEnabled) return;
+    
+    const isAuth = await this.isAuthenticated();
+    if (!isAuth) return;
+
+    console.log(`[CloudSync] Auto-syncing campaign: ${campaignId}`);
+    const result = await this.uploadCampaign(campaignId);
+    
+    if (result.success) {
+      this.lastSyncTime = Date.now();
+      this.setStatus('synced');
     }
   }
 
@@ -230,6 +274,7 @@ class CloudSyncServiceClass {
 
       // Save to local storage
       saveCampaign(campaign);
+      this.syncedCampaigns.add(campaignId);
       console.log(`[CloudSync] Downloaded campaign: ${campaign.meta.name}`);
 
       return { success: true, campaign };
@@ -258,6 +303,7 @@ class CloudSyncServiceClass {
         return { success: false, error: error.message };
       }
 
+      this.syncedCampaigns.delete(campaignId);
       console.log(`[CloudSync] Deleted cloud save: ${campaignId}`);
       return { success: true };
     } catch (e) {
@@ -368,6 +414,11 @@ class CloudSyncServiceClass {
       // Download cloud version, overwriting local
       return this.downloadCampaign(campaignId);
     }
+  }
+
+  // Refresh synced campaigns list from cloud
+  async refreshSyncedCampaigns(): Promise<void> {
+    await this.listCloudSaves();
   }
 }
 
