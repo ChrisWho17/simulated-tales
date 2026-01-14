@@ -8,3 +8,5 @@ export { SaveRecoveryModal } from './SaveRecoveryModal';
 export { RecoveryHistoryPanel } from './RecoveryHistoryPanel';
 export { AskAIHelpModal } from './AskAIHelpModal';
 export { CampaignInventorySync } from './CampaignInventorySync';
+export { LegacyMigrationPrompt } from './LegacyMigrationPrompt';
+export { SaveCodeModal } from './SaveCodeModal';
