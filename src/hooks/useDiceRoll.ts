@@ -7,8 +7,7 @@ import {
   shouldRollDice, 
   DifficultyTier,
   ModifierSource,
-  DicePlayer,
-  ACTION_CATEGORIES
+  DicePlayer
 } from '@/game/diceSystem';
 import { 
   SkillCheckResult,
@@ -29,19 +28,41 @@ const DIFFICULTY_MAP: Record<DifficultyLevel, DifficultyTier> = {
   legendary: 'VERY_HARD' // Cap at VERY_HARD
 };
 
-// Map action types to skill check categories
+// Map action types to skill check categories - complete mapping for all dice actions
 const ACTION_TO_SKILL_MAP: Record<string, { category: SkillCategory; skill: string }> = {
+  // Combat actions
   COMBAT_ATTACK: { category: 'physical', skill: 'combat' },
   COMBAT_DEFEND: { category: 'physical', skill: 'combat' },
   COMBAT_DODGE: { category: 'physical', skill: 'athletics' },
   ESCAPE: { category: 'physical', skill: 'athletics' },
+  RESIST_EFFECT: { category: 'physical', skill: 'athletics' },
+  SAVING_THROW: { category: 'physical', skill: 'athletics' },
+  
+  // Social actions
   INTIMIDATE: { category: 'social', skill: 'intimidation' },
   PERSUADE_MAJOR: { category: 'social', skill: 'persuasion' },
   PERSUADE_MINOR: { category: 'social', skill: 'persuasion' },
   ROMANCE_ADVANCE: { category: 'social', skill: 'seduction' },
+  FLIRT: { category: 'social', skill: 'charm' },
+  HAGGLE: { category: 'social', skill: 'persuasion' },
+  
+  // Physical actions
   STEALTH: { category: 'physical', skill: 'athletics' },
-  PERCEPTION_CHECK: { category: 'social', skill: 'deception' }, // Using deception for insight
-  FLIRT: { category: 'social', skill: 'charm' }
+  CLIMB: { category: 'physical', skill: 'athletics' },
+  SWIM: { category: 'physical', skill: 'athletics' },
+  JUMP: { category: 'physical', skill: 'athletics' },
+  LIFT: { category: 'physical', skill: 'athletics' },
+  ENDURE: { category: 'physical', skill: 'athletics' },
+  
+  // Practical/mental actions
+  PERCEPTION_CHECK: { category: 'practical', skill: 'survival' },
+  SEARCH: { category: 'practical', skill: 'survival' },
+  LOCKPICK: { category: 'practical', skill: 'crafting' },
+  CRAFT: { category: 'practical', skill: 'crafting' },
+  HEAL: { category: 'practical', skill: 'medicine' },
+  RECALL: { category: 'practical', skill: 'medicine' },
+  INSIGHT: { category: 'social', skill: 'charm' },
+  CRITICAL_CHOICE: { category: 'practical', skill: 'survival' },
 };
 
 export interface DiceRollOptions {
@@ -192,7 +213,25 @@ export function combatActionToDiceAction(action: string): string {
   return map[action] || 'COMBAT_ATTACK';
 }
 
-// Convert player state to DicePlayer format
+/**
+ * Convert D&D-style stats (8-20 scale) to dice system format (0-100 scale)
+ * Formula: ((stat - 10) * 5) + 50 = percentage
+ * 10 = 50 (average), 20 = 100 (maximum), 8 = 40 (minimum typical)
+ */
+function convertDnDStatToPercentage(stat: number | undefined): number {
+  if (stat === undefined || stat === null || isNaN(stat)) return 50;
+  // Clamp D&D stat to reasonable range (3-30)
+  const clampedStat = Math.max(3, Math.min(30, stat));
+  // Convert: 10 = 50%, each point = 5%
+  const converted = ((clampedStat - 10) * 5) + 50;
+  // Clamp result to 0-100 range
+  return Math.max(0, Math.min(100, converted));
+}
+
+/**
+ * Convert player state to DicePlayer format
+ * Handles both D&D-style stats (8-20) and percentage stats (0-100)
+ */
 export function toDicePlayer(stats: {
   strength?: number;
   agility?: number;
@@ -200,15 +239,25 @@ export function toDicePlayer(stats: {
   charisma?: number;
   perception?: number;
   endurance?: number;
-}): DicePlayer {
+}, isPercentageScale = false): DicePlayer {
+  // Auto-detect scale: D&D stats are typically 3-30, percentage is 0-100
+  const values = Object.values(stats).filter(v => v !== undefined) as number[];
+  const maxVal = Math.max(...values, 0);
+  const isDnDScale = !isPercentageScale && maxVal <= 30;
+  
+  const convert = isDnDScale ? convertDnDStatToPercentage : (v: number | undefined) => {
+    if (v === undefined || v === null || isNaN(v)) return 50;
+    return Math.max(0, Math.min(100, v));
+  };
+  
   return {
     stats: {
-      strength: stats.strength ?? 50,
-      agility: stats.agility ?? 50,
-      intelligence: stats.intelligence ?? 50,
-      charisma: stats.charisma ?? 50,
-      perception: stats.perception ?? 50,
-      endurance: stats.endurance ?? 50
+      strength: convert(stats.strength),
+      agility: convert(stats.agility),
+      intelligence: convert(stats.intelligence),
+      charisma: convert(stats.charisma),
+      perception: convert(stats.perception),
+      endurance: convert(stats.endurance)
     },
     wounds: [],
     statusEffects: []

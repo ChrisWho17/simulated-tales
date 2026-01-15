@@ -205,35 +205,58 @@ export const rollDice = (sides: number, count = 1): { rolls: number[]; total: nu
 /**
  * Convert stat (0-100) to D20 modifier (-5 to +10)
  * 50 = +0, every 10 points = +2
+ * Includes validation to handle invalid inputs
  */
 export const calculateStatModifier = (statValue: number): number => {
-  return Math.floor((statValue - 50) / 5);
+  // Validate input
+  if (typeof statValue !== 'number' || isNaN(statValue)) return 0;
+  // Clamp to valid range
+  const clampedStat = Math.max(0, Math.min(100, statValue));
+  return Math.floor((clampedStat - 50) / 5);
 };
 
 /**
  * Get effective stat value after applying wounds and status effects
+ * Includes validation to handle missing or invalid data
  */
 export const getEffectiveStatWithWounds = (player: DicePlayer, statName: StatType): number => {
-  let base = player.stats[statName] || 50;
+  // Validate player and stats exist
+  if (!player || !player.stats) return 50;
+  
+  const rawStat = player.stats[statName];
+  let base = typeof rawStat === 'number' && !isNaN(rawStat) ? rawStat : 50;
   let modifier = 0;
   
-  player.wounds?.forEach(wound => {
-    if (wound.statPenalties?.[statName]) {
-      modifier += wound.statPenalties[statName]!;
-    }
-  });
+  // Apply wound penalties safely
+  if (Array.isArray(player.wounds)) {
+    player.wounds.forEach(wound => {
+      if (wound?.statPenalties?.[statName]) {
+        const penalty = wound.statPenalties[statName];
+        if (typeof penalty === 'number' && !isNaN(penalty)) {
+          modifier += penalty;
+        }
+      }
+    });
+  }
   
-  player.statusEffects?.forEach(effect => {
-    if (effect.statModifiers?.[statName]) {
-      modifier += effect.statModifiers[statName]!;
-    }
-  });
+  // Apply status effect modifiers safely
+  if (Array.isArray(player.statusEffects)) {
+    player.statusEffects.forEach(effect => {
+      if (effect?.statModifiers?.[statName]) {
+        const effectMod = effect.statModifiers[statName];
+        if (typeof effectMod === 'number' && !isNaN(effectMod)) {
+          modifier += effectMod;
+        }
+      }
+    });
+  }
   
   return Math.max(1, Math.min(100, base + modifier));
 };
 
 /**
  * Perform a full dice roll with all modifiers
+ * Includes comprehensive input validation
  */
 export const performDiceRoll = (
   player: DicePlayer,
@@ -241,8 +264,14 @@ export const performDiceRoll = (
   difficulty: DifficultyTier = 'NORMAL',
   contextModifiers: ModifierSource[] = []
 ): DiceRollResult | null => {
+  // Validate inputs
+  if (!player || !actionType) return null;
+  
   const action = ACTION_CATEGORIES[actionType];
-  if (!action) return null;
+  if (!action) {
+    console.warn(`[DiceSystem] Unknown action type: ${actionType}`);
+    return null;
+  }
   
   const diffMod = DIFFICULTY_MODIFIERS[difficulty] || DIFFICULTY_MODIFIERS.NORMAL;
   
@@ -263,26 +292,34 @@ export const performDiceRoll = (
     { source: `Difficulty (${diffMod.label})`, value: diffMod.modifier }
   ];
   
-  // Add context modifiers
-  contextModifiers.forEach(mod => {
-    totalModifier += mod.value;
-    modifierBreakdown.push(mod);
-  });
-  
-  // Check for wounds affecting this stat
-  player.wounds?.forEach(wound => {
-    if (wound.statPenalties?.[action.stat]) {
-      const penalty = Math.floor(wound.statPenalties[action.stat]! / 5);
-      if (penalty !== 0) {
-        totalModifier += penalty;
-        modifierBreakdown.push({ 
-          source: `${wound.type} (${wound.location})`, 
-          value: penalty,
-          isWound: true 
-        });
-      }
+  // Add context modifiers (with validation)
+  const safeModifiers = Array.isArray(contextModifiers) ? contextModifiers : [];
+  safeModifiers.forEach(mod => {
+    if (mod && typeof mod.value === 'number' && !isNaN(mod.value)) {
+      totalModifier += mod.value;
+      modifierBreakdown.push(mod);
     }
   });
+  
+  // Check for wounds affecting this stat (with validation)
+  if (Array.isArray(player.wounds)) {
+    player.wounds.forEach(wound => {
+      if (wound?.statPenalties?.[action.stat]) {
+        const rawPenalty = wound.statPenalties[action.stat];
+        if (typeof rawPenalty === 'number' && !isNaN(rawPenalty)) {
+          const penalty = Math.floor(rawPenalty / 5);
+          if (penalty !== 0) {
+            totalModifier += penalty;
+            modifierBreakdown.push({ 
+              source: `${wound.type || 'Wound'} (${wound.location || 'body'})`, 
+              value: penalty,
+              isWound: true 
+            });
+          }
+        }
+      }
+    });
+  }
   
   const totalRoll = naturalRoll + totalModifier;
   
