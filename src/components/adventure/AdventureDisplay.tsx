@@ -1753,7 +1753,7 @@ export function AdventureDisplay({
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="What do you do?"
+              placeholder="What do you do? (try /recap for story summary)"
               className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
               style={{ fontSize: '16px' }}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
