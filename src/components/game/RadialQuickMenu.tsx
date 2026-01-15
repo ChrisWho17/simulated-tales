@@ -10,14 +10,16 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-// Floating particle component
+// Floating particle component with varied properties
 const FloatingParticle = ({ 
   delay, 
   duration, 
   size, 
   startAngle, 
   radius,
-  color 
+  color,
+  opacity,
+  speed 
 }: { 
   delay: number; 
   duration: number; 
@@ -25,12 +27,22 @@ const FloatingParticle = ({
   startAngle: number;
   radius: number;
   color: string;
+  opacity: number;
+  speed: number;
 }) => {
+  // Each particle has unique trajectory based on its properties
+  const angleVariance = 30 + Math.random() * 60;
+  const endAngle = startAngle + angleVariance * speed;
+  const radiusVariance = 15 + Math.random() * 35;
+  
   const startX = Math.cos((startAngle * Math.PI) / 180) * radius;
   const startY = Math.sin((startAngle * Math.PI) / 180) * radius;
-  const endAngle = startAngle + 60 + Math.random() * 40;
-  const endX = Math.cos((endAngle * Math.PI) / 180) * (radius + 20 + Math.random() * 30);
-  const endY = Math.sin((endAngle * Math.PI) / 180) * (radius + 20 + Math.random() * 30);
+  const midAngle = startAngle + angleVariance * 0.5;
+  const midRadius = radius + radiusVariance * 0.7;
+  const midX = Math.cos((midAngle * Math.PI) / 180) * midRadius;
+  const midY = Math.sin((midAngle * Math.PI) / 180) * midRadius;
+  const endX = Math.cos((endAngle * Math.PI) / 180) * (radius + radiusVariance);
+  const endY = Math.sin((endAngle * Math.PI) / 180) * (radius + radiusVariance);
   
   return (
     <motion.div
@@ -41,7 +53,7 @@ const FloatingParticle = ({
         background: color,
         left: '50%',
         top: '50%',
-        filter: 'blur(0.5px)',
+        filter: size > 3 ? 'blur(0.5px)' : 'none',
       }}
       initial={{ 
         x: startX - size/2, 
@@ -50,19 +62,81 @@ const FloatingParticle = ({
         scale: 0 
       }}
       animate={{ 
-        x: [startX - size/2, endX - size/2, startX - size/2],
-        y: [startY - size/2, endY - size/2, startY - size/2],
-        opacity: [0, 0.8, 0.6, 0],
-        scale: [0, 1, 0.8, 0],
+        x: [startX - size/2, midX - size/2, endX - size/2, startX - size/2],
+        y: [startY - size/2, midY - size/2, endY - size/2, startY - size/2],
+        opacity: [0, opacity * 0.9, opacity * 0.7, opacity * 0.4, 0],
+        scale: [0, 1.1, 0.9, 0.6, 0],
       }}
       transition={{
-        duration,
+        duration: duration / speed,
         delay,
         repeat: Infinity,
         ease: "easeInOut",
       }}
     />
   );
+};
+
+// Generate particles with varied properties
+const generateParticles = () => {
+  const particles: Array<{
+    key: string;
+    delay: number;
+    duration: number;
+    size: number;
+    startAngle: number;
+    radius: number;
+    color: string;
+    opacity: number;
+    speed: number;
+  }> = [];
+  
+  // Layer 1: Larger, slower primary particles
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      key: `large-${i}`,
+      delay: i * 0.4 + Math.random() * 0.3,
+      duration: 6 + Math.random() * 3,
+      size: 4 + Math.random() * 3,
+      startAngle: (i * 45) + Math.random() * 30,
+      radius: 120 + Math.random() * 50,
+      color: 'hsl(var(--primary))',
+      opacity: 0.3 + Math.random() * 0.3,
+      speed: 0.6 + Math.random() * 0.4,
+    });
+  }
+  
+  // Layer 2: Medium particles with varied colors
+  for (let i = 0; i < 12; i++) {
+    particles.push({
+      key: `medium-${i}`,
+      delay: i * 0.25 + Math.random() * 0.2,
+      duration: 4 + Math.random() * 2,
+      size: 2 + Math.random() * 2.5,
+      startAngle: (i * 30) + Math.random() * 20,
+      radius: 90 + Math.random() * 70,
+      color: i % 3 === 0 ? 'hsl(var(--primary))' : 'rgba(255, 255, 255, 0.8)',
+      opacity: 0.4 + Math.random() * 0.4,
+      speed: 0.8 + Math.random() * 0.5,
+    });
+  }
+  
+  // Layer 3: Tiny fast sparkles
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      key: `sparkle-${i}`,
+      delay: i * 0.15 + Math.random() * 0.4,
+      duration: 2.5 + Math.random() * 1.5,
+      size: 1 + Math.random() * 1.5,
+      startAngle: (i * 18) + Math.random() * 15,
+      radius: 70 + Math.random() * 100,
+      color: 'rgba(255, 255, 255, 0.9)',
+      opacity: 0.5 + Math.random() * 0.5,
+      speed: 1 + Math.random() * 0.8,
+    });
+  }
+  
+  return particles;
 };
 
 interface RadialQuickMenuProps {
@@ -113,6 +187,9 @@ export function RadialQuickMenu({
 }: RadialQuickMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  
+  // Memoize particles so they don't regenerate on every render
+  const particles = useMemo(() => generateParticles(), []);
 
   const toggleMenu = useCallback(() => {
     setIsOpen(prev => !prev);
@@ -233,42 +310,19 @@ export function RadialQuickMenu({
             }}
           />
           
-          {/* Floating particles */}
+          {/* Floating particles with varied properties */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-            {/* Primary color particles */}
-            {Array.from({ length: 12 }).map((_, i) => (
+            {particles.map((particle) => (
               <FloatingParticle
-                key={`primary-${i}`}
-                delay={i * 0.3}
-                duration={4 + Math.random() * 2}
-                size={2 + Math.random() * 3}
-                startAngle={(i * 30) + Math.random() * 15}
-                radius={100 + Math.random() * 60}
-                color="hsl(var(--primary) / 0.6)"
-              />
-            ))}
-            {/* Accent particles - slightly larger, different timing */}
-            {Array.from({ length: 8 }).map((_, i) => (
-              <FloatingParticle
-                key={`accent-${i}`}
-                delay={0.5 + i * 0.4}
-                duration={5 + Math.random() * 2}
-                size={3 + Math.random() * 2}
-                startAngle={(i * 45) + 20}
-                radius={130 + Math.random() * 40}
-                color="hsl(var(--primary) / 0.4)"
-              />
-            ))}
-            {/* Tiny sparkle particles */}
-            {Array.from({ length: 16 }).map((_, i) => (
-              <FloatingParticle
-                key={`sparkle-${i}`}
-                delay={i * 0.2}
-                duration={3 + Math.random() * 1.5}
-                size={1 + Math.random() * 1.5}
-                startAngle={(i * 22.5)}
-                radius={80 + Math.random() * 80}
-                color="rgba(255, 255, 255, 0.5)"
+                key={particle.key}
+                delay={particle.delay}
+                duration={particle.duration}
+                size={particle.size}
+                startAngle={particle.startAngle}
+                radius={particle.radius}
+                color={particle.color}
+                opacity={particle.opacity}
+                speed={particle.speed}
               />
             ))}
           </div>

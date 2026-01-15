@@ -1583,12 +1583,12 @@ export function AdventureDisplay({
               }}
             />
             
-            {/* Weather Button - Hidden on mobile, accessible via quick menu */}
+            {/* Weather Button - Now visible on mobile too */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`hidden md:flex h-7 w-7 flex-shrink-0 frosted-button ${
+              className={`h-7 w-7 md:h-7 md:w-7 flex-shrink-0 frosted-button ${
                 weatherState.current === 'storm' ? 'text-yellow-400' : 
                 weatherState.current === 'rain' ? 'text-blue-400' : 
                 weatherState.current === 'fog' ? 'text-violet-400' : 
