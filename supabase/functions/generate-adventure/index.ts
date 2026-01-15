@@ -1278,7 +1278,46 @@ ${timeContext.timeOfDay === 'night' ? '  • Most shops closed, taverns and inns
 ${timeContext.timeOfDay === 'late_night' ? '  • Near-empty streets, only night workers about, profound quiet, deepest shadows' : ''}
 - Sensory details should match: ${timeContext.isDaytime ? 'warmth, sunlight, clear visibility, daytime sounds' : 'cool air, moonlight or artificial light, limited visibility, night sounds'}
 - NEVER describe midday sun during night scenes or vice versa
-- Use time-appropriate greetings: "${timeContext.timeOfDay === 'morning' ? 'Good morning' : timeContext.timeOfDay === 'evening' || timeContext.timeOfDay === 'night' ? 'Good evening' : timeContext.timeOfDay === 'afternoon' ? 'Good afternoon' : 'Greetings'}"`;
+- Use time-appropriate greetings: "${timeContext.timeOfDay === 'morning' ? 'Good morning' : timeContext.timeOfDay === 'evening' || timeContext.timeOfDay === 'night' ? 'Good evening' : timeContext.timeOfDay === 'afternoon' ? 'Good afternoon' : 'Greetings'}"
+
+=== TIME DURATION NARRATION - HOW TO DESCRIBE ELAPSED TIME ===
+When describing time passage, match your language to the actual duration:
+
+INSTANT (< 1 minute):
+- "In a heartbeat..." / "A split second later..." / "Before you can blink..."
+- "The moment stretches..." / "Time seems to freeze, then snap forward..."
+
+BRIEF (1-5 minutes):
+- "A moment later..." / "After a brief pause..." / "Scarcely a minute passes..."
+- "In the time it takes to catch your breath..." / "A few heartbeats later..."
+
+SHORT (5-15 minutes):
+- "Several minutes crawl by..." / "After a short while..." / "Quarter of an hour passes..."
+- "Time enough to grow restless..." / "The wait feels longer than it is..."
+
+MODERATE (15-30 minutes):
+- "Half an hour slips away..." / "Twenty minutes feel like an eternity..."
+- "The better part of half an hour..." / "Time stretches, languid and heavy..."
+
+SUBSTANTIAL (30-60 minutes):
+- "Nearly an hour passes..." / "The hour hand creeps forward..."
+- "Forty minutes of silence..." / "Time enough to question every choice..."
+
+LENGTHY (1-2 hours):
+- "An hour crawls by..." / "The morning wears on..." / "Two hours feel like days..."
+- "Time loses meaning..." / "The sun shifts noticeably in the sky..."
+
+EXTENDED (2+ hours):
+- "Hours blur together..." / "The afternoon fades into memory..."
+- "By the time you finish, the light has changed entirely..."
+- "What feels like a lifetime passes..."
+
+CRITICAL: Match narrative tension to duration:
+- Quick actions (combat, dialogue) = instant/brief language
+- Travel, waiting, searching = short/moderate language  
+- Rest, recovery, long tasks = substantial/lengthy language
+- Never describe a 2-minute conversation as "hours later"
+- Never describe an hour-long journey as "a moment passes"`;
     }
     
     // === NPC SCHEDULE CONTEXT - NPCs present based on time of day ===
