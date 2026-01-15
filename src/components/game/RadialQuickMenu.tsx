@@ -339,7 +339,7 @@ export function RadialQuickMenu({
               const isHovered = hoveredIndex === index;
               
               return (
-                <motion.button
+                <button
                   key={index}
                   onClick={() => handleItemClick(item.onClick)}
                   onMouseEnter={() => setHoveredIndex(index)}
@@ -350,47 +350,32 @@ export function RadialQuickMenu({
                     "absolute flex items-center justify-center",
                     "w-14 h-14 rounded-full",
                     "bg-card/90 backdrop-blur-md border-2",
+                    "transition-transform duration-150",
                     item.color
                   )}
-                  initial={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
-                  animate={{ 
-                    scale: isHovered ? 1.15 : 1,
-                    opacity: 1,
-                    x: '-50%',
-                    y: '-50%',
+                  style={{
+                    left: `calc(50% + ${position.x}px)`,
+                    top: `calc(50% + ${position.y}px)`,
+                    transform: `translate(-50%, -50%) scale(${isHovered ? 1.15 : 1})`,
                     boxShadow: isHovered 
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
                       : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
                     borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
                   }}
-                  exit={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
-                  transition={{
-                    duration: 0.15,
-                    ease: "easeOut",
-                    delay: 0.05,
-                  }}
-                  style={{
-                    left: `calc(50% + ${position.x}px)`,
-                    top: `calc(50% + ${position.y}px)`,
-                  }}
                 >
                   {item.icon}
                   
                   {/* Label below button */}
-                  <motion.span 
+                  <span 
                     className={cn(
                       "absolute top-full mt-2 left-1/2 -translate-x-1/2",
                       "text-[11px] font-medium whitespace-nowrap",
                       isHovered ? "text-foreground" : "text-muted-foreground"
                     )}
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ delay: 0.1 }}
                   >
                     {item.label}
-                  </motion.span>
-                </motion.button>
+                  </span>
+                </button>
               );
             })}
             
@@ -402,12 +387,12 @@ export function RadialQuickMenu({
                 "w-16 h-16 rounded-full",
                 "bg-card/95 border-2 border-primary/50",
                 "hover:border-primary hover:scale-105 active:scale-95",
-                "transition-transform duration-150"
+                "transition-transform duration-150",
+                "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
               )}
               style={{
-                left: 'calc(50% - 33px)',
-                top: 'calc(50% - 31px)',
-                transform: 'translate(-50%, -50%)',
+                marginLeft: '-1px',
+                marginTop: '-1px',
                 boxShadow: '0 0 30px 8px hsl(var(--primary) / 0.25), 0 0 60px 15px hsl(var(--primary) / 0.1)'
               }}
             >
