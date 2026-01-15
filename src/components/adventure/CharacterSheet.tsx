@@ -5,8 +5,11 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy
 } from 'lucide-react';
+import { AchievementPerksToggle, useAchievementStatPerks } from '@/components/game/AchievementStatPerks';
+import { useCampaignOptional } from '@/contexts/CampaignContext';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -335,9 +338,13 @@ export function CharacterSheet({
   hasBloodLoss = false
 }: CharacterSheetProps) {
   const { settings } = useGame();
+  const campaign = useCampaignOptional();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  
+  // Achievement stat perks
+  const { enabled: perksEnabled, statBonuses: perkBonuses } = useAchievementStatPerks(campaign?.activeCampaign?.id);
   
   // Check if realism mode is enabled
   const isRealismMode = settings.inDepthSettings?.worldTone === 'brutal' || 
@@ -349,20 +356,35 @@ export function CharacterSheet({
     energy: 100
   });
 
-  // Calculate effective stats with modifier effects
-  const { effectiveStats, statChanges } = useMemo(() => {
+  // Calculate effective stats with modifier effects AND achievement perks
+  const { effectiveStats, statChanges, perkChanges } = useMemo(() => {
+    let baseStats = { ...character.stats };
+    const perkChangesMap: Record<string, number> = {};
+    
+    // Apply achievement perks first if enabled
+    if (perksEnabled && perkBonuses) {
+      for (const [stat, bonus] of Object.entries(perkBonuses) as [keyof CharacterStats, number][]) {
+        if (bonus > 0) {
+          baseStats[stat] += bonus;
+          perkChangesMap[stat] = bonus;
+        }
+      }
+    }
+    
+    // Then apply modifier effects
     if (!modifierState || modifierState.activeModifiers.length === 0) {
-      return { effectiveStats: character.stats, statChanges: {} };
+      return { effectiveStats: baseStats, statChanges: {}, perkChanges: perkChangesMap };
     }
     const result = calculateEffectiveStats(
-      character.stats as unknown as Record<string, number>,
+      baseStats as unknown as Record<string, number>,
       modifierState.activeModifiers
     );
     return { 
       effectiveStats: result.stats as unknown as CharacterStats, 
-      statChanges: result.changes 
+      statChanges: result.changes,
+      perkChanges: perkChangesMap
     };
-  }, [character.stats, modifierState]);
+  }, [character.stats, modifierState, perksEnabled, perkBonuses]);
 
   const formatMod = (stat: number, statKey?: string) => {
     const mod = getStatModifier(stat);
@@ -504,22 +526,39 @@ export function CharacterSheet({
                 <h3 className="font-semibold text-primary mb-3 flex items-center gap-2 text-sm md:text-base">
                   <Shield className="w-4 h-4" />
                   Attributes
+                  {perksEnabled && Object.values(perkChanges).some(v => v > 0) && (
+                    <span className="text-xs text-amber-400 flex items-center gap-1">
+                      <Trophy className="w-3 h-3" />
+                      Perks Active
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-3 gap-2 md:gap-3">
                   {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
                     const { baseStr, change } = formatMod(effectiveStats[stat], stat);
-                    const hasChange = change !== 0;
+                    const hasModifierChange = change !== 0;
+                    const hasPerkBonus = perkChanges[stat] > 0;
                     return (
                       <div 
                         key={stat} 
-                        className="bg-background/50 rounded-lg p-2 md:p-3 border border-border/30 text-center"
+                        className={cn(
+                          "bg-background/50 rounded-lg p-2 md:p-3 border text-center",
+                          hasPerkBonus ? "border-amber-500/30" : "border-border/30"
+                        )}
                       >
                         <div className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">
                           {stat.slice(0, 3)}
                         </div>
                         <div className="text-lg md:text-xl font-bold mt-0.5 flex items-center justify-center gap-1">
                           <span>{effectiveStats[stat]}</span>
-                          {hasChange && (
+                          {/* Show perk bonus */}
+                          {hasPerkBonus && (
+                            <span className="text-xs text-amber-400" title={`Achievement Perk: +${perkChanges[stat]}`}>
+                              (+{perkChanges[stat]})
+                            </span>
+                          )}
+                          {/* Show modifier change */}
+                          {hasModifierChange && (
                             <span className={`text-xs ${change > 0 ? 'text-modifier-buff' : 'text-modifier-critical'}`}>
                               ({change > 0 ? '+' : ''}{change})
                             </span>
@@ -530,6 +569,11 @@ export function CharacterSheet({
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Achievement Perks Toggle */}
+              <div className="bg-background/30 rounded-lg p-3 border border-border/20">
+                <AchievementPerksToggle campaignId={campaign?.activeCampaign?.id} />
               </div>
 
 
