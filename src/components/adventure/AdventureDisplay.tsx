@@ -20,6 +20,7 @@ import { SavesDropdown } from '@/components/campaign';
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
+import { SessionRecapSplash } from '@/components/game/SessionRecapSplash';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
@@ -256,6 +257,7 @@ export function AdventureDisplay({
   const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showSessionRecap, setShowSessionRecap] = useState(false);
   
   // Weather state - use external if provided, otherwise manage locally
   const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
@@ -1036,6 +1038,14 @@ export function AdventureDisplay({
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
+      // Check for /recap command - intercept and show splash
+      const trimmedInput = input.trim().toLowerCase();
+      if (trimmedInput === '/recap') {
+        setShowSessionRecap(true);
+        setInput('');
+        return;
+      }
+      
       // Check for /checkself command
       const parsed = parseEnhancedCommand(input.trim());
       if (parsed.type === 'checkself') {
@@ -2093,6 +2103,20 @@ export function AdventureDisplay({
         isOpen={showInventory} 
         onClose={() => setShowInventory(false)} 
         availableMods={[]} 
+      />
+      
+      {/* Session Recap Splash - triggered by /recap command */}
+      <SessionRecapSplash
+        isOpen={showSessionRecap}
+        onClose={() => setShowSessionRecap(false)}
+        storyEntries={story}
+        characterName={character.name}
+        currentLocation={
+          // Extract location from last narrator entry or use fallback
+          story.filter(e => e.role === 'narrator').slice(-1)[0]?.content.match(/\*\*([^*]+)\*\*/)?.[1] || 
+          'an unknown location'
+        }
+        genre={genre}
       />
     </div>
   );
