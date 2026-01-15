@@ -85,27 +85,18 @@ export const ORIGINS: Record<GameGenre, Origin[]> = {
     { id: 'pressed_sailor', name: 'Pressed Sailor', description: 'Forced into service, found freedom', socialClass: 'common', familyStatus: 'distant', startingAdvantages: ['Seamanship', 'Naval knowledge', 'Determination'], startingDisadvantages: ['Hunted', 'Trust issues'], suggestedTraits: ['Resentful', 'Skilled', 'Free-spirited'], narrativeHooks: ['Navy pursuit', 'Old shipmates', 'Family waiting'] },
     { id: 'merchant_heir', name: 'Merchant Heir', description: 'Trading company legacy, chose the black flag', socialClass: 'merchant', familyStatus: 'estranged', startingAdvantages: ['Navigation', 'Trade knowledge', 'Wealth'], startingDisadvantages: ['Family hunters', 'Soft'], suggestedTraits: ['Ambitious', 'Educated', 'Rebellious'], narrativeHooks: ['Family business', 'Trade secrets', 'Arranged marriage fled'] },
   ],
-  noir: [
-    { id: 'fallen_idealist', name: 'Fallen Idealist', description: 'Once believed in the system', socialClass: 'common', familyStatus: 'broken', startingAdvantages: ['Connections', 'Experience', 'Reputation'], startingDisadvantages: ['Cynical', 'Enemies made'], suggestedTraits: ['Cynical', 'Experienced', 'Lonely'], narrativeHooks: ['Old case reopened', 'Former partner', 'One good deed'] },
+  war: [
+    { id: 'drafted_soldier', name: 'Drafted Soldier', description: 'Didn\'t choose this fight', socialClass: 'common', familyStatus: 'distant', startingAdvantages: ['Combat training', 'Brothers in arms', 'Discipline'], startingDisadvantages: ['Trauma', 'No choice'], suggestedTraits: ['Reluctant', 'Loyal', 'Haunted'], narrativeHooks: ['Returning home', 'War crimes witnessed', 'Missing comrades'] },
+    { id: 'career_military', name: 'Career Military', description: 'Born for the uniform', socialClass: 'common', familyStatus: 'complicated', startingAdvantages: ['Leadership', 'Combat skills', 'Connections'], startingDisadvantages: ['Rigid thinking', 'Enemies made'], suggestedTraits: ['Disciplined', 'Proud', 'Tactical'], narrativeHooks: ['Court martial risk', 'Political games', 'Old rivals'] },
   ],
-  urban: [
+  modern_life: [
     { id: 'old_money', name: 'Old Money', description: 'Generational wealth and expectations', socialClass: 'noble', familyStatus: 'distant', startingAdvantages: ['Wealth', 'Connections', 'Education'], startingDisadvantages: ['Expectations', 'Sheltered'], suggestedTraits: ['Refined', 'Entitled', 'Conflicted'], narrativeHooks: ['Family scandals', 'Disinheritance threat', 'Class awakening'] },
     { id: 'immigrant_family', name: 'Immigrant Family', description: 'First generation, carrying dreams', socialClass: 'common', familyStatus: 'loving', startingAdvantages: ['Work ethic', 'Community', 'Perspective'], startingDisadvantages: ['Prejudice', 'Financial pressure'], suggestedTraits: ['Determined', 'Family-oriented', 'Resilient'], narrativeHooks: ['Family obligations', 'Cultural identity', 'Making it'] },
+    { id: 'self_made', name: 'Self Made', description: 'Built everything from nothing', socialClass: 'merchant', familyStatus: 'broken', startingAdvantages: ['Drive', 'Street smarts', 'Independence'], startingDisadvantages: ['Trust issues', 'Workaholic'], suggestedTraits: ['Ambitious', 'Driven', 'Guarded'], narrativeHooks: ['Past catching up', 'Empire at risk', 'Finding balance'] },
   ],
-  romance: [
-    { id: 'heartbroken', name: 'Heartbroken', description: 'Love left scars', socialClass: 'common', familyStatus: 'complicated', startingAdvantages: ['Emotional depth', 'Experience', 'Independence'], startingDisadvantages: ['Trust issues', 'Walls up'], suggestedTraits: ['Guarded', 'Passionate', 'Cynical'], narrativeHooks: ['Ex returns', 'Opening up', 'Second chances'] },
-  ],
-  survival: [
-    { id: 'sole_survivor', name: 'Sole Survivor', description: 'Everyone else is gone', socialClass: 'unknown', familyStatus: 'orphaned', startingAdvantages: ['Survival skills', 'Nothing to lose', 'Determination'], startingDisadvantages: ['Trauma', 'Alone'], suggestedTraits: ['Haunted', 'Resourceful', 'Driven'], narrativeHooks: ['Finding others', 'What happened', 'Moving forward'] },
-  ],
-  historical: [
-    { id: 'minor_nobility', name: 'Minor Nobility', description: 'A title with little power', socialClass: 'noble', familyStatus: 'distant', startingAdvantages: ['Education', 'Some status', 'Connections'], startingDisadvantages: ['Expectations', 'Poverty'], suggestedTraits: ['Proud', 'Educated', 'Ambitious'], narrativeHooks: ['Restore glory', 'Political intrigue', 'Forbidden love'] },
-  ],
-  superhero: [
-    { id: 'tragic_origin', name: 'Tragic Origin', description: 'Powers came at great cost', socialClass: 'common', familyStatus: 'broken', startingAdvantages: ['Powers', 'Motivation', 'Nothing to lose'], startingDisadvantages: ['Trauma', 'Enemies'], suggestedTraits: ['Driven', 'Haunted', 'Protective'], narrativeHooks: ['Responsible party', 'Preventing others', 'Finding purpose'] },
-  ],
-  steampunk: [
-    { id: 'inventor_prodigy', name: 'Inventor Prodigy', description: 'Genius with gears and steam', socialClass: 'merchant', familyStatus: 'complicated', startingAdvantages: ['Technical genius', 'Creations', 'Curiosity'], startingDisadvantages: ['Obsessive', 'Social awkwardness'], suggestedTraits: ['Brilliant', 'Eccentric', 'Driven'], narrativeHooks: ['Grand invention', 'Stolen designs', 'Patron\'s agenda'] },
+  custom: [
+    { id: 'mysterious_past', name: 'Mysterious Past', description: 'Your origins are shrouded in mystery', socialClass: 'unknown', familyStatus: 'orphaned', startingAdvantages: ['Flexibility', 'Hidden potential', 'Clean slate'], startingDisadvantages: ['Unknown enemies', 'Identity questions'], suggestedTraits: ['Curious', 'Adaptable', 'Searching'], narrativeHooks: ['True origins revealed', 'Hidden powers awaken', 'Family found'] },
+    { id: 'chosen_one', name: 'Chosen One', description: 'Marked by destiny for something greater', socialClass: 'common', familyStatus: 'complicated', startingAdvantages: ['Destiny', 'Hidden allies', 'Unique gifts'], startingDisadvantages: ['Weight of expectation', 'Targeted'], suggestedTraits: ['Burdened', 'Determined', 'Doubting'], narrativeHooks: ['Prophecy unfolds', 'Destiny rejected', 'True meaning revealed'] },
   ],
 };
 
