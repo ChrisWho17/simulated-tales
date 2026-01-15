@@ -327,58 +327,22 @@ export function RadialQuickMenu({
             ))}
           </div>
           
-          {/* Center container - using flexbox centering */}
+          {/* Center container - using flexbox centering with overflow hidden */}
           <div 
-            className="relative"
-            style={{ width: '280px', height: '280px' }}
+            className="relative overflow-hidden"
+            style={{ width: '300px', height: '300px' }}
           >
-            {/* Multiple decorative orbit rings */}
-            <motion.div 
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/30 pointer-events-none"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ delay: 0.1, duration: 0.4, type: "spring" }}
-              style={{
-                width: '220px',
-                height: '220px',
-                animation: 'spin 25s linear infinite',
-              }}
-            />
+            {/* Single subtle orbit ring - contained within the menu area */}
             <motion.div 
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/20 pointer-events-none"
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              transition={{ delay: 0.15, duration: 0.4, type: "spring" }}
+              transition={{ delay: 0.1, duration: 0.4, type: "spring" }}
               style={{
-                width: '260px',
-                height: '260px',
-                animation: 'spin 35s linear infinite reverse',
-              }}
-            />
-            <motion.div 
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/15 pointer-events-none"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ delay: 0.2, duration: 0.4, type: "spring" }}
-              style={{
-                width: '300px',
-                height: '300px',
-                animation: 'spin 45s linear infinite',
-              }}
-            />
-            <motion.div 
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10 pointer-events-none"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ delay: 0.25, duration: 0.4, type: "spring" }}
-              style={{
-                width: '340px',
-                height: '340px',
-                animation: 'spin 60s linear infinite reverse',
+                width: '240px',
+                height: '240px',
+                animation: 'spin 30s linear infinite',
               }}
             />
             
