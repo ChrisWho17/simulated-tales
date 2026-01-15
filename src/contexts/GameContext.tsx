@@ -169,6 +169,7 @@ export interface GameSettings {
   
   // Developer/Debug toggles
   showEventBusDebug: boolean;
+  showPlayStatistics: boolean;
   
   // UI toggles
   showConsequenceFeed: boolean;
@@ -265,6 +266,7 @@ const defaultSettings: GameSettings = {
   
   // Developer/Debug toggles
   showEventBusDebug: false,
+  showPlayStatistics: false,
   
   // UI toggles
   showConsequenceFeed: true,
