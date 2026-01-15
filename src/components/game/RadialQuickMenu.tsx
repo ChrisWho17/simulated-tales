@@ -350,19 +350,17 @@ export function RadialQuickMenu({
                     "absolute flex items-center justify-center",
                     "w-14 h-14 rounded-full",
                     "bg-card/90 backdrop-blur-md border-2",
-                    "transition-all duration-200 ease-out",
-                    "animate-[fadeIn_200ms_ease-out_forwards]",
+                    "opacity-0 animate-[fadeScaleIn_180ms_ease-out_80ms_forwards]",
                     item.color
                   )}
                   style={{
                     left: `calc(50% + ${position.x}px)`,
                     top: `calc(50% + ${position.y}px)`,
-                    transform: `translate(-50%, -50%) scale(${isHovered ? 1.15 : 1})`,
+                    transform: `translate(-50%, -50%)`,
                     boxShadow: isHovered 
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
                       : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
                     borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
-                    animationDelay: '80ms',
                   }}
                 >
                   {item.icon}
@@ -372,10 +370,9 @@ export function RadialQuickMenu({
                     className={cn(
                       "absolute top-full mt-2 left-1/2 -translate-x-1/2",
                       "text-[11px] font-medium whitespace-nowrap",
-                      "animate-[fadeIn_200ms_ease-out_forwards]",
+                      "opacity-0 animate-[fadeIn_150ms_ease-out_120ms_forwards]",
                       isHovered ? "text-foreground" : "text-muted-foreground"
                     )}
-                    style={{ animationDelay: '120ms' }}
                   >
                     {item.label}
                   </span>
@@ -390,10 +387,9 @@ export function RadialQuickMenu({
                 "absolute z-10 flex items-center justify-center",
                 "w-16 h-16 rounded-full",
                 "bg-card/95 border-2 border-primary/50",
-                "hover:border-primary hover:scale-105 active:scale-95",
-                "transition-transform duration-150",
+                "hover:border-primary active:scale-95",
                 "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                "animate-[fadeIn_150ms_ease-out_forwards]"
+                "opacity-0 animate-[fadeScaleIn_150ms_ease-out_forwards]"
               )}
               style={{
                 marginLeft: '-1px',
@@ -405,8 +401,12 @@ export function RadialQuickMenu({
             </button>
           </div>
           
-          {/* CSS for fade-in animation */}
+          {/* CSS for fade-in with scale animation */}
           <style>{`
+            @keyframes fadeScaleIn {
+              from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+              to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
             @keyframes fadeIn {
               from { opacity: 0; }
               to { opacity: 1; }
