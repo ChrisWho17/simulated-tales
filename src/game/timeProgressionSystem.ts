@@ -270,6 +270,9 @@ export interface TimeContext {
   isDaytime: boolean;
   lightLevel: 'bright' | 'dim' | 'dark';
   narrativeHint: string;
+  // Elapsed time for this action/turn
+  actionElapsedMinutes: number;
+  actionElapsedDescription: string;
 }
 
 const TIME_NARRATIVE_HINTS: Record<TimeOfDayPeriod, string[]> = {
@@ -310,6 +313,23 @@ const TIME_NARRATIVE_HINTS: Record<TimeOfDayPeriod, string[]> = {
   ],
 };
 
+// Helper to get human-readable elapsed time description
+function getElapsedTimeDescription(minutes: number): string {
+  if (minutes < 1) return 'an instant';
+  if (minutes === 1) return 'a moment (about a minute)';
+  if (minutes <= 2) return 'a brief moment (a couple minutes)';
+  if (minutes <= 5) return 'a few minutes';
+  if (minutes <= 10) return 'several minutes';
+  if (minutes <= 15) return 'about a quarter hour';
+  if (minutes <= 20) return 'nearly twenty minutes';
+  if (minutes <= 30) return 'about half an hour';
+  if (minutes <= 45) return 'close to an hour';
+  if (minutes <= 60) return 'about an hour';
+  if (minutes <= 90) return 'over an hour';
+  if (minutes <= 120) return 'a couple of hours';
+  return `several hours (${Math.floor(minutes / 60)} hours)`;
+}
+
 export function buildTimeContext(state: GameTimeState): TimeContext {
   const timeOfDay = getTimeOfDay(state.hour);
   const hints = TIME_NARRATIVE_HINTS[timeOfDay];
@@ -324,6 +344,9 @@ export function buildTimeContext(state: GameTimeState): TimeContext {
     lightLevel = 'dark';
   }
   
+  // Get the elapsed minutes from the current multiplier
+  const elapsedMinutes = TIME_MULTIPLIER_CONFIG[state.multiplier].minutes;
+  
   return {
     hour: state.hour,
     minute: state.minute,
@@ -336,6 +359,8 @@ export function buildTimeContext(state: GameTimeState): TimeContext {
     isDaytime: isDaytime(state.hour),
     lightLevel,
     narrativeHint,
+    actionElapsedMinutes: elapsedMinutes,
+    actionElapsedDescription: getElapsedTimeDescription(elapsedMinutes),
   };
 }
 

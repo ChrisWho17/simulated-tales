@@ -151,6 +151,9 @@ interface TimeContext {
   isDaytime: boolean;
   lightLevel: 'bright' | 'dim' | 'dark';
   narrativeHint: string;
+  // Elapsed time for this action/turn
+  actionElapsedMinutes?: number;
+  actionElapsedDescription?: string;
 }
 
 // ============= NPC SCHEDULE CONTEXT - NPCs at locations based on time =============
@@ -1280,44 +1283,39 @@ ${timeContext.timeOfDay === 'late_night' ? '  • Near-empty streets, only night
 - NEVER describe midday sun during night scenes or vice versa
 - Use time-appropriate greetings: "${timeContext.timeOfDay === 'morning' ? 'Good morning' : timeContext.timeOfDay === 'evening' || timeContext.timeOfDay === 'night' ? 'Good evening' : timeContext.timeOfDay === 'afternoon' ? 'Good afternoon' : 'Greetings'}"
 
-=== TIME DURATION NARRATION - HOW TO DESCRIBE ELAPSED TIME ===
-When describing time passage, match your language to the actual duration:
+=== ACTION ELAPSED TIME (THIS TURN) ===
+${timeContext.actionElapsedMinutes ? `THIS ACTION TAKES: ${timeContext.actionElapsedMinutes} minutes (${timeContext.actionElapsedDescription})` : 'TIME PACING: Use natural judgment for action duration'}
 
-INSTANT (< 1 minute):
-- "In a heartbeat..." / "A split second later..." / "Before you can blink..."
-- "The moment stretches..." / "Time seems to freeze, then snap forward..."
+CRITICAL - MATCH YOUR TIME LANGUAGE TO THE ACTUAL ELAPSED TIME:
+${timeContext.actionElapsedMinutes && timeContext.actionElapsedMinutes < 5 ? 
+`→ This is a QUICK action (~${timeContext.actionElapsedMinutes} min). Use instant/brief language:
+  "In a heartbeat..." / "A moment later..." / "Before you can blink..."` : 
+timeContext.actionElapsedMinutes && timeContext.actionElapsedMinutes <= 15 ?
+`→ This is a SHORT action (~${timeContext.actionElapsedMinutes} min). Use short pacing:
+  "Several minutes pass..." / "After a short while..." / "A quarter hour later..."` :
+timeContext.actionElapsedMinutes && timeContext.actionElapsedMinutes <= 30 ?
+`→ This is a MODERATE action (~${timeContext.actionElapsedMinutes} min). Use moderate pacing:
+  "Half an hour slips away..." / "The better part of half an hour..."` :
+timeContext.actionElapsedMinutes && timeContext.actionElapsedMinutes <= 60 ?
+`→ This is a SUBSTANTIAL action (~${timeContext.actionElapsedMinutes} min). Use substantial pacing:
+  "Nearly an hour passes..." / "Time enough to question every choice..."` :
+timeContext.actionElapsedMinutes && timeContext.actionElapsedMinutes > 60 ?
+`→ This is an EXTENDED action (~${timeContext.actionElapsedMinutes} min). Use lengthy pacing:
+  "Hours blur together..." / "By the time you finish, the light has changed..."` :
+`→ Use natural pacing based on the action type.`}
 
-BRIEF (1-5 minutes):
-- "A moment later..." / "After a brief pause..." / "Scarcely a minute passes..."
-- "In the time it takes to catch your breath..." / "A few heartbeats later..."
+TIME DURATION REFERENCE (for actions without explicit timing):
+- INSTANT (< 1 min): "In a heartbeat..." / "A split second later..."
+- BRIEF (1-5 min): "A moment later..." / "A few heartbeats later..."
+- SHORT (5-15 min): "Several minutes crawl by..." / "Quarter of an hour passes..."
+- MODERATE (15-30 min): "Half an hour slips away..." / "Twenty minutes feel like an eternity..."
+- SUBSTANTIAL (30-60 min): "Nearly an hour passes..." / "The hour hand creeps forward..."
+- LENGTHY (1-2 hrs): "An hour crawls by..." / "The morning wears on..."
+- EXTENDED (2+ hrs): "Hours blur together..." / "The afternoon fades into memory..."
 
-SHORT (5-15 minutes):
-- "Several minutes crawl by..." / "After a short while..." / "Quarter of an hour passes..."
-- "Time enough to grow restless..." / "The wait feels longer than it is..."
-
-MODERATE (15-30 minutes):
-- "Half an hour slips away..." / "Twenty minutes feel like an eternity..."
-- "The better part of half an hour..." / "Time stretches, languid and heavy..."
-
-SUBSTANTIAL (30-60 minutes):
-- "Nearly an hour passes..." / "The hour hand creeps forward..."
-- "Forty minutes of silence..." / "Time enough to question every choice..."
-
-LENGTHY (1-2 hours):
-- "An hour crawls by..." / "The morning wears on..." / "Two hours feel like days..."
-- "Time loses meaning..." / "The sun shifts noticeably in the sky..."
-
-EXTENDED (2+ hours):
-- "Hours blur together..." / "The afternoon fades into memory..."
-- "By the time you finish, the light has changed entirely..."
-- "What feels like a lifetime passes..."
-
-CRITICAL: Match narrative tension to duration:
-- Quick actions (combat, dialogue) = instant/brief language
-- Travel, waiting, searching = short/moderate language  
-- Rest, recovery, long tasks = substantial/lengthy language
-- Never describe a 2-minute conversation as "hours later"
-- Never describe an hour-long journey as "a moment passes"`;
+NEVER mismatch time language with actual duration:
+- A 2-minute conversation should NOT be "hours later"
+- An hour-long journey should NOT be "a moment passes"`;
     }
     
     // === NPC SCHEDULE CONTEXT - NPCs present based on time of day ===
