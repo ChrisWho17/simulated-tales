@@ -58,6 +58,29 @@ interface ConversationExchange {
   tick?: number;
 }
 
+interface PlayerStateContext {
+  // Armor and clothing
+  currentOutfit?: string;
+  armorType?: 'none' | 'light' | 'medium' | 'heavy';
+  armorCondition?: 'pristine' | 'worn' | 'damaged' | 'destroyed';
+  visibleWeapons?: string[];
+  
+  // Physical state
+  wounds?: { location: string; severity: 'minor' | 'moderate' | 'severe' | 'critical' }[];
+  bloodVisible?: boolean;
+  exhaustionLevel?: number; // 0-100
+  
+  // Emotional state
+  currentMood?: string;
+  moodIntensity?: number; // 0-100
+  visibleEmotions?: string[]; // trembling, crying, laughing, scowling, etc.
+  
+  // Environmental effects on player
+  wetFromRain?: boolean;
+  dirtyCovered?: boolean;
+  coldShivering?: boolean;
+}
+
 interface DialogueRequest {
   npc: NPCContext;
   playerInput: string;
@@ -66,6 +89,8 @@ interface DialogueRequest {
   conversationHistory?: ConversationExchange[];
   isFirstInteraction: boolean;
   isFarewell?: boolean;
+  playerState?: PlayerStateContext;
+  weatherContext?: string;
 }
 
 interface DialogueIndicators {
@@ -91,7 +116,7 @@ serve(async (req) => {
   }
 
   try {
-    const { npc, playerInput, location, timeOfDay, conversationHistory, isFirstInteraction, isFarewell } = await req.json() as DialogueRequest;
+    const { npc, playerInput, location, timeOfDay, conversationHistory, isFirstInteraction, isFarewell, playerState, weatherContext } = await req.json() as DialogueRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -161,6 +186,110 @@ serve(async (req) => {
       clothingContext = `\n\n${npc.playerClothingContext}\n\nYou may comment on the player's outfit if it seems remarkable (very stylish, intimidating, or poorly put together). Don't force comments - only mention clothing if it's genuinely noteworthy and fits the conversation naturally.`;
     }
 
+    // ============= PLAYER STATE REACTIONS =============
+    // Build comprehensive player state context for NPC reactions
+    let playerStateContext = '';
+    if (playerState) {
+      playerStateContext = '\n\n===== PLAYER APPEARANCE (What You See) =====\n';
+      playerStateContext += 'REACT NATURALLY to what you observe about this person:\n\n';
+      
+      // Armor/Clothing reactions
+      if (playerState.armorType && playerState.armorType !== 'none') {
+        const armorReactions: Record<string, string> = {
+          light: 'They\'re wearing light protective gear. Unusual but not alarming.',
+          medium: 'They\'re wearing medium armor/tactical gear. This is concerning - are they expecting trouble?',
+          heavy: 'They\'re in HEAVY ARMOR - full tactical/combat gear. This is extremely intimidating and alarming. You should react with fear, suspicion, or at least strong curiosity.'
+        };
+        playerStateContext += `🛡️ ARMOR: ${armorReactions[playerState.armorType]}\n`;
+        
+        if (playerState.armorCondition && playerState.armorCondition !== 'pristine') {
+          playerStateContext += `   - Armor condition: ${playerState.armorCondition} - ${playerState.armorCondition === 'damaged' ? 'Shows recent combat damage!' : 'Looks well-used'}\n`;
+        }
+      }
+      
+      if (playerState.currentOutfit) {
+        playerStateContext += `👔 OUTFIT: ${playerState.currentOutfit}\n`;
+      }
+      
+      if (playerState.visibleWeapons && playerState.visibleWeapons.length > 0) {
+        playerStateContext += `⚔️ VISIBLE WEAPONS: ${playerState.visibleWeapons.join(', ')} - React appropriately! Armed strangers are concerning.\n`;
+      }
+      
+      // Wound reactions - NPCs MUST react to visible injuries
+      if (playerState.wounds && playerState.wounds.length > 0) {
+        playerStateContext += '\n🩸 VISIBLE INJURIES (You MUST react to these):\n';
+        playerState.wounds.forEach(wound => {
+          const woundReactions: Record<string, string> = {
+            minor: 'minor scratch/bruise - mention if conversation allows',
+            moderate: 'noticeable injury - express concern or comment',
+            severe: 'SERIOUS INJURY - express shock, offer help, or back away in alarm',
+            critical: 'LIFE-THREATENING - this person is badly hurt! React with urgency!'
+          };
+          playerStateContext += `   - ${wound.severity.toUpperCase()} wound on ${wound.location}: ${woundReactions[wound.severity]}\n`;
+        });
+        
+        if (playerState.bloodVisible) {
+          playerStateContext += '   - ⚠️ BLOOD IS VISIBLE - Most people react strongly to seeing blood!\n';
+        }
+      }
+      
+      // Exhaustion
+      if (playerState.exhaustionLevel && playerState.exhaustionLevel > 30) {
+        if (playerState.exhaustionLevel > 70) {
+          playerStateContext += '😫 EXHAUSTION: They look completely exhausted - dark circles, sluggish movement, barely staying upright\n';
+        } else if (playerState.exhaustionLevel > 50) {
+          playerStateContext += '😓 TIREDNESS: They look quite tired and worn out\n';
+        } else {
+          playerStateContext += '😐 FATIGUE: They seem a bit tired\n';
+        }
+      }
+      
+      // Emotional state reactions
+      if (playerState.currentMood || playerState.visibleEmotions?.length) {
+        playerStateContext += '\n💭 EMOTIONAL STATE (visible to you):\n';
+        
+        if (playerState.currentMood) {
+          const intensity = playerState.moodIntensity || 50;
+          const intensityWord = intensity > 70 ? 'intensely' : intensity > 40 ? 'visibly' : 'slightly';
+          playerStateContext += `   - They appear ${intensityWord} ${playerState.currentMood}\n`;
+        }
+        
+        if (playerState.visibleEmotions && playerState.visibleEmotions.length > 0) {
+          playerStateContext += `   - Observable signs: ${playerState.visibleEmotions.join(', ')}\n`;
+          
+          // Specific emotion guidance
+          if (playerState.visibleEmotions.includes('crying') || playerState.visibleEmotions.includes('tears')) {
+            playerStateContext += '   - ⚠️ They appear to be crying/have tear tracks - respond with empathy or discomfort\n';
+          }
+          if (playerState.visibleEmotions.includes('trembling') || playerState.visibleEmotions.includes('shaking')) {
+            playerStateContext += '   - ⚠️ They\'re visibly trembling - from fear, cold, or stress? React appropriately\n';
+          }
+          if (playerState.visibleEmotions.includes('rage') || playerState.visibleEmotions.includes('furious')) {
+            playerStateContext += '   - ⚠️ They appear ANGRY - be cautious, defensive, or try to de-escalate\n';
+          }
+        }
+      }
+      
+      // Environmental effects on player
+      if (playerState.wetFromRain) {
+        playerStateContext += '🌧️ They\'re soaking wet from the rain - dripping water, clothes clinging\n';
+      }
+      if (playerState.dirtyCovered) {
+        playerStateContext += '🟤 They\'re covered in dirt/grime - have they been crawling through something?\n';
+      }
+      if (playerState.coldShivering) {
+        playerStateContext += '❄️ They\'re shivering from cold - might offer warmth or comment\n';
+      }
+      
+      playerStateContext += '\n** Your dialogue should ACKNOWLEDGE what you see when appropriate **\n';
+    }
+
+    // Weather context for environmental reactions
+    let weatherSection = '';
+    if (weatherContext) {
+      weatherSection = `\n\nCURRENT WEATHER: ${weatherContext}\nThis affects the conversation naturally - reference weather if it makes sense.`;
+    }
+
     // Build the system prompt for modern realistic dialogue
     const systemPrompt = `You are ${npc.name}, a ${npc.age}-year-old ${npc.occupation} in a modern-day urban setting. 
 
@@ -228,6 +357,8 @@ SETTING:
 ${conversationContext}
 ${farewellContext}
 ${clothingContext}
+${playerStateContext}
+${weatherSection}
 
 ${isFirstInteraction ? 'This is your first interaction with this player. React naturally to being approached by a stranger.' : 'Continue the conversation naturally based on your memories and relationship.'}
 
