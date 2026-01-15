@@ -263,15 +263,16 @@ export function RadialQuickMenu({
     },
   ];
 
-  // Calculate radial positions - full circle around center
+  // Calculate radial positions - full circle around center (evenly distributed)
   const getItemPosition = (index: number, total: number) => {
-    const startAngle = -90; // Start from top
+    // Start from top (-90°) and distribute evenly around the full circle
+    const startAngle = -90;
     const angleStep = 360 / total;
     const angle = startAngle + (angleStep * index);
     const radians = (angle * Math.PI) / 180;
     
-    // Radius sized for mobile screens
-    const radius = 110;
+    // Radius sized for mobile screens  
+    const radius = 105;
     
     return {
       x: Math.cos(radians) * radius,
