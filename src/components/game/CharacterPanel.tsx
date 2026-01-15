@@ -38,6 +38,8 @@ import { WoundDisplay } from './WoundDisplay';
 import { Wound } from '@/lib/woundSystem';
 import { getGameSettings } from '@/lib/gameSettings';
 import { PlayerMoodIndicator, derivePlayerMood } from './PlayerMoodIndicator';
+import { DraggableInventoryItem } from './DraggableInventoryItem';
+import { useGame } from '@/contexts/GameContext';
 
 interface CharacterPanelProps {
   gameState: GameState;
@@ -110,6 +112,8 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
   const npcsHere = getNPCsAtLocation(gameState, player.currentLocation);
   const settings = getGameSettings();
   const showTension = settings.adultContent;
+  const { settings: gameSettings } = useGame();
+  const dragDropEnabled = gameSettings.enableInventoryDragDrop;
   
   // Derive player mood from current stats
   const playerMood = useMemo(() => derivePlayerMood({
@@ -344,23 +348,43 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
                   <p className="text-xs text-muted-foreground italic">Your pockets are empty.</p>
                 ) : (
                   player.inventory.map(item => (
-                    <div 
-                      key={item.id} 
-                      className="p-2 rounded bg-secondary/50 border border-border flex items-start gap-2"
-                    >
-                      {item.type === 'weapon' ? (
-                        <Sword className="h-4 w-4 text-blood mt-0.5 shrink-0" />
-                      ) : (
-                        <Package className="h-4 w-4 text-copper mt-0.5 shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-medium text-sm truncate">{item.name}</span>
-                          <span className="text-xs text-gold shrink-0">{item.value}g</span>
+                    dragDropEnabled ? (
+                      <DraggableInventoryItem
+                        key={item.id}
+                        item={{
+                          id: item.id,
+                          instanceId: item.id,
+                          name: item.name,
+                          description: item.description,
+                          category: item.type === 'weapon' ? 'weapons' : 'misc',
+                          quantity: 1,
+                          value: item.value,
+                          consumable: item.type === 'consumable',
+                        }}
+                        dragEnabled={dragDropEnabled}
+                        onUse={() => console.log('Use item:', item.name)}
+                        onDrop={() => console.log('Drop item:', item.name)}
+                        onDetails={() => console.log('View details:', item.name)}
+                      />
+                    ) : (
+                      <div 
+                        key={item.id} 
+                        className="p-2 rounded bg-secondary/50 border border-border flex items-start gap-2"
+                      >
+                        {item.type === 'weapon' ? (
+                          <Sword className="h-4 w-4 text-blood mt-0.5 shrink-0" />
+                        ) : (
+                          <Package className="h-4 w-4 text-copper mt-0.5 shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-medium text-sm truncate">{item.name}</span>
+                            <span className="text-xs text-gold shrink-0">{item.value}g</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
                       </div>
-                    </div>
+                    )
                   ))
                 )}
               </div>
