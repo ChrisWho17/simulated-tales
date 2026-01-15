@@ -132,13 +132,14 @@ export interface ClothingContext {
 }
 
 export interface ClothingReaction {
-  severity: 'none' | 'mild' | 'moderate' | 'severe';
+  severity: 'positive' | 'none' | 'mild' | 'moderate' | 'severe';
   trustModifier: number;
   respectModifier: number;
   dialogueModifiers: string[];
   internalThoughts: string[];
   possibleComments: string[];
   npcBehaviorTriggers: string[];
+  isPositive: boolean;
 }
 
 // ============================================================================
@@ -335,12 +336,73 @@ export function evaluateClothingConflict(
     }
   }
 
-  // Determine severity
-  let severity: 'none' | 'mild' | 'moderate' | 'severe';
+  // Check for POSITIVE reactions - appropriate/impressive clothing
+  let positiveScore = 0;
+  let isPositive = false;
+  
+  if (genreExpectations.appropriate.includes(style)) {
+    positiveScore += 15;
+  }
+  
+  // Bonus for formal occasions
+  if (locationFormality === 'formal' && (style === 'formal' || style === 'extravagant')) {
+    positiveScore += 20;
+    internalThoughts.push(`Now that's how you dress for an occasion like this.`);
+    possibleComments.push(
+      `"You clean up nicely."`,
+      `"I see you understand the importance of proper attire."`,
+      `"A pleasure to meet someone with such refined taste."`
+    );
+    npcBehaviorTriggers.push('impressed', 'more_respectful');
+  }
+  
+  // Genre-perfect style bonuses
+  if (style === 'genre_default' || 
+      (genre.toLowerCase() === 'cyberpunk' && (style === 'punk' || style === 'streetwear')) ||
+      (genre.toLowerCase() === 'fantasy' && style === 'vintage') ||
+      (genre.toLowerCase() === 'western' && style === 'vintage') ||
+      (genre.toLowerCase() === 'mystery' && style === 'formal') ||
+      (genre.toLowerCase() === 'romance' && (style === 'formal' || style === 'extravagant'))) {
+    positiveScore += 10;
+    if (!internalThoughts.some(t => t.includes('dress'))) {
+      internalThoughts.push(`They fit right in. Looks like one of us.`);
+    }
+    npcBehaviorTriggers.push('sees_as_belonging');
+  }
+  
+  // NPC role positive reactions
+  if (npcRole) {
+    const roleLower = npcRole.toLowerCase();
+    if (/noble|lord|lady|aristocrat/i.test(roleLower) && (style === 'formal' || style === 'extravagant')) {
+      positiveScore += 15;
+      possibleComments.push(
+        `"Finally, someone who understands proper decorum."`,
+        `"Your attire speaks well of you."`
+      );
+      npcBehaviorTriggers.push('treats_as_equal');
+    }
+    if (/artist|performer|entertainer/i.test(roleLower) && (style === 'extravagant' || style === 'bohemian' || style === 'punk')) {
+      positiveScore += 10;
+      possibleComments.push(
+        `"I love your style! Very expressive."`,
+        `"You've got great taste."`
+      );
+      npcBehaviorTriggers.push('kindred_spirit');
+    }
+  }
+
+  // Determine severity - check positive first
+  let severity: 'positive' | 'none' | 'mild' | 'moderate' | 'severe';
   let trustModifier = 0;
   let respectModifier = 0;
 
-  if (conflictScore <= 5) {
+  if (positiveScore >= 20 && conflictScore <= 10) {
+    severity = 'positive';
+    isPositive = true;
+    trustModifier = Math.min(15, positiveScore / 2);
+    respectModifier = Math.min(20, positiveScore);
+    dialogueModifiers.push('warm', 'approving', 'friendly');
+  } else if (conflictScore <= 5) {
     severity = 'none';
   } else if (conflictScore <= 20) {
     severity = 'mild';
@@ -367,7 +429,8 @@ export function evaluateClothingConflict(
     dialogueModifiers,
     internalThoughts,
     possibleComments,
-    npcBehaviorTriggers
+    npcBehaviorTriggers,
+    isPositive
   };
 }
 
@@ -488,8 +551,11 @@ export function getClothingDialogueModification(
 let currentPlayerClothing: ClothingContext = {};
 let currentGenre: string = 'fantasy';
 
-export function setPlayerClothingContext(clothing: ClothingContext): void {
+export function setPlayerClothingContext(clothing: ClothingContext, genre?: string): void {
   currentPlayerClothing = clothing;
+  if (genre) {
+    currentGenre = genre;
+  }
 }
 
 export function setClothingReactionGenre(genre: string): void {
