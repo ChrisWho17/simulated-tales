@@ -14,13 +14,16 @@ import {
   SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, FACE_SHAPES,
   DISTINGUISHING_FEATURES, ACCESSORIES,
   BUST_OPTIONS, HIP_OPTIONS, MUSCLE_OPTIONS, BODY_HAIR_OPTIONS,
-  PIERCING_OPTIONS, TATTOO_OPTIONS,
+  PIERCING_OPTIONS, TATTOO_OPTIONS, TATTOO_STYLE_OPTIONS,
+  SCAR_OPTIONS, PROSTHETIC_OPTIONS, IMPLANT_OPTIONS, MUTATION_OPTIONS,
+  CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
-  ChevronRight, ChevronLeft, Sword, Shield, Wand2, Heart, Sparkles, 
+  ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
-  Eye, Crosshair, Zap, Blend, Plus
+  Eye, Crosshair, Zap, Blend, Plus, Shirt, Scissors, Syringe, Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
@@ -109,8 +112,19 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     detailLevel: 'simple',
     simple: { gender: 'male', height: 'average', build: 'average' },
     detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
-    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '' },
+    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
   });
+  
+  // Collapsible section states
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    bodyMods: false,
+    physicalMods: false,
+    clothing: false,
+  });
+  
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
   
   // Portrait state
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
@@ -196,6 +210,51 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }
   };
 
+  const toggleScar = (scar: string) => {
+    const current = appearance.full?.scars || [];
+    if (current.includes(scar)) {
+      updateAppearance('full', 'scars', current.filter(s => s !== scar));
+    } else {
+      updateAppearance('full', 'scars', [...current, scar]);
+    }
+  };
+
+  const toggleProsthetic = (prosthetic: string) => {
+    const current = appearance.full?.prosthetics || [];
+    if (current.includes(prosthetic)) {
+      updateAppearance('full', 'prosthetics', current.filter(p => p !== prosthetic));
+    } else {
+      updateAppearance('full', 'prosthetics', [...current, prosthetic]);
+    }
+  };
+
+  const toggleImplant = (implant: string) => {
+    const current = appearance.full?.implants || [];
+    if (current.includes(implant)) {
+      updateAppearance('full', 'implants', current.filter(i => i !== implant));
+    } else {
+      updateAppearance('full', 'implants', [...current, implant]);
+    }
+  };
+
+  const toggleMutation = (mutation: string) => {
+    const current = appearance.full?.mutations || [];
+    if (current.includes(mutation)) {
+      updateAppearance('full', 'mutations', current.filter(m => m !== mutation));
+    } else {
+      updateAppearance('full', 'mutations', [...current, mutation]);
+    }
+  };
+
+  const toggleClothingDetail = (detail: string) => {
+    const current = appearance.full?.clothingDetails || [];
+    if (current.includes(detail)) {
+      updateAppearance('full', 'clothingDetails', current.filter(d => d !== detail));
+    } else {
+      updateAppearance('full', 'clothingDetails', [...current, detail]);
+    }
+  };
+
   const updateAppearance = (level: 'simple' | 'detailed' | 'full', key: string, value: any) => {
     setAppearance(prev => ({
       ...prev,
@@ -243,6 +302,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         // Extended body modifications
         piercings: appearance.full?.piercings || [],
         tattoos: appearance.full?.tattoos || [],
+        tattooStyle: appearance.full?.tattooStyle,
+        scars: appearance.full?.scars || [],
+        prosthetics: appearance.full?.prosthetics || [],
+        implants: appearance.full?.implants || [],
+        mutations: appearance.full?.mutations || [],
+        clothingStyle: appearance.full?.clothingStyle,
+        clothingDetails: appearance.full?.clothingDetails || [],
       };
       
       const prompt = buildPortraitPrompt(characterData, genre, 'neutral', className);
@@ -658,6 +724,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       Adult Content
                     </h3>
                     
+                    {/* Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -708,212 +775,275 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     )}
 
-                    {/* Extended Body Modifications */}
-                    <div className="mt-4 p-4 bg-background/30 rounded-lg border border-border/50">
-                      <h4 className="text-sm font-medium text-primary mb-3 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        Body Modifications
-                      </h4>
-                      
-                      {/* Piercings */}
-                      <div className="mb-4">
-                        <label className="text-sm text-muted-foreground block mb-2">Piercings</label>
-                        
-                        {/* Face Piercings */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Face</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {PIERCING_OPTIONS.filter(p => p.category === 'face').map(piercing => (
-                              <button
-                                key={piercing.value}
-                                onClick={() => togglePiercing(piercing.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.piercings?.includes(piercing.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {piercing.label}
-                              </button>
-                            ))}
-                          </div>
+                    {/* DROPDOWN 1: Body Modifications (Piercings & Tattoos) */}
+                    <Collapsible open={openSections.bodyMods} onOpenChange={() => toggleSection('bodyMods')}>
+                      <CollapsibleTrigger className="w-full p-3 bg-background/50 rounded-lg border border-border/50 hover:border-primary/50 transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">Body Modifications</span>
+                          {((appearance.full?.piercings?.length || 0) + (appearance.full?.tattoos?.length || 0)) > 0 && (
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                              {(appearance.full?.piercings?.length || 0) + (appearance.full?.tattoos?.length || 0)} selected
+                            </span>
+                          )}
                         </div>
-                        
-                        {/* Body Piercings */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Body</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {PIERCING_OPTIONS.filter(p => p.category === 'body').map(piercing => (
-                              <button
-                                key={piercing.value}
-                                onClick={() => togglePiercing(piercing.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.piercings?.includes(piercing.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {piercing.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Intimate Piercings */}
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.bodyMods ? 'rotate-180' : ''}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-4 bg-background rounded-lg border border-border/30 space-y-4">
+                        {/* Piercings */}
                         <div>
-                          <span className="text-xs text-destructive/70 uppercase tracking-wide">Intimate</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {PIERCING_OPTIONS.filter(p => p.category === 'intimate').map(piercing => (
-                              <button
-                                key={piercing.value}
-                                onClick={() => togglePiercing(piercing.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.piercings?.includes(piercing.value)
-                                    ? 'bg-destructive text-destructive-foreground'
-                                    : 'bg-background/50 border border-destructive/30 hover:border-destructive/50'
-                                }`}
-                              >
-                                {piercing.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Tattoos */}
-                      <div>
-                        <label className="text-sm text-muted-foreground block mb-2">Tattoos</label>
-                        
-                        {/* Face & Neck */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Face & Neck</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'face' || t.category === 'neck').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
-                          </div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Piercings</label>
+                          {['face', 'body', 'intimate'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className={`text-xs uppercase tracking-wide ${category === 'intimate' ? 'text-destructive/70' : 'text-muted-foreground/70'}`}>
+                                {category}
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {PIERCING_OPTIONS.filter(p => p.category === category).map(piercing => (
+                                  <button
+                                    key={piercing.value}
+                                    onClick={() => togglePiercing(piercing.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.piercings?.includes(piercing.value)
+                                        ? category === 'intimate' ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
+                                        : category === 'intimate' ? 'bg-background border border-destructive/30 hover:border-destructive/50' : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {piercing.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                         
-                        {/* Arms */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Arms & Hands</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'arms').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Torso */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Torso</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'torso').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Back */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Back</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'back').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Legs */}
-                        <div className="mb-2">
-                          <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">Legs</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'legs').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Intimate */}
+                        {/* Tattoos */}
                         <div>
-                          <span className="text-xs text-destructive/70 uppercase tracking-wide">Intimate</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {TATTOO_OPTIONS.filter(t => t.category === 'intimate').map(tattoo => (
-                              <button
-                                key={tattoo.value}
-                                onClick={() => toggleTattoo(tattoo.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.tattoos?.includes(tattoo.value)
-                                    ? 'bg-destructive text-destructive-foreground'
-                                    : 'bg-background/50 border border-destructive/30 hover:border-destructive/50'
-                                }`}
-                              >
-                                {tattoo.label}
-                              </button>
-                            ))}
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium text-muted-foreground">Tattoos</label>
+                            <select
+                              value={appearance.full?.tattooStyle || ''}
+                              onChange={(e) => updateAppearance('full', 'tattooStyle', e.target.value)}
+                              className="text-xs p-1 rounded bg-background border border-border/50"
+                            >
+                              <option value="">Style: Any</option>
+                              {TATTOO_STYLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
                           </div>
+                          {['face', 'neck', 'arms', 'torso', 'back', 'legs', 'intimate'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className={`text-xs uppercase tracking-wide ${category === 'intimate' ? 'text-destructive/70' : 'text-muted-foreground/70'}`}>
+                                {category}
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {TATTOO_OPTIONS.filter(t => t.category === category).map(tattoo => (
+                                  <button
+                                    key={tattoo.value}
+                                    onClick={() => toggleTattoo(tattoo.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.tattoos?.includes(tattoo.value)
+                                        ? category === 'intimate' ? 'bg-destructive text-destructive-foreground' : 'bg-primary text-primary-foreground'
+                                        : category === 'intimate' ? 'bg-background border border-destructive/30 hover:border-destructive/50' : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {tattoo.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
+                    {/* DROPDOWN 2: Physical Modifications (Scars, Prosthetics, Implants, Mutations) */}
+                    <Collapsible open={openSections.physicalMods} onOpenChange={() => toggleSection('physicalMods')}>
+                      <CollapsibleTrigger className="w-full p-3 bg-background/50 rounded-lg border border-border/50 hover:border-primary/50 transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Scissors className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">Physical Modifications</span>
+                          {((appearance.full?.scars?.length || 0) + (appearance.full?.prosthetics?.length || 0) + (appearance.full?.implants?.length || 0) + (appearance.full?.mutations?.length || 0)) > 0 && (
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                              {(appearance.full?.scars?.length || 0) + (appearance.full?.prosthetics?.length || 0) + (appearance.full?.implants?.length || 0) + (appearance.full?.mutations?.length || 0)} selected
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.physicalMods ? 'rotate-180' : ''}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-4 bg-background rounded-lg border border-border/30 space-y-4">
+                        {/* Scars */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Scars & Wounds</label>
+                          {['face', 'body', 'limbs'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">{category}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {SCAR_OPTIONS.filter(s => s.category === category).map(scar => (
+                                  <button
+                                    key={scar.value}
+                                    onClick={() => toggleScar(scar.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.scars?.includes(scar.value)
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {scar.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Prosthetics */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Prosthetics</label>
+                          {['head', 'arms', 'legs'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">{category}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {PROSTHETIC_OPTIONS.filter(p => p.category === category).map(prosthetic => (
+                                  <button
+                                    key={prosthetic.value}
+                                    onClick={() => toggleProsthetic(prosthetic.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.prosthetics?.includes(prosthetic.value)
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {prosthetic.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Implants */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Implants & Enhancements</label>
+                          {['cosmetic', 'tech'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">{category}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {IMPLANT_OPTIONS.filter(i => i.category === category).map(implant => (
+                                  <button
+                                    key={implant.value}
+                                    onClick={() => toggleImplant(implant.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.implants?.includes(implant.value)
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {implant.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Mutations */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Mutations & Alterations</label>
+                          <div className="flex flex-wrap gap-1">
+                            {MUTATION_OPTIONS.map(mutation => (
+                              <button
+                                key={mutation.value}
+                                onClick={() => toggleMutation(mutation.value)}
+                                className={`px-2 py-1 rounded text-xs transition-all ${
+                                  appearance.full?.mutations?.includes(mutation.value)
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-background border border-border/30 hover:border-primary/50'
+                                }`}
+                              >
+                                {mutation.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* DROPDOWN 3: Clothing Style */}
+                    <Collapsible open={openSections.clothing} onOpenChange={() => toggleSection('clothing')}>
+                      <CollapsibleTrigger className="w-full p-3 bg-background/50 rounded-lg border border-border/50 hover:border-primary/50 transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Shirt className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">Clothing Style</span>
+                          {appearance.full?.clothingStyle && appearance.full.clothingStyle !== 'genre_default' && (
+                            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
+                              {CLOTHING_STYLE_OPTIONS.find(o => o.value === appearance.full?.clothingStyle)?.label || 'Custom'}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.clothing ? 'rotate-180' : ''}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-4 bg-background rounded-lg border border-border/30 space-y-4">
+                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/30 text-xs text-accent mb-3">
+                          <strong>Note:</strong> Clothing that doesn't match your genre may cause NPCs to react differently to you!
+                        </div>
+                        
+                        {/* Style Selection */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Overall Style</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {CLOTHING_STYLE_OPTIONS.map(style => (
+                              <button
+                                key={style.value}
+                                onClick={() => updateAppearance('full', 'clothingStyle', style.value)}
+                                className={`p-2 rounded-lg text-left transition-all ${
+                                  appearance.full?.clothingStyle === style.value
+                                    ? 'bg-primary/20 border border-primary'
+                                    : 'bg-background border border-border/30 hover:border-primary/50'
+                                }`}
+                              >
+                                <div className="text-xs font-medium">{style.label}</div>
+                                <div className="text-[10px] text-muted-foreground">{style.description}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Specific Items */}
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground block mb-2">Specific Items</label>
+                          {['tops', 'bottoms', 'full', 'footwear', 'accessories'].map(category => (
+                            <div key={category} className="mb-2">
+                              <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">{category}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {CLOTHING_DETAIL_OPTIONS.filter(c => c.category === category).map(item => (
+                                  <button
+                                    key={item.value}
+                                    onClick={() => toggleClothingDetail(item.value)}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                      appearance.full?.clothingDetails?.includes(item.value)
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-background border border-border/30 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    {item.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Free-form description */}
                     <div>
-                      <label className="text-sm text-muted-foreground">Additional Intimate Details (optional)</label>
+                      <label className="text-sm text-muted-foreground">Additional Details (optional)</label>
                       <Textarea
                         value={appearance.full?.intimateDetails || ''}
                         onChange={(e) => updateAppearance('full', 'intimateDetails', e.target.value)}
-                        placeholder="Describe additional physical characteristics..."
+                        placeholder="Describe additional physical characteristics, custom clothing, or unique features..."
                         className="mt-1 bg-background border-border/50"
-                        maxLength={200}
+                        maxLength={300}
                       />
                     </div>
                   </div>
