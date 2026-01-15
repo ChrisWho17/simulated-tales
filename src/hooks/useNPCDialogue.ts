@@ -12,12 +12,38 @@ import {
   MilestoneType 
 } from '@/lib/relationshipJournal';
 
+// Player state context for NPC reactions
+export interface PlayerStateContext {
+  // Armor and clothing
+  currentOutfit?: string;
+  armorType?: 'none' | 'light' | 'medium' | 'heavy';
+  armorCondition?: 'pristine' | 'worn' | 'damaged' | 'destroyed';
+  visibleWeapons?: string[];
+  
+  // Physical state
+  wounds?: { location: string; severity: 'minor' | 'moderate' | 'severe' | 'critical' }[];
+  bloodVisible?: boolean;
+  exhaustionLevel?: number; // 0-100
+  
+  // Emotional state
+  currentMood?: string;
+  moodIntensity?: number; // 0-100
+  visibleEmotions?: string[]; // trembling, crying, laughing, scowling, etc.
+  
+  // Environmental effects on player
+  wetFromRain?: boolean;
+  dirtyCovered?: boolean;
+  coldShivering?: boolean;
+}
+
 interface UseNPCDialogueProps {
   npc: NPC;
   genre: string;
   era: string;
   playerRelationship?: Relationship;
   relationshipMilestone?: MilestoneType;
+  playerState?: PlayerStateContext;
+  weatherContext?: string;
 }
 
 interface DialogueIndicators {
@@ -35,7 +61,7 @@ interface DialogueResponse {
   milestoneProgression?: MilestoneProgression;
 }
 
-export function useNPCDialogue({ npc, genre, era, playerRelationship, relationshipMilestone }: UseNPCDialogueProps) {
+export function useNPCDialogue({ npc, genre, era, playerRelationship, relationshipMilestone, playerState, weatherContext }: UseNPCDialogueProps) {
   const [dialogueHistory, setDialogueHistory] = useState<DialogueEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentIndicators, setCurrentIndicators] = useState<DialogueIndicators | null>(null);
@@ -86,7 +112,9 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship, relationsh
           conversationHistory: conversationContext,
           genre,
           era,
-          isFirstMessage
+          isFirstMessage,
+          playerState,
+          weatherContext
         }
       });
 
@@ -136,7 +164,7 @@ export function useNPCDialogue({ npc, genre, era, playerRelationship, relationsh
     } finally {
       setIsLoading(false);
     }
-  }, [npc, relationship, dialogueHistory, genre, era]);
+  }, [npc, relationship, dialogueHistory, genre, era, playerState, weatherContext]);
 
   const startConversation = useCallback(async () => {
     const result = await generateDialogue(undefined, true);
