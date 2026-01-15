@@ -167,6 +167,13 @@ export interface CharacterAppearance {
   // Extended body modifications
   piercings?: string[];
   tattoos?: string[];
+  tattooStyle?: string;
+  scars?: string[];
+  prosthetics?: string[];
+  implants?: string[];
+  mutations?: string[];
+  clothingStyle?: string;
+  clothingDetails?: string[];
 }
 
 // Piercing value to description mapping
@@ -218,6 +225,78 @@ const TATTOO_PROMPT_MAP: Record<string, string> = {
   'ankle': 'ankle tattoo',
   'intimate_area': 'intimate area tattoo',
   'inner_thigh': 'inner thigh tattoo',
+};
+
+// Scar descriptions
+const SCAR_PROMPT_MAP: Record<string, string> = {
+  'face_slash': 'prominent facial scar slashing across face',
+  'face_burn': 'burn scars on face',
+  'missing_eye': 'missing eye with scar tissue',
+  'missing_ear': 'missing ear',
+  'neck_scar': 'visible scar across neck',
+  'chest_scars': 'multiple scars across chest',
+  'back_lashes': 'lash mark scars on back',
+  'bullet_wounds': 'healed bullet wound scars',
+  'surgical_scars': 'surgical scars on body',
+  'arm_burns': 'burn scars on arms',
+  'missing_fingers': 'missing fingers on hand',
+  'leg_scars': 'scarred legs',
+};
+
+// Prosthetic descriptions
+const PROSTHETIC_PROMPT_MAP: Record<string, string> = {
+  'arm_mechanical': 'mechanical prosthetic arm',
+  'arm_cybernetic': 'high-tech cybernetic arm with visible circuits',
+  'hand_prosthetic': 'prosthetic hand replacement',
+  'leg_mechanical': 'mechanical prosthetic leg',
+  'leg_cybernetic': 'cybernetic leg with tech components',
+  'eye_cybernetic': 'glowing cybernetic eye implant',
+  'eye_glass': 'glass eye',
+  'jaw_metal': 'metal jaw prosthetic',
+};
+
+// Implant descriptions
+const IMPLANT_PROMPT_MAP: Record<string, string> = {
+  'subdermal_horns': 'subdermal horn implants on forehead',
+  'split_tongue': 'forked split tongue',
+  'pointed_ears': 'surgically pointed elf-like ears',
+  'fangs': 'visible fang tooth implants',
+  'eye_mods': 'unusual eye color implants',
+  'neural_jack': 'neural interface port on temple',
+  'data_port': 'data port implant on neck',
+  'reflex_booster': 'visible reflex booster implants',
+  'subdermal_armor': 'visible subdermal armor plating',
+  'skill_chip': 'skill chip socket behind ear',
+};
+
+// Mutation descriptions
+const MUTATION_PROMPT_MAP: Record<string, string> = {
+  'unusual_skin': 'unusual unnatural skin color',
+  'scales': 'patches of reptilian scales on skin',
+  'extra_digits': 'extra fingers',
+  'bioluminescence': 'bioluminescent glowing markings on skin',
+  'unusual_eyes': 'unusual mutated eye structure',
+  'claws': 'natural sharp claws instead of nails',
+  'tail': 'visible tail',
+  'horns_natural': 'natural grown horns on head',
+};
+
+// Clothing style descriptions
+const CLOTHING_STYLE_PROMPT_MAP: Record<string, string> = {
+  'formal': 'wearing formal business attire',
+  'casual': 'wearing casual relaxed clothing',
+  'streetwear': 'wearing urban streetwear fashion',
+  'punk': 'wearing punk alternative clothing with spikes and patches',
+  'goth': 'wearing dark gothic Victorian-inspired clothing',
+  'military': 'wearing military tactical gear',
+  'athletic': 'wearing athletic sporty clothing',
+  'bohemian': 'wearing flowing bohemian hippie clothes',
+  'vintage': 'wearing vintage retro period clothing',
+  'minimalist': 'wearing simple minimalist clean clothing',
+  'extravagant': 'wearing bold flashy extravagant outfit',
+  'revealing': 'wearing revealing clothing showing skin',
+  'modest': 'wearing modest conservative full-coverage clothing',
+  'cosplay': 'wearing costume cosplay outfit',
 };
 
 export function buildPortraitPrompt(

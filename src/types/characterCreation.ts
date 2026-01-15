@@ -30,6 +30,15 @@ export interface FullAppearance {
   // Extended body modifications
   piercings?: string[];
   tattoos?: string[];
+  tattooStyle?: string;
+  // Physical modifications
+  scars?: string[];
+  prosthetics?: string[];
+  implants?: string[];
+  mutations?: string[];
+  // Clothing style
+  clothingStyle?: string;
+  clothingDetails?: string[];
 }
 
 export interface TieredAppearance {
@@ -133,6 +142,126 @@ export const HIP_OPTIONS = [{ value: 'narrow', label: 'Narrow' }, { value: 'aver
 export const MUSCLE_OPTIONS = [{ value: 'none', label: 'Soft' }, { value: 'toned', label: 'Toned' }, { value: 'defined', label: 'Defined' }, { value: 'very muscular', label: 'Very Muscular' }];
 export const BODY_HAIR_OPTIONS = [{ value: 'none', label: 'None' }, { value: 'light', label: 'Light' }, { value: 'moderate', label: 'Moderate' }, { value: 'heavy', label: 'Heavy' }];
 
+// Tattoo style options
+export const TATTOO_STYLE_OPTIONS = [
+  { value: 'traditional', label: 'Traditional/American', description: 'Bold lines, bright colors' },
+  { value: 'tribal', label: 'Tribal', description: 'Bold black patterns' },
+  { value: 'realistic', label: 'Realistic/Portrait', description: 'Photorealistic designs' },
+  { value: 'watercolor', label: 'Watercolor', description: 'Flowing, colorful splashes' },
+  { value: 'geometric', label: 'Geometric', description: 'Sacred geometry, patterns' },
+  { value: 'blackwork', label: 'Blackwork', description: 'Solid black designs' },
+  { value: 'japanese', label: 'Japanese/Irezumi', description: 'Dragons, koi, waves' },
+  { value: 'minimalist', label: 'Minimalist', description: 'Simple, fine line' },
+  { value: 'neo_traditional', label: 'Neo-Traditional', description: 'Modern take on traditional' },
+  { value: 'trash_polka', label: 'Trash Polka', description: 'Red and black chaos' },
+];
+
+// Physical modification options
+export const SCAR_OPTIONS = [
+  { value: 'face_slash', label: 'Facial Slash', category: 'face' },
+  { value: 'face_burn', label: 'Facial Burns', category: 'face' },
+  { value: 'missing_eye', label: 'Missing Eye', category: 'face' },
+  { value: 'missing_ear', label: 'Missing Ear', category: 'face' },
+  { value: 'neck_scar', label: 'Neck Scar', category: 'body' },
+  { value: 'chest_scars', label: 'Chest Scars', category: 'body' },
+  { value: 'back_lashes', label: 'Back Lash Marks', category: 'body' },
+  { value: 'bullet_wounds', label: 'Bullet Wound Scars', category: 'body' },
+  { value: 'surgical_scars', label: 'Surgical Scars', category: 'body' },
+  { value: 'arm_burns', label: 'Arm Burns', category: 'limbs' },
+  { value: 'missing_fingers', label: 'Missing Fingers', category: 'limbs' },
+  { value: 'leg_scars', label: 'Leg Scars', category: 'limbs' },
+];
+
+export const PROSTHETIC_OPTIONS = [
+  { value: 'arm_mechanical', label: 'Mechanical Arm', category: 'arms' },
+  { value: 'arm_cybernetic', label: 'Cybernetic Arm', category: 'arms' },
+  { value: 'hand_prosthetic', label: 'Prosthetic Hand', category: 'arms' },
+  { value: 'leg_mechanical', label: 'Mechanical Leg', category: 'legs' },
+  { value: 'leg_cybernetic', label: 'Cybernetic Leg', category: 'legs' },
+  { value: 'eye_cybernetic', label: 'Cybernetic Eye', category: 'head' },
+  { value: 'eye_glass', label: 'Glass Eye', category: 'head' },
+  { value: 'jaw_metal', label: 'Metal Jaw', category: 'head' },
+];
+
+export const IMPLANT_OPTIONS = [
+  { value: 'subdermal_horns', label: 'Subdermal Horns', category: 'cosmetic' },
+  { value: 'split_tongue', label: 'Split Tongue', category: 'cosmetic' },
+  { value: 'pointed_ears', label: 'Pointed Ears', category: 'cosmetic' },
+  { value: 'fangs', label: 'Fang Implants', category: 'cosmetic' },
+  { value: 'eye_mods', label: 'Eye Color Implants', category: 'cosmetic' },
+  { value: 'neural_jack', label: 'Neural Interface Jack', category: 'tech' },
+  { value: 'data_port', label: 'Data Port', category: 'tech' },
+  { value: 'reflex_booster', label: 'Reflex Boosters', category: 'tech' },
+  { value: 'subdermal_armor', label: 'Subdermal Armor', category: 'tech' },
+  { value: 'skill_chip', label: 'Skill Chip Socket', category: 'tech' },
+];
+
+export const MUTATION_OPTIONS = [
+  { value: 'unusual_skin', label: 'Unusual Skin Color', category: 'visible' },
+  { value: 'scales', label: 'Scale Patches', category: 'visible' },
+  { value: 'extra_digits', label: 'Extra Fingers/Toes', category: 'visible' },
+  { value: 'bioluminescence', label: 'Bioluminescent Markings', category: 'visible' },
+  { value: 'unusual_eyes', label: 'Unusual Eye Structure', category: 'visible' },
+  { value: 'claws', label: 'Natural Claws', category: 'visible' },
+  { value: 'tail', label: 'Tail', category: 'visible' },
+  { value: 'horns_natural', label: 'Natural Horns', category: 'visible' },
+];
+
+// Clothing style options - can contrast with genre for NPC reactions
+export const CLOTHING_STYLE_OPTIONS = [
+  { value: 'genre_default', label: 'Genre Appropriate', description: 'Standard for setting' },
+  { value: 'formal', label: 'Formal/Business', description: 'Suits, dresses, professional' },
+  { value: 'casual', label: 'Casual', description: 'Relaxed everyday wear' },
+  { value: 'streetwear', label: 'Streetwear', description: 'Urban, trendy, branded' },
+  { value: 'punk', label: 'Punk/Alternative', description: 'Ripped, spikes, patches' },
+  { value: 'goth', label: 'Gothic', description: 'Dark, Victorian influence' },
+  { value: 'military', label: 'Military/Tactical', description: 'Combat ready, practical' },
+  { value: 'athletic', label: 'Athletic/Sporty', description: 'Performance wear' },
+  { value: 'bohemian', label: 'Bohemian/Hippie', description: 'Flowing, natural fabrics' },
+  { value: 'vintage', label: 'Vintage/Retro', description: 'Past era fashion' },
+  { value: 'minimalist', label: 'Minimalist', description: 'Simple, clean lines' },
+  { value: 'extravagant', label: 'Extravagant/Flashy', description: 'Bold, attention-grabbing' },
+  { value: 'revealing', label: 'Revealing', description: 'Shows more skin' },
+  { value: 'modest', label: 'Modest/Conservative', description: 'Full coverage' },
+  { value: 'cosplay', label: 'Costume/Cosplay', description: 'Character or themed' },
+];
+
+export const CLOTHING_DETAIL_OPTIONS = [
+  // Tops
+  { value: 'crop_top', label: 'Crop Top', category: 'tops' },
+  { value: 'tank_top', label: 'Tank Top', category: 'tops' },
+  { value: 'deep_v', label: 'Deep V-Neck', category: 'tops' },
+  { value: 'off_shoulder', label: 'Off-Shoulder', category: 'tops' },
+  { value: 'backless', label: 'Backless', category: 'tops' },
+  { value: 'mesh_top', label: 'Mesh/See-through', category: 'tops' },
+  { value: 'corset', label: 'Corset', category: 'tops' },
+  { value: 'hoodie', label: 'Hoodie', category: 'tops' },
+  { value: 'leather_jacket', label: 'Leather Jacket', category: 'tops' },
+  // Bottoms
+  { value: 'short_shorts', label: 'Short Shorts', category: 'bottoms' },
+  { value: 'mini_skirt', label: 'Mini Skirt', category: 'bottoms' },
+  { value: 'slit_skirt', label: 'High Slit Skirt', category: 'bottoms' },
+  { value: 'leather_pants', label: 'Leather Pants', category: 'bottoms' },
+  { value: 'ripped_jeans', label: 'Ripped Jeans', category: 'bottoms' },
+  { value: 'cargo_pants', label: 'Cargo Pants', category: 'bottoms' },
+  // Full body
+  { value: 'bodysuit', label: 'Bodysuit', category: 'full' },
+  { value: 'catsuit', label: 'Catsuit', category: 'full' },
+  { value: 'gown', label: 'Evening Gown', category: 'full' },
+  { value: 'jumpsuit', label: 'Jumpsuit', category: 'full' },
+  // Footwear
+  { value: 'heels', label: 'High Heels', category: 'footwear' },
+  { value: 'boots_thigh', label: 'Thigh-High Boots', category: 'footwear' },
+  { value: 'combat_boots', label: 'Combat Boots', category: 'footwear' },
+  { value: 'barefoot', label: 'Barefoot', category: 'footwear' },
+  // Accessories
+  { value: 'collar', label: 'Collar/Choker', category: 'accessories' },
+  { value: 'gloves_long', label: 'Long Gloves', category: 'accessories' },
+  { value: 'stockings', label: 'Stockings/Fishnets', category: 'accessories' },
+  { value: 'harness', label: 'Body Harness', category: 'accessories' },
+  { value: 'cape', label: 'Cape/Cloak', category: 'accessories' },
+];
+
 export function formatAppearanceForAI(appearance: TieredAppearance, genre: string): string {
   const { simple, detailed, full, detailLevel } = appearance;
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
@@ -160,11 +289,53 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
       description += `, with ${piercingLabels.join(', ')}`;
     }
     if (full.tattoos?.length) {
+      const tattooStyle = full.tattooStyle ? TATTOO_STYLE_OPTIONS.find(s => s.value === full.tattooStyle)?.label || '' : '';
       const tattooLabels = full.tattoos.map(t => {
         const opt = TATTOO_OPTIONS.find(o => o.value === t);
         return opt ? opt.label.toLowerCase() + ' tattoo' : t;
       });
-      description += `, with ${tattooLabels.join(', ')}`;
+      description += `, with ${tattooStyle ? tattooStyle + ' style ' : ''}${tattooLabels.join(', ')}`;
+    }
+    // Physical modifications
+    if (full.scars?.length) {
+      const scarLabels = full.scars.map(s => {
+        const opt = SCAR_OPTIONS.find(o => o.value === s);
+        return opt ? opt.label.toLowerCase() : s;
+      });
+      description += `, with ${scarLabels.join(', ')}`;
+    }
+    if (full.prosthetics?.length) {
+      const prostheticLabels = full.prosthetics.map(p => {
+        const opt = PROSTHETIC_OPTIONS.find(o => o.value === p);
+        return opt ? opt.label.toLowerCase() : p;
+      });
+      description += `, has ${prostheticLabels.join(', ')}`;
+    }
+    if (full.implants?.length) {
+      const implantLabels = full.implants.map(i => {
+        const opt = IMPLANT_OPTIONS.find(o => o.value === i);
+        return opt ? opt.label.toLowerCase() : i;
+      });
+      description += `, with ${implantLabels.join(', ')}`;
+    }
+    if (full.mutations?.length) {
+      const mutationLabels = full.mutations.map(m => {
+        const opt = MUTATION_OPTIONS.find(o => o.value === m);
+        return opt ? opt.label.toLowerCase() : m;
+      });
+      description += `, has ${mutationLabels.join(', ')}`;
+    }
+    // Clothing style
+    if (full.clothingStyle && full.clothingStyle !== 'genre_default') {
+      const styleOpt = CLOTHING_STYLE_OPTIONS.find(o => o.value === full.clothingStyle);
+      description += `. Wearing ${styleOpt?.label || full.clothingStyle} style clothing`;
+    }
+    if (full.clothingDetails?.length) {
+      const clothingLabels = full.clothingDetails.map(c => {
+        const opt = CLOTHING_DETAIL_OPTIONS.find(o => o.value === c);
+        return opt ? opt.label.toLowerCase() : c;
+      });
+      description += `, specifically ${clothingLabels.join(', ')}`;
     }
     if (full.intimateDetails) description += `. ${full.intimateDetails}`;
   }
