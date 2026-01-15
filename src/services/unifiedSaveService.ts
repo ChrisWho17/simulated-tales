@@ -90,10 +90,12 @@ class UnifiedSaveServiceClass {
   };
   
   private syncStatus: SyncStatus = 'idle';
+  private syncProgress: number = 0; // 0-100
   private lastSyncTime: number | null = null;
   private statusCallbacks: Set<(status: SyncStatus) => void> = new Set();
   private accountCallbacks: Set<(account: SaveAccount) => void> = new Set();
   private lastSyncCallbacks: Set<(time: number | null) => void> = new Set();
+  private progressCallbacks: Set<(progress: number) => void> = new Set();
   private initialized = false;
 
   // ============================================================================
@@ -214,6 +216,21 @@ class UnifiedSaveServiceClass {
     return () => this.lastSyncCallbacks.delete(callback);
   }
 
+  // Progress tracking
+  getSyncProgress(): number {
+    return this.syncProgress;
+  }
+
+  private setProgress(progress: number): void {
+    this.syncProgress = Math.min(100, Math.max(0, progress));
+    this.progressCallbacks.forEach(cb => cb(this.syncProgress));
+  }
+
+  onProgressChange(callback: (progress: number) => void): () => void {
+    this.progressCallbacks.add(callback);
+    return () => this.progressCallbacks.delete(callback);
+  }
+
   // ============================================================================
   // CAMPAIGN OPERATIONS - Unified API
   // ============================================================================
@@ -313,11 +330,20 @@ class UnifiedSaveServiceClass {
     }
 
     this.setStatus('syncing');
+    this.setProgress(0);
 
     try {
+      // Phase 1: Compress data (30%)
+      this.setProgress(10);
       const compressed = compressCampaign(campaign);
+      this.setProgress(30);
+      
+      // Phase 2: Generate checksum (40%)
       const checksum = generateChecksum(campaign);
+      this.setProgress(40);
 
+      // Phase 3: Upload to cloud (40% -> 90%)
+      this.setProgress(50);
       const { error } = await supabase
         .from('cloud_saves')
         .upsert({
@@ -337,18 +363,28 @@ class UnifiedSaveServiceClass {
           onConflict: 'user_id,campaign_id',
         });
 
+      this.setProgress(90);
+
       if (error) {
         console.error('[UnifiedSave] Cloud save error:', error);
         this.setStatus('error');
+        this.setProgress(0);
         return { success: false, error: error.message };
       }
 
+      // Phase 4: Complete (100%)
+      this.setProgress(100);
       this.setStatus('synced');
       console.log(`[UnifiedSave] Cloud saved: ${campaign.meta.name}`);
+      
+      // Reset progress after a short delay
+      setTimeout(() => this.setProgress(0), 1000);
+      
       return { success: true };
     } catch (e) {
       console.error('[UnifiedSave] Cloud save failed:', e);
       this.setStatus('error');
+      this.setProgress(0);
       return { success: false, error: 'Save failed' };
     }
   }
