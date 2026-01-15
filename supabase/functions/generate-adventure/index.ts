@@ -2061,6 +2061,54 @@ FACTION STANDING:
       systemContent += CHEAT_MODE_ADDITION;
     }
 
+    // ============= SYSTEMS INTEGRATION CHECKLIST - NARRATIVE COHERENCE =============
+    // This reminds the AI to weave ALL active systems together in every response
+    systemContent += `\n\n===== SYSTEMS INTEGRATION CHECKLIST =====
+BEFORE generating your response, VERIFY you've considered each active system:
+
+📋 **MANDATORY CHECKLIST** (apply all that are present):
+
+${clothingArmorContext ? `✓ OUTFIT/ARMOR: "${clothingArmorContext.currentOutfit || 'standard attire'}"
+   - Stat effects: ${Object.entries(clothingArmorContext.statModifiers || {}).filter(([_, v]) => v !== 0).map(([k, v]) => `${k}: ${Number(v) >= 0 ? '+' : ''}${Number(v) * 2}`).join(', ') || 'none'}
+   - First impression: ${clothingArmorContext.firstImpressionMod > 0 ? '+' : ''}${clothingArmorContext.firstImpressionMod}
+   ${(clothingArmorContext.statModifiers?.stealth ?? 0) < 0 ? '⚠️ STEALTH PENALTY ACTIVE - Describe noise/bulk when sneaking' : ''}
+   ${(clothingArmorContext.statModifiers?.perception ?? 0) < 0 ? '⚠️ VISION PENALTY ACTIVE - Describe restricted sightlines' : ''}` : ''}
+
+${weatherContext ? `✓ WEATHER: ${weatherContext.name} (${weatherContext.intensity})
+   - Include weather details in scene descriptions
+   - Weather affects visibility, movement, NPC behavior` : ''}
+
+${timeContext ? `✓ TIME: ${timeContext.formattedTime} (${timeContext.timeOfDay})
+   - Light level: ${timeContext.lightLevel}
+   - Businesses/NPCs should be active/asleep appropriately` : ''}
+
+${emotionalContext ? `✓ PLAYER MOOD: ${emotionalContext.currentMood} (${Math.round(emotionalContext.moodIntensity * 100)}%)
+   - Action flavor: ${emotionalContext.actionFlavor}
+   - Dialogue should reflect: ${emotionalContext.dialogueTone}` : ''}
+
+${pressureClockContext && pressureClockContext.worldPressureLevel > 30 ? `✓ WORLD PRESSURE: ${pressureClockContext.worldPressureLevel}%
+   - Include tension/atmosphere in descriptions
+   - Active effects: ${pressureClockContext.activeEffects.slice(0, 3).join(', ') || 'ambient tension'}` : ''}
+
+${npcMotivationContext?.presentNPCMotivations?.length ? `✓ NPC MOTIVATIONS IN SCENE:
+${npcMotivationContext.presentNPCMotivations.slice(0, 3).map(npc => `   - ${npc.npcName}: wants ${npc.desire.slice(0, 30)}... fears ${npc.fear.slice(0, 30)}...`).join('\n')}` : ''}
+
+${relationshipMeterContext?.sceneNPCMeters?.length ? `✓ RELATIONSHIP DYNAMICS:
+${relationshipMeterContext.sceneNPCMeters.slice(0, 3).map(npc => `   - ${npc.npcName}: Trust ${npc.trust}, Respect ${npc.respect}, Attach ${npc.attachment}`).join('\n')}` : ''}
+
+${voiceSignatureContext?.npcSignatures?.length ? `✓ NPC VOICE SIGNATURES ACTIVE - Each NPC should sound distinct!` : ''}
+
+${microEventContext?.triggerEvent ? `✓ MICRO-EVENT REQUIRED: "${microEventContext.selectedEvent?.description || 'include small interruption'}"` : ''}
+
+${livingWorldContext?.fullContext ? `✓ LIVING WORLD ACTIVE - Properties/Rivals/Factions are in play` : ''}
+
+**INTEGRATION RULES:**
+1. Cross-reference systems: Clothing affects social rolls, weather affects stealth, time affects NPC availability
+2. Don't just list effects - SHOW them through narrative details
+3. Systems INTERACT: Heavy armor + rain = even louder; night + low perception = major disadvantage
+4. NPCs notice and react to player's visible state (outfit, wounds, mood expressions)
+5. The world is ALIVE - things happen whether player watches or not`;
+
     // Add content rating instructions based on adult content setting
     if (adultContent) {
       systemContent += `
