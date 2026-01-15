@@ -109,7 +109,7 @@ export interface CharacterAppearance { bodyType: BodyTypeOption; height: HeightO
 export type SpawnPointType = 'college' | 'home' | 'homeless';
 export interface CharacterBackground { origin: string; spawnPoint: SpawnPointType; }
 export interface CharacterPersonality { disposition: DispositionOption; socialStyle: SocialStyleOption; }
-export interface CharacterData { basicInfo: CharacterBasicInfo; appearance: CharacterAppearance; background: CharacterBackground; personality: CharacterPersonality; }
+export interface CharacterData { basicInfo: CharacterBasicInfo; appearance: CharacterAppearance; background: CharacterBackground; personality: CharacterPersonality; portraitUrl?: string | null; backstory?: any; }
 export interface BackgroundEffect { startingStress: number; startingMoney: number; skills: string[]; traumaSeeds: string[]; }
 export interface SpawnPointData { id: SpawnPointType; name: string; startingLocation: string; housing: string; money: number; stress: number; socialCapital: string[]; schedule: string; narrativeHook: string; uniqueEvents: string[]; }
 
