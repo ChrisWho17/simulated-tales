@@ -12,6 +12,7 @@ import { RPGCharacter } from '@/types/rpgCharacter';
 import { AdrenalineBar } from './AdrenalineBar';
 import { AdrenalineSystemState } from '@/game/adrenalineSystem';
 import { CloudSyncIndicator } from '@/components/cloud/CloudSyncIndicator';
+import { BadgeShowcase, MenuBadgeIndicator } from './AchievementBadges';
 
 interface ExtendedCharacter extends RPGCharacter {
   id?: string;
@@ -163,19 +164,25 @@ export function GameHeader({
           </Tooltip>
         )}
         
-        {/* Trophy Room Link - Always visible */}
+        {/* Trophy Room Link with Badge Indicator */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => navigate('/achievements')}
-              className="hover:bg-amber-500/20 hover:text-amber-400"
+              className="hover:bg-amber-500/20 hover:text-amber-400 relative"
             >
               <Trophy className="h-4 w-4 text-amber-400" />
+              <MenuBadgeIndicator />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Trophy Room</TooltipContent>
+          <TooltipContent>
+            <div className="text-center">
+              <p>Trophy Room</p>
+              <BadgeShowcase maxBadges={3} size="sm" showEmpty={false} className="mt-1" />
+            </div>
+          </TooltipContent>
         </Tooltip>
         
         {onOpenSessionStats && (

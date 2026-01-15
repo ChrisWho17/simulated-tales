@@ -17,6 +17,7 @@ export interface Achievement {
   unlockedAt?: number;
   progress?: number;
   maxProgress?: number;
+  hasRewards?: boolean; // Flag indicating this achievement has claimable rewards
 }
 
 export const ACHIEVEMENT_CATEGORIES = [
