@@ -10,6 +10,7 @@ import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySy
 import { migrateStorageKeys } from "@/lib/campaignStorageMigration";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
@@ -43,6 +44,7 @@ const App = () => (
                   <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/campaigns/new" element={<Index />} />
                   <Route path="/play" element={<Index />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/loadout-test" element={<LoadoutTest />} />
                   <Route path="/inventory-test" element={<InventoryTest />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
