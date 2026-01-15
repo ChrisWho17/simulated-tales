@@ -2,11 +2,13 @@
 // PROFILE PAGE - User account management and synced campaigns
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { CloudSyncService, CloudSave } from '@/services/cloudSyncService';
 import { renameCampaign } from '@/lib/campaignStorage';
+import { PageTransition } from '@/components/ui/PageTransition';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CampaignSaveSkeletonList } from '@/components/ui/SkeletonLoader';
 import { 
   User, 
   Cloud, 
@@ -193,6 +196,16 @@ export default function Profile() {
     return name.split(' ').map((n: string) => n.charAt(0)).join('').toUpperCase().slice(0, 2);
   };
 
+  // Auto-focus ref for rename input
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  
+  // Focus rename input when dialog opens
+  useEffect(() => {
+    if (renameTarget && renameInputRef.current) {
+      setTimeout(() => renameInputRef.current?.focus(), 100);
+    }
+  }, [renameTarget]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -202,22 +215,22 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <h1 className="text-xl font-semibold">Profile Settings</h1>
-          <div className="w-20" /> {/* Spacer for centering */}
-        </div>
-      </header>
+    <PageTransition>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Breadcrumbs 
+                items={[
+                  { label: 'Profile' }
+                ]} 
+              />
+              <h1 className="text-xl font-semibold hidden sm:block">Profile Settings</h1>
+              <div className="w-20" /> {/* Spacer for centering */}
+            </div>
+          </div>
+        </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
         {/* Account Section */}
@@ -325,9 +338,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               {isLoadingSaves ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+                <CampaignSaveSkeletonList count={3} />
               ) : cloudSaves.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Cloud className="h-12 w-12 text-muted-foreground mb-4" />
@@ -474,6 +485,7 @@ export default function Profile() {
             <Label htmlFor="campaign-name">Campaign Name</Label>
             <Input
               id="campaign-name"
+              ref={renameInputRef}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Enter new name"
@@ -505,6 +517,7 @@ export default function Profile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </PageTransition>
   );
 }
