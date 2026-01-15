@@ -4,7 +4,7 @@ import {
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard, Timer
+  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard, Timer, Highlighter
 } from 'lucide-react';
 import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
@@ -1160,6 +1160,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   </div>
                 </div>
               )}
+              
+              {/* System Highlighting */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30">
+                <div className="flex items-center gap-2">
+                  <Highlighter className="w-4 h-4 text-accent" />
+                  <div>
+                    <span className="text-sm font-medium">System Highlights</span>
+                    <p className="text-xs text-muted-foreground">Show when armor, weather, wounds etc. affect the story</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={settings.enableSystemHighlight ?? false}
+                  onCheckedChange={(checked) => updateSettings({ enableSystemHighlight: checked })}
+                />
+              </div>
             </div>
           )}
           

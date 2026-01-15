@@ -177,6 +177,9 @@ export interface GameSettings {
   // Display settings
   typewriterEnabled: boolean;
   
+  // System highlighting in narrative
+  enableSystemHighlight: boolean;
+  
   // Director settings
   directorSettings: DirectorSettings;
 }
@@ -273,6 +276,9 @@ const defaultSettings: GameSettings = {
   
   // Display settings
   typewriterEnabled: true,
+  
+  // System highlighting
+  enableSystemHighlight: false,
   
   // Director settings
   directorSettings: DEFAULT_DIRECTOR_SETTINGS,
