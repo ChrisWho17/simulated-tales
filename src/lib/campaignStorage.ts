@@ -39,7 +39,12 @@ export function loadCampaignIndex(): CampaignMetadata[] {
   try {
     const saved = localStorage.getItem(CAMPAIGN_INDEX_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Ensure we always return an array
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      console.warn('[Campaign Storage] Campaign index was not an array, resetting');
     }
   } catch (e) {
     console.error('[Campaign Storage] Failed to load index:', e);
