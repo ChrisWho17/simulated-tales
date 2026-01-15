@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Heart, Shield, Crown, Users, ChevronDown, ChevronUp,
-  Sparkles, MessageCircle, AlertTriangle, Eye, Flame, Star
+  Sparkles, MessageCircle, AlertTriangle, Eye, Flame, Star, Shirt
 } from 'lucide-react';
 import { NPC } from '@/types/game';
 import { 
@@ -16,6 +16,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ClothingReactionIndicator } from './ClothingReactionIndicator';
 
 interface EnhancedRelationshipCardProps {
   npc: NPC;
@@ -270,6 +271,13 @@ export function EnhancedRelationshipCard({
                   </div>
                 </div>
               )}
+
+              {/* Clothing/Appearance Reaction */}
+              <ClothingReactionIndicator 
+                npcRole={npc.meta?.occupation}
+                npcName={npc.meta?.name}
+                showDetails={false}
+              />
 
               {/* Quick actions */}
               <div className="flex gap-2 pt-1">

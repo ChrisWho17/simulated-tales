@@ -13,8 +13,10 @@ import { MoodIndicator } from './MoodIndicator';
 import { CharacterInfoSheet } from './CharacterInfoSheet';
 import { npcWeatherReactionSystem, NPCWeatherPersonality } from '@/game/npcWeatherReactionSystem';
 import { WeatherType } from '@/game/weatherSystem';
+import { ClothingReactionIndicator } from '@/components/game/ClothingReactionIndicator';
+import { getPlayerClothingReaction } from '@/game/clothingReactionSystem';
 import { 
-  MessageSquare, X, Loader2, ChevronRight, Cloud
+  MessageSquare, X, Loader2, ChevronRight, Cloud, Shirt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -245,6 +247,15 @@ export function ConversationUI({
                   }}
                 />
               </div>
+            </div>
+            
+            {/* Clothing Reaction Indicator */}
+            <div className="mt-3 px-4">
+              <ClothingReactionIndicator 
+                npcRole={npc.meta.occupation}
+                npcName={npc.meta.name}
+                showDetails={true}
+              />
             </div>
           </div>
         </div>

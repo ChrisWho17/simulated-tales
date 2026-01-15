@@ -12,12 +12,13 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { User, Users, MapPin, Heart, Camera, Loader2, UserCircle2, Shield, Dices } from 'lucide-react';
+import { User, Users, MapPin, Heart, Camera, Loader2, UserCircle2, Shield, Dices, Shirt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getStatModifier } from '@/types/rpgCharacter';
 import { NPCCharacterStats } from '@/game/npcIdentityRegistry';
+import { ClothingReactionIndicator } from '@/components/game/ClothingReactionIndicator';
 
 // Ensure NPC registry is loaded
 loadNPCRegistry();
@@ -283,6 +284,19 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
                 <NPCStatsGrid stats={npc.permanent.characterStats} />
               </div>
             )}
+
+            {/* Clothing/Appearance Reaction */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <Shirt className="w-4 h-4" />
+                Impression of You
+              </h4>
+              <ClothingReactionIndicator 
+                npcRole={npc.semiPermanent.occupation}
+                npcName={npc.permanent.name}
+                showDetails={true}
+              />
+            </div>
 
             {/* Relationships Section */}
             {(spouse || siblings.length > 0) && (
