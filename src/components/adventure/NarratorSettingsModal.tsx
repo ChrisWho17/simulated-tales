@@ -83,7 +83,7 @@ export function NarratorSettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+        <ScrollArea className="flex-1 min-h-0 max-h-[60vh] -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Enable Director Toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
