@@ -25,6 +25,9 @@ import { OnboardingOverlay, useOnboarding } from '@/components/game/OnboardingOv
 import { CommandAutocomplete, useCommandAutocomplete, SLASH_COMMANDS } from '@/components/game/CommandAutocomplete';
 import { QuickDiceRoll } from '@/components/game/QuickDiceRoll';
 import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView';
+import { TimeDisplay } from '@/components/game/TimeDisplay';
+import { QuestQuickView } from '@/components/game/QuestQuickView';
+import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
@@ -264,6 +267,10 @@ export function AdventureDisplay({
   const [showSessionRecap, setShowSessionRecap] = useState(false);
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
+  const [showTimeDisplay, setShowTimeDisplay] = useState(false);
+  const [showQuestQuickView, setShowQuestQuickView] = useState(false);
+  const [gameHour, setGameHour] = useState(() => new Date().getHours()); // Track in-game time
+  const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
   
   // Onboarding system
@@ -1091,7 +1098,7 @@ export function AdventureDisplay({
         case '/?':
           toast({
             title: '📖 Available Commands',
-            description: '/recap • /inventory • /stats • /roll • /map • /relationships • /bookmarks • /settings',
+            description: '/recap • /inventory • /stats • /roll • /map • /quest • /time • /weather • /relationships • /bookmarks • /settings',
             duration: 5000,
           });
           setInput('');
@@ -1127,6 +1134,19 @@ export function AdventureDisplay({
         case '/weather':
         case '/w':
           setShowWeatherModal(true);
+          setInput('');
+          return;
+        case '/time':
+        case '/t':
+        case '/clock':
+          setShowTimeDisplay(true);
+          setInput('');
+          return;
+        case '/quest':
+        case '/quests':
+        case '/journal':
+        case '/q':
+          setShowQuestQuickView(true);
           setInput('');
           return;
       }
@@ -2292,6 +2312,22 @@ export function AdventureDisplay({
           portraitUrl: npc.portraitUrl,
         }))}
       />
+      
+      {/* Time Display - triggered by /time command */}
+      {showTimeDisplay && (
+        <TimeDisplay
+          gameHour={gameHour}
+          onClose={() => setShowTimeDisplay(false)}
+        />
+      )}
+      
+      {/* Quest Quick View - triggered by /quest command */}
+      {showQuestQuickView && (
+        <QuestQuickView
+          questLog={questLog}
+          onClose={() => setShowQuestQuickView(false)}
+        />
+      )}
       
       {/* First-time player onboarding */}
       <OnboardingOverlay 

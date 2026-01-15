@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   Backpack, ScrollText, Heart, Settings, HelpCircle,
-  Bookmark, Map, Users, Dices, RotateCcw, Search, Cloud
+  Bookmark, Map, Users, Dices, RotateCcw, Search, Cloud,
+  Clock, BookOpen
 } from 'lucide-react';
 
 export interface SlashCommand {
@@ -45,6 +46,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'navigation',
   },
   {
+    command: '/quest',
+    aliases: ['/journal', '/quests', '/q'],
+    description: 'View active quests',
+    icon: <BookOpen className="w-4 h-4" />,
+    category: 'navigation',
+  },
+  {
     command: '/relationships',
     aliases: ['/rel', '/npcs'],
     description: 'View NPC relationships',
@@ -63,6 +71,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     aliases: ['/w'],
     description: 'Check current weather',
     icon: <Cloud className="w-4 h-4" />,
+    category: 'game',
+  },
+  {
+    command: '/time',
+    aliases: ['/t', '/clock'],
+    description: 'Check time of day',
+    icon: <Clock className="w-4 h-4" />,
     category: 'game',
   },
   {
