@@ -2,7 +2,7 @@
 // SAVES DROPDOWN - Campaign management dropdown for in-game UI
 // ============================================================================
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
@@ -53,8 +53,19 @@ export function SavesDropdown() {
   const [showCheckpointRestore, setShowCheckpointRestore] = useState(false);
   const [checkpointLabel, setCheckpointLabel] = useState('');
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   
   const importInputRef = useRef<HTMLInputElement>(null);
+  
+  // Listen for mobile quick menu trigger
+  useEffect(() => {
+    const handleOpenSaves = () => {
+      setIsOpen(true);
+    };
+    
+    window.addEventListener('open-saves-dropdown', handleOpenSaves);
+    return () => window.removeEventListener('open-saves-dropdown', handleOpenSaves);
+  }, []);
   
   if (!campaignContext) {
     return null;
@@ -180,7 +191,7 @@ export function SavesDropdown() {
   
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="ghost" 

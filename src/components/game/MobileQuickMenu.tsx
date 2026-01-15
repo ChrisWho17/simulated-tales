@@ -4,7 +4,7 @@
 import React from 'react';
 import { 
   Settings, Trophy, ScrollText, Backpack, Bookmark, 
-  Clock, CloudRain, RotateCcw, Save, X, Info
+  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface MobileQuickMenuProps {
   onOpenWeather: () => void;
   onOpenTime: () => void;
   onOpenRecap: () => void;
+  onOpenSaves: () => void;
   onRestart: () => void;
   characterName?: string;
   currentTime?: string;
@@ -43,6 +44,7 @@ export function MobileQuickMenu({
   onOpenWeather,
   onOpenTime,
   onOpenRecap,
+  onOpenSaves,
   onRestart,
   characterName,
   currentTime,
@@ -92,6 +94,13 @@ export function MobileQuickMenu({
       onClick: () => { onOpenRecap(); onClose(); },
       color: 'text-green-400',
       description: 'Story so far',
+    },
+    {
+      icon: <FolderOpen className="w-5 h-5" />,
+      label: 'Saves',
+      onClick: () => { onOpenSaves(); onClose(); },
+      color: 'text-cyan-400',
+      description: 'Save & Load',
     },
     {
       icon: <Settings className="w-5 h-5" />,
