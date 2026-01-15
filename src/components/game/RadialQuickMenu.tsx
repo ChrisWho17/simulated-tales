@@ -349,8 +349,8 @@ export function RadialQuickMenu({
                   className={cn(
                     "absolute flex items-center justify-center",
                     "w-14 h-14 rounded-full",
-                    "bg-card/90 backdrop-blur-md border-2",
-                    "opacity-0 animate-[fadeScaleIn_180ms_ease-out_80ms_forwards]",
+                    "bg-card/80 backdrop-blur-lg border",
+                    "opacity-0",
                     item.color
                   )}
                   style={{
@@ -359,8 +359,9 @@ export function RadialQuickMenu({
                     transform: `translate(-50%, -50%)`,
                     boxShadow: isHovered 
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
-                      : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
-                    borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
+                      : `0 0 8px 2px ${item.glowColor}15, 0 4px 12px rgba(0,0,0,0.3)`,
+                    borderColor: isHovered ? item.glowColor : `${item.glowColor}25`,
+                    animation: !isHovered ? `fadeScaleIn 180ms ease-out 80ms forwards, glassGlow 3s ease-in-out 300ms infinite` : 'fadeScaleIn 180ms ease-out 80ms forwards',
                   }}
                 >
                   {item.icon}
@@ -401,7 +402,7 @@ export function RadialQuickMenu({
             </button>
           </div>
           
-          {/* CSS for fade-in with scale animation */}
+          {/* CSS for animations */}
           <style>{`
             @keyframes fadeScaleIn {
               from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
@@ -410,6 +411,16 @@ export function RadialQuickMenu({
             @keyframes fadeIn {
               from { opacity: 0; }
               to { opacity: 1; }
+            }
+            @keyframes glassGlow {
+              0%, 100% { 
+                box-shadow: 0 0 8px 2px currentColor, 0 4px 12px rgba(0,0,0,0.2);
+                border-color: currentColor;
+              }
+              50% { 
+                box-shadow: 0 0 14px 4px currentColor, 0 4px 16px rgba(0,0,0,0.25);
+                border-color: currentColor;
+              }
             }
           `}</style>
         </motion.div>
