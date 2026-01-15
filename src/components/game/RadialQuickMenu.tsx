@@ -94,20 +94,6 @@ export function RadialQuickMenu({
       glowColor: 'rgb(251 191 36)',
     },
     {
-      icon: <Clock className="w-5 h-5" />,
-      label: 'Time',
-      onClick: onOpenTime,
-      color: 'text-yellow-400',
-      glowColor: 'rgb(250 204 21)',
-    },
-    {
-      icon: <CloudRain className="w-5 h-5" />,
-      label: 'Weather',
-      onClick: onOpenWeather,
-      color: 'text-blue-400',
-      glowColor: 'rgb(96 165 250)',
-    },
-    {
       icon: <Bookmark className="w-5 h-5" />,
       label: 'Bookmarks',
       onClick: onOpenBookmarks,
@@ -164,24 +150,36 @@ export function RadialQuickMenu({
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="md:hidden fixed inset-0 z-[100]"
+          className="md:hidden fixed inset-0 z-[100] flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Backdrop with blur */}
+          {/* Inverted vignette backdrop - bright center, dark edges */}
           <motion.div 
-            className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            className="absolute inset-0"
             onClick={toggleMenu}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{
+              background: `
+                radial-gradient(
+                  circle at center,
+                  hsl(var(--primary) / 0.15) 0%,
+                  hsl(var(--primary) / 0.08) 15%,
+                  rgba(0, 0, 0, 0.7) 45%,
+                  rgba(0, 0, 0, 0.92) 100%
+                )
+              `,
+              backdropFilter: 'blur(8px)',
+            }}
           />
           
-          {/* Center container - positioned exactly at screen center */}
+          {/* Center container - using flexbox centering */}
           <div 
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className="relative"
             style={{ width: '280px', height: '280px' }}
           >
             {/* Multiple decorative orbit rings */}
