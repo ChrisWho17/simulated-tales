@@ -31,7 +31,7 @@ import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
 import { PacingIndicator } from '@/components/game/PacingIndicator';
 import { MobileQuickMenu } from '@/components/game/MobileQuickMenu';
-import { RadialQuickMenu } from '@/components/game/RadialQuickMenu';
+import { RadialQuickMenu, RadialMenuTrigger } from '@/components/game/RadialQuickMenu';
 import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
@@ -1685,6 +1685,9 @@ export function AdventureDisplay({
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
+            
+            {/* Radial Menu Trigger - Mobile only, opens Skyrim-style menu */}
+            <RadialMenuTrigger onClick={() => window.dispatchEvent(new CustomEvent('open-radial-menu'))} />
           </div>
         </div>
       </header>
@@ -1813,7 +1816,7 @@ export function AdventureDisplay({
                   
                   {/* Action Buttons Row - Bookmark, Generate Image & Regenerate World */}
                   <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
-                    {/* Left side - Bookmark button on all narrator entries */}
+                    {/* Left side - Bookmark button on all narrator entries (hidden on mobile, use radial menu) */}
                     <BookmarkButton
                       entryId={entry.id}
                       entryIndex={index}
@@ -1821,7 +1824,7 @@ export function AdventureDisplay({
                       campaignId={campaignId}
                       characterName={character.name}
                       size="sm"
-                      className="opacity-60 hover:opacity-100"
+                      className="opacity-60 hover:opacity-100 hidden md:inline-flex"
                     />
                     
                     {/* Right side - Action buttons only on latest entry */}
