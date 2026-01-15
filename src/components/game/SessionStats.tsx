@@ -9,6 +9,17 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { 
+  loadLifetimeStats, 
+  saveLifetimeStats, 
+  addPlaytime,
+  recordSessionStart,
+  LifetimeStatistics 
+} from '@/lib/lifetimeStats';
+import { 
+  checkLifetimeAchievements, 
+  LifetimeAchievement 
+} from '@/lib/lifetimeAchievements';
 
 export interface SessionStatsData {
   sessionStartTime: number;
@@ -55,6 +66,7 @@ interface SessionStatsContextType {
   getFormattedPlayTime: () => string;
   getTotalPlayTimeHours: () => number;
   exportAsText: () => string;
+  mergeToLifetimeStats: () => void;
 }
 
 const SessionStatsContext = createContext<SessionStatsContextType | null>(null);
@@ -107,9 +119,10 @@ export function useSessionStatsOptional() {
 interface SessionStatsProviderProps {
   children: ReactNode;
   onPlayTimeReached?: (hours: number) => void;
+  onLifetimeAchievementUnlock?: (achievement: LifetimeAchievement) => void;
 }
 
-export function SessionStatsProvider({ children, onPlayTimeReached }: SessionStatsProviderProps) {
+export function SessionStatsProvider({ children, onPlayTimeReached, onLifetimeAchievementUnlock }: SessionStatsProviderProps) {
   const [stats, setStats] = useState<SessionStatsData>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -122,6 +135,11 @@ export function SessionStatsProvider({ children, onPlayTimeReached }: SessionSta
     }
     return { ...DEFAULT_STATS };
   });
+
+  // Record session start on mount
+  useEffect(() => {
+    recordSessionStart();
+  }, []);
 
   // Track last reported hour milestone for achievement unlocks
   const lastReportedHour = useRef<number>(Math.floor(stats.totalPlayTime / 3600));
@@ -269,6 +287,80 @@ export function SessionStatsProvider({ children, onPlayTimeReached }: SessionSta
     return lines.join('\n');
   }, [stats, getFormattedPlayTime]);
 
+  // Merge session stats into lifetime stats and check for achievements
+  const mergeToLifetimeStats = useCallback(() => {
+    const lifetimeStats = loadLifetimeStats();
+    
+    // Merge numeric stats
+    lifetimeStats.totalPlaytimeSeconds += stats.totalPlayTime;
+    lifetimeStats.totalCombatEncounters += stats.combatEncounters;
+    lifetimeStats.totalEnemiesDefeated += stats.enemiesDefeated;
+    lifetimeStats.totalDeaths += stats.deathCount;
+    lifetimeStats.totalDiceRolled += stats.diceRolled;
+    lifetimeStats.totalNaturalTwenties += stats.naturalTwenties;
+    lifetimeStats.totalNaturalOnes += stats.naturalOnes;
+    lifetimeStats.totalCriticalSuccesses += stats.criticalSuccesses;
+    lifetimeStats.totalCriticalFailures += stats.criticalFailures;
+    lifetimeStats.totalGoldEarned += stats.goldEarned;
+    lifetimeStats.totalGoldSpent += stats.goldSpent;
+    lifetimeStats.totalLocationsVisited += stats.locationsVisited.length;
+    lifetimeStats.totalNpcsEncountered += stats.npcsEncountered.length;
+    lifetimeStats.totalQuestsCompleted += stats.questsCompleted;
+    lifetimeStats.totalSecretsDiscovered += stats.secretsDiscovered;
+    lifetimeStats.totalItemsAcquired += stats.itemsAcquired;
+    lifetimeStats.totalItemsCrafted += stats.itemsCrafted;
+    lifetimeStats.totalItemsUsed += stats.itemsUsed;
+    lifetimeStats.totalChoicesMade += stats.choicesMade;
+    lifetimeStats.totalDialogueExchanges += stats.dialogueExchanges;
+    lifetimeStats.totalReputationGained += stats.reputationGained;
+    lifetimeStats.totalReputationLost += stats.reputationLost;
+    lifetimeStats.factionsEncountered += stats.factionsEncountered.length;
+    
+    // Update records
+    if (stats.damageDealt > lifetimeStats.highestDamageDealt) {
+      lifetimeStats.highestDamageDealt = stats.damageDealt;
+    }
+    
+    saveLifetimeStats(lifetimeStats);
+    
+    // Check for lifetime achievement unlocks
+    checkLifetimeAchievements(lifetimeStats, (achievement) => {
+      console.log(`[SessionStats] Lifetime achievement unlocked: ${achievement.name}`);
+      toast.success(`🏆 Lifetime Achievement: ${achievement.name}`, {
+        description: achievement.description,
+        duration: 5000,
+      });
+      if (onLifetimeAchievementUnlock) {
+        onLifetimeAchievementUnlock(achievement);
+      }
+    });
+    
+    console.log('[SessionStats] Merged to lifetime stats');
+  }, [stats, onLifetimeAchievementUnlock]);
+
+  // Merge stats periodically and on visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        mergeToLifetimeStats();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also merge every 5 minutes
+    const mergeInterval = setInterval(() => {
+      mergeToLifetimeStats();
+    }, 300000);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(mergeInterval);
+      // Final merge on unmount
+      mergeToLifetimeStats();
+    };
+  }, [mergeToLifetimeStats]);
+
   return (
     <SessionStatsContext.Provider value={{ 
       stats, 
@@ -280,6 +372,7 @@ export function SessionStatsProvider({ children, onPlayTimeReached }: SessionSta
       getFormattedPlayTime,
       getTotalPlayTimeHours,
       exportAsText,
+      mergeToLifetimeStats,
     }}>
       {children}
     </SessionStatsContext.Provider>

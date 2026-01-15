@@ -143,6 +143,10 @@ import {
 } from '@/game/moveSyncSystem';
 import { processNarrativeForCombatAchievements } from '@/game/combatAchievementBridge';
 import { useSessionStatsOptional } from '@/components/game/SessionStats';
+import { 
+  incrementLifetimeStat, 
+  recordGenrePlayed 
+} from '@/lib/lifetimeStats';
 import {
   DirectorSettings,
   DEFAULT_DIRECTOR_SETTINGS,
@@ -1829,6 +1833,12 @@ export function AdventureGame() {
     console.log('[Character Visual] Built visual profile:', visualProfile.fullVisualDescription.slice(0, 100) + '...');
     
     try {
+      // Track lifetime stats for campaign start
+      incrementLifetimeStat('campaignsStarted');
+      if (scenarioSelection.genre) {
+        recordGenrePlayed(scenarioSelection.genre);
+      }
+      
       // Initialize campaign memory for new adventure
       const campaignId = `campaign_${char.name}_${Date.now()}`;
       const toneProfile = scenarioSelection.genre ? [scenarioSelection.genre] : [];

@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { 
   Trophy, Clock, Swords, Coins, MapPin, Users, Scroll, Dice6, 
   TrendingUp, Skull, Heart, Star, BarChart3, Download, Copy, Check,
-  Flame, Target, Sparkles
+  Flame, Target, Sparkles, Lock
 } from 'lucide-react';
 import { 
   loadLifetimeStats, 
@@ -15,9 +16,14 @@ import {
   resetLifetimeStats,
   LifetimeStatistics 
 } from '@/lib/lifetimeStats';
+import { 
+  getLifetimeAchievementProgress,
+  LifetimeAchievement 
+} from '@/lib/lifetimeAchievements';
 import { getGenreTitle } from '@/lib/genreDetection';
 import { GameGenre } from '@/types/genreData';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface StatRowProps {
   icon: React.ReactNode;
@@ -55,6 +61,82 @@ function RecordCard({ icon, title, value, subtitle, color }: RecordCardProps) {
       </div>
       <div className="text-2xl font-bold">{value}</div>
       {subtitle && <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>}
+    </div>
+  );
+}
+
+// Lifetime Achievements Display component
+function LifetimeAchievementsDisplay({ stats }: { stats: LifetimeStatistics }) {
+  const achievements = getLifetimeAchievementProgress(stats);
+  
+  const rarityColors = {
+    common: 'border-slate-400/50 bg-slate-500/10',
+    uncommon: 'border-green-400/50 bg-green-500/10',
+    rare: 'border-blue-400/50 bg-blue-500/10',
+    epic: 'border-purple-400/50 bg-purple-500/10',
+    legendary: 'border-amber-400/50 bg-amber-500/10',
+  };
+
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  
+  return (
+    <div className="space-y-4">
+      <div className="text-center text-sm text-muted-foreground">
+        <span className="text-primary font-medium">{unlockedCount}</span> / {achievements.length} achievements unlocked
+      </div>
+      
+      <div className="grid gap-2">
+        {achievements.map((achievement) => (
+          <div
+            key={achievement.id}
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-lg border transition-all",
+              achievement.unlocked 
+                ? rarityColors[achievement.rarity]
+                : "border-border/30 bg-muted/10 opacity-60"
+            )}
+          >
+            <div className="text-2xl">
+              {achievement.unlocked ? achievement.icon : <Lock className="w-5 h-5 text-muted-foreground" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "font-medium text-sm",
+                  achievement.unlocked ? "" : "text-muted-foreground"
+                )}>
+                  {achievement.name}
+                </span>
+                <span className={cn(
+                  "text-[10px] uppercase px-1.5 py-0.5 rounded-full",
+                  achievement.rarity === 'common' && "bg-slate-500/20 text-slate-400",
+                  achievement.rarity === 'uncommon' && "bg-green-500/20 text-green-400",
+                  achievement.rarity === 'rare' && "bg-blue-500/20 text-blue-400",
+                  achievement.rarity === 'epic' && "bg-purple-500/20 text-purple-400",
+                  achievement.rarity === 'legendary' && "bg-amber-500/20 text-amber-400"
+                )}>
+                  {achievement.rarity}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">{achievement.description}</div>
+              {achievement.progress && !achievement.unlocked && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <Progress 
+                    value={(achievement.progress.current / achievement.progress.max) * 100} 
+                    className="h-1.5 flex-1"
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {achievement.progress.current.toLocaleString()}/{achievement.progress.max.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+            {achievement.unlocked && (
+              <Trophy className="w-4 h-4 text-primary shrink-0" />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -170,11 +252,12 @@ export function LifetimeStatsModal() {
           </div>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="w-full grid grid-cols-4 mb-4">
+            <TabsList className="w-full grid grid-cols-5 mb-4">
               <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
               <TabsTrigger value="combat" className="text-xs">Combat</TabsTrigger>
               <TabsTrigger value="exploration" className="text-xs">World</TabsTrigger>
               <TabsTrigger value="records" className="text-xs">Records</TabsTrigger>
+              <TabsTrigger value="achievements" className="text-xs">Badges</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-1">
@@ -268,6 +351,10 @@ export function LifetimeStatsModal() {
               <div className="text-center text-xs text-muted-foreground pt-4">
                 Keep playing to set new records!
               </div>
+            </TabsContent>
+
+            <TabsContent value="achievements" className="space-y-3">
+              <LifetimeAchievementsDisplay stats={stats} />
             </TabsContent>
           </Tabs>
         </ScrollArea>
