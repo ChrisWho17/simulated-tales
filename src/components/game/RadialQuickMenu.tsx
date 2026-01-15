@@ -394,25 +394,16 @@ export function RadialQuickMenu({
               );
             })}
             
-            {/* Central close button - nudged slightly up-left for visual balance */}
-            <motion.button
+            {/* Central close button */}
+            <button
               onClick={toggleMenu}
               className={cn(
                 "absolute z-10 flex items-center justify-center",
                 "w-16 h-16 rounded-full",
                 "bg-card/95 border-2 border-primary/50",
-                "hover:border-primary active:scale-95"
+                "hover:border-primary hover:scale-105 active:scale-95",
+                "transition-transform duration-150"
               )}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{
-                type: "spring",
-                stiffness: 500,
-                damping: 25,
-              }}
               style={{
                 left: 'calc(50% - 33px)',
                 top: 'calc(50% - 31px)',
@@ -421,7 +412,7 @@ export function RadialQuickMenu({
               }}
             >
               <X className="w-7 h-7 text-primary" />
-            </motion.button>
+            </button>
           </div>
           
           {/* CSS for idle pulse animation */}
