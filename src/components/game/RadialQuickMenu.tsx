@@ -352,42 +352,25 @@ export function RadialQuickMenu({
                     "bg-card/90 backdrop-blur-md border-2",
                     item.color
                   )}
-                  initial={{ 
-                    left: '50%',
-                    top: '50%',
-                    x: '-50%',
-                    y: '-50%',
-                    scale: 0,
-                    opacity: 0 
-                  }}
+                  initial={{ scale: 0, opacity: 0 }}
                   animate={{ 
-                    left: `calc(50% + ${position.x}px)`,
-                    top: `calc(50% + ${position.y}px)`,
-                    x: '-50%',
-                    y: '-50%',
                     scale: isHovered ? 1.15 : 1,
                     opacity: 1,
+                  }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{
+                    duration: 0.15,
+                    ease: "easeOut",
+                    delay: 0.05,
+                  }}
+                  style={{
+                    left: `calc(50% + ${position.x}px)`,
+                    top: `calc(50% + ${position.y}px)`,
+                    transform: 'translate(-50%, -50%)',
                     boxShadow: isHovered 
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
                       : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
                     borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
-                  }}
-                  exit={{ 
-                    left: '50%',
-                    top: '50%',
-                    x: '-50%',
-                    y: '-50%',
-                    scale: 0,
-                    opacity: 0 
-                  }}
-                  transition={{
-                    duration: 0.2,
-                    ease: "easeOut",
-                    delay: 0.05, // All icons appear together 50ms after X
-                  }}
-                  style={{
-                    animation: !isHovered ? `radial-pulse-${index % 3} 2.5s ease-in-out infinite` : undefined,
-                    animationDelay: `${index * 0.2}s`,
                   }}
                 >
                   {item.icon}
