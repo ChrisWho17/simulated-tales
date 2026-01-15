@@ -1582,12 +1582,12 @@ export function AdventureDisplay({
               }}
             />
             
-            {/* Weather Button */}
+            {/* Weather Button - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button ${
+              className={`hidden md:flex h-7 w-7 flex-shrink-0 frosted-button ${
                 weatherState.current === 'storm' ? 'text-yellow-400' : 
                 weatherState.current === 'rain' ? 'text-blue-400' : 
                 weatherState.current === 'fog' ? 'text-violet-400' : 
@@ -1600,87 +1600,89 @@ export function AdventureDisplay({
               title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
             >
               {weatherState.current === 'storm' ? (
-                <CloudLightning className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <CloudLightning className="w-4 h-4" />
               ) : weatherState.current === 'rain' ? (
-                <CloudRain className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <CloudRain className="w-4 h-4" />
               ) : weatherState.current === 'fog' ? (
-                <CloudFog className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <CloudFog className="w-4 h-4" />
               ) : weatherState.current === 'heat_wave' ? (
-                <Flame className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <Flame className="w-4 h-4" />
               ) : weatherState.current === 'wind' ? (
-                <Wind className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <Wind className="w-4 h-4" />
               ) : weatherState.current === 'snow' ? (
-                <Snowflake className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <Snowflake className="w-4 h-4" />
               ) : weatherState.current === 'cloudy' ? (
-                <Cloud className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <Cloud className="w-4 h-4" />
               ) : (
-                <Sun className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <Sun className="w-4 h-4" />
               )}
             </Button>
             
-            {/* Audio indicator removed - no sound in game */}
-            
-            {/* Character Sheet Button */}
+            {/* Character Sheet Button - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowCharacterSheet(true)}
-              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Character Sheet"
             >
-              <ScrollText className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <ScrollText className="w-4 h-4" />
             </Button>
             
-            {/* Inventory Button */}
+            {/* Inventory Button - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowInventory(true)}
-              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Inventory (Ctrl+I)"
             >
-              <Backpack className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <Backpack className="w-4 h-4" />
             </Button>
             
-            {/* Bookmarks Button */}
+            {/* Bookmarks Button - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowBookmarks(true)}
-              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Bookmarks (Ctrl+B)"
             >
-              <Bookmark className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <Bookmark className="w-4 h-4" />
             </Button>
             
-            {/* Saves Dropdown */}
-            <div className="flex-shrink-0">
+            {/* Saves Dropdown - Hidden on mobile, accessible via quick menu */}
+            <div className="hidden md:block flex-shrink-0">
               <SavesDropdown />
             </div>
             
-            {/* Cloud Sync Indicator */}
-            <CloudSyncIndicator />
             
-            {/* Settings */}
+            
+            {/* Cloud Sync Indicator - Hidden on mobile */}
+            <div className="hidden md:block">
+              <CloudSyncIndicator />
+            </div>
+            
+            {/* Settings - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowSettings(true)}
-              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Settings"
             >
-              <Sliders className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <Sliders className="w-4 h-4" />
             </Button>
             
-            {/* Restart */}
+            {/* Restart - Hidden on mobile, accessible via quick menu */}
             <Button
               variant="ghost"
               size="icon"
               onClick={onRestart}
-              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
               title="New Adventure"
             >
-              <RotateCcw className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -2457,6 +2459,10 @@ export function AdventureDisplay({
         onOpenWeather={() => setShowWeatherModal(true)}
         onOpenTime={() => setShowTimeDisplay(true)}
         onOpenRecap={() => setShowSessionRecap(true)}
+        onOpenSaves={() => {
+          // Trigger saves dropdown by dispatching a custom event
+          window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
+        }}
         onRestart={onRestart}
         characterName={character.name}
         currentTime={`${timeState.hour}:${String(timeState.minute).padStart(2, '0')}`}
