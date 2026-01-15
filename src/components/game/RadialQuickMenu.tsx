@@ -1,14 +1,70 @@
 // Radial Quick Menu - Skyrim-style centered radial menu
 // Gear icon in header opens a full-screen centered radial menu
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, ScrollText, Backpack, Bookmark, 
-  Clock, CloudRain, RotateCcw, X, Info, FolderOpen, Sliders
+  RotateCcw, X, Info, FolderOpen, Sliders
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
+// Floating particle component
+const FloatingParticle = ({ 
+  delay, 
+  duration, 
+  size, 
+  startAngle, 
+  radius,
+  color 
+}: { 
+  delay: number; 
+  duration: number; 
+  size: number; 
+  startAngle: number;
+  radius: number;
+  color: string;
+}) => {
+  const startX = Math.cos((startAngle * Math.PI) / 180) * radius;
+  const startY = Math.sin((startAngle * Math.PI) / 180) * radius;
+  const endAngle = startAngle + 60 + Math.random() * 40;
+  const endX = Math.cos((endAngle * Math.PI) / 180) * (radius + 20 + Math.random() * 30);
+  const endY = Math.sin((endAngle * Math.PI) / 180) * (radius + 20 + Math.random() * 30);
+  
+  return (
+    <motion.div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        background: color,
+        left: '50%',
+        top: '50%',
+        filter: 'blur(0.5px)',
+      }}
+      initial={{ 
+        x: startX - size/2, 
+        y: startY - size/2, 
+        opacity: 0,
+        scale: 0 
+      }}
+      animate={{ 
+        x: [startX - size/2, endX - size/2, startX - size/2],
+        y: [startY - size/2, endY - size/2, startY - size/2],
+        opacity: [0, 0.8, 0.6, 0],
+        scale: [0, 1, 0.8, 0],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
+  );
+};
+
 interface RadialQuickMenuProps {
   onOpenSettings: () => void;
   onOpenCharacterSheet: () => void;
@@ -176,6 +232,46 @@ export function RadialQuickMenu({
               backdropFilter: 'blur(8px)',
             }}
           />
+          
+          {/* Floating particles */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            {/* Primary color particles */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <FloatingParticle
+                key={`primary-${i}`}
+                delay={i * 0.3}
+                duration={4 + Math.random() * 2}
+                size={2 + Math.random() * 3}
+                startAngle={(i * 30) + Math.random() * 15}
+                radius={100 + Math.random() * 60}
+                color="hsl(var(--primary) / 0.6)"
+              />
+            ))}
+            {/* Accent particles - slightly larger, different timing */}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <FloatingParticle
+                key={`accent-${i}`}
+                delay={0.5 + i * 0.4}
+                duration={5 + Math.random() * 2}
+                size={3 + Math.random() * 2}
+                startAngle={(i * 45) + 20}
+                radius={130 + Math.random() * 40}
+                color="hsl(var(--primary) / 0.4)"
+              />
+            ))}
+            {/* Tiny sparkle particles */}
+            {Array.from({ length: 16 }).map((_, i) => (
+              <FloatingParticle
+                key={`sparkle-${i}`}
+                delay={i * 0.2}
+                duration={3 + Math.random() * 1.5}
+                size={1 + Math.random() * 1.5}
+                startAngle={(i * 22.5)}
+                radius={80 + Math.random() * 80}
+                color="rgba(255, 255, 255, 0.5)"
+              />
+            ))}
+          </div>
           
           {/* Center container - using flexbox centering */}
           <div 
