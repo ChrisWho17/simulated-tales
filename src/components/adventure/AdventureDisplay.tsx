@@ -68,6 +68,10 @@ import { WeatherParticles } from '@/components/ui/weather-particles';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+// Screen effects and achievement integration
+import { useScreenEffectsIntegration } from '@/hooks/useScreenEffectsIntegration';
+import { useAchievementTriggers } from '@/hooks/useAchievementTriggers';
+
 // Inventory system integration
 import { 
   useInventory, 
@@ -295,6 +299,19 @@ export function AdventureDisplay({
     playerHealth: character.currentHealth,
     playerMaxHealth: character.maxHealth,
   });
+  
+  // Screen effects integration - wires shake, time-of-day, and weather effects
+  const screenEffectsHealthPercent = character.maxHealth > 0 
+    ? (character.currentHealth / character.maxHealth) * 100 
+    : 100;
+  useScreenEffectsIntegration({
+    gameHour: new Date().getHours(), // TODO: Use in-game time when available
+    playerHealthPercent: screenEffectsHealthPercent,
+    weather: weatherState?.current,
+  });
+  
+  // Achievement triggers - tracks achievements from game events
+  const achievements = useAchievementTriggers();
   
   // Get registered NPC names for clickable links in narrative
   const npcNameMap = useRegisteredNPCNames();
@@ -1032,6 +1049,12 @@ export function AdventureDisplay({
       
       // Track last action for XP stat inference
       setLastPlayerAction(input.trim());
+      
+      // Achievement: track choice made
+      if (achievements.isAvailable) {
+        achievements.onChoiceMade();
+      }
+      
       // Tick modifiers by 1 turn on each player action
       if (modifierManagerRef.current) {
         const beforeCount = modifierManagerRef.current.getState().activeModifiers.length;
@@ -1082,6 +1105,17 @@ export function AdventureDisplay({
     if (modifierManagerRef.current) {
       modifierManagerRef.current.tickTurn(1);
     }
+    
+    // Achievement triggers for dice rolls
+    if (roll?.naturalRoll !== undefined && achievements.isAvailable) {
+      achievements.onDiceRoll(roll.naturalRoll);
+    }
+    
+    // Track choice made
+    if (achievements.isAvailable) {
+      achievements.onChoiceMade();
+    }
+    
     setShowDiceRoll(false);
     setCurrentDiceRoll(null);
     onPlayerAction(`[Dice roll for: ${pendingMechanics?.rollRequired?.reason}]`, roll);
