@@ -31,6 +31,7 @@ import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
 import { PacingIndicator } from '@/components/game/PacingIndicator';
 import { MobileQuickMenu } from '@/components/game/MobileQuickMenu';
+import { RadialQuickMenu } from '@/components/game/RadialQuickMenu';
 import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
@@ -2448,7 +2449,7 @@ export function AdventureDisplay({
         forceShow={showOnboarding}
       />
       
-      {/* Mobile Quick Menu - triggered by tapping UNTOLD logo */}
+      {/* Mobile Quick Menu - triggered by tapping UNTOLD logo (kept for legacy) */}
       <MobileQuickMenu
         isOpen={showMobileQuickMenu}
         onClose={() => setShowMobileQuickMenu(false)}
@@ -2460,13 +2461,27 @@ export function AdventureDisplay({
         onOpenTime={() => setShowTimeDisplay(true)}
         onOpenRecap={() => setShowSessionRecap(true)}
         onOpenSaves={() => {
-          // Trigger saves dropdown by dispatching a custom event
           window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
         }}
         onRestart={onRestart}
         characterName={character.name}
         currentTime={`${timeState.hour}:${String(timeState.minute).padStart(2, '0')}`}
         currentWeather={WEATHER_CONFIGS[weatherState.current].name}
+      />
+      
+      {/* Radial Quick Menu - Gear icon with radial menu on mobile */}
+      <RadialQuickMenu
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenCharacterSheet={() => setShowCharacterSheet(true)}
+        onOpenInventory={() => setShowInventory(true)}
+        onOpenBookmarks={() => setShowBookmarks(true)}
+        onOpenWeather={() => setShowWeatherModal(true)}
+        onOpenTime={() => setShowTimeDisplay(true)}
+        onOpenRecap={() => setShowSessionRecap(true)}
+        onOpenSaves={() => {
+          window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
+        }}
+        onRestart={onRestart}
       />
     </div>
   );
