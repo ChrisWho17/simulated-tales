@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
+import { LifetimeStatsModal } from './LifetimeStatsModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -394,9 +395,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
         {/* Main Content */}
         <div className="w-full max-w-3xl space-y-8">
-          {/* Game Settings Menu - Collapsible */}
-          <div className="flex justify-center animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+          {/* Game Settings Menu & Lifetime Stats - Side by Side */}
+          <div className="flex justify-center items-center gap-3 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
             <GameSettingsMenu />
+            <LifetimeStatsModal />
           </div>
           
           {/* Genre Contract Setup - Glass Panel */}
