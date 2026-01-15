@@ -7,6 +7,7 @@ import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { BookmarkButton } from '@/components/ui/BookmarkButton';
 import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
+import { TypewriterNarrative } from '@/components/ui/TypewriterText';
 import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
@@ -284,6 +285,10 @@ export function AdventureDisplay({
   const manualWeatherType = gameContext?.settings?.manualWeatherType as WeatherType | undefined;
   const manualWeatherIntensity = gameContext?.settings?.manualWeatherIntensity;
   const showWeatherParticles = gameContext?.settings?.showWeatherParticles ?? true;
+  
+  // Get typewriter settings from game context
+  const typewriterEnabled = gameContext?.settings?.typewriterEnabled ?? true;
+  const textSpeed = gameContext?.settings?.textSpeed ?? 'normal';
   
   // Game loop for adrenaline system with player health for Director priority
   const [gameLoopState, gameLoopActions] = useGameLoop({
@@ -1576,7 +1581,16 @@ export function AdventureDisplay({
                   )}
                   
                   <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
-                    {formatNarrativeContent(entry.content, index)}
+                    {/* Use typewriter effect for latest narrator entry when enabled */}
+                    {typewriterEnabled && index === story.length - 1 && textSpeed !== 'instant' ? (
+                      <TypewriterNarrative
+                        content={cleanNarrativeForDisplay(entry.content)}
+                        speed={textSpeed}
+                        onComplete={() => {}}
+                      />
+                    ) : (
+                      formatNarrativeContent(entry.content, index)
+                    )}
                   </div>
                   
                   {/* Action Buttons Row - Bookmark, Generate Image & Regenerate World */}
