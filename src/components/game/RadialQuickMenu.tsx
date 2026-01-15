@@ -327,25 +327,11 @@ export function RadialQuickMenu({
             ))}
           </div>
           
-          {/* Center container - using flexbox centering with overflow hidden */}
+          {/* Center container - menu items positioned around center */}
           <div 
-            className="relative overflow-hidden"
+            className="relative"
             style={{ width: '300px', height: '300px' }}
           >
-            {/* Single subtle orbit ring - contained within the menu area */}
-            <motion.div 
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/20 pointer-events-none"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ delay: 0.1, duration: 0.4, type: "spring" }}
-              style={{
-                width: '240px',
-                height: '240px',
-                animation: 'spin 30s linear infinite',
-              }}
-            />
-            
             {/* Radial menu items with staggered spring animation */}
             {menuItems.map((item, index) => {
               const position = getItemPosition(index, menuItems.length);
