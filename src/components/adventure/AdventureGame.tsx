@@ -130,6 +130,7 @@ import {
   buildMoveSyncContextForAI,
   getMoveSyncState,
 } from '@/game/moveSyncSystem';
+import { processNarrativeForCombatAchievements } from '@/game/combatAchievementBridge';
 import {
   DirectorSettings,
   DEFAULT_DIRECTOR_SETTINGS,
@@ -1979,6 +1980,12 @@ export function AdventureGame() {
       const npcResult = processNarrativeForNPCs(narrative, currentTurn, character.name);
       if (npcResult.registered.length > 0) {
         console.log(`[NPCAutoReg] Registered ${npcResult.registered.length} NPCs:`, npcResult.registered);
+      }
+      
+      // === COMBAT ACHIEVEMENT BRIDGE: Detect combat outcomes from narrative ===
+      const combatResult = processNarrativeForCombatAchievements(narrative, currentTurn);
+      if (combatResult.type) {
+        console.log(`[CombatAchievements] Detected combat outcome: ${combatResult.type}`, combatResult);
       }
       
 // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
