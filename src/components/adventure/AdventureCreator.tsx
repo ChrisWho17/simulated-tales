@@ -13,6 +13,7 @@ import { DiceMode, DICE_MODES, saveDiceMode } from '@/game/diceSystem';
 import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
+import { GameSettingsMenu } from './GameSettingsMenu';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -393,6 +394,11 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
         {/* Main Content */}
         <div className="w-full max-w-3xl space-y-8">
+          {/* Game Settings Menu - Collapsible */}
+          <div className="flex justify-center animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+            <GameSettingsMenu />
+          </div>
+          
           {/* Genre Contract Setup - Glass Panel */}
           <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center justify-between mb-5">

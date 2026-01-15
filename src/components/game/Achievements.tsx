@@ -47,12 +47,15 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'legend', name: 'Legend', description: 'Complete 15 quests', icon: '🏆', category: 'story', rarity: 'rare', maxProgress: 15 },
   { id: 'decisive', name: 'Decisive', description: 'Make 100 choices', icon: '🎯', category: 'story', rarity: 'rare', maxProgress: 100 },
   
-  // Secret
+  // Secret - Time-based
   { id: 'lucky_roll', name: 'Lucky Roll', description: 'Roll a natural 20', icon: '🎲', category: 'secret', rarity: 'uncommon' },
   { id: 'unlucky', name: 'Unlucky', description: 'Roll a natural 1', icon: '💀', category: 'secret', rarity: 'uncommon' },
   { id: 'persistent', name: 'Persistent', description: 'Play for 1 hour in a single session', icon: '⏰', category: 'secret', rarity: 'rare' },
   { id: 'dedicated', name: 'Dedicated', description: 'Play for 5 hours total', icon: '🎮', category: 'secret', rarity: 'epic', maxProgress: 5 },
+  { id: 'marathon', name: 'Marathon Runner', description: 'Play for 10 consecutive hours', icon: '🏃', category: 'secret', rarity: 'legendary', maxProgress: 10 },
   { id: 'night_owl', name: 'Night Owl', description: 'Play past midnight', icon: '🦉', category: 'secret', rarity: 'uncommon' },
+  { id: 'early_bird', name: 'Early Bird', description: 'Play between 5 AM and 7 AM', icon: '🌅', category: 'secret', rarity: 'uncommon' },
+  { id: 'weekend_warrior', name: 'Weekend Warrior', description: 'Play for 3+ hours on a weekend', icon: '🎯', category: 'secret', rarity: 'rare' },
 ];
 
 interface AchievementsContextType {
