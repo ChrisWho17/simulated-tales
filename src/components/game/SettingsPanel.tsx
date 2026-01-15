@@ -4,7 +4,7 @@ import {
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload, GripVertical, Accessibility
+  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard
 } from 'lucide-react';
 import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
@@ -44,7 +44,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio' | 'accessibility'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio' | 'accessibility' | 'tutorial'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -197,7 +197,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display', 'accessibility'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display', 'accessibility', 'tutorial'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -213,6 +213,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {tab === 'cloud' && <CloudUpload className="w-3 h-3" />}
                 {tab === 'audio' && <Volume2 className="w-3 h-3" />}
                 {tab === 'accessibility' && <Accessibility className="w-3 h-3" />}
+                {tab === 'tutorial' && <HelpCircle className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -1114,6 +1115,97 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* Accessibility Tab */}
           {activeTab === 'accessibility' && (
             <AccessibilitySettingsPanel />
+          )}
+          
+          {/* Tutorial Tab - Commands & Tips */}
+          {activeTab === 'tutorial' && (
+            <div className="space-y-6">
+              {/* Commands Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-[var(--accent-primary)]" />
+                  <h3 className="text-sm font-medium">Commands</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Type these in the story input to trigger special actions
+                </p>
+                
+                <div className="space-y-2">
+                  {[
+                    { cmd: '/recap', desc: 'Show a "Previously On..." AI-generated story summary', icon: '📖' },
+                    { cmd: '/checkself', desc: 'Check your body for hidden wounds', icon: '🔍' },
+                    { cmd: '/checkself thorough', desc: 'Thorough self-examination (takes longer)', icon: '🩺' },
+                  ].map((command) => (
+                    <div 
+                      key={command.cmd}
+                      className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-background/50"
+                    >
+                      <span className="text-lg">{command.icon}</span>
+                      <div className="flex-1">
+                        <code className="text-sm font-mono text-[var(--accent-primary)] bg-[var(--accent-bg)]/30 px-2 py-0.5 rounded">
+                          {command.cmd}
+                        </code>
+                        <p className="text-xs text-muted-foreground mt-1">{command.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Keyboard Shortcuts */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Keyboard className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Keyboard Shortcuts</h3>
+                </div>
+                
+                <div className="grid gap-2">
+                  {[
+                    { keys: 'Ctrl/⌘ + I', desc: 'Open Inventory' },
+                    { keys: 'Ctrl/⌘ + K', desc: 'Open Character Sheet' },
+                    { keys: 'Ctrl/⌘ + B', desc: 'Open Bookmarks' },
+                    { keys: 'Enter', desc: 'Submit action' },
+                  ].map((shortcut) => (
+                    <div 
+                      key={shortcut.keys}
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/20"
+                    >
+                      <span className="text-xs text-muted-foreground">{shortcut.desc}</span>
+                      <kbd className="text-xs font-mono bg-background/50 px-2 py-1 rounded border border-border/50">
+                        {shortcut.keys}
+                      </kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Tips */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-medium">Tips</h3>
+                </div>
+                
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-2 p-2 rounded bg-muted/10">
+                    <span>💡</span>
+                    <span>Triple-tap a story entry to rewind to that point</span>
+                  </div>
+                  <div className="flex items-start gap-2 p-2 rounded bg-muted/10">
+                    <span>🎲</span>
+                    <span>Change dice mode in Gameplay settings for more or less RNG</span>
+                  </div>
+                  <div className="flex items-start gap-2 p-2 rounded bg-muted/10">
+                    <span>🌤️</span>
+                    <span>Click the weather display to see forecast and details</span>
+                  </div>
+                  <div className="flex items-start gap-2 p-2 rounded bg-muted/10">
+                    <span>📌</span>
+                    <span>Bookmark important story moments with the bookmark button</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           
           {/* Weather Tab */}
