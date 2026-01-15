@@ -11,6 +11,9 @@ import { parseTextForNPCLinks } from './NPCNameLink';
 import { RegisteredNPC } from '@/game/npcIdentityRegistry';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { BookmarkButton } from '@/components/ui/BookmarkButton';
+import { SystemBadgesSummary } from '@/components/game/SystemHighlight';
+import { findSystemReferences, SYSTEM_CONFIG, SystemType } from '@/lib/systemReferenceHighlighter';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Type alias for the NPC name map
 type NPCNameMap = Map<string, RegisteredNPC>;
@@ -50,6 +53,8 @@ interface MemoizedStoryEntryProps {
   textSpeed?: 'slow' | 'normal' | 'fast' | 'instant';
   campaignId?: string;
   characterName?: string;
+  // System highlighting
+  enableSystemHighlight?: boolean;
 }
 
 // Get modifier color class based on type
@@ -60,6 +65,75 @@ const getModifierBadgeClass = (modifier: Modifier): string => {
   return 'text-modifier-neutral';
 };
 
+// System highlight inline component
+const SystemHighlightInline = memo(function SystemHighlightInline({
+  text,
+  keyPrefix,
+}: {
+  text: string;
+  keyPrefix: string;
+}): React.ReactElement {
+  const refs = useMemo(() => findSystemReferences(text), [text]);
+  
+  if (refs.length === 0) {
+    return <>{text}</>;
+  }
+  
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+  
+  refs.forEach((ref, i) => {
+    // Add text before this reference
+    if (ref.startIndex > lastIndex) {
+      result.push(<span key={`${keyPrefix}-t-${i}`}>{text.slice(lastIndex, ref.startIndex)}</span>);
+    }
+    
+    // Add highlighted reference
+    const config = SYSTEM_CONFIG[ref.system];
+    result.push(
+      <TooltipProvider key={`${keyPrefix}-h-${i}`} delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="relative inline cursor-help transition-all duration-200 hover:brightness-110"
+              style={{
+                color: config.color,
+                backgroundColor: config.bgColor,
+                borderBottom: `2px solid ${config.borderColor}`,
+                padding: '0 2px',
+                borderRadius: '2px',
+                textShadow: `0 0 8px ${config.bgColor}`,
+              }}
+            >
+              {ref.keyword}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent 
+            side="top" 
+            className="flex items-center gap-2 font-sans text-sm border"
+            style={{
+              backgroundColor: 'hsl(var(--popover))',
+              borderColor: config.borderColor,
+            }}
+          >
+            <span className="text-base">{config.icon}</span>
+            <span className="font-medium" style={{ color: config.color }}>{config.label} System</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+    
+    lastIndex = ref.endIndex;
+  });
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    result.push(<span key={`${keyPrefix}-end`}>{text.slice(lastIndex)}</span>);
+  }
+  
+  return <>{result}</>;
+});
+
 // Memoized text segment formatter
 const FormatTextSegment = memo(function FormatTextSegment({
   text,
@@ -69,6 +143,7 @@ const FormatTextSegment = memo(function FormatTextSegment({
   npcNameMap,
   playerName,
   openCharacterSheet,
+  enableSystemHighlight,
 }: {
   text: string;
   keyPrefix: string;
@@ -77,6 +152,7 @@ const FormatTextSegment = memo(function FormatTextSegment({
   npcNameMap: NPCNameMap;
   playerName: string;
   openCharacterSheet: () => void;
+  enableSystemHighlight?: boolean;
 }): React.ReactElement {
   const result: React.ReactNode[] = [];
   
@@ -110,9 +186,19 @@ const FormatTextSegment = memo(function FormatTextSegment({
           const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-i-${i}-${j}`, playerName, openCharacterSheet);
           result.push(<em key={`${keyPrefix}-i-${i}-${j}`} className="text-muted-foreground">{npcParsed}</em>);
         } else if (iPart) {
-          // Regular text - simplified processing for performance
-          const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-t-${i}-${j}`, playerName, openCharacterSheet);
-          result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{npcParsed}</span>);
+          // Regular text - apply system highlighting if enabled
+          if (enableSystemHighlight) {
+            result.push(
+              <SystemHighlightInline 
+                key={`${keyPrefix}-t-${i}-${j}`}
+                text={iPart}
+                keyPrefix={`${keyPrefix}-sys-${i}-${j}`}
+              />
+            );
+          } else {
+            const npcParsed = parseTextForNPCLinks(iPart, npcNameMap, `${keyPrefix}-t-${i}-${j}`, playerName, openCharacterSheet);
+            result.push(<span key={`${keyPrefix}-t-${i}-${j}`}>{npcParsed}</span>);
+          }
         }
       });
     }
@@ -130,6 +216,7 @@ const NarrativeParagraph = memo(function NarrativeParagraph({
   npcNameMap,
   playerName,
   openCharacterSheet,
+  enableSystemHighlight,
 }: {
   paragraph: string;
   paragraphIndex: number;
@@ -138,6 +225,7 @@ const NarrativeParagraph = memo(function NarrativeParagraph({
   npcNameMap: NPCNameMap;
   playerName: string;
   openCharacterSheet: () => void;
+  enableSystemHighlight?: boolean;
 }): React.ReactElement | null {
   if (!paragraph.trim()) return null;
   
@@ -165,7 +253,11 @@ const NarrativeParagraph = memo(function NarrativeParagraph({
           {parseTextForNPCLinks(speakerName, npcNameMap, `dialogue-speaker-${paragraphIndex}`, playerName, openCharacterSheet)}:
         </span>
         <span className="italic ml-2 text-foreground/90">
-          &ldquo;{dialogueText}&rdquo;
+          {enableSystemHighlight ? (
+            <SystemHighlightInline text={dialogueText} keyPrefix={`dialogue-${paragraphIndex}`} />
+          ) : (
+            <>&ldquo;{dialogueText}&rdquo;</>
+          )}
         </span>
         {nameReveal && (
           <span className="ml-2 text-xs text-accent animate-fade-in">
@@ -188,6 +280,7 @@ const NarrativeParagraph = memo(function NarrativeParagraph({
         npcNameMap={npcNameMap}
         playerName={playerName}
         openCharacterSheet={openCharacterSheet}
+        enableSystemHighlight={enableSystemHighlight}
       />
     </p>
   );
@@ -217,6 +310,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
   textSpeed = 'normal',
   campaignId = 'default',
   characterName = 'Player',
+  enableSystemHighlight = false,
 }: MemoizedStoryEntryProps): React.ReactElement {
   // Typewriter state
   const [typewriterComplete, setTypewriterComplete] = useState(!enableTypewriter || !isLatest);
@@ -300,6 +394,11 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
         
         {/* Narrative content */}
         <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+          {/* System badges summary for latest entry */}
+          {isLatest && enableSystemHighlight && (
+            <SystemBadgesSummary text={cleanedContent} className="mb-3" />
+          )}
+          
           {paragraphs.map((paragraph, idx) => (
             <NarrativeParagraph
               key={`${entry.id}-p-${idx}`}
@@ -310,6 +409,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
               npcNameMap={npcNameMap}
               playerName={playerName}
               openCharacterSheet={openCharacterSheet}
+              enableSystemHighlight={enableSystemHighlight}
             />
           ))}
           
@@ -416,6 +516,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
     prevProps.tapFeedback?.index === nextProps.tapFeedback?.index &&
     prevProps.tapFeedback?.count === nextProps.tapFeedback?.count &&
     prevProps.rollbackSplash?.index === nextProps.rollbackSplash?.index &&
+    prevProps.enableSystemHighlight === nextProps.enableSystemHighlight &&
     // Only compare modifiers for latest entry
     (prevProps.isLatest === nextProps.isLatest && 
      (!nextProps.isLatest || prevProps.recentModifiers.length === nextProps.recentModifiers.length))
