@@ -31,6 +31,8 @@ import { QuestQuickView } from '@/components/game/QuestQuickView';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
   GameTimeState, 
+  TimeMultiplier,
+  TIME_MULTIPLIER_CONFIG,
   TimeSkipConsequence,
   createInitialTimeState, 
   advanceTime,
@@ -204,6 +206,9 @@ interface AdventureDisplayProps {
   // Weather state lifted from parent for AI sync
   weatherState?: WeatherState;
   onWeatherStateChange?: (state: WeatherState) => void;
+  // Time state lifted from parent for campaign persistence
+  timeState?: GameTimeState;
+  onTimeStateChange?: (state: GameTimeState) => void;
   // Campaign ID for inventory isolation
   campaignId?: string;
   // World regeneration - only available before first player action
@@ -235,6 +240,8 @@ export function AdventureDisplay({
   onMoodChange,
   weatherState: externalWeatherState,
   onWeatherStateChange,
+  timeState: externalTimeState,
+  onTimeStateChange,
   campaignId = 'default_campaign',
   onRegenerateWorld,
   canRegenerateWorld = false,
@@ -281,8 +288,20 @@ export function AdventureDisplay({
   const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
   
-  // Time progression system
-  const [timeState, setTimeState] = useState<GameTimeState>(() => createInitialTimeState());
+  // Time progression system - use external if provided, otherwise manage locally
+  const [localTimeState, setLocalTimeState] = useState<GameTimeState>(() => createInitialTimeState());
+  const timeState = externalTimeState ?? localTimeState;
+  const setTimeState = useCallback((newState: GameTimeState | ((prev: GameTimeState) => GameTimeState)) => {
+    if (onTimeStateChange) {
+      if (typeof newState === 'function') {
+        onTimeStateChange(newState(timeState));
+      } else {
+        onTimeStateChange(newState);
+      }
+    } else {
+      setLocalTimeState(newState as any);
+    }
+  }, [onTimeStateChange, timeState]);
   
   // Onboarding system
   const { showOnboarding, triggerOnboarding, completeOnboarding } = useOnboarding();
@@ -2022,6 +2041,14 @@ export function AdventureDisplay({
         onManualSave={handleManualSave}
         onLoadSave={handleLoadSave}
         currentCharacterName={character.name}
+        currentTimeMultiplier={timeState.multiplier}
+        onTimeMultiplierChange={(multiplier) => {
+          setTimeState(prev => ({ ...prev, multiplier }));
+          toast({
+            title: "Time Pace Changed",
+            description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
+          });
+        }}
       />
 
       {/* Bookmarks Sidebar */}

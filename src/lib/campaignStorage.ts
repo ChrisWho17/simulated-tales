@@ -21,6 +21,7 @@ import { StoryEntry } from '@/components/adventure/types';
 import { GameGenre } from '@/types/genreData';
 import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
 import { createInitialWeatherState } from '@/game/weatherSystem';
+import { createInitialTimeState } from '@/game/timeProgressionSystem';
 import { seedWorldForGenre, hasGenreSeed } from '@/game/livingWorld';
 import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry, clearNPCRegistry } from '@/game/npcIdentityRegistry';
 import { 
@@ -348,11 +349,13 @@ export function createNewCampaign(
     currentMood: 'neutral',
     moodHistory: [],
     weatherState: createInitialWeatherState(),
+    timeState: createInitialTimeState(),
     livingWorldState,
     settings: {
       adultContent: false,
       cheatMode: false,
       directorSettings: { ...DEFAULT_DIRECTOR_SETTINGS },
+      timeMultiplier: 'fifteen_minutes',
     },
   };
   

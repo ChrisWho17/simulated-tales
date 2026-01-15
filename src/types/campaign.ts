@@ -10,6 +10,7 @@ import { StoryEntry } from '@/components/adventure/types';
 import { CampaignMemoryStore } from './campaignMemory';
 import { WeatherState } from '@/game/weatherSystem';
 import { DirectorSettings } from '@/game/directorModeSystem';
+import { GameTimeState, TimeMultiplier } from '@/game/timeProgressionSystem';
 
 // ============================================================================
 // CAMPAIGN METADATA (for index)
@@ -125,11 +126,15 @@ export interface CampaignData {
   // NPC Personality assignments - personality templates for NPCs
   npcPersonalityMap?: Record<string, unknown>;
   
+  // Time progression state
+  timeState?: GameTimeState;
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;
     cheatMode?: boolean;
     directorSettings?: DirectorSettings;
+    timeMultiplier?: TimeMultiplier;
   };
 }
 
