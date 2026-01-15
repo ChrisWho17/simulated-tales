@@ -72,7 +72,7 @@ export function NarratorSettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl h-[90vh] sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Clapperboard className="w-5 h-5 text-primary" />
@@ -83,7 +83,7 @@ export function NarratorSettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 max-h-[60vh] -mx-6 px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
           <div className="space-y-6 py-4">
             {/* Enable Director Toggle */}
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/50">
@@ -367,7 +367,7 @@ export function NarratorSettingsModal({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="pt-4 border-t border-border/50">
           <Button variant="outline" onClick={onClose}>
