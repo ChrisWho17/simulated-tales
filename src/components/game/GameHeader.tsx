@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
-import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity, ShoppingBag, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -21,6 +21,7 @@ interface ExtendedCharacter extends RPGCharacter {
 
 interface GameHeaderProps {
   time: GameTime;
+  playerGold?: number;
   onSave: () => void;
   onLoad: () => void;
   onNewGame?: () => void;
@@ -28,6 +29,7 @@ interface GameHeaderProps {
   onOpenInventory?: () => void;
   onOpenAchievements?: () => void;
   onOpenSessionStats?: () => void;
+  onOpenShop?: () => void;
   character?: ExtendedCharacter | null;
   adrenalineState?: AdrenalineSystemState | null;
   showAdrenaline?: boolean;
@@ -76,6 +78,7 @@ function CharacterPortrait({ character }: { character: ExtendedCharacter }) {
 
 export function GameHeader({ 
   time, 
+  playerGold = 0,
   onSave, 
   onLoad, 
   onNewGame,
@@ -83,6 +86,7 @@ export function GameHeader({
   onOpenInventory,
   onOpenAchievements,
   onOpenSessionStats,
+  onOpenShop,
   character,
   adrenalineState,
   showAdrenaline = false
@@ -110,8 +114,20 @@ export function GameHeader({
             <div className="w-32">
               <AdrenalineBar state={adrenalineState} compact />
             </div>
-          </>
+        </>
         )}
+        
+        {/* Gold Display */}
+        <div className="h-6 w-px bg-border" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+              <Coins className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium text-amber-500">{playerGold}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>Your Gold</TooltipContent>
+        </Tooltip>
       </div>
       
       <div className="flex items-center gap-2">
@@ -145,6 +161,22 @@ export function GameHeader({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Inventory</TooltipContent>
+          </Tooltip>
+        )}
+        
+        {onOpenShop && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onOpenShop}
+                className="hover:bg-amber-500/20 hover:text-amber-400"
+              >
+                <ShoppingBag className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Clothing Shop</TooltipContent>
           </Tooltip>
         )}
         
