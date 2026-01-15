@@ -101,6 +101,33 @@ export type Database = {
         }
         Relationships: []
       }
+      lifetime_stats: {
+        Row: {
+          created_at: string
+          id: string
+          stats_data: Json
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          stats_data?: Json
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          stats_data?: Json
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       npc_portraits: {
         Row: {
           created_at: string

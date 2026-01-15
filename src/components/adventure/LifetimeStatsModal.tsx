@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Trophy, Clock, Swords, Coins, MapPin, Users, Scroll, Dice6, 
   TrendingUp, Skull, Heart, Star, BarChart3, Download, Copy, Check,
-  Flame, Target, Sparkles, Lock
+  Flame, Target, Sparkles, Lock, Cloud, RefreshCw, Loader2
 } from 'lucide-react';
 import { 
   loadLifetimeStats, 
@@ -20,10 +20,12 @@ import {
   getLifetimeAchievementProgress,
   LifetimeAchievement 
 } from '@/lib/lifetimeAchievements';
+import { LifetimeStatsCloudSync } from '@/services/lifetimeStatsCloudSync';
 import { getGenreTitle } from '@/lib/genreDetection';
 import { GameGenre } from '@/types/genreData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StatRowProps {
   icon: React.ReactNode;
@@ -142,15 +144,42 @@ function LifetimeAchievementsDisplay({ stats }: { stats: LifetimeStatistics }) {
 }
 
 export function LifetimeStatsModal() {
+  const { isAuthenticated } = useAuth();
   const [stats, setStats] = useState<LifetimeStatistics | null>(null);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (open) {
       setStats(loadLifetimeStats());
+      // Auto-sync when opening if authenticated
+      if (isAuthenticated) {
+        handleCloudSync(true);
+      }
     }
-  }, [open]);
+  }, [open, isAuthenticated]);
+
+  const handleCloudSync = async (silent = false) => {
+    setIsSyncing(true);
+    try {
+      const result = await LifetimeStatsCloudSync.syncStats();
+      if (result.success) {
+        setStats(loadLifetimeStats());
+        if (!silent) {
+          toast.success(result.merged ? 'Stats synced and merged!' : 'Stats uploaded to cloud!');
+        }
+      } else if (!silent) {
+        toast.error('Failed to sync stats');
+      }
+    } catch (e) {
+      if (!silent) {
+        toast.error('Sync error');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleExportText = () => {
     if (!stats) return;
@@ -365,6 +394,22 @@ export function LifetimeStatsModal() {
             Reset Stats
           </Button>
           <div className="flex gap-2">
+            {isAuthenticated && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleCloudSync(false)} 
+                disabled={isSyncing}
+                className="gap-2"
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Cloud className="w-4 h-4" />
+                )}
+                Sync
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handleExportText} className="gap-2">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               Copy

@@ -61,7 +61,7 @@ export interface LifetimeStatistics {
   genresPlayed: Record<string, number>; // genre -> times played
 }
 
-function createDefaultStats(): LifetimeStatistics {
+export function createDefaultStats(): LifetimeStatistics {
   return {
     totalPlaytimeSeconds: 0,
     firstPlayedAt: Date.now(),

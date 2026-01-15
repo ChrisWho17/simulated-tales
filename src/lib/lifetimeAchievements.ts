@@ -387,6 +387,11 @@ export function saveLifetimeAchievementState(state: LifetimeAchievementState): v
   }
 }
 
+export function resetLifetimeAchievements(): void {
+  localStorage.removeItem(LIFETIME_ACHIEVEMENTS_KEY);
+  console.log('[LifetimeAchievements] Reset complete');
+}
+
 export function checkLifetimeAchievements(
   stats: LifetimeStatistics,
   onUnlock: (achievement: LifetimeAchievement) => void

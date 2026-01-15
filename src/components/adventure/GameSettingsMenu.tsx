@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -14,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { DataWipeModal } from './DataWipeModal';
 
 export interface GameSettingsMenuProps {
   className?: string;
@@ -23,6 +24,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
   const navigate = useNavigate();
   const { settings, updateSettings, diceMode, setDiceMode } = useGame();
   const [isOpen, setIsOpen] = useState(false);
+  const [showWipeModal, setShowWipeModal] = useState(false);
 
   const DICE_MODE_OPTIONS = [
     { 
@@ -172,8 +174,24 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             <Trophy className="w-4 h-4 text-amber-400" />
             <span className="text-sm">Trophy Room</span>
           </Button>
+          
+          {/* Data Wipe Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowWipeModal(true)}
+            className="w-full flex items-center justify-center gap-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50 text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-sm">Wipe All Data</span>
+          </Button>
         </div>
       </CollapsibleContent>
+      
+      <DataWipeModal 
+        open={showWipeModal} 
+        onOpenChange={setShowWipeModal}
+      />
     </Collapsible>
   );
 }
