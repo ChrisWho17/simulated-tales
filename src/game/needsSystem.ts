@@ -145,6 +145,9 @@ export function processNeedDecay(needs: PlayerNeeds, hours: number = 1, activity
     psychological: { ...needs.psychological },
   };
   
+  // Validate hours is positive
+  if (hours <= 0) return updated;
+  
   // Process physical needs
   for (const [need, rate] of Object.entries(NEED_DECAY_RATES)) {
     const modifier = activityModifiers?.[need as keyof PhysicalNeeds] ?? 0;
@@ -153,14 +156,15 @@ export function processNeedDecay(needs: PlayerNeeds, hours: number = 1, activity
     if (need in updated.physical) {
       const key = need as keyof PhysicalNeeds;
       if (need === 'bladder') {
-        // Bladder fills up
+        // Bladder fills up (rate is negative, so we subtract to increase)
         updated.physical[key] = Math.min(100, Math.max(0, updated.physical[key] - totalRate));
       } else {
-        // Other physical needs drop
+        // Other physical needs drop (positive rate means decay)
         updated.physical[key] = Math.min(100, Math.max(0, updated.physical[key] - totalRate));
       }
     } else if (need in updated.psychological) {
       const key = need as keyof PsychologicalNeeds;
+      // Psychological needs: stress/tension increase (negative rate), others decrease
       updated.psychological[key] = Math.min(100, Math.max(0, updated.psychological[key] - totalRate));
     }
   }

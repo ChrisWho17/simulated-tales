@@ -113,53 +113,75 @@ function getClothingCombatStats(): {
 
 // ============= COMBAT INITIALIZATION =============
 
+// Helper to clamp stat values to valid ranges
+function clampStat(value: number, min: number = 0, max: number = 100): number {
+  return Math.max(min, Math.min(max, value || 0));
+}
+
 export function initializeCombat(
   playerState: LifeSimPlayerState,
   npc: NPC,
   location: string,
   environmentMods: SkillModifier[] = []
 ): CombatEncounter {
-  // Get clothing bonuses
+  // Validate inputs
+  if (!playerState || !npc) {
+    throw new Error('[Combat] Cannot initialize combat without player state and NPC');
+  }
+  
+  // Get clothing bonuses (safely)
   const clothingBonuses = getClothingCombatStats();
   
+  // Safely extract player stats with fallbacks
+  const playerHealth = clampStat(playerState.needs?.physical?.health ?? 100);
+  const playerEnergy = clampStat(playerState.needs?.physical?.energy ?? 100);
+  const playerCombat = clampStat(playerState.skills?.physical?.combat ?? 20);
+  const playerAthletics = clampStat(playerState.skills?.physical?.athletics ?? 20);
+  const playerIntimidation = clampStat(playerState.skills?.social?.intimidation ?? 10);
+  const playerPersuasion = clampStat(playerState.skills?.social?.persuasion ?? 10);
+  const playerStress = clampStat(playerState.needs?.psychological?.stress ?? 0);
+  
   const playerStats: CombatantStats = {
-    health: playerState.needs.physical.health,
+    health: playerHealth,
     maxHealth: 100,
-    energy: playerState.needs.physical.energy,
-    combatSkill: playerState.skills.physical.combat,
-    dodgeSkill: playerState.skills.physical.athletics + clothingBonuses.dodgeBonus,
-    intimidationSkill: playerState.skills.social.intimidation + clothingBonuses.intimidationBonus,
-    persuasionSkill: playerState.skills.social.persuasion + clothingBonuses.persuasionBonus,
+    energy: playerEnergy,
+    combatSkill: playerCombat,
+    dodgeSkill: clampStat(playerAthletics + clothingBonuses.dodgeBonus),
+    intimidationSkill: clampStat(playerIntimidation + clothingBonuses.intimidationBonus),
+    persuasionSkill: clampStat(playerPersuasion + clothingBonuses.persuasionBonus),
     weaponDamage: 10, // Base unarmed
-    armorProtection: clothingBonuses.armorBonus, // Now includes clothing defense!
-    stressLevel: playerState.needs.psychological.stress,
+    armorProtection: clampStat(clothingBonuses.armorBonus, 0, 50), // Cap armor at 50%
+    stressLevel: playerStress,
   };
   
-  const npcCombatSkill = Math.min(100, 30 + Math.floor(npc.meta.stats.health / 3));
+  // Safely extract NPC stats with fallbacks
+  const npcHealth = clampStat(npc.meta?.stats?.health ?? 50);
+  const npcEnergy = clampStat(npc.meta?.stats?.energy ?? 50);
+  const npcCombatSkill = clampStat(30 + Math.floor(npcHealth / 3));
   
   const npcStats: CombatantStats = {
-    health: npc.meta.stats.health,
+    health: npcHealth,
     maxHealth: 100,
-    energy: npc.meta.stats.energy,
+    energy: npcEnergy,
     combatSkill: npcCombatSkill,
-    dodgeSkill: npcCombatSkill - 10,
-    intimidationSkill: npc.meta.traits.includes('calm') ? 20 : npcCombatSkill,
+    dodgeSkill: clampStat(npcCombatSkill - 10, 0),
+    intimidationSkill: npc.meta?.traits?.includes('calm') ? 20 : npcCombatSkill,
     persuasionSkill: 30,
     weaponDamage: 10,
-    armorProtection: npc.meta.occupation.includes('Guard') ? 15 : 0,
-    stressLevel: npc.stressLevel,
+    armorProtection: npc.meta?.occupation?.includes('Guard') ? 15 : 0,
+    stressLevel: clampStat(npc.stressLevel ?? 0),
   };
   
   return {
     id: `combat_${Date.now()}`,
-    location,
+    location: location || 'unknown',
     participants: [npc.id],
     rounds: [],
     currentRound: 0,
     isActive: true,
     playerStats,
     npcStats: { [npc.id]: npcStats },
-    environmentModifiers: environmentMods,
+    environmentModifiers: environmentMods || [],
     witnesses: [],
     canFlee: true,
     fleeAttempts: 0,
