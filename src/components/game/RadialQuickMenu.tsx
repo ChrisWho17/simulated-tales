@@ -361,7 +361,7 @@ export function RadialQuickMenu({
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
                       : `0 0 8px 2px ${item.glowColor}15, 0 4px 12px rgba(0,0,0,0.3)`,
                     borderColor: isHovered ? item.glowColor : `${item.glowColor}25`,
-                    animation: !isHovered ? `fadeScaleIn 180ms ease-out 80ms forwards, glassGlow 3s ease-in-out 300ms infinite` : 'fadeScaleIn 180ms ease-out 80ms forwards',
+                    animation: !isHovered ? `fadeScaleIn 180ms ease-out 80ms forwards, glassGlow 5s ease-in-out 300ms infinite` : 'fadeScaleIn 180ms ease-out 80ms forwards',
                   }}
                 >
                   {item.icon}
