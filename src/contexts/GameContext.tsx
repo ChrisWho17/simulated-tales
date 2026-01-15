@@ -172,6 +172,9 @@ export interface GameSettings {
   // UI toggles
   showConsequenceFeed: boolean;
   
+  // Display settings
+  typewriterEnabled: boolean;
+  
   // Director settings
   directorSettings: DirectorSettings;
 }
@@ -263,6 +266,9 @@ const defaultSettings: GameSettings = {
   
   // UI toggles
   showConsequenceFeed: true,
+  
+  // Display settings
+  typewriterEnabled: true,
   
   // Director settings
   directorSettings: DEFAULT_DIRECTOR_SETTINGS,

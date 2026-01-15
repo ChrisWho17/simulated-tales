@@ -1051,29 +1051,46 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 />
               </div>
               
-              {/* Text Speed */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Text Speed</span>
-                  <span className="text-xs text-[var(--accent-secondary)]">
-                    {textSpeedLabels[settings.textSpeed]}
-                  </span>
+              {/* Typewriter Effect */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <div>
+                    <span className="text-sm font-medium">Typewriter Effect</span>
+                    <p className="text-xs text-muted-foreground">Animate narrator text character by character</p>
+                  </div>
                 </div>
-                <Slider
-                  value={[textSpeedValues.indexOf(settings.textSpeed)]}
-                  min={0}
-                  max={3}
-                  step={1}
-                  onValueChange={([index]) => {
-                    updateSettings({ textSpeed: textSpeedValues[index] });
-                  }}
-                  className="w-full"
+                <Switch 
+                  checked={settings.typewriterEnabled ?? true}
+                  onCheckedChange={(checked) => updateSettings({ typewriterEnabled: checked })}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Slow</span>
-                  <span>Instant</span>
-                </div>
               </div>
+              
+              {/* Text Speed - only show when typewriter is enabled */}
+              {(settings.typewriterEnabled ?? true) && (
+                <div className="space-y-3 pl-6 border-l-2 border-[var(--accent-primary)]/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Text Speed</span>
+                    <span className="text-xs text-[var(--accent-secondary)]">
+                      {textSpeedLabels[settings.textSpeed]}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[textSpeedValues.indexOf(settings.textSpeed)]}
+                    min={0}
+                    max={3}
+                    step={1}
+                    onValueChange={([index]) => {
+                      updateSettings({ textSpeed: textSpeedValues[index] });
+                    }}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Slow</span>
+                    <span>Instant</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
