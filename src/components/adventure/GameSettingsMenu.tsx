@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Zap } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -16,13 +16,17 @@ import {
 } from '@/components/ui/collapsible';
 import { DataWipeModal } from './DataWipeModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
-import { SystemsTestPanel } from './SystemsTestPanel';
+import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
+import { GameGenre } from '@/types/genreData';
 
 export interface GameSettingsMenuProps {
   className?: string;
+  currentGenre?: GameGenre;
+  onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
+export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, isLoading }: GameSettingsMenuProps) {
   const navigate = useNavigate();
   const { settings, updateSettings, diceMode, setDiceMode } = useGame();
   const [isOpen, setIsOpen] = useState(false);
@@ -55,7 +59,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
         <Button
           variant="outline"
           size="sm"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/50 text-sm hover:bg-muted/50"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/50 text-sm hover:bg-muted/50 transition-all duration-300"
         >
           <Settings className="w-4 h-4 text-muted-foreground" />
           <span className="text-muted-foreground font-medium">Game Settings</span>
@@ -81,14 +85,14 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
                   key={mode.id}
                   onClick={() => setDiceMode(mode.id)}
                   className={cn(
-                    "p-2 rounded-lg border text-center transition-all",
+                    "p-2 rounded-lg border text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]",
                     diceMode === mode.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border/50 hover:border-border"
+                      ? "border-primary bg-primary/10 shadow-[0_0_10px_var(--accent-glow)]"
+                      : "border-border/50 hover:border-border hover:bg-muted/20"
                   )}
                 >
                   <mode.icon className={cn(
-                    "w-4 h-4 mx-auto mb-1",
+                    "w-4 h-4 mx-auto mb-1 transition-colors",
                     diceMode === mode.id ? "text-primary" : "text-muted-foreground"
                   )} />
                   <div className="text-xs font-medium">{mode.name}</div>
@@ -101,10 +105,10 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
           {/* Quick Toggles - Grid */}
           <div className="grid grid-cols-2 gap-2">
             {/* Auto Save */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0 hover:bg-muted/10 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Save className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs truncate">Auto{'\n'}Save</span>
+                <span className="text-xs truncate">Auto Save</span>
               </div>
               <Switch 
                 checked={settings.autoSave}
@@ -114,10 +118,10 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             </div>
             
             {/* Show Roll Details */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0 hover:bg-muted/10 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Eye className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs truncate">Roll{'\n'}Details</span>
+                <span className="text-xs truncate">Roll Details</span>
               </div>
               <Switch 
                 checked={settings.showRollDetails}
@@ -127,10 +131,10 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             </div>
             
             {/* 18+ Content */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0 hover:bg-muted/10 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                <span className="text-xs truncate">18+{'\n'}Content</span>
+                <span className="text-xs truncate">18+ Content</span>
               </div>
               <Switch 
                 checked={settings.adultContent}
@@ -140,7 +144,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             </div>
             
             {/* Typewriter Effect */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0 hover:bg-muted/10 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                 <span className="text-xs truncate">Typewriter</span>
@@ -154,7 +158,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
           </div>
           
           {/* Weather Effects Toggle */}
-          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
             <div className="flex items-center gap-2">
               <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs">Weather Effects</span>
@@ -171,7 +175,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             variant="outline"
             size="sm"
             onClick={() => navigate('/achievements')}
-            className="w-full flex items-center justify-center gap-2 border-amber-400/30 hover:bg-amber-400/10 hover:border-amber-400/50"
+            className="w-full flex items-center justify-center gap-2 border-amber-400/30 hover:bg-amber-400/10 hover:border-amber-400/50 transition-all duration-300"
           >
             <Trophy className="w-4 h-4 text-amber-400" />
             <span className="text-sm">Trophy Room</span>
@@ -179,7 +183,11 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
           
           {/* Systems Test Panel */}
           <div className="w-full">
-            <SystemsTestPanel />
+            <SystemsTestPanel 
+              currentGenre={currentGenre || 'fantasy'}
+              onRunTest={onRunSystemsTest}
+              isLoading={isLoading}
+            />
           </div>
           
           {/* Backup/Restore */}
@@ -192,7 +200,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             variant="outline"
             size="sm"
             onClick={() => setShowWipeModal(true)}
-            className="w-full flex items-center justify-center gap-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50 text-destructive"
+            className="w-full flex items-center justify-center gap-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50 text-destructive transition-all duration-300"
           >
             <Trash2 className="w-4 h-4" />
             <span className="text-sm">Wipe All Data</span>
