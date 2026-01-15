@@ -328,6 +328,22 @@ interface AdventureRequest {
   };
   // NEW: DIRECTOR MODE - DM manipulation and narrative steering
   directorContext?: DirectorContext;
+  // NEW: CLOTHING/ARMOR CONTEXT - Affects player stats and NPC reactions
+  clothingArmorContext?: {
+    currentOutfit: string;           // Description of current outfit
+    styleCategory: string;           // formal, casual, combat, stealth, etc.
+    statModifiers: {                 // Stat bonuses/penalties from gear
+      defense?: number;
+      charisma?: number;
+      intimidation?: number;
+      stealth?: number;
+      perception?: number;
+      luck?: number;
+    };
+    effectiveStatChanges: string;    // Human-readable stat effect summary
+    firstImpressionMod: number;      // NPC first impression modifier
+    specialEffects: string[];        // Special outfit effects
+  };
 }
 
 // ============= NPC PERSONALITY SYSTEM =============
@@ -1107,7 +1123,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1399,6 +1415,66 @@ Fame: ${reputationContext.globalFame}, Infamy: ${reputationContext.globalInfamy}
     }
     if (memoryContext?.fullContext) {
       systemContent += '\n\n=== CAMPAIGN MEMORY ===' + memoryContext.fullContext;
+    }
+    
+    // === CLOTHING & ARMOR CONTEXT - Affects stats and NPC reactions ===
+    if (clothingArmorContext) {
+      let clothingSection = `\n\n=== PLAYER OUTFIT & EQUIPMENT EFFECTS ===
+CURRENT OUTFIT: ${clothingArmorContext.currentOutfit || 'Standard attire'}
+STYLE: ${clothingArmorContext.styleCategory || 'casual'}
+
+EQUIPMENT STAT MODIFIERS (THESE AFFECT ALL RELEVANT CHECKS):`;
+
+      const mods = clothingArmorContext.statModifiers || {};
+      if (mods.defense && mods.defense > 0) {
+        clothingSection += `\n• DEFENSE +${mods.defense * 2}: Armor/protective gear reduces incoming damage`;
+      }
+      if (mods.charisma) {
+        clothingSection += `\n• CHARISMA ${mods.charisma >= 0 ? '+' : ''}${mods.charisma * 2}: ${mods.charisma > 0 ? 'Stylish outfit improves social interactions' : 'Poor attire hampers social presence'}`;
+      }
+      if (mods.intimidation && mods.intimidation > 0) {
+        clothingSection += `\n• INTIMIDATION +${mods.intimidation * 2}: Threatening appearance adds weight to threats`;
+      }
+      if (mods.stealth) {
+        clothingSection += `\n• STEALTH ${mods.stealth >= 0 ? '+' : ''}${mods.stealth * 2}: ${mods.stealth > 0 ? 'Dark/quiet clothing aids concealment' : 'Bright/noisy attire hinders stealth'}`;
+      }
+      if (mods.perception && mods.perception > 0) {
+        clothingSection += `\n• PERCEPTION +${mods.perception * 2}: Enhanced sensory equipment`;
+      }
+      if (mods.luck && mods.luck > 0) {
+        clothingSection += `\n• LUCK +${mods.luck}: Lucky charms improve all roll outcomes slightly`;
+      }
+
+      if (clothingArmorContext.effectiveStatChanges) {
+        clothingSection += `\n\nEFFECTIVE STAT SUMMARY: ${clothingArmorContext.effectiveStatChanges}`;
+      }
+
+      if (clothingArmorContext.firstImpressionMod !== 0) {
+        clothingSection += `\n\nFIRST IMPRESSION: ${clothingArmorContext.firstImpressionMod > 0 ? '+' : ''}${clothingArmorContext.firstImpressionMod} (NPCs react ${clothingArmorContext.firstImpressionMod > 0 ? 'more favorably' : 'less favorably'} initially)`;
+      }
+
+      if (clothingArmorContext.specialEffects && clothingArmorContext.specialEffects.length > 0) {
+        clothingSection += `\n\nSPECIAL EFFECTS:\n${clothingArmorContext.specialEffects.map(e => `• ${e}`).join('\n')}`;
+      }
+
+      clothingSection += `
+
+CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
+1. REFERENCE the player's attire when NPCs first see them or in social situations
+2. APPLY stat modifiers to relevant situations:
+   - High defense = describe armor absorbing/deflecting blows
+   - High intimidation = NPCs react nervously, step back, avoid eye contact
+   - High charisma = NPCs are more receptive, complimentary, trusting
+   - High stealth = easier to blend in, less likely to be noticed
+   - Low stats = describe the disadvantage narratively (clunky armor draws attention, shabby clothes invite dismissal)
+3. ARMOR CAN COUNTERACT PLAYER ATTRIBUTES:
+   - Heavy armor may give +defense but -stealth
+   - Flashy outfit may give +charisma but -stealth
+   - Intimidating gear may give +intimidation but -first impression with friendly NPCs
+4. When determining difficulty or outcomes, FACTOR IN these equipment modifiers
+5. NPCs should comment on remarkable outfits (very stylish, intimidating, or out-of-place)`;
+
+      systemContent += clothingSection;
     }
     
     // === WORLD CONSISTENCY CONTEXT ===

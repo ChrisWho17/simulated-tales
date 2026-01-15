@@ -292,6 +292,105 @@ export function buildClothingGameplayContext(): string {
   return lines.join('\n');
 }
 
+/**
+ * Build structured clothing context for AI narration
+ * This is passed to the edge function for comprehensive stat integration
+ */
+export function buildClothingArmorContextForAI(): {
+  currentOutfit: string;
+  styleCategory: string;
+  statModifiers: {
+    defense?: number;
+    charisma?: number;
+    intimidation?: number;
+    stealth?: number;
+    perception?: number;
+    luck?: number;
+  };
+  effectiveStatChanges: string;
+  firstImpressionMod: number;
+  specialEffects: string[];
+} | null {
+  const clothingStats = wardrobeManager.getCurrentStats();
+  const fashionBonuses = fashionReputationManager.getStatBonuses();
+  const wardrobeState = wardrobeManager.getState();
+  const equippedItems = wardrobeManager.getEquippedList();
+  
+  // Skip if no meaningful equipment
+  const hasStats = Object.values(clothingStats).some(v => typeof v === 'number' && v !== 0);
+  if (!hasStats && equippedItems.length === 0) {
+    return null;
+  }
+  
+  // Build outfit description
+  const outfitParts = equippedItems.map(wi => wi.item.name);
+  const currentOutfit = outfitParts.length > 0 
+    ? outfitParts.join(', ')
+    : 'Standard attire';
+  
+  // Determine style category
+  let styleCategory = 'casual';
+  if (wardrobeState.activeStyle) {
+    styleCategory = wardrobeState.activeStyle;
+  } else if (clothingStats.defense && clothingStats.defense > 2) {
+    styleCategory = 'combat/armored';
+  } else if (clothingStats.intimidation && clothingStats.intimidation > 2) {
+    styleCategory = 'intimidating';
+  } else if (clothingStats.stealth && clothingStats.stealth > 0) {
+    styleCategory = 'stealth/tactical';
+  } else if ((clothingStats.charisma || 0) + (fashionBonuses.charisma || 0) > 2) {
+    styleCategory = 'formal/elegant';
+  }
+  
+  // Compile stat modifiers
+  const statModifiers: Record<string, number> = {};
+  if (clothingStats.defense) statModifiers.defense = clothingStats.defense;
+  if (clothingStats.charisma || fashionBonuses.charisma) {
+    statModifiers.charisma = (clothingStats.charisma || 0) + (fashionBonuses.charisma || 0);
+  }
+  if (clothingStats.intimidation) statModifiers.intimidation = clothingStats.intimidation;
+  if (clothingStats.stealth) statModifiers.stealth = clothingStats.stealth;
+  if (clothingStats.perception) statModifiers.perception = clothingStats.perception;
+  if (clothingStats.luck) statModifiers.luck = clothingStats.luck;
+  
+  // Build effective stat changes summary
+  const changes: string[] = [];
+  for (const [stat, value] of Object.entries(statModifiers)) {
+    if (value !== 0) {
+      changes.push(`${stat} ${value > 0 ? '+' : ''}${value * 2}`);
+    }
+  }
+  const effectiveStatChanges = changes.length > 0 ? changes.join(', ') : 'No significant modifiers';
+  
+  // Get first impression modifier
+  const firstImpressionData = getFirstImpressionModifier();
+  
+  // Compile special effects
+  const specialEffects: string[] = [];
+  
+  // Check for genre bonuses on equipped items
+  for (const wi of equippedItems) {
+    if (wi.item.stats.genreBonus) {
+      specialEffects.push(`${wi.item.name}: +${wi.item.stats.genreBonus.value} ${wi.item.stats.genreBonus.stat} in ${wi.item.stats.genreBonus.genre} settings`);
+    }
+  }
+  
+  // Add fashion level perks
+  const unlockedPerks = fashionReputationManager.getUnlockedPerks();
+  if (unlockedPerks.length > 0) {
+    specialEffects.push(...unlockedPerks.map(p => `Fashion Perk: ${p.name} - ${p.description}`));
+  }
+  
+  return {
+    currentOutfit,
+    styleCategory,
+    statModifiers,
+    effectiveStatChanges,
+    firstImpressionMod: firstImpressionData.value,
+    specialEffects,
+  };
+}
+
 // ============= EXPORTS FOR EASY INTEGRATION =============
 
 export const ClothingGameplay = {
@@ -304,4 +403,5 @@ export const ClothingGameplay = {
   getFirstImpression: getFirstImpressionModifier,
   getGenreBonus: getGenreClothingBonus,
   buildContext: buildClothingGameplayContext,
+  buildAIContext: buildClothingArmorContextForAI,
 };

@@ -143,6 +143,7 @@ import {
 } from '@/game/moveSyncSystem';
 import { processNarrativeForCombatAchievements } from '@/game/combatAchievementBridge';
 import { useSessionStatsOptional } from '@/components/game/SessionStats';
+import { buildClothingArmorContextForAI } from '@/game/clothingGameplayIntegration';
 import { 
   incrementLifetimeStat, 
   recordGenrePlayed 
@@ -1225,6 +1226,12 @@ export function AdventureGame() {
           timeState,
           [] // Nearby locations could be added if available
         );
+        
+        // Clothing/Armor context - affects stats and NPC reactions
+        const clothingArmorContext = buildClothingArmorContextForAI();
+        if (clothingArmorContext) {
+          requestBody.clothingArmorContext = clothingArmorContext;
+        }
       }
       
       // === ADVANCED CONTEXT (retryLevel === 0 only) ===
