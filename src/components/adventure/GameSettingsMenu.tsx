@@ -2,7 +2,8 @@
 // Filtered to game settings only - no world/character/life settings
 
 import { useState } from 'react';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -19,6 +20,7 @@ export interface GameSettingsMenuProps {
 }
 
 export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
+  const navigate = useNavigate();
   const { settings, updateSettings, diceMode, setDiceMode } = useGame();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -159,6 +161,17 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
               className="scale-75"
             />
           </div>
+          
+          {/* Trophy Room Link */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/achievements')}
+            className="w-full flex items-center justify-center gap-2 border-amber-400/30 hover:bg-amber-400/10 hover:border-amber-400/50"
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <span className="text-sm">Trophy Room</span>
+          </Button>
         </div>
       </CollapsibleContent>
     </Collapsible>

@@ -89,6 +89,22 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'night_owl', name: 'Night Owl', description: 'Play past midnight', icon: '🦉', category: 'secret', rarity: 'uncommon' },
   { id: 'early_bird', name: 'Early Bird', description: 'Play between 5 AM and 7 AM', icon: '🌅', category: 'secret', rarity: 'uncommon' },
   { id: 'weekend_warrior', name: 'Weekend Warrior', description: 'Play for 3+ hours on a weekend', icon: '🎯', category: 'secret', rarity: 'rare' },
+  
+  // Streak-based achievements
+  { id: 'daily_player', name: 'Daily Player', description: 'Play for 3 consecutive days', icon: '📅', category: 'secret', rarity: 'uncommon', maxProgress: 3 },
+  { id: 'weekly_streak', name: 'Weekly Streak', description: 'Play for 7 consecutive days', icon: '📆', category: 'secret', rarity: 'rare', maxProgress: 7 },
+  { id: 'monthly_dedication', name: 'Monthly Dedication', description: 'Play for 30 consecutive days', icon: '🗓️', category: 'secret', rarity: 'legendary', maxProgress: 30 },
+  { id: 'comeback_kid', name: 'Comeback Kid', description: 'Return after a 7+ day break', icon: '🔄', category: 'secret', rarity: 'uncommon' },
+  
+  // Category completion achievements (Perfectionist)
+  { id: 'exploration_master', name: 'Exploration Master', description: 'Complete all exploration achievements', icon: '🗺️', category: 'secret', rarity: 'epic' },
+  { id: 'combat_master', name: 'Combat Master', description: 'Complete all combat achievements', icon: '⚔️', category: 'secret', rarity: 'epic' },
+  { id: 'social_master', name: 'Social Master', description: 'Complete all social achievements', icon: '💬', category: 'secret', rarity: 'epic' },
+  { id: 'story_master', name: 'Story Master', description: 'Complete all story achievements', icon: '📖', category: 'secret', rarity: 'epic' },
+  { id: 'merchant_master', name: 'Merchant Master', description: 'Complete all merchant achievements', icon: '💰', category: 'secret', rarity: 'epic' },
+  { id: 'collector_master', name: 'Collector Master', description: 'Complete all collector achievements', icon: '🎁', category: 'secret', rarity: 'epic' },
+  { id: 'diplomat_master', name: 'Diplomat Master', description: 'Complete all diplomat achievements', icon: '🤝', category: 'secret', rarity: 'epic' },
+  { id: 'perfectionist', name: 'Perfectionist', description: 'Unlock every achievement in the game', icon: '👑', category: 'secret', rarity: 'legendary' },
 ];
 
 interface AchievementsContextType {

@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Trophy, Star, Lock, ArrowLeft, Calendar, Clock, Award, TrendingUp, Sparkles } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Trophy, Star, Lock, ArrowLeft, Calendar, Clock, Award, TrendingUp, Sparkles, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useAchievements, Achievement, ACHIEVEMENT_CATEGORIES } from '@/components/game/Achievements';
+import { AchievementExport } from '@/components/game/AchievementExport';
 import { format } from 'date-fns';
 
 const rarityColors = {
@@ -227,24 +228,33 @@ export default function AchievementGallery() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate(-1)}
-            className="shrink-0"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-display font-bold flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-amber-400" />
-              Trophy Room
-            </h1>
-            <p className="text-muted-foreground">
-              Your collection of accomplishments and legendary feats
-            </p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(-1)}
+              className="shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-display font-bold flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-amber-400" />
+                Trophy Room
+              </h1>
+              <p className="text-muted-foreground">
+                Your collection of accomplishments and legendary feats
+              </p>
+            </div>
           </div>
+          
+          {/* Export/Share Button */}
+          <AchievementExport
+            achievements={achievements}
+            unlockedCount={stats.unlocked}
+            totalCount={stats.total}
+          />
         </div>
         
         {/* Stats Overview */}
