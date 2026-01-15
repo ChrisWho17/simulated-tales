@@ -371,7 +371,16 @@ export function inventoryReducer(state: InventoryState, action: { type: string; 
   
   switch (action.type) {
 case ACTIONS.ADD_ITEM: {
-      const { item, quantity = 1 } = action.payload;
+      const { item, quantity = 1 } = action.payload || {};
+      
+      // Validate item exists and has required fields
+      if (!item || !item.id || !item.name) {
+        console.error('[Inventory] Cannot add item: missing required fields (id, name)');
+        return state;
+      }
+      
+      // Validate quantity
+      const validQuantity = Math.max(1, Math.floor(quantity) || 1);
       
       // AUTO-ASSIGN EQUIP SLOTS if missing
       let processedItem = ensureEquipSlots(item);
@@ -389,15 +398,16 @@ case ACTIONS.ADD_ITEM: {
       if (existingIndex !== -1 && processedItem.stackable) {
         // Stacking - use existing instanceId
         addedInstanceId = state.items[existingIndex].instanceId;
+        const existingQuantity = state.items[existingIndex].quantity || 0;
         newItems = state.items.map((i, idx) => 
-          idx === existingIndex ? { ...i, quantity: i.quantity + quantity } : i
+          idx === existingIndex ? { ...i, quantity: existingQuantity + validQuantity } : i
         );
       } else {
         // Create new item with instanceId
         addedInstanceId = `${processedItem.id}-${timestamp}`;
         let newItem: InventoryItem = { 
           ...processedItem, 
-          quantity, 
+          quantity: validQuantity, 
           instanceId: addedInstanceId 
         } as InventoryItem;
         
@@ -415,7 +425,7 @@ case ACTIONS.ADD_ITEM: {
         lastAction: {
           type: 'ADD',
           item: processedItem,
-          quantity,
+          quantity: validQuantity,
           timestamp,
           narrativeHook: `picked up ${quantity > 1 ? `${quantity}x ` : ''}${processedItem.name}`,
         },

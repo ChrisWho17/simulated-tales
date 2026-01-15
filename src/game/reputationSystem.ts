@@ -181,6 +181,15 @@ export function modifyLocationReputation(
   trait?: ReputationTrait,
   currentTick: number = 0
 ): WorldReputation {
+  // Validate inputs
+  if (!locationId || !locationName) {
+    console.warn('[Reputation] Invalid location data provided');
+    return world;
+  }
+  
+  // Clamp amount to prevent extreme swings
+  const clampedAmount = Math.max(-50, Math.min(50, amount));
+  
   const existing = world.locations[locationId] || {
     locationId,
     locationName,
@@ -190,28 +199,36 @@ export function modifyLocationReputation(
     significantEvents: []
   };
   
-  const newReputation = Math.max(-100, Math.min(100, existing.reputation + amount));
+  const newReputation = Math.max(-100, Math.min(100, existing.reputation + clampedAmount));
+  
+  // Skip if no actual change
+  if (newReputation === existing.reputation && !trait) {
+    return world;
+  }
   
   const event: ReputationEvent = {
     tick: currentTick,
-    action: reason,
-    impact: amount,
+    action: reason || 'unknown',
+    impact: clampedAmount,
     trait
   };
   
-  // Add trait if significant action
+  // Add trait if significant action (keep max 5 traits per location)
   const newTraits = [...existing.traits];
-  if (trait && !newTraits.includes(trait) && Math.abs(amount) >= 10) {
+  if (trait && !newTraits.includes(trait) && Math.abs(clampedAmount) >= 10) {
     newTraits.push(trait);
+    if (newTraits.length > 5) {
+      newTraits.shift(); // Remove oldest trait
+    }
   }
   
-  // Update global fame/infamy
-  let newFame = world.globalFame;
-  let newInfamy = world.globalInfamy;
-  if (amount >= 15) {
-    newFame = Math.min(100, world.globalFame + Math.floor(amount / 3));
-  } else if (amount <= -15) {
-    newInfamy = Math.min(100, world.globalInfamy + Math.floor(Math.abs(amount) / 3));
+  // Update global fame/infamy with bounds checking
+  let newFame = Math.max(0, Math.min(100, world.globalFame));
+  let newInfamy = Math.max(0, Math.min(100, world.globalInfamy));
+  if (clampedAmount >= 15) {
+    newFame = Math.min(100, newFame + Math.floor(clampedAmount / 3));
+  } else if (clampedAmount <= -15) {
+    newInfamy = Math.min(100, newInfamy + Math.floor(Math.abs(clampedAmount) / 3));
   }
   
   const updatedWorld = {
@@ -241,7 +258,7 @@ export function modifyLocationReputation(
       locationId,
       previousValue: existing.reputation,
       newValue: newReputation,
-      reason,
+      reason: reason || 'unknown',
     },
   } as any);
 

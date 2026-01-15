@@ -627,11 +627,20 @@ function findReplaceable(state: ModifierState, modifier: Modifier): number {
 
 export function applyModifier(state: ModifierState, modifier: Modifier): ModifierState {
   // Validate modifier has required fields
-  if (!modifier.originEvent) {
-    console.warn('Modifier applied without origin event:', modifier.name);
+  if (!modifier.id || !modifier.name) {
+    console.error('[Modifier] Cannot apply modifier without id and name');
+    return state;
   }
-  if (!modifier.duration) {
-    console.warn('Modifier applied without duration:', modifier.name);
+  if (!modifier.originEvent) {
+    console.warn('[Modifier] Modifier applied without origin event:', modifier.name);
+  }
+  if (!modifier.duration || typeof modifier.duration.remaining !== 'number') {
+    console.warn('[Modifier] Modifier applied without valid duration:', modifier.name);
+    // Apply default duration
+    modifier = {
+      ...modifier,
+      duration: modifier.duration || { type: 'time', remaining: 24, total: 24 }
+    };
   }
 
   const newState = { ...state, activeModifiers: [...state.activeModifiers] };

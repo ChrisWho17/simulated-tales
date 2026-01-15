@@ -67,13 +67,19 @@ export function rollD100(advantage: 'none' | 'advantage' | 'disadvantage' = 'non
 }
 
 /**
- * Get a skill value from the player state
+ * Get a skill value from the player state with safe fallbacks
  */
-export function getSkillValue(skills: PlayerSkills, category: SkillCategory, skillName: string): number {
-  const categorySkills = skills[category];
-  if (!categorySkills) return 0;
+export function getSkillValue(skills: PlayerSkills | null | undefined, category: SkillCategory, skillName: string): number {
+  if (!skills) return 0;
   
-  return (categorySkills as unknown as Record<string, number>)[skillName] || 0;
+  const categorySkills = skills[category];
+  if (!categorySkills || typeof categorySkills !== 'object') return 0;
+  
+  const value = (categorySkills as unknown as Record<string, number>)[skillName];
+  
+  // Ensure we return a valid number between 0-100
+  if (typeof value !== 'number' || isNaN(value)) return 0;
+  return Math.max(0, Math.min(100, value));
 }
 
 /**

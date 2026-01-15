@@ -311,10 +311,23 @@ export function initializeQuestLog(): QuestLog {
 
 export function startQuest(questLog: QuestLog, questId: string): QuestLog {
   const definition = QUEST_DEFINITIONS[questId];
-  if (!definition) return questLog;
+  if (!definition) {
+    console.warn(`[QuestSystem] Cannot start quest: Unknown quest ID "${questId}"`);
+    return questLog;
+  }
+  
+  // Prevent starting duplicate quests
+  if (questLog.quests[questId]?.status === 'active') {
+    console.warn(`[QuestSystem] Quest "${questId}" is already active`);
+    return questLog;
+  }
+  
+  // Deep clone objectives to prevent shared state issues
+  const clonedObjectives = definition.objectives.map(obj => ({ ...obj }));
   
   const quest: Quest = {
     ...definition,
+    objectives: clonedObjectives,
     status: 'active',
     currentObjectiveIndex: 0,
     journalEntries: [{
@@ -329,7 +342,7 @@ export function startQuest(questLog: QuestLog, questId: string): QuestLog {
     ...questLog,
     quests: { ...questLog.quests, [questId]: quest },
     availableQuests: questLog.availableQuests.filter(id => id !== questId),
-    currentActiveCount: questLog.currentActiveCount + 1,
+    currentActiveCount: Math.max(0, questLog.currentActiveCount + 1),
   };
 }
 

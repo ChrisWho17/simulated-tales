@@ -401,15 +401,23 @@ export function triggerAdrenaline(
   amount: number,
   _source: string = 'danger'
 ): { state: AdrenalineSystemState; gain: number } {
+  // Validate inputs
+  if (!state || amount <= 0) {
+    return { state: state || createAdrenalineState(), gain: 0 };
+  }
+  
+  // Clamp amount to reasonable bounds
+  const clampedAmount = Math.min(50, Math.max(0, amount));
+  
   const diminishingFactor = 1 - (state.adrenaline.current / state.adrenaline.max) * 0.5;
-  const actualGain = amount * diminishingFactor;
+  const actualGain = clampedAmount * diminishingFactor;
   
   return {
     state: {
       ...state,
       adrenaline: {
         ...state.adrenaline,
-        current: Math.min(state.adrenaline.max, state.adrenaline.current + actualGain),
+        current: Math.min(state.adrenaline.max, Math.max(0, state.adrenaline.current + actualGain)),
         lastTriggerTime: Date.now()
       }
     },
