@@ -7,7 +7,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { InventoryProvider, InventoryAction } from "@/game/inventorySystem";
 import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySync";
-import { migrateStorageKeys } from "@/lib/campaignStorageMigration";
+// Migration removed - cloud handles everything
 import { ScreenEffectsProvider } from "@/components/game/ScreenEffects";
 import { SessionStatsProvider } from "@/components/game/SessionStats";
 import { AchievementsProvider } from "@/components/game/Achievements";
@@ -22,9 +22,6 @@ import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
 import AchievementGallery from "./pages/AchievementGallery";
 import "@/styles/untold-story-engine.css";
-
-// Run storage migration on app startup
-migrateStorageKeys();
 
 const queryClient = new QueryClient();
 
