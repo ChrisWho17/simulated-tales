@@ -4,8 +4,9 @@ import {
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload
+  FileText, Upload, CloudUpload, GripVertical
 } from 'lucide-react';
+import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { AudioSettingsPanel } from '@/components/ui/AudioSettingsPanel';
@@ -769,12 +770,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   </div>
                   
                   <div className="flex items-center justify-between py-2">
-                    <div>
-                      <span className="text-sm">Inventory Drag & Drop</span>
-                      <p className="text-xs text-muted-foreground">Swipe items to use/drop</p>
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-sm">Inventory Drag & Drop</span>
+                        <p className="text-xs text-muted-foreground">Swipe items to use/drop</p>
+                      </div>
                     </div>
                     <Switch 
-                      checked={settings.enableInventoryDragDrop ?? true}
+                      checked={settings.enableInventoryDragDrop === true}
                       onCheckedChange={(checked) => updateSettings({ enableInventoryDragDrop: checked })}
                     />
                   </div>
@@ -933,9 +937,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         <h3 className="text-sm font-medium">Auto Saves</h3>
                         <span className="text-xs text-muted-foreground">({autoSaves.length})</span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {autoSaves.map((save) => (
-                          <SaveSlot 
+                          <SaveSlotPreview 
                             key={save.id} 
                             save={save}
                             isConfirmingDelete={confirmDelete === save.id}
@@ -955,9 +959,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         <h3 className="text-sm font-medium">Manual Saves</h3>
                         <span className="text-xs text-muted-foreground">({manualSaves.length})</span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {manualSaves.map((save) => (
-                          <SaveSlot 
+                          <SaveSlotPreview 
                             key={save.id} 
                             save={save}
                             isConfirmingDelete={confirmDelete === save.id}

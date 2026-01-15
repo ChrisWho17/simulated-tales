@@ -161,6 +161,7 @@ export interface GameSettings {
   enableReputationSystem: boolean;
   enableXPSystem: boolean;
   enableInventoryWeight: boolean;
+  enableInventoryDragDrop: boolean;
   enableAdrenalineSystem: boolean;
   
   // NPC Speech settings
@@ -256,6 +257,7 @@ const defaultSettings: GameSettings = {
   enableReputationSystem: true,
   enableXPSystem: true,
   enableInventoryWeight: true,
+  enableInventoryDragDrop: true,
   enableAdrenalineSystem: false,
   
   // NPC Speech settings
