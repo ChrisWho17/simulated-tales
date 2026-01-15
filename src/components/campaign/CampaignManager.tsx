@@ -43,6 +43,7 @@ import {
   Bomb,
   HardDrive,
   Cloud,
+  UserCircle,
 } from 'lucide-react';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
@@ -72,6 +73,7 @@ interface CampaignManagerProps {
 }
 
 export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManagerProps) {
+  const navigate = useNavigate();
   const { campaigns, loadCampaign, deleteCampaign, duplicateCampaign, exportCampaign, importCampaign, activeCampaignId } = useCampaign();
   const { isAuthenticated } = useAuth();
   
@@ -326,6 +328,16 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
           </div>
           
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/profile')}
+              className="gap-2"
+            >
+              <UserCircle className="h-4 w-4" />
+              Profile
+            </Button>
+            
             <CloudSyncIndicator variant="badge" />
             
             <Button

@@ -260,6 +260,35 @@ export function deleteCampaignData(campaignId: string): void {
   }
 }
 
+// Rename a campaign
+export function renameCampaign(campaignId: string, newName: string): boolean {
+  if (!campaignId || !newName.trim()) {
+    console.error('[Campaign Storage] Cannot rename: invalid parameters');
+    return false;
+  }
+  
+  try {
+    // Load the full campaign data
+    const campaign = loadCampaign(campaignId);
+    if (!campaign) {
+      console.error('[Campaign Storage] Cannot rename: campaign not found');
+      return false;
+    }
+    
+    // Update campaign name
+    campaign.meta.name = newName.trim();
+    
+    // Save the updated campaign
+    saveCampaign(campaign, true);
+    
+    console.log(`[Campaign Storage] Renamed campaign ${campaignId} to: ${newName}`);
+    return true;
+  } catch (e) {
+    console.error('[Campaign Storage] Failed to rename campaign:', e);
+    return false;
+  }
+}
+
 // ============================================================================
 // CAMPAIGN CREATION
 // ============================================================================
