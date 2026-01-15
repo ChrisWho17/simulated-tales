@@ -153,6 +153,25 @@ interface TimeContext {
   narrativeHint: string;
 }
 
+// ============= NPC SCHEDULE CONTEXT - NPCs at locations based on time =============
+
+interface NPCScheduleInfo {
+  npcId: string;
+  npcName: string;
+  currentLocation: string;
+  currentActivity: string;
+  nextScheduledHour?: number;
+  nextLocation?: string;
+  nextActivity?: string;
+}
+
+interface NPCScheduleContext {
+  currentLocationNPCs: NPCScheduleInfo[];
+  nearbyNPCs: { location: string; npcs: NPCScheduleInfo[] }[];
+  scheduleNotes: string[];
+  locationName: string;
+}
+
 // ============= NEW: SIGNATURE DETAILS, FAIL-FORWARD, 3-METER RELATIONSHIPS =============
 
 interface SignatureDetailContext {
@@ -294,8 +313,10 @@ interface AdventureRequest {
   enableNPCAccents?: boolean;
   // WEATHER CONTEXT - Ensures story narrative matches displayed weather
   weatherContext?: WeatherContext;
-  // TIME CONTEXT - In-game time for narrative adaptation (dawn/noon/dusk/night)
+// TIME CONTEXT - In-game time for narrative adaptation (dawn/noon/dusk/night)
   timeContext?: TimeContext;
+  // NPC SCHEDULE CONTEXT - NPCs at current/nearby locations based on time
+  npcScheduleContext?: NPCScheduleContext;
   // LIVING WORLD CONTEXT - Properties, rivals, factions
   livingWorldContext?: LivingWorldContext;
   // NEW: NARRATIVE CONTRACT - Universal rules, genre bible, spawn packet
@@ -1086,7 +1107,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1242,6 +1263,55 @@ ${timeContext.timeOfDay === 'late_night' ? '  • Near-empty streets, only night
 - Sensory details should match: ${timeContext.isDaytime ? 'warmth, sunlight, clear visibility, daytime sounds' : 'cool air, moonlight or artificial light, limited visibility, night sounds'}
 - NEVER describe midday sun during night scenes or vice versa
 - Use time-appropriate greetings: "${timeContext.timeOfDay === 'morning' ? 'Good morning' : timeContext.timeOfDay === 'evening' || timeContext.timeOfDay === 'night' ? 'Good evening' : timeContext.timeOfDay === 'afternoon' ? 'Good afternoon' : 'Greetings'}"`;
+    }
+    
+    // === NPC SCHEDULE CONTEXT - NPCs present based on time of day ===
+    if (npcScheduleContext) {
+      let npcPresenceInstructions = `\n\n=== NPC PRESENCE (TIME-BASED SCHEDULES) ===`;
+      
+      if (npcScheduleContext.currentLocationNPCs.length > 0) {
+        npcPresenceInstructions += `\n\nNPCs currently at ${npcScheduleContext.locationName}:`;
+        for (const npc of npcScheduleContext.currentLocationNPCs) {
+          npcPresenceInstructions += `\n• ${npc.npcName}: ${npc.currentActivity}`;
+          if (npc.nextScheduledHour !== undefined && npc.nextActivity) {
+            const hoursUntil = npc.nextScheduledHour > (timeContext?.hour || 12) 
+              ? npc.nextScheduledHour - (timeContext?.hour || 12)
+              : (24 - (timeContext?.hour || 12)) + npc.nextScheduledHour;
+            if (hoursUntil <= 2) {
+              npcPresenceInstructions += ` (leaving soon for: ${npc.nextActivity})`;
+            }
+          }
+        }
+      } else {
+        npcPresenceInstructions += `\n\nNo familiar NPCs are currently at ${npcScheduleContext.locationName} at this time.`;
+      }
+      
+      if (npcScheduleContext.nearbyNPCs.length > 0) {
+        npcPresenceInstructions += '\n\nNPCs at nearby locations:';
+        for (const { location, npcs } of npcScheduleContext.nearbyNPCs) {
+          const npcNames = npcs.map(n => n.npcName).join(', ');
+          npcPresenceInstructions += `\n• ${location}: ${npcNames}`;
+        }
+      }
+      
+      if (npcScheduleContext.scheduleNotes.length > 0) {
+        npcPresenceInstructions += '\n\nSchedule notes:';
+        for (const note of npcScheduleContext.scheduleNotes) {
+          npcPresenceInstructions += `\n• ${note}`;
+        }
+      }
+      
+      npcPresenceInstructions += `
+
+NPC SCHEDULE RULES (CRITICAL):
+- ONLY include NPCs listed above in your narrative for this location
+- NPCs NOT at this location should NOT appear unless they specifically arrive
+- Reference NPC activities naturally (e.g., "Martha wipes down the bar while keeping an eye on the crowd...")
+- If an NPC is noted as "leaving soon," you may hint at their upcoming departure
+- NPCs have schedules - a tavern keeper won't be at the market at midnight
+- If the player seeks someone who's not present, acknowledge their absence and where they might be`;
+      
+      systemContent += npcPresenceInstructions;
     }
     
     // === DICE MODE INSTRUCTIONS ===

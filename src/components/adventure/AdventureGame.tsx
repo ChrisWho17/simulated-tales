@@ -36,6 +36,9 @@ import {
   formatTimeContextForAI,
   TimeOfDayPeriod,
 } from '@/game/timeProgressionSystem';
+import {
+  buildRegisteredNPCScheduleContext,
+} from '@/game/npcScheduleSystem';
 import { 
   ToneState, 
   createInitialToneState, 
@@ -1207,6 +1210,13 @@ export function AdventureGame() {
         
         // Time context - always include for time-aware narratives
         requestBody.timeContext = buildTimeContext(timeState);
+        
+        // NPC Schedule context - NPCs present based on time of day
+        requestBody.npcScheduleContext = buildRegisteredNPCScheduleContext(
+          playerLocation.zoneName || 'Unknown Location',
+          timeState,
+          [] // Nearby locations could be added if available
+        );
       }
       
       // === ADVANCED CONTEXT (retryLevel === 0 only) ===
