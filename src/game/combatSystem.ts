@@ -82,6 +82,35 @@ export interface CombatEncounter {
   maxFleeAttempts: number;
 }
 
+// ============= CLOTHING INTEGRATION =============
+
+/**
+ * Get clothing combat modifiers (lazy loaded to avoid circular deps)
+ */
+function getClothingCombatStats(): {
+  armorBonus: number;
+  intimidationBonus: number;
+  persuasionBonus: number;
+  dodgeBonus: number;
+} {
+  try {
+    const { wardrobeManager } = require('./wardrobeSystem');
+    const { fashionReputationManager } = require('./fashionReputationSystem');
+    
+    const clothingStats = wardrobeManager.getCurrentStats();
+    const fashionBonuses = fashionReputationManager.getStatBonuses();
+    
+    return {
+      armorBonus: (clothingStats.defense || 0) * 2,
+      intimidationBonus: ((clothingStats.intimidation || 0) + (fashionBonuses.charisma || 0)) * 2,
+      persuasionBonus: ((clothingStats.charisma || 0) + (fashionBonuses.charisma || 0)) * 2,
+      dodgeBonus: clothingStats.stealth || 0,
+    };
+  } catch (e) {
+    return { armorBonus: 0, intimidationBonus: 0, persuasionBonus: 0, dodgeBonus: 0 };
+  }
+}
+
 // ============= COMBAT INITIALIZATION =============
 
 export function initializeCombat(
@@ -90,16 +119,19 @@ export function initializeCombat(
   location: string,
   environmentMods: SkillModifier[] = []
 ): CombatEncounter {
+  // Get clothing bonuses
+  const clothingBonuses = getClothingCombatStats();
+  
   const playerStats: CombatantStats = {
     health: playerState.needs.physical.health,
     maxHealth: 100,
     energy: playerState.needs.physical.energy,
     combatSkill: playerState.skills.physical.combat,
-    dodgeSkill: playerState.skills.physical.athletics,
-    intimidationSkill: playerState.skills.social.intimidation,
-    persuasionSkill: playerState.skills.social.persuasion,
+    dodgeSkill: playerState.skills.physical.athletics + clothingBonuses.dodgeBonus,
+    intimidationSkill: playerState.skills.social.intimidation + clothingBonuses.intimidationBonus,
+    persuasionSkill: playerState.skills.social.persuasion + clothingBonuses.persuasionBonus,
     weaponDamage: 10, // Base unarmed
-    armorProtection: 0,
+    armorProtection: clothingBonuses.armorBonus, // Now includes clothing defense!
     stressLevel: playerState.needs.psychological.stress,
   };
   

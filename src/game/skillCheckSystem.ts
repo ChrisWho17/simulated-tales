@@ -454,7 +454,23 @@ export function getActionSkillRequirement(action: string): ActionSkillRequiremen
 }
 
 /**
- * Perform an action skill check with all modifiers
+ * Get clothing-based modifiers for skill checks (lazy loaded to avoid circular deps)
+ */
+function getClothingModifiers(category: SkillCategory, skill: string): SkillModifier[] {
+  try {
+    // Dynamically import to avoid circular dependency
+    const { getClothingSkillModifiers } = require('./clothingGameplayIntegration');
+    if (typeof getClothingSkillModifiers === 'function') {
+      return getClothingSkillModifiers(category, skill);
+    }
+  } catch (e) {
+    // Module not yet loaded, return empty
+  }
+  return [];
+}
+
+/**
+ * Perform an action skill check with all modifiers including clothing
  */
 export function performActionCheck(
   action: string,
@@ -471,7 +487,13 @@ export function performActionCheck(
     ? calculateSituationalModifiers(playerState, situationalContext)
     : [];
   
-  const allModifiers = [...contextModifiers, ...situationalMods];
+  // Get clothing modifiers for this skill
+  const clothingMods = getClothingModifiers(
+    requirement.primary.category,
+    requirement.primary.skill
+  );
+  
+  const allModifiers = [...contextModifiers, ...situationalMods, ...clothingMods];
   
   // Add secondary skill bonus if applicable
   if (requirement.secondary) {
