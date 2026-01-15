@@ -22,6 +22,9 @@ import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { SessionRecapSplash } from '@/components/game/SessionRecapSplash';
 import { OnboardingOverlay, useOnboarding } from '@/components/game/OnboardingOverlay';
+import { CommandAutocomplete, useCommandAutocomplete, SLASH_COMMANDS } from '@/components/game/CommandAutocomplete';
+import { QuickDiceRoll } from '@/components/game/QuickDiceRoll';
+import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
@@ -259,9 +262,15 @@ export function AdventureDisplay({
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
+  const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
+  const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
+  const [showMapPanel, setShowMapPanel] = useState(false);
   
   // Onboarding system
   const { showOnboarding, triggerOnboarding, completeOnboarding } = useOnboarding();
+  
+  // Command autocomplete
+  const commandAutocomplete = useCommandAutocomplete();
   
   // Weather state - use external if provided, otherwise manage locally
   const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
@@ -1080,10 +1089,9 @@ export function AdventureDisplay({
         case '/help':
         case '/commands':
         case '/?':
-          // Show help toast with available commands
           toast({
             title: '📖 Available Commands',
-            description: '/recap • /inventory • /stats • /checkself • /settings',
+            description: '/recap • /inventory • /stats • /roll • /map • /relationships • /bookmarks • /settings',
             duration: 5000,
           });
           setInput('');
@@ -1092,6 +1100,29 @@ export function AdventureDisplay({
         case '/bm':
           setShowBookmarks(true);
           setInput('');
+          return;
+        case '/roll':
+        case '/dice':
+        case '/r':
+          setShowQuickDiceRoll(true);
+          setInput('');
+          return;
+        case '/relationships':
+        case '/rel':
+        case '/npcs':
+          setShowRelationshipsQuickView(true);
+          setInput('');
+          return;
+        case '/map':
+        case '/m':
+        case '/location':
+          setShowMapPanel(prev => !prev);
+          setInput('');
+          toast({
+            title: '🗺️ Map Panel',
+            description: showMapPanel ? 'Map panel closed' : 'Map panel opened',
+            duration: 2000,
+          });
           return;
       }
       
@@ -2161,11 +2192,32 @@ export function AdventureDisplay({
         storyEntries={story}
         characterName={character.name}
         currentLocation={
-          // Extract location from last narrator entry or use fallback
           story.filter(e => e.role === 'narrator').slice(-1)[0]?.content.match(/\*\*([^*]+)\*\*/)?.[1] || 
           'an unknown location'
         }
         genre={genre}
+      />
+      
+      {/* Quick Dice Roll - triggered by /roll command */}
+      <QuickDiceRoll
+        open={showQuickDiceRoll}
+        onClose={() => setShowQuickDiceRoll(false)}
+      />
+      
+      {/* Relationships Quick View - triggered by /relationships command */}
+      <RelationshipsQuickView
+        open={showRelationshipsQuickView}
+        onClose={() => setShowRelationshipsQuickView(false)}
+        relationships={Object.values(npcNameMap).map(npc => ({
+          id: npc.id || npc.name.toLowerCase().replace(/\s+/g, '-'),
+          name: npc.name,
+          occupation: npc.occupation,
+          trust: npc.trust ?? 0,
+          respect: npc.respect ?? 0,
+          romance: npc.romance,
+          romanceUnlocked: npc.romanceUnlocked,
+          portraitUrl: npc.portraitUrl,
+        }))}
       />
       
       {/* First-time player onboarding */}
