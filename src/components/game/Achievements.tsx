@@ -12,12 +12,24 @@ export interface Achievement {
   name: string;
   description: string;
   icon: string;
-  category: 'exploration' | 'combat' | 'social' | 'story' | 'secret';
+  category: 'exploration' | 'combat' | 'social' | 'story' | 'secret' | 'merchant' | 'collector' | 'diplomat';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   unlockedAt?: number;
   progress?: number;
   maxProgress?: number;
 }
+
+export const ACHIEVEMENT_CATEGORIES = [
+  { id: 'all', name: 'All', icon: '🏆' },
+  { id: 'exploration', name: 'Exploration', icon: '🗺️' },
+  { id: 'combat', name: 'Combat', icon: '⚔️' },
+  { id: 'social', name: 'Social', icon: '💬' },
+  { id: 'story', name: 'Story', icon: '📖' },
+  { id: 'merchant', name: 'Merchant', icon: '💰' },
+  { id: 'collector', name: 'Collector', icon: '🎁' },
+  { id: 'diplomat', name: 'Diplomat', icon: '🤝' },
+  { id: 'secret', name: 'Secret', icon: '❓' },
+] as const;
 
 // Pre-defined achievements
 const ACHIEVEMENTS: Achievement[] = [
@@ -46,6 +58,27 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'storyteller', name: 'Storyteller', description: 'Complete 5 quests', icon: '📚', category: 'story', rarity: 'uncommon', maxProgress: 5 },
   { id: 'legend', name: 'Legend', description: 'Complete 15 quests', icon: '🏆', category: 'story', rarity: 'rare', maxProgress: 15 },
   { id: 'decisive', name: 'Decisive', description: 'Make 100 choices', icon: '🎯', category: 'story', rarity: 'rare', maxProgress: 100 },
+  
+  // Merchant - Trading achievements
+  { id: 'first_sale', name: 'First Sale', description: 'Complete your first trade', icon: '💰', category: 'merchant', rarity: 'common' },
+  { id: 'haggler', name: 'Haggler', description: 'Successfully negotiate 5 trades', icon: '🤑', category: 'merchant', rarity: 'uncommon', maxProgress: 5 },
+  { id: 'shrewd_trader', name: 'Shrewd Trader', description: 'Complete 20 profitable trades', icon: '📊', category: 'merchant', rarity: 'rare', maxProgress: 20 },
+  { id: 'merchant_prince', name: 'Merchant Prince', description: 'Amass 10,000 currency through trade', icon: '👑', category: 'merchant', rarity: 'epic', maxProgress: 10000 },
+  { id: 'black_market', name: 'Black Market', description: 'Trade illegal or contraband items', icon: '🕶️', category: 'merchant', rarity: 'rare' },
+  
+  // Collector - Gathering achievements
+  { id: 'magpie', name: 'Magpie', description: 'Collect your first rare item', icon: '🎁', category: 'collector', rarity: 'common' },
+  { id: 'hoarder', name: 'Hoarder', description: 'Own 50 items simultaneously', icon: '📦', category: 'collector', rarity: 'uncommon', maxProgress: 50 },
+  { id: 'treasure_hunter', name: 'Treasure Hunter', description: 'Find 10 rare or better items', icon: '💎', category: 'collector', rarity: 'rare', maxProgress: 10 },
+  { id: 'curator', name: 'Curator', description: 'Collect one item from 5 different categories', icon: '🏛️', category: 'collector', rarity: 'rare', maxProgress: 5 },
+  { id: 'legendary_finder', name: 'Legendary Finder', description: 'Discover a legendary artifact', icon: '⭐', category: 'collector', rarity: 'legendary' },
+  
+  // Diplomat - Alliance achievements
+  { id: 'ambassador', name: 'Ambassador', description: 'Form your first alliance', icon: '🤝', category: 'diplomat', rarity: 'common' },
+  { id: 'peacekeeper', name: 'Peacekeeper', description: 'Resolve 3 conflicts peacefully', icon: '☮️', category: 'diplomat', rarity: 'uncommon', maxProgress: 3 },
+  { id: 'faction_friend', name: 'Faction Friend', description: 'Gain positive standing with 3 factions', icon: '🏰', category: 'diplomat', rarity: 'rare', maxProgress: 3 },
+  { id: 'grand_alliance', name: 'Grand Alliance', description: 'Unite 5 different factions', icon: '🌍', category: 'diplomat', rarity: 'epic', maxProgress: 5 },
+  { id: 'world_peace', name: 'World Peace', description: 'Achieve positive standing with all factions', icon: '🕊️', category: 'diplomat', rarity: 'legendary' },
   
   // Secret - Time-based
   { id: 'lucky_roll', name: 'Lucky Roll', description: 'Roll a natural 20', icon: '🎲', category: 'secret', rarity: 'uncommon' },
@@ -339,7 +372,7 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
   const { achievements, unlockedAchievements } = useAchievements();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const categories = ['all', 'exploration', 'combat', 'social', 'story', 'secret'];
+  const categories = ACHIEVEMENT_CATEGORIES.map(c => c.id);
   
   const filteredAchievements = selectedCategory === 'all'
     ? achievements
