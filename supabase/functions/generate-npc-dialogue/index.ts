@@ -48,6 +48,8 @@ interface NPCContext {
   patterns?: string[];
   // Relationship milestone for romance system
   relationshipMilestone?: MilestoneType;
+  // Clothing/fashion context
+  playerClothingContext?: string;
 }
 
 interface ConversationExchange {
@@ -153,6 +155,12 @@ serve(async (req) => {
       farewellContext = '\n\nThe player is saying goodbye and ending the conversation. Give a natural farewell response that reflects your relationship and the conversation you just had.';
     }
 
+    // Clothing/fashion context
+    let clothingContext = '';
+    if (npc.playerClothingContext) {
+      clothingContext = `\n\n${npc.playerClothingContext}\n\nYou may comment on the player's outfit if it seems remarkable (very stylish, intimidating, or poorly put together). Don't force comments - only mention clothing if it's genuinely noteworthy and fits the conversation naturally.`;
+    }
+
     // Build the system prompt for modern realistic dialogue
     const systemPrompt = `You are ${npc.name}, a ${npc.age}-year-old ${npc.occupation} in a modern-day urban setting. 
 
@@ -219,6 +227,7 @@ SETTING:
 - This is a realistic modern urban environment
 ${conversationContext}
 ${farewellContext}
+${clothingContext}
 
 ${isFirstInteraction ? 'This is your first interaction with this player. React naturally to being approached by a stranger.' : 'Continue the conversation naturally based on your memories and relationship.'}
 

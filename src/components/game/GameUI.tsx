@@ -82,6 +82,8 @@ import { useScreenEffectsOptional } from './ScreenEffects';
 import { MiniSessionStats, useSessionStatsOptional, SessionStatsDisplay } from './SessionStats';
 import { useAchievementsOptional, AchievementsDisplay } from './Achievements';
 import { StoryRecap } from './StoryRecap';
+import { ClothingShop } from './ClothingShop';
+import { ClothingItem } from '@/game/clothingItemSystem';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -162,6 +164,15 @@ async function generateAIDialogue(
         .map(p => `${p.pattern} (${p.confidence}% confident)`);
     }
     
+    // Get clothing context for NPC reactions
+    let playerClothingContext = '';
+    try {
+      const { buildClothingContextForDialogue } = await import('@/game/npcClothingReactionSystem');
+      playerClothingContext = buildClothingContextForDialogue();
+    } catch (e) {
+      // Clothing system not available
+    }
+    
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-npc-dialogue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -184,6 +195,7 @@ async function generateAIDialogue(
           activeTrauma,
           recentMemories,
           patterns,
+          playerClothingContext,
         },
         playerInput,
         location,
@@ -291,6 +303,7 @@ export function GameUI() {
   const [showStoryRecap, setShowStoryRecap] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showSessionStats, setShowSessionStats] = useState(false);
+  const [showClothingShop, setShowClothingShop] = useState(false);
   const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
   
@@ -1333,13 +1346,42 @@ export function GameUI() {
     return <CharacterCreation onComplete={handleCharacterComplete} />;
   }
   
+  // Handle clothing purchase
+  const handleClothingPurchase = useCallback((item: ClothingItem, price: number) => {
+    if (!gameState.lifeSim) return;
+    
+    // Deduct gold
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        stats: {
+          ...prev.player.stats,
+          gold: Math.max(0, prev.player.stats.gold - price),
+        },
+      },
+      lifeSim: prev.lifeSim ? {
+        ...prev.lifeSim,
+        economy: {
+          ...prev.lifeSim.economy,
+          money: Math.max(0, prev.lifeSim.economy.money - price),
+        },
+      } : null,
+    }));
+    
+    toast.success(`Purchased ${item.name} for ${price}g!`);
+    addStatChange('gold', -price);
+  }, [gameState.lifeSim, addStatChange]);
+  
   return (
     <div className="h-screen flex flex-col bg-background">
       <GameHeader 
         time={gameState.time} 
+        playerGold={gameState.lifeSim?.economy.money || gameState.player.stats.gold}
         onSave={handleSave}
         onLoad={handleLoad}
         onNewGame={handleNewGame}
+        onOpenShop={() => setShowClothingShop(true)}
       />
       
       {/* Weather Display - Top bar */}
@@ -1468,6 +1510,15 @@ export function GameUI() {
           onClose={() => setShowSessionStats(false)} 
         />
       )}
+      
+      {/* Clothing Shop */}
+      <ClothingShop
+        playerGold={gameState.lifeSim?.economy.money || gameState.player.stats.gold}
+        playerLevel={gameState.lifeSim?.skills.social.charm || 1}
+        onPurchase={handleClothingPurchase}
+        isOpen={showClothingShop}
+        onOpenChange={setShowClothingShop}
+      />
     </div>
   );
 }
