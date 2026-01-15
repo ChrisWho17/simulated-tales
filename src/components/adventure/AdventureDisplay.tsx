@@ -31,6 +31,7 @@ import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
 import { PacingIndicator } from '@/components/game/PacingIndicator';
 import { MobileQuickMenu } from '@/components/game/MobileQuickMenu';
+import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
   GameTimeState, 
@@ -1656,6 +1657,9 @@ export function AdventureDisplay({
             <div className="flex-shrink-0">
               <SavesDropdown />
             </div>
+            
+            {/* Cloud Sync Indicator */}
+            <CloudSyncIndicator />
             
             {/* Settings */}
             <Button
