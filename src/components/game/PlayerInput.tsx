@@ -5,8 +5,10 @@ import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle } from 'lucide-re
 import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
 import { InputFormatGuide, InputHint } from './InputFormatGuide';
 import { EmotionPicker } from './EmotionPicker';
+import { OutfitChangeMenu } from './OutfitChangeMenu';
 import { CoreMoodType } from '@/game/moodSystem';
 import { GameGenre } from '@/types/genreData';
+import { ClothingContext } from '@/game/clothingReactionSystem';
 
 interface PlayerInputProps {
   onSubmit: (command: string, emotionalTone?: CoreMoodType | null) => void;
@@ -14,6 +16,8 @@ interface PlayerInputProps {
   currentMood?: CoreMoodType;
   genre?: GameGenre;
   enableEmotionPicker?: boolean;
+  currentClothing?: ClothingContext;
+  onOutfitChange?: (newClothing: ClothingContext) => void;
 }
 
 const quickActions = [
@@ -29,7 +33,9 @@ export function PlayerInput({
   disabled,
   currentMood = 'neutral',
   genre = 'fantasy',
-  enableEmotionPicker = true
+  enableEmotionPicker = true,
+  currentClothing,
+  onOutfitChange
 }: PlayerInputProps) {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -102,6 +108,14 @@ export function PlayerInput({
             <span className="hidden sm:inline">{label}</span>
           </Button>
         ))}
+        
+        {/* Outfit Change Button */}
+        <OutfitChangeMenu
+          genre={genre}
+          currentClothing={currentClothing}
+          onOutfitChange={onOutfitChange}
+          compact
+        />
         
         {/* Emotion Picker - shows after quick actions */}
         {enableEmotionPicker && (

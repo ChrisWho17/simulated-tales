@@ -13,7 +13,8 @@ import {
   XCircle, 
   Shirt,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -53,6 +54,15 @@ export function ClothingReactionIndicator({
 
   const getSeverityConfig = () => {
     switch (reaction.severity) {
+      case 'positive':
+        return {
+          icon: Sparkles,
+          color: 'text-success',
+          bgColor: 'bg-success/10',
+          borderColor: 'border-success/30',
+          label: 'Impressed',
+          description: 'Your appearance impresses them'
+        };
       case 'mild':
         return {
           icon: Eye,
@@ -244,11 +254,15 @@ export function ClothingReactionBadge({
     return null;
   }
 
-  const config = {
+  const configs = {
+    positive: { bg: 'bg-success/20', text: 'text-success', label: '✨' },
     mild: { bg: 'bg-warning/20', text: 'text-warning', label: '👀' },
     moderate: { bg: 'bg-orange-500/20', text: 'text-orange-500', label: '⚠️' },
     severe: { bg: 'bg-destructive/20', text: 'text-destructive', label: '❌' }
-  }[reaction.severity];
+  };
+  
+  const config = configs[reaction.severity as keyof typeof configs];
+  if (!config) return null;
 
   return (
     <span className={cn(
@@ -256,7 +270,7 @@ export function ClothingReactionBadge({
       config.bg,
       config.text
     )}>
-      {config.label} Appearance
+      {config.label} {reaction.isPositive ? 'Impressed' : 'Appearance'}
     </span>
   );
 }
