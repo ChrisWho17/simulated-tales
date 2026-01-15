@@ -1569,7 +1569,7 @@ export function AdventureDisplay({
           </button>
           
           {/* Toolbar buttons - grouped together with no-shrink */}
-          <div className="flex items-center gap-0.5 flex-shrink-0">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto">
             {/* Pacing Indicator - Compact dropdown */}
             <PacingIndicator
               currentMultiplier={timeState.multiplier}
@@ -1587,7 +1587,7 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowWeatherModal(true)}
-              className={`h-7 w-7 flex-shrink-0 frosted-button ${
+              className={`h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button ${
                 weatherState.current === 'storm' ? 'text-yellow-400' : 
                 weatherState.current === 'rain' ? 'text-blue-400' : 
                 weatherState.current === 'fog' ? 'text-violet-400' : 
@@ -1600,21 +1600,21 @@ export function AdventureDisplay({
               title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
             >
               {weatherState.current === 'storm' ? (
-                <CloudLightning className="w-4 h-4" />
+                <CloudLightning className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'rain' ? (
-                <CloudRain className="w-4 h-4" />
+                <CloudRain className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'fog' ? (
-                <CloudFog className="w-4 h-4" />
+                <CloudFog className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'heat_wave' ? (
-                <Flame className="w-4 h-4" />
+                <Flame className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'wind' ? (
-                <Wind className="w-4 h-4" />
+                <Wind className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'snow' ? (
-                <Snowflake className="w-4 h-4" />
+                <Snowflake className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : weatherState.current === 'cloudy' ? (
-                <Cloud className="w-4 h-4" />
+                <Cloud className="w-3.5 h-3.5 md:w-4 md:h-4" />
               ) : (
-                <Sun className="w-4 h-4" />
+                <Sun className="w-3.5 h-3.5 md:w-4 md:h-4" />
               )}
             </Button>
             
@@ -1625,10 +1625,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowCharacterSheet(true)}
-              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Character Sheet"
             >
-              <ScrollText className="w-4 h-4" />
+              <ScrollText className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </Button>
             
             {/* Inventory Button */}
@@ -1636,10 +1636,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowInventory(true)}
-              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Inventory (Ctrl+I)"
             >
-              <Backpack className="w-4 h-4" />
+              <Backpack className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </Button>
             
             {/* Bookmarks Button */}
@@ -1647,10 +1647,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowBookmarks(true)}
-              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Bookmarks (Ctrl+B)"
             >
-              <Bookmark className="w-4 h-4" />
+              <Bookmark className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </Button>
             
             {/* Saves Dropdown */}
@@ -1666,10 +1666,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={() => setShowSettings(true)}
-              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
               title="Settings"
             >
-              <Sliders className="w-4 h-4" />
+              <Sliders className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </Button>
             
             {/* Restart */}
@@ -1677,10 +1677,10 @@ export function AdventureDisplay({
               variant="ghost"
               size="icon"
               onClick={onRestart}
-              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
+              className="h-6 w-6 md:h-7 md:w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
               title="New Adventure"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </Button>
           </div>
         </div>
@@ -2242,9 +2242,9 @@ export function AdventureDisplay({
             })()}
             
             <Tabs defaultValue="current" className="relative z-10">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="current">Current</TabsTrigger>
-                <TabsTrigger value="forecast">Forecast</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 bg-background/80 backdrop-blur-sm">
+                <TabsTrigger value="current" className="data-[state=active]:bg-primary/20">Current</TabsTrigger>
+                <TabsTrigger value="forecast" className="data-[state=active]:bg-primary/20">Forecast</TabsTrigger>
               </TabsList>
               
               <TabsContent value="current" className="space-y-4 text-center">
