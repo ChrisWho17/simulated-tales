@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye } from 'lucide-react';
+import { BookmarkButton } from '@/components/ui/BookmarkButton';
+import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -248,6 +250,7 @@ export function AdventureDisplay({
   const [showCheckSelfModal, setShowCheckSelfModal] = useState(false);
   const [checkSelfThoroughness, setCheckSelfThoroughness] = useState<'quick' | 'careful' | 'thorough'>('quick');
   const [showWeatherModal, setShowWeatherModal] = useState(false);
+  const [showBookmarks, setShowBookmarks] = useState(false);
   
   // Weather state - use external if provided, otherwise manage locally
   const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
@@ -318,6 +321,16 @@ export function AdventureDisplay({
       if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
         e.preventDefault();
         setShowInventory(prev => !prev);
+      }
+      // Ctrl+B or Cmd+B to open bookmarks
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setShowBookmarks(prev => !prev);
+      }
+      // Ctrl+K or Cmd+K to open character sheet
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCharacterSheet(prev => !prev);
       }
     };
     
@@ -1417,6 +1430,17 @@ export function AdventureDisplay({
               <Backpack className="w-4 h-4" />
             </Button>
             
+            {/* Bookmarks Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowBookmarks(true)}
+              className="h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+              title="Bookmarks (Ctrl+B)"
+            >
+              <Bookmark className="w-4 h-4" />
+            </Button>
+            
             {/* Saves Dropdown */}
             <div className="flex-shrink-0">
               <SavesDropdown />
@@ -1555,62 +1579,76 @@ export function AdventureDisplay({
                     {formatNarrativeContent(entry.content, index)}
                   </div>
                   
-                  {/* Action Buttons Row - Generate Image & Regenerate World */}
-                  {index === story.length - 1 && entry.role === 'narrator' && (
-                    <div className="mt-4 flex justify-end gap-2 flex-wrap">
-                      {/* Regenerate World Button - Only on first narrator entry before any player action */}
-                      {canRegenerateWorld && story.length === 1 && onRegenerateWorld && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRegenerateWorld();
-                          }}
-                          disabled={isLoading}
-                          className="border-warning/50 text-warning hover:bg-warning/10 hover:border-warning"
-                          title="Generate a new opening scene (locks after your first action)"
-                        >
-                          {isLoading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Regenerating...
-                            </>
-                          ) : (
-                            <>
-                              <RotateCcw className="w-4 h-4 mr-2" />
-                              Regenerate World
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      
-                      {/* Generate Image Button */}
-                      {!entry.imageUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onGenerateImage(entry.id);
-                          }}
-                          disabled={!!generatingImageFor}
-                        >
-                          {generatingImageFor === entry.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Generating...
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon className="w-4 h-4 mr-2" />
-                              Illustrate Scene
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  {/* Action Buttons Row - Bookmark, Generate Image & Regenerate World */}
+                  <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
+                    {/* Left side - Bookmark button on all narrator entries */}
+                    <BookmarkButton
+                      entryId={entry.id}
+                      entryIndex={index}
+                      entryContent={entry.content.slice(0, 200)}
+                      campaignId={campaignId}
+                      characterName={character.name}
+                      size="sm"
+                      className="opacity-60 hover:opacity-100"
+                    />
+                    
+                    {/* Right side - Action buttons only on latest entry */}
+                    {index === story.length - 1 && (
+                      <div className="flex gap-2 flex-wrap">
+                        {/* Regenerate World Button - Only on first narrator entry before any player action */}
+                        {canRegenerateWorld && story.length === 1 && onRegenerateWorld && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRegenerateWorld();
+                            }}
+                            disabled={isLoading}
+                            className="border-warning/50 text-warning hover:bg-warning/10 hover:border-warning"
+                            title="Generate a new opening scene (locks after your first action)"
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Regenerating...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Regenerate World
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        {/* Generate Image Button */}
+                        {!entry.imageUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onGenerateImage(entry.id);
+                            }}
+                            disabled={!!generatingImageFor}
+                          >
+                            {generatingImageFor === entry.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-4 h-4 mr-2" />
+                                Illustrate Scene
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </Card>
               )}
             </div>
@@ -1740,6 +1778,28 @@ export function AdventureDisplay({
         currentCharacterName={character.name}
       />
 
+      {/* Bookmarks Sidebar */}
+      <BookmarksSidebar
+        campaignId={campaignId}
+        open={showBookmarks}
+        onOpenChange={setShowBookmarks}
+        onJumpToEntry={(entryId, entryIndex) => {
+          const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+          if (!viewport) return;
+          
+          const entries = viewport.querySelectorAll('[data-story-index]');
+          const targetEntry = Array.from(entries).find(
+            el => el.getAttribute('data-story-index') === String(entryIndex)
+          ) as HTMLElement;
+          if (targetEntry) {
+            targetEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEntry.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+            setTimeout(() => {
+              targetEntry.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            }, 2000);
+          }
+        }}
+      />
       {/* Story Rollback Modal */}
       <StoryRollbackModal
         isOpen={!!rollbackTarget}

@@ -1,14 +1,16 @@
 // Memoized Story Entry component for performance optimization
 // Prevents re-rendering of story entries unless their content changes
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ImageIcon, RotateCcw } from 'lucide-react';
+import { Loader2, ImageIcon, RotateCcw, Bookmark, BookmarkCheck } from 'lucide-react';
 import { CoreMoodType, MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH } from '@/game/moodSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { parseTextForNPCLinks } from './NPCNameLink';
 import { RegisteredNPC } from '@/game/npcIdentityRegistry';
+import { TypewriterText } from '@/components/ui/TypewriterText';
+import { BookmarkButton } from '@/components/ui/BookmarkButton';
 
 // Type alias for the NPC name map
 type NPCNameMap = Map<string, RegisteredNPC>;
@@ -43,6 +45,11 @@ interface MemoizedStoryEntryProps {
   tapFeedback: { index: number; count: number } | null;
   rollbackSplash: { index: number } | null;
   showRollbackHint: boolean;
+  // New polish features
+  enableTypewriter?: boolean;
+  textSpeed?: 'slow' | 'normal' | 'fast' | 'instant';
+  campaignId?: string;
+  characterName?: string;
 }
 
 // Get modifier color class based on type
@@ -206,7 +213,14 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
   tapFeedback,
   rollbackSplash,
   showRollbackHint,
+  enableTypewriter = false,
+  textSpeed = 'normal',
+  campaignId = 'default',
+  characterName = 'Player',
 }: MemoizedStoryEntryProps): React.ReactElement {
+  // Typewriter state
+  const [typewriterComplete, setTypewriterComplete] = useState(!enableTypewriter || !isLatest);
+  
   // Memoize the cleaned content
   const cleanedContent = useMemo(() => 
     cleanNarrativeForDisplay(entry.content),
@@ -315,59 +329,75 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
         </div>
         
         {/* Action Buttons */}
-        {index === storyLength - 1 && (
-          <div className="mt-4 flex justify-end gap-2 flex-wrap">
-            {canRegenerateWorld && storyLength === 1 && onRegenerateWorld && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRegenerateWorld();
-                }}
-                disabled={isLoading}
-                className="border-warning/50 text-warning hover:bg-warning/10 hover:border-warning"
-                title="Generate a new opening scene"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Regenerate World
-                  </>
-                )}
-              </Button>
-            )}
-            
-            {!entry.imageUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGenerateImage(entry.id);
-                }}
-                disabled={!!generatingImageFor}
-              >
-                {generatingImageFor === entry.id ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Illustrate Scene
-                  </>
-                )}
-              </Button>
-            )}
+        <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
+          {/* Left side - Bookmark button */}
+          <div className="flex items-center gap-2">
+            <BookmarkButton
+              entryId={entry.id}
+              entryIndex={index}
+              entryContent={cleanedContent.slice(0, 200)}
+              campaignId={campaignId}
+              characterName={characterName}
+              size="sm"
+              className="opacity-60 hover:opacity-100"
+            />
           </div>
-        )}
+          
+          {/* Right side - Action buttons (only on latest entry) */}
+          {index === storyLength - 1 && (
+            <div className="flex gap-2 flex-wrap">
+              {canRegenerateWorld && storyLength === 1 && onRegenerateWorld && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRegenerateWorld();
+                  }}
+                  disabled={isLoading}
+                  className="border-warning/50 text-warning hover:bg-warning/10 hover:border-warning"
+                  title="Generate a new opening scene"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Regenerate World
+                    </>
+                  )}
+                </Button>
+              )}
+              
+              {!entry.imageUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGenerateImage(entry.id);
+                  }}
+                  disabled={!!generatingImageFor}
+                >
+                  {generatingImageFor === entry.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Illustrate Scene
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   );

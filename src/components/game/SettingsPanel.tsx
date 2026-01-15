@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
+import { AudioSettingsPanel } from '@/components/ui/AudioSettingsPanel';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
@@ -41,7 +42,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -194,7 +195,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'saves', 'cloud', 'display'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -208,6 +209,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {tab === 'director' && <Clapperboard className="w-3 h-3" />}
                 {tab === 'weather' && <Cloud className="w-3 h-3" />}
                 {tab === 'cloud' && <CloudUpload className="w-3 h-3" />}
+                {tab === 'audio' && <Volume2 className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -861,6 +863,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               directorSettings={currentDirectorSettings}
               onUpdate={handleDirectorSettingsUpdate}
             />
+          )}
+          
+          {/* Audio Tab */}
+          {activeTab === 'audio' && (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Audio Settings</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Control game sounds and ambient audio
+                </p>
+              </div>
+              
+              <AudioSettingsPanel />
+            </div>
           )}
           
           {/* Saves Tab */}
