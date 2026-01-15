@@ -26,8 +26,16 @@ import { CommandAutocomplete, useCommandAutocomplete, SLASH_COMMANDS } from '@/c
 import { QuickDiceRoll } from '@/components/game/QuickDiceRoll';
 import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView';
 import { TimeDisplay } from '@/components/game/TimeDisplay';
+import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
+import { 
+  GameTimeState, 
+  TimeSkipConsequence,
+  createInitialTimeState, 
+  advanceTime,
+  hoursToWeatherTicks
+} from '@/game/timeProgressionSystem';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
@@ -268,10 +276,13 @@ export function AdventureDisplay({
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
   const [showTimeDisplay, setShowTimeDisplay] = useState(false);
+  const [showTimeSkipModal, setShowTimeSkipModal] = useState(false);
   const [showQuestQuickView, setShowQuestQuickView] = useState(false);
-  const [gameHour, setGameHour] = useState(() => new Date().getHours()); // Track in-game time
   const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
+  
+  // Time progression system
+  const [timeState, setTimeState] = useState<GameTimeState>(() => createInitialTimeState());
   
   // Onboarding system
   const { showOnboarding, triggerOnboarding, completeOnboarding } = useOnboarding();
@@ -327,7 +338,7 @@ export function AdventureDisplay({
     ? (character.currentHealth / character.maxHealth) * 100 
     : 100;
   useScreenEffectsIntegration({
-    gameHour: new Date().getHours(), // TODO: Use in-game time when available
+    gameHour: timeState.hour,
     playerHealthPercent: screenEffectsHealthPercent,
     weather: weatherState?.current,
   });
@@ -1180,6 +1191,10 @@ export function AdventureDisplay({
           console.log(`  - ${m.name}: ${m.duration.remaining}/${m.duration.total} turns remaining`);
         });
       }
+      
+      // Advance game time by 1 turn
+      setTimeState(prev => advanceTime(prev, 1));
+      
       onPlayerAction(input.trim());
       setInput('');
     }
@@ -2316,10 +2331,37 @@ export function AdventureDisplay({
       {/* Time Display - triggered by /time command */}
       {showTimeDisplay && (
         <TimeDisplay
-          gameHour={gameHour}
+          timeState={timeState}
+          weatherState={weatherState}
           onClose={() => setShowTimeDisplay(false)}
+          onOpenTimeSkip={() => setShowTimeSkipModal(true)}
         />
       )}
+      
+      {/* Time Skip Modal */}
+      <TimeSkipModal
+        open={showTimeSkipModal}
+        onClose={() => setShowTimeSkipModal(false)}
+        currentTimeState={timeState}
+        onTimeSkip={(newState, consequences) => {
+          setTimeState(newState);
+          // Advance weather based on hours skipped
+          const hoursDiff = Math.floor((newState.totalMinutes - timeState.totalMinutes) / 60);
+          const weatherTicks = hoursToWeatherTicks(hoursDiff);
+          for (let i = 0; i < weatherTicks; i++) {
+            setWeatherState(prev => tickWeather(prev, weatherTickRef.current + i));
+          }
+          weatherTickRef.current += weatherTicks;
+          // Show consequences as toasts
+          consequences.forEach(c => {
+            toast({
+              title: c.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              description: c.description,
+              duration: 4000,
+            });
+          });
+        }}
+      />
       
       {/* Quest Quick View - triggered by /quest command */}
       {showQuestQuickView && (
