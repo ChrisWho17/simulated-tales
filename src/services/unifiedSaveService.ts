@@ -90,8 +90,10 @@ class UnifiedSaveServiceClass {
   };
   
   private syncStatus: SyncStatus = 'idle';
+  private lastSyncTime: number | null = null;
   private statusCallbacks: Set<(status: SyncStatus) => void> = new Set();
   private accountCallbacks: Set<(account: SaveAccount) => void> = new Set();
+  private lastSyncCallbacks: Set<(time: number | null) => void> = new Set();
   private initialized = false;
 
   // ============================================================================
@@ -195,6 +197,21 @@ class UnifiedSaveServiceClass {
   private setStatus(status: SyncStatus): void {
     this.syncStatus = status;
     this.statusCallbacks.forEach(cb => cb(status));
+    
+    // Update last sync time when synced
+    if (status === 'synced') {
+      this.lastSyncTime = Date.now();
+      this.lastSyncCallbacks.forEach(cb => cb(this.lastSyncTime));
+    }
+  }
+
+  getLastSyncTime(): number | null {
+    return this.lastSyncTime;
+  }
+
+  onLastSyncTimeChange(callback: (time: number | null) => void): () => void {
+    this.lastSyncCallbacks.add(callback);
+    return () => this.lastSyncCallbacks.delete(callback);
   }
 
   // ============================================================================

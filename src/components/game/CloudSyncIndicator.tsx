@@ -30,7 +30,8 @@ import {
   Loader2,
   LogIn,
   LogOut,
-  User
+  User,
+  Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,18 +39,43 @@ interface CloudSyncIndicatorProps {
   className?: string;
 }
 
+// Format relative time
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (seconds < 10) return 'Just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
+
 export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
   const [account, setAccount] = useState<SaveAccount>(UnifiedSaveService.getAccount());
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(UnifiedSaveService.getStatus());
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(UnifiedSaveService.getLastSyncTime());
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     const unsubAccount = UnifiedSaveService.onAccountChange(setAccount);
     const unsubStatus = UnifiedSaveService.onStatusChange(setSyncStatus);
+    const unsubLastSync = UnifiedSaveService.onLastSyncTimeChange(setLastSyncTime);
+    
+    // Update relative time every 30 seconds
+    const interval = setInterval(() => forceUpdate(n => n + 1), 30000);
     
     return () => {
       unsubAccount();
       unsubStatus();
+      unsubLastSync();
+      clearInterval(interval);
     };
   }, []);
 
@@ -108,6 +134,14 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
     return account.email || 'Cloud sync';
   };
 
+  // Pulsing animation class when syncing
+  const getPulseClass = () => {
+    if (isSyncing) {
+      return 'animate-pulse ring-2 ring-primary/50 ring-offset-1 ring-offset-background';
+    }
+    return '';
+  };
+
   return (
     <DropdownMenu>
       <TooltipProvider>
@@ -117,7 +151,7 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-7 w-7 flex-shrink-0 frosted-button ${getStatusColor()} ${className}`}
+                className={`h-7 w-7 flex-shrink-0 frosted-button transition-all duration-300 ${getStatusColor()} ${getPulseClass()} ${className}`}
                 disabled={isSigningIn}
               >
                 {getIcon()}
@@ -169,8 +203,11 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
           <div className="flex items-center gap-2 text-xs">
             {isSyncing ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                <span className="text-muted-foreground">Syncing...</span>
+                <div className="relative">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full animate-ping" />
+                </div>
+                <span className="text-primary font-medium">Syncing...</span>
               </>
             ) : isSynced ? (
               <>
@@ -195,6 +232,18 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
             )}
           </div>
         </div>
+
+        {/* Last Sync Time */}
+        {isCloud && lastSyncTime && (
+          <>
+            <div className="px-2 py-1 border-t border-border/50">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span>Last synced: {formatRelativeTime(lastSyncTime)}</span>
+              </div>
+            </div>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 
