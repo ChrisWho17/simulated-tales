@@ -104,6 +104,9 @@ export interface GameSettings {
   enableXPSystem: boolean;             // Experience and leveling
   enableInventoryWeight: boolean;      // Inventory capacity limits
   
+  // Inventory settings
+  enableInventoryDragDrop?: boolean;   // Enable drag-and-drop for inventory management
+  
   // NPC Speech settings
   enableNPCAccents: boolean;           // NPCs speak with regional accents/dialects
   
@@ -118,6 +121,9 @@ export interface GameSettings {
   
   // Director settings
   directorSettings: DirectorSettings;
+  
+  // Typewriter
+  typewriterEnabled?: boolean;
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -198,6 +204,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   enableXPSystem: true,
   enableInventoryWeight: true,
   
+  // Inventory settings
+  enableInventoryDragDrop: true,
+  
   // NPC Speech settings
   enableNPCAccents: true,
   
@@ -212,6 +221,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Director settings
   directorSettings: DEFAULT_DIRECTOR_SETTINGS,
+  
+  // Typewriter
+  typewriterEnabled: true,
 };
 
 // Get current settings (alias for loadSettings)

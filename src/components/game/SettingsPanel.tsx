@@ -767,6 +767,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onCheckedChange={(checked) => updateSettings({ enableInventoryWeight: checked })}
                     />
                   </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Inventory Drag & Drop</span>
+                      <p className="text-xs text-muted-foreground">Swipe items to use/drop</p>
+                    </div>
+                    <Switch 
+                      checked={settings.enableInventoryDragDrop ?? true}
+                      onCheckedChange={(checked) => updateSettings({ enableInventoryDragDrop: checked })}
+                    />
+                  </div>
                 </div>
               </div>
               
