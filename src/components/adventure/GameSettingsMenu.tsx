@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2 } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, FileArchive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -15,6 +15,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DataWipeModal } from './DataWipeModal';
+import { BackupRestoreModal } from './BackupRestoreModal';
 
 export interface GameSettingsMenuProps {
   className?: string;
@@ -174,6 +175,11 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             <Trophy className="w-4 h-4 text-amber-400" />
             <span className="text-sm">Trophy Room</span>
           </Button>
+          
+          {/* Backup/Restore */}
+          <div className="w-full">
+            <BackupRestoreModal />
+          </div>
           
           {/* Data Wipe Button */}
           <Button
