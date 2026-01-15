@@ -381,13 +381,9 @@ export function RadialQuickMenu({
                     opacity: 0 
                   }}
                   transition={{
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 20,
+                    duration: 0.2,
+                    ease: "easeOut",
                     delay: 0.05, // All icons appear together 50ms after X
-                    scale: { duration: 0.2 },
-                    boxShadow: { duration: 0.3 },
-                    borderColor: { duration: 0.2 },
                   }}
                   style={{
                     animation: !isHovered ? `radial-pulse-${index % 3} 2.5s ease-in-out infinite` : undefined,
@@ -423,9 +419,9 @@ export function RadialQuickMenu({
                 "bg-card/95 border-2 border-primary/50",
                 "hover:border-primary active:scale-95"
               )}
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              exit={{ scale: 0, rotate: 180 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{
