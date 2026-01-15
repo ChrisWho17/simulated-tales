@@ -5,6 +5,7 @@
 
 import { GenreLoadout, GENRE_LOADOUTS, LoadoutItem } from './loadoutSystem';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { eventBus } from './eventBus';
 
 function getGenreLoadout(genre: string): GenreLoadout | null {
   return GENRE_LOADOUTS[genre.toLowerCase()] || GENRE_LOADOUTS[genre] || null;
@@ -284,6 +285,20 @@ class PlayerStateManagerClass {
     this.notifyListeners('currency', change);
     this.logTransaction(change);
 
+    // Emit EventBus event for play statistics tracking
+    eventBus.emit({
+      type: 'ITEM_PURCHASED',
+      tick: 0,
+      source: 'playerStateManager',
+      priority: 'normal',
+      data: {
+        itemId: 'currency',
+        itemName: 'currency',
+        cost: amount,
+        reason,
+      },
+    } as any);
+
     return {
       success: true,
       spent: amount,
@@ -310,6 +325,20 @@ class PlayerStateManagerClass {
 
     this.notifyListeners('currency', change);
     this.logTransaction(change);
+
+    // Emit EventBus event for play statistics tracking
+    eventBus.emit({
+      type: 'ITEM_SOLD',
+      tick: 0,
+      source: 'playerStateManager',
+      priority: 'normal',
+      data: {
+        itemId: 'currency',
+        itemName: 'currency',
+        value: amount,
+        reason: source,
+      },
+    } as any);
 
     return {
       success: true,
