@@ -245,13 +245,122 @@ export function formatFullGameDateTime(state: GameTimeState): string {
   return `${formatGameTime(state)} - ${formatGameDate(state)}, Year ${state.year}`;
 }
 
-export function getTimeOfDay(hour: number): 'dawn' | 'morning' | 'afternoon' | 'evening' | 'dusk' | 'night' {
+export type TimeOfDayPeriod = 'dawn' | 'morning' | 'afternoon' | 'evening' | 'dusk' | 'night' | 'late_night';
+
+export function getTimeOfDay(hour: number): TimeOfDayPeriod {
   if (hour >= 5 && hour < 7) return 'dawn';
   if (hour >= 7 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 17) return 'afternoon';
   if (hour >= 17 && hour < 20) return 'evening';
-  if (hour >= 20 && hour < 21) return 'dusk';
-  return 'night';
+  if (hour >= 20 && hour < 22) return 'dusk';
+  if (hour >= 22 || hour < 2) return 'night';
+  return 'late_night';
+}
+
+// Build time context for AI prompts
+export interface TimeContext {
+  hour: number;
+  minute: number;
+  timeOfDay: TimeOfDayPeriod;
+  formattedTime: string;
+  formattedDate: string;
+  day: number;
+  month: number;
+  year: number;
+  isDaytime: boolean;
+  lightLevel: 'bright' | 'dim' | 'dark';
+  narrativeHint: string;
+}
+
+const TIME_NARRATIVE_HINTS: Record<TimeOfDayPeriod, string[]> = {
+  dawn: [
+    'The first light of dawn paints the sky in soft pinks and golds.',
+    'Morning mist clings to the ground as the world slowly awakens.',
+    'Birdsong heralds the coming day, the air still cool and fresh.',
+  ],
+  morning: [
+    'Bright morning light floods the scene, casting sharp shadows.',
+    'The day has properly begun, activity picking up around you.',
+    'Morning energy fills the air as people go about their routines.',
+  ],
+  afternoon: [
+    'The sun sits high, bathing everything in warm light.',
+    'Afternoon warmth settles in, the day at its peak.',
+    'The midday bustle continues unabated around you.',
+  ],
+  evening: [
+    'Golden hour light casts everything in warm, amber tones.',
+    'The day winds down, long shadows stretching across the ground.',
+    'Evening approaches, bringing with it a change in atmosphere.',
+  ],
+  dusk: [
+    'Twilight descends, the sky a canvas of deep purples and oranges.',
+    'The last rays of sunlight fade, darkness creeping in at the edges.',
+    'Dusk settles in, that liminal hour between day and night.',
+  ],
+  night: [
+    'Darkness has fallen, the world transformed by moonlight and shadow.',
+    'Night cloaks the land, stars beginning to appear overhead.',
+    'The nocturnal hours bring a different character to your surroundings.',
+  ],
+  late_night: [
+    'The deepest hours of the night, when most of the world sleeps.',
+    'A profound stillness hangs in the air, the night at its darkest.',
+    'These quiet hours before dawn feel suspended in time.',
+  ],
+};
+
+export function buildTimeContext(state: GameTimeState): TimeContext {
+  const timeOfDay = getTimeOfDay(state.hour);
+  const hints = TIME_NARRATIVE_HINTS[timeOfDay];
+  const narrativeHint = hints[Math.floor(Math.random() * hints.length)];
+  
+  let lightLevel: 'bright' | 'dim' | 'dark';
+  if (state.hour >= 8 && state.hour < 18) {
+    lightLevel = 'bright';
+  } else if ((state.hour >= 6 && state.hour < 8) || (state.hour >= 18 && state.hour < 21)) {
+    lightLevel = 'dim';
+  } else {
+    lightLevel = 'dark';
+  }
+  
+  return {
+    hour: state.hour,
+    minute: state.minute,
+    timeOfDay,
+    formattedTime: formatGameTime(state),
+    formattedDate: formatGameDate(state),
+    day: state.day,
+    month: state.month,
+    year: state.year,
+    isDaytime: isDaytime(state.hour),
+    lightLevel,
+    narrativeHint,
+  };
+}
+
+// Format time context for AI prompt injection
+export function formatTimeContextForAI(context: TimeContext): string {
+  return `=== CURRENT TIME ===
+Time: ${context.formattedTime} (${context.timeOfDay})
+Date: ${context.formattedDate}, Year ${context.year}
+Light Level: ${context.lightLevel}
+
+TEMPORAL ATMOSPHERE:
+${context.narrativeHint}
+
+TIME-BASED NARRATIVE INSTRUCTIONS:
+- Weave the ${context.timeOfDay} atmosphere naturally into descriptions
+- Reference appropriate lighting (${context.lightLevel} conditions)
+- NPCs and locations should reflect the time of day:
+  ${context.timeOfDay === 'dawn' ? '• Early risers, bakers working, streets quiet' : ''}
+  ${context.timeOfDay === 'morning' ? '• Markets opening, workers commuting, daytime routines' : ''}
+  ${context.timeOfDay === 'afternoon' ? '• Peak activity, shops busy, people out and about' : ''}
+  ${context.timeOfDay === 'evening' ? '• Shops closing, taverns filling, homeward journeys' : ''}
+  ${context.timeOfDay === 'dusk' ? '• Lamplighters working, transition to night life' : ''}
+  ${context.timeOfDay === 'night' ? '• Most shops closed, taverns active, guards on patrol' : ''}
+  ${context.timeOfDay === 'late_night' ? '• Near-empty streets, only night workers about, eerie quiet' : ''}
+- Sensory details should match: ${context.isDaytime ? 'sunlight, warmth, visibility' : 'moonlight, shadows, limited visibility'}`;
 }
 
 export function getHoursUntilSunrise(hour: number): number {

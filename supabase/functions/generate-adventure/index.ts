@@ -137,6 +137,22 @@ interface WeatherContext {
   effects: string;                    // Gameplay effects description
 }
 
+// ============= TIME CONTEXT - In-game time for narrative adaptation =============
+
+interface TimeContext {
+  hour: number;
+  minute: number;
+  timeOfDay: 'dawn' | 'morning' | 'afternoon' | 'evening' | 'dusk' | 'night' | 'late_night';
+  formattedTime: string;
+  formattedDate: string;
+  day: number;
+  month: number;
+  year: number;
+  isDaytime: boolean;
+  lightLevel: 'bright' | 'dim' | 'dark';
+  narrativeHint: string;
+}
+
 // ============= NEW: SIGNATURE DETAILS, FAIL-FORWARD, 3-METER RELATIONSHIPS =============
 
 interface SignatureDetailContext {
@@ -278,6 +294,8 @@ interface AdventureRequest {
   enableNPCAccents?: boolean;
   // WEATHER CONTEXT - Ensures story narrative matches displayed weather
   weatherContext?: WeatherContext;
+  // TIME CONTEXT - In-game time for narrative adaptation (dawn/noon/dusk/night)
+  timeContext?: TimeContext;
   // LIVING WORLD CONTEXT - Properties, rivals, factions
   livingWorldContext?: LivingWorldContext;
   // NEW: NARRATIVE CONTRACT - Universal rules, genre bible, spawn packet
@@ -1068,7 +1086,7 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
+    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, livingWorldContext, narrativeContractContext, directorContext } = await req.json() as AdventureRequest;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -1199,6 +1217,31 @@ CRITICAL WEATHER RULES:
 - If clear skies are shown, describe clear skies
 - Weather affects visibility, NPC behavior, and atmosphere
 - Never contradict the displayed weather with different conditions`;
+    }
+    
+    // === TIME CONTEXT - IN-GAME TIME FOR NARRATIVE ADAPTATION ===
+    if (timeContext) {
+      systemContent += `\n\n=== CURRENT TIME (MUST MATCH GAME CLOCK) ===
+TIME: ${timeContext.formattedTime} (${timeContext.timeOfDay})
+DATE: ${timeContext.formattedDate}, Year ${timeContext.year}
+LIGHT LEVEL: ${timeContext.lightLevel}
+
+${timeContext.narrativeHint}
+
+TIME-BASED NARRATIVE INSTRUCTIONS - CRITICAL:
+- ALL descriptions must reflect the ${timeContext.timeOfDay} period naturally
+- Reference appropriate lighting conditions (${timeContext.lightLevel})
+- NPCs and locations should behave appropriately for the time:
+${timeContext.timeOfDay === 'dawn' ? '  • Early risers beginning routines, bakers at work, streets still quiet, dew on surfaces' : ''}
+${timeContext.timeOfDay === 'morning' ? '  • Markets opening, workers commuting, morning energy, shops preparing for the day' : ''}
+${timeContext.timeOfDay === 'afternoon' ? '  • Peak activity, busy streets, shops and taverns active, full sunlight' : ''}
+${timeContext.timeOfDay === 'evening' ? '  • Shops closing, taverns filling up, people heading home, golden hour light' : ''}
+${timeContext.timeOfDay === 'dusk' ? '  • Transition to night, lamplighters working, last vendors packing up, fading light' : ''}
+${timeContext.timeOfDay === 'night' ? '  • Most shops closed, taverns and inns active, guards on patrol, moonlight and torches' : ''}
+${timeContext.timeOfDay === 'late_night' ? '  • Near-empty streets, only night workers about, profound quiet, deepest shadows' : ''}
+- Sensory details should match: ${timeContext.isDaytime ? 'warmth, sunlight, clear visibility, daytime sounds' : 'cool air, moonlight or artificial light, limited visibility, night sounds'}
+- NEVER describe midday sun during night scenes or vice versa
+- Use time-appropriate greetings: "${timeContext.timeOfDay === 'morning' ? 'Good morning' : timeContext.timeOfDay === 'evening' || timeContext.timeOfDay === 'night' ? 'Good evening' : timeContext.timeOfDay === 'afternoon' ? 'Good afternoon' : 'Greetings'}"`;
     }
     
     // === DICE MODE INSTRUCTIONS ===
