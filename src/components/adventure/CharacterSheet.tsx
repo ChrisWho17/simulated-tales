@@ -5,7 +5,7 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3
 } from 'lucide-react';
 import { AchievementPerksToggle, useAchievementStatPerks } from '@/components/game/AchievementStatPerks';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
@@ -45,6 +45,7 @@ import {
 import { TemperatureDisplay } from '@/components/game/TemperatureDisplay';
 import { WeatherState as TurnBasedWeatherState } from '@/game/weatherSystem';
 import { TemperatureState } from '@/game/temperatureSystem';
+import { SessionStatsDisplay, useSessionStatsOptional } from '@/components/game/SessionStats';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
@@ -339,9 +340,11 @@ export function CharacterSheet({
 }: CharacterSheetProps) {
   const { settings } = useGame();
   const campaign = useCampaignOptional();
+  const sessionStats = useSessionStatsOptional();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   
   // Achievement stat perks
   const { enabled: perksEnabled, statBonuses: perkBonuses } = useAchievementStatPerks(campaign?.activeCampaign?.id);
@@ -576,6 +579,18 @@ export function CharacterSheet({
                 <AchievementPerksToggle campaignId={campaign?.activeCampaign?.id} />
               </div>
 
+              {/* Play Statistics Button - Developer Feature */}
+              {settings.showPlayStatistics && sessionStats && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowStats(true)}
+                  className="w-full flex items-center justify-center gap-2 border-primary/30 hover:bg-primary/10"
+                >
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <span className="text-sm">Play Statistics</span>
+                </Button>
+              )}
 
               {/* Traits */}
               {character.traits.length > 0 && (
@@ -703,6 +718,14 @@ export function CharacterSheet({
           character={character}
           onConfirm={handleLevelUp}
           onCancel={() => setShowLevelUp(false)}
+        />
+      )}
+      
+      {/* Play Statistics Modal */}
+      {sessionStats && (
+        <SessionStatsDisplay 
+          isOpen={showStats} 
+          onClose={() => setShowStats(false)} 
         />
       )}
     </>

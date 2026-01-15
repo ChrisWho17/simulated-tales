@@ -910,6 +910,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onCheckedChange={(checked) => updateSettings({ showConsequenceFeed: checked })}
                     />
                   </div>
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm">Play Statistics</span>
+                      <p className="text-xs text-muted-foreground">Show stats button in character sheet</p>
+                    </div>
+                    <Switch 
+                      checked={settings.showPlayStatistics ?? false}
+                      onCheckedChange={(checked) => updateSettings({ showPlayStatistics: checked })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
