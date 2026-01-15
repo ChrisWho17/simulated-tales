@@ -1457,6 +1457,20 @@ EQUIPMENT STAT MODIFIERS (THESE AFFECT ALL RELEVANT CHECKS):`;
         clothingSection += `\n\nSPECIAL EFFECTS:\n${clothingArmorContext.specialEffects.map(e => `• ${e}`).join('\n')}`;
       }
 
+      // Add heavy armor penalty warnings
+      const hasStealthPenalty = mods.stealth && mods.stealth < 0;
+      const hasPerceptionPenalty = mods.perception && mods.perception < 0;
+      
+      if (hasStealthPenalty || hasPerceptionPenalty) {
+        clothingSection += `\n\n⚠️ EQUIPMENT PENALTIES ACTIVE:`;
+        if (hasStealthPenalty && mods.stealth !== undefined) {
+          clothingSection += `\n• HEAVY ARMOR STEALTH PENALTY: ${mods.stealth * 2} to all stealth attempts. The player's armor is BULKY and NOISY - metal clinks, plates scrape, footsteps are LOUD. ALWAYS narrate this when the player attempts to sneak, hide, or move quietly. Guards WILL hear approaching footsteps. Enemies WILL notice the player entering rooms.`;
+        }
+        if (hasPerceptionPenalty && mods.perception !== undefined) {
+          clothingSection += `\n• RESTRICTED VISION PENALTY: ${mods.perception * 2} to perception. Helmet restricts peripheral vision - describe difficulty seeing threats from the sides.`;
+        }
+      }
+
       clothingSection += `
 
 CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
@@ -1466,13 +1480,17 @@ CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
    - High intimidation = NPCs react nervously, step back, avoid eye contact
    - High charisma = NPCs are more receptive, complimentary, trusting
    - High stealth = easier to blend in, less likely to be noticed
-   - Low stats = describe the disadvantage narratively (clunky armor draws attention, shabby clothes invite dismissal)
+   - **NEGATIVE STEALTH = EXPLICITLY DESCRIBE THE PROBLEM**: Armor clanks, boots thud, metal scrapes against doorframes, breath echoes in helmet
 3. ARMOR CAN COUNTERACT PLAYER ATTRIBUTES:
-   - Heavy armor may give +defense but -stealth
-   - Flashy outfit may give +charisma but -stealth
-   - Intimidating gear may give +intimidation but -first impression with friendly NPCs
-4. When determining difficulty or outcomes, FACTOR IN these equipment modifiers
-5. NPCs should comment on remarkable outfits (very stylish, intimidating, or out-of-place)`;
+   - Heavy armor GIVES +defense BUT SEVERELY HINDERS STEALTH (-2 to -6 penalty)
+   - The heavier the armor, the louder and more conspicuous the player
+   - When sneaking in heavy armor: "Your plate armor scrapes against the wall, the sound echoing down the corridor"
+   - When trying to hide: "The bulk of your armor makes it impossible to fit into the shadows"
+4. STEALTH ACTIONS IN HEAVY ARMOR SHOULD OFTEN FAIL or be narrated with significant difficulty
+5. NPCs should comment on remarkable outfits (very stylish, intimidating, or out-of-place)
+6. If player has negative stealth and tries to sneak, ALWAYS mention the armor causing problems`;
+
+
 
       systemContent += clothingSection;
     }
