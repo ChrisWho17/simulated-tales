@@ -12,6 +12,7 @@ import { ScreenEffectsProvider } from "@/components/game/ScreenEffects";
 import { SessionStatsProvider } from "@/components/game/SessionStats";
 import { AchievementsProvider } from "@/components/game/Achievements";
 import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
+import { SessionAchievementBridge } from "@/components/game/SessionAchievementBridge";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -39,6 +40,8 @@ const App = () => (
       <ScreenEffectsProvider>
         <SessionStatsProvider>
           <AchievementsProvider>
+            {/* Bridge to connect session stats to achievements */}
+            <SessionAchievementBridge />
             <GameProvider>
               <CampaignProvider>
                 <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>

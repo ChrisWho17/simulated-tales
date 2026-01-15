@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, Clock, Users, MapPin, Swords, MessageCircle, 
@@ -33,6 +33,7 @@ interface SessionStatsContextType {
   addLocationVisit: (locationName: string) => void;
   resetSession: () => void;
   getFormattedPlayTime: () => string;
+  getTotalPlayTimeHours: () => number;
 }
 
 const SessionStatsContext = createContext<SessionStatsContextType | null>(null);
@@ -69,7 +70,12 @@ export function useSessionStatsOptional() {
   return useContext(SessionStatsContext);
 }
 
-export function SessionStatsProvider({ children }: { children: ReactNode }) {
+interface SessionStatsProviderProps {
+  children: ReactNode;
+  onPlayTimeReached?: (hours: number) => void;
+}
+
+export function SessionStatsProvider({ children, onPlayTimeReached }: SessionStatsProviderProps) {
   const [stats, setStats] = useState<SessionStatsData>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -83,16 +89,34 @@ export function SessionStatsProvider({ children }: { children: ReactNode }) {
     return { ...DEFAULT_STATS };
   });
 
-  // Track play time
+  // Track last reported hour milestone for achievement unlocks
+  const lastReportedHour = useRef<number>(Math.floor(stats.totalPlayTime / 3600));
+
+  // Track play time and trigger achievement milestones
   useEffect(() => {
     const interval = setInterval(() => {
-      setStats(prev => ({
-        ...prev,
-        totalPlayTime: prev.totalPlayTime + 1,
-      }));
+      setStats(prev => {
+        const newPlayTime = prev.totalPlayTime + 1;
+        const currentHour = Math.floor(newPlayTime / 3600);
+        
+        // Check if we've crossed a new hour milestone
+        if (currentHour > lastReportedHour.current) {
+          lastReportedHour.current = currentHour;
+          // Trigger the callback for achievement system
+          if (onPlayTimeReached) {
+            onPlayTimeReached(currentHour);
+          }
+          console.log(`[SessionStats] Play time milestone reached: ${currentHour} hour(s)`);
+        }
+        
+        return {
+          ...prev,
+          totalPlayTime: newPlayTime,
+        };
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [onPlayTimeReached]);
 
   // Save stats periodically
   useEffect(() => {
@@ -102,36 +126,37 @@ export function SessionStatsProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [stats]);
 
-  const incrementStat = (stat: keyof SessionStatsData, value = 1) => {
+  const incrementStat = useCallback((stat: keyof SessionStatsData, value = 1) => {
     setStats(prev => ({
       ...prev,
       [stat]: typeof prev[stat] === 'number' ? (prev[stat] as number) + value : prev[stat],
     }));
-  };
+  }, []);
 
-  const addNpcEncounter = (npcName: string) => {
+  const addNpcEncounter = useCallback((npcName: string) => {
     setStats(prev => ({
       ...prev,
       npcsEncountered: prev.npcsEncountered.includes(npcName)
         ? prev.npcsEncountered
         : [...prev.npcsEncountered, npcName],
     }));
-  };
+  }, []);
 
-  const addLocationVisit = (locationName: string) => {
+  const addLocationVisit = useCallback((locationName: string) => {
     setStats(prev => ({
       ...prev,
       locationsVisited: prev.locationsVisited.includes(locationName)
         ? prev.locationsVisited
         : [...prev.locationsVisited, locationName],
     }));
-  };
+  }, []);
 
-  const resetSession = () => {
+  const resetSession = useCallback(() => {
     setStats({ ...DEFAULT_STATS, sessionStartTime: Date.now() });
-  };
+    lastReportedHour.current = 0;
+  }, []);
 
-  const getFormattedPlayTime = () => {
+  const getFormattedPlayTime = useCallback(() => {
     const hours = Math.floor(stats.totalPlayTime / 3600);
     const minutes = Math.floor((stats.totalPlayTime % 3600) / 60);
     const seconds = stats.totalPlayTime % 60;
@@ -140,7 +165,11 @@ export function SessionStatsProvider({ children }: { children: ReactNode }) {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes}m ${seconds}s`;
-  };
+  }, [stats.totalPlayTime]);
+
+  const getTotalPlayTimeHours = useCallback(() => {
+    return stats.totalPlayTime / 3600;
+  }, [stats.totalPlayTime]);
 
   return (
     <SessionStatsContext.Provider value={{ 
@@ -149,7 +178,8 @@ export function SessionStatsProvider({ children }: { children: ReactNode }) {
       addNpcEncounter, 
       addLocationVisit, 
       resetSession,
-      getFormattedPlayTime 
+      getFormattedPlayTime,
+      getTotalPlayTimeHours,
     }}>
       {children}
     </SessionStatsContext.Provider>
