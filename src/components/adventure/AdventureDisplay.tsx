@@ -1817,15 +1817,17 @@ export function AdventureDisplay({
                   {/* Action Buttons Row - Bookmark, Generate Image & Regenerate World */}
                   <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
                     {/* Left side - Bookmark button on all narrator entries (hidden on mobile, use radial menu) */}
-                    <BookmarkButton
-                      entryId={entry.id}
-                      entryIndex={index}
-                      entryContent={entry.content.slice(0, 200)}
-                      campaignId={campaignId}
-                      characterName={character.name}
-                      size="sm"
-                      className="opacity-60 hover:opacity-100 hidden md:inline-flex"
-                    />
+                    <div className="hidden md:block">
+                      <BookmarkButton
+                        entryId={entry.id}
+                        entryIndex={index}
+                        entryContent={entry.content.slice(0, 200)}
+                        campaignId={campaignId}
+                        characterName={character.name}
+                        size="sm"
+                        className="opacity-60 hover:opacity-100"
+                      />
+                    </div>
                     
                     {/* Right side - Action buttons only on latest entry */}
                     {index === story.length - 1 && (

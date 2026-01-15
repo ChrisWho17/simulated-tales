@@ -430,8 +430,8 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
         
         {/* Action Buttons */}
         <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
-          {/* Left side - Bookmark button */}
-          <div className="flex items-center gap-2">
+          {/* Left side - Bookmark button (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-2">
             <BookmarkButton
               entryId={entry.id}
               entryIndex={index}
@@ -439,7 +439,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
               campaignId={campaignId}
               characterName={characterName}
               size="sm"
-              className="opacity-60 hover:opacity-100 hidden md:inline-flex"
+              className="opacity-60 hover:opacity-100"
             />
           </div>
           
