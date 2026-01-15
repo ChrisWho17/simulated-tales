@@ -97,7 +97,7 @@ export function useAchievementTriggers() {
       }
     }));
 
-    // Combat events
+    // Combat events - DEATH/KNOCKOUT (NPC defeated)
     handlers.push(eventBus.subscribe(['DEATH', 'KNOCKOUT'], (event) => {
       const data = (event as any).data;
       
@@ -115,8 +115,61 @@ export function useAchievementTriggers() {
         achievements.updateProgress('survivor', wins);
         achievements.updateProgress('warrior', wins);
         
+        // Check for flawless victory (champion achievement)
+        if (data.flawlessVictory) {
+          achievements.unlockAchievement('champion');
+        }
+        
         saveProgress();
       }
+    }));
+
+    // Combat won event (explicit combat resolution)
+    handlers.push(eventBus.subscribe(['COMBAT_WON'], (event) => {
+      const data = (event as any).data;
+      
+      progressRef.current.combatsWon++;
+      const wins = progressRef.current.combatsWon;
+      
+      // First combat win
+      if (wins === 1) {
+        achievements.unlockAchievement('first_blood');
+      }
+      
+      // Progress achievements
+      achievements.updateProgress('survivor', wins);
+      achievements.updateProgress('warrior', wins);
+      
+      // Check for flawless victory
+      if (data?.flawlessVictory) {
+        achievements.unlockAchievement('champion');
+      }
+      
+      saveProgress();
+    }));
+
+    // Combat de-escalated (pacifist achievement)
+    handlers.push(eventBus.subscribe(['COMBAT_DEESCALATED'], (event) => {
+      progressRef.current.combatsDeescalated++;
+      const deescalated = progressRef.current.combatsDeescalated;
+      
+      // Update pacifist progress
+      achievements.updateProgress('pacifist', deescalated);
+      
+      // Also count as a persuasion success if method was persuasion
+      const data = (event as any).data;
+      if (data?.method === 'persuasion' || data?.method === 'diplomacy') {
+        progressRef.current.persuasionSuccesses++;
+        achievements.updateProgress('silver_tongue', progressRef.current.persuasionSuccesses);
+      }
+      
+      saveProgress();
+    }));
+
+    // Combat fled - could be a tactical retreat
+    handlers.push(eventBus.subscribe(['COMBAT_FLED'], () => {
+      // Fleeing doesn't count toward achievements but we track it
+      console.log('[Achievements] Combat fled - no achievement triggered');
     }));
 
     // Quest events
