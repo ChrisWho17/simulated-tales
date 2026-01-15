@@ -4,7 +4,7 @@ import {
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard
+  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard, Timer
 } from 'lucide-react';
 import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
@@ -16,6 +16,7 @@ import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
+import { TimeMultiplier, TIME_MULTIPLIER_CONFIG } from '@/game/timeProgressionSystem';
 import { COLOR_PRESETS } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -33,6 +34,8 @@ interface SettingsPanelProps {
   onLoadSave?: (save: GameSave) => void;
   onManualSave?: () => void;
   currentCharacterName?: string;
+  currentTimeMultiplier?: TimeMultiplier;
+  onTimeMultiplierChange?: (multiplier: TimeMultiplier) => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
@@ -40,7 +43,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onClose, 
   onLoadSave, 
   onManualSave,
-  currentCharacterName 
+  currentCharacterName,
+  currentTimeMultiplier = 'fifteen_minutes',
+  onTimeMultiplierChange,
 }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
@@ -301,6 +306,40 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   checked={settings.showRollDetails}
                   onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
                 />
+              </div>
+              
+              {/* Time Multiplier Section */}
+              <div className="space-y-3 pt-4 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <Timer className="w-4 h-4 text-[var(--accent-secondary)]" />
+                  <h3 className="text-sm font-medium">Time Per Turn</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  How much in-game time passes with each action
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  {(Object.entries(TIME_MULTIPLIER_CONFIG) as [TimeMultiplier, typeof TIME_MULTIPLIER_CONFIG[TimeMultiplier]][]).map(([id, config]) => (
+                    <button
+                      key={id}
+                      onClick={() => onTimeMultiplierChange?.(id)}
+                      className={cn(
+                        "p-3 rounded-lg border text-left transition-all",
+                        currentTimeMultiplier === id
+                          ? "border-[var(--accent-primary)] bg-[var(--accent-bg)]"
+                          : "border-border/50 hover:border-border"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{config.label}</span>
+                        <span className="text-xs text-muted-foreground">{config.minutes} min/turn</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{config.description}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground/70 italic mt-2">
+                  💡 Tip: Use "1 Minute" for intense dialogue, "1 Hour" for travel montages
+                </p>
               </div>
               
               {/* In-Depth Settings Section */}

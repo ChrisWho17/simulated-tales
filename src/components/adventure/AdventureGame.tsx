@@ -28,6 +28,10 @@ import {
   formatWeatherEffectsForAI,
   WEATHER_CONFIGS,
 } from '@/game/weatherSystem';
+import {
+  GameTimeState,
+  createInitialTimeState,
+} from '@/game/timeProgressionSystem';
 import { 
   ToneState, 
   createInitialToneState, 
@@ -291,6 +295,14 @@ export function AdventureGame() {
     return createInitialWeatherState();
   });
   
+  // Time state - synced from AdventureDisplay for AI context and campaign persistence
+  const [timeState, setTimeState] = useState<GameTimeState>(() => {
+    if (campaignContext?.activeCampaign?.timeState) {
+      return campaignContext.activeCampaign.timeState;
+    }
+    return createInitialTimeState();
+  });
+  
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
   const hasInitialized = useRef<boolean>(false);
@@ -365,6 +377,12 @@ export function AdventureGame() {
       if (campaign.weatherState) {
         setWeatherState(campaign.weatherState);
         console.log('[AdventureGame] Restored weather:', campaign.weatherState.current);
+      }
+      
+      // Restore time state if available
+      if (campaign.timeState) {
+        setTimeState(campaign.timeState);
+        console.log('[AdventureGame] Restored time:', campaign.timeState.hour + ':' + campaign.timeState.minute);
       }
       
       // Restore director settings if available
@@ -539,6 +557,26 @@ export function AdventureGame() {
       console.log(`[Weather Sync] Synced weather to campaign - ${weatherState.current} (${weatherState.ticksRemaining} ticks remaining)`);
     }
   }, [phase, weatherState, campaignContext]);
+  
+  // CRITICAL: Sync time state to campaign when time changes
+  // This ensures game time is persisted across save/load
+  const lastSyncedTimeRef = useRef<string>('');
+  useEffect(() => {
+    if (phase !== 'playing' || !campaignContext?.updateCampaign) return;
+    
+    // Create a hash of time state to detect actual changes
+    const timeHash = JSON.stringify({
+      totalMinutes: timeState.totalMinutes,
+      multiplier: timeState.multiplier,
+    });
+    
+    // Only sync if time data has actually changed
+    if (timeHash !== lastSyncedTimeRef.current) {
+      lastSyncedTimeRef.current = timeHash;
+      campaignContext.updateCampaign({ timeState });
+      console.log(`[Time Sync] Synced time to campaign - Day ${timeState.day}, ${timeState.hour}:${timeState.minute.toString().padStart(2, '0')}`);
+    }
+  }, [phase, timeState, campaignContext]);
   
   // CRITICAL: Sync director settings FROM campaign when campaign changes
   // This ensures in-game settings panel changes are reflected in local state
@@ -2452,6 +2490,8 @@ export function AdventureGame() {
         onMoodChange={handleMoodChange}
         weatherState={weatherState}
         onWeatherStateChange={setWeatherState}
+        timeState={timeState}
+        onTimeStateChange={setTimeState}
         campaignId={campaignContext?.activeCampaignId || 'default_campaign'}
         onRegenerateWorld={!worldLocked && story.length === 1 ? handleRegenerateWorld : undefined}
         canRegenerateWorld={!worldLocked && story.length === 1 && !isLoading}
