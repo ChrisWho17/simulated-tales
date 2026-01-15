@@ -114,3 +114,58 @@ export function TypingIndicator({ className }: { className?: string }) {
     </div>
   );
 }
+
+// Story entry skeleton for loading narrative content
+export function StoryEntrySkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("space-y-4 p-4 animate-in fade-in duration-300", className)}>
+      {/* Narrator badge */}
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-muted animate-pulse" />
+        <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+      </div>
+      
+      {/* First paragraph */}
+      <div className="space-y-2 pl-2 border-l-2 border-primary/20">
+        <div className="h-5 w-full bg-muted/60 rounded animate-pulse" />
+        <div className="h-5 w-11/12 bg-muted/60 rounded animate-pulse" style={{ animationDelay: '100ms' }} />
+        <div className="h-5 w-4/5 bg-muted/60 rounded animate-pulse" style={{ animationDelay: '200ms' }} />
+      </div>
+      
+      {/* Second paragraph */}
+      <div className="space-y-2 pl-2">
+        <div className="h-5 w-full bg-muted/50 rounded animate-pulse" style={{ animationDelay: '300ms' }} />
+        <div className="h-5 w-10/12 bg-muted/50 rounded animate-pulse" style={{ animationDelay: '400ms' }} />
+        <div className="h-5 w-3/4 bg-muted/50 rounded animate-pulse" style={{ animationDelay: '500ms' }} />
+      </div>
+      
+      {/* Potential dialogue indicator */}
+      <div className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg border border-border/30">
+        <div className="w-10 h-10 rounded-lg bg-muted/50 animate-pulse shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-1/4 bg-muted/40 rounded animate-pulse" />
+          <div className="h-4 w-full bg-muted/30 rounded animate-pulse italic" />
+          <div className="h-4 w-2/3 bg-muted/30 rounded animate-pulse italic" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Generating story indicator with skeleton
+export function GeneratingStoryIndicator({ className }: { className?: string }) {
+  return (
+    <div className={cn("space-y-6", className)}>
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <LoadingDots className="scale-150" />
+          </div>
+          <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
+        </div>
+        <p className="text-sm text-muted-foreground italic">Weaving your story...</p>
+      </div>
+      <StoryEntrySkeleton />
+    </div>
+  );
+}

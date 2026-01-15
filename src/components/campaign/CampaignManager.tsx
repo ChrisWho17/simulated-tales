@@ -358,19 +358,58 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
         
         {/* Campaign Grid */}
         {sortedCampaigns.length === 0 ? (
-          <Card className="p-12 text-center bg-card/50 backdrop-blur border-border/50">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <BookOpen className="h-8 w-8 text-primary" />
+          <Card className="p-12 text-center bg-gradient-to-br from-card/80 to-card/40 backdrop-blur border-border/50 relative overflow-hidden">
+            {/* Decorative background */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent pointer-events-none" />
+            
+            <div className="relative flex flex-col items-center gap-6">
+              <div className="relative">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="h-10 w-10 text-primary" />
+                </div>
+                <div className="absolute -inset-2 rounded-full border border-primary/20 animate-pulse" />
+                <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-primary animate-bounce" style={{ animationDelay: '500ms' }} />
               </div>
-              <h2 className="text-xl font-semibold text-foreground">No campaigns yet</h2>
-              <p className="text-muted-foreground max-w-md">
-                Create your first campaign to begin your adventure. Each campaign is a separate world with its own characters, story, and rules.
-              </p>
-              <Button onClick={onCreateNew} className="gap-2 mt-2">
-                <Plus className="h-4 w-4" />
-                Create Your First Campaign
-              </Button>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">Your Story Awaits</h2>
+                <p className="text-muted-foreground max-w-md leading-relaxed">
+                  Every great adventure begins with a single step. Create your first campaign and let the AI narrator guide you through an 
+                  <span className="text-primary font-medium"> unforgettable journey</span>.
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
+                <Button onClick={onCreateNew} size="lg" className="gap-2 shadow-lg shadow-primary/20">
+                  <Plus className="h-5 w-5" />
+                  Begin Your Adventure
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Fantasy • Sci-Fi • Mystery • Horror & more
+                </p>
+              </div>
+              
+              {/* Feature hints */}
+              <div className="grid grid-cols-3 gap-4 mt-6 text-center">
+                <div className="space-y-1">
+                  <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center mx-auto">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Custom Characters</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center mx-auto">
+                    <Swords className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Dynamic Combat</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center mx-auto">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Branching Stories</p>
+                </div>
+              </div>
             </div>
           </Card>
         ) : (
