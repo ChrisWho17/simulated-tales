@@ -8,6 +8,7 @@ import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { BookmarkButton } from '@/components/ui/BookmarkButton';
 import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
 import { TypewriterNarrative } from '@/components/ui/TypewriterText';
+import { SystemBadgesSummary } from '@/components/game/SystemHighlight';
 import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
@@ -345,6 +346,7 @@ export function AdventureDisplay({
   // Get typewriter settings from game context
   const typewriterEnabled = gameContext?.settings?.typewriterEnabled ?? true;
   const textSpeed = gameContext?.settings?.textSpeed ?? 'normal';
+  const enableSystemHighlight = (gameContext?.settings as any)?.enableSystemHighlight ?? false;
   
   // Game loop for adrenaline system with player health for Director priority
   const [gameLoopState, gameLoopActions] = useGameLoop({
@@ -1764,6 +1766,11 @@ export function AdventureDisplay({
                   )}
                   
                   <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+                    {/* System badges summary when highlighting is enabled - shown on latest entry */}
+                    {enableSystemHighlight && index === story.length - 1 && (
+                      <SystemBadgesSummary text={entry.content} className="mb-3" />
+                    )}
+                    
                     {/* Use typewriter effect for latest narrator entry when enabled */}
                     {typewriterEnabled && index === story.length - 1 && textSpeed !== 'instant' ? (
                       <TypewriterNarrative

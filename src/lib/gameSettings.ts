@@ -124,6 +124,9 @@ export interface GameSettings {
   
   // Typewriter
   typewriterEnabled?: boolean;
+  
+  // System highlighting in narrative
+  enableSystemHighlight?: boolean;
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -224,6 +227,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // Typewriter
   typewriterEnabled: true,
+  
+  // System highlighting
+  enableSystemHighlight: false,
 };
 
 // Get current settings (alias for loadSettings)
