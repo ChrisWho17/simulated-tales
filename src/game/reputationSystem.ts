@@ -3,6 +3,8 @@
 // Based on the Interconnected Game Prompt System Design
 // ============================================================================
 
+import { eventBus } from './eventBus';
+
 export interface LocationReputation {
   locationId: string;
   locationName: string;
@@ -212,7 +214,7 @@ export function modifyLocationReputation(
     newInfamy = Math.min(100, world.globalInfamy + Math.floor(Math.abs(amount) / 3));
   }
   
-  return {
+  const updatedWorld = {
     ...world,
     locations: {
       ...world.locations,
@@ -227,6 +229,23 @@ export function modifyLocationReputation(
     globalFame: newFame,
     globalInfamy: newInfamy
   };
+
+  // Emit EventBus event for play statistics tracking
+  eventBus.emit({
+    type: 'REPUTATION_CHANGED',
+    tick: currentTick,
+    source: 'reputationSystem',
+    priority: 'normal',
+    data: {
+      entity: 'player',
+      locationId,
+      previousValue: existing.reputation,
+      newValue: newReputation,
+      reason,
+    },
+  } as any);
+
+  return updatedWorld;
 }
 
 export function modifyFactionReputation(
@@ -252,7 +271,7 @@ export function modifyFactionReputation(
     newTraits.push(trait);
   }
   
-  return {
+  const updatedWorld = {
     ...world,
     factions: {
       ...world.factions,
@@ -264,6 +283,22 @@ export function modifyFactionReputation(
       }
     }
   };
+
+  // Emit EventBus event for play statistics tracking
+  eventBus.emit({
+    type: 'FACTION_REPUTATION_CHANGED',
+    tick: 0,
+    source: 'reputationSystem',
+    priority: 'normal',
+    data: {
+      entity: 'player',
+      factionId,
+      previousValue: existing.reputation,
+      newValue: newReputation,
+    },
+  } as any);
+
+  return updatedWorld;
 }
 
 // ============================================================================
