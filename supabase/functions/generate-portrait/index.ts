@@ -490,78 +490,59 @@ function buildLegacyPrompt(requestData: any) {
 // LOVABLE AI IMAGE GENERATION (Using Gemini Flash Image)
 // ============================================================================
 
-async function generateWithLovableAI(promptDetails: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+async function generateWithTogetherAI(prompt: string): Promise<string> {
+  const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY is not configured");
+  if (!TOGETHER_API_KEY) {
+    throw new Error("TOGETHER_API_KEY is not configured");
   }
 
-  console.log("Generating portrait with Lovable AI (Gemini Flash Image)");
-  console.log("Prompt details:", promptDetails.substring(0, 300) + "...");
+  console.log("Generating portrait with Together.ai (FLUX.1 Schnell)");
+  console.log("Prompt:", prompt.substring(0, 300) + "...");
 
-  // Convert keyword-style prompt to natural language for Gemini
-  const naturalPrompt = `Generate an image of a character portrait with the following details:
-
-A detailed, realistic digital painting of a character. The style should be cinematic with dramatic lighting, professional illustration quality, like concept art for a AAA video game.
-
-Character details: ${promptDetails}
-
-Important: Create a three-quarter body shot from the knees up, with the character looking at the viewer. The image should have a detailed background environment. Make sure the face and eyes are highly detailed and expressive.`;
-
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetch('https://api.together.xyz/v1/images/generations', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Authorization': `Bearer ${TOGETHER_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-image-preview',
-      messages: [
-        { 
-          role: 'user', 
-          content: naturalPrompt
-        }
-      ],
-      modalities: ['image', 'text'],
+      model: 'black-forest-labs/FLUX.1-schnell-Free',
+      prompt: prompt,
+      width: 768,
+      height: 1024,
+      steps: 4,
+      n: 1,
+      response_format: 'b64_json',
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Lovable AI error:", response.status, errorText);
+    console.error("Together.ai error:", response.status, errorText);
     
     if (response.status === 429) {
       throw new Error("Rate limit exceeded, please try again later.");
     }
-    if (response.status === 402) {
-      throw new Error("Usage limit reached, please add credits.");
+    if (response.status === 402 || response.status === 401) {
+      throw new Error("API key issue or credits exhausted.");
     }
     
-    throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+    throw new Error(`Together.ai error: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  console.log("Lovable AI response received");
+  console.log("Together.ai response received");
   
-  // Check for image in the response
-  const imageData = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  const b64Data = result.data?.[0]?.b64_json;
   
-  if (!imageData) {
-    // Log more details to help debug
-    const messageContent = result.choices?.[0]?.message?.content || '';
-    console.error("No image in response. Message:", messageContent.substring(0, 200));
-    console.error("Full response structure:", JSON.stringify({
-      hasChoices: !!result.choices,
-      choicesLength: result.choices?.length,
-      hasMessage: !!result.choices?.[0]?.message,
-      hasImages: !!result.choices?.[0]?.message?.images,
-      imagesLength: result.choices?.[0]?.message?.images?.length
-    }));
-    throw new Error("No image generated - model returned text only");
+  if (!b64Data) {
+    console.error("No image in response:", JSON.stringify(result).substring(0, 500));
+    throw new Error("No image generated");
   }
 
-  return imageData;
+  // Return as data URL
+  return `data:image/png;base64,${b64Data}`;
 }
 
 // ============================================================================
@@ -686,7 +667,7 @@ serve(async (req) => {
 
     console.log("Final prompt:", promptData.prompt.substring(0, 400) + "...");
 
-    const imageUrl = await generateWithLovableAI(promptData.prompt);
+    const imageUrl = await generateWithTogetherAI(promptData.prompt);
 
     console.log("Portrait generated successfully for:", name);
 
