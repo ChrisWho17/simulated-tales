@@ -108,13 +108,19 @@ export function TypewriterText({
   
   return (
     <span 
-      className={cn('relative', className)}
+      className={cn('relative group', className)}
       onClick={handleClick}
       style={{ cursor: !isComplete && enabled ? 'pointer' : 'inherit' }}
+      title={!isComplete && enabled ? 'Click to skip' : undefined}
     >
       {renderText ? renderText(displayedText) : displayedText}
       {showCursor && !isComplete && enabled && (
-        <span className="animate-blink text-primary">▌</span>
+        <>
+          <span className="animate-blink text-primary">▌</span>
+          <span className="ml-2 text-xs text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+            click to skip
+          </span>
+        </>
       )}
     </span>
   );
@@ -204,13 +210,19 @@ export function TypewriterNarrative({
 
   return (
     <div 
-      className={cn('relative', className)}
+      className={cn('relative group', className)}
       onClick={!isComplete ? skipToEnd : undefined}
       style={{ cursor: !isComplete ? 'pointer' : 'inherit' }}
+      title={!isComplete ? 'Click to skip' : undefined}
     >
       {formatContent(displayedContent)}
       {!isComplete && (
-        <span className="animate-blink text-primary inline-block ml-0.5">▌</span>
+        <span className="inline-flex items-center">
+          <span className="animate-blink text-primary inline-block ml-0.5">▌</span>
+          <span className="ml-2 text-xs text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity select-none">
+            click to skip
+          </span>
+        </span>
       )}
     </div>
   );

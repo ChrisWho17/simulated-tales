@@ -44,121 +44,97 @@ export function AudioSettingsPanel({ className }: AudioSettingsPanelProps) {
   };
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Master Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {settings.enabled ? (
-            <Volume2 className="w-5 h-5 text-primary" />
-          ) : (
-            <VolumeX className="w-5 h-5 text-muted-foreground" />
-          )}
+    <div className={cn("space-y-6 relative", className)}>
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-lg">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+            <Volume2 className="w-6 h-6 text-primary animate-pulse" />
+          </div>
           <div>
-            <Label>Audio Enabled</Label>
-            <p className="text-xs text-muted-foreground">
-              {isInitialized ? 'Audio system ready' : 'Click anywhere to initialize'}
+            <p className="font-medium text-foreground">Audio Coming Soon</p>
+            <p className="text-sm text-muted-foreground max-w-[200px]">
+              Ambient music and sound effects are in development
             </p>
           </div>
         </div>
-        <Switch
-          checked={settings.enabled}
-          onCheckedChange={() => handleToggleAudio()}
-        />
       </div>
       
-      {settings.enabled && (
-        <>
-          {/* Master Volume */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4" />
-                Master Volume
-              </Label>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(settings.masterVolume * 100)}%
-              </span>
+      {/* Blurred settings preview behind overlay */}
+      <div className="opacity-50 pointer-events-none">
+        {/* Master Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {settings.enabled ? (
+              <Volume2 className="w-5 h-5 text-primary" />
+            ) : (
+              <VolumeX className="w-5 h-5 text-muted-foreground" />
+            )}
+            <div>
+              <Label>Audio Enabled</Label>
+              <p className="text-xs text-muted-foreground">
+                {isInitialized ? 'Audio system ready' : 'Click anywhere to initialize'}
+              </p>
             </div>
-            <Slider
-              value={[settings.masterVolume * 100]}
-              onValueChange={handleMasterChange}
-              max={100}
-              step={5}
-              className="w-full"
-            />
           </div>
-          
-          {/* Music Volume */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Music className="w-4 h-4" />
-                Music
-              </Label>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(settings.musicVolume * 100)}%
-              </span>
-            </div>
-            <Slider
-              value={[settings.musicVolume * 100]}
-              onValueChange={handleMusicChange}
-              max={100}
-              step={5}
-              className="w-full"
-            />
+          <Switch
+            checked={settings.enabled}
+            disabled
+          />
+        </div>
+        
+        {/* Volume Previews */}
+        <div className="space-y-3 mt-6">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4" />
+              Master Volume
+            </Label>
+            <span className="text-sm text-muted-foreground">70%</span>
           </div>
-          
-          {/* SFX Volume */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Sound Effects
-              </Label>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(settings.sfxVolume * 100)}%
-              </span>
-            </div>
-            <Slider
-              value={[settings.sfxVolume * 100]}
-              onValueChange={handleSfxChange}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
-          
-          {/* Ambient Volume */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Bell className="w-4 h-4" />
-                Ambient
-              </Label>
-              <span className="text-sm text-muted-foreground">
-                {Math.round(settings.ambientVolume * 100)}%
-              </span>
-            </div>
-            <Slider
-              value={[settings.ambientVolume * 100]}
-              onValueChange={handleAmbientChange}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
-          
-          {/* Test Button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={testSound}
+          <Slider
+            value={[70]}
+            max={100}
+            step={5}
             className="w-full"
-          >
-            Test Sound (Dice Roll)
-          </Button>
-        </>
-      )}
+            disabled
+          />
+        </div>
+        
+        <div className="space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2">
+              <Music className="w-4 h-4" />
+              Music
+            </Label>
+            <span className="text-sm text-muted-foreground">50%</span>
+          </div>
+          <Slider
+            value={[50]}
+            max={100}
+            step={5}
+            className="w-full"
+            disabled
+          />
+        </div>
+        
+        <div className="space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Sound Effects
+            </Label>
+            <span className="text-sm text-muted-foreground">80%</span>
+          </div>
+          <Slider
+            value={[80]}
+            max={100}
+            step={5}
+            className="w-full"
+            disabled
+          />
+        </div>
+      </div>
     </div>
   );
 }

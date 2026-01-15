@@ -95,8 +95,10 @@ export function PlayerInput({
             onClick={() => handleQuickAction(command)}
             disabled={disabled}
             className="text-xs gap-1 sm:gap-1.5 bg-secondary/50 border-border hover:bg-secondary hover:border-primary/30 transition-all px-2 sm:px-3"
+            aria-label={label}
+            title={label}
           >
-            <Icon className="h-3 w-3" />
+            <Icon className="h-3 w-3" aria-hidden="true" />
             <span className="hidden sm:inline">{label}</span>
           </Button>
         ))}
@@ -146,8 +148,10 @@ export function PlayerInput({
           type="submit" 
           disabled={disabled || !input.trim()}
           className="bg-primary text-primary-foreground hover:bg-primary/90 glow-primary"
+          aria-label="Send command"
+          title="Send (Enter)"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-4 w-4" aria-hidden="true" />
         </Button>
       </form>
       

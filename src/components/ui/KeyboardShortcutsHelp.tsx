@@ -27,6 +27,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl', 'S'], description: 'Quick save', category: 'actions' },
   { keys: ['Enter'], description: 'Submit action', category: 'actions' },
   { keys: ['Click'], description: 'Skip typewriter', category: 'actions' },
+  { keys: ['?'], description: 'Show this help', category: 'actions' },
   
   // Panels
   { keys: ['Ctrl', 'C'], description: 'Character sheet', category: 'panels' },
@@ -34,6 +35,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl', 'J'], description: 'Quest journal', category: 'panels' },
   { keys: ['Ctrl', ','], description: 'Settings', category: 'panels' },
   { keys: ['Ctrl', 'B'], description: 'Bookmarks', category: 'panels' },
+  { keys: ['Ctrl', 'Shift', 'D'], description: 'Debug diagnostics', category: 'panels' },
 ];
 
 const CATEGORY_LABELS = {
