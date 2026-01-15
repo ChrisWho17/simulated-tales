@@ -9,10 +9,10 @@ interface ShakeConfig {
 }
 
 // Time of day tinting
-type TimeOfDay = 'dawn' | 'morning' | 'noon' | 'afternoon' | 'dusk' | 'evening' | 'night' | 'midnight';
+export type TimeOfDay = 'dawn' | 'morning' | 'noon' | 'afternoon' | 'dusk' | 'evening' | 'night' | 'midnight';
 
 // Mood vignette
-type MoodLevel = 'calm' | 'tense' | 'anxious' | 'critical';
+export type MoodLevel = 'calm' | 'tense' | 'anxious' | 'critical';
 
 interface ScreenEffectsState {
   shake: ShakeConfig | null;

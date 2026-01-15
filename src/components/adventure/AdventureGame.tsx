@@ -538,6 +538,22 @@ export function AdventureGame() {
       console.log(`[Weather Sync] Synced weather to campaign - ${weatherState.current} (${weatherState.ticksRemaining} ticks remaining)`);
     }
   }, [phase, weatherState, campaignContext]);
+  
+  // CRITICAL: Sync director settings FROM campaign when campaign changes
+  // This ensures in-game settings panel changes are reflected in local state
+  useEffect(() => {
+    if (phase !== 'playing' || !campaignContext?.activeCampaign?.settings?.directorSettings) return;
+    
+    const campaignSettings = campaignContext.activeCampaign.settings.directorSettings;
+    // Only update if settings actually differ (compare stringified to avoid reference issues)
+    const campaignHash = JSON.stringify(campaignSettings);
+    const localHash = JSON.stringify(directorSettings);
+    
+    if (campaignHash !== localHash) {
+      setDirectorSettings(campaignSettings);
+      console.log(`[Director Sync] Synced director settings from campaign: ${campaignSettings.directorType}`);
+    }
+  }, [phase, campaignContext?.activeCampaign?.settings?.directorSettings]);
 
   // === PLAYER STATE MANAGER SYNC ===
   // Initialize playerStateManager with character and sync changes back to React state
