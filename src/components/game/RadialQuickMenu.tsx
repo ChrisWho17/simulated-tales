@@ -384,7 +384,7 @@ export function RadialQuickMenu({
                     type: "spring",
                     stiffness: 400,
                     damping: 20,
-                    delay: index * 0.04,
+                    delay: 0.05, // All icons appear together 50ms after X
                     scale: { duration: 0.2 },
                     boxShadow: { duration: 0.3 },
                     borderColor: { duration: 0.2 },
@@ -406,7 +406,7 @@ export function RadialQuickMenu({
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    transition={{ delay: 0.1 + index * 0.04 }}
+                    transition={{ delay: 0.1 }}
                   >
                     {item.label}
                   </motion.span>

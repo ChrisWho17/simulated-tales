@@ -439,7 +439,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
               campaignId={campaignId}
               characterName={characterName}
               size="sm"
-              className="opacity-60 hover:opacity-100"
+              className="opacity-60 hover:opacity-100 hidden md:inline-flex"
             />
           </div>
           
