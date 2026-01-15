@@ -30,8 +30,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'The sky stretches endlessly blue, with not a cloud in sight. Perfect conditions for travel.',
     icon: '☀',
     spawnWeight: 35, // Highest chance
-    minDuration: 60,
-    maxDuration: 120,
+    minDuration: 40,
+    maxDuration: 60,
     effects: ['✦ Excellent visibility', '✦ Comfortable temperature', '✦ Ideal travel conditions'],
     ambientText: 'Warm sunlight bathes the landscape. Birds sing in the distance.',
     transitionText: 'The clouds part, revealing a brilliant blue sky.',
@@ -41,8 +41,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Gray clouds blanket the sky, diffusing the light into a soft, even glow. The air feels heavy with possibility.',
     icon: '☁',
     spawnWeight: 25,
-    minDuration: 40,
-    maxDuration: 100,
+    minDuration: 30,
+    maxDuration: 60,
     effects: ['◌ Reduced visibility', '◌ Cooler temperature', '◌ Rain may be coming'],
     ambientText: 'A ceiling of gray stretches from horizon to horizon.',
     transitionText: 'Clouds roll in, dimming the light.',
@@ -53,8 +53,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Steady rainfall patters against every surface. The world takes on a muted, contemplative quality.',
     icon: '🌧',
     spawnWeight: 15,
-    minDuration: 30,
-    maxDuration: 80,
+    minDuration: 20,
+    maxDuration: 50,
     effects: ['🌧 Reduced visibility', '🌧 Wet conditions', '🌧 Slower travel', '🌧 Tracks wash away'],
     ambientText: 'Raindrops drum a steady rhythm. Puddles form in low places.',
     transitionText: 'The first drops begin to fall, quickly becoming a steady rain.',
@@ -65,8 +65,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Lightning splits the sky as thunder shakes the ground. Nature unleashes its fury.',
     icon: '⛈',
     spawnWeight: 5,
-    minDuration: 30,
-    maxDuration: 60,
+    minDuration: 20,
+    maxDuration: 45,
     effects: ['⚡ Very poor visibility', '⚡ Lightning danger', '⚡ Travel hazardous', '⚡ Shelter advised'],
     ambientText: 'Thunder crashes overhead. Lightning illuminates the darkness in violent flashes.',
     transitionText: 'The sky darkens ominously as the first bolt of lightning tears across the heavens.',
@@ -77,8 +77,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'A thick mist blankets everything, reducing the world to ghostly silhouettes and muffled sounds.',
     icon: '🌫',
     spawnWeight: 8,
-    minDuration: 30,
-    maxDuration: 70,
+    minDuration: 20,
+    maxDuration: 50,
     effects: ['🌫 Severely limited visibility', '🌫 Sounds distorted', '🌫 Easy to get lost', '🌫 Perfect for stealth'],
     ambientText: 'The fog swallows everything beyond a few paces. Sounds seem to come from everywhere and nowhere.',
     transitionText: 'Mist creeps in silently, tendrils wrapping around everything.',
@@ -89,8 +89,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Snowflakes drift down from leaden skies, blanketing the world in white silence.',
     icon: '❄',
     spawnWeight: 6,
-    minDuration: 40,
-    maxDuration: 90,
+    minDuration: 30,
+    maxDuration: 60,
     effects: ['❄ Cold conditions', '❄ Tracks visible', '❄ Reduced speed', '❄ Beautiful scenery'],
     ambientText: 'Snowflakes dance on the wind, settling softly on every surface.',
     transitionText: 'The first snowflakes begin their gentle descent from gray skies.',
@@ -101,8 +101,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Oppressive heat radiates from every surface. The air shimmers with intensity.',
     icon: '🔥',
     spawnWeight: 4,
-    minDuration: 40,
-    maxDuration: 80,
+    minDuration: 30,
+    maxDuration: 60,
     effects: ['🔥 Exhausting conditions', '🔥 Dehydration risk', '🔥 Tempers may flare', '🔥 Seek shade'],
     ambientText: 'Heat rises in visible waves. Every breath feels thick and heavy.',
     transitionText: 'The temperature climbs relentlessly as the sun beats down without mercy.',
@@ -113,8 +113,8 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
     description: 'Strong gusts whip across the land, carrying dust and debris. Everything feels restless.',
     icon: '💨',
     spawnWeight: 10,
-    minDuration: 30,
-    maxDuration: 70,
+    minDuration: 20,
+    maxDuration: 50,
     effects: ['💨 Ranged attacks affected', '💨 Debris hazard', '💨 Noise masks sounds', '💨 Fire spreads easily'],
     ambientText: 'The wind howls and gusts, never settling into any rhythm.',
     transitionText: 'A sudden gust announces the arrival of strong winds.',
@@ -133,14 +133,29 @@ export interface WeatherState {
 }
 
 export function createInitialWeatherState(): WeatherState {
+  // Select random initial weather using spawn weights
+  const weatherTypes = Object.keys(WEATHER_CONFIGS) as WeatherType[];
+  const totalWeight = weatherTypes.reduce((sum, w) => sum + WEATHER_CONFIGS[w].spawnWeight, 0);
+  let roll = Math.random() * totalWeight;
+  let initialWeather: WeatherType = 'clear';
+  
+  for (const weather of weatherTypes) {
+    roll -= WEATHER_CONFIGS[weather].spawnWeight;
+    if (roll <= 0) {
+      initialWeather = weather;
+      break;
+    }
+  }
+  
+  const duration = rollDuration(initialWeather);
   return {
-    current: 'clear',
-    ticksRemaining: rollDuration('clear'),
-    totalDuration: 90,
-    intensity: 1.0,
+    current: initialWeather,
+    ticksRemaining: duration,
+    totalDuration: duration,
+    intensity: 0.7 + Math.random() * 0.6, // 0.7-1.3
     transitioningTo: null,
     transitionProgress: 0,
-    history: [{ weather: 'clear', startedAt: 0 }],
+    history: [{ weather: initialWeather, startedAt: 0 }],
   };
 }
 

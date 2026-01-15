@@ -366,6 +366,12 @@ export function AdventureGame() {
         console.log('[AdventureGame] Restored weather:', campaign.weatherState.current);
       }
       
+      // Restore director settings if available
+      if (campaign.settings?.directorSettings) {
+        setDirectorSettings(campaign.settings.directorSettings);
+        console.log('[AdventureGame] Restored director settings:', campaign.settings.directorSettings.directorType);
+      }
+      
       // Check if we need to generate initial narrative (restored campaign with no history)
       if (campaign.narrativeHistory.length === 0) {
         console.log('[AdventureGame] Campaign has empty history, will generate initial narrative');
@@ -1766,6 +1772,15 @@ export function AdventureGame() {
       if (campaignContext && worldBible) {
         const newCampaign = campaignContext.createCampaign(worldBible, char, scenarioSelection.scenario);
         console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
+        
+        // Save director settings to the campaign
+        campaignContext.updateCampaign({
+          settings: {
+            ...newCampaign.settings,
+            directorSettings: settings,
+          },
+        });
+        console.log(`[Campaign System] Saved director settings: ${settings.directorType}`);
       }
 
       // Generate narrative with timeout protection
