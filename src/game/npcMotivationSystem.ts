@@ -4,6 +4,11 @@
 // NPCs react in ways that are self-protective, not just good/bad
 // ============================================================================
 
+import { 
+  getPlayerClothingReaction, 
+  ClothingReaction 
+} from './clothingReactionSystem';
+
 export interface NPCMotivation {
   npcId: string;
   npcName: string;
@@ -200,6 +205,15 @@ export interface NPCReaction {
   dialogue: string;
   internalThought: string;
   trustChange: number;
+  clothingReaction?: ClothingReaction;
+}
+
+export interface NPCReactionContext {
+  isPublic?: boolean;
+  witnesses?: string[];
+  playerReputation?: number;
+  locationFormality?: 'casual' | 'formal' | 'dangerous' | 'sacred';
+  checkClothing?: boolean;
 }
 
 /**
@@ -208,12 +222,25 @@ export interface NPCReaction {
 export function calculateNPCReaction(
   motivation: NPCMotivation,
   playerAction: string,
-  context: { isPublic?: boolean; witnesses?: string[]; playerReputation?: number }
+  context: NPCReactionContext = {}
 ): NPCReaction {
   const actionLower = playerAction.toLowerCase();
   let trustChange = 0;
   let behavior: NPCBehavior | null = null;
   let stance = motivation.currentStance;
+  let clothingReaction: ClothingReaction | undefined;
+
+  // Check clothing reaction if enabled
+  if (context.checkClothing !== false) {
+    // Detect role from motivation or use default
+    const npcRole = detectRoleFromMotivation(motivation);
+    clothingReaction = getPlayerClothingReaction(npcRole, context.locationFormality);
+    
+    // Apply clothing reaction modifiers to trust
+    if (clothingReaction.severity !== 'none') {
+      trustChange += clothingReaction.trustModifier;
+    }
+  }
   let dialogue = '';
   let internalThought = '';
   
@@ -261,14 +288,44 @@ export function calculateNPCReaction(
       internalThought = `I'll keep this close until I know more.`;
     }
   }
+
+  // If clothing caused significant reaction and no other dialogue, use clothing comment
+  if (clothingReaction && clothingReaction.severity !== 'none' && !dialogue) {
+    if (clothingReaction.possibleComments.length > 0) {
+      dialogue = clothingReaction.possibleComments[Math.floor(Math.random() * clothingReaction.possibleComments.length)];
+    }
+    if (clothingReaction.internalThoughts.length > 0) {
+      internalThought = clothingReaction.internalThoughts[0];
+    }
+    if (clothingReaction.npcBehaviorTriggers.includes('suspicious')) {
+      behavior = 'withholds_info';
+    } else if (clothingReaction.npcBehaviorTriggers.includes('dismissive')) {
+      stance = 'guarded';
+    } else if (clothingReaction.npcBehaviorTriggers.includes('opportunistic')) {
+      behavior = 'changes_prices';
+    }
+  }
   
   return {
     stance,
     behavior,
     dialogue,
     internalThought,
-    trustChange
+    trustChange,
+    clothingReaction
   };
+}
+
+/**
+ * Detect NPC role from their motivation for clothing reactions
+ */
+function detectRoleFromMotivation(motivation: NPCMotivation): string | undefined {
+  // Check behaviors to infer role
+  if (motivation.behaviors.includes('changes_prices')) return 'merchant';
+  if (motivation.behaviors.includes('demands_proof')) return 'guard';
+  if (motivation.behaviors.includes('tests_loyalty')) return 'criminal';
+  if (motivation.behaviors.includes('plays_victim')) return 'survivor';
+  return undefined;
 }
 
 function calculateStance(trustLevel: number): NPCStance {
@@ -382,7 +439,10 @@ function generateWithholdResponse(motivation: NPCMotivation): string {
 /**
  * Build motivation context for AI prompts
  */
-export function buildNPCMotivationContext(motivations: NPCMotivation[]): string {
+export function buildNPCMotivationContext(
+  motivations: NPCMotivation[], 
+  options?: { includeClothingReactions?: boolean; locationFormality?: 'casual' | 'formal' | 'dangerous' | 'sacred' }
+): string {
   if (motivations.length === 0) return '';
   
   const lines: string[] = ['### NPC MOTIVATIONS (Use for realistic reactions)'];
@@ -403,10 +463,29 @@ export function buildNPCMotivationContext(motivations: NPCMotivation[]): string 
     if (recentMemory.length > 0) {
       lines.push(`  → Remembers: ${recentMemory.map(i => i.action).join('; ')}`);
     }
+
+    // Add clothing reaction if enabled
+    if (options?.includeClothingReactions) {
+      const npcRole = detectRoleFromMotivation(m);
+      const clothingReaction = getPlayerClothingReaction(npcRole, options.locationFormality);
+      
+      if (clothingReaction.severity !== 'none') {
+        lines.push(`  → Clothing Reaction: ${clothingReaction.severity.toUpperCase()}`);
+        if (clothingReaction.internalThoughts.length > 0) {
+          lines.push(`    Thinks: "${clothingReaction.internalThoughts[0]}"`);
+        }
+        if (clothingReaction.npcBehaviorTriggers.length > 0) {
+          lines.push(`    Behavior: ${clothingReaction.npcBehaviorTriggers.join(', ')}`);
+        }
+      }
+    }
   }
   
   lines.push('');
   lines.push('*NPCs should act in self-interest, not as simple good/bad characters.*');
+  if (options?.includeClothingReactions) {
+    lines.push('*NPCs react to player appearance based on genre expectations and their role.*');
+  }
   
   return lines.join('\n');
 }
