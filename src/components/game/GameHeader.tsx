@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
 import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity } from 'lucide-react';
@@ -85,6 +86,7 @@ export function GameHeader({
   adrenalineState,
   showAdrenaline = false
 }: GameHeaderProps) {
+  const navigate = useNavigate();
   return (
     <header className="min-h-16 py-3 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center gap-2">
@@ -160,6 +162,21 @@ export function GameHeader({
             <TooltipContent>Achievements</TooltipContent>
           </Tooltip>
         )}
+        
+        {/* Trophy Room Link - Always visible */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/achievements')}
+              className="hover:bg-amber-500/20 hover:text-amber-400"
+            >
+              <Trophy className="h-4 w-4 text-amber-400" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Trophy Room</TooltipContent>
+        </Tooltip>
         
         {onOpenSessionStats && (
           <Tooltip>
