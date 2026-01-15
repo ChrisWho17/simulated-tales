@@ -2377,6 +2377,13 @@ export function AdventureDisplay({
           weatherState={weatherState}
           onClose={() => setShowTimeDisplay(false)}
           onOpenTimeSkip={() => setShowTimeSkipModal(true)}
+          onTimeMultiplierChange={(multiplier) => {
+            setTimeState(prev => ({ ...prev, multiplier }));
+            toast({
+              title: "Time Pace Changed",
+              description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
+            });
+          }}
         />
       )}
       

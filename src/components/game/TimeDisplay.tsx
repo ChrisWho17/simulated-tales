@@ -19,7 +19,9 @@ import {
   getHoursUntilSunrise,
   getHoursUntilSunset,
   getTimeOfDay,
-  getExtendedForecast
+  getExtendedForecast,
+  TimeMultiplier,
+  TIME_MULTIPLIER_CONFIG
 } from '@/game/timeProgressionSystem';
 import { 
   WeatherState, 
@@ -34,6 +36,7 @@ interface TimeDisplayProps {
   weatherState?: WeatherState;
   onClose: () => void;
   onOpenTimeSkip?: () => void;
+  onTimeMultiplierChange?: (multiplier: TimeMultiplier) => void;
 }
 
 // Time of day phases with their hour ranges
@@ -62,8 +65,8 @@ function formatDuration(hours: number): string {
   return `${hours} hours`;
 }
 
-export function TimeDisplay({ timeState, weatherState, onClose, onOpenTimeSkip }: TimeDisplayProps) {
-  const [activeTab, setActiveTab] = useState<'time' | 'forecast'>('time');
+export function TimeDisplay({ timeState, weatherState, onClose, onOpenTimeSkip, onTimeMultiplierChange }: TimeDisplayProps) {
+  const [activeTab, setActiveTab] = useState<'time' | 'forecast' | 'pacing'>('time');
   
   const phase = getTimeOfDay(timeState.hour);
   const phaseConfig = TIME_PHASES[phase];
@@ -107,15 +110,19 @@ export function TimeDisplay({ timeState, weatherState, onClose, onOpenTimeSkip }
         </CardHeader>
         
         <CardContent className="flex-1 overflow-hidden pt-4 flex flex-col">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time' | 'forecast')} className="flex-1 flex flex-col">
-            <TabsList className="grid grid-cols-2 mb-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'time' | 'forecast' | 'pacing')} className="flex-1 flex flex-col">
+            <TabsList className="grid grid-cols-3 mb-4">
               <TabsTrigger value="time" className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Time
               </TabsTrigger>
+              <TabsTrigger value="pacing" className="flex items-center gap-1">
+                <FastForward className="w-3 h-3" />
+                Pacing
+              </TabsTrigger>
               <TabsTrigger value="forecast" className="flex items-center gap-1">
                 <Cloud className="w-3 h-3" />
-                Forecast
+                Weather
               </TabsTrigger>
             </TabsList>
             
@@ -252,6 +259,61 @@ export function TimeDisplay({ timeState, weatherState, onClose, onOpenTimeSkip }
                   Skip Time...
                 </Button>
               )}
+            </TabsContent>
+            
+            {/* Pacing Tab - Time Multiplier Selection */}
+            <TabsContent value="pacing" className="flex-1 mt-0">
+              <div className="space-y-4">
+                <div className="text-center space-y-1">
+                  <h4 className="font-semibold text-sm">Turn Pacing</h4>
+                  <p className="text-xs text-muted-foreground">
+                    How much game time passes per action
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {(Object.entries(TIME_MULTIPLIER_CONFIG) as [TimeMultiplier, typeof TIME_MULTIPLIER_CONFIG[TimeMultiplier]][]).map(([id, config]) => (
+                    <button
+                      key={id}
+                      onClick={() => onTimeMultiplierChange?.(id)}
+                      disabled={!onTimeMultiplierChange}
+                      className={cn(
+                        "p-3 rounded-lg border text-left transition-all",
+                        timeState.multiplier === id
+                          ? "border-primary bg-primary/10"
+                          : "border-border/50 hover:border-border",
+                        !onTimeMultiplierChange && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {id === 'minute_per_turn' && <span>⚔️</span>}
+                          {id === 'five_minutes' && <span>💬</span>}
+                          {id === 'fifteen_minutes' && <span>🚶</span>}
+                          {id === 'thirty_minutes' && <span>🗺️</span>}
+                          {id === 'hour_per_turn' && <span>🌅</span>}
+                          <span className="font-medium text-sm">{config.label}</span>
+                        </div>
+                        <Badge variant={timeState.multiplier === id ? "default" : "outline"} className="text-xs">
+                          {config.minutes} min
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 ml-6">{config.description}</p>
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                  <h5 className="text-xs font-medium">💡 Pacing Tips</h5>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• <strong>1 Minute</strong> — Combat, tense standoffs, quick dialogue</li>
+                    <li>• <strong>5 Minutes</strong> — Exploration, searching, conversations</li>
+                    <li>• <strong>15 Minutes</strong> — Default, walking around, activities</li>
+                    <li>• <strong>30 Minutes</strong> — Travel between areas, shopping</li>
+                    <li>• <strong>1 Hour</strong> — Long journeys, training montages, resting</li>
+                  </ul>
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="forecast" className="flex-1 mt-0">
