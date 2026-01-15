@@ -3,12 +3,14 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
   User, RefreshCw, Loader2, Sparkles, Heart, Shield, 
-  Sword, Wand2, Zap, Eye, Palette, ChevronDown, ChevronUp
+  Sword, Wand2, Zap, Eye, Palette, ChevronDown, ChevronUp, Trophy
 } from 'lucide-react';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { TieredAppearance, formatAppearanceForAI } from '@/types/characterCreation';
 import { Backstory, PersonalityTrait, CharacterFlaw } from '@/game/characterDevelopmentSystem';
+import { BadgeShowcase, TitleDisplay, frameStyles } from '@/components/game/AchievementBadges';
+import { useAchievementRewards } from '@/components/game/AchievementRewards';
 
 interface VisualCharacterCardProps {
   character: RPGCharacter & { 
@@ -33,10 +35,18 @@ export function VisualCharacterCard({
 }: VisualCharacterCardProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const { equippedCosmetics, getClaimedByType } = useAchievementRewards();
   
   const genreData = GENRE_DATA[genre];
   const charClass = genreData?.classes.find(c => c.id === character.classId);
   const background = genreData?.backgrounds.find(b => b.id === character.backgroundId);
+  
+  // Get equipped frame and title
+  const equippedFrame = equippedCosmetics.frame;
+  const frameStyle = equippedFrame ? frameStyles[equippedFrame] : null;
+  const equippedTitle = equippedCosmetics.title;
+  const titles = getClaimedByType('title');
+  const currentTitle = titles.find(t => t.id === equippedTitle);
 
   const handleRegenerate = async () => {
     if (!onRegeneratePortrait) return;
@@ -104,7 +114,10 @@ export function VisualCharacterCard({
     <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
       {/* Portrait Section */}
       <div className="relative">
-        <div className="aspect-[3/4] max-h-[300px] bg-gradient-to-b from-muted to-background">
+        <div className={cn(
+          "aspect-[3/4] max-h-[300px] bg-gradient-to-b from-muted to-background rounded-t-xl overflow-hidden",
+          frameStyle?.className
+        )}>
           {character.portraitUrl ? (
             <img 
               src={character.portraitUrl} 
@@ -120,6 +133,11 @@ export function VisualCharacterCard({
         
         {/* Overlay gradient */}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent" />
+        
+        {/* Achievement Badges - top left */}
+        <div className="absolute top-3 left-3">
+          <BadgeShowcase maxBadges={3} size="sm" showEmpty={false} />
+        </div>
         
         {/* Portrait controls */}
         {onRegeneratePortrait && (
@@ -140,6 +158,12 @@ export function VisualCharacterCard({
         
         {/* Name plate */}
         <div className="absolute bottom-0 inset-x-0 p-4">
+          {/* Title display */}
+          {currentTitle && (
+            <p className="text-xs text-amber-400 italic mb-0.5">
+              {currentTitle.name}
+            </p>
+          )}
           <h2 className="text-xl font-narrative font-bold text-gradient-gold">
             {character.name}
           </h2>
