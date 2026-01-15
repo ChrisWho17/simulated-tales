@@ -393,7 +393,7 @@ export function RadialQuickMenu({
               )}
               style={{
                 marginLeft: '-1px',
-                marginTop: '-1px',
+                marginTop: '4px',
                 boxShadow: '0 0 30px 8px hsl(var(--primary) / 0.25), 0 0 60px 15px hsl(var(--primary) / 0.1)'
               }}
             >
