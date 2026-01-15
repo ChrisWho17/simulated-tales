@@ -31,6 +31,10 @@ import {
 import {
   GameTimeState,
   createInitialTimeState,
+  getTimeOfDay as getGameTimeOfDay,
+  buildTimeContext,
+  formatTimeContextForAI,
+  TimeOfDayPeriod,
 } from '@/game/timeProgressionSystem';
 import { 
   ToneState, 
@@ -702,15 +706,10 @@ export function AdventureGame() {
   const { worldState, narrativeQueue, activeRumors, sceneNPCs, playerLocation, activeConsequences } = gameLoopState;
   const { processPlayerAction: processActionForRipples, advanceTurn, setSceneNPCs, moveToZone, getLocationContext } = gameLoopActions;
   
-  // Helper to get time of day based on system time (can be enhanced with in-game time)
-  const getTimeOfDay = (): 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night' => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 17) return 'afternoon';
-    if (hour >= 17 && hour < 21) return 'evening';
-    if (hour >= 21 || hour < 2) return 'night';
-    return 'late_night';
-  };
+  // Helper to get time of day based on in-game time state (not real time)
+  const getTimeOfDay = useCallback((): TimeOfDayPeriod => {
+    return getGameTimeOfDay(timeState.hour);
+  }, [timeState.hour]);
   
   // Persist mood changes
   useEffect(() => {
@@ -1205,6 +1204,9 @@ export function AdventureGame() {
             effects: formatWeatherEffectsForAI(weatherState),
           };
         }
+        
+        // Time context - always include for time-aware narratives
+        requestBody.timeContext = buildTimeContext(timeState);
       }
       
       // === ADVANCED CONTEXT (retryLevel === 0 only) ===
@@ -1504,6 +1506,8 @@ export function AdventureGame() {
               spawnPacket: null,
               isOpening: false,
             },
+            // Time context for time-aware narrative
+            timeContext: buildTimeContext(timeState),
             // Director context for zone transitions
             directorContext: settings.directorSettings ? {
               enabled: settings.directorSettings.enabled,
@@ -1631,6 +1635,8 @@ export function AdventureGame() {
                   isOpening: true,
                 };
               })(),
+              // Time context for time-aware opening narrative
+              timeContext: buildTimeContext(timeState),
               // Director context for initial narrative
               directorContext: settings.directorSettings ? {
                 enabled: settings.directorSettings.enabled,
