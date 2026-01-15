@@ -164,7 +164,61 @@ export interface CharacterAppearance {
   faceShape?: string;
   distinguishingFeatures?: string[];
   accessories?: string[];
+  // Extended body modifications
+  piercings?: string[];
+  tattoos?: string[];
 }
+
+// Piercing value to description mapping
+const PIERCING_PROMPT_MAP: Record<string, string> = {
+  'ear_lobe': 'ear lobe piercings with studs',
+  'ear_helix': 'helix ear piercing with hoop',
+  'ear_industrial': 'industrial bar piercing through ear',
+  'nose_nostril': 'nostril piercing with small stud',
+  'nose_septum': 'septum piercing with ring',
+  'lip_labret': 'labret lip piercing',
+  'lip_snake_bites': 'snake bite lip piercings',
+  'lip_monroe': 'monroe piercing above lip',
+  'eyebrow': 'eyebrow piercing with barbell',
+  'tongue': 'tongue piercing',
+  'navel': 'navel belly button piercing',
+  'nipple': 'nipple piercings',
+  'dermal_chest': 'chest dermal piercings',
+  'dermal_hips': 'hip dermal piercings',
+  'intimate_male': 'intimate piercing',
+  'intimate_female': 'intimate piercing',
+};
+
+// Tattoo value to description mapping
+const TATTOO_PROMPT_MAP: Record<string, string> = {
+  'face_tribal': 'tribal face tattoo',
+  'face_tears': 'tear drop tattoos under eye',
+  'face_makeup': 'cosmetic face tattoos',
+  'neck_front': 'front neck tattoo',
+  'neck_sides': 'side neck tattoos',
+  'neck_back': 'back of neck tattoo',
+  'arm_sleeve_full': 'full sleeve arm tattoos with intricate detailed designs',
+  'arm_sleeve_half': 'half sleeve tattoos on upper arm',
+  'arm_forearm': 'forearm tattoo',
+  'arm_bicep': 'bicep tattoo',
+  'hand': 'hand and finger tattoos',
+  'chest_full': 'full chest piece tattoo with elaborate design',
+  'chest_side': 'side chest tattoo',
+  'sternum': 'sternum tattoo between breasts',
+  'ribs': 'rib cage side tattoo',
+  'stomach': 'stomach tattoo',
+  'back_full': 'full back tattoo covering entire back',
+  'back_upper': 'upper back tattoo',
+  'back_lower': 'lower back tattoo',
+  'back_spine': 'spine tattoo running down back',
+  'shoulder_blade': 'shoulder blade tattoo',
+  'thigh': 'thigh tattoo',
+  'calf': 'calf tattoo',
+  'leg_sleeve': 'full leg sleeve tattoo',
+  'ankle': 'ankle tattoo',
+  'intimate_area': 'intimate area tattoo',
+  'inner_thigh': 'inner thigh tattoo',
+};
 
 export function buildPortraitPrompt(
   character: CharacterAppearance,
@@ -380,6 +434,26 @@ export function buildPortraitPrompt(
     };
     if (muscleDescriptions[character.muscleDefinition]) {
       details.push(muscleDescriptions[character.muscleDefinition]);
+    }
+  }
+  
+  // Extended body modifications - piercings
+  if (character.piercings && character.piercings.length > 0) {
+    for (const piercing of character.piercings) {
+      const desc = PIERCING_PROMPT_MAP[piercing];
+      if (desc) {
+        details.push(desc);
+      }
+    }
+  }
+  
+  // Extended body modifications - tattoos
+  if (character.tattoos && character.tattoos.length > 0) {
+    for (const tattoo of character.tattoos) {
+      const desc = TATTOO_PROMPT_MAP[tattoo];
+      if (desc) {
+        details.push(desc);
+      }
     }
   }
   

@@ -27,6 +27,9 @@ export interface FullAppearance {
   bodyHair?: 'none' | 'light' | 'moderate' | 'heavy';
   intimateDetails?: string;
   isHermaphrodite?: boolean;
+  // Extended body modifications
+  piercings?: string[];
+  tattoos?: string[];
 }
 
 export interface TieredAppearance {
@@ -63,8 +66,68 @@ export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Short', 'Medium', 'Long', 'Very
 export const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Auburn', 'Red', 'Blonde', 'Platinum Blonde', 'White', 'Gray', 'Blue', 'Purple', 'Pink', 'Green', 'Silver'];
 export const EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray', 'Violet', 'Heterochromia', 'Red', 'Golden', 'Silver'];
 export const FACE_SHAPES = [{ value: 'oval', label: 'Oval' }, { value: 'round', label: 'Round' }, { value: 'square', label: 'Square' }, { value: 'heart', label: 'Heart' }, { value: 'oblong', label: 'Oblong' }, { value: 'diamond', label: 'Diamond' }];
-export const DISTINGUISHING_FEATURES = ['Facial scar', 'Body scar', 'Neck tattoo', 'Face tattoo', 'Arm tattoos', 'Full sleeve', 'Ear piercings', 'Nose piercing', 'Lip piercing', 'Freckles', 'Dimples', 'Beauty mark', 'Eyepatch', 'Burn scars'];
-export const ACCESSORIES = ['Glasses', 'Sunglasses', 'Earrings', 'Necklace', 'Choker', 'Ring', 'Bracelet', 'Watch', 'Hat', 'Bandana', 'Headband', 'Circlet', 'Eyepatch', 'Mask', 'Goggles'];
+export const DISTINGUISHING_FEATURES = ['Facial scar', 'Body scar', 'Freckles', 'Dimples', 'Beauty mark', 'Eyepatch', 'Burn scars', 'Birthmark'];
+export const ACCESSORIES = ['Glasses', 'Sunglasses', 'Earrings', 'Necklace', 'Choker', 'Ring', 'Bracelet', 'Watch', 'Hat', 'Bandana', 'Headband', 'Circlet', 'Mask', 'Goggles'];
+
+// Extended body modification options
+export const PIERCING_OPTIONS = [
+  // Face
+  { value: 'ear_lobe', label: 'Ear Lobe', category: 'face' },
+  { value: 'ear_helix', label: 'Ear Helix', category: 'face' },
+  { value: 'ear_industrial', label: 'Industrial Bar', category: 'face' },
+  { value: 'nose_nostril', label: 'Nostril', category: 'face' },
+  { value: 'nose_septum', label: 'Septum', category: 'face' },
+  { value: 'lip_labret', label: 'Labret', category: 'face' },
+  { value: 'lip_snake_bites', label: 'Snake Bites', category: 'face' },
+  { value: 'lip_monroe', label: 'Monroe', category: 'face' },
+  { value: 'eyebrow', label: 'Eyebrow', category: 'face' },
+  { value: 'tongue', label: 'Tongue', category: 'face' },
+  // Body
+  { value: 'navel', label: 'Navel/Belly Button', category: 'body' },
+  { value: 'nipple', label: 'Nipple', category: 'body' },
+  { value: 'dermal_chest', label: 'Chest Dermals', category: 'body' },
+  { value: 'dermal_hips', label: 'Hip Dermals', category: 'body' },
+  // Intimate (18+)
+  { value: 'intimate_male', label: 'Prince Albert', category: 'intimate' },
+  { value: 'intimate_female', label: 'VCH', category: 'intimate' },
+];
+
+export const TATTOO_OPTIONS = [
+  // Face & Neck
+  { value: 'face_tribal', label: 'Face Tribal', category: 'face' },
+  { value: 'face_tears', label: 'Tear Drops', category: 'face' },
+  { value: 'face_makeup', label: 'Cosmetic/Makeup', category: 'face' },
+  { value: 'neck_front', label: 'Front Neck', category: 'neck' },
+  { value: 'neck_sides', label: 'Side Neck', category: 'neck' },
+  { value: 'neck_back', label: 'Back of Neck', category: 'neck' },
+  // Arms
+  { value: 'arm_sleeve_full', label: 'Full Sleeve', category: 'arms' },
+  { value: 'arm_sleeve_half', label: 'Half Sleeve', category: 'arms' },
+  { value: 'arm_forearm', label: 'Forearm Only', category: 'arms' },
+  { value: 'arm_bicep', label: 'Bicep', category: 'arms' },
+  { value: 'hand', label: 'Hand/Finger', category: 'arms' },
+  // Torso
+  { value: 'chest_full', label: 'Full Chest Piece', category: 'torso' },
+  { value: 'chest_side', label: 'Side Chest', category: 'torso' },
+  { value: 'sternum', label: 'Sternum', category: 'torso' },
+  { value: 'ribs', label: 'Rib Cage', category: 'torso' },
+  { value: 'stomach', label: 'Stomach', category: 'torso' },
+  // Back
+  { value: 'back_full', label: 'Full Back', category: 'back' },
+  { value: 'back_upper', label: 'Upper Back', category: 'back' },
+  { value: 'back_lower', label: 'Lower Back', category: 'back' },
+  { value: 'back_spine', label: 'Spine', category: 'back' },
+  { value: 'shoulder_blade', label: 'Shoulder Blade', category: 'back' },
+  // Legs
+  { value: 'thigh', label: 'Thigh', category: 'legs' },
+  { value: 'calf', label: 'Calf', category: 'legs' },
+  { value: 'leg_sleeve', label: 'Leg Sleeve', category: 'legs' },
+  { value: 'ankle', label: 'Ankle', category: 'legs' },
+  // Intimate (18+)
+  { value: 'intimate_area', label: 'Intimate Area', category: 'intimate' },
+  { value: 'inner_thigh', label: 'Inner Thigh', category: 'intimate' },
+];
+
 export const BUST_OPTIONS = [{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'very large', label: 'Very Large' }];
 export const HIP_OPTIONS = [{ value: 'narrow', label: 'Narrow' }, { value: 'average', label: 'Average' }, { value: 'wide', label: 'Wide' }, { value: 'very wide', label: 'Very Wide' }];
 export const MUSCLE_OPTIONS = [{ value: 'none', label: 'Soft' }, { value: 'toned', label: 'Toned' }, { value: 'defined', label: 'Defined' }, { value: 'very muscular', label: 'Very Muscular' }];
@@ -87,6 +150,21 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
     if (simple.gender === 'male' || simple.gender === 'other') {
       if (full.muscleDefinition && full.muscleDefinition !== 'none') description += `, ${full.muscleDefinition} muscles`;
       if (full.bodyHair && full.bodyHair !== 'none') description += `, ${full.bodyHair} body hair`;
+    }
+    // Extended body modifications
+    if (full.piercings?.length) {
+      const piercingLabels = full.piercings.map(p => {
+        const opt = PIERCING_OPTIONS.find(o => o.value === p);
+        return opt ? opt.label.toLowerCase() + ' piercing' : p;
+      });
+      description += `, with ${piercingLabels.join(', ')}`;
+    }
+    if (full.tattoos?.length) {
+      const tattooLabels = full.tattoos.map(t => {
+        const opt = TATTOO_OPTIONS.find(o => o.value === t);
+        return opt ? opt.label.toLowerCase() + ' tattoo' : t;
+      });
+      description += `, with ${tattooLabels.join(', ')}`;
     }
     if (full.intimateDetails) description += `. ${full.intimateDetails}`;
   }
