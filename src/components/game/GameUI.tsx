@@ -1373,6 +1373,33 @@ export function GameUI() {
     addStatChange('gold', -price);
   }, [gameState.lifeSim, addStatChange]);
   
+  // Handle clothing sale
+  const handleClothingSell = useCallback((item: ClothingItem, sellPrice: number) => {
+    // Add gold from sale
+    setGameState(prev => ({
+      ...prev,
+      player: {
+        ...prev.player,
+        stats: {
+          ...prev.player.stats,
+          gold: prev.player.stats.gold + sellPrice,
+        },
+      },
+      lifeSim: prev.lifeSim ? {
+        ...prev.lifeSim,
+        economy: {
+          ...prev.lifeSim.economy,
+          money: prev.lifeSim.economy.money + sellPrice,
+        },
+      } : null,
+    }));
+    
+    toast.success(`Sold ${item.name} for ${sellPrice}g!`, {
+      description: 'Your fashion reputation got you a better price!',
+    });
+    addStatChange('gold', sellPrice);
+  }, [addStatChange]);
+  
   return (
     <div className="h-screen flex flex-col bg-background">
       <GameHeader 
@@ -1516,6 +1543,7 @@ export function GameUI() {
         playerGold={gameState.lifeSim?.economy.money || gameState.player.stats.gold}
         playerLevel={gameState.lifeSim?.skills.social.charm || 1}
         onPurchase={handleClothingPurchase}
+        onSell={handleClothingSell}
         isOpen={showClothingShop}
         onOpenChange={setShowClothingShop}
       />
