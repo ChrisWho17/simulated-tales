@@ -2088,3 +2088,54 @@
   background: linear-gradient(135deg, rgba(255,90,110,0.22), rgba(255,255,255,0.06));
   border-color: rgba(255,90,110,0.4);
 }
+
+/* === ACCESSIBILITY STYLES === */
+
+/* Reduced Motion */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* High Contrast */
+.high-contrast {
+  --foreground: 0 0% 100%;
+  --muted-foreground: 0 0% 85%;
+  --background: 0 0% 0%;
+  --border: 0 0% 40%;
+}
+
+.high-contrast .glass-panel {
+  background: rgba(0, 0, 0, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Dyslexia-friendly font */
+.dyslexia-font {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
+}
+
+.dyslexia-font * {
+  font-family: inherit !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+}
+
+/* Large cursor */
+.large-cursor,
+.large-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'%3E%3Cpath fill='white' stroke='black' stroke-width='1' d='M5 3l14 9-6 2 4 7-3 1-4-7-5 4z'/%3E%3C/svg%3E") 0 0, auto;
+}
+
+/* Dynamic text sizing */
+html {
+  font-size: var(--base-font-size, 16px);
+}
+
+/* Dynamic line height */
+body {
+  line-height: var(--line-height-base, 1.5);
+}
