@@ -21,6 +21,7 @@ import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { SessionRecapSplash } from '@/components/game/SessionRecapSplash';
+import { OnboardingOverlay, useOnboarding } from '@/components/game/OnboardingOverlay';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
@@ -259,6 +260,9 @@ export function AdventureDisplay({
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
   
+  // Onboarding system
+  const { showOnboarding, triggerOnboarding, completeOnboarding } = useOnboarding();
+  
   // Weather state - use external if provided, otherwise manage locally
   const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
   const weatherState = externalWeatherState ?? localWeatherState;
@@ -358,9 +362,18 @@ export function AdventureDisplay({
       }
     };
     
+    // Listen for onboarding trigger from settings
+    const handleOnboardingTrigger = () => {
+      triggerOnboarding();
+    };
+    
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    window.addEventListener('trigger-onboarding', handleOnboardingTrigger);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('trigger-onboarding', handleOnboardingTrigger);
+    };
+  }, [triggerOnboarding]);
 
   // Track scroll position to show/hide scroll-to-bottom button
   const checkIfAtBottom = useCallback(() => {
@@ -1038,15 +1051,51 @@ export function AdventureDisplay({
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
-      // Check for /recap command - intercept and show splash
       const trimmedInput = input.trim().toLowerCase();
-      if (trimmedInput === '/recap') {
-        setShowSessionRecap(true);
-        setInput('');
-        return;
+      
+      // Slash commands - intercept and handle
+      switch (trimmedInput) {
+        case '/recap':
+          setShowSessionRecap(true);
+          setInput('');
+          return;
+        case '/inventory':
+        case '/inv':
+        case '/i':
+          setShowInventory(true);
+          setInput('');
+          return;
+        case '/stats':
+        case '/character':
+        case '/char':
+        case '/c':
+          setShowCharacterSheet(true);
+          setInput('');
+          return;
+        case '/settings':
+        case '/options':
+          setShowSettings(true);
+          setInput('');
+          return;
+        case '/help':
+        case '/commands':
+        case '/?':
+          // Show help toast with available commands
+          toast({
+            title: '📖 Available Commands',
+            description: '/recap • /inventory • /stats • /checkself • /settings',
+            duration: 5000,
+          });
+          setInput('');
+          return;
+        case '/bookmarks':
+        case '/bm':
+          setShowBookmarks(true);
+          setInput('');
+          return;
       }
       
-      // Check for /checkself command
+      // Check for /checkself command (with optional parameters)
       const parsed = parseEnhancedCommand(input.trim());
       if (parsed.type === 'checkself') {
         const thoroughness = parsed.target === 'careful' ? 'careful' : 
@@ -2117,6 +2166,12 @@ export function AdventureDisplay({
           'an unknown location'
         }
         genre={genre}
+      />
+      
+      {/* First-time player onboarding */}
+      <OnboardingOverlay 
+        onComplete={completeOnboarding}
+        forceShow={showOnboarding}
       />
     </div>
   );

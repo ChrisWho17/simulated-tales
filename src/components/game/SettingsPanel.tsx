@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
 import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorModeSystem';
 import { SaveCodeModal } from '@/components/campaign/SaveCodeModal';
@@ -1133,8 +1134,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <div className="space-y-2">
                   {[
                     { cmd: '/recap', desc: 'Show a "Previously On..." AI-generated story summary', icon: '📖' },
+                    { cmd: '/inventory', desc: 'Open your inventory (also: /inv, /i)', icon: '🎒' },
+                    { cmd: '/stats', desc: 'Open character sheet (also: /char, /c)', icon: '📊' },
+                    { cmd: '/bookmarks', desc: 'View saved story moments (also: /bm)', icon: '📌' },
+                    { cmd: '/settings', desc: 'Open settings panel', icon: '⚙️' },
+                    { cmd: '/help', desc: 'Show available commands (also: /?)', icon: '❓' },
                     { cmd: '/checkself', desc: 'Check your body for hidden wounds', icon: '🔍' },
-                    { cmd: '/checkself thorough', desc: 'Thorough self-examination (takes longer)', icon: '🩺' },
                   ].map((command) => (
                     <div 
                       key={command.cmd}
@@ -1204,6 +1209,26 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <span>Bookmark important story moments with the bookmark button</span>
                   </div>
                 </div>
+              </div>
+              
+              {/* Restart Tutorial Button */}
+              <div className="pt-4 border-t border-border/30">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    localStorage.removeItem('untold-onboarding-completed');
+                    onClose();
+                    // Trigger page reload to show onboarding
+                    window.dispatchEvent(new CustomEvent('trigger-onboarding'));
+                  }}
+                  className="w-full gap-2"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Restart Tutorial
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Re-watch the first-time player guide
+                </p>
               </div>
             </div>
           )}
