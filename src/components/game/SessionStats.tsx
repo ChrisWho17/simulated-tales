@@ -2,11 +2,13 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback,
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, Clock, Users, MapPin, Swords, MessageCircle, 
-  Footprints, Star, Trophy, X, ChevronUp
+  Footprints, Star, Trophy, X, ChevronUp, Coins, Hammer,
+  TrendingUp, TrendingDown, Skull, Package, Share2, Copy, Check, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 export interface SessionStatsData {
   sessionStartTime: number;
@@ -19,11 +21,28 @@ export interface SessionStatsData {
   distanceTraveled: number;
   itemsAcquired: number;
   itemsUsed: number;
+  itemsCrafted: number;
   deathCount: number;
   criticalSuccesses: number;
   criticalFailures: number;
   questsCompleted: number;
   secretsDiscovered: number;
+  // New economy stats
+  goldEarned: number;
+  goldSpent: number;
+  // New reputation stats
+  reputationGained: number;
+  reputationLost: number;
+  factionsEncountered: string[];
+  // Combat stats
+  enemiesDefeated: number;
+  damageDealt: number;
+  damageTaken: number;
+  healingReceived: number;
+  // Misc
+  diceRolled: number;
+  naturalTwenties: number;
+  naturalOnes: number;
 }
 
 interface SessionStatsContextType {
@@ -31,9 +50,11 @@ interface SessionStatsContextType {
   incrementStat: (stat: keyof SessionStatsData, value?: number) => void;
   addNpcEncounter: (npcName: string) => void;
   addLocationVisit: (locationName: string) => void;
+  addFactionEncounter: (factionName: string) => void;
   resetSession: () => void;
   getFormattedPlayTime: () => string;
   getTotalPlayTimeHours: () => number;
+  exportAsText: () => string;
 }
 
 const SessionStatsContext = createContext<SessionStatsContextType | null>(null);
@@ -51,11 +72,24 @@ const DEFAULT_STATS: SessionStatsData = {
   distanceTraveled: 0,
   itemsAcquired: 0,
   itemsUsed: 0,
+  itemsCrafted: 0,
   deathCount: 0,
   criticalSuccesses: 0,
   criticalFailures: 0,
   questsCompleted: 0,
   secretsDiscovered: 0,
+  goldEarned: 0,
+  goldSpent: 0,
+  reputationGained: 0,
+  reputationLost: 0,
+  factionsEncountered: [],
+  enemiesDefeated: 0,
+  damageDealt: 0,
+  damageTaken: 0,
+  healingReceived: 0,
+  diceRolled: 0,
+  naturalTwenties: 0,
+  naturalOnes: 0,
 };
 
 export function useSessionStats() {
@@ -151,6 +185,15 @@ export function SessionStatsProvider({ children, onPlayTimeReached }: SessionSta
     }));
   }, []);
 
+  const addFactionEncounter = useCallback((factionName: string) => {
+    setStats(prev => ({
+      ...prev,
+      factionsEncountered: prev.factionsEncountered.includes(factionName)
+        ? prev.factionsEncountered
+        : [...prev.factionsEncountered, factionName],
+    }));
+  }, []);
+
   const resetSession = useCallback(() => {
     setStats({ ...DEFAULT_STATS, sessionStartTime: Date.now() });
     lastReportedHour.current = 0;
@@ -171,15 +214,72 @@ export function SessionStatsProvider({ children, onPlayTimeReached }: SessionSta
     return stats.totalPlayTime / 3600;
   }, [stats.totalPlayTime]);
 
+  const exportAsText = useCallback(() => {
+    const playTime = getFormattedPlayTime();
+    const lines = [
+      '═══════════════════════════════════',
+      '       📊 PLAY STATISTICS',
+      '═══════════════════════════════════',
+      '',
+      '⏱️  JOURNEY',
+      `   Play Time: ${playTime}`,
+      `   Choices Made: ${stats.choicesMade}`,
+      `   Quests Completed: ${stats.questsCompleted}`,
+      `   Secrets Discovered: ${stats.secretsDiscovered}`,
+      '',
+      '👥  ENCOUNTERS',
+      `   NPCs Met: ${stats.npcsEncountered.length}`,
+      `   Locations Visited: ${stats.locationsVisited.length}`,
+      `   Factions Encountered: ${stats.factionsEncountered.length}`,
+      `   Dialogues: ${stats.dialogueExchanges}`,
+      '',
+      '⚔️  COMBAT',
+      `   Combat Encounters: ${stats.combatEncounters}`,
+      `   Enemies Defeated: ${stats.enemiesDefeated}`,
+      `   Damage Dealt: ${stats.damageDealt}`,
+      `   Damage Taken: ${stats.damageTaken}`,
+      `   Healing Received: ${stats.healingReceived}`,
+      `   Deaths: ${stats.deathCount}`,
+      '',
+      '🎲  DICE',
+      `   Dice Rolled: ${stats.diceRolled}`,
+      `   Natural 20s: ${stats.naturalTwenties}`,
+      `   Natural 1s: ${stats.naturalOnes}`,
+      `   Critical Successes: ${stats.criticalSuccesses}`,
+      `   Critical Failures: ${stats.criticalFailures}`,
+      '',
+      '💰  ECONOMY',
+      `   Gold Earned: ${stats.goldEarned}`,
+      `   Gold Spent: ${stats.goldSpent}`,
+      `   Net Gold: ${stats.goldEarned - stats.goldSpent}`,
+      '',
+      '📦  ITEMS',
+      `   Items Acquired: ${stats.itemsAcquired}`,
+      `   Items Used: ${stats.itemsUsed}`,
+      `   Items Crafted: ${stats.itemsCrafted}`,
+      '',
+      '🏛️  REPUTATION',
+      `   Reputation Gained: ${stats.reputationGained}`,
+      `   Reputation Lost: ${stats.reputationLost}`,
+      '',
+      '═══════════════════════════════════',
+      '   Generated by Untold Stories',
+      '═══════════════════════════════════',
+    ];
+    return lines.join('\n');
+  }, [stats, getFormattedPlayTime]);
+
   return (
     <SessionStatsContext.Provider value={{ 
       stats, 
       incrementStat, 
       addNpcEncounter, 
       addLocationVisit, 
+      addFactionEncounter,
       resetSession,
       getFormattedPlayTime,
       getTotalPlayTimeHours,
+      exportAsText,
     }}>
       {children}
     </SessionStatsContext.Provider>
@@ -192,20 +292,69 @@ interface SessionStatsDisplayProps {
 }
 
 export function SessionStatsDisplay({ isOpen, onClose }: SessionStatsDisplayProps) {
-  const { stats, getFormattedPlayTime } = useSessionStats();
+  const { stats, getFormattedPlayTime, exportAsText } = useSessionStats();
+  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'combat' | 'economy'>('overview');
 
-  const statItems = [
+  const handleCopyText = async () => {
+    try {
+      await navigator.clipboard.writeText(exportAsText());
+      setCopied(true);
+      toast.success('Stats copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Failed to copy stats');
+    }
+  };
+
+  const handleDownloadText = () => {
+    const text = exportAsText();
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `play-stats-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Stats downloaded!');
+  };
+
+  const overviewStats = [
     { icon: Clock, label: 'Play Time', value: getFormattedPlayTime(), color: 'text-blue-400' },
     { icon: MessageCircle, label: 'Choices Made', value: stats.choicesMade, color: 'text-violet-400' },
     { icon: Users, label: 'NPCs Met', value: stats.npcsEncountered.length, color: 'text-emerald-400' },
-    { icon: MapPin, label: 'Locations Visited', value: stats.locationsVisited.length, color: 'text-amber-400' },
-    { icon: Swords, label: 'Combat Encounters', value: stats.combatEncounters, color: 'text-red-400' },
-    { icon: MessageCircle, label: 'Dialogues', value: stats.dialogueExchanges, color: 'text-cyan-400' },
-    { icon: Star, label: 'Critical Successes', value: stats.criticalSuccesses, color: 'text-yellow-400' },
-    { icon: Activity, label: 'Critical Failures', value: stats.criticalFailures, color: 'text-orange-400' },
-    { icon: Trophy, label: 'Quests Completed', value: stats.questsCompleted, color: 'text-purple-400' },
+    { icon: MapPin, label: 'Locations', value: stats.locationsVisited.length, color: 'text-amber-400' },
+    { icon: Trophy, label: 'Quests Done', value: stats.questsCompleted, color: 'text-purple-400' },
     { icon: Footprints, label: 'Secrets Found', value: stats.secretsDiscovered, color: 'text-pink-400' },
+    { icon: Star, label: 'Nat 20s', value: stats.naturalTwenties, color: 'text-yellow-400' },
+    { icon: Activity, label: 'Nat 1s', value: stats.naturalOnes, color: 'text-orange-400' },
   ];
+
+  const combatStats = [
+    { icon: Swords, label: 'Combats', value: stats.combatEncounters, color: 'text-red-400' },
+    { icon: Skull, label: 'Enemies Defeated', value: stats.enemiesDefeated, color: 'text-red-500' },
+    { icon: TrendingUp, label: 'Damage Dealt', value: stats.damageDealt, color: 'text-orange-400' },
+    { icon: TrendingDown, label: 'Damage Taken', value: stats.damageTaken, color: 'text-rose-400' },
+    { icon: Activity, label: 'Healing', value: stats.healingReceived, color: 'text-green-400' },
+    { icon: X, label: 'Deaths', value: stats.deathCount, color: 'text-gray-400' },
+    { icon: Star, label: 'Crit Successes', value: stats.criticalSuccesses, color: 'text-yellow-400' },
+    { icon: Activity, label: 'Crit Failures', value: stats.criticalFailures, color: 'text-orange-400' },
+  ];
+
+  const economyStats = [
+    { icon: Coins, label: 'Gold Earned', value: stats.goldEarned, color: 'text-yellow-400' },
+    { icon: Coins, label: 'Gold Spent', value: stats.goldSpent, color: 'text-amber-500' },
+    { icon: Package, label: 'Items Acquired', value: stats.itemsAcquired, color: 'text-blue-400' },
+    { icon: Package, label: 'Items Used', value: stats.itemsUsed, color: 'text-cyan-400' },
+    { icon: Hammer, label: 'Items Crafted', value: stats.itemsCrafted, color: 'text-orange-400' },
+    { icon: TrendingUp, label: 'Rep Gained', value: stats.reputationGained, color: 'text-emerald-400' },
+    { icon: TrendingDown, label: 'Rep Lost', value: stats.reputationLost, color: 'text-red-400' },
+    { icon: Users, label: 'Factions', value: stats.factionsEncountered.length, color: 'text-purple-400' },
+  ];
+
+  const currentStats = activeTab === 'overview' ? overviewStats : activeTab === 'combat' ? combatStats : economyStats;
 
   return (
     <AnimatePresence>
@@ -214,7 +363,7 @@ export function SessionStatsDisplay({ isOpen, onClose }: SessionStatsDisplayProp
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={onClose}
         >
           <motion.div
@@ -222,84 +371,147 @@ export function SessionStatsDisplay({ isOpen, onClose }: SessionStatsDisplayProp
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25 }}
-            className="glass-panel w-full max-w-md max-h-[80vh] overflow-hidden"
+            className="glass-panel w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-border/30">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border/30 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-[var(--accent-primary)]" />
-                <h2 className="font-display text-lg">Session Stats</h2>
+                <h2 className="font-display text-lg">Play Statistics</h2>
               </div>
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            <ScrollArea className="p-4 max-h-[60vh]">
-              <div className="grid grid-cols-2 gap-3">
-                {statItems.map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-3 rounded-lg bg-black/30 border border-border/30"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <item.icon className={cn("w-4 h-4", item.color)} />
-                      <span className="text-xs text-muted-foreground">{item.label}</span>
+            {/* Tabs */}
+            <div className="flex gap-1 p-2 border-b border-border/20 flex-shrink-0">
+              {(['overview', 'combat', 'economy'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize",
+                    activeTab === tab
+                      ? "bg-primary/20 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Stats Content */}
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {currentStats.map((item, index) => (
+                    <motion.div
+                      key={item.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="p-3 rounded-lg bg-black/30 border border-border/30"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <item.icon className={cn("w-4 h-4", item.color)} />
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                      </div>
+                      <div className="text-xl font-bold font-mono">
+                        {item.value}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* NPCs List */}
+                {activeTab === 'overview' && stats.npcsEncountered.length > 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-black/30 border border-border/30">
+                    <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-emerald-400" />
+                      NPCs Encountered
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {stats.npcsEncountered.slice(0, 10).map(npc => (
+                        <span key={npc} className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
+                          {npc}
+                        </span>
+                      ))}
+                      {stats.npcsEncountered.length > 10 && (
+                        <span className="px-2 py-0.5 text-xs text-muted-foreground">
+                          +{stats.npcsEncountered.length - 10} more
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xl font-bold font-mono">
-                      {item.value}
+                  </div>
+                )}
+
+                {/* Locations List */}
+                {activeTab === 'overview' && stats.locationsVisited.length > 0 && (
+                  <div className="mt-3 p-3 rounded-lg bg-black/30 border border-border/30">
+                    <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-amber-400" />
+                      Locations Visited
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {stats.locationsVisited.slice(0, 8).map(loc => (
+                        <span key={loc} className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
+                          {loc}
+                        </span>
+                      ))}
+                      {stats.locationsVisited.length > 8 && (
+                        <span className="px-2 py-0.5 text-xs text-muted-foreground">
+                          +{stats.locationsVisited.length - 8} more
+                        </span>
+                      )}
                     </div>
-                  </motion.div>
-                ))}
+                  </div>
+                )}
+
+                {/* Factions List */}
+                {activeTab === 'economy' && stats.factionsEncountered.length > 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-black/30 border border-border/30">
+                    <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-purple-400" />
+                      Factions Encountered
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {stats.factionsEncountered.map(faction => (
+                        <span key={faction} className="px-2 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded-full">
+                          {faction}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* NPCs List */}
-              {stats.npcsEncountered.length > 0 && (
-                <div className="mt-4 p-3 rounded-lg bg-black/30 border border-border/30">
-                  <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-400" />
-                    NPCs Encountered
-                  </h3>
-                  <div className="flex flex-wrap gap-1">
-                    {stats.npcsEncountered.slice(0, 10).map(npc => (
-                      <span key={npc} className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
-                        {npc}
-                      </span>
-                    ))}
-                    {stats.npcsEncountered.length > 10 && (
-                      <span className="px-2 py-0.5 text-xs text-muted-foreground">
-                        +{stats.npcsEncountered.length - 10} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Locations List */}
-              {stats.locationsVisited.length > 0 && (
-                <div className="mt-3 p-3 rounded-lg bg-black/30 border border-border/30">
-                  <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-amber-400" />
-                    Locations Visited
-                  </h3>
-                  <div className="flex flex-wrap gap-1">
-                    {stats.locationsVisited.slice(0, 8).map(loc => (
-                      <span key={loc} className="px-2 py-0.5 text-xs bg-amber-500/20 text-amber-400 rounded-full">
-                        {loc}
-                      </span>
-                    ))}
-                    {stats.locationsVisited.length > 8 && (
-                      <span className="px-2 py-0.5 text-xs text-muted-foreground">
-                        +{stats.locationsVisited.length - 8} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </ScrollArea>
+
+            {/* Export Actions */}
+            <div className="p-3 border-t border-border/30 flex-shrink-0">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyText}
+                  className="flex-1 gap-2"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy Text'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadText}
+                  className="flex-1 gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}
@@ -360,6 +572,10 @@ export function MiniSessionStats() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Combats:</span>
                 <span className="font-mono">{stats.combatEncounters}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Gold Earned:</span>
+                <span className="font-mono">{stats.goldEarned}</span>
               </div>
             </div>
           </motion.div>
