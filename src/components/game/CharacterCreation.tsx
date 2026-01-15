@@ -32,18 +32,38 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2, Shield } from 'lucide-react';
+import { User, Palette, BookOpen, Brain, Sparkles, Wand2, Loader2, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BackstoryGenerator } from '@/components/adventure/BackstoryGenerator';
+import { Backstory } from '@/game/characterDevelopmentSystem';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+type CreationStep = 'basics' | 'appearance' | 'portrait' | 'backstory' | 'background' | 'personality' | 'summary';
+
+const STEPS: CreationStep[] = ['basics', 'appearance', 'portrait', 'backstory', 'background', 'personality', 'summary'];
+
+const STEP_LABELS: Record<CreationStep, string> = {
+  basics: 'Basic Info',
+  appearance: 'Appearance',
+  portrait: 'Portrait',
+  backstory: 'Backstory',
+  background: 'Background',
+  personality: 'Personality',
+  summary: 'Summary',
+};
 
 interface CharacterCreationProps {
   onComplete: (character: CharacterData) => void;
+  genre?: string;
 }
 
-export function CharacterCreation({ onComplete }: CharacterCreationProps) {
+export function CharacterCreation({ onComplete, genre = 'modern_life' }: CharacterCreationProps) {
+  const [currentStep, setCurrentStep] = useState<CreationStep>('basics');
   const [character, setCharacter] = useState<CharacterData>(DEFAULT_CHARACTER);
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
   const [adultContentEnabled, setAdultContentEnabled] = useState(false);
+  const [backstory, setBackstory] = useState<Backstory | null>(null);
 
   const backgroundEffect = useMemo(() => {
     return BACKGROUND_EFFECTS[character.background.origin];
@@ -86,11 +106,52 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
     }));
   };
 
+  const currentStepIndex = STEPS.indexOf(currentStep);
+
+  const canProceedFromStep = (step: CreationStep): boolean => {
+    switch (step) {
+      case 'basics': return character.basicInfo.name.trim().length > 0;
+      case 'appearance': return true;
+      case 'portrait': return true; // Portrait is optional
+      case 'backstory': return true; // Backstory is optional
+      case 'background': return true;
+      case 'personality': return true;
+      case 'summary': return true;
+    }
+  };
+
+  const goToNextStep = () => {
+    if (currentStepIndex < STEPS.length - 1 && canProceedFromStep(currentStep)) {
+      setCurrentStep(STEPS[currentStepIndex + 1]);
+    }
+  };
+
+  const goToPrevStep = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStep(STEPS[currentStepIndex - 1]);
+    }
+  };
+
+  const handleBackstoryComplete = (completedBackstory: Backstory) => {
+    setBackstory(completedBackstory);
+    goToNextStep();
+  };
+
+  const handleBackstorySkip = () => {
+    goToNextStep();
+  };
+
   const handleBeginJourney = () => {
     if (!character.basicInfo.name.trim()) {
       return;
     }
-    onComplete(character);
+    // Attach backstory and portrait to character data
+    const finalCharacter = {
+      ...character,
+      portraitUrl,
+      backstory,
+    };
+    onComplete(finalCharacter as CharacterData);
   };
 
   const handleGeneratePortrait = async () => {
@@ -136,6 +197,18 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
     };
   }, [character]);
 
+  // Backstory step gets its own full-screen view
+  if (currentStep === 'backstory') {
+    return (
+      <BackstoryGenerator
+        genre={genre as any}
+        characterName={character.basicInfo.name || 'Traveler'}
+        onComplete={handleBackstoryComplete}
+        onSkip={handleBackstorySkip}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl border-border/50 bg-card/95 backdrop-blur shadow-deep">
@@ -151,161 +224,189 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
           <p className="text-muted-foreground mt-2">
             Shape who you will become in this world
           </p>
+          
+          {/* Step Progress Indicator */}
+          <div className="flex gap-1 mt-6 max-w-xl mx-auto">
+            {STEPS.map((step, i) => (
+              <div
+                key={step}
+                className={cn(
+                  "flex-1 h-1.5 rounded-full transition-all cursor-pointer hover:opacity-80",
+                  i <= currentStepIndex ? "bg-primary" : "bg-muted"
+                )}
+                onClick={() => i <= currentStepIndex && setCurrentStep(step)}
+                title={STEP_LABELS[step]}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Step {currentStepIndex + 1} of {STEPS.length}: {STEP_LABELS[currentStep]}
+          </p>
         </CardHeader>
 
         <ScrollArea className="h-[60vh]">
           <CardContent className="p-6 space-y-8">
-            {/* AI Portrait Generation */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-primary">
-                <Wand2 className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">AI Character Portrait</h2>
-              </div>
-              <Separator className="bg-border/30" />
-              
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                {/* Portrait Preview - Full Body */}
-                <div className="w-40 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
-                  {portraitUrl ? (
-                    <img 
-                      src={portraitUrl} 
-                      alt="Character portrait" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-12 h-12 text-muted-foreground/30" />
-                  )}
+            {/* Portrait Step */}
+            {currentStep === 'portrait' && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Wand2 className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">AI Character Portrait</h2>
+                </div>
+                <Separator className="bg-border/30" />
+                
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                  {/* Portrait Preview - Full Body */}
+                  <div className="w-40 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
+                    {portraitUrl ? (
+                      <img 
+                        src={portraitUrl} 
+                        alt="Character portrait" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-12 h-12 text-muted-foreground/30" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-3 text-center sm:text-left">
+                    <p className="text-sm text-muted-foreground">
+                      Generate a unique full-body AI portrait based on your character's appearance settings.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGeneratePortrait}
+                      disabled={isGeneratingPortrait}
+                      className="gap-2"
+                    >
+                      {isGeneratingPortrait ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-4 w-4" />
+                          {portraitUrl ? 'Regenerate Portrait' : 'Generate Portrait'}
+                        </>
+                      )}
+                    </Button>
+                    {portraitUrl && (
+                      <p className="text-xs text-muted-foreground">
+                        Click to regenerate with current settings
+                      </p>
+                    )}
+                  </div>
                 </div>
                 
-                <div className="flex-1 space-y-3 text-center sm:text-left">
-                  <p className="text-sm text-muted-foreground">
-                    Generate a unique full-body AI portrait based on your character's appearance settings.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePortrait}
-                    disabled={isGeneratingPortrait}
-                    className="gap-2"
-                  >
-                    {isGeneratingPortrait ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="h-4 w-4" />
-                        {portraitUrl ? 'Regenerate Portrait' : 'Generate Portrait'}
-                      </>
-                    )}
-                  </Button>
-                  {portraitUrl && (
-                    <p className="text-xs text-muted-foreground">
-                      Click to regenerate with current settings
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* Basic Information */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-primary">
-                <User className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">Basic Information</h2>
-              </div>
-              <Separator className="bg-border/30" />
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter character name"
-                    value={character.basicInfo.name}
-                    onChange={(e) => updateBasicInfo('name', e.target.value)}
-                    className="bg-input/50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select 
-                    value={character.basicInfo.gender} 
-                    onValueChange={(v) => updateBasicInfo('gender', v)}
-                  >
-                    <SelectTrigger className="bg-input/50">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="non-binary">Non-binary</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="unspecified">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <div className="flex justify-between">
-                    <Label>Age</Label>
-                    <span className="text-sm text-muted-foreground">{character.basicInfo.age}</span>
-                  </div>
-                  <Slider
-                    value={[character.basicInfo.age]}
-                    onValueChange={([v]) => updateBasicInfo('age', v)}
-                    min={18}
-                    max={50}
-                    step={1}
-                    className="py-2"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Additional Features Toggle */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-accent">
-                  <Sparkles className="w-5 h-5" />
-                  <h2 className="text-lg font-semibold">Additional Features</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="adult-content" className="text-sm text-muted-foreground">
-                    {adultContentEnabled ? 'Enabled' : 'Disabled'}
-                  </Label>
-                  <Switch
-                    id="adult-content"
-                    checked={adultContentEnabled}
-                    onCheckedChange={setAdultContentEnabled}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enable additional body customization options for more detailed character creation.
-              </p>
-              
-              {/* Custom AI Portrait Description */}
-              <div className="space-y-2 p-4 rounded-lg border border-primary/30 bg-primary/5">
-                <Label htmlFor="custom-description" className="flex items-center gap-2">
-                  <Wand2 className="w-4 h-4 text-primary" />
-                  Custom Portrait Details
-                </Label>
-                <Textarea
-                  id="custom-description"
-                  placeholder="Add specific details for your AI portrait: facial features, scars, tattoos, accessories, clothing style, poses, expressions, unique characteristics..."
-                  value={character.appearance.customDescription || ''}
-                  onChange={(e) => updateAppearance('customDescription', e.target.value)}
-                  className="bg-input/50 min-h-[80px] resize-none"
-                  maxLength={500}
-                />
-                <p className="text-xs text-muted-foreground">
-                  These details will be combined with your character settings to generate a more precise portrait. ({character.appearance.customDescription?.length || 0}/500)
+                <p className="text-sm text-muted-foreground text-center pt-4">
+                  Portrait generation is optional. You can skip this step and continue.
                 </p>
-              </div>
-            </section>
+              </section>
+            )}
+
+            {/* Basic Information Step */}
+            {currentStep === 'basics' && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <User className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">Basic Information</h2>
+                </div>
+                <Separator className="bg-border/30" />
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Enter character name"
+                      value={character.basicInfo.name}
+                      onChange={(e) => updateBasicInfo('name', e.target.value)}
+                      className="bg-input/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select 
+                      value={character.basicInfo.gender} 
+                      onValueChange={(v) => updateBasicInfo('gender', v)}
+                    >
+                      <SelectTrigger className="bg-input/50">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="non-binary">Non-binary</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="unspecified">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <div className="flex justify-between">
+                      <Label>Age</Label>
+                      <span className="text-sm text-muted-foreground">{character.basicInfo.age}</span>
+                    </div>
+                    <Slider
+                      value={[character.basicInfo.age]}
+                      onValueChange={([v]) => updateBasicInfo('age', v)}
+                      min={18}
+                      max={50}
+                      step={1}
+                      className="py-2"
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Appearance Step - includes additional features and main appearance */}
+            {currentStep === 'appearance' && (
+              <>
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-accent">
+                      <Sparkles className="w-5 h-5" />
+                      <h2 className="text-lg font-semibold">Additional Features</h2>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="adult-content" className="text-sm text-muted-foreground">
+                        {adultContentEnabled ? 'Enabled' : 'Disabled'}
+                      </Label>
+                      <Switch
+                        id="adult-content"
+                        checked={adultContentEnabled}
+                        onCheckedChange={setAdultContentEnabled}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enable additional body customization options for more detailed character creation.
+                  </p>
+                  
+                  {/* Custom AI Portrait Description */}
+                  <div className="space-y-2 p-4 rounded-lg border border-primary/30 bg-primary/5">
+                    <Label htmlFor="custom-description" className="flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-primary" />
+                      Custom Portrait Details
+                    </Label>
+                    <Textarea
+                      id="custom-description"
+                      placeholder="Add specific details for your AI portrait: facial features, scars, tattoos, accessories, clothing style, poses, expressions, unique characteristics..."
+                      value={character.appearance.customDescription || ''}
+                      onChange={(e) => updateAppearance('customDescription', e.target.value)}
+                      className="bg-input/50 min-h-[80px] resize-none"
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      These details will be combined with your character settings to generate a more precise portrait. ({character.appearance.customDescription?.length || 0}/500)
+                    </p>
+                  </div>
+                </section>
 
             {/* Appearance */}
             <section className="space-y-4">
@@ -618,8 +719,11 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 )}
               </div>
             </section>
+              </>
+            )}
 
-            {/* Background */}
+            {/* Background Step */}
+            {currentStep === 'background' && (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-primary">
                 <BookOpen className="w-5 h-5" />
@@ -709,9 +813,11 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 )}
               </div>
             </section>
+            )}
 
-            {/* Personality */}
-            <section className="space-y-4">
+            {/* Personality Step */}
+            {currentStep === 'personality' && (
+              <section className="space-y-4">
               <div className="flex items-center gap-2 text-primary">
                 <Brain className="w-5 h-5" />
                 <h2 className="text-lg font-semibold">Personality</h2>
@@ -762,31 +868,82 @@ export function CharacterCreation({ onComplete }: CharacterCreationProps) {
                 </div>
               </div>
             </section>
+            )}
 
-            {/* Character Summary */}
-            <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-primary">Character Summary</h2>
-              <Separator className="bg-border/30" />
-              
-              <div className="p-4 rounded-lg bg-muted/30 border border-border/30 space-y-2 font-narrative">
-                <p className="text-lg font-semibold text-foreground">{characterSummary.name}</p>
-                <p className="text-muted-foreground">{characterSummary.description}</p>
-                <p><span className="text-muted-foreground">Background:</span> {characterSummary.background}</p>
-                <p><span className="text-muted-foreground">Personality:</span> {characterSummary.personality}</p>
-              </div>
-            </section>
+            {/* Summary Step */}
+            {currentStep === 'summary' && (
+              <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-primary">Character Summary</h2>
+                <Separator className="bg-border/30" />
+                
+                <div className="p-4 rounded-lg bg-muted/30 border border-border/30 space-y-2 font-narrative">
+                  {portraitUrl && (
+                    <div className="w-24 h-32 rounded-lg overflow-hidden mb-3">
+                      <img src={portraitUrl} alt="Character portrait" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <p className="text-lg font-semibold text-foreground">{characterSummary.name}</p>
+                  <p className="text-muted-foreground">{characterSummary.description}</p>
+                  <p><span className="text-muted-foreground">Background:</span> {characterSummary.background}</p>
+                  <p><span className="text-muted-foreground">Personality:</span> {characterSummary.personality}</p>
+                  {backstory && (
+                    <div className="pt-2 border-t border-border/30 mt-3">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Origin:</span> {backstory.origin.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Motivation:</span> {backstory.motivation.name}
+                      </p>
+                      {backstory.generatedNarrative && (
+                        <p className="text-sm italic text-muted-foreground mt-2 line-clamp-3">
+                          "{backstory.generatedNarrative}"
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </CardContent>
         </ScrollArea>
 
+        {/* Step Navigation Footer */}
         <div className="p-6 border-t border-border/30">
-          <Button
-            onClick={handleBeginJourney}
-            disabled={!character.basicInfo.name.trim()}
-            className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground glow-primary"
-          >
-            Begin Your Journey
-          </Button>
-          {!character.basicInfo.name.trim() && (
+          <div className="flex gap-3">
+            {currentStepIndex > 0 && (
+              <Button
+                variant="outline"
+                onClick={goToPrevStep}
+                className="gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back
+              </Button>
+            )}
+            
+            <div className="flex-1">
+              {currentStep === 'summary' ? (
+                <Button
+                  onClick={handleBeginJourney}
+                  disabled={!character.basicInfo.name.trim()}
+                  className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground glow-primary"
+                >
+                  Begin Your Journey
+                </Button>
+              ) : (
+                <Button
+                  onClick={goToNextStep}
+                  disabled={!canProceedFromStep(currentStep)}
+                  className="w-full gap-2"
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {currentStep === 'basics' && !character.basicInfo.name.trim() && (
             <p className="text-center text-sm text-muted-foreground mt-2">
               Please enter a name to continue
             </p>
