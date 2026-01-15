@@ -3,11 +3,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
+import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { cn } from '@/lib/utils';
 import {
   Collapsible,
@@ -184,6 +185,52 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               onCheckedChange={(checked) => updateSettings({ enableWeatherEffects: checked })}
               className="scale-90"
             />
+          </div>
+          
+          {/* Director Mode Section */}
+          <div className="pt-3 border-t border-border/30 space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Clapperboard className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Director Mode</span>
+            </div>
+            
+            {/* Enable Director Toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
+              <div className="flex flex-col">
+                <span className="text-xs">Enable Director</span>
+                <span className="text-[10px] text-muted-foreground">DM manipulation features</span>
+              </div>
+              <Switch 
+                checked={settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled}
+                onCheckedChange={(checked) => updateSettings({ 
+                  directorSettings: { 
+                    ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+                    enabled: checked,
+                    rawGame: !checked ? true : (settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame)
+                  }
+                })}
+                className="scale-90"
+              />
+            </div>
+            
+            {/* Raw Game Toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
+              <div className="flex flex-col">
+                <span className="text-xs">Raw Game</span>
+                <span className="text-[10px] text-muted-foreground">Pure simulation, no steering</span>
+              </div>
+              <Switch 
+                checked={settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame}
+                disabled={!(settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled)}
+                onCheckedChange={(checked) => updateSettings({ 
+                  directorSettings: { 
+                    ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+                    rawGame: checked
+                  }
+                })}
+                className="scale-90"
+              />
+            </div>
           </div>
           
           {/* Trophy Room Link */}
