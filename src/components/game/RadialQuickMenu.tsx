@@ -333,7 +333,7 @@ export function RadialQuickMenu({
             className="relative"
             style={{ width: '300px', height: '300px' }}
           >
-            {/* Radial menu items with staggered spring animation */}
+            {/* Radial menu items */}
             {menuItems.map((item, index) => {
               const position = getItemPosition(index, menuItems.length);
               const isHovered = hoveredIndex === index;
@@ -350,7 +350,8 @@ export function RadialQuickMenu({
                     "absolute flex items-center justify-center",
                     "w-14 h-14 rounded-full",
                     "bg-card/90 backdrop-blur-md border-2",
-                    "transition-transform duration-150",
+                    "transition-all duration-200 ease-out",
+                    "animate-[fadeIn_200ms_ease-out_forwards]",
                     item.color
                   )}
                   style={{
@@ -361,6 +362,7 @@ export function RadialQuickMenu({
                       ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
                       : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
                     borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
+                    animationDelay: '80ms',
                   }}
                 >
                   {item.icon}
@@ -370,8 +372,10 @@ export function RadialQuickMenu({
                     className={cn(
                       "absolute top-full mt-2 left-1/2 -translate-x-1/2",
                       "text-[11px] font-medium whitespace-nowrap",
+                      "animate-[fadeIn_200ms_ease-out_forwards]",
                       isHovered ? "text-foreground" : "text-muted-foreground"
                     )}
+                    style={{ animationDelay: '120ms' }}
                   >
                     {item.label}
                   </span>
@@ -379,7 +383,7 @@ export function RadialQuickMenu({
               );
             })}
             
-            {/* Central close button */}
+            {/* Central close button - appears first */}
             <button
               onClick={toggleMenu}
               className={cn(
@@ -388,7 +392,8 @@ export function RadialQuickMenu({
                 "bg-card/95 border-2 border-primary/50",
                 "hover:border-primary hover:scale-105 active:scale-95",
                 "transition-transform duration-150",
-                "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                "animate-[fadeIn_150ms_ease-out_forwards]"
               )}
               style={{
                 marginLeft: '-1px',
@@ -400,19 +405,11 @@ export function RadialQuickMenu({
             </button>
           </div>
           
-          {/* CSS for idle pulse animation */}
+          {/* CSS for fade-in animation */}
           <style>{`
-            @keyframes radial-pulse-0 {
-              0%, 100% { box-shadow: 0 0 12px 2px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
-              50% { box-shadow: 0 0 18px 4px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
-            }
-            @keyframes radial-pulse-1 {
-              0%, 100% { box-shadow: 0 0 10px 2px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
-              50% { box-shadow: 0 0 16px 4px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
-            }
-            @keyframes radial-pulse-2 {
-              0%, 100% { box-shadow: 0 0 14px 3px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
-              50% { box-shadow: 0 0 20px 5px currentColor, 0 4px 15px rgba(0,0,0,0.4); }
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
             }
           `}</style>
         </motion.div>
