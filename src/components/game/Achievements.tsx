@@ -1,10 +1,11 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Star, Lock, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { AchievementParticles, LegendaryAchievementCelebration } from './AchievementParticles';
 
 export interface Achievement {
   id: string;
@@ -96,6 +97,7 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   });
 
   const [pendingNotification, setPendingNotification] = useState<Achievement | null>(null);
+  const [showLegendaryCelebration, setShowLegendaryCelebration] = useState(false);
 
   const unlockedAchievements = new Set(
     achievements.filter(a => a.unlockedAt).map(a => a.id)
@@ -119,6 +121,12 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
       const unlocked = updated.find(a => a.id === id);
       if (unlocked) {
         setPendingNotification(unlocked);
+        
+        // Show legendary celebration for legendary achievements
+        if (unlocked.rarity === 'legendary') {
+          setShowLegendaryCelebration(true);
+          setTimeout(() => setShowLegendaryCelebration(false), 3000);
+        }
       }
 
       return updated;
@@ -140,6 +148,12 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
         const unlocked = updated.find(a => a.id === id);
         if (unlocked) {
           setPendingNotification(unlocked);
+          
+          // Show legendary celebration for legendary achievements
+          if (unlocked.rarity === 'legendary') {
+            setShowLegendaryCelebration(true);
+            setTimeout(() => setShowLegendaryCelebration(false), 3000);
+          }
         }
         return updated;
       }
@@ -157,7 +171,7 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     if (pendingNotification) {
       toast.custom(() => (
         <AchievementToast achievement={pendingNotification} />
-      ), { duration: 4000 });
+      ), { duration: pendingNotification.rarity === 'legendary' ? 6000 : 4000 });
       setPendingNotification(null);
     }
   }, [pendingNotification]);
@@ -171,11 +185,16 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
       getAchievement,
     }}>
       {children}
+      {/* Legendary achievement celebration overlay */}
+      <LegendaryAchievementCelebration isActive={showLegendaryCelebration} />
     </AchievementsContext.Provider>
   );
 }
 
 function AchievementToast({ achievement }: { achievement: Achievement }) {
+  const [showParticles, setShowParticles] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   const rarityColors = {
     common: 'border-slate-400 bg-slate-500/20',
     uncommon: 'border-green-400 bg-green-500/20',
@@ -183,29 +202,126 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
     epic: 'border-purple-400 bg-purple-500/20',
     legendary: 'border-amber-400 bg-amber-500/20',
   };
+  
+  const rarityGlows = {
+    common: '',
+    uncommon: 'shadow-[0_0_15px_rgba(74,222,128,0.3)]',
+    rare: 'shadow-[0_0_20px_rgba(96,165,250,0.4)]',
+    epic: 'shadow-[0_0_25px_rgba(168,85,247,0.5)]',
+    legendary: 'shadow-[0_0_30px_rgba(251,191,36,0.6)]',
+  };
+  
+  // Play achievement sound on mount
+  useEffect(() => {
+    // Create a simple achievement unlock sound using Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Different sounds based on rarity
+      const frequencies = {
+        common: [523, 659],
+        uncommon: [523, 659, 784],
+        rare: [392, 523, 659, 784],
+        epic: [392, 523, 659, 784, 1047],
+        legendary: [392, 494, 587, 698, 880, 1047],
+      };
+      
+      const notes = frequencies[achievement.rarity];
+      const duration = achievement.rarity === 'legendary' ? 0.15 : 0.1;
+      
+      notes.forEach((freq, i) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = achievement.rarity === 'legendary' ? 'sine' : 'triangle';
+        
+        const startTime = audioContext.currentTime + i * duration;
+        const volume = 0.1;
+        
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 2);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration * 2);
+      });
+    } catch (e) {
+      // Audio not supported, fail silently
+      console.log('[Achievement] Audio not available');
+    }
+  }, [achievement.rarity]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, y: -20, scale: 0.9, rotateX: -15 }}
+      animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
+      transition={{ type: 'spring', damping: 15, stiffness: 300 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-lg border-2",
-        "backdrop-blur-md bg-background/80",
-        rarityColors[achievement.rarity]
+        "relative flex items-center gap-3 px-4 py-3 rounded-lg border-2 overflow-hidden",
+        "backdrop-blur-md bg-background/90",
+        rarityColors[achievement.rarity],
+        rarityGlows[achievement.rarity]
       )}
     >
-      <div className="relative">
-        <span className="text-2xl">{achievement.icon}</span>
+      {/* Particle effects */}
+      <AchievementParticles 
+        isActive={showParticles} 
+        rarity={achievement.rarity}
+        onComplete={() => setShowParticles(false)}
+      />
+      
+      {/* Shimmer effect for rare+ */}
+      {['rare', 'epic', 'legendary'].includes(achievement.rarity) && (
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          initial={{ x: '-100%' }}
+          animate={{ x: '200%' }}
+          transition={{ duration: 1.5, ease: 'easeInOut' }}
+        />
+      )}
+      
+      <div className="relative z-10">
+        <motion.span 
+          className="text-2xl block"
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', delay: 0.1, damping: 10 }}
+        >
+          {achievement.icon}
+        </motion.span>
         <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 animate-pulse" />
       </div>
-      <div>
-        <div className="flex items-center gap-2">
+      <div className="relative z-10">
+        <motion.div 
+          className="flex items-center gap-2"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15 }}
+        >
           <Trophy className="w-4 h-4 text-yellow-400" />
           <span className="font-bold text-sm">Achievement Unlocked!</span>
-        </div>
-        <p className="font-medium">{achievement.name}</p>
-        <p className="text-xs text-muted-foreground">{achievement.description}</p>
+        </motion.div>
+        <motion.p 
+          className="font-medium"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          {achievement.name}
+        </motion.p>
+        <motion.p 
+          className="text-xs text-muted-foreground"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          {achievement.description}
+        </motion.p>
       </div>
     </motion.div>
   );

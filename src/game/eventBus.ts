@@ -35,6 +35,9 @@ export type GameEventType =
   | 'WOUND_TREATED'
   | 'DEATH'
   | 'KNOCKOUT'
+  | 'COMBAT_WON'
+  | 'COMBAT_DEESCALATED'
+  | 'COMBAT_FLED'
   // Weapon events
   | 'WEAPON_JAM'
   | 'WEAPON_DESTROYED'
@@ -111,7 +114,8 @@ export interface RelationshipEvent extends BaseEvent {
 
 export interface CombatEvent extends BaseEvent {
   type: 'DAMAGE_DEALT' | 'DAMAGE_RECEIVED' | 'WOUND_INFLICTED' | 
-        'WOUND_REVEALED' | 'WOUND_TREATED' | 'DEATH' | 'KNOCKOUT';
+        'WOUND_REVEALED' | 'WOUND_TREATED' | 'DEATH' | 'KNOCKOUT' |
+        'COMBAT_WON' | 'COMBAT_DEESCALATED' | 'COMBAT_FLED';
   data: {
     sourceEntity?: string;
     targetEntity: string;
@@ -119,6 +123,8 @@ export interface CombatEvent extends BaseEvent {
     woundType?: string;
     location?: string;
     isHidden?: boolean;
+    flawlessVictory?: boolean; // No damage taken during combat
+    method?: string; // How combat was resolved (persuasion, intimidation, etc.)
   };
 }
 
