@@ -1,4 +1,4 @@
-// Clothing Shop Component - Browse and buy clothing based on reputation
+// Clothing Shop Component - Browse, buy, and sell clothing based on reputation
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,7 +13,9 @@ import {
   Eye,
   Sparkles,
   Zap,
-  Heart
+  Heart,
+  Coins,
+  ArrowRightLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,9 +52,15 @@ interface ClothingShopProps {
   playerGold: number;
   playerLevel?: number;
   onPurchase: (item: ClothingItem, finalPrice: number) => void;
+  onSell?: (item: ClothingItem, sellPrice: number) => void;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
+// Base sell percentage (without reputation bonus)
+const BASE_SELL_PERCENTAGE = 30; // 30% of original value
+// Max sell percentage (with max reputation)
+const MAX_SELL_PERCENTAGE = 70; // 70% of original value
 
 const SLOT_ICONS: Record<ClothingSlot, React.ReactNode> = {
   head: <Crown className="w-4 h-4" />,
@@ -77,12 +85,14 @@ export function ClothingShop({
   playerGold,
   playerLevel = 1,
   onPurchase,
+  onSell,
   isOpen,
   onOpenChange,
 }: ClothingShopProps) {
   const [selectedSlot, setSelectedSlot] = useState<ClothingSlot | 'all'>('all');
   const [fashionState, setFashionState] = useState(fashionReputationManager.getState());
   const [wardrobeState, setWardrobeState] = useState(wardrobeManager.getState());
+  const [shopMode, setShopMode] = useState<'buy' | 'sell'>('buy');
 
   useEffect(() => {
     const unsubFashion = fashionReputationManager.subscribe(setFashionState);
@@ -96,11 +106,36 @@ export function ClothingShop({
   const discount = fashionReputationManager.getDiscount();
   const fashionLevel = fashionReputationManager.getLevelInfo();
 
+  // Calculate sell bonus based on reputation (0-100 score maps to 0-40% bonus)
+  const sellBonus = useMemo(() => {
+    // Fashion score typically ranges 0-100
+    const normalizedScore = Math.min(fashionState.score, 100) / 100;
+    return Math.floor(normalizedScore * (MAX_SELL_PERCENTAGE - BASE_SELL_PERCENTAGE));
+  }, [fashionState.score]);
+
+  const sellPercentage = BASE_SELL_PERCENTAGE + sellBonus;
+
   const availableItems = useMemo(() => {
     const inventory = getShopInventory(playerLevel, fashionState.score);
     if (selectedSlot === 'all') return inventory;
     return inventory.filter(item => item.slot === selectedSlot);
   }, [playerLevel, fashionState.score, selectedSlot]);
+
+  // Items available to sell (owned items that aren't equipped)
+  const sellableItems = useMemo(() => {
+    const equipped = wardrobeState.equipped;
+    const equippedIds = new Set(
+      Object.values(equipped)
+        .filter(Boolean)
+        .map(wi => wi?.item.id)
+    );
+    
+    let items = wardrobeState.ownedItems.filter(wi => !equippedIds.has(wi.item.id));
+    if (selectedSlot !== 'all') {
+      items = items.filter(wi => wi.item.slot === selectedSlot);
+    }
+    return items;
+  }, [wardrobeState, selectedSlot]);
 
   const lockedItems = useMemo(() => {
     return CLOTHING_DATABASE.filter(item => {
@@ -117,6 +152,11 @@ export function ClothingShop({
     return basePrice - discountAmount;
   };
 
+  const calculateSellPrice = (item: ClothingItem): number => {
+    const basePrice = item.value;
+    return Math.floor(basePrice * (sellPercentage / 100));
+  };
+
   const canAfford = (item: ClothingItem): boolean => {
     return playerGold >= calculatePrice(item);
   };
@@ -131,6 +171,12 @@ export function ClothingShop({
       wardrobeManager.addItem(item, 'shop');
       onPurchase(item, finalPrice);
     }
+  };
+
+  const handleSell = (item: ClothingItem) => {
+    const sellPrice = calculateSellPrice(item);
+    wardrobeManager.removeItem(item.id);
+    onSell?.(item, sellPrice);
   };
 
   const renderStats = (stats: ClothingStats) => {
@@ -161,7 +207,7 @@ export function ClothingShop({
     );
   };
 
-  const renderItemCard = (item: ClothingItem, isLocked: boolean = false) => {
+  const renderBuyItemCard = (item: ClothingItem, isLocked: boolean = false) => {
     const owned = alreadyOwned(item);
     const affordable = canAfford(item);
     const price = calculatePrice(item);
@@ -264,6 +310,93 @@ export function ClothingShop({
     );
   };
 
+  const renderSellItemCard = (wardrobeItem: { item: ClothingItem; acquiredFrom: string; timesWorn: number }) => {
+    const item = wardrobeItem.item;
+    const sellPrice = calculateSellPrice(item);
+    const basePrice = Math.floor(item.value * (BASE_SELL_PERCENTAGE / 100));
+    const hasBonus = sellBonus > 0;
+
+    return (
+      <motion.div
+        key={item.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        className={`
+          relative p-3 rounded-lg border transition-all hover:shadow-md
+          ${getRarityBgColor(item.rarity)}
+        `}
+      >
+        {/* Rarity indicator */}
+        <div className="absolute top-2 right-2">
+          <Badge variant="outline" className={`text-xs ${getRarityColor(item.rarity)}`}>
+            {item.rarity}
+          </Badge>
+        </div>
+
+        {/* Slot icon */}
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-md bg-background/50 border">
+            {SLOT_ICONS[item.slot]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-sm truncate pr-16">{item.name}</h4>
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+              {item.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-2">
+          {renderStats(item.stats)}
+        </div>
+
+        {/* Acquisition info */}
+        <div className="mt-2 flex items-center gap-2">
+          <Badge variant="outline" className="text-xs capitalize">
+            {item.style}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            From: {wardrobeItem.acquiredFrom}
+          </span>
+          {wardrobeItem.timesWorn > 0 && (
+            <span className="text-xs text-muted-foreground">
+              • Worn {wardrobeItem.timesWorn}x
+            </span>
+          )}
+        </div>
+
+        {/* Sell price and action */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {hasBonus && (
+              <span className="text-xs text-muted-foreground line-through">{basePrice}g</span>
+            )}
+            <span className="font-medium text-amber-500">
+              +{sellPrice}g
+            </span>
+            {hasBonus && (
+              <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-500">
+                +{sellBonus}%
+              </Badge>
+            )}
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleSell(item)}
+            className="gap-1 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+          >
+            <Coins className="w-3 h-3" />
+            Sell
+          </Button>
+        </div>
+      </motion.div>
+    );
+  };
+
   const shopContent = (
     <div className="flex flex-col h-full">
       {/* Header with reputation */}
@@ -271,7 +404,7 @@ export function ClothingShop({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold">Fashion Boutique</h3>
-            <p className="text-sm text-muted-foreground">Browse exclusive apparel</p>
+            <p className="text-sm text-muted-foreground">Buy & sell exclusive apparel</p>
           </div>
           <div className="text-right">
             <div className="flex items-center gap-2">
@@ -282,8 +415,32 @@ export function ClothingShop({
           </div>
         </div>
 
-        {/* Discount banner */}
-        {discount > 0 && (
+        {/* Buy/Sell mode toggle */}
+        <div className="mt-3">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={shopMode === 'buy' ? 'default' : 'outline'}
+              onClick={() => setShopMode('buy')}
+              className="flex-1 gap-1"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Buy
+            </Button>
+            <Button
+              size="sm"
+              variant={shopMode === 'sell' ? 'default' : 'outline'}
+              onClick={() => setShopMode('sell')}
+              className="flex-1 gap-1"
+            >
+              <Coins className="w-4 h-4" />
+              Sell
+            </Button>
+          </div>
+        </div>
+
+        {/* Discount/Bonus banner */}
+        {shopMode === 'buy' && discount > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -291,6 +448,18 @@ export function ClothingShop({
           >
             <Sparkles className="w-4 h-4 inline mr-1" />
             Fashion Insider: {discount}% discount on all items!
+          </motion.div>
+        )}
+        
+        {shopMode === 'sell' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="mt-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-500 text-sm"
+          >
+            <Coins className="w-4 h-4 inline mr-1" />
+            Sell Rate: {sellPercentage}% of item value
+            {sellBonus > 0 && <span className="ml-1">(+{sellBonus}% from reputation)</span>}
           </motion.div>
         )}
 
@@ -319,40 +488,65 @@ export function ClothingShop({
       {/* Items grid */}
       <ScrollArea className="flex-1">
         <div className="space-y-3 pr-4">
-          <AnimatePresence mode="popLayout">
-            {availableItems.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-8 text-muted-foreground"
-              >
-                <Shirt className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No items available in this category</p>
-                <p className="text-xs">Increase your fashion reputation to unlock more!</p>
-              </motion.div>
-            ) : (
-              availableItems.map(item => renderItemCard(item))
-            )}
-          </AnimatePresence>
+          {shopMode === 'buy' ? (
+            <>
+              <AnimatePresence mode="popLayout">
+                {availableItems.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    <Shirt className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No items available in this category</p>
+                    <p className="text-xs">Increase your fashion reputation to unlock more!</p>
+                  </motion.div>
+                ) : (
+                  availableItems.map(item => renderBuyItemCard(item))
+                )}
+              </AnimatePresence>
 
-          {/* Locked items preview */}
-          {lockedItems.length > 0 && (
-            <div className="mt-6 pt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Unlock with higher reputation
-              </h4>
-              <div className="space-y-3 opacity-60">
-                {lockedItems.map(item => renderItemCard(item, true))}
-              </div>
-            </div>
+              {/* Locked items preview */}
+              {lockedItems.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Unlock with higher reputation
+                  </h4>
+                  <div className="space-y-3 opacity-60">
+                    {lockedItems.map(item => renderBuyItemCard(item, true))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {sellableItems.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  <Shirt className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No items to sell</p>
+                  <p className="text-xs">Unequip items first, or find more clothing!</p>
+                </motion.div>
+              ) : (
+                sellableItems.map(wi => renderSellItemCard(wi))
+              )}
+            </AnimatePresence>
           )}
         </div>
       </ScrollArea>
 
       {/* Reputation progress */}
       <div className="pt-4 border-t mt-4">
-        <div className="text-xs text-muted-foreground mb-2">Fashion Progress</div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-muted-foreground">Fashion Progress</span>
+          {shopMode === 'sell' && (
+            <span className="text-xs text-amber-500">Higher rep = better prices</span>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           {FASHION_LEVELS.map((level, idx) => (
             <TooltipProvider key={level.level}>
