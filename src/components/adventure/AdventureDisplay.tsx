@@ -2099,6 +2099,7 @@ export function AdventureDisplay({
         campaignId={campaignId}
         open={showBookmarks}
         onOpenChange={setShowBookmarks}
+        trigger={<></>}
         onJumpToEntry={(entryId, entryIndex) => {
           const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
           if (!viewport) return;
