@@ -1,5 +1,5 @@
-// Radial Quick Menu - Gear icon that opens a circular menu
-// Items fan out in a radial pattern with glowing hover animations
+// Radial Quick Menu - Skyrim-style centered radial menu
+// Gear icon in header opens a full-screen centered radial menu
 
 import React, { useState, useCallback } from 'react';
 import { 
@@ -7,6 +7,7 @@ import {
   Clock, CloudRain, RotateCcw, X, Info, FolderOpen, Sliders
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface RadialQuickMenuProps {
   onOpenSettings: () => void;
@@ -26,6 +27,21 @@ interface RadialMenuItem {
   onClick: () => void;
   color: string;
   glowColor: string;
+}
+
+// Gear button for the header
+export function RadialMenuTrigger({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onClick}
+      className="md:hidden h-6 w-6 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
+      title="Quick Menu"
+    >
+      <Settings className="w-4 h-4 transition-transform duration-300 hover:rotate-90" />
+    </Button>
+  );
 }
 
 export function RadialQuickMenu({
@@ -52,83 +68,91 @@ export function RadialQuickMenu({
     setIsOpen(false);
   }, []);
 
+  // Listen for external trigger
+  React.useEffect(() => {
+    const handleOpenRadialMenu = () => {
+      setIsOpen(true);
+    };
+    
+    window.addEventListener('open-radial-menu', handleOpenRadialMenu);
+    return () => window.removeEventListener('open-radial-menu', handleOpenRadialMenu);
+  }, []);
+
   const menuItems: RadialMenuItem[] = [
     {
-      icon: <ScrollText className="w-5 h-5" />,
+      icon: <ScrollText className="w-6 h-6" />,
       label: 'Character',
       onClick: onOpenCharacterSheet,
       color: 'text-primary',
-      glowColor: 'shadow-primary/60',
+      glowColor: 'hsl(var(--primary))',
     },
     {
-      icon: <Backpack className="w-5 h-5" />,
+      icon: <Backpack className="w-6 h-6" />,
       label: 'Inventory',
       onClick: onOpenInventory,
       color: 'text-amber-400',
-      glowColor: 'shadow-amber-400/60',
+      glowColor: 'rgb(251 191 36)',
     },
     {
-      icon: <Clock className="w-5 h-5" />,
+      icon: <Clock className="w-6 h-6" />,
       label: 'Time',
       onClick: onOpenTime,
       color: 'text-yellow-400',
-      glowColor: 'shadow-yellow-400/60',
+      glowColor: 'rgb(250 204 21)',
     },
     {
-      icon: <CloudRain className="w-5 h-5" />,
+      icon: <CloudRain className="w-6 h-6" />,
       label: 'Weather',
       onClick: onOpenWeather,
       color: 'text-blue-400',
-      glowColor: 'shadow-blue-400/60',
+      glowColor: 'rgb(96 165 250)',
     },
     {
-      icon: <Bookmark className="w-5 h-5" />,
+      icon: <Bookmark className="w-6 h-6" />,
       label: 'Bookmarks',
       onClick: onOpenBookmarks,
       color: 'text-purple-400',
-      glowColor: 'shadow-purple-400/60',
+      glowColor: 'rgb(192 132 252)',
     },
     {
-      icon: <Info className="w-5 h-5" />,
+      icon: <Info className="w-6 h-6" />,
       label: 'Recap',
       onClick: onOpenRecap,
       color: 'text-green-400',
-      glowColor: 'shadow-green-400/60',
+      glowColor: 'rgb(74 222 128)',
     },
     {
-      icon: <FolderOpen className="w-5 h-5" />,
+      icon: <FolderOpen className="w-6 h-6" />,
       label: 'Saves',
       onClick: onOpenSaves,
       color: 'text-cyan-400',
-      glowColor: 'shadow-cyan-400/60',
+      glowColor: 'rgb(34 211 238)',
     },
     {
-      icon: <Sliders className="w-5 h-5" />,
+      icon: <Sliders className="w-6 h-6" />,
       label: 'Settings',
       onClick: onOpenSettings,
       color: 'text-muted-foreground',
-      glowColor: 'shadow-foreground/40',
+      glowColor: 'hsl(var(--muted-foreground))',
     },
     {
-      icon: <RotateCcw className="w-5 h-5" />,
+      icon: <RotateCcw className="w-6 h-6" />,
       label: 'New Story',
       onClick: onRestart,
       color: 'text-destructive',
-      glowColor: 'shadow-destructive/60',
+      glowColor: 'hsl(var(--destructive))',
     },
   ];
 
-  // Calculate radial positions for menu items
+  // Calculate radial positions - full circle around center
   const getItemPosition = (index: number, total: number) => {
-    // Start from top (-90 degrees) and go clockwise
-    const startAngle = -90;
-    const spreadAngle = 180; // Half circle (right side)
-    const angleStep = spreadAngle / (total - 1);
+    const startAngle = -90; // Start from top
+    const angleStep = 360 / total;
     const angle = startAngle + (angleStep * index);
     const radians = (angle * Math.PI) / 180;
     
-    // Radius from center
-    const radius = 90;
+    // Larger radius for Skyrim-style menu
+    const radius = 120;
     
     return {
       x: Math.cos(radians) * radius,
@@ -136,22 +160,23 @@ export function RadialQuickMenu({
     };
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="md:hidden fixed bottom-20 right-4 z-50">
-      {/* Backdrop when open */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={toggleMenu}
-        />
-      )}
+    <div className="md:hidden fixed inset-0 z-[100] flex items-center justify-center">
+      {/* Backdrop with blur */}
+      <div 
+        className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+        onClick={toggleMenu}
+      />
       
-      {/* Radial menu items */}
+      {/* Center container */}
       <div className="relative">
+        {/* Radial menu items */}
         {menuItems.map((item, index) => {
           const position = getItemPosition(index, menuItems.length);
           const isHovered = hoveredIndex === index;
-          const delay = index * 30; // Staggered animation
+          const delay = index * 40; // Staggered animation
           
           return (
             <button
@@ -160,105 +185,89 @@ export function RadialQuickMenu({
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
               onTouchStart={() => setHoveredIndex(index)}
-              onTouchEnd={() => setHoveredIndex(null)}
+              onTouchEnd={() => {
+                // Small delay before clearing hover to show the effect
+                setTimeout(() => setHoveredIndex(null), 100);
+              }}
               className={cn(
                 "absolute flex flex-col items-center justify-center",
-                "w-12 h-12 rounded-full",
-                "bg-card/95 backdrop-blur-md border border-border/50",
+                "w-16 h-16 rounded-full",
+                "bg-card/90 backdrop-blur-md border-2 border-border/50",
                 "transition-all duration-300 ease-out",
-                isOpen ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
-                isHovered && "scale-110 border-primary/50",
+                "-translate-x-1/2 -translate-y-1/2",
                 item.color
               )}
               style={{
-                transform: isOpen 
-                  ? `translate(${position.x}px, ${position.y}px) scale(${isHovered ? 1.15 : 1})`
-                  : 'translate(0, 0) scale(0)',
-                transitionDelay: isOpen ? `${delay}ms` : '0ms',
+                left: position.x,
+                top: position.y,
+                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${isHovered ? 1.2 : 1})`,
+                transitionDelay: `${delay}ms`,
                 boxShadow: isHovered 
-                  ? `0 0 20px 4px var(--glow-color), 0 0 40px 8px var(--glow-color-faint)`
-                  : 'none',
-                '--glow-color': isHovered ? getGlowColor(item.color) : 'transparent',
-                '--glow-color-faint': isHovered ? getGlowColorFaint(item.color) : 'transparent',
-              } as React.CSSProperties}
+                  ? `0 0 30px 8px ${item.glowColor}, 0 0 60px 16px ${item.glowColor}40, inset 0 0 20px ${item.glowColor}30`
+                  : '0 4px 20px rgba(0,0,0,0.4)',
+                borderColor: isHovered ? item.glowColor : undefined,
+                animation: isHovered ? 'pulse 1.5s infinite' : undefined,
+              }}
             >
               <div className={cn(
                 "transition-all duration-200",
-                isHovered && "animate-pulse"
+                isHovered && "scale-110"
               )}>
                 {item.icon}
               </div>
               
-              {/* Label tooltip on hover */}
-              {isHovered && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                  <span className="px-2 py-1 text-xs font-medium bg-card/95 rounded-md border border-border/50 shadow-lg animate-fade-in">
-                    {item.label}
-                  </span>
-                </div>
-              )}
+              {/* Label - always visible for Skyrim style */}
+              <span className={cn(
+                "absolute -bottom-7 left-1/2 -translate-x-1/2",
+                "text-xs font-medium whitespace-nowrap",
+                "transition-all duration-200",
+                isHovered ? "text-foreground scale-110" : "text-muted-foreground"
+              )}>
+                {item.label}
+              </span>
             </button>
           );
         })}
         
-        {/* Central gear button */}
+        {/* Central close button */}
         <button
           onClick={toggleMenu}
           className={cn(
             "relative z-10 flex items-center justify-center",
-            "w-14 h-14 rounded-full",
-            "bg-gradient-to-br from-primary/90 to-primary/70",
+            "w-20 h-20 rounded-full",
+            "bg-gradient-to-br from-card/95 to-card/80",
             "border-2 border-primary/50",
-            "shadow-lg shadow-primary/30",
+            "shadow-2xl",
             "transition-all duration-300",
-            "hover:shadow-xl hover:shadow-primary/40",
-            "active:scale-95",
-            isOpen && "rotate-180 bg-gradient-to-br from-destructive/90 to-destructive/70 border-destructive/50 shadow-destructive/30"
+            "hover:border-primary hover:scale-105"
           )}
+          style={{
+            boxShadow: '0 0 40px 10px hsl(var(--primary) / 0.3), 0 0 80px 20px hsl(var(--primary) / 0.15)'
+          }}
         >
-          {isOpen ? (
-            <X className="w-6 h-6 text-white" />
-          ) : (
-            <Settings className={cn(
-              "w-6 h-6 text-white",
-              "transition-transform duration-700",
-              "hover:rotate-90"
-            )} />
-          )}
-          
-          {/* Pulsing ring when closed */}
-          {!isOpen && (
-            <div className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping" />
-          )}
+          <X className="w-8 h-8 text-primary" />
         </button>
+        
+        {/* Decorative ring */}
+        <div 
+          className="absolute inset-0 w-20 h-20 rounded-full border border-primary/20 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none"
+          style={{
+            width: '280px',
+            height: '280px',
+            animation: 'spin 30s linear infinite',
+          }}
+        />
+        <div 
+          className="absolute inset-0 w-20 h-20 rounded-full border border-primary/10 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none"
+          style={{
+            width: '320px',
+            height: '320px',
+            animation: 'spin 45s linear infinite reverse',
+          }}
+        />
       </div>
     </div>
   );
-}
-
-// Helper to get glow color from text color class
-function getGlowColor(colorClass: string): string {
-  const colorMap: Record<string, string> = {
-    'text-primary': 'hsl(var(--primary))',
-    'text-amber-400': 'rgb(251 191 36)',
-    'text-yellow-400': 'rgb(250 204 21)',
-    'text-blue-400': 'rgb(96 165 250)',
-    'text-purple-400': 'rgb(192 132 252)',
-    'text-green-400': 'rgb(74 222 128)',
-    'text-cyan-400': 'rgb(34 211 238)',
-    'text-muted-foreground': 'hsl(var(--muted-foreground))',
-    'text-destructive': 'hsl(var(--destructive))',
-  };
-  return colorMap[colorClass] || 'hsl(var(--primary))';
-}
-
-function getGlowColorFaint(colorClass: string): string {
-  const color = getGlowColor(colorClass);
-  // Return a more transparent version
-  if (color.startsWith('rgb')) {
-    return color.replace('rgb', 'rgba').replace(')', ' / 0.3)');
-  }
-  return color.replace(')', ' / 0.3)');
 }
 
 export default RadialQuickMenu;
