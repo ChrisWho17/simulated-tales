@@ -1,16 +1,17 @@
 // Achievement Rewards System - handles XP bonuses, special items, and cosmetic unlocks
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Gift, Sparkles, Star, Crown, Zap, Shield, Sword, 
-  Palette, X, Check, PartyPopper, Gem
+  Palette, X, Check, PartyPopper, Gem, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Achievement } from './Achievements';
+import { playerStateManager } from '@/game/playerStateManager';
 
 // Reward types
 export type RewardType = 'xp' | 'item' | 'cosmetic' | 'title' | 'badge_frame' | 'currency';
@@ -160,11 +161,12 @@ export const ACHIEVEMENT_REWARDS: Record<string, AchievementReward[]> = {
   ],
 };
 
-// Storage key for claimed rewards
+// Storage keys
 const CLAIMED_REWARDS_KEY = 'untold-claimed-rewards';
 const EQUIPPED_COSMETICS_KEY = 'untold-equipped-cosmetics';
+const CAMPAIGN_REDEEMED_KEY = 'untold-campaign-redeemed-rewards';
 
-// Get claimed rewards from storage
+// Get claimed rewards from storage (globally claimed)
 export function getClaimedRewards(): Set<string> {
   try {
     const saved = localStorage.getItem(CLAIMED_REWARDS_KEY);
@@ -177,6 +179,31 @@ export function getClaimedRewards(): Set<string> {
 // Save claimed rewards
 export function saveClaimedRewards(rewards: Set<string>) {
   localStorage.setItem(CLAIMED_REWARDS_KEY, JSON.stringify([...rewards]));
+}
+
+// Get per-campaign redeemed rewards
+export function getCampaignRedeemedRewards(): Record<string, Set<string>> {
+  try {
+    const saved = localStorage.getItem(CAMPAIGN_REDEEMED_KEY);
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    const result: Record<string, Set<string>> = {};
+    for (const [campaignId, rewards] of Object.entries(parsed)) {
+      result[campaignId] = new Set(rewards as string[]);
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+// Save per-campaign redeemed rewards
+export function saveCampaignRedeemedRewards(rewards: Record<string, Set<string>>) {
+  const serializable: Record<string, string[]> = {};
+  for (const [campaignId, rewardSet] of Object.entries(rewards)) {
+    serializable[campaignId] = [...rewardSet];
+  }
+  localStorage.setItem(CAMPAIGN_REDEEMED_KEY, JSON.stringify(serializable));
 }
 
 // Get equipped cosmetics
@@ -194,13 +221,15 @@ export function saveEquippedCosmetics(cosmetics: Record<string, string>) {
   localStorage.setItem(EQUIPPED_COSMETICS_KEY, JSON.stringify(cosmetics));
 }
 
-// Reward claiming modal
+// Reward claiming modal with campaign redemption
 interface RewardClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
   achievement: Achievement;
   rewards: AchievementReward[];
   onClaim: (rewards: AchievementReward[]) => void;
+  campaignId?: string; // Current campaign for per-campaign redemption
+  alreadyRedeemedInCampaign?: boolean;
 }
 
 export function RewardClaimModal({ 
@@ -208,13 +237,37 @@ export function RewardClaimModal({
   onClose, 
   achievement, 
   rewards, 
-  onClaim 
+  onClaim,
+  campaignId,
+  alreadyRedeemedInCampaign = false
 }: RewardClaimModalProps) {
   const [claimed, setClaimed] = useState(false);
+  const [redeemed, setRedeemed] = useState(false);
+  const [showRedeemOption, setShowRedeemOption] = useState(false);
   
   const handleClaim = () => {
     setClaimed(true);
     onClaim(rewards);
+    
+    // After claiming, show redeem option if in a campaign
+    if (campaignId && !alreadyRedeemedInCampaign) {
+      setShowRedeemOption(true);
+    } else {
+      setTimeout(onClose, 1500);
+    }
+  };
+  
+  const handleRedeem = () => {
+    if (!campaignId) return;
+    
+    // Apply rewards to player state
+    applyRewardsToPlayerState(rewards);
+    setRedeemed(true);
+    
+    toast.success('Rewards applied to your character!', {
+      description: 'XP, items, and currency have been added.',
+    });
+    
     setTimeout(onClose, 1500);
   };
   
@@ -243,9 +296,22 @@ export function RewardClaimModal({
             <Gift className="w-5 h-5 text-amber-400" />
             Achievement Rewards
           </DialogTitle>
+          {campaignId && !alreadyRedeemedInCampaign && (
+            <DialogDescription className="text-xs">
+              You can redeem these rewards once per campaign
+            </DialogDescription>
+          )}
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Already redeemed warning */}
+          {alreadyRedeemedInCampaign && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>Already redeemed in this campaign</span>
+            </div>
+          )}
+          
           {/* Achievement info */}
           <div className={cn(
             "p-4 rounded-lg border-2 text-center",
@@ -269,7 +335,7 @@ export function RewardClaimModal({
                   transition={{ delay: index * 0.1 }}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg border",
-                    claimed && "bg-green-500/10 border-green-500/30"
+                    (claimed || redeemed) && "bg-green-500/10 border-green-500/30"
                   )}
                 >
                   <div className={cn(
@@ -285,7 +351,7 @@ export function RewardClaimModal({
                     </div>
                     <p className="text-xs text-muted-foreground">{reward.description}</p>
                   </div>
-                  {claimed && (
+                  {(claimed || redeemed) && (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -299,8 +365,8 @@ export function RewardClaimModal({
             })}
           </div>
           
-          {/* Claim button */}
-          {!claimed ? (
+          {/* Buttons */}
+          {!claimed && !showRedeemOption ? (
             <Button 
               onClick={handleClaim} 
               className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
@@ -308,6 +374,31 @@ export function RewardClaimModal({
               <PartyPopper className="w-4 h-4" />
               Claim Rewards
             </Button>
+          ) : showRedeemOption && !redeemed ? (
+            <div className="space-y-2">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center text-sm text-green-500 mb-2"
+              >
+                <Check className="w-5 h-5 inline mr-1" />
+                Rewards claimed!
+              </motion.div>
+              <Button 
+                onClick={handleRedeem}
+                className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+              >
+                <Zap className="w-4 h-4" />
+                Redeem for Current Campaign
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={onClose}
+                className="w-full"
+              >
+                Save for Later
+              </Button>
+            </div>
           ) : (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -315,7 +406,9 @@ export function RewardClaimModal({
               className="text-center py-4"
             >
               <Sparkles className="w-8 h-8 text-amber-400 mx-auto mb-2 animate-pulse" />
-              <p className="text-sm text-green-500 font-medium">Rewards Claimed!</p>
+              <p className="text-sm text-green-500 font-medium">
+                {redeemed ? 'Rewards Applied to Character!' : 'Rewards Claimed!'}
+              </p>
             </motion.div>
           )}
         </div>
@@ -324,10 +417,45 @@ export function RewardClaimModal({
   );
 }
 
-// Hook for managing achievement rewards
-export function useAchievementRewards() {
+// Apply rewards directly to player state
+export function applyRewardsToPlayerState(rewards: AchievementReward[]): void {
+  for (const reward of rewards) {
+    switch (reward.type) {
+      case 'xp':
+        if (reward.value) {
+          playerStateManager.addXP(reward.value, `Achievement: ${reward.name}`);
+          console.log(`[AchievementRewards] Applied ${reward.value} XP`);
+        }
+        break;
+      case 'currency':
+        if (reward.value) {
+          playerStateManager.addCurrency(reward.value, `Achievement: ${reward.name}`);
+          console.log(`[AchievementRewards] Applied ${reward.value} currency`);
+        }
+        break;
+      case 'item':
+        playerStateManager.addItem({
+          id: reward.id,
+          name: reward.name,
+          description: reward.description,
+          category: 'reward',
+          value: reward.value || 50,
+          stackable: false,
+        });
+        console.log(`[AchievementRewards] Added item: ${reward.name}`);
+        break;
+      // Cosmetics and titles are stored separately, not in player state
+      default:
+        break;
+    }
+  }
+}
+
+// Hook for managing achievement rewards with per-campaign tracking
+export function useAchievementRewards(campaignId?: string) {
   const [claimedRewards, setClaimedRewards] = useState<Set<string>>(() => getClaimedRewards());
   const [equippedCosmetics, setEquippedCosmetics] = useState<Record<string, string>>(() => getEquippedCosmetics());
+  const [campaignRedeemed, setCampaignRedeemed] = useState<Record<string, Set<string>>>(() => getCampaignRedeemedRewards());
   
   const claimReward = useCallback((rewardId: string) => {
     setClaimedRewards(prev => {
@@ -337,6 +465,48 @@ export function useAchievementRewards() {
       return newSet;
     });
   }, []);
+  
+  // Redeem rewards for a specific campaign (applies to player state)
+  const redeemForCampaign = useCallback((achievementId: string, rewards: AchievementReward[], targetCampaignId?: string) => {
+    const cid = targetCampaignId || campaignId;
+    if (!cid) {
+      console.warn('[AchievementRewards] No campaign ID provided for redemption');
+      return false;
+    }
+    
+    // Check if already redeemed
+    if (campaignRedeemed[cid]?.has(achievementId)) {
+      console.log(`[AchievementRewards] Already redeemed ${achievementId} in campaign ${cid}`);
+      return false;
+    }
+    
+    // Apply rewards to player state
+    applyRewardsToPlayerState(rewards);
+    
+    // Mark as redeemed for this campaign
+    setCampaignRedeemed(prev => {
+      const newRedeemed = { ...prev };
+      if (!newRedeemed[cid]) {
+        newRedeemed[cid] = new Set();
+      }
+      newRedeemed[cid] = new Set([...newRedeemed[cid], achievementId]);
+      saveCampaignRedeemedRewards(newRedeemed);
+      return newRedeemed;
+    });
+    
+    toast.success('Rewards applied!', {
+      description: 'XP, items, and currency have been added to your character.',
+    });
+    
+    return true;
+  }, [campaignId, campaignRedeemed]);
+  
+  // Check if achievement was redeemed in current campaign
+  const isRedeemedInCampaign = useCallback((achievementId: string, targetCampaignId?: string) => {
+    const cid = targetCampaignId || campaignId;
+    if (!cid) return false;
+    return campaignRedeemed[cid]?.has(achievementId) || false;
+  }, [campaignId, campaignRedeemed]);
   
   const equipCosmetic = useCallback((slot: string, cosmeticId: string) => {
     setEquippedCosmetics(prev => {
@@ -360,6 +530,10 @@ export function useAchievementRewards() {
     return rewards.filter(r => !claimedRewards.has(r.id));
   }, [claimedRewards]);
   
+  const getRewardsForAchievement = useCallback((achievementId: string) => {
+    return ACHIEVEMENT_REWARDS[achievementId] || [];
+  }, []);
+  
   const getAllClaimedRewards = useCallback(() => {
     const all: AchievementReward[] = [];
     for (const [, rewards] of Object.entries(ACHIEVEMENT_REWARDS)) {
@@ -376,15 +550,38 @@ export function useAchievementRewards() {
     return getAllClaimedRewards().filter(r => r.type === type);
   }, [getAllClaimedRewards]);
   
+  // Get list of achievements with unclaimed rewards
+  const getAchievementsWithRewards = useCallback((unlockedAchievementIds: string[]) => {
+    return unlockedAchievementIds.filter(id => {
+      const rewards = ACHIEVEMENT_REWARDS[id];
+      return rewards && rewards.length > 0;
+    });
+  }, []);
+  
+  // Get count of unredeemed rewards for current campaign
+  const getUnredeemedCount = useCallback((unlockedAchievementIds: string[]) => {
+    if (!campaignId) return 0;
+    return unlockedAchievementIds.filter(id => {
+      const rewards = ACHIEVEMENT_REWARDS[id];
+      return rewards && rewards.length > 0 && !isRedeemedInCampaign(id);
+    }).length;
+  }, [campaignId, isRedeemedInCampaign]);
+  
   return {
     claimedRewards,
     equippedCosmetics,
+    campaignRedeemed,
     claimReward,
+    redeemForCampaign,
+    isRedeemedInCampaign,
     equipCosmetic,
     unequipCosmetic,
     getUnclaimedRewards,
+    getRewardsForAchievement,
     getAllClaimedRewards,
     getClaimedByType,
+    getAchievementsWithRewards,
+    getUnredeemedCount,
   };
 }
 
