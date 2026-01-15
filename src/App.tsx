@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
+import AchievementGallery from "./pages/AchievementGallery";
 import "@/styles/untold-story-engine.css";
 
 // Run storage migration on app startup
@@ -58,6 +59,7 @@ const App = () => (
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/loadout-test" element={<LoadoutTest />} />
                           <Route path="/inventory-test" element={<InventoryTest />} />
+                          <Route path="/achievements" element={<AchievementGallery />} />
                           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                           <Route path="*" element={<NotFound />} />
                         </Routes>

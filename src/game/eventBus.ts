@@ -72,7 +72,19 @@ export type GameEventType =
   | 'MOVE_SYNC_COMPLETE'
   | 'ENVIRONMENT_CHANGED'
   | 'PLAYER_STATE_CHANGED'
-  | 'GENRE_VIOLATION_DETECTED';
+  | 'GENRE_VIOLATION_DETECTED'
+  // Trade/Commerce events
+  | 'TRADE_COMPLETED'
+  | 'ITEM_SOLD'
+  | 'ITEM_PURCHASED'
+  // Collector events
+  | 'RARE_ITEM_FOUND'
+  | 'LEGENDARY_ITEM_FOUND'
+  | 'INVENTORY_CHANGED'
+  // Diplomat events
+  | 'ALLIANCE_FORMED'
+  | 'CONFLICT_RESOLVED'
+  | 'FACTION_REPUTATION_CHANGED';
 
 // ============= EVENT PAYLOAD INTERFACES =============
 

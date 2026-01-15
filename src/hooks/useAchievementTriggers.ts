@@ -13,6 +13,17 @@ interface TrackedProgress {
   choicesMade: number;
   persuasionSuccesses: number;
   combatsDeescalated: number;
+  // Merchant progress
+  tradesCompleted: number;
+  tradeProfits: number;
+  // Collector progress
+  rareItemsFound: number;
+  itemCategories: Set<string>;
+  totalItemsOwned: number;
+  // Diplomat progress
+  alliancesFormed: number;
+  conflictsResolved: number;
+  factionsWithPositiveStanding: Set<string>;
 }
 
 export function useAchievementTriggers() {
@@ -25,6 +36,17 @@ export function useAchievementTriggers() {
     choicesMade: 0,
     persuasionSuccesses: 0,
     combatsDeescalated: 0,
+    // Merchant
+    tradesCompleted: 0,
+    tradeProfits: 0,
+    // Collector
+    rareItemsFound: 0,
+    itemCategories: new Set(),
+    totalItemsOwned: 0,
+    // Diplomat
+    alliancesFormed: 0,
+    conflictsResolved: 0,
+    factionsWithPositiveStanding: new Set(),
   });
   
   // Load progress from localStorage
@@ -41,6 +63,17 @@ export function useAchievementTriggers() {
           choicesMade: parsed.choicesMade || 0,
           persuasionSuccesses: parsed.persuasionSuccesses || 0,
           combatsDeescalated: parsed.combatsDeescalated || 0,
+          // Merchant
+          tradesCompleted: parsed.tradesCompleted || 0,
+          tradeProfits: parsed.tradeProfits || 0,
+          // Collector
+          rareItemsFound: parsed.rareItemsFound || 0,
+          itemCategories: new Set(parsed.itemCategories || []),
+          totalItemsOwned: parsed.totalItemsOwned || 0,
+          // Diplomat
+          alliancesFormed: parsed.alliancesFormed || 0,
+          conflictsResolved: parsed.conflictsResolved || 0,
+          factionsWithPositiveStanding: new Set(parsed.factionsWithPositiveStanding || []),
         };
       }
     } catch (e) {
@@ -59,6 +92,17 @@ export function useAchievementTriggers() {
         choicesMade: progressRef.current.choicesMade,
         persuasionSuccesses: progressRef.current.persuasionSuccesses,
         combatsDeescalated: progressRef.current.combatsDeescalated,
+        // Merchant
+        tradesCompleted: progressRef.current.tradesCompleted,
+        tradeProfits: progressRef.current.tradeProfits,
+        // Collector
+        rareItemsFound: progressRef.current.rareItemsFound,
+        itemCategories: Array.from(progressRef.current.itemCategories),
+        totalItemsOwned: progressRef.current.totalItemsOwned,
+        // Diplomat
+        alliancesFormed: progressRef.current.alliancesFormed,
+        conflictsResolved: progressRef.current.conflictsResolved,
+        factionsWithPositiveStanding: Array.from(progressRef.current.factionsWithPositiveStanding),
       };
       localStorage.setItem('untold-achievement-progress', JSON.stringify(toSave));
     } catch (e) {
@@ -343,6 +387,116 @@ export function useAchievementTriggers() {
     }
   }, [achievements]);
 
+  // Merchant triggers
+  const onTradeCompleted = useCallback((profit: number = 0, isBlackMarket: boolean = false) => {
+    if (!achievements) return;
+    
+    progressRef.current.tradesCompleted++;
+    progressRef.current.tradeProfits += Math.max(0, profit);
+    const trades = progressRef.current.tradesCompleted;
+    
+    // First trade
+    if (trades === 1) {
+      achievements.unlockAchievement('first_sale');
+    }
+    
+    // Progress achievements
+    achievements.updateProgress('haggler', trades);
+    achievements.updateProgress('shrewd_trader', trades);
+    achievements.updateProgress('merchant_prince', progressRef.current.tradeProfits);
+    
+    // Black market achievement
+    if (isBlackMarket) {
+      achievements.unlockAchievement('black_market');
+    }
+    
+    saveProgress();
+  }, [achievements, saveProgress]);
+
+  // Collector triggers
+  const onRareItemFound = useCallback((itemRarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary', category?: string) => {
+    if (!achievements) return;
+    
+    // First rare item
+    if (['rare', 'epic', 'legendary'].includes(itemRarity) && progressRef.current.rareItemsFound === 0) {
+      achievements.unlockAchievement('magpie');
+    }
+    
+    if (['rare', 'epic', 'legendary'].includes(itemRarity)) {
+      progressRef.current.rareItemsFound++;
+      achievements.updateProgress('treasure_hunter', progressRef.current.rareItemsFound);
+    }
+    
+    // Legendary item
+    if (itemRarity === 'legendary') {
+      achievements.unlockAchievement('legendary_finder');
+    }
+    
+    // Track categories
+    if (category) {
+      progressRef.current.itemCategories.add(category);
+      achievements.updateProgress('curator', progressRef.current.itemCategories.size);
+    }
+    
+    saveProgress();
+  }, [achievements, saveProgress]);
+
+  const onInventoryChanged = useCallback((totalItems: number) => {
+    if (!achievements) return;
+    
+    progressRef.current.totalItemsOwned = totalItems;
+    achievements.updateProgress('hoarder', totalItems);
+    saveProgress();
+  }, [achievements, saveProgress]);
+
+  // Diplomat triggers
+  const onAllianceFormed = useCallback((factionId?: string) => {
+    if (!achievements) return;
+    
+    progressRef.current.alliancesFormed++;
+    
+    // First alliance
+    if (progressRef.current.alliancesFormed === 1) {
+      achievements.unlockAchievement('ambassador');
+    }
+    
+    achievements.updateProgress('grand_alliance', progressRef.current.alliancesFormed);
+    
+    if (factionId) {
+      progressRef.current.factionsWithPositiveStanding.add(factionId);
+      achievements.updateProgress('faction_friend', progressRef.current.factionsWithPositiveStanding.size);
+    }
+    
+    saveProgress();
+  }, [achievements, saveProgress]);
+
+  const onConflictResolved = useCallback(() => {
+    if (!achievements) return;
+    
+    progressRef.current.conflictsResolved++;
+    achievements.updateProgress('peacekeeper', progressRef.current.conflictsResolved);
+    saveProgress();
+  }, [achievements, saveProgress]);
+
+  const onFactionStandingChanged = useCallback((factionId: string, isPositive: boolean, allFactionsPositive: boolean = false) => {
+    if (!achievements) return;
+    
+    if (isPositive) {
+      progressRef.current.factionsWithPositiveStanding.add(factionId);
+    } else {
+      progressRef.current.factionsWithPositiveStanding.delete(factionId);
+    }
+    
+    achievements.updateProgress('faction_friend', progressRef.current.factionsWithPositiveStanding.size);
+    
+    // World peace - all factions positive
+    if (allFactionsPositive) {
+      achievements.unlockAchievement('world_peace');
+    }
+    
+    saveProgress();
+  }, [achievements, saveProgress]);
+
   return {
     onLocationVisited,
     onNPCMet,
@@ -354,6 +508,15 @@ export function useAchievementTriggers() {
     onPersuasionSuccess,
     onMaxTrustReached,
     onSessionTimeReached,
+    // Merchant
+    onTradeCompleted,
+    // Collector
+    onRareItemFound,
+    onInventoryChanged,
+    // Diplomat
+    onAllianceFormed,
+    onConflictResolved,
+    onFactionStandingChanged,
     isAvailable: !!achievements,
   };
 }
