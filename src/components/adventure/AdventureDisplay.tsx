@@ -1124,6 +1124,11 @@ export function AdventureDisplay({
             duration: 2000,
           });
           return;
+        case '/weather':
+        case '/w':
+          setShowWeatherModal(true);
+          setInput('');
+          return;
       }
       
       // Check for /checkself command (with optional parameters)
@@ -1828,15 +1833,83 @@ export function AdventureDisplay({
       {/* Input Area */}
       <div className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6">
         <div className="max-w-3xl mx-auto">
-          <div className="flex gap-3">
+          <div className="flex gap-3 relative">
+            {/* Command Autocomplete Dropdown */}
+            <CommandAutocomplete
+              inputValue={input}
+              onSelectCommand={(cmd) => {
+                setInput(cmd);
+                commandAutocomplete.close();
+                // Auto-submit the command
+                setTimeout(() => {
+                  const trimmed = cmd.toLowerCase();
+                  // Execute command immediately
+                  if (trimmed === '/inventory' || trimmed === '/inv' || trimmed === '/i') {
+                    setShowInventory(true);
+                    setInput('');
+                  } else if (trimmed === '/stats' || trimmed === '/character' || trimmed === '/char' || trimmed === '/c') {
+                    setShowCharacterSheet(true);
+                    setInput('');
+                  } else if (trimmed === '/bookmarks' || trimmed === '/bm') {
+                    setShowBookmarks(true);
+                    setInput('');
+                  } else if (trimmed === '/settings' || trimmed === '/options') {
+                    setShowSettings(true);
+                    setInput('');
+                  } else if (trimmed === '/roll' || trimmed === '/dice' || trimmed === '/r') {
+                    setShowQuickDiceRoll(true);
+                    setInput('');
+                  } else if (trimmed === '/relationships' || trimmed === '/rel' || trimmed === '/npcs') {
+                    setShowRelationshipsQuickView(true);
+                    setInput('');
+                  } else if (trimmed === '/weather' || trimmed === '/w') {
+                    setShowWeatherModal(true);
+                    setInput('');
+                  } else if (trimmed === '/recap') {
+                    setShowSessionRecap(true);
+                    setInput('');
+                  } else if (trimmed === '/map' || trimmed === '/m' || trimmed === '/location') {
+                    setShowMapPanel(prev => !prev);
+                    setInput('');
+                  } else if (trimmed === '/help' || trimmed === '/commands' || trimmed === '/?') {
+                    toast({
+                      title: '📖 Available Commands',
+                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /relationships • /bookmarks • /settings',
+                      duration: 5000,
+                    });
+                    setInput('');
+                  }
+                }, 10);
+              }}
+              visible={commandAutocomplete.visible}
+              onClose={commandAutocomplete.close}
+              selectedIndex={commandAutocomplete.selectedIndex}
+              onSelectedIndexChange={commandAutocomplete.setSelectedIndex}
+            />
+            
             <Input
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="What do you do? (try /recap for story summary)"
+              onChange={(e) => {
+                setInput(e.target.value);
+                commandAutocomplete.handleInputChange(e.target.value);
+              }}
+              placeholder="What do you do? (try /help for commands)"
               className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
               style={{ fontSize: '16px' }}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+              onKeyDown={(e) => {
+                // Handle autocomplete keyboard navigation first
+                const handled = commandAutocomplete.handleKeyDown(e, input, (cmd) => {
+                  setInput(cmd);
+                  commandAutocomplete.close();
+                });
+                if (handled) return;
+                
+                // Normal enter to submit
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  handleSubmit();
+                }
+              }}
               disabled={isLoading || showDiceRoll}
             />
             <Button
