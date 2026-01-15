@@ -32,18 +32,26 @@ interface BookmarksSidebarProps {
   campaignId: string;
   onJumpToEntry?: (entryId: string, entryIndex: number) => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function BookmarksSidebar({
   campaignId,
   onJumpToEntry,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: BookmarksSidebarProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [bookmarks, setBookmarks] = useState<StoryBookmark[]>([]);
+
+  // Support controlled and uncontrolled modes
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
 
   // Load bookmarks when sheet opens
   const handleOpenChange = (isOpen: boolean) => {
