@@ -1394,9 +1394,7 @@ export function GameUI() {
       } : null,
     }));
     
-    toast.success(`Sold ${item.name} for ${sellPrice}g!`, {
-      description: 'Your fashion reputation got you a better price!',
-    });
+    toast.success(`Sold ${item.name} for ${sellPrice}g!`);
     addStatChange('gold', sellPrice);
   }, [addStatChange]);
   
