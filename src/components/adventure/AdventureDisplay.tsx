@@ -182,6 +182,8 @@ function isStackableItem(itemName: string): boolean {
   return /potion|bandage|medkit|ammo|bullet|arrow|bolt|coin|gem|food|water|drink|herb|material/.test(name);
 }
 
+import { TestConfig, TestScenario } from './SystemsTestPanel';
+
 interface AdventureDisplayProps {
   story: StoryEntry[];
   onPlayerAction: (action: string, diceRoll?: any) => void;
@@ -215,6 +217,8 @@ interface AdventureDisplayProps {
   // World regeneration - only available before first player action
   onRegenerateWorld?: () => void;
   canRegenerateWorld?: boolean;
+  // Systems test integration
+  onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
 }
 
 export function AdventureDisplay({
@@ -246,6 +250,7 @@ export function AdventureDisplay({
   campaignId = 'default_campaign',
   onRegenerateWorld,
   canRegenerateWorld = false,
+  onRunSystemsTest,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -2056,6 +2061,9 @@ export function AdventureDisplay({
             description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
           });
         }}
+        currentGenre={genre}
+        onRunSystemsTest={onRunSystemsTest}
+        isRunningTest={isLoading}
       />
 
       {/* Bookmarks Sidebar */}
