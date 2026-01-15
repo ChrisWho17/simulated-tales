@@ -490,7 +490,7 @@ function buildLegacyPrompt(requestData: any) {
 // LOVABLE AI IMAGE GENERATION (Using Gemini Flash Image)
 // ============================================================================
 
-async function generateWithLovableAI(prompt: string): Promise<string> {
+async function generateWithLovableAI(promptDetails: string): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
   if (!LOVABLE_API_KEY) {
@@ -498,7 +498,16 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
   }
 
   console.log("Generating portrait with Lovable AI (Gemini Flash Image)");
-  console.log("Prompt:", prompt.substring(0, 300) + "...");
+  console.log("Prompt details:", promptDetails.substring(0, 300) + "...");
+
+  // Convert keyword-style prompt to natural language for Gemini
+  const naturalPrompt = `Generate an image of a character portrait with the following details:
+
+A detailed, realistic digital painting of a character. The style should be cinematic with dramatic lighting, professional illustration quality, like concept art for a AAA video game.
+
+Character details: ${promptDetails}
+
+Important: Create a three-quarter body shot from the knees up, with the character looking at the viewer. The image should have a detailed background environment. Make sure the face and eyes are highly detailed and expressive.`;
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -511,7 +520,7 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
       messages: [
         { 
           role: 'user', 
-          content: `Generate a high-quality character portrait image: ${prompt}. Professional illustration, detailed, cinematic lighting.` 
+          content: naturalPrompt
         }
       ],
       modalities: ['image', 'text'],
@@ -535,11 +544,21 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
   const result = await response.json();
   console.log("Lovable AI response received");
   
+  // Check for image in the response
   const imageData = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   
   if (!imageData) {
-    console.error("No image in response:", JSON.stringify(result).substring(0, 500));
-    throw new Error("No image generated");
+    // Log more details to help debug
+    const messageContent = result.choices?.[0]?.message?.content || '';
+    console.error("No image in response. Message:", messageContent.substring(0, 200));
+    console.error("Full response structure:", JSON.stringify({
+      hasChoices: !!result.choices,
+      choicesLength: result.choices?.length,
+      hasMessage: !!result.choices?.[0]?.message,
+      hasImages: !!result.choices?.[0]?.message?.images,
+      imagesLength: result.choices?.[0]?.message?.images?.length
+    }));
+    throw new Error("No image generated - model returned text only");
   }
 
   return imageData;
