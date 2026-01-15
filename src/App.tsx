@@ -8,6 +8,10 @@ import { CampaignProvider } from "@/contexts/CampaignContext";
 import { InventoryProvider, InventoryAction } from "@/game/inventorySystem";
 import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySync";
 import { migrateStorageKeys } from "@/lib/campaignStorageMigration";
+import { ScreenEffectsProvider } from "@/components/game/ScreenEffects";
+import { SessionStatsProvider } from "@/components/game/SessionStats";
+import { AchievementsProvider } from "@/components/game/Achievements";
+import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -31,31 +35,39 @@ const handleInventoryNarrativeAction = (action: InventoryAction) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <GameProvider>
-      <CampaignProvider>
-        <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
-          <CampaignInventorySync>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/campaigns" element={<Campaigns />} />
-                  <Route path="/campaigns/new" element={<Index />} />
-                  <Route path="/play" element={<Index />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/loadout-test" element={<LoadoutTest />} />
-                  <Route path="/inventory-test" element={<InventoryTest />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </CampaignInventorySync>
-        </InventoryProvider>
-      </CampaignProvider>
-    </GameProvider>
+    <AccessibilityProvider>
+      <ScreenEffectsProvider>
+        <SessionStatsProvider>
+          <AchievementsProvider>
+            <GameProvider>
+              <CampaignProvider>
+                <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
+                  <CampaignInventorySync>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
+                        <Routes>
+                          <Route path="/" element={<Index />} />
+                          <Route path="/campaigns" element={<Campaigns />} />
+                          <Route path="/campaigns/new" element={<Index />} />
+                          <Route path="/play" element={<Index />} />
+                          <Route path="/profile" element={<Profile />} />
+                          <Route path="/loadout-test" element={<LoadoutTest />} />
+                          <Route path="/inventory-test" element={<InventoryTest />} />
+                          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </BrowserRouter>
+                    </TooltipProvider>
+                  </CampaignInventorySync>
+                </InventoryProvider>
+              </CampaignProvider>
+            </GameProvider>
+          </AchievementsProvider>
+        </SessionStatsProvider>
+      </ScreenEffectsProvider>
+    </AccessibilityProvider>
   </QueryClientProvider>
 );
 

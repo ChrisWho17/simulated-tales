@@ -77,6 +77,11 @@ import {
   tickAdrenalineSystem,
   triggerSituationalAdrenaline,
 } from '@/game/adrenalineCombatIntegration';
+import { FloatingStatContainer, useStatChanges } from './FloatingStatChange';
+import { useScreenEffectsOptional } from './ScreenEffects';
+import { MiniSessionStats, useSessionStatsOptional, SessionStatsDisplay } from './SessionStats';
+import { useAchievementsOptional, AchievementsDisplay } from './Achievements';
+import { StoryRecap } from './StoryRecap';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -283,8 +288,17 @@ export function GameUI() {
     return initializeQuestLog();
   });
   const [showQuestJournal, setShowQuestJournal] = useState(false);
+  const [showStoryRecap, setShowStoryRecap] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showSessionStats, setShowSessionStats] = useState(false);
   const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
+  
+  // Game polish systems (optional - gracefully degrade if not available)
+  const screenEffects = useScreenEffectsOptional();
+  const sessionStats = useSessionStatsOptional();
+  const achievementsContext = useAchievementsOptional();
+  const { changes: statChanges, addChange: addStatChange, removeChange: removeStatChange } = useStatChanges();
   
   // Adrenaline System State
   const [adrenalineState, setAdrenalineState] = useState<AdrenalineSystemState>(() => {
@@ -1333,19 +1347,28 @@ export function GameUI() {
         <WeatherDisplay weather={weather} timeOfDay={getTimePeriod(gameState.time.hour)} compact />
       </div>
       
-      {/* Quest Journal Button */}
-      <button
-        onClick={() => setShowQuestJournal(true)}
-        className="absolute top-16 right-4 z-20 p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
-        title="Quest Journal (J)"
-      >
-        <span className="text-sm font-medium">📜 Journal</span>
-        {questLog.currentActiveCount > 0 && (
-          <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
-            {questLog.currentActiveCount}
-          </span>
-        )}
-      </button>
+      {/* Quest Journal & Story Recap Buttons */}
+      <div className="absolute top-16 right-4 z-20 flex gap-2">
+        <button
+          onClick={() => setShowStoryRecap(true)}
+          className="p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
+          title="Story Recap"
+        >
+          <span className="text-sm font-medium">📖 Recap</span>
+        </button>
+        <button
+          onClick={() => setShowQuestJournal(true)}
+          className="p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
+          title="Quest Journal (J)"
+        >
+          <span className="text-sm font-medium">📜 Journal</span>
+          {questLog.currentActiveCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
+              {questLog.currentActiveCount}
+            </span>
+          )}
+        </button>
+      </div>
       
       {/* Story Mode Sidebar - collapsible character panel */}
       <StoryModeSidebar 
@@ -1408,6 +1431,41 @@ export function GameUI() {
           playerState={gameState.lifeSim}
           onCombatEnd={handleCombatEnd}
           onEncounterUpdate={handleCombatUpdate}
+        />
+      )}
+      
+      {/* Story Recap Modal */}
+      <StoryRecap
+        isOpen={showStoryRecap}
+        onClose={() => setShowStoryRecap(false)}
+        storyEvents={displayEvents}
+        characterName={gameState.player.name}
+        currentLocation={gameState.locations[gameState.player.currentLocation]?.name || 'Unknown'}
+      />
+      
+      {/* Floating Stat Changes */}
+      <FloatingStatContainer 
+        changes={statChanges} 
+        onRemove={removeStatChange}
+        position="top-right"
+      />
+      
+      {/* Mini Session Stats */}
+      <MiniSessionStats />
+      
+      {/* Achievements Modal */}
+      {achievementsContext && (
+        <AchievementsDisplay 
+          isOpen={showAchievements} 
+          onClose={() => setShowAchievements(false)} 
+        />
+      )}
+      
+      {/* Session Stats Modal */}
+      {sessionStats && (
+        <SessionStatsDisplay 
+          isOpen={showSessionStats} 
+          onClose={() => setShowSessionStats(false)} 
         />
       )}
     </div>

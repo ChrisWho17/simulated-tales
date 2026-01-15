@@ -1,6 +1,6 @@
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
-import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -24,6 +24,8 @@ interface GameHeaderProps {
   onNewGame?: () => void;
   onOpenCharacterSheet?: () => void;
   onOpenInventory?: () => void;
+  onOpenAchievements?: () => void;
+  onOpenSessionStats?: () => void;
   character?: ExtendedCharacter | null;
   adrenalineState?: AdrenalineSystemState | null;
   showAdrenaline?: boolean;
@@ -77,6 +79,8 @@ export function GameHeader({
   onNewGame,
   onOpenCharacterSheet,
   onOpenInventory,
+  onOpenAchievements,
+  onOpenSessionStats,
   character,
   adrenalineState,
   showAdrenaline = false
@@ -141,7 +145,39 @@ export function GameHeader({
           </Tooltip>
         )}
         
-        {(onOpenCharacterSheet || onOpenInventory) && <div className="h-6 w-px bg-border" />}
+        {onOpenAchievements && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onOpenAchievements}
+                className="hover:bg-secondary hover:text-primary"
+              >
+                <Trophy className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Achievements</TooltipContent>
+          </Tooltip>
+        )}
+        
+        {onOpenSessionStats && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onOpenSessionStats}
+                className="hover:bg-secondary hover:text-primary"
+              >
+                <Activity className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Session Stats</TooltipContent>
+          </Tooltip>
+        )}
+        
+        {(onOpenCharacterSheet || onOpenInventory || onOpenAchievements || onOpenSessionStats) && <div className="h-6 w-px bg-border" />}
         
         {onNewGame && (
           <Tooltip>

@@ -4,12 +4,13 @@ import {
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload, GripVertical
+  FileText, Upload, CloudUpload, GripVertical, Accessibility
 } from 'lucide-react';
 import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { AudioSettingsPanel } from '@/components/ui/AudioSettingsPanel';
+import { AccessibilitySettingsPanel, useAccessibilityOptional } from '@/components/game/AccessibilitySettings';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
@@ -43,7 +44,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio' | 'accessibility'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -196,7 +197,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display', 'accessibility'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -211,6 +212,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {tab === 'weather' && <Cloud className="w-3 h-3" />}
                 {tab === 'cloud' && <CloudUpload className="w-3 h-3" />}
                 {tab === 'audio' && <Volume2 className="w-3 h-3" />}
+                {tab === 'accessibility' && <Accessibility className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -1107,6 +1109,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
               )}
             </div>
+          )}
+          
+          {/* Accessibility Tab */}
+          {activeTab === 'accessibility' && (
+            <AccessibilitySettingsPanel />
           )}
           
           {/* Weather Tab */}
