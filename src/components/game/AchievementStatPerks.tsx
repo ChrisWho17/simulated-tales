@@ -295,7 +295,6 @@ export function AchievementPerksToggle({ campaignId, className }: AchievementPer
           id="achievement-perks"
           checked={enabled}
           onCheckedChange={togglePerks}
-          disabled={!hasPerks}
         />
       </div>
       
@@ -343,9 +342,15 @@ export function AchievementPerksToggle({ campaignId, className }: AchievementPer
         </div>
       )}
       
-      {!hasPerks && (
+      {!hasPerks && !enabled && (
         <p className="text-xs text-muted-foreground">
           Redeem achievement rewards to unlock stat bonuses
+        </p>
+      )}
+      
+      {!hasPerks && enabled && (
+        <p className="text-xs text-muted-foreground">
+          No redeemed perks yet. Visit the Trophy Room to redeem achievement rewards.
         </p>
       )}
     </div>

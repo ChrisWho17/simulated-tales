@@ -29,6 +29,8 @@ import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView
 import { TimeDisplay } from '@/components/game/TimeDisplay';
 import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
+import { PacingIndicator } from '@/components/game/PacingIndicator';
+import { MobileQuickMenu } from '@/components/game/MobileQuickMenu';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
   GameTimeState, 
@@ -293,6 +295,7 @@ export function AdventureDisplay({
   const [showQuestQuickView, setShowQuestQuickView] = useState(false);
   const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
+  const [showMobileQuickMenu, setShowMobileQuickMenu] = useState(false);
   
   // Time progression system - use external if provided, otherwise manage locally
   const [localTimeState, setLocalTimeState] = useState<GameTimeState>(() => createInitialTimeState());
@@ -1555,16 +1558,29 @@ export function AdventureDisplay({
       {/* Header */}
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
         <div className="flex items-center justify-between px-2 py-1 gap-1">
-          {/* Title */}
-          <h1 
-            className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0"
+          {/* Title - Tappable on mobile */}
+          <button
+            onClick={() => setShowMobileQuickMenu(true)}
+            className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0 md:cursor-default active:scale-95 transition-transform"
             data-text="UNTOLD"
           >
             UNTOLD
-          </h1>
+          </button>
           
           {/* Toolbar buttons - grouped together with no-shrink */}
           <div className="flex items-center gap-0.5 flex-shrink-0">
+            {/* Pacing Indicator - Compact dropdown */}
+            <PacingIndicator
+              currentMultiplier={timeState.multiplier}
+              onMultiplierChange={(multiplier) => {
+                setTimeState(prev => ({ ...prev, multiplier }));
+                toast({
+                  title: "Time Pace Changed",
+                  description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
+                });
+              }}
+            />
+            
             {/* Weather Button */}
             <Button
               variant="ghost"
@@ -2424,6 +2440,23 @@ export function AdventureDisplay({
       <OnboardingOverlay 
         onComplete={completeOnboarding}
         forceShow={showOnboarding}
+      />
+      
+      {/* Mobile Quick Menu - triggered by tapping UNTOLD logo */}
+      <MobileQuickMenu
+        isOpen={showMobileQuickMenu}
+        onClose={() => setShowMobileQuickMenu(false)}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenCharacterSheet={() => setShowCharacterSheet(true)}
+        onOpenInventory={() => setShowInventory(true)}
+        onOpenBookmarks={() => setShowBookmarks(true)}
+        onOpenWeather={() => setShowWeatherModal(true)}
+        onOpenTime={() => setShowTimeDisplay(true)}
+        onOpenRecap={() => setShowSessionRecap(true)}
+        onRestart={onRestart}
+        characterName={character.name}
+        currentTime={`${timeState.hour}:${String(timeState.minute).padStart(2, '0')}`}
+        currentWeather={WEATHER_CONFIGS[weatherState.current].name}
       />
     </div>
   );
