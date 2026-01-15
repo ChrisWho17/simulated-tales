@@ -197,7 +197,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         : blendedClasses.find(c => c.id === selectedClass);
       const className = selectedClassData?.name || selectedClass;
       
-      // Build character appearance data including full (18+) customizations
+      // Build character appearance data including all customizations
       const characterData = {
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
@@ -206,6 +206,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         hairStyle: appearance.detailed?.hairStyle || 'short',
         eyeColor: appearance.detailed?.eyeColor || 'brown',
         skinTone: appearance.detailed?.skinTone || 'medium',
+        faceShape: appearance.detailed?.faceShape,
+        // Include distinguishing features directly (piercings, tattoos, scars, etc.)
+        distinguishingFeatures: appearance.detailed?.distinguishingFeatures || [],
+        // Include accessories directly (glasses, jewelry, etc.)
+        accessories: appearance.detailed?.accessories || [],
+        // Legacy details array for compatibility
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),

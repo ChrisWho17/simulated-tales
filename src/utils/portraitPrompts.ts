@@ -160,6 +160,10 @@ export interface CharacterAppearance {
   hipWidth?: string;
   muscleDefinition?: string;
   intimateDetails?: string;
+  // Detailed appearance options
+  faceShape?: string;
+  distinguishingFeatures?: string[];
+  accessories?: string[];
 }
 
 export function buildPortraitPrompt(
@@ -210,18 +214,132 @@ export function buildPortraitPrompt(
   const eyeColor = character.eyeColor ? `striking ${character.eyeColor} eyes with detail` : '';
   const skinTone = character.skinTone ? `${character.skinTone} skin tone` : '';
   
+  // Face shape descriptor
+  const faceShapeDesc = character.faceShape ? `${character.faceShape} face shape` : '';
+  
   // Optional details - enhanced for realism
   const details: string[] = [];
-  if (character.hasTattoos || character.details?.includes('tattoos')) {
+  
+  // Process distinguishing features (piercings, tattoos, scars, etc.)
+  const distinguishingFeatures = character.distinguishingFeatures || [];
+  const allDetails = [...(character.details || []), ...distinguishingFeatures];
+  
+  // Piercings - detailed descriptions
+  const PIERCING_DESCRIPTIONS: Record<string, string> = {
+    'ear piercings': 'multiple detailed ear piercings, visible earrings and studs',
+    'nose piercing': 'visible nose piercing, small nose ring or stud',
+    'lip piercing': 'lip piercing visible, labret or lip ring',
+    'eyebrow piercing': 'eyebrow piercing, metal barbell above eye',
+    'septum piercing': 'septum piercing, visible nose ring',
+    'tongue piercing': 'tongue piercing visible',
+  };
+  
+  // Tattoo descriptions
+  const TATTOO_DESCRIPTIONS: Record<string, string> = {
+    'neck tattoo': 'detailed neck tattoo, visible ink on neck',
+    'face tattoo': 'facial tattoo, inked face design',
+    'arm tattoos': 'detailed arm tattoos, ink designs on arms',
+    'full sleeve': 'full sleeve tattoo, heavily inked arms with intricate designs',
+    'tattoos': 'detailed realistic tattoos, meaningful tattoo designs',
+  };
+  
+  // Scar descriptions
+  const SCAR_DESCRIPTIONS: Record<string, string> = {
+    'facial scar': 'prominent facial scar, healed wound across face',
+    'body scar': 'visible body scars, healed wounds on skin',
+    'burn scars': 'burn scars visible, healed burn marks on skin',
+    'scars': 'realistic battle scars, healed wounds visible on skin',
+  };
+  
+  // Other feature descriptions
+  const FEATURE_DESCRIPTIONS: Record<string, string> = {
+    'freckles': 'natural freckles across face and nose',
+    'dimples': 'visible dimples when smiling',
+    'beauty mark': 'distinctive beauty mark on face',
+    'eyepatch': 'worn eyepatch covering one eye, mysterious appearance',
+  };
+  
+  // Process all details
+  for (const detail of allDetails) {
+    const lowerDetail = detail.toLowerCase();
+    
+    // Check piercings
+    for (const [key, desc] of Object.entries(PIERCING_DESCRIPTIONS)) {
+      if (lowerDetail.includes(key.split(' ')[0])) {
+        details.push(desc);
+        break;
+      }
+    }
+    
+    // Check tattoos
+    for (const [key, desc] of Object.entries(TATTOO_DESCRIPTIONS)) {
+      if (lowerDetail.includes('tattoo') || lowerDetail.includes(key.split(' ')[0])) {
+        if (lowerDetail.includes(key) || (lowerDetail === 'tattoos' && key === 'tattoos')) {
+          details.push(desc);
+          break;
+        }
+      }
+    }
+    
+    // Check scars
+    for (const [key, desc] of Object.entries(SCAR_DESCRIPTIONS)) {
+      if (lowerDetail.includes('scar') || lowerDetail.includes('burn')) {
+        if (lowerDetail.includes(key.split(' ')[0])) {
+          details.push(desc);
+          break;
+        }
+      }
+    }
+    
+    // Check other features
+    for (const [key, desc] of Object.entries(FEATURE_DESCRIPTIONS)) {
+      if (lowerDetail.includes(key.split(' ')[0])) {
+        details.push(desc);
+        break;
+      }
+    }
+  }
+  
+  // Process accessories
+  const accessories = character.accessories || [];
+  const ACCESSORY_DESCRIPTIONS: Record<string, string> = {
+    'glasses': 'wearing glasses, detailed eyewear',
+    'sunglasses': 'wearing stylish sunglasses',
+    'earrings': 'visible earrings, decorative ear jewelry',
+    'necklace': 'wearing necklace, visible jewelry around neck',
+    'choker': 'wearing choker necklace, tight neck jewelry',
+    'ring': 'visible rings on fingers',
+    'bracelet': 'wearing bracelets on wrists',
+    'watch': 'wearing wristwatch',
+    'hat': 'wearing hat, visible headwear',
+    'bandana': 'wearing bandana, cloth headwear',
+    'headband': 'wearing headband',
+    'circlet': 'wearing ornate circlet on forehead',
+    'mask': 'wearing partial face mask',
+    'goggles': 'wearing goggles, pushed up on forehead or over eyes',
+  };
+  
+  for (const accessory of accessories) {
+    const lowerAcc = accessory.toLowerCase();
+    for (const [key, desc] of Object.entries(ACCESSORY_DESCRIPTIONS)) {
+      if (lowerAcc.includes(key)) {
+        details.push(desc);
+        break;
+      }
+    }
+  }
+  
+  // Legacy boolean flags
+  if (character.hasTattoos && !allDetails.some(d => d.toLowerCase().includes('tattoo'))) {
     details.push('detailed realistic tattoos, sleeve tattoos on arms, military or meaningful tattoo designs');
   }
-  if (character.hasScars || character.details?.includes('scars')) {
+  if (character.hasScars && !allDetails.some(d => d.toLowerCase().includes('scar'))) {
     details.push('realistic battle scars, healed wounds visible on skin');
   }
-  if (character.hasCybernetics || character.details?.includes('cybernetics')) {
+  if (character.hasCybernetics || allDetails.some(d => d.toLowerCase().includes('cybernetic'))) {
     details.push('detailed cybernetic augmentations, chrome mechanical parts, glowing tech elements');
   }
-  if (character.hasBeard || character.details?.includes('beard')) {
+  if (character.hasBeard || allDetails.some(d => d.toLowerCase().includes('beard'))) {
     details.push('well-groomed tactical beard, facial hair with detail');
   }
   
@@ -274,17 +392,21 @@ export function buildPortraitPrompt(
     details.push(character.customDescription);
   }
   
+  // Deduplicate details
+  const uniqueDetails = [...new Set(details)];
+  
   return [
     STYLE_BASE,
     gender,
     buildDesc,
+    faceShapeDesc,
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,
     eyeColor,
     roleStyle,
     genreConfig.style,
     emotionStyle,
-    details.join(', '),
+    uniqueDetails.join(', '),
     `dramatic background: ${background}`,
   ].filter(Boolean).join(', ');
 }
