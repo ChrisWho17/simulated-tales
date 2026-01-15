@@ -352,12 +352,18 @@ export function RadialQuickMenu({
                     "bg-card/90 backdrop-blur-md border-2",
                     item.color
                   )}
-                  initial={{ scale: 0, opacity: 0 }}
+                  initial={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
                   animate={{ 
                     scale: isHovered ? 1.15 : 1,
                     opacity: 1,
+                    x: '-50%',
+                    y: '-50%',
+                    boxShadow: isHovered 
+                      ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
+                      : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
+                    borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
                   }}
-                  exit={{ scale: 0, opacity: 0 }}
+                  exit={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
                   transition={{
                     duration: 0.15,
                     ease: "easeOut",
@@ -366,11 +372,6 @@ export function RadialQuickMenu({
                   style={{
                     left: `calc(50% + ${position.x}px)`,
                     top: `calc(50% + ${position.y}px)`,
-                    transform: 'translate(-50%, -50%)',
-                    boxShadow: isHovered 
-                      ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
-                      : `0 0 12px 2px ${item.glowColor}30, 0 4px 15px rgba(0,0,0,0.4)`,
-                    borderColor: isHovered ? item.glowColor : `${item.glowColor}40`,
                   }}
                 >
                   {item.icon}
