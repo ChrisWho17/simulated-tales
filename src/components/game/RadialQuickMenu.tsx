@@ -414,12 +414,11 @@ export function RadialQuickMenu({
               );
             })}
             
-            {/* Central close button */}
+            {/* Central close button - nudged slightly up-left for visual balance */}
             <motion.button
               onClick={toggleMenu}
               className={cn(
-                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                "z-10 flex items-center justify-center",
+                "absolute z-10 flex items-center justify-center",
                 "w-16 h-16 rounded-full",
                 "bg-card/95 border-2 border-primary/50",
                 "hover:border-primary active:scale-95"
@@ -435,6 +434,9 @@ export function RadialQuickMenu({
                 damping: 25,
               }}
               style={{
+                left: 'calc(50% - 8px)',
+                top: 'calc(50% - 12px)',
+                transform: 'translate(-50%, -50%)',
                 boxShadow: '0 0 30px 8px hsl(var(--primary) / 0.25), 0 0 60px 15px hsl(var(--primary) / 0.1)'
               }}
             >
