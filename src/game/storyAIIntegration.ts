@@ -5,6 +5,13 @@
 
 import { playerStateManager } from './playerStateManager';
 import { storyActionValidator, StoryAction, ValidatedChoice } from './storyActionValidator';
+import { 
+  getCurrentClothingContext, 
+  setPlayerClothingContext, 
+  setClothingReactionGenre,
+  getPlayerClothingReaction,
+  ClothingContext 
+} from './clothingReactionSystem';
 
 // ============================================================================
 // AI CONTEXT BUILDER
@@ -276,6 +283,53 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
       }
     }
   }
+  /**
+   * Set player clothing context for NPC reactions
+   */
+  setPlayerClothing(clothing: ClothingContext, genre: string): void {
+    setPlayerClothingContext(clothing);
+    setClothingReactionGenre(genre);
+  }
+
+  /**
+   * Get clothing reaction context for AI prompts
+   */
+  getClothingReactionContext(): string {
+    return getCurrentClothingContext();
+  }
+
+  /**
+   * Build complete AI context including clothing reactions
+   */
+  buildCompleteAIContext(npcRole?: string): string {
+    let context = this.buildPlayerStateContext();
+    
+    // Add clothing reaction context
+    const clothingContext = this.getClothingReactionContext();
+    if (clothingContext) {
+      context += '\n' + clothingContext;
+    }
+
+    // Get specific NPC clothing reaction if role provided
+    if (npcRole) {
+      const reaction = getPlayerClothingReaction(npcRole);
+      if (reaction.severity !== 'none') {
+        context += `\n\n### NPC CLOTHING REACTION (${npcRole})\n`;
+        context += `Severity: ${reaction.severity}\n`;
+        if (reaction.dialogueModifiers.length > 0) {
+          context += `Dialogue modifiers: ${reaction.dialogueModifiers.join(', ')}\n`;
+        }
+        if (reaction.possibleComments.length > 0) {
+          context += `Possible comments: ${reaction.possibleComments[0]}\n`;
+        }
+        if (reaction.npcBehaviorTriggers.length > 0) {
+          context += `Behavior triggers: ${reaction.npcBehaviorTriggers.join(', ')}\n`;
+        }
+      }
+    }
+
+    return context;
+  }
 }
 
 // ============================================================================
@@ -293,4 +347,11 @@ export const storyAIIntegration = new StoryAIIntegrationClass();
  */
 export function buildStoryPromptWithState(basePrompt: string): string {
   return basePrompt + '\n' + storyAIIntegration.buildPlayerStateContext();
+}
+
+/**
+ * Inject complete context including clothing reactions
+ */
+export function buildStoryPromptWithClothingContext(basePrompt: string, npcRole?: string): string {
+  return basePrompt + '\n' + storyAIIntegration.buildCompleteAIContext(npcRole);
 }

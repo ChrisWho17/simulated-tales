@@ -19,6 +19,7 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
+import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
@@ -372,6 +373,19 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     
     // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
+    
+    // Set up clothing context for NPC reactions
+    if (appearance.full) {
+      storyAIIntegration.setPlayerClothing({
+        clothingStyle: appearance.full.clothingStyle,
+        clothingDetails: appearance.full.clothingDetails,
+        piercings: appearance.full.piercings,
+        tattoos: appearance.full.tattoos,
+        prosthetics: appearance.full.prosthetics,
+        implants: appearance.full.implants,
+        mutations: appearance.full.mutations,
+      }, genre);
+    }
     
     // Save the locked portrait reference for gameplay regeneration
     savePlayerPortraitReference(
