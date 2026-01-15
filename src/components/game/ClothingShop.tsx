@@ -108,8 +108,8 @@ export function ClothingShop({
 
   // Calculate sell bonus based on reputation (0-100 score maps to 0-40% bonus)
   const sellBonus = useMemo(() => {
-    // Fashion score typically ranges 0-100
-    const normalizedScore = Math.min(fashionState.score, 100) / 100;
+    // Fashion score can be negative, so clamp to 0-100 range
+    const normalizedScore = Math.max(0, Math.min(fashionState.score, 100)) / 100;
     return Math.floor(normalizedScore * (MAX_SELL_PERCENTAGE - BASE_SELL_PERCENTAGE));
   }, [fashionState.score]);
 
