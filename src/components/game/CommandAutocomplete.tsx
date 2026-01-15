@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   Backpack, ScrollText, Heart, Settings, HelpCircle,
-  Bookmark, Map, Users, Dices, RotateCcw, Search
+  Bookmark, Map, Users, Dices, RotateCcw, Search, Cloud
 } from 'lucide-react';
 
 export interface SlashCommand {
@@ -56,6 +56,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     aliases: ['/dice', '/r'],
     description: 'Roll dice manually',
     icon: <Dices className="w-4 h-4" />,
+    category: 'game',
+  },
+  {
+    command: '/weather',
+    aliases: ['/w'],
+    description: 'Check current weather',
+    icon: <Cloud className="w-4 h-4" />,
     category: 'game',
   },
   {
