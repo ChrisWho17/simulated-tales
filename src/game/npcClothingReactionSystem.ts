@@ -85,7 +85,7 @@ export function generateNPCStylePreference(
     preference.careAboutFashion = Math.min(100, preference.careAboutFashion + 20);
   }
   
-  if (traits.includes('fearful') || traits.includes('calm')) {
+  if (traits.includes('fearful') || traits.includes('cowardly') || traits.includes('nervous')) {
     preference.isIntimidatedByMilitary = true;
   }
   
