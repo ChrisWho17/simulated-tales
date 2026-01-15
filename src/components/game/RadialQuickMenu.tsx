@@ -80,63 +80,63 @@ export function RadialQuickMenu({
 
   const menuItems: RadialMenuItem[] = [
     {
-      icon: <ScrollText className="w-6 h-6" />,
+      icon: <ScrollText className="w-5 h-5" />,
       label: 'Character',
       onClick: onOpenCharacterSheet,
       color: 'text-primary',
       glowColor: 'hsl(var(--primary))',
     },
     {
-      icon: <Backpack className="w-6 h-6" />,
+      icon: <Backpack className="w-5 h-5" />,
       label: 'Inventory',
       onClick: onOpenInventory,
       color: 'text-amber-400',
       glowColor: 'rgb(251 191 36)',
     },
     {
-      icon: <Clock className="w-6 h-6" />,
+      icon: <Clock className="w-5 h-5" />,
       label: 'Time',
       onClick: onOpenTime,
       color: 'text-yellow-400',
       glowColor: 'rgb(250 204 21)',
     },
     {
-      icon: <CloudRain className="w-6 h-6" />,
+      icon: <CloudRain className="w-5 h-5" />,
       label: 'Weather',
       onClick: onOpenWeather,
       color: 'text-blue-400',
       glowColor: 'rgb(96 165 250)',
     },
     {
-      icon: <Bookmark className="w-6 h-6" />,
+      icon: <Bookmark className="w-5 h-5" />,
       label: 'Bookmarks',
       onClick: onOpenBookmarks,
       color: 'text-purple-400',
       glowColor: 'rgb(192 132 252)',
     },
     {
-      icon: <Info className="w-6 h-6" />,
+      icon: <Info className="w-5 h-5" />,
       label: 'Recap',
       onClick: onOpenRecap,
       color: 'text-green-400',
       glowColor: 'rgb(74 222 128)',
     },
     {
-      icon: <FolderOpen className="w-6 h-6" />,
+      icon: <FolderOpen className="w-5 h-5" />,
       label: 'Saves',
       onClick: onOpenSaves,
       color: 'text-cyan-400',
       glowColor: 'rgb(34 211 238)',
     },
     {
-      icon: <Sliders className="w-6 h-6" />,
+      icon: <Sliders className="w-5 h-5" />,
       label: 'Settings',
       onClick: onOpenSettings,
       color: 'text-muted-foreground',
       glowColor: 'hsl(var(--muted-foreground))',
     },
     {
-      icon: <RotateCcw className="w-6 h-6" />,
+      icon: <RotateCcw className="w-5 h-5" />,
       label: 'New Story',
       onClick: onRestart,
       color: 'text-destructive',
@@ -151,8 +151,8 @@ export function RadialQuickMenu({
     const angle = startAngle + (angleStep * index);
     const radians = (angle * Math.PI) / 180;
     
-    // Larger radius for Skyrim-style menu
-    const radius = 120;
+    // Radius sized for mobile screens
+    const radius = 110;
     
     return {
       x: Math.cos(radians) * radius,
@@ -163,20 +163,41 @@ export function RadialQuickMenu({
   if (!isOpen) return null;
 
   return (
-    <div className="md:hidden fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="md:hidden fixed inset-0 z-[100]">
       {/* Backdrop with blur */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+        className="absolute inset-0 bg-black/85 backdrop-blur-md animate-fade-in"
         onClick={toggleMenu}
       />
       
-      {/* Center container */}
-      <div className="relative">
+      {/* Center container - positioned exactly at screen center */}
+      <div 
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ width: '280px', height: '280px' }}
+      >
+        {/* Decorative rings */}
+        <div 
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/20 pointer-events-none"
+          style={{
+            width: '260px',
+            height: '260px',
+            animation: 'spin 30s linear infinite',
+          }}
+        />
+        <div 
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10 pointer-events-none"
+          style={{
+            width: '300px',
+            height: '300px',
+            animation: 'spin 45s linear infinite reverse',
+          }}
+        />
+        
         {/* Radial menu items */}
         {menuItems.map((item, index) => {
           const position = getItemPosition(index, menuItems.length);
           const isHovered = hoveredIndex === index;
-          const delay = index * 40; // Staggered animation
+          const delay = index * 30;
           
           return (
             <button
@@ -185,44 +206,36 @@ export function RadialQuickMenu({
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
               onTouchStart={() => setHoveredIndex(index)}
-              onTouchEnd={() => {
-                // Small delay before clearing hover to show the effect
-                setTimeout(() => setHoveredIndex(null), 100);
-              }}
+              onTouchEnd={() => setTimeout(() => setHoveredIndex(null), 150)}
               className={cn(
-                "absolute flex flex-col items-center justify-center",
-                "w-16 h-16 rounded-full",
-                "bg-card/90 backdrop-blur-md border-2 border-border/50",
+                "absolute flex items-center justify-center",
+                "w-14 h-14 rounded-full",
+                "bg-card/90 backdrop-blur-md border-2",
                 "transition-all duration-300 ease-out",
-                "-translate-x-1/2 -translate-y-1/2",
                 item.color
               )}
               style={{
-                left: position.x,
-                top: position.y,
-                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${isHovered ? 1.2 : 1})`,
+                left: `calc(50% + ${position.x}px)`,
+                top: `calc(50% + ${position.y}px)`,
+                transform: `translate(-50%, -50%) scale(${isHovered ? 1.15 : 1})`,
                 transitionDelay: `${delay}ms`,
                 boxShadow: isHovered 
-                  ? `0 0 30px 8px ${item.glowColor}, 0 0 60px 16px ${item.glowColor}40, inset 0 0 20px ${item.glowColor}30`
-                  : '0 4px 20px rgba(0,0,0,0.4)',
-                borderColor: isHovered ? item.glowColor : undefined,
-                animation: isHovered ? 'pulse 1.5s infinite' : undefined,
+                  ? `0 0 25px 6px ${item.glowColor}, 0 0 50px 12px ${item.glowColor}40`
+                  : '0 4px 15px rgba(0,0,0,0.4)',
+                borderColor: isHovered ? item.glowColor : 'rgba(255,255,255,0.1)',
               }}
             >
-              <div className={cn(
-                "transition-all duration-200",
-                isHovered && "scale-110"
-              )}>
-                {item.icon}
-              </div>
+              {item.icon}
               
-              {/* Label - always visible for Skyrim style */}
-              <span className={cn(
-                "absolute -bottom-7 left-1/2 -translate-x-1/2",
-                "text-xs font-medium whitespace-nowrap",
-                "transition-all duration-200",
-                isHovered ? "text-foreground scale-110" : "text-muted-foreground"
-              )}>
+              {/* Label below button */}
+              <span 
+                className={cn(
+                  "absolute top-full mt-2 left-1/2 -translate-x-1/2",
+                  "text-[11px] font-medium whitespace-nowrap",
+                  "transition-all duration-200",
+                  isHovered ? "text-foreground" : "text-muted-foreground"
+                )}
+              >
                 {item.label}
               </span>
             </button>
@@ -233,38 +246,19 @@ export function RadialQuickMenu({
         <button
           onClick={toggleMenu}
           className={cn(
-            "relative z-10 flex items-center justify-center",
-            "w-20 h-20 rounded-full",
-            "bg-gradient-to-br from-card/95 to-card/80",
-            "border-2 border-primary/50",
-            "shadow-2xl",
+            "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+            "z-10 flex items-center justify-center",
+            "w-16 h-16 rounded-full",
+            "bg-card/95 border-2 border-primary/50",
             "transition-all duration-300",
-            "hover:border-primary hover:scale-105"
+            "hover:border-primary hover:scale-105 active:scale-95"
           )}
           style={{
-            boxShadow: '0 0 40px 10px hsl(var(--primary) / 0.3), 0 0 80px 20px hsl(var(--primary) / 0.15)'
+            boxShadow: '0 0 30px 8px hsl(var(--primary) / 0.25), 0 0 60px 15px hsl(var(--primary) / 0.1)'
           }}
         >
-          <X className="w-8 h-8 text-primary" />
+          <X className="w-7 h-7 text-primary" />
         </button>
-        
-        {/* Decorative ring */}
-        <div 
-          className="absolute inset-0 w-20 h-20 rounded-full border border-primary/20 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none"
-          style={{
-            width: '280px',
-            height: '280px',
-            animation: 'spin 30s linear infinite',
-          }}
-        />
-        <div 
-          className="absolute inset-0 w-20 h-20 rounded-full border border-primary/10 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none"
-          style={{
-            width: '320px',
-            height: '320px',
-            animation: 'spin 45s linear infinite reverse',
-          }}
-        />
       </div>
     </div>
   );
