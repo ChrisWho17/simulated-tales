@@ -12,6 +12,7 @@ export interface StoryBookmark {
   characterName: string;
   icon?: string; // Optional emoji/icon
   color?: string; // Optional highlight color
+  note?: string; // Player's personal note about this moment
 }
 
 const BOOKMARKS_KEY = 'untold-story-bookmarks';
@@ -103,6 +104,16 @@ export function updateBookmarkStyle(
   if (bookmark) {
     if (updates.icon !== undefined) bookmark.icon = updates.icon;
     if (updates.color !== undefined) bookmark.color = updates.color;
+    saveBookmarks(bookmarks);
+  }
+}
+
+// Update bookmark note
+export function updateBookmarkNote(bookmarkId: string, note: string): void {
+  const bookmarks = loadBookmarks();
+  const bookmark = bookmarks.find(b => b.id === bookmarkId);
+  if (bookmark) {
+    bookmark.note = note.trim() || undefined;
     saveBookmarks(bookmarks);
   }
 }

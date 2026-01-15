@@ -8,6 +8,7 @@ import {
 } from './sheet';
 import { Button } from './button';
 import { Input } from './input';
+import { Textarea } from './textarea';
 import { ScrollArea } from './scroll-area';
 import { 
   Bookmark, 
@@ -16,13 +17,17 @@ import {
   Edit2, 
   Check, 
   X,
-  BookOpen
+  BookOpen,
+  StickyNote,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   getBookmarksForCampaign, 
   removeBookmark, 
   updateBookmarkTitle,
+  updateBookmarkNote,
   StoryBookmark 
 } from '@/lib/bookmarkSystem';
 import { format } from 'date-fns';
@@ -47,6 +52,9 @@ export function BookmarksSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState('');
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [bookmarks, setBookmarks] = useState<StoryBookmark[]>([]);
 
   // Support controlled and uncontrolled modes
@@ -67,7 +75,8 @@ export function BookmarksSidebar({
     const query = searchQuery.toLowerCase();
     return bookmarks.filter(b => 
       b.title.toLowerCase().includes(query) ||
-      b.preview.toLowerCase().includes(query)
+      b.preview.toLowerCase().includes(query) ||
+      b.note?.toLowerCase().includes(query)
     );
   }, [bookmarks, searchQuery]);
 
@@ -96,6 +105,37 @@ export function BookmarksSidebar({
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditTitle('');
+  };
+
+  const handleStartNoteEdit = (bookmark: StoryBookmark, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingNoteId(bookmark.id);
+    setEditNote(bookmark.note || '');
+  };
+
+  const handleSaveNote = (id: string) => {
+    updateBookmarkNote(id, editNote);
+    setBookmarks(prev => prev.map(b => 
+      b.id === id ? { ...b, note: editNote.trim() || undefined } : b
+    ));
+    setEditingNoteId(null);
+    setEditNote('');
+    toast.success('Note saved');
+  };
+
+  const handleCancelNoteEdit = () => {
+    setEditingNoteId(null);
+    setEditNote('');
+  };
+
+  const toggleNoteExpanded = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNotes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleJump = (bookmark: StoryBookmark) => {
@@ -200,6 +240,15 @@ export function BookmarksSidebar({
                               size="icon"
                               variant="ghost"
                               className="h-7 w-7"
+                              title="Add note"
+                              onClick={(e) => handleStartNoteEdit(bookmark, e)}
+                            >
+                              <StickyNote className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleStartEdit(bookmark);
@@ -223,6 +272,61 @@ export function BookmarksSidebar({
                         <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                           {bookmark.preview}
                         </p>
+                        
+                        {/* Note section */}
+                        {editingNoteId === bookmark.id ? (
+                          <div className="mt-2 space-y-2" onClick={e => e.stopPropagation()}>
+                            <Textarea
+                              value={editNote}
+                              onChange={(e) => setEditNote(e.target.value)}
+                              placeholder="Add a personal note about this moment..."
+                              className="text-sm resize-none"
+                              rows={3}
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={handleCancelNoteEdit}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                size="sm"
+                                onClick={() => handleSaveNote(bookmark.id)}
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Save Note
+                              </Button>
+                            </div>
+                          </div>
+                        ) : bookmark.note ? (
+                          <div 
+                            className="mt-2 p-2 rounded bg-primary/5 border border-primary/10"
+                            onClick={(e) => toggleNoteExpanded(bookmark.id, e)}
+                          >
+                            <div className="flex items-start gap-2">
+                              <StickyNote className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
+                              <p className={cn(
+                                "text-xs text-muted-foreground flex-1",
+                                !expandedNotes.has(bookmark.id) && "line-clamp-2"
+                              )}>
+                                {bookmark.note}
+                              </p>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 flex-shrink-0"
+                              >
+                                {expandedNotes.has(bookmark.id) 
+                                  ? <ChevronUp className="w-3 h-3" />
+                                  : <ChevronDown className="w-3 h-3" />
+                                }
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
                       </>
                     )}
                   </div>
