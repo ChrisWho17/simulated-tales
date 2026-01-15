@@ -98,62 +98,62 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
           </div>
           
           {/* Quick Toggles - Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {/* Auto Save */}
-            <div className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-background/30">
-              <div className="flex items-center gap-2">
-                <Save className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs">Auto Save</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Save className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs truncate">Auto{'\n'}Save</span>
               </div>
               <Switch 
                 checked={settings.autoSave}
                 onCheckedChange={(checked) => updateSettings({ autoSave: checked })}
-                className="scale-75"
+                className="scale-90 flex-shrink-0"
               />
             </div>
             
             {/* Show Roll Details */}
-            <div className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-background/30">
-              <div className="flex items-center gap-2">
-                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs">Roll Details</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Eye className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs truncate">Roll{'\n'}Details</span>
               </div>
               <Switch 
                 checked={settings.showRollDetails}
                 onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
-                className="scale-75"
+                className="scale-90 flex-shrink-0"
               />
             </div>
             
             {/* 18+ Content */}
-            <div className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-background/30">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs">18+ Content</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                <span className="text-xs truncate">18+{'\n'}Content</span>
               </div>
               <Switch 
                 checked={settings.adultContent}
                 onCheckedChange={(checked) => updateSettings({ adultContent: checked })}
-                className="scale-75"
+                className="scale-90 flex-shrink-0"
               />
             </div>
             
             {/* Typewriter Effect */}
-            <div className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-background/30">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs">Typewriter</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <span className="text-xs truncate">Typewriter</span>
               </div>
               <Switch 
                 checked={settings.typewriterEnabled}
                 onCheckedChange={(checked) => updateSettings({ typewriterEnabled: checked })}
-                className="scale-75"
+                className="scale-90 flex-shrink-0"
               />
             </div>
           </div>
           
           {/* Weather Effects Toggle */}
-          <div className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-background/30">
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30">
             <div className="flex items-center gap-2">
               <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs">Weather Effects</span>
@@ -161,7 +161,7 @@ export function GameSettingsMenu({ className }: GameSettingsMenuProps) {
             <Switch 
               checked={settings.enableWeatherEffects}
               onCheckedChange={(checked) => updateSettings({ enableWeatherEffects: checked })}
-              className="scale-75"
+              className="scale-90"
             />
           </div>
           
