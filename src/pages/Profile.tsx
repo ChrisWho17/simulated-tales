@@ -6,12 +6,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { CloudSyncService, CloudSave } from '@/services/cloudSyncService';
+import { renameCampaign } from '@/lib/campaignStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   User, 
   Cloud, 
@@ -25,7 +28,10 @@ import {
   Sword,
   BookOpen,
   Loader2,
-  Mail
+  Mail,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -40,6 +46,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -51,6 +65,11 @@ export default function Profile() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Rename state
+  const [renameTarget, setRenameTarget] = useState<CloudSave | null>(null);
+  const [newName, setNewName] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
 
   // Load cloud saves when authenticated
   useEffect(() => {
@@ -119,6 +138,36 @@ export default function Profile() {
       toast.error('Failed to download campaign');
     }
   };
+
+  const handleRename = async () => {
+    if (!renameTarget || !newName.trim()) return;
+    
+    setIsRenaming(true);
+    try {
+      // Rename locally first
+      const success = renameCampaign(renameTarget.campaign_id, newName.trim());
+      
+      if (success) {
+        // Re-sync to cloud to update the name there too
+        await CloudSyncService.uploadCampaign(renameTarget.campaign_id);
+        toast.success(`Renamed to "${newName.trim()}"`);
+        await loadCloudSaves();
+      } else {
+        toast.error('Failed to rename campaign');
+      }
+    } catch (error) {
+      toast.error('Failed to rename campaign');
+    } finally {
+      setIsRenaming(false);
+      setRenameTarget(null);
+      setNewName('');
+    }
+  };
+
+  const openRenameDialog = (save: CloudSave) => {
+    setRenameTarget(save);
+    setNewName(save.campaign_name);
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -323,7 +372,15 @@ export default function Profile() {
                             Last synced {formatDistanceToNow(new Date(save.last_synced_at), { addSuffix: true })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 ml-4">
+                        <div className="flex items-center gap-1 ml-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openRenameDialog(save)}
+                            title="Rename campaign"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -403,6 +460,51 @@ export default function Profile() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={!!renameTarget} onOpenChange={() => setRenameTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Campaign</DialogTitle>
+            <DialogDescription>
+              Enter a new name for "{renameTarget?.campaign_name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="campaign-name">Campaign Name</Label>
+            <Input
+              id="campaign-name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Enter new name"
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newName.trim()) {
+                  handleRename();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setRenameTarget(null)}
+              disabled={isRenaming}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRename}
+              disabled={isRenaming || !newName.trim()}
+            >
+              {isRenaming ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
