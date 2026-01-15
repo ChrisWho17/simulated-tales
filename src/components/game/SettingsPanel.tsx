@@ -28,6 +28,9 @@ import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorMode
 import { SaveCodeModal } from '@/components/campaign/SaveCodeModal';
 import { CampaignData } from '@/types/campaign';
 
+import { SystemsTestPanel, TestConfig, TestScenario } from '@/components/adventure/SystemsTestPanel';
+import { GameGenre } from '@/types/genreData';
+
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,6 +39,10 @@ interface SettingsPanelProps {
   currentCharacterName?: string;
   currentTimeMultiplier?: TimeMultiplier;
   onTimeMultiplierChange?: (multiplier: TimeMultiplier) => void;
+  // Systems test integration
+  currentGenre?: GameGenre;
+  onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
+  isRunningTest?: boolean;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
@@ -46,6 +53,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   currentCharacterName,
   currentTimeMultiplier = 'fifteen_minutes',
   onTimeMultiplierChange,
+  currentGenre = 'fantasy',
+  onRunSystemsTest,
+  isRunningTest = false,
 }) => {
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
@@ -921,6 +931,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       onCheckedChange={(checked) => updateSettings({ showPlayStatistics: checked })}
                     />
                   </div>
+                  
+                  {/* Systems Test Panel */}
+                  {onRunSystemsTest && (
+                    <div className="pt-3 border-t border-border/30 mt-3">
+                      <SystemsTestPanel 
+                        currentGenre={currentGenre}
+                        onRunTest={onRunSystemsTest}
+                        isLoading={isRunningTest}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

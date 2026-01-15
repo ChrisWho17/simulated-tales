@@ -6,6 +6,7 @@ import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { NarratorSettingsModal } from './NarratorSettingsModal';
+import { TestConfig, TestScenario } from './SystemsTestPanel';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
@@ -2210,6 +2211,90 @@ export function AdventureGame() {
     }
   }, [retryRequested, lastFailedAction, retryLastAction]);
 
+  // === SYSTEMS TEST: Run test scenario with injected game state ===
+  const handleRunSystemsTest = useCallback(async (testConfig: TestConfig, scenario: TestScenario) => {
+    if (!character || !scenarioSelection) {
+      toast.error('Start an adventure to run systems tests');
+      return;
+    }
+    
+    console.log('[SystemsTest] Running test scenario:', scenario.name);
+    console.log('[SystemsTest] Test config:', testConfig);
+    
+    // Apply weather state if configured
+    if (testConfig.weatherType !== 'clear') {
+      const weatherMap: Record<string, typeof weatherState.current> = {
+        'rain': 'rain',
+        'storm': 'storm',
+        'snow': 'snow',
+        'fog': 'fog',
+        'clear': 'clear',
+      };
+      const newWeather = weatherMap[testConfig.weatherType] || 'clear';
+      setWeatherState(prev => ({
+        ...prev,
+        current: newWeather,
+        intensity: testConfig.weatherType === 'storm' ? 0.9 : 0.7,
+      }));
+      console.log('[SystemsTest] Set weather to:', newWeather);
+    }
+    
+    // Apply time state if configured  
+    const timeMap: Record<string, number> = {
+      'dawn': 6,
+      'morning': 9,
+      'afternoon': 14,
+      'evening': 18,
+      'night': 22,
+    };
+    const newHour = timeMap[testConfig.timeOfDay] || 14;
+    setTimeState(prev => ({ ...prev, hour: newHour }));
+    console.log('[SystemsTest] Set time to hour:', newHour);
+    
+    // Apply mood if configured
+    if (testConfig.moodType !== 'neutral') {
+      const moodMap: Record<string, CoreMoodType> = {
+        'fearful': 'fearful',
+        'angry': 'mad',
+        'hopeful': 'happy',
+        'melancholic': 'sad',
+        'neutral': 'neutral',
+      };
+      const newMood = moodMap[testConfig.moodType] || 'neutral';
+      setCurrentMood(newMood);
+      console.log('[SystemsTest] Set mood to:', newMood);
+    }
+    
+    // Build context hints for the AI prompt
+    const contextHints: string[] = [];
+    
+    if (testConfig.armorType !== 'none') {
+      contextHints.push(`[CONTEXT: The player is wearing ${testConfig.armorType} armor that affects their movement and appearance]`);
+    }
+    
+    if (testConfig.woundLevel !== 'none') {
+      contextHints.push(`[CONTEXT: The player has ${testConfig.woundLevel} wounds that are visibly bleeding/showing]`);
+    }
+    
+    if (testConfig.exhaustionLevel !== 'fresh') {
+      contextHints.push(`[CONTEXT: The player is ${testConfig.exhaustionLevel} and it shows in their movements and speech]`);
+    }
+    
+    // Combine context with scenario test prompt
+    const enhancedPrompt = contextHints.length > 0 
+      ? `${contextHints.join(' ')} ${scenario.testPrompt}`
+      : scenario.testPrompt;
+    
+    console.log('[SystemsTest] Enhanced prompt:', enhancedPrompt);
+    
+    // Trigger the AI narration with the test scenario
+    await handlePlayerAction(enhancedPrompt);
+    
+    toast.success('Systems test triggered!', {
+      description: `Check the narrative for ${scenario.systems.join(', ')} references`,
+    });
+  }, [character, scenarioSelection, handlePlayerAction, setWeatherState, setTimeState]);
+
   // Generate scene image
   const handleGenerateImage = useCallback(async (entryId: string) => {
     const entry = story.find(e => e.id === entryId);
@@ -2549,6 +2634,7 @@ export function AdventureGame() {
         campaignId={campaignContext?.activeCampaignId || 'default_campaign'}
         onRegenerateWorld={!worldLocked && story.length === 1 ? handleRegenerateWorld : undefined}
         canRegenerateWorld={!worldLocked && story.length === 1 && !isLoading}
+        onRunSystemsTest={handleRunSystemsTest}
       />
     );
   }
