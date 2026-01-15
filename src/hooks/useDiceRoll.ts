@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useGameOptional } from '@/contexts/GameContext';
+import { useSessionStatsOptional } from '@/components/game/SessionStats';
 import { 
   DiceRollResult, 
   performDiceRoll, 
@@ -79,6 +80,7 @@ export interface UseDiceRollReturn {
 
 export function useDiceRoll(): UseDiceRollReturn {
   const gameContext = useGameOptional();
+  const sessionStats = useSessionStatsOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
   
   const [state, setState] = useState<DiceRollState>({
@@ -137,12 +139,27 @@ export function useDiceRoll(): UseDiceRollReturn {
         currentRoll: result,
         lastSkillCheck: null
       });
+      
+      // Track dice roll stats
+      if (sessionStats) {
+        sessionStats.incrementStat('diceRolled');
+        if (result.naturalRoll === 20) {
+          sessionStats.incrementStat('naturalTwenties');
+        } else if (result.naturalRoll === 1) {
+          sessionStats.incrementStat('naturalOnes');
+        }
+        if (result.isCritical) {
+          sessionStats.incrementStat('criticalSuccesses');
+        } else if (result.result.label === 'Critical Failure') {
+          sessionStats.incrementStat('criticalFailures');
+        }
+      }
     } else {
       setState(prev => ({ ...prev, isRolling: false }));
     }
     
     return { diceRoll: result, skillCheck: null, shouldDisplay: true };
-  }, [diceMode]);
+  }, [diceMode, sessionStats]);
   
   const clearRoll = useCallback(() => {
     setState({

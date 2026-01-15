@@ -13,6 +13,7 @@ import { SessionStatsProvider } from "@/components/game/SessionStats";
 import { AchievementsProvider } from "@/components/game/Achievements";
 import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
 import { SessionAchievementBridge } from "@/components/game/SessionAchievementBridge";
+import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -43,6 +44,8 @@ const App = () => (
           <AchievementsProvider>
             {/* Bridge to connect session stats to achievements */}
             <SessionAchievementBridge />
+            {/* Bridge to connect EventBus game events to session stats */}
+            <SessionStatsBridge />
             <GameProvider>
               <CampaignProvider>
                 <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>

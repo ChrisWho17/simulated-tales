@@ -142,6 +142,7 @@ import {
   getMoveSyncState,
 } from '@/game/moveSyncSystem';
 import { processNarrativeForCombatAchievements } from '@/game/combatAchievementBridge';
+import { useSessionStatsOptional } from '@/components/game/SessionStats';
 import {
   DirectorSettings,
   DEFAULT_DIRECTOR_SETTINGS,
@@ -276,6 +277,9 @@ export function AdventureGame() {
   
   // Campaign context (optional - may not be available)
   const campaignContext = useCampaignOptional();
+  
+  // Session stats for tracking gameplay metrics
+  const sessionStats = useSessionStatsOptional();
   
   // Inventory system integration
   const inventory = useInventory();
@@ -2000,6 +2004,11 @@ export function AdventureGame() {
     const updatedStory = [...story, playerEntry];
     setStory(updatedStory);
     
+    // === STATS TRACKING: Record player choice ===
+    if (sessionStats) {
+      sessionStats.incrementStat('choicesMade');
+    }
+    
     // Add player action to campaign narrative
     if (campaignContext) {
       campaignContext.addNarrativeEntry(playerEntry);
@@ -2034,6 +2043,13 @@ export function AdventureGame() {
       const npcResult = processNarrativeForNPCs(narrative, currentTurn, character.name);
       if (npcResult.registered.length > 0) {
         console.log(`[NPCAutoReg] Registered ${npcResult.registered.length} NPCs:`, npcResult.registered);
+        
+        // === STATS TRACKING: Record NPC encounters ===
+        if (sessionStats) {
+          npcResult.registered.forEach(npcName => {
+            sessionStats.addNpcEncounter(typeof npcName === 'string' ? npcName : String(npcName));
+          });
+        }
       }
       
       // === COMBAT ACHIEVEMENT BRIDGE: Detect combat outcomes from narrative ===
@@ -2113,10 +2129,15 @@ export function AdventureGame() {
         console.log(`[MoveSync] Genre violations detected: ${moveSyncResult.genreViolations.length}`);
       }
       
+      // === STATS TRACKING: Track location if changed ===
+      if (sessionStats && moveSyncResult.environmentUpdates?.currentLocation) {
+        sessionStats.addLocationVisit(moveSyncResult.environmentUpdates.currentLocation);
+      }
+      
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory, sessionStats]);
 
   // Retry last failed action
   const retryLastAction = useCallback(async () => {
