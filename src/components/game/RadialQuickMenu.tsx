@@ -435,7 +435,7 @@ export function RadialQuickMenu({
               }}
               style={{
                 left: 'calc(50% - 31px)',
-                top: 'calc(50% - 29px)',
+                top: 'calc(50% - 31px)',
                 transform: 'translate(-50%, -50%)',
                 boxShadow: '0 0 30px 8px hsl(var(--primary) / 0.25), 0 0 60px 15px hsl(var(--primary) / 0.1)'
               }}
