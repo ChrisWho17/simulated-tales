@@ -497,51 +497,49 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
 }
 
 async function generateImage(prompt: string, negative: string): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = Deno.env.get("TOGETHER_API_KEY");
+  if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
 
-  // Combine prompt with negative prompt instructions
-  const fullPrompt = `${prompt}\n\nIMPORTANT - AVOID: ${negative}`;
+  console.log("Generating portrait with Together.ai (FLUX.1-schnell)");
+  console.log("Prompt:", prompt.substring(0, 200) + "...");
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://api.together.ai/v1/images/generations", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image-preview",
-      messages: [
-        {
-          role: "user",
-          content: fullPrompt
-        }
-      ],
-      modalities: ["image", "text"]
+      model: "black-forest-labs/FLUX.1-schnell",
+      prompt: prompt,
+      negative_prompt: negative,
+      width: 832,
+      height: 1216,
+      steps: 4,
+      n: 1,
+      response_format: "b64_json"
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("Lovable AI error:", error);
+    console.error("Together.ai error:", response.status, error);
     if (response.status === 429) {
       throw new Error("Rate limit exceeded, please try again later");
     }
-    if (response.status === 402) {
-      throw new Error("Payment required, please add credits to your workspace");
-    }
-    throw new Error(`Generation failed: ${response.status}`);
+    throw new Error(`Generation failed: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  const b64Data = data.data?.[0]?.b64_json;
   
-  if (!imageUrl) {
+  if (!b64Data) {
     console.error("No image in response:", JSON.stringify(data));
-    throw new Error("No image returned from AI");
+    throw new Error("No image returned from Together.ai");
   }
 
-  return imageUrl;
+  // Return as base64 data URL
+  return `data:image/png;base64,${b64Data}`;
 }
 
 serve(async (req) => {
