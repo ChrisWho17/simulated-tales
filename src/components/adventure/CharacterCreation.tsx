@@ -34,6 +34,7 @@ import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
 import { CustomClassBuilder, CustomClassData } from './CustomClassBuilder';
 import { StartingGearEditor } from './StartingGearEditor';
 import { StartingGearItem } from '@/game/storyInventoryBridge';
+import { AppearanceAccordions } from './AppearanceAccordions';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -113,7 +114,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     detailLevel: 'simple',
     simple: { gender: 'male', height: 'average', build: 'average' },
     detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
-    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
+    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
   });
   
   // Collapsible section states
@@ -300,12 +301,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         bodyHair: appearance.full?.bodyHair,
         // CRITICAL: Body modifications - passed directly to edge function
         piercings: appearance.full?.piercings || [],
+        piercingStyle: appearance.full?.piercingStyle || '',
         tattoos: appearance.full?.tattoos || [],
         tattooStyle: appearance.full?.tattooStyle,
         scars: appearance.full?.scars || [],
         prosthetics: appearance.full?.prosthetics || [],
         implants: appearance.full?.implants || [],
         mutations: appearance.full?.mutations || [],
+        clothingStyle: appearance.full?.clothingStyle || 'genre_default',
+        clothingDetails: appearance.full?.clothingDetails || [],
         // CRITICAL: Free-form description from "Additional Details" textarea
         additionalDetails: appearance.full?.intimateDetails || '',
         // Class info for role-appropriate styling
@@ -796,28 +800,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     )}
 
-                    {/* Free-form description - AI Priority Enhancement */}
-                    <div className="border border-primary/30 rounded-lg p-3 bg-primary/5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        <label className="text-sm font-medium text-primary">AI Enhancement Details</label>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        ✨ <strong>Priority field</strong> — These details are emphasized to the AI after your base character is built. 
-                        Describe accessories, augmentations, cosmetic surgery, unique features, specific outfit details, 
-                        jewelry styles, makeup looks, or any other enhancements you want the AI to prioritize.
-                      </p>
-                      <Textarea
-                        value={appearance.full?.intimateDetails || ''}
-                        onChange={(e) => updateAppearance('full', 'intimateDetails', e.target.value)}
-                        placeholder="e.g., Rose gold nose ring, sleeve tattoo of cherry blossoms, subtle lip fillers, chrome cybernetic left arm, vintage aviator sunglasses, silver ear cuffs..."
-                        className="mt-1 bg-background border-border/50 min-h-[80px]"
-                        maxLength={500}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1 text-right">
-                        {(appearance.full?.intimateDetails || '').length}/500
-                      </p>
-                    </div>
+                    {/* Appearance Accordions - Clothing, Piercings, Tattoos, Mods */}
+                    <AppearanceAccordions 
+                      appearance={appearance}
+                      onUpdateAppearance={updateAppearance}
+                      genre={genre}
+                    />
                   </div>
                 )}
               </ScrollArea>
