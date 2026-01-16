@@ -8,7 +8,7 @@ const corsHeaders = {
 // ============================================================================
 // STYLE LOCK - Universal cinematic key art style (never changes)
 // ============================================================================
-const STYLE_LOCK = `cinematic key art, stylized realism, polished digital illustration, controlled detail, clean anatomy, strong material realism, crisp edges, soft key light with subtle rim light, slight depth of field, no text, no watermark`;
+const STYLE_LOCK = `stylized character art, cartoon proportions with realistic textures, high definition illustration, visible fabric weave, metal scratches, leather grain, expressive features, clean linework with detailed shading, strong material fidelity, crisp edges, soft key light with subtle rim light, slight depth of field, no text, no watermark, anime-inspired realism, polished digital painting`;
 
 // ============================================================================
 // HARD LOCK - Appended to every prompt
