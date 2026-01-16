@@ -6,60 +6,15 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// CORE STYLE TEMPLATE - Realistic waist-up portraits with detailed environments
+// CORE STYLE TEMPLATE - Simplified for FLUX Schnell (4-step model)
+// Schnell prioritizes early tokens, so keep base minimal
 // ============================================================================
 
-// Realistic photo style - knees up to head framing (3/4 body shot)
-const PORTRAIT_STYLE_BASE = [
-  'ultra realistic photograph',
-  'professional full body portrait photography',
-  'IMPORTANT: three-quarter length portrait showing full body from knees up to head',
-  'full torso visible',
-  'hips and waist clearly visible',
-  'arms and hands visible',
-  'medium shot framing',
-  'subject standing',
-  'sharp focus on face',
-  'natural skin texture',
-  'photorealistic',
-  'detailed facial features',
-  'looking at viewer',
-  'studio quality lighting',
-  'high resolution',
-  'detailed eyes with natural reflections',
-  'natural hair texture',
-  'authentic clothing fabric textures',
-  'full outfit visible from knees to head',
-].join(', ');
+// Minimal base - character details will come FIRST in final prompt
+const PORTRAIT_STYLE_BASE = 'realistic photograph, 3/4 body portrait from knees to head, full torso visible, photorealistic, sharp focus';
 
-const PORTRAIT_NEGATIVE = [
-  'headshot only',
-  'face closeup',
-  'bust shot',
-  'shoulders up only',
-  'cropped body',
-  'cartoon',
-  'anime',
-  'illustration',
-  'painting',
-  'drawing',
-  'sketch',
-  'digital art',
-  'CGI',
-  '3D render',
-  'blurry',
-  'bad anatomy',
-  'distorted face',
-  'extra limbs',
-  'watermark',
-  'text',
-  'logo',
-  'plastic skin',
-  'mannequin',
-  'doll-like',
-  'oversaturated',
-  'overexposed',
-].join(', ');
+// Simplified negative prompt - only critical exclusions
+const PORTRAIT_NEGATIVE = 'cartoon, anime, illustration, painting, sketch, digital art, blurry, distorted, extra limbs, watermark, text';
 
 // ============================================================================
 // GENRE STYLES - Detailed environments for waist-up portraits
@@ -669,7 +624,8 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: `IMPORTANT: three-quarter length portrait from knees to head, full torso visible, medium shot, NOT a headshot, ${prompt}`,
+      // Pass prompt as-is - character details are already at the start
+      prompt: prompt,
       width: 832,
       height: 1216,
       steps: 4,
@@ -941,82 +897,45 @@ function buildLockedReferencePrompt(body: any) {
   // Determine final clothing - use override if specified, otherwise use role/genre default
   const finalClothing = clothingOverride || roleStyle;
   
-  // Build the realistic portrait prompt with all character creation settings
-  // CRITICAL: Body modifications MUST appear early in the prompt for FLUX to render them
-  const promptParts = [
-    // Core realistic photo style with knee-to-head framing
-    PORTRAIT_STYLE_BASE,
-    
-    // Character identity - EXPLICIT for better prompt following
-    `portrait of ${ageDesc} ${genderDesc}`,
-    `body type: ${buildDesc}`,
-    heightDesc,
-    `skin: ${skinDesc}`,
-    `hair: ${hairColorDesc}, ${hairStyleDesc}`,
-    `eyes: ${eyeColorDesc}`,
-  ];
+  // =========================================================================
+  // BUILD PROMPT - CRITICAL: Character-specific details FIRST for Schnell
+  // Schnell (4 steps) heavily weights early tokens, so put unique features first
+  // =========================================================================
   
-  // BODY MODIFICATIONS - MUST be early in prompt for AI to render them
-  // Split into visible facial/body mods for emphasis
+  const promptParts: string[] = [];
+  
+  // 1. BODY MODIFICATIONS FIRST - Most unique, most likely to be missed
   if (bodyModParts.length > 0) {
-    // Categorize by visibility
-    const facialMods = bodyModParts.filter(m => 
-      m.toLowerCase().includes('face') || 
-      m.toLowerCase().includes('eyebrow') || 
-      m.toLowerCase().includes('nose') || 
-      m.toLowerCase().includes('lip') || 
-      m.toLowerCase().includes('tongue') || 
-      m.toLowerCase().includes('ear') ||
-      m.toLowerCase().includes('septum') ||
-      m.toLowerCase().includes('monroe') ||
-      m.toLowerCase().includes('labret') ||
-      m.toLowerCase().includes('jaw') ||
-      m.toLowerCase().includes('eye') ||
-      m.toLowerCase().includes('cheek')
-    );
-    
-    const bodyMods = bodyModParts.filter(m => !facialMods.includes(m));
-    
-    // Add facial modifications prominently
-    if (facialMods.length > 0) {
-      promptParts.push(`CLEARLY VISIBLE on face: ${facialMods.join(', ')}`);
-    }
-    
-    // Add body modifications
-    if (bodyMods.length > 0) {
-      promptParts.push(`VISIBLE body features: ${bodyMods.join(', ')}`);
-    }
-    
-    console.log("Facial mods emphasized:", facialMods.length, "Body mods:", bodyMods.length);
+    // All mods go at the very start for maximum weight
+    promptParts.push(`MUST SHOW: ${bodyModParts.join(', ')}`);
+    console.log("Body mods placed FIRST in prompt:", bodyModParts.length, "items");
   }
   
-  // Character details (other features)
+  // 2. Core physical identity (compact)
+  promptParts.push(`${ageDesc} ${genderDesc}, ${buildDesc}, ${skinDesc}`);
+  promptParts.push(`${hairColorDesc} ${hairStyleDesc}, ${eyeColorDesc}`);
+  if (heightDesc) promptParts.push(heightDesc);
+  
+  // 3. Details and features (compact)
   if (detailParts.length > 0) {
-    promptParts.push(`additional features: ${detailParts.join(', ')}`);
+    promptParts.push(detailParts.join(', '));
   }
   
-  // Add remaining prompt parts
-  promptParts.push(
-    // Clothing/gear based on class, genre, or custom style
-    `clothing and gear: ${finalClothing}`,
-    
-    // Expression
-    `expression: ${expression}`,
-    
-    // Portrait hints from class selection
-    portraitHints?.join(', ') || '',
-    
-    // Genre-specific environment background
-    `${genre} genre setting, realistic environment background: ${background}`,
-    
-    // Depth and atmosphere
-    'shallow depth of field, background slightly blurred',
-    'natural atmospheric lighting',
-  );
+  // 4. Clothing/role
+  promptParts.push(finalClothing);
+  
+  // 5. Expression
+  promptParts.push(expression);
+  
+  // 6. Genre setting and background
+  promptParts.push(`${genre} setting, ${background}`);
+  
+  // 7. Photography style at END (Schnell will still apply it but won't prioritize over character)
+  promptParts.push(PORTRAIT_STYLE_BASE);
   
   const finalPrompt = promptParts.filter(Boolean).join(', ');
-  console.log("Built prompt length:", finalPrompt.length);
-  console.log("Final prompt preview:", finalPrompt.substring(0, 600) + "...");
+  console.log("Simplified prompt length:", finalPrompt.length);
+  console.log("Final prompt:", finalPrompt.substring(0, 800));
   
   return {
     prompt: finalPrompt,
