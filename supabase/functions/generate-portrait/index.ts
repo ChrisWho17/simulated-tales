@@ -34,6 +34,11 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'warm comfortable ambiance', 
     elements: 'coffee shop, modern apartment, street scene' 
   },
+  contemporary: { 
+    setting: 'modern day setting', 
+    atmosphere: 'realistic present-day world', 
+    elements: 'urban streets, modern interiors, everyday locations' 
+  },
   
   // Sci-Fi
   cyberpunk: { 
@@ -46,10 +51,20 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'advanced technology, clean futurism', 
     elements: 'spaceship interior, space station, sleek technology' 
   },
+  sci_fi: { 
+    setting: 'futuristic environment', 
+    atmosphere: 'advanced technology, clean futurism', 
+    elements: 'spaceship interior, space station, sleek technology' 
+  },
   space_opera: { 
     setting: 'starship bridge or alien vista', 
     atmosphere: 'epic galactic scale, cosmic wonder', 
     elements: 'control panels, viewports to space, distant planets' 
+  },
+  mecha: { 
+    setting: 'giant robot hangar bay', 
+    atmosphere: 'massive scale mechanical warfare', 
+    elements: 'towering mecha, industrial hangar, pilot interfaces' 
   },
   
   // War/Military
@@ -57,6 +72,11 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     setting: 'battlefield or military installation', 
     atmosphere: 'tense combat readiness, military precision', 
     elements: 'military equipment, fortifications, combat zone' 
+  },
+  military: { 
+    setting: 'military base or combat zone', 
+    atmosphere: 'disciplined military environment', 
+    elements: 'barracks, equipment, military vehicles' 
   },
   ww2: { 
     setting: '1940s wartime Europe', 
@@ -73,9 +93,19 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'humid tropical warfare, dense vegetation', 
     elements: 'jungle foliage, firebase, humid environment' 
   },
+  cold_war: { 
+    setting: 'Cold War era Eastern Europe', 
+    atmosphere: 'espionage tension, ideological conflict', 
+    elements: 'Berlin Wall, Soviet architecture, period spy aesthetics' 
+  },
   
   // Post-Apocalyptic
   postapoc: { 
+    setting: 'post-apocalyptic wasteland', 
+    atmosphere: 'desolate survival, civilization collapse', 
+    elements: 'ruined buildings, overgrown decay, scavenged world' 
+  },
+  post_apocalyptic: { 
     setting: 'post-apocalyptic wasteland', 
     atmosphere: 'desolate survival, civilization collapse', 
     elements: 'ruined buildings, overgrown decay, scavenged world' 
@@ -84,6 +114,11 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     setting: 'zombie apocalypse city', 
     atmosphere: 'desperate survival horror', 
     elements: 'barricaded buildings, abandoned streets, survival setup' 
+  },
+  survival: { 
+    setting: 'wilderness survival setting', 
+    atmosphere: 'harsh nature, human endurance', 
+    elements: 'forest camp, makeshift shelter, survival gear' 
   },
   fallout: { 
     setting: 'retro-futuristic nuclear wasteland', 
@@ -112,6 +147,16 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'bright heroic fantasy, magical wonder', 
     elements: 'crystal spires, magical auras, enchanted landscape' 
   },
+  sword_sorcery: { 
+    setting: 'barbaric ancient world', 
+    atmosphere: 'raw primal fantasy, ancient mysteries', 
+    elements: 'ancient ruins, mystical temples, savage wilderness' 
+  },
+  sword_and_sorcery: { 
+    setting: 'barbaric ancient world', 
+    atmosphere: 'raw primal fantasy, ancient mysteries', 
+    elements: 'ancient ruins, mystical temples, savage wilderness' 
+  },
   
   // Horror
   horror: { 
@@ -124,10 +169,25 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'aristocratic darkness, eternal night', 
     elements: 'moonlit architecture, gothic elements, candlelight' 
   },
+  werewolf: { 
+    setting: 'foggy wilderness under full moon', 
+    atmosphere: 'bestial horror, primal fear', 
+    elements: 'full moon, dark forest, mist, wild nature' 
+  },
   lovecraft: { 
     setting: '1920s New England', 
     atmosphere: 'cosmic horror, eldritch unease', 
     elements: 'old buildings, mysterious shadows, unsettling geometry' 
+  },
+  lovecraftian: { 
+    setting: '1920s New England', 
+    atmosphere: 'cosmic horror, eldritch unease', 
+    elements: 'old buildings, mysterious shadows, unsettling geometry' 
+  },
+  cosmic_horror: { 
+    setting: 'reality-bending space', 
+    atmosphere: 'incomprehensible cosmic dread', 
+    elements: 'impossible geometry, stars, void' 
   },
   
   // Historical
@@ -146,39 +206,196 @@ const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; e
     atmosphere: 'industrial age elegance and grime', 
     elements: 'gas lamps, cobblestones, period architecture' 
   },
+  renaissance: { 
+    setting: 'Italian Renaissance city', 
+    atmosphere: 'artistic golden age, intrigue', 
+    elements: 'palazzo architecture, marble, artistic grandeur' 
+  },
+  ancient: { 
+    setting: 'ancient classical world', 
+    atmosphere: 'timeless antiquity, mythic grandeur', 
+    elements: 'Roman forum, Greek temples, classical columns' 
+  },
+  ancient_rome: { 
+    setting: 'ancient Roman Empire', 
+    atmosphere: 'imperial grandeur, classical civilization', 
+    elements: 'Roman architecture, columns, marble' 
+  },
+  ancient_greece: { 
+    setting: 'ancient Greek city-state', 
+    atmosphere: 'philosophical golden age', 
+    elements: 'Greek temples, olive groves, Mediterranean' 
+  },
+  
+  // Punk genres
   steampunk: { 
     setting: 'steampunk Victorian city', 
     atmosphere: 'brass and steam technology, retro-futurism', 
     elements: 'clockwork machinery, steam pipes, brass and copper' 
   },
+  dieselpunk: { 
+    setting: '1930s-40s retro-futuristic city', 
+    atmosphere: 'art deco industrial power', 
+    elements: 'art deco architecture, massive machines, propaganda' 
+  },
+  atompunk: { 
+    setting: '1950s atomic age future', 
+    atmosphere: 'retro-futuristic optimism', 
+    elements: 'atomic symbols, chrome and fins, Jetsons aesthetic' 
+  },
+  solarpunk: { 
+    setting: 'eco-futuristic utopia', 
+    atmosphere: 'sustainable green future', 
+    elements: 'vertical gardens, solar panels, nature and technology merged' 
+  },
+  
+  // Adventure
+  pirate: { 
+    setting: 'Caribbean pirate ship or port', 
+    atmosphere: 'swashbuckling high seas adventure', 
+    elements: 'ship deck, tropical port, treasure, sails' 
+  },
+  nautical: { 
+    setting: 'maritime setting', 
+    atmosphere: 'ocean adventure, seafaring life', 
+    elements: 'ships, docks, ocean, maritime equipment' 
+  },
+  exploration: { 
+    setting: 'uncharted wilderness', 
+    atmosphere: 'discovery and adventure', 
+    elements: 'jungle, ruins, expedition camp' 
+  },
   
   // Thriller/Crime
+  mystery: { 
+    setting: 'atmospheric mystery location', 
+    atmosphere: 'puzzling intrigue, hidden secrets', 
+    elements: 'study, clues, Victorian or noir aesthetics' 
+  },
   spy: { 
     setting: 'sophisticated spy location', 
     atmosphere: 'international intrigue, high stakes', 
     elements: 'luxury casino, secret base, exotic locale' 
+  },
+  espionage: { 
+    setting: 'Cold War spy setting', 
+    atmosphere: 'covert operations, danger', 
+    elements: 'safe houses, surveillance, hidden weapons' 
   },
   crime: { 
     setting: 'urban crime scene', 
     atmosphere: 'gritty underworld tension', 
     elements: 'dark alley, city night, urban environment' 
   },
+  heist: { 
+    setting: 'high-security target location', 
+    atmosphere: 'precision theft, high stakes', 
+    elements: 'museum, vault, security systems, night operation' 
+  },
+  thriller: { 
+    setting: 'tense thriller environment', 
+    atmosphere: 'suspense and danger', 
+    elements: 'urban setting, shadows, tension' 
+  },
   
-  // Other
+  // Superhero
   superhero: { 
     setting: 'heroic cityscape', 
     atmosphere: 'larger than life heroism', 
     elements: 'city rooftop, dramatic sky, urban backdrop' 
+  },
+  supervillain: { 
+    setting: 'villainous lair', 
+    atmosphere: 'menacing power, dark ambition', 
+    elements: 'secret base, technology, destruction' 
+  },
+  comic_book: { 
+    setting: 'dynamic comic scene', 
+    atmosphere: 'bold heroic drama', 
+    elements: 'city, action, dramatic lighting' 
+  },
+  
+  // Slice of life & Drama
+  slice_of_life: { 
+    setting: 'everyday comfortable location', 
+    atmosphere: 'warm familiar comfort', 
+    elements: 'cozy home, neighborhood, everyday spaces' 
   },
   romance: { 
     setting: 'romantic setting', 
     atmosphere: 'intimate warmth, emotional connection', 
     elements: 'soft lighting, elegant venue, romantic ambiance' 
   },
-  slice_of_life: { 
-    setting: 'everyday comfortable location', 
-    atmosphere: 'warm familiar comfort', 
-    elements: 'cozy home, neighborhood, everyday spaces' 
+  comedy: { 
+    setting: 'bright everyday setting', 
+    atmosphere: 'lighthearted fun, vibrant energy', 
+    elements: 'colorful environment, casual spaces' 
+  },
+  drama: { 
+    setting: 'emotionally charged setting', 
+    atmosphere: 'intense personal drama', 
+    elements: 'intimate spaces, meaningful locations' 
+  },
+  
+  // Mythological
+  mythology: { 
+    setting: 'mythological realm', 
+    atmosphere: 'divine legend, ancient power', 
+    elements: 'temples, divine symbols, mythic landscape' 
+  },
+  greek_mythology: { 
+    setting: 'Mount Olympus or ancient Greece', 
+    atmosphere: 'divine Greek mythology', 
+    elements: 'Greek temples, clouds, divine lighting' 
+  },
+  norse_mythology: { 
+    setting: 'Nordic mythological realm', 
+    atmosphere: 'Viking mythology, runic power', 
+    elements: 'Yggdrasil, runes, Norse architecture' 
+  },
+  
+  // Asian-inspired
+  wuxia: { 
+    setting: 'ancient Chinese martial world', 
+    atmosphere: 'martial arts epic, honor and skill', 
+    elements: 'bamboo forests, temples, mountains' 
+  },
+  xianxia: { 
+    setting: 'celestial cultivation realm', 
+    atmosphere: 'immortal cultivation, cosmic power', 
+    elements: 'floating mountains, mystical clouds, cultivation sect' 
+  },
+  samurai: { 
+    setting: 'feudal Japan', 
+    atmosphere: 'bushido honor, Japanese aesthetics', 
+    elements: 'Japanese castle, cherry blossoms, traditional architecture' 
+  },
+  
+  // Misc
+  urban_fantasy: { 
+    setting: 'modern city with hidden magic', 
+    atmosphere: 'magic hidden in modern world', 
+    elements: 'city streets, hidden magical elements, urban night' 
+  },
+  grimdark: { 
+    setting: 'brutal dark fantasy world', 
+    atmosphere: 'grim hopeless darkness, moral gray', 
+    elements: 'mud, blood, dark castles, bleak landscape' 
+  },
+  apocalyptic: { 
+    setting: 'world ending catastrophe', 
+    atmosphere: 'final days, desperate survival', 
+    elements: 'destruction, fire, chaos' 
+  },
+  dystopia: { 
+    setting: 'oppressive dystopian society', 
+    atmosphere: 'totalitarian control, resistance', 
+    elements: 'propaganda, brutalist architecture, surveillance' 
+  },
+  utopia: { 
+    setting: 'perfect society', 
+    atmosphere: 'harmonious idealism', 
+    elements: 'gleaming cities, gardens, peace' 
   },
 };
 
