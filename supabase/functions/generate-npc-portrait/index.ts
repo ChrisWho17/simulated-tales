@@ -11,11 +11,16 @@ const corsHeaders = {
 
 const PORTRAIT_STYLE_BASE = [
   'ultra realistic photograph',
-  'professional portrait photography',
+  'professional full body portrait photography',
+  'CRITICAL: three-quarter length portrait showing full body from knees up to head',
+  'full torso visible',
+  'hips and waist clearly visible',
+  'arms and hands visible',
+  'medium shot framing from knees to head',
+  'subject standing',
   'sharp focus on face',
   'natural skin texture',
   'photorealistic',
-  'three-quarter body shot from knees up to head',
   'detailed facial features',
   'looking at viewer',
   'studio quality lighting',
@@ -23,11 +28,18 @@ const PORTRAIT_STYLE_BASE = [
   'detailed eyes with natural reflections',
   'natural hair texture',
   'authentic clothing fabric textures',
+  'full outfit visible from knees to head',
   'full environment visible in background',
   'character in foreground with detailed background scenery',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
+  'headshot only',
+  'face closeup',
+  'bust shot',
+  'shoulders up only',
+  'cropped body',
+  'portrait from chest up',
   'cartoon',
   'anime',
   'illustration',
@@ -455,12 +467,13 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: prompt,
-      width: 768,
-      height: 1024,
+      prompt: `IMPORTANT: three-quarter length portrait from knees to head, full torso visible, medium shot, ${prompt}`,
+      width: 832,
+      height: 1216,
       steps: 4,
       n: 1,
       response_format: 'b64_json',
+      negative_prompt: PORTRAIT_NEGATIVE,
     }),
   });
 

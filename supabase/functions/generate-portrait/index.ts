@@ -513,12 +513,13 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: `three-quarter length portrait from knees to head, full torso visible, ${prompt}`,
+      prompt: `IMPORTANT: three-quarter length portrait from knees to head, full torso visible, medium shot, NOT a headshot, ${prompt}`,
       width: 832,
       height: 1216,
       steps: 4,
       n: 1,
       response_format: 'b64_json',
+      negative_prompt: PORTRAIT_NEGATIVE,
     }),
   });
 
