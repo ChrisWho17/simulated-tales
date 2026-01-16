@@ -329,6 +329,48 @@ const ORIGIN_CLOTHING_STYLES: Record<string, { traditional: string; modern: stri
   },
 };
 
+// Origin-based BADASS vibes - make every character look formidable
+const ORIGIN_BADASS_VIBES: Record<string, string[]> = {
+  // Asian origins
+  'japanese': ['samurai warrior spirit', 'yakuza boss energy', 'ronin wanderer intensity', 'shinobi lethal grace'],
+  'chinese': ['wuxia martial master', 'triad enforcer presence', 'Shaolin warrior monk', 'imperial assassin poise'],
+  'korean': ['K-drama anti-hero swagger', 'special forces operative', 'underground fighter stance', 'revenge-driven intensity'],
+  'indian': ['Bollywood action hero presence', 'warrior caste nobility', 'mythic deity avatar', 'royal bodyguard intensity'],
+  'thai': ['Muay Thai champion presence', 'jungle guerrilla fighter', 'ancient warrior spirit', 'lethal elegance'],
+  'vietnamese': ['war-hardened survivor', 'special ops operative', 'guerrilla fighter resilience', 'quiet deadly intensity'],
+  // European origins
+  'british': ['SAS operative coldness', 'London underworld kingpin', 'Victorian assassin elegance', 'punk rock rebellion'],
+  'french': ['French Foreign Legion hardness', 'resistance fighter spirit', 'aristocratic duel master', 'parkour traceur agility'],
+  'italian': ['mafia don authority', 'Roman gladiator presence', 'Renaissance assassin grace', 'street-smart survivor'],
+  'german': ['Teutonic knight severity', 'industrial overlord power', 'precision killer coldness', 'underground techno warrior'],
+  'spanish': ['matador fearless swagger', 'conquistador ruthlessness', 'flamenco passion intensity', 'guerrilla fighter fire'],
+  'russian': ['Spetsnaz lethality', 'Bratva enforcer menace', 'Siberian survivor hardness', 'cold war operative steeliness'],
+  'scandinavian': ['Viking berserker fury', 'Norse god presence', 'frozen warrior resilience', 'death metal intensity'],
+  'irish': ['IRA rebel fire', 'bare-knuckle boxer toughness', 'Celtic warrior spirit', 'street fighter scrappiness'],
+  'scottish': ['Highland warrior ferocity', 'claymore-wielding intensity', 'clan chief authority', 'rebellious freedom fighter'],
+  'greek': ['Spartan warrior discipline', 'Olympian god presence', 'mythic hero destiny', 'ancient warrior philosopher'],
+  // American origins
+  'american': ['Navy SEAL operator', 'outlaw biker gang leader', 'Wild West gunslinger', 'street gang kingpin presence'],
+  'mexican': ['cartel sicario intensity', 'luchador mystique', 'revolucionario fire', 'border town survivor grit'],
+  'brazilian': ['favela warrior survival', 'Jiu-Jitsu champion presence', 'capoeira fighter grace', 'jungle predator instinct'],
+  'caribbean': ['pirate captain swagger', 'voodoo priest mysticism', 'island rebel spirit', 'hurricane survivor resilience'],
+  // African origins
+  'african': ['Wakandan warrior royalty', 'tribal warrior chief', 'savanna predator presence', 'Afrofuturist power'],
+  'nigerian': ['Lagos kingpin presence', '419 mastermind cunning', 'tribal warrior heritage', 'Nollywood action star'],
+  'egyptian': ['pharaoh god-king presence', 'ancient guardian power', 'desert warrior survival', 'Medjay protector duty'],
+  'moroccan': ['Berber mountain warrior', 'Marrakech underworld boss', 'desert nomad resilience', 'ancient fortress defender'],
+  'ethiopian': ['Aksumite warrior nobility', 'undefeated empire pride', 'highland warrior strength', 'ancient bloodline power'],
+  // Middle Eastern origins
+  'arabian': ['desert sheikh authority', 'Bedouin warrior nomad', 'Gulf billionaire power', 'ancient assassin order'],
+  'persian': ['immortal warrior legacy', 'Persian empire nobility', 'desert storm survivor', 'ancient dynasty power'],
+  'turkish': ['Ottoman Janissary elite', 'Istanbul underworld boss', 'Anatolian wolf warrior', 'empire builder ambition'],
+  'israeli': ['Mossad operative lethality', 'IDF special forces hardness', 'Krav Maga master', 'desert warrior survival'],
+  // Other
+  'australian': ['outback survivor toughness', 'Mad Max road warrior', 'crocodile hunter fearlessness', 'convict rebellion spirit'],
+  'polynesian': ['Maori warrior haka intensity', 'island god presence', 'ocean navigator fearlessness', 'tribal tattoo power'],
+  'native american': ['Apache warrior stealth', 'spirit warrior mysticism', 'plains warrior nobility', 'First Nations pride'],
+};
+
 // Get origin-based clothing style
 function getOriginClothingStyle(nationality?: string, ethnicity?: string, origin?: string): string {
   const searchStr = (nationality || ethnicity || origin || '').toLowerCase();
@@ -341,6 +383,21 @@ function getOriginClothingStyle(nationality?: string, ethnicity?: string, origin
     }
   }
   return '';
+}
+
+// Get origin-based badass vibe
+function getOriginBadassVibe(nationality?: string, ethnicity?: string, origin?: string): string {
+  const searchStr = (nationality || ethnicity || origin || '').toLowerCase();
+  
+  for (const [key, vibes] of Object.entries(ORIGIN_BADASS_VIBES)) {
+    if (searchStr.includes(key)) {
+      // Randomly pick one badass vibe
+      return vibes[Math.floor(Math.random() * vibes.length)];
+    }
+  }
+  // Default badass vibes for unknown origins
+  const defaultVibes = ['dangerous confidence', 'battle-hardened survivor', 'natural born leader', 'apex predator presence'];
+  return defaultVibes[Math.floor(Math.random() * defaultVibes.length)];
 }
 
 // Build clothing description: user additionals SUPERSEDE all else, then origin drives style, genre provides context
@@ -480,12 +537,16 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const originClothingStyle = getOriginClothingStyle(nationality, ethnicity, origin);
   const clothingDesc = buildClothingDescription(style.aesthetic, characterClass, originClothingStyle, userDesc);
   
+  // Get origin-based badass vibe
+  const badassVibe = getOriginBadassVibe(nationality, ethnicity, origin);
+  
   console.log('Genre aesthetic:', style.aesthetic);
   console.log('Origin clothing style:', originClothingStyle);
+  console.log('Badass vibe:', badassVibe);
   console.log('Final clothing direction:', clothingDesc);
   
-  // Maximum creative freedom - minimal constraints, let AI interpret freely
-  const prompt = `${character}, ${clothingDesc}, ${style.background}, ${style.lighting}`;
+  // Maximum creative freedom with badass energy
+  const prompt = `${character}, ${badassVibe}, ${clothingDesc}, ${style.background}, ${style.lighting}`;
   
   console.log('Final prompt:', prompt);
   console.log('Character class for costume:', characterClass);
