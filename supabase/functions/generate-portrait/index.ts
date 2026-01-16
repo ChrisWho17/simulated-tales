@@ -1562,6 +1562,78 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   // ========== USER CUSTOM DETAILS - HIGHEST PRIORITY ==========
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
 
+  // ========== PERSONALITY KEYWORD DETECTION ==========
+  // Detect personality keywords to adjust style
+  const lowerUserDesc = userDesc.toLowerCase();
+  
+  // MODEST keywords - conservative, covered, professional style
+  const MODEST_KEYWORDS = [
+    'modest', 'conservative', 'reserved', 'professional', 'dignified',
+    'proper', 'covered', 'traditional', 'pious', 'devout', 'innocent',
+    'pure', 'chaste', 'virtuous', 'demure', 'shy', 'timid', 'humble',
+    'prudish', 'buttoned-up', 'formal', 'respectable', 'decent'
+  ];
+  
+  // ALLURING keywords - more revealing, sensual, provocative style
+  const ALLURING_KEYWORDS = [
+    'alluring', 'seductive', 'provocative', 'sensual', 'sultry', 'flirty',
+    'bold', 'daring', 'confident', 'revealing', 'scandalous', 'tempting',
+    'enticing', 'teasing', 'playful', 'naughty', 'risque', 'suggestive',
+    'voluptuous', 'bombshell', 'femme fatale', 'siren', 'vixen', 'lewd',
+    'promiscuous', 'uninhibited', 'brazen', 'shameless', 'erotic'
+  ];
+  
+  // Calculate personality score (-1 to 1, negative = modest, positive = alluring)
+  let personalityScore = 0;
+  let matchedKeywords: string[] = [];
+  
+  for (const keyword of MODEST_KEYWORDS) {
+    if (lowerUserDesc.includes(keyword)) {
+      personalityScore -= 1;
+      matchedKeywords.push(`modest:${keyword}`);
+    }
+  }
+  
+  for (const keyword of ALLURING_KEYWORDS) {
+    if (lowerUserDesc.includes(keyword)) {
+      personalityScore += 1;
+      matchedKeywords.push(`alluring:${keyword}`);
+    }
+  }
+  
+  // Clamp score between -3 and 3 for graduated effect
+  personalityScore = Math.max(-3, Math.min(3, personalityScore));
+  
+  // Build personality style modifier
+  let personalityStyleMod = '';
+  let personalityClothingMod = '';
+  
+  if (personalityScore <= -2) {
+    // Very modest
+    personalityStyleMod = 'extremely modest and conservative presentation, very covered and concealing, formal and proper posture, reserved dignified expression';
+    personalityClothingMod = 'high necklines, long sleeves, full coverage, no skin showing, buttoned-up, layered modest clothing';
+  } else if (personalityScore === -1) {
+    // Somewhat modest
+    personalityStyleMod = 'modest and reserved presentation, appropriate coverage, professional demeanor, calm composed expression';
+    personalityClothingMod = 'modest neckline, appropriate coverage, professional attire';
+  } else if (personalityScore === 1) {
+    // Somewhat alluring
+    personalityStyleMod = 'confident alluring presence, slightly flirty expression, attractive pose, eye contact with subtle invitation';
+    personalityClothingMod = 'slightly revealing neckline, form-fitting silhouette, tastefully attractive attire';
+  } else if (personalityScore === 2) {
+    // More alluring
+    personalityStyleMod = 'seductive confident presence, sensual expression, provocative pose, smoldering eye contact, attractive and bold';
+    personalityClothingMod = 'revealing neckline showing cleavage, form-hugging outfit, bare shoulders, attractive revealing attire';
+  } else if (personalityScore >= 3) {
+    // Very alluring
+    personalityStyleMod = 'extremely seductive and provocative presence, sultry bedroom eyes, suggestive sensual pose, uninhibited boldness';
+    personalityClothingMod = 'very revealing outfit, deep plunging neckline, maximum cleavage, bare midriff, provocatively skimpy attire, scandalously revealing';
+  }
+  
+  if (matchedKeywords.length > 0) {
+    console.log('Personality keywords detected:', matchedKeywords.join(', '), '| Score:', personalityScore);
+  }
+
   // ========== GENRE ISOLATION RULES ==========
   const genreIsolation: Record<string, string> = {
     'fantasy': 'STRICT GENRE RULES: Medieval fantasy setting ONLY. NO modern technology, NO electricity, NO cybernetics, NO neon lights, NO futuristic elements. Use torches, candles, magic, swords, leather, cloth, medieval architecture.',
@@ -1608,25 +1680,34 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     promptSections.push(`BODY MODIFICATIONS: ${modParts.join(', ')}`);
   }
   
-  // 6. Clothing
-  promptSections.push(clothingDesc);
+  // 6. Clothing (with personality modifier)
+  if (personalityClothingMod) {
+    promptSections.push(`${clothingDesc} [PERSONALITY STYLE: ${personalityClothingMod}]`);
+  } else {
+    promptSections.push(clothingDesc);
+  }
   
   // 7. Role (if specified)
   if (roleDesc) {
     promptSections.push(roleDesc);
   }
   
-  // 8. Genre-specific styling
+  // 8. Personality/demeanor modifier (if keywords detected)
+  if (personalityStyleMod) {
+    promptSections.push(`PERSONALITY/DEMEANOR: ${personalityStyleMod}`);
+  }
+  
+  // 9. Genre-specific styling
   promptSections.push(`SCENE/BACKGROUND: ${style.background}`);
   promptSections.push(`JEWELRY/ACCESSORIES: ${style.jewelry}`);
   promptSections.push(`MAKEUP/GROOMING: ${style.makeup}`);
   
-  // 9. User custom details - PRIORITY
+  // 10. User custom details - PRIORITY
   if (userDesc) {
     promptSections.push(`[USER PRIORITY - MUST FOLLOW: ${userDesc}]`);
   }
   
-  // 10. Art style
+  // 11. Art style
   promptSections.push(`ART STYLE: ${STYLE_LOCK}`);
   
   const prompt = promptSections.join('. ');
