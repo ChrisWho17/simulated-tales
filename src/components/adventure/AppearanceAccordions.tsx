@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap, Wand2, Sword, Skull, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   TieredAppearance,
@@ -8,57 +8,57 @@ import {
   SCAR_OPTIONS, PROSTHETIC_OPTIONS, IMPLANT_OPTIONS, MUTATION_OPTIONS,
 } from '@/types/characterCreation';
 
-// Personality presets that auto-fill keywords for portrait generation
-export const PERSONALITY_PRESETS = [
-  {
-    id: 'goddess',
-    label: 'Goddess',
-    icon: Crown,
-    keywords: 'regal, divine, elegant, flowing robes, ethereal glow, majestic, graceful posture, radiant, celestial beauty',
-    description: 'Divine elegance and ethereal beauty',
-    color: 'from-amber-500 to-yellow-400',
-  },
-  {
-    id: 'modest',
-    label: 'Modest',
-    icon: Heart,
-    keywords: 'modest, conservative, covered, reserved, professional, dignified, proper posture, respectable, traditional',
-    description: 'Reserved and dignified appearance',
-    color: 'from-blue-400 to-cyan-400',
-  },
-  {
-    id: 'neutral',
-    label: 'Neutral',
-    icon: Zap,
-    keywords: 'natural, casual, relaxed, comfortable, everyday, practical, neutral posture, balanced',
-    description: 'Natural everyday look',
-    color: 'from-gray-400 to-slate-400',
-  },
-  {
-    id: 'flirty',
-    label: 'Flirty',
-    icon: Sparkles,
-    keywords: 'playful, charming, confident, stylish, form-fitting, flattering, coy smile, alluring eyes, fashionable',
-    description: 'Playful and charming style',
-    color: 'from-pink-400 to-rose-400',
-  },
-  {
-    id: 'provocative',
-    label: 'Provocative',
-    icon: Flame,
-    keywords: 'bold, daring, confident, striking, dramatic, attention-grabbing, fierce pose, intense gaze, powerful',
-    description: 'Bold and daring presence',
-    color: 'from-orange-500 to-red-500',
-  },
-  {
-    id: 'lusty',
-    label: 'Lusty',
-    icon: Flame,
-    keywords: 'seductive, sensual, alluring, captivating, magnetic, enticing, sultry gaze, confident pose, passionate',
-    description: 'Captivating and magnetic aura',
-    color: 'from-purple-500 to-pink-500',
-  },
-] as const;
+// Slash command definitions - categories of presets
+export interface SlashCommand {
+  command: string;
+  label: string;
+  category: 'personality' | 'genre' | 'clothing' | 'pose' | 'style';
+  keywords: string;
+  description: string;
+  color: string;
+  icon: typeof Crown;
+}
+
+// All slash commands organized by category
+export const SLASH_COMMANDS: SlashCommand[] = [
+  // ===== PERSONALITY PRESETS =====
+  { command: 'goddess', label: 'Goddess', category: 'personality', keywords: 'regal, divine, elegant, flowing robes, ethereal glow, majestic, graceful posture, radiant, celestial beauty', description: 'Divine elegance', color: 'from-amber-500 to-yellow-400', icon: Crown },
+  { command: 'modest', label: 'Modest', category: 'personality', keywords: 'modest, conservative, covered, reserved, professional, dignified, proper posture, respectable, traditional', description: 'Reserved dignity', color: 'from-blue-400 to-cyan-400', icon: Heart },
+  { command: 'neutral', label: 'Neutral', category: 'personality', keywords: 'natural, casual, relaxed, comfortable, everyday, practical, neutral posture, balanced', description: 'Everyday look', color: 'from-gray-400 to-slate-400', icon: Zap },
+  { command: 'flirty', label: 'Flirty', category: 'personality', keywords: 'playful, charming, confident, stylish, form-fitting, flattering, coy smile, alluring eyes, fashionable', description: 'Playful charm', color: 'from-pink-400 to-rose-400', icon: Sparkles },
+  { command: 'provocative', label: 'Provocative', category: 'personality', keywords: 'bold, daring, confident, striking, dramatic, attention-grabbing, fierce pose, intense gaze, powerful', description: 'Bold presence', color: 'from-orange-500 to-red-500', icon: Flame },
+  { command: 'lusty', label: 'Lusty', category: 'personality', keywords: 'seductive, sensual, alluring, captivating, magnetic, enticing, sultry gaze, confident pose, passionate', description: 'Magnetic aura', color: 'from-purple-500 to-pink-500', icon: Flame },
+  
+  // ===== GENRE PRESETS =====
+  { command: 'fantasy', label: 'Fantasy', category: 'genre', keywords: 'mystical, enchanted, medieval fantasy, arcane details, magical aura, flowing cape, elven inspired, ornate jewelry', description: 'High fantasy style', color: 'from-purple-600 to-indigo-500', icon: Wand2 },
+  { command: 'cyberpunk', label: 'Cyberpunk', category: 'genre', keywords: 'neon accents, chrome implants, cybernetic enhancements, techwear, holographic details, urban dystopian, LED highlights', description: 'Neon future', color: 'from-cyan-500 to-purple-600', icon: Zap },
+  { command: 'noir', label: 'Noir', category: 'genre', keywords: 'mysterious, shadowy, dramatic lighting, vintage glamour, smoky atmosphere, classic elegance, dark sophistication', description: 'Dark mystery', color: 'from-gray-700 to-gray-900', icon: Skull },
+  { command: 'scifi', label: 'Sci-Fi', category: 'genre', keywords: 'futuristic uniform, sleek design, space-age materials, clean lines, holographic badges, practical elegance', description: 'Space age', color: 'from-blue-500 to-cyan-400', icon: Rocket },
+  { command: 'western', label: 'Western', category: 'genre', keywords: 'rugged, frontier style, leather accents, dusty worn look, cowboy aesthetic, weathered details, sun-kissed', description: 'Frontier style', color: 'from-amber-600 to-orange-500', icon: Sword },
+  { command: 'horror', label: 'Horror', category: 'genre', keywords: 'eerie, unsettling beauty, pale complexion, dark circles, haunting gaze, gothic elements, supernatural aura', description: 'Haunting beauty', color: 'from-red-900 to-gray-900', icon: Skull },
+  { command: 'steampunk', label: 'Steampunk', category: 'genre', keywords: 'brass gears, copper accents, Victorian industrial, goggles, clockwork details, leather straps, steam-powered', description: 'Victorian tech', color: 'from-amber-700 to-stone-600', icon: Wand2 },
+  
+  // ===== CLOTHING STYLE PRESETS =====
+  { command: 'elegant', label: 'Elegant', category: 'clothing', keywords: 'elegant gown, flowing fabric, luxurious silk, refined tailoring, graceful draping, sophisticated style', description: 'Refined elegance', color: 'from-rose-400 to-purple-400', icon: Shirt },
+  { command: 'casual', label: 'Casual', category: 'clothing', keywords: 'casual wear, comfortable clothing, relaxed fit, everyday style, simple but stylish, natural look', description: 'Relaxed style', color: 'from-green-400 to-teal-400', icon: Shirt },
+  { command: 'armor', label: 'Armored', category: 'clothing', keywords: 'protective armor, battle-ready, plate mail, leather armor straps, warrior gear, combat ready', description: 'Battle gear', color: 'from-slate-500 to-gray-600', icon: Sword },
+  { command: 'formal', label: 'Formal', category: 'clothing', keywords: 'formal attire, business professional, sharp tailoring, pressed suit, polished appearance, executive style', description: 'Professional look', color: 'from-gray-600 to-slate-700', icon: Shirt },
+  { command: 'revealing', label: 'Revealing', category: 'clothing', keywords: 'revealing outfit, form-fitting, low-cut, bare midriff, tight clothing, showing skin, daring neckline', description: 'Daring style', color: 'from-red-500 to-pink-500', icon: Sparkles },
+  { command: 'tactical', label: 'Tactical', category: 'clothing', keywords: 'tactical gear, military style, utility vest, cargo pockets, combat boots, practical equipment', description: 'Combat ready', color: 'from-green-700 to-stone-600', icon: Sword },
+  { command: 'royal', label: 'Royal', category: 'clothing', keywords: 'royal garments, crown, regal cape, velvet robes, gold trim, jeweled accessories, throne-worthy', description: 'Regal attire', color: 'from-amber-400 to-yellow-300', icon: Crown },
+  
+  // ===== POSE PRESETS =====
+  { command: 'confident', label: 'Confident', category: 'pose', keywords: 'confident stance, hands on hips, head held high, powerful pose, assertive posture, commanding presence', description: 'Power pose', color: 'from-orange-400 to-amber-400', icon: Zap },
+  { command: 'relaxed', label: 'Relaxed', category: 'pose', keywords: 'relaxed pose, leaning casually, easy smile, comfortable stance, laid-back posture, at ease', description: 'Easy stance', color: 'from-teal-400 to-cyan-400', icon: Heart },
+  { command: 'action', label: 'Action', category: 'pose', keywords: 'dynamic pose, mid-action, battle stance, movement blur, intense focus, ready to strike', description: 'Dynamic action', color: 'from-red-500 to-orange-500', icon: Sword },
+  { command: 'mysterious', label: 'Mysterious', category: 'pose', keywords: 'mysterious pose, partially hidden, shadowy, enigmatic expression, turned away slightly, secretive', description: 'Enigmatic', color: 'from-purple-600 to-gray-700', icon: Skull },
+  
+  // ===== BLENDED STYLE PRESETS =====
+  { command: 'darkfantasy', label: 'Dark Fantasy', category: 'style', keywords: 'dark fantasy, corrupted elegance, shadowy magic, twisted beauty, ominous glow, cursed aesthetic', description: 'Corrupted magic', color: 'from-purple-900 to-gray-900', icon: Skull },
+  { command: 'techfantasy', label: 'Tech Fantasy', category: 'style', keywords: 'magitech, arcane circuits, glowing runes on chrome, magical cybernetics, enchanted technology', description: 'Magic meets tech', color: 'from-cyan-500 to-purple-500', icon: Wand2 },
+  { command: 'postapoc', label: 'Post-Apocalyptic', category: 'style', keywords: 'wasteland survivor, scavenged gear, weathered look, survival aesthetic, rugged and worn, makeshift repairs', description: 'Wasteland style', color: 'from-stone-600 to-amber-700', icon: Skull },
+  { command: 'gothic', label: 'Gothic', category: 'style', keywords: 'gothic beauty, dark romantic, Victorian elegance, lace and velvet, pale complexion, dramatic dark makeup', description: 'Dark romance', color: 'from-purple-800 to-gray-900', icon: Heart },
+];
 // Piercing style options that affect NPC reactions
 export const PIERCING_STYLE_OPTIONS = [
   { value: 'minimal', label: 'Minimal', description: 'Subtle, tasteful jewelry', reputation: 'professional' },
@@ -79,47 +79,103 @@ interface AppearanceAccordionsProps {
 
 export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: AppearanceAccordionsProps) {
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [appliedCommands, setAppliedCommands] = useState<string[]>([]);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashFilter, setSlashFilter] = useState('');
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const toggleSection = useCallback((section: AccordionSection) => {
     setOpenSection(prev => prev === section ? null : section);
   }, []);
 
-  const applyPersonalityPreset = useCallback((preset: typeof PERSONALITY_PRESETS[number]) => {
+  // Filter commands based on current input
+  const filteredCommands = SLASH_COMMANDS.filter(cmd => 
+    cmd.command.toLowerCase().includes(slashFilter.toLowerCase()) ||
+    cmd.label.toLowerCase().includes(slashFilter.toLowerCase()) ||
+    cmd.category.toLowerCase().includes(slashFilter.toLowerCase())
+  );
+
+  // Group commands by category
+  const groupedCommands = filteredCommands.reduce((acc, cmd) => {
+    if (!acc[cmd.category]) acc[cmd.category] = [];
+    acc[cmd.category].push(cmd);
+    return acc;
+  }, {} as Record<string, SlashCommand[]>);
+
+  const categoryLabels: Record<string, string> = {
+    personality: '🎭 Personality',
+    genre: '🌍 Genre',
+    clothing: '👗 Clothing',
+    pose: '🧍 Pose',
+    style: '✨ Style Blend',
+  };
+
+  const applySlashCommand = useCallback((cmd: SlashCommand) => {
     const currentDetails = appearance.full?.intimateDetails || '';
     
-    // Check if this preset is already selected - if so, remove it
-    if (selectedPreset === preset.id) {
-      // Remove the preset keywords from the text
-      const keywordsToRemove = preset.keywords.split(', ');
-      let newDetails = currentDetails;
+    // Remove the slash command text from input
+    const cleanedDetails = currentDetails.replace(/\/\w*$/, '').trim();
+    
+    // Check if already applied - toggle off
+    if (appliedCommands.includes(cmd.command)) {
+      const keywordsToRemove = cmd.keywords.split(', ');
+      let newDetails = cleanedDetails;
       keywordsToRemove.forEach(keyword => {
         newDetails = newDetails.replace(new RegExp(`\\b${keyword}\\b,?\\s*`, 'gi'), '');
       });
       newDetails = newDetails.replace(/,\s*,/g, ', ').replace(/^,\s*|,\s*$/g, '').trim();
       onUpdateAppearance('full', 'intimateDetails', newDetails);
-      setSelectedPreset(null);
-      return;
+      setAppliedCommands(prev => prev.filter(c => c !== cmd.command));
+    } else {
+      // Apply the command
+      const newDetails = cleanedDetails 
+        ? `${cleanedDetails}, ${cmd.keywords}` 
+        : cmd.keywords;
+      onUpdateAppearance('full', 'intimateDetails', newDetails.slice(0, 500));
+      setAppliedCommands(prev => [...prev, cmd.command]);
     }
     
-    // Remove any existing preset keywords first
-    let cleanedDetails = currentDetails;
-    PERSONALITY_PRESETS.forEach(p => {
-      const keywordsToRemove = p.keywords.split(', ');
-      keywordsToRemove.forEach(keyword => {
-        cleanedDetails = cleanedDetails.replace(new RegExp(`\\b${keyword}\\b,?\\s*`, 'gi'), '');
-      });
-    });
-    cleanedDetails = cleanedDetails.replace(/,\s*,/g, ', ').replace(/^,\s*|,\s*$/g, '').trim();
+    setShowSlashMenu(false);
+    setSlashFilter('');
+  }, [appearance.full?.intimateDetails, onUpdateAppearance, appliedCommands]);
+
+  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    onUpdateAppearance('full', 'intimateDetails', value);
     
-    // Append new preset keywords
-    const newDetails = cleanedDetails 
-      ? `${cleanedDetails}, ${preset.keywords}` 
-      : preset.keywords;
+    // Check for slash command trigger
+    const slashMatch = value.match(/\/(\w*)$/);
+    if (slashMatch) {
+      setSlashFilter(slashMatch[1]);
+      setShowSlashMenu(true);
+      
+      // Calculate menu position
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+      }
+    } else {
+      setShowSlashMenu(false);
+      setSlashFilter('');
+    }
     
-    onUpdateAppearance('full', 'intimateDetails', newDetails.slice(0, 500));
-    setSelectedPreset(preset.id);
-  }, [appearance.full?.intimateDetails, onUpdateAppearance, selectedPreset]);
+    // Update applied commands tracking
+    const newApplied = SLASH_COMMANDS.filter(cmd => {
+      const firstKeyword = cmd.keywords.split(', ')[0];
+      return value.toLowerCase().includes(firstKeyword.toLowerCase());
+    }).map(cmd => cmd.command);
+    setAppliedCommands(newApplied);
+  }, [onUpdateAppearance]);
+
+  // Close menu on click outside
+  useEffect(() => {
+    const handleClickOutside = () => setShowSlashMenu(false);
+    if (showSlashMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showSlashMenu]);
 
   const toggleArrayItem = useCallback((field: string, item: string) => {
     const current = (appearance.full as any)?.[field] || [];
@@ -435,68 +491,116 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
       )}
 
       {/* AI Enhancement Priority Field - After accordions */}
-      <div className="border border-primary/30 rounded-lg p-3 bg-primary/5 mt-4">
+      <div className="border border-primary/30 rounded-lg p-3 bg-primary/5 mt-4 relative">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <label className="text-sm font-medium text-primary">Additional Details</label>
         </div>
         
-        {/* Personality Preset Buttons */}
-        <div className="mb-3">
-          <p className="text-xs text-muted-foreground mb-2">
-            🎭 Choose a style preset to auto-fill keywords:
-          </p>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {PERSONALITY_PRESETS.map((preset) => {
-              const IconComponent = preset.icon;
-              const isSelected = selectedPreset === preset.id;
+        {/* Applied Commands Tags */}
+        {appliedCommands.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {appliedCommands.map(cmdName => {
+              const cmd = SLASH_COMMANDS.find(c => c.command === cmdName);
+              if (!cmd) return null;
+              const IconComponent = cmd.icon;
               return (
                 <button
-                  key={preset.id}
+                  key={cmd.command}
                   type="button"
-                  onClick={() => applyPersonalityPreset(preset)}
-                  title={preset.description}
+                  onClick={() => applySlashCommand(cmd)}
                   className={cn(
-                    "group relative flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-xs font-medium",
-                    "border hover:scale-105",
-                    isSelected
-                      ? `bg-gradient-to-br ${preset.color} text-white border-transparent shadow-lg`
-                      : "bg-background/50 border-border/30 hover:border-primary/50 text-foreground/80 hover:text-foreground"
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                    "bg-gradient-to-r text-white transition-all hover:scale-105",
+                    cmd.color
                   )}
+                  title={`Click to remove /${cmd.command}`}
                 >
-                  <IconComponent className={cn(
-                    "w-4 h-4 transition-transform",
-                    isSelected && "animate-pulse"
-                  )} />
-                  <span>{preset.label}</span>
-                  {isSelected && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-                  )}
+                  <IconComponent className="w-3 h-3" />
+                  /{cmd.command}
+                  <span className="ml-1 opacity-70">×</span>
                 </button>
               );
             })}
           </div>
-        </div>
+        )}
 
         <p className="text-xs text-muted-foreground mb-2">
-          ✨ Describe unique features, accessories, or specific looks you want emphasized in your portrait.
+          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <code className="bg-muted px-1 rounded">/fantasy</code> <code className="bg-muted px-1 rounded">/elegant</code> <code className="bg-muted px-1 rounded">/lusty</code>
         </p>
-        <textarea
-          value={appearance.full?.intimateDetails || ''}
-          onChange={(e) => {
-            onUpdateAppearance('full', 'intimateDetails', e.target.value);
-            // Clear preset selection if user manually edits
-            if (selectedPreset) {
-              const preset = PERSONALITY_PRESETS.find(p => p.id === selectedPreset);
-              if (preset && !e.target.value.includes(preset.keywords.split(', ')[0])) {
-                setSelectedPreset(null);
+        
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={appearance.full?.intimateDetails || ''}
+            onChange={handleTextareaChange}
+            onKeyDown={(e) => {
+              if (showSlashMenu && e.key === 'Escape') {
+                setShowSlashMenu(false);
+                setSlashFilter('');
               }
-            }
-          }}
-          placeholder="e.g., Rose gold jewelry, sleeve tattoo with cherry blossoms, chrome cybernetic arm, vintage aviator glasses..."
-          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50 text-sm min-h-[60px] resize-none"
-          maxLength={500}
-        />
+            }}
+            placeholder="Type / to see presets, or describe: rose gold jewelry, sleeve tattoo, chrome cybernetic arm..."
+            className="w-full p-2 rounded-lg bg-background border border-border/50 text-sm min-h-[60px] resize-none"
+            maxLength={500}
+          />
+          
+          {/* Slash Command Autocomplete Menu */}
+          {showSlashMenu && filteredCommands.length > 0 && (
+            <div 
+              className="absolute z-50 left-0 right-0 bottom-full mb-1 max-h-64 overflow-y-auto rounded-lg border border-primary/30 bg-background shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-2 border-b border-border/30 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  Type to filter • {filteredCommands.length} commands available
+                </p>
+              </div>
+              {Object.entries(groupedCommands).map(([category, commands]) => (
+                <div key={category}>
+                  <div className="px-2 py-1 bg-muted/20 text-xs font-semibold text-muted-foreground sticky top-0">
+                    {categoryLabels[category] || category}
+                  </div>
+                  {commands.map(cmd => {
+                    const IconComponent = cmd.icon;
+                    const isApplied = appliedCommands.includes(cmd.command);
+                    return (
+                      <button
+                        key={cmd.command}
+                        type="button"
+                        onClick={() => applySlashCommand(cmd)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-2 text-left transition-all",
+                          "hover:bg-primary/10",
+                          isApplied && "bg-primary/20"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-6 h-6 rounded flex items-center justify-center bg-gradient-to-br",
+                          cmd.color
+                        )}>
+                          <IconComponent className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm text-primary">/{cmd.command}</span>
+                            <span className="text-xs text-muted-foreground truncate">{cmd.description}</span>
+                          </div>
+                        </div>
+                        {isApplied && (
+                          <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
+                            Active
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
         <p className="text-xs text-muted-foreground mt-1 text-right">
           {(appearance.full?.intimateDetails || '').length}/500
         </p>
