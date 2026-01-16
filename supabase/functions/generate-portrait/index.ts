@@ -572,17 +572,14 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Origin modifier:', originModifier);
   console.log('Final clothing:', clothingDesc);
   
-  // HARD LOCK FRAMING: Knees to head, no zoom variation
-  const framingInstruction = 'STRICT CAMERA: three-quarter body portrait showing from knees to head only, fixed medium shot, no zoom, no close-up, no full body, frame cuts at knee level at bottom and above head at top';
-  
-  const prompt = `${framingInstruction}, semi-realistic art style, stylized proportions, soft skin rendering, expressive features, visible body shape and curves, soft cinematic lighting, painterly quality with clean details, 4K render, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, MAINTAIN FRAMING: knees to head only`;
+  // Professional art style prompt
+  const prompt = `Knees-to-head standing character portrait, centered full figure crop at the knees, facing camera, confident neutral stance, clean silhouette, readable design, ${character}, wearing ${clothingDesc}, High-end digital illustration with stylized realism: realistic anatomy and materials, painterly gradients, crisp edges, controlled detail, polished concept-art finish, Cinematic lighting: soft key light + subtle rim light, realistic specular highlights on hard surfaces, gentle bloom, atmospheric depth, background bokeh, Material fidelity: visible fabric weave, metal micro-scratches, leather grain, skin texture kept tasteful and natural, Background: ${style.background}, ${style.lighting}, genre-neutral ambient environment with depth, soft shapes, no distracting focal points, character is the focus, Camera: 50mm look, eye-level, slight depth of field, sharp face/eyes, clean composition, professional key art, Design coherence: consistent color palette, unified visual language across clothing/gear/accessories, no random add-ons, Quality: correct hands, correct proportions, no artifacts, no extra limbs, no text unless explicitly requested`;
   
   console.log('Final prompt:', prompt);
-  console.log('Selected costume:', selectedCostume);
   
   return {
     prompt,
-    negative: 'zoomed in, zoomed out, close-up, headshot, bust shot, face only, shoulders up, chest up, waist up, full body, feet visible, shoes visible, ground visible, floor visible, ankles visible, photo-realistic, hyper-realistic, deformed, bad anatomy, blurry, low quality',
+    negative: 'photorealistic, anime, cartoon, lowpoly, pixel art, sketchy lineart, washed out, over-saturated, muddy lighting, blurry, low-res, jpeg artifacts, watermark, logo, unreadable gibberish text, extra fingers, extra limbs, deformed hands, asymmetrical eyes, uncanny doll skin, plastic skin, bad anatomy, cropped head, cut-off face, full body with feet, feet visible, ground visible, floor visible',
   };
 }
 
