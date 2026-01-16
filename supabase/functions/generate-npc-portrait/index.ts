@@ -9,24 +9,17 @@ const corsHeaders = {
 // PORTRAIT STYLE CONSTANTS - Realistic waist-up portraits
 // ============================================================================
 
+// Safe, professional prompt that avoids content filter triggers
 const PORTRAIT_STYLE_BASE = [
-  'masterpiece',
-  'best quality',
-  'ultra detailed digital painting',
-  'realistic style',
-  'cinematic lighting',
-  'dramatic atmosphere',
-  'three-quarter body shot from knees up',
-  'full environment visible in background',
-  'character in foreground with detailed background scenery',
-  'looking at viewer',
-  'highly detailed face and eyes',
-  'intricate clothing and gear details',
-  'professional illustration',
-  '8k resolution',
-  'volumetric lighting',
-  'depth of field',
-  'wide shot composition',
+  'professional character illustration',
+  'high quality digital art',
+  'three-quarter length portrait showing from knees to head',
+  'detailed background environment',
+  'natural lighting',
+  'looking at camera',
+  'detailed facial features',
+  'appropriate professional attire',
+  'clean composition',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
@@ -61,28 +54,29 @@ const PORTRAIT_NEGATIVE = [
 // GENRE STYLES FOR NPCs
 // ============================================================================
 
+// Genre styles with safe, non-triggering descriptions
 const GENRE_STYLES: Record<string, string> = {
-  modern: 'modern contemporary casual clothing, everyday civilian attire, stylish casual outfit, modern city environment background',
-  'modern-life': 'modern contemporary casual clothing, everyday civilian attire, stylish casual outfit, modern city environment background',
-  war: 'military combat uniform, tactical body armor, warzone battlefield background',
-  cyberpunk: 'cyberpunk tactical gear, neon lights, chrome cybernetic augmentations, neon-lit megacity background',
-  postapoc: 'post-apocalyptic scavenged gear, weathered leather and metal, wasteland ruins background',
-  scifi: 'advanced sci-fi power armor, futuristic tech, spaceship or alien world background',
-  fantasy: 'high fantasy armor and robes, magical enchanted equipment, mystical forest or castle background',
-  medieval: 'realistic medieval plate armor, chainmail, castle or battlefield background',
-  horror: 'survival horror gear, blood-stained clothing, abandoned dark location background',
-  western: 'wild west attire, leather duster, cowboy hat, frontier town or desert background',
-  noir: 'film noir attire, 1940s fedora and trench coat, rainy city street background',
-  mystery: 'detective attire, 1940s style, dramatic shadows, noir office background',
-  pirate: 'golden age pirate attire, captain coat, tricorn hat, ship deck or tropical cove background',
-  ww2: '1940s military uniform, period-accurate gear, WW2 battlefield background',
-  survival: 'rugged survival gear, outdoor clothing, wilderness campsite background',
-  steampunk: 'Victorian steampunk attire, brass goggles, clockwork gadgets, industrial city background',
-  apocalypse: 'post-apocalyptic survivor gear, scavenged armor, nuclear wasteland background',
-  vampire: 'gothic vampire aristocrat attire, Victorian dark elegance, gothic castle background',
-  zombie: 'zombie apocalypse survivor gear, blood-stained, overrun city background',
-  superhero: 'superhero costume, dramatic heroic pose, city skyline background',
-  spy: 'sleek spy attire, tactical stealth gear, casino or secret base background',
+  modern: 'modern casual clothing, city street background',
+  'modern-life': 'modern casual clothing, city street background',
+  war: 'military uniform, outdoor field background',
+  cyberpunk: 'futuristic clothing with tech accessories, neon city background',
+  postapoc: 'worn practical clothing, desert landscape background',
+  scifi: 'futuristic uniform, space station background',
+  fantasy: 'medieval fantasy robes and light armor, forest background',
+  medieval: 'medieval period clothing, castle courtyard background',
+  horror: 'dark casual clothing, dimly lit room background',
+  western: 'western frontier clothing, desert town background',
+  noir: '1940s business attire, office with venetian blinds background',
+  mystery: '1940s detective clothing, study room background',
+  pirate: 'historical sailing era clothing, ship deck background',
+  ww2: '1940s period uniform, European countryside background',
+  survival: 'outdoor hiking gear, wilderness background',
+  steampunk: 'Victorian era clothing with brass accessories, industrial background',
+  apocalypse: 'rugged practical clothing, abandoned building background',
+  vampire: 'elegant Victorian formal wear, mansion interior background',
+  zombie: 'practical survivor clothing, empty street background',
+  superhero: 'colorful athletic costume, city rooftop background',
+  spy: 'formal business attire, modern office background',
 };
 
 // ============================================================================
@@ -134,13 +128,12 @@ function buildNPCPrompt(npc: any, config: any): string {
   
   const npcDesc = npcParts.join(', ') || 'character portrait';
   
+  // Keep it simple and professional to avoid content filters
   const prompt = [
     PORTRAIT_STYLE_BASE,
     npcDesc,
     genreStyle,
     emotionStyle,
-    // Avoid things that might trigger content filters
-    'professional illustration, safe for work, fully clothed, dignified pose',
   ].filter(Boolean).join(', ');
   
   return prompt;
@@ -171,7 +164,7 @@ async function generateWithLovableAI(prompt: string): Promise<string> {
       messages: [
         { 
           role: 'user', 
-          content: `Generate a high-quality portrait image: ${prompt}` 
+          content: `Create a professional character portrait for a game: ${prompt}. The character should be shown in appropriate attire for their setting.` 
         }
       ],
       modalities: ['image', 'text'],
