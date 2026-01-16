@@ -312,91 +312,156 @@ const DETAIL_OPTIONS: Record<string, string> = {
 // BODY MODIFICATION MAPPINGS - for detailed character customization
 // ============================================================================
 
+// PIERCING MAPPINGS - Must match values from characterCreation.ts PIERCING_OPTIONS
 const PIERCING_PROMPT_MAP: Record<string, string> = {
-  'ear_lobe': 'visible ear lobe piercings, multiple earrings',
-  'ear_helix': 'helix ear piercing, cartilage piercings',
-  'ear_industrial': 'industrial ear piercing bar',
-  'nose_stud': 'nose stud piercing',
-  'nose_ring': 'nose ring piercing',
-  'septum': 'septum piercing, visible nose ring',
-  'lip_ring': 'lip ring piercing',
-  'labret': 'labret piercing below lip',
-  'eyebrow': 'eyebrow piercing, barbell through brow',
-  'tongue': 'tongue piercing visible',
-  'navel': 'navel belly button piercing',
-  'nipple': 'nipple piercings visible through clothing',
-  'intimate': 'intimate body piercings',
+  // Face - from characterCreation.ts
+  'ear_lobe': 'VISIBLE ear lobe piercings with multiple earrings',
+  'ear_helix': 'VISIBLE helix ear piercing on cartilage',
+  'ear_industrial': 'VISIBLE industrial ear piercing bar through cartilage',
+  'nose_nostril': 'VISIBLE nostril piercing with stud',
+  'nose_septum': 'VISIBLE septum nose ring piercing',
+  'lip_labret': 'VISIBLE labret piercing below lower lip',
+  'lip_snake_bites': 'VISIBLE snake bites piercings on both sides of lower lip',
+  'lip_monroe': 'VISIBLE monroe piercing above upper lip',
+  'eyebrow': 'VISIBLE eyebrow piercing with barbell',
+  'tongue': 'tongue piercing visible when speaking',
+  // Body
+  'navel': 'navel belly button piercing visible',
+  'nipple': 'nipple piercings visible',
+  'dermal_chest': 'dermal anchor piercings on chest',
+  'dermal_hips': 'dermal anchor piercings on hips',
+  // Intimate
+  'intimate_male': 'intimate piercing',
+  'intimate_female': 'intimate piercing',
 };
 
+// TATTOO MAPPINGS - Must match values from characterCreation.ts TATTOO_OPTIONS
 const TATTOO_PROMPT_MAP: Record<string, string> = {
-  'face': 'facial tattoos, face ink, tribal face markings',
-  'neck': 'neck tattoo, throat ink design',
-  'chest': 'chest tattoo, torso ink art',
-  'back': 'back tattoo, spine ink design',
-  'full_sleeve': 'full sleeve tattoos both arms, heavily inked arms',
-  'half_sleeve': 'half sleeve tattoos on upper arms',
-  'forearm': 'forearm tattoos, lower arm ink',
-  'hand': 'hand tattoos, finger tattoos, knuckle ink',
-  'leg': 'leg tattoos, thigh ink',
-  'tribal': 'tribal pattern tattoos, bold black geometric',
-  'japanese': 'japanese style tattoos, irezumi, koi dragons',
-  'blackwork': 'blackwork tattoos, solid black ink designs',
-  'realism': 'realistic portrait tattoos, photorealistic ink',
-  'watercolor': 'watercolor style tattoos, colorful flowing ink',
-  'traditional': 'traditional old school tattoos, bold colors',
+  // Face & Neck
+  'face_tribal': 'VISIBLE tribal tattoo markings on face',
+  'face_tears': 'VISIBLE tear drop tattoos under eye',
+  'face_makeup': 'VISIBLE cosmetic tattoo makeup on face',
+  'neck_front': 'VISIBLE tattoo on front of neck',
+  'neck_sides': 'VISIBLE tattoos on sides of neck',
+  'neck_back': 'tattoo on back of neck',
+  // Arms
+  'arm_sleeve_full': 'FULLY TATTOOED arms with complete sleeve tattoos from shoulder to wrist',
+  'arm_sleeve_half': 'half sleeve tattoos on upper arms',
+  'arm_forearm': 'tattoos on forearms',
+  'arm_bicep': 'tattoo on bicep',
+  'hand': 'VISIBLE hand tattoos and finger tattoos',
+  // Torso
+  'chest_full': 'large chest piece tattoo visible',
+  'chest_side': 'side chest tattoo',
+  'sternum': 'sternum tattoo between breasts',
+  'ribs': 'rib cage side tattoos',
+  'stomach': 'stomach/abdomen tattoo',
+  // Back
+  'back_full': 'full back tattoo piece',
+  'back_upper': 'upper back tattoo',
+  'back_lower': 'lower back tattoo',
+  'back_spine': 'spine tattoo down back',
+  'shoulder_blade': 'shoulder blade tattoo',
+  // Legs
+  'thigh': 'thigh tattoo',
+  'calf': 'calf tattoo',
+  'leg_sleeve': 'leg sleeve tattoo',
+  'ankle': 'ankle tattoo',
+  // Intimate
+  'intimate_area': 'intimate area tattoo',
+  'inner_thigh': 'inner thigh tattoo',
+  // Styles (for tattooStyle field)
+  'traditional': 'traditional American style bold tattoos',
+  'tribal': 'bold black tribal pattern tattoos',
+  'realistic': 'photorealistic portrait tattoos',
+  'watercolor': 'watercolor style colorful flowing tattoos',
+  'geometric': 'geometric sacred geometry tattoos',
+  'blackwork': 'solid blackwork tattoo style',
+  'japanese': 'Japanese irezumi style with dragons and koi',
+  'minimalist': 'minimalist fine line tattoos',
+  'neo_traditional': 'neo-traditional style tattoos',
+  'trash_polka': 'trash polka red and black style tattoos',
 };
 
+// SCAR MAPPINGS - Must match values from characterCreation.ts SCAR_OPTIONS
 const SCAR_PROMPT_MAP: Record<string, string> = {
-  'facial': 'prominent facial scar, healed wound across face',
-  'eye': 'scar across eye, through eyebrow',
-  'cheek': 'cheek scar, slashing mark on face',
-  'lip': 'scar through lip, healed cut',
-  'body': 'body scars, torso wounds healed',
-  'burn': 'burn scars, healed burn marks on skin',
-  'surgical': 'surgical scars, medical procedure marks',
+  // Face
+  'face_slash': 'VISIBLE prominent slash scar across face',
+  'face_burn': 'VISIBLE burn scars on face',
+  'missing_eye': 'missing eye with scar or eyepatch',
+  'missing_ear': 'missing ear',
+  // Body  
+  'neck_scar': 'visible neck scar',
+  'chest_scars': 'chest scars visible',
+  'back_lashes': 'lash scars on back',
+  'bullet_wounds': 'bullet wound scars',
+  'surgical_scars': 'surgical scars',
+  // Limbs
+  'arm_burns': 'burn scars on arms',
+  'missing_fingers': 'missing fingers',
+  'leg_scars': 'leg scars',
 };
 
+// IMPLANT MAPPINGS - Must match values from characterCreation.ts IMPLANT_OPTIONS
 const IMPLANT_PROMPT_MAP: Record<string, string> = {
-  'neural': 'neural interface implant on temple, glowing circuitry under skin, cybernetic brain jack',
-  'eye': 'cybernetic eye implant, glowing mechanical eye, optical augmentation',
-  'arm': 'cybernetic arm, mechanical prosthetic arm, chrome limb with visible mechanics',
-  'hand': 'cybernetic hand, mechanical fingers, chrome knuckles with tech details',
-  'spine': 'spinal implant visible, vertebrae augmentation, back cybernetics',
-  'subdermal': 'subdermal implants, glowing patterns under skin, tech-enhanced skin',
-  'ports': 'data ports on neck and arms, visible connection jacks, interface sockets',
+  // Cosmetic
+  'subdermal_horns': 'VISIBLE subdermal horn implants on forehead',
+  'split_tongue': 'split forked tongue visible',
+  'pointed_ears': 'surgically pointed elf-like ears',
+  'fangs': 'VISIBLE fang tooth implants',
+  'eye_mods': 'modified eye color implants',
+  // Tech/Cybernetic
+  'neural_jack': 'VISIBLE neural interface jack port on temple',
+  'data_port': 'VISIBLE data port jack on neck',
+  'reflex_booster': 'reflex booster implants',
+  'subdermal_armor': 'subdermal armor plating visible under skin',
+  'skill_chip': 'skill chip socket implant on head',
 };
 
+// PROSTHETIC MAPPINGS - Must match values from characterCreation.ts PROSTHETIC_OPTIONS
 const PROSTHETIC_PROMPT_MAP: Record<string, string> = {
-  'arm': 'prosthetic arm, artificial limb, mechanical replacement arm',
-  'leg': 'prosthetic leg, artificial limb, mechanical leg',
-  'hand': 'prosthetic hand, mechanical fingers, artificial hand',
-  'eye': 'prosthetic eye, glass eye, artificial eye',
+  // Arms
+  'arm_mechanical': 'VISIBLE mechanical prosthetic arm, artificial limb',
+  'arm_cybernetic': 'VISIBLE high-tech cybernetic arm with chrome and circuitry',
+  'hand_prosthetic': 'VISIBLE prosthetic mechanical hand',
+  // Legs
+  'leg_mechanical': 'mechanical prosthetic leg',
+  'leg_cybernetic': 'high-tech cybernetic leg with chrome',
+  // Head
+  'eye_cybernetic': 'VISIBLE glowing cybernetic eye implant',
+  'eye_glass': 'glass prosthetic eye',
+  'jaw_metal': 'VISIBLE metal jaw prosthetic, chrome jawline',
 };
 
+// MUTATION MAPPINGS - Must match values from characterCreation.ts MUTATION_OPTIONS
 const MUTATION_PROMPT_MAP: Record<string, string> = {
-  'scales': 'mutated scales on skin, reptilian patches',
-  'horns': 'small horns growing from head, mutant protrusions',
-  'claws': 'claw-like fingernails, sharp mutated nails',
-  'fangs': 'visible fangs, sharp mutated teeth',
-  'extra_limbs': 'extra appendages, mutated limbs',
-  'bioluminescent': 'bioluminescent patches on skin, glowing mutation',
+  'unusual_skin': 'unusual unnatural skin color',
+  'scales': 'VISIBLE mutated reptilian scale patches on skin',
+  'extra_digits': 'extra fingers or toes',
+  'bioluminescence': 'VISIBLE bioluminescent glowing markings on skin',
+  'unusual_eyes': 'unusual mutated eye structure',
+  'claws': 'VISIBLE sharp claw-like fingernails',
+  'tail': 'VISIBLE tail appendage',
+  'horns_natural': 'VISIBLE natural horns growing from head',
 };
 
+// CLOTHING STYLE MAPPINGS - Must match values from characterCreation.ts CLOTHING_STYLE_OPTIONS
 const CLOTHING_STYLE_PROMPT_MAP: Record<string, string> = {
   'genre_default': '', // Use genre default
-  'streetwear': 'urban streetwear fashion, hoodies, sneakers, casual cool',
-  'formal': 'formal attire, suit and tie, elegant business wear',
-  'casual': 'casual everyday clothing, relaxed fit, comfortable',
-  'punk': 'punk fashion, leather jacket, spikes, chains, rebellious style',
-  'goth': 'gothic fashion, black clothing, dark aesthetic, lace and leather',
-  'military': 'military style clothing, tactical gear, combat fatigues',
-  'sporty': 'athletic sportswear, track suit, sporty casual',
-  'vintage': 'vintage retro fashion, classic old-school style',
-  'haute_couture': 'high fashion, designer clothing, avant-garde style',
-  'cyberpunk_street': 'cyberpunk streetwear, neon accents, tech-wear, futuristic urban',
-  'corporate': 'corporate professional attire, business suit, executive style',
-  'nomad': 'nomad wasteland clothing, dusty road-worn, scavenged gear',
-  'rocker': 'rock and roll fashion, band shirts, leather, chains',
+  'formal': 'wearing formal business attire, elegant suit and tie',
+  'casual': 'wearing casual everyday clothing, relaxed comfortable fit',
+  'streetwear': 'wearing urban streetwear fashion, trendy branded clothing',
+  'punk': 'wearing punk alternative fashion with leather jacket, spikes, patches',
+  'goth': 'wearing gothic dark fashion with black clothing, lace accents',
+  'military': 'wearing military tactical clothing, combat gear',
+  'athletic': 'wearing athletic sporty clothing, performance wear',
+  'bohemian': 'wearing bohemian hippie style with flowing natural fabrics',
+  'vintage': 'wearing vintage retro fashion from past era',
+  'minimalist': 'wearing minimalist clean clothing with simple lines',
+  'extravagant': 'wearing extravagant flashy bold attention-grabbing outfit',
+  'revealing': 'wearing revealing clothing showing more skin',
+  'modest': 'wearing modest conservative clothing with full coverage',
+  'cosplay': 'wearing costume or cosplay themed outfit',
 };
 
 // ============================================================================
