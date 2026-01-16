@@ -128,7 +128,9 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const character = desc.join(', ');
   
   console.log('Building portrait for:', name);
-  console.log('Gender:', gender, '| Build:', build, '| Bust:', bustSize, '| Clothing:', clothingStyle);
+  console.log('Gender:', gender, '| Build:', build, '| Bust:', bustSize, '| Hips:', hipWidth);
+  console.log('Clothing style:', clothingStyle, '| Clothing details:', clothingDetails);
+  console.log('Additional details:', userDesc);
   console.log('Character description:', character);
   
   // Strong framing at START - three-quarter body from knees up
