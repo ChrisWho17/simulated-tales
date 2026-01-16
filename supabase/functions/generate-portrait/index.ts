@@ -1087,7 +1087,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   return {
     prompt,
-    negative: 'blurry, watermark, text, low quality, amateur, poorly drawn, bad hands, username, signature, words, letters, nsfw, nude, naked, topless, exposed chest, lingerie, underwear, bra, panties',
+    negative: 'blurry, out of focus, watermark, text, low quality, amateur, poorly drawn, username, signature, words, letters, low resolution, pixelated, jpeg artifacts, noise, overexposed, underexposed',
   };
 }
 
