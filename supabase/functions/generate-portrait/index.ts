@@ -1092,50 +1092,98 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
 }
 
 // ============================================================================
-// IMAGE GENERATION
+// IMAGE GENERATION - Replicate with Juggernaut-XL-v7
 // ============================================================================
 async function generateImage(prompt: string, negative: string): Promise<string> {
-  const apiKey = Deno.env.get("TOGETHER_API_KEY");
-  if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
+  const apiKey = Deno.env.get("REPLICATE_API_KEY");
+  if (!apiKey) throw new Error("REPLICATE_API_KEY not configured");
 
-  console.log("Generating portrait with Together.ai (FLUX.1-dev)");
+  console.log("Generating portrait with Replicate (Juggernaut-XL-v7)");
 
-  const response = await fetch("https://api.together.ai/v1/images/generations", {
+  // Start the prediction
+  const createResponse = await fetch("https://api.replicate.com/v1/predictions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "Prefer": "wait"
     },
     body: JSON.stringify({
-      model: "black-forest-labs/FLUX.1-dev",
-      prompt: prompt,
-      negative_prompt: negative,
-      width: 832,
-      height: 1216,
-      steps: 34,
-      n: 1,
-      response_format: "b64_json"
+      version: "6a52feace43ce1f6bbc2cdabfc68423cb6c7f4ad0c5f8f8b3d9b9d07b529e74a",
+      input: {
+        prompt: prompt,
+        negative_prompt: negative || "blurry, low quality, watermark, text",
+        width: 832,
+        height: 1216,
+        num_inference_steps: 30,
+        guidance_scale: 5,
+        scheduler: "DPM++ 2M Karras",
+        num_outputs: 1
+      }
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("Together.ai error:", response.status, error);
-    if (response.status === 429) {
+  if (!createResponse.ok) {
+    const error = await createResponse.text();
+    console.error("Replicate error:", createResponse.status, error);
+    if (createResponse.status === 429) {
       throw new Error("Rate limit exceeded, please try again later");
     }
-    throw new Error(`Generation failed: ${response.status} - ${error}`);
+    throw new Error(`Generation failed: ${createResponse.status} - ${error}`);
   }
 
-  const data = await response.json();
-  const b64Data = data.data?.[0]?.b64_json;
+  let prediction = await createResponse.json();
+  console.log("Prediction started:", prediction.id, "Status:", prediction.status);
+
+  // Poll for completion if not using "Prefer: wait" or if still processing
+  let attempts = 0;
+  const maxAttempts = 60; // 60 seconds timeout
   
-  if (!b64Data) {
-    console.error("No image in response:", JSON.stringify(data));
-    throw new Error("No image returned from Together.ai");
+  while (prediction.status !== "succeeded" && prediction.status !== "failed" && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+    
+    if (!pollResponse.ok) {
+      throw new Error(`Failed to poll prediction: ${pollResponse.status}`);
+    }
+    
+    prediction = await pollResponse.json();
+    attempts++;
+    
+    if (attempts % 5 === 0) {
+      console.log(`Polling attempt ${attempts}, status: ${prediction.status}`);
+    }
   }
 
-  return `data:image/png;base64,${b64Data}`;
+  if (prediction.status === "failed") {
+    console.error("Prediction failed:", prediction.error);
+    throw new Error(`Image generation failed: ${prediction.error}`);
+  }
+
+  if (prediction.status !== "succeeded") {
+    throw new Error("Image generation timed out");
+  }
+
+  const imageUrl = prediction.output?.[0];
+  
+  if (!imageUrl) {
+    console.error("No image in response:", JSON.stringify(prediction));
+    throw new Error("No image returned from Replicate");
+  }
+
+  // Fetch the image and convert to base64
+  const imageResponse = await fetch(imageUrl);
+  if (!imageResponse.ok) {
+    throw new Error("Failed to fetch generated image");
+  }
+  
+  const imageBuffer = await imageResponse.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+  
+  return `data:image/png;base64,${base64}`;
 }
 
 // ============================================================================
