@@ -923,6 +923,245 @@ const GENRE_STYLES: Record<string, GenreStyle> = {
 };
 
 // ============================================================================
+// GENRE NORMALIZATION - Maps genre strings to GENRE_STYLES keys
+// ============================================================================
+
+// Genre aliases and sub-genre mappings for flexible matching
+const GENRE_ALIASES: Record<string, string> = {
+  // Main genres with variations
+  'scifi': 'scifi',
+  'sci-fi': 'scifi',
+  'sci_fi': 'sci_fi',
+  'science fiction': 'scifi',
+  'sciencefiction': 'scifi',
+  
+  // Fantasy variations
+  'fantasy': 'fantasy',
+  'high fantasy': 'high_fantasy',
+  'highfantasy': 'high_fantasy',
+  'dark fantasy': 'dark_fantasy',
+  'darkfantasy': 'dark_fantasy',
+  'epic fantasy': 'high_fantasy',
+  'sword and sorcery': 'sword_and_sorcery',
+  'swordandsorcery': 'sword_and_sorcery',
+  'fairy tale': 'fairy_tale',
+  'fairytale': 'fairy_tale',
+  
+  // Cyberpunk
+  'cyberpunk': 'cyberpunk',
+  'cyber punk': 'cyberpunk',
+  'netrunner': 'cyberpunk',
+  
+  // Horror variations
+  'horror': 'horror',
+  'gothic horror': 'gothic_horror',
+  'gothichorror': 'gothic_horror',
+  'gothic': 'gothic_horror',
+  'cosmic horror': 'cosmic_horror',
+  'cosmichorror': 'cosmic_horror',
+  'lovecraftian': 'cosmic_horror',
+  'slasher': 'slasher',
+  'zombie': 'zombie',
+  'zombies': 'zombie',
+  
+  // Mystery/Noir
+  'mystery': 'mystery',
+  'noir': 'noir',
+  'detective': 'detective',
+  'crime': 'crime',
+  'thriller': 'thriller',
+  'spy': 'spy',
+  'espionage': 'spy',
+  'cozy mystery': 'cozy_mystery',
+  'cozymystery': 'cozy_mystery',
+  
+  // Post-apocalyptic
+  'postapoc': 'postapoc',
+  'post-apocalyptic': 'post_apocalyptic',
+  'post apocalyptic': 'post_apocalyptic',
+  'postapocalyptic': 'post_apocalyptic',
+  'apocalypse': 'apocalypse_survivor',
+  'wasteland': 'wasteland',
+  'fallout': 'wasteland',
+  
+  // Western
+  'western': 'western',
+  'wild west': 'western',
+  'cowboy': 'western',
+  'gunslinger': 'gunslinger',
+  'frontier': 'frontier',
+  'outlaw': 'outlaw',
+  
+  // Pirate
+  'pirate': 'pirate',
+  'pirates': 'pirate',
+  'nautical': 'pirate',
+  'naval': 'naval_officer',
+  'treasure hunter': 'treasure_hunter',
+  'treasurehunter': 'treasure_hunter',
+  
+  // War/Military
+  'war': 'war',
+  'military': 'war',
+  'ww2': 'ww2',
+  'wwii': 'ww2',
+  'world war 2': 'ww2',
+  'special forces': 'special_forces',
+  'specialforces': 'special_forces',
+  'mercenary': 'mercenary',
+  'resistance': 'resistance_fighter',
+  
+  // Modern
+  'modern': 'modern',
+  'modern life': 'modern_life',
+  'modernlife': 'modern_life',
+  'contemporary': 'contemporary',
+  'slice of life': 'slice_of_life',
+  'sliceoflife': 'slice_of_life',
+  'romance': 'romance',
+  'business': 'business',
+  
+  // Steampunk
+  'steampunk': 'steampunk',
+  'steam punk': 'steampunk',
+  'dieselpunk': 'dieselpunk',
+  'diesel punk': 'dieselpunk',
+  'clockwork': 'clockwork',
+  'clockpunk': 'clockwork',
+  
+  // Victorian
+  'victorian': 'victorian',
+  'edwardian': 'edwardian',
+  'gaslight': 'gaslight',
+  'gaslamp': 'gaslight',
+  
+  // Space Opera
+  'space opera': 'space_opera',
+  'spaceopera': 'space_opera',
+  'star wars': 'space_opera',
+  'hard scifi': 'hard_scifi',
+  'hardscifi': 'hard_scifi',
+  'alien': 'alien_world',
+  'alien world': 'alien_world',
+  
+  // Superhero
+  'superhero': 'superhero',
+  'super hero': 'superhero',
+  'vigilante': 'vigilante',
+  'villain': 'villain',
+  'supervillain': 'villain',
+  
+  // Urban Fantasy
+  'urban fantasy': 'urban_fantasy',
+  'urbanfantasy': 'urban_fantasy',
+  'supernatural': 'supernatural',
+  'paranormal': 'paranormal',
+};
+
+// Fallback genre parents - if specific sub-genre not found, try parent
+const GENRE_FALLBACKS: Record<string, string> = {
+  'high_fantasy': 'fantasy',
+  'dark_fantasy': 'fantasy',
+  'sword_and_sorcery': 'fantasy',
+  'fairy_tale': 'fantasy',
+  'medieval': 'fantasy',
+  
+  'space_opera': 'scifi',
+  'hard_scifi': 'scifi',
+  'alien_world': 'scifi',
+  'sci_fi': 'scifi',
+  
+  'gothic_horror': 'horror',
+  'cosmic_horror': 'horror',
+  'slasher': 'horror',
+  'zombie': 'horror',
+  'body_horror': 'horror',
+  
+  'noir': 'mystery',
+  'detective': 'mystery',
+  'cozy_mystery': 'mystery',
+  'thriller': 'mystery',
+  'spy': 'mystery',
+  
+  'wasteland': 'postapoc',
+  'post_apocalyptic': 'postapoc',
+  'apocalypse_survivor': 'postapoc',
+  
+  'gunslinger': 'western',
+  'frontier': 'western',
+  'outlaw': 'western',
+  
+  'naval_officer': 'pirate',
+  'treasure_hunter': 'pirate',
+  
+  'ww2': 'war',
+  'special_forces': 'war',
+  'resistance_fighter': 'war',
+  'mercenary': 'war',
+  
+  'modern_life': 'modern',
+  'contemporary': 'modern',
+  'slice_of_life': 'modern',
+  'romance': 'modern',
+  'business': 'modern',
+  
+  'dieselpunk': 'steampunk',
+  'clockwork': 'steampunk',
+  
+  'edwardian': 'victorian',
+  'gaslight': 'victorian',
+  
+  'vigilante': 'superhero',
+  'villain': 'superhero',
+  
+  'supernatural': 'urban_fantasy',
+  'paranormal': 'urban_fantasy',
+};
+
+function normalizeGenre(rawGenre: string): string {
+  // Normalize the input
+  const normalized = rawGenre
+    .toLowerCase()
+    .trim()
+    .replace(/[-\s]+/g, '_')  // Replace spaces and hyphens with underscores
+    .replace(/_+/g, '_');      // Remove duplicate underscores
+  
+  // First, check if it's a direct alias
+  if (GENRE_ALIASES[rawGenre.toLowerCase()]) {
+    const aliased = GENRE_ALIASES[rawGenre.toLowerCase()];
+    // Check if the aliased genre exists in GENRE_STYLES
+    if (GENRE_STYLES[aliased]) {
+      return aliased;
+    }
+    // If not, try fallback
+    if (GENRE_FALLBACKS[aliased] && GENRE_STYLES[GENRE_FALLBACKS[aliased]]) {
+      return GENRE_FALLBACKS[aliased];
+    }
+  }
+  
+  // Check if normalized version is directly in GENRE_STYLES
+  if (GENRE_STYLES[normalized]) {
+    return normalized;
+  }
+  
+  // Try fallback for the normalized version
+  if (GENRE_FALLBACKS[normalized] && GENRE_STYLES[GENRE_FALLBACKS[normalized]]) {
+    return GENRE_FALLBACKS[normalized];
+  }
+  
+  // Partial matching - find genres that contain the search term
+  const genreKeys = Object.keys(GENRE_STYLES);
+  for (const key of genreKeys) {
+    if (key.includes(normalized) || normalized.includes(key)) {
+      return key;
+    }
+  }
+  
+  // Final fallback to modern
+  return 'modern';
+}
+
+// ============================================================================
 // BUILD PROMPT FUNCTION
 // ============================================================================
 function buildPrompt(body: any): { prompt: string; negative: string } {
@@ -1037,9 +1276,14 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const cutOption = CUT_OPTIONS[gender || 'other'] || CUT_OPTIONS.other;
   parts.push(cutOption);
   
-  // ========== GENRE STYLING MODULE ==========
-  const genreKey = (genre || 'modern').toLowerCase().replace(/[\s-]/g, '_');
+  // ========== GENRE STYLING MODULE WITH SUB-GENRE MATCHING ==========
+  const rawGenre = (genre || 'modern').toLowerCase().trim();
+  
+  // Genre normalization and sub-genre matching
+  const genreKey = normalizeGenre(rawGenre);
   const style = GENRE_STYLES[genreKey] || GENRE_STYLES.modern;
+  
+  console.log(`Genre matching: "${rawGenre}" -> "${genreKey}"`);
   
   // Apply genre-specific styling (expanded 3x details)
   parts.push(style.clothing);
