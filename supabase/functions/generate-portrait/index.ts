@@ -6,23 +6,35 @@ const corsHeaders = {
 };
 
 // Simple genre backgrounds
-const GENRE_BACKGROUNDS: Record<string, string> = {
-  fantasy: 'fantasy setting',
-  medieval: 'medieval castle',
-  cyberpunk: 'neon city',
-  scifi: 'spaceship interior',
-  horror: 'dark atmosphere',
-  western: 'wild west',
-  modern: 'urban city',
-  noir: 'film noir shadows',
-  steampunk: 'brass and steam',
-  postapoc: 'wasteland ruins',
-  romance: 'romantic setting',
-  vampire: 'gothic manor',
-  pirate: 'ship deck',
-  spy: 'luxury casino',
-  war: 'military base',
-  superhero: 'city rooftop',
+const GENRE_STYLES: Record<string, { background: string; clothing: string }> = {
+  fantasy: { background: 'fantasy setting', clothing: 'fantasy adventurer outfit' },
+  medieval: { background: 'medieval castle', clothing: 'medieval period clothing' },
+  cyberpunk: { background: 'neon city', clothing: 'cyberpunk techwear outfit' },
+  scifi: { background: 'spaceship interior', clothing: 'sci-fi uniform' },
+  sci_fi: { background: 'spaceship interior', clothing: 'sci-fi uniform' },
+  horror: { background: 'dark atmosphere', clothing: 'casual modern clothes' },
+  western: { background: 'wild west', clothing: 'western frontier outfit' },
+  modern: { background: 'urban city', clothing: 'modern casual clothes' },
+  modern_life: { background: 'urban city', clothing: 'everyday modern outfit' },
+  contemporary: { background: 'urban city', clothing: 'contemporary fashion' },
+  noir: { background: 'film noir shadows', clothing: 'classic noir attire' },
+  steampunk: { background: 'brass and steam', clothing: 'steampunk outfit with goggles' },
+  postapoc: { background: 'wasteland ruins', clothing: 'post-apocalyptic survivor gear' },
+  post_apocalyptic: { background: 'wasteland ruins', clothing: 'wasteland survivor clothes' },
+  romance: { background: 'romantic setting', clothing: 'elegant romantic attire' },
+  vampire: { background: 'gothic manor', clothing: 'gothic elegant clothing' },
+  dark_fantasy: { background: 'dark gothic realm', clothing: 'dark fantasy armor and robes' },
+  high_fantasy: { background: 'magical realm', clothing: 'high fantasy elegant robes' },
+  pirate: { background: 'ship deck', clothing: 'pirate outfit' },
+  spy: { background: 'luxury casino', clothing: 'sleek spy suit' },
+  war: { background: 'military base', clothing: 'military uniform' },
+  ww2: { background: 'wartime setting', clothing: 'WWII era uniform' },
+  superhero: { background: 'city rooftop', clothing: 'superhero costume' },
+  slice_of_life: { background: 'cozy everyday place', clothing: 'casual comfortable clothes' },
+  urban_fantasy: { background: 'modern city with magic', clothing: 'modern clothes with magical touches' },
+  crime: { background: 'gritty urban night', clothing: 'street-smart urban outfit' },
+  mystery: { background: 'detective office', clothing: 'investigator attire' },
+  space_opera: { background: 'grand starship', clothing: 'dramatic space opera costume' },
 };
 
 function buildPrompt(body: any): { prompt: string; negative: string } {
@@ -73,12 +85,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
   if (userDesc) parts.push(userDesc);
   
-  // Background from genre
+  // Get genre style for background and clothing
   const genreKey = (genre || 'modern').toLowerCase().replace(/[\s-]/g, '_');
-  const background = GENRE_BACKGROUNDS[genreKey] || GENRE_BACKGROUNDS.modern;
+  const style = GENRE_STYLES[genreKey] || GENRE_STYLES.modern;
+  
+  // Add clothing to character description
+  parts.push(style.clothing);
   
   const character = parts.join(', ');
-  const prompt = `${character}, ${background}`;
+  const prompt = `${character}, ${style.background}`;
   
   console.log('Portrait prompt:', prompt);
   
