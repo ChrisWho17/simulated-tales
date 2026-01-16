@@ -8,7 +8,18 @@ import { resetLifetimeAchievements } from './lifetimeAchievements';
 
 // All known storage key prefixes and exact keys used by the game
 const STORAGE_KEY_PATTERNS = [
-  // Campaign system
+  // NEW: LWE (Living World Engine) system - primary save system
+  'lwe_',
+  'lwe_save_',
+  'lwe_saves_index',
+  'lwe_autosave_',
+  'lwe_active_campaign',
+  
+  // NEW: Guest local saves (UnifiedSaveService)
+  'guest_local_',
+  'guest_local_campaigns',
+  
+  // Campaign system (legacy)
   'untold_campaign_',
   'untold_campaign_index',
   'untold_active_campaign',
@@ -44,6 +55,12 @@ const STORAGE_KEY_PATTERNS = [
 ];
 
 const EXACT_KEYS_TO_REMOVE = [
+  // LWE system
+  'lwe_saves_index',
+  'lwe_active_campaign',
+  'guest_local_campaigns',
+  
+  // Legacy
   'untold_campaign_index',
   'untold_active_campaign',
   'untold_lifetime_stats',
