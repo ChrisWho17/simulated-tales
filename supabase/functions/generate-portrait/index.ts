@@ -411,12 +411,13 @@ const ORIGIN_STYLE_MODIFIERS: Record<string, string> = {
   'native american': 'with Native American traditional elements, beadwork, natural materials',
 };
 
-// Get origin modifier based on ethnicity/nationality/origin
-function getOriginModifier(origin?: string, nationality?: string, ethnicity?: string): string {
-  const originStr = (origin || nationality || ethnicity || '').toLowerCase();
+// Get cultural style modifier based on ethnicity/nationality only (origin is background story, not culture)
+function getOriginModifier(nationality?: string, ethnicity?: string): string {
+  // Only use nationality and ethnicity for cultural style - origin is character background story
+  const cultureStr = (nationality || ethnicity || '').toLowerCase();
   
   for (const [key, modifier] of Object.entries(ORIGIN_STYLE_MODIFIERS)) {
-    if (originStr.includes(key)) {
+    if (cultureStr.includes(key)) {
       return modifier;
     }
   }
@@ -564,7 +565,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   // Build clothing: genre costume + origin cultural style + user additionals
   const selectedCostume = selectCostume(style.costumes, characterClass);
-  const originModifier = getOriginModifier(origin, nationality, ethnicity);
+  const originModifier = getOriginModifier(nationality, ethnicity);
   const clothingDesc = buildClothingDescription(selectedCostume, originModifier, userDesc);
   
   console.log('Selected costume:', selectedCostume);
