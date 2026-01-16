@@ -1,23 +1,50 @@
 // FLUX.1 Portrait Generation - Secure server-side implementation via edge function
 import { supabase } from '@/integrations/supabase/client';
 
+// Character data interface for portrait generation
+export interface PortraitCharacterData {
+  name?: string;
+  gender?: string;
+  build?: string;
+  height?: string;
+  hairColor?: string;
+  hairStyle?: string;
+  eyeColor?: string;
+  skinTone?: string;
+  faceShape?: string;
+  distinguishingFeatures?: string[];
+  accessories?: string[];
+  details?: string[];
+  // Body modifications
+  piercings?: string[];
+  tattoos?: string[];
+  tattooStyle?: string;
+  scars?: string[];
+  prosthetics?: string[];
+  implants?: string[];
+  mutations?: string[];
+  clothingStyle?: string;
+  clothingDetails?: string[];
+  // Class/role info
+  characterClass?: string;
+  portraitHints?: string[];
+  // Environment context for scene adaptation
+  environmentContext?: {
+    location?: string;
+    weather?: string;
+    timeOfDay?: string;
+    mood?: string;
+    isInCombat?: boolean;
+  };
+}
+
+// Legacy function - takes just a prompt string (for backward compatibility)
 export async function generatePortraitWithFlux(prompt: string): Promise<string> {
-  console.log('[Portrait] Calling edge function with prompt:', prompt.substring(0, 100) + '...');
+  console.log('[Portrait] Calling edge function with prompt only (legacy mode):', prompt.substring(0, 100) + '...');
   
-  const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+  const { data, error } = await supabase.functions.invoke('generate-portrait', {
     body: {
-      npc: {
-        id: `portrait-${Date.now()}`,
-        meta: {
-          name: 'Character',
-          description: 'Custom character portrait',
-        }
-      },
-      prompt: prompt,
-      config: {
-        genre: 'modern',
-        emotion: 'neutral',
-      }
+      customPrompt: prompt,
     }
   });
 
@@ -32,5 +59,70 @@ export async function generatePortraitWithFlux(prompt: string): Promise<string> 
   }
 
   console.log('[Portrait] Successfully generated portrait');
+  return data.imageUrl;
+}
+
+// Full character data function - passes structured data for accurate body modifications
+export async function generatePortraitWithCharacterData(
+  characterData: PortraitCharacterData,
+  genre: string = 'modern'
+): Promise<string> {
+  console.log('[Portrait] Calling edge function with full character data:', {
+    name: characterData.name,
+    gender: characterData.gender,
+    piercings: characterData.piercings?.length,
+    tattoos: characterData.tattoos?.length,
+    scars: characterData.scars?.length,
+    implants: characterData.implants?.length,
+    prosthetics: characterData.prosthetics?.length,
+    mutations: characterData.mutations?.length,
+    clothingStyle: characterData.clothingStyle,
+  });
+  
+  const { data, error } = await supabase.functions.invoke('generate-portrait', {
+    body: {
+      name: characterData.name || 'Character',
+      gender: characterData.gender || 'male',
+      build: characterData.build || 'average',
+      height: characterData.height || 'average',
+      hairColor: characterData.hairColor || 'brown',
+      hairStyle: characterData.hairStyle || 'short',
+      eyeColor: characterData.eyeColor || 'brown',
+      skinTone: characterData.skinTone || 'medium',
+      faceShape: characterData.faceShape,
+      details: characterData.details || [],
+      distinguishingFeatures: characterData.distinguishingFeatures || [],
+      accessories: characterData.accessories || [],
+      // Critical body modifications - passed explicitly
+      piercings: characterData.piercings || [],
+      tattoos: characterData.tattoos || [],
+      tattooStyle: characterData.tattooStyle,
+      scars: characterData.scars || [],
+      prosthetics: characterData.prosthetics || [],
+      implants: characterData.implants || [],
+      mutations: characterData.mutations || [],
+      clothingStyle: characterData.clothingStyle,
+      clothingDetails: characterData.clothingDetails || [],
+      // Class/role info
+      characterClass: characterData.characterClass,
+      portraitHints: characterData.portraitHints || [],
+      // Environment context
+      environmentContext: characterData.environmentContext,
+      // Genre for styling
+      genre: genre,
+    }
+  });
+
+  if (error) {
+    console.error('[Portrait] Edge function error:', error);
+    throw new Error(`Portrait generation failed: ${error.message}`);
+  }
+
+  if (!data?.imageUrl) {
+    console.error('[Portrait] No image URL in response:', data);
+    throw new Error('No image generated');
+  }
+
+  console.log('[Portrait] Successfully generated portrait with body modifications');
   return data.imageUrl;
 }

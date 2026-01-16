@@ -267,8 +267,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      const { generatePortraitWithFlux } = await import('@/services/fluxImageGeneration');
-      const { buildPortraitPrompt } = await import('@/utils/portraitPrompts');
+      const { generatePortraitWithCharacterData } = await import('@/services/fluxImageGeneration');
       
       // Get class name for prompt
       const selectedClassData = customClass && selectedClass === customClass.id
@@ -276,8 +275,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         : blendedClasses.find(c => c.id === selectedClass);
       const className = selectedClassData?.name || selectedClass;
       
-      // Build character appearance data including all customizations
+      // Build character appearance data including all customizations - pass directly to edge function
       const characterData = {
+        name: name,
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
         height: appearance.simple?.height || 'average',
@@ -286,21 +286,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         eyeColor: appearance.detailed?.eyeColor || 'brown',
         skinTone: appearance.detailed?.skinTone || 'medium',
         faceShape: appearance.detailed?.faceShape,
-        // Include distinguishing features directly (piercings, tattoos, scars, etc.)
+        // Distinguishing features and accessories
         distinguishingFeatures: appearance.detailed?.distinguishingFeatures || [],
-        // Include accessories directly (glasses, jewelry, etc.)
         accessories: appearance.detailed?.accessories || [],
-        // Legacy details array for compatibility
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
-        // Full appearance (18+) options
-        bustSize: appearance.full?.bustSize,
-        hipWidth: appearance.full?.hipWidth,
-        muscleDefinition: appearance.full?.muscleDefinition,
-        intimateDetails: appearance.full?.intimateDetails,
-        // Extended body modifications
+        // CRITICAL: Body modifications - passed directly to edge function
         piercings: appearance.full?.piercings || [],
         tattoos: appearance.full?.tattoos || [],
         tattooStyle: appearance.full?.tattooStyle,
@@ -310,12 +303,21 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         mutations: appearance.full?.mutations || [],
         clothingStyle: appearance.full?.clothingStyle,
         clothingDetails: appearance.full?.clothingDetails || [],
+        // Class info for role-appropriate styling
+        characterClass: className,
+        portraitHints: (selectedClassData as any)?.portraitHints || [],
       };
       
-      const prompt = buildPortraitPrompt(characterData, genre, 'neutral', className);
-      console.log('[FLUX] Generating portrait with prompt:', prompt);
+      console.log('[FLUX] Generating portrait with body modifications:', {
+        piercings: characterData.piercings.length,
+        tattoos: characterData.tattoos.length,
+        scars: characterData.scars.length,
+        implants: characterData.implants.length,
+        prosthetics: characterData.prosthetics.length,
+        mutations: characterData.mutations.length,
+      });
       
-      const imageUrl = await generatePortraitWithFlux(prompt);
+      const imageUrl = await generatePortraitWithCharacterData(characterData, genre);
       setPortraitUrl(imageUrl);
       toast.success('Portrait generated!');
     } catch (error) {
