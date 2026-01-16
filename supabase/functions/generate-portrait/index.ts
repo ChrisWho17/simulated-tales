@@ -923,6 +923,204 @@ const GENRE_STYLES: Record<string, GenreStyle> = {
 };
 
 // ============================================================================
+// ROLE STYLING BY GENRE - Specific character roles within each genre
+// ============================================================================
+interface RoleStyle {
+  description: string;
+  clothing: string;
+  accessories: string;
+  techDetails: string;
+}
+
+const ROLE_STYLES: Record<string, Record<string, RoleStyle>> = {
+  // Cyberpunk roles
+  cyberpunk: {
+    netrunner: {
+      description: 'elite hacker, cyberdeck expert, virtual infiltrator, data thief, corporate spy',
+      clothing: 'neural-interface headset with visible cables, lightweight tactical jacket with cable ports, form-fitting smart-fabric undersuit, fingerless gloves with haptic feedback pads, data-cable harness across chest',
+      accessories: 'cyberdeck mounted on thigh or back, multiple data cables, AR visor or smart-lens glasses, encrypted commlink earpiece, neural interface plugs visible at temples',
+      techDetails: 'subdermal circuitry glowing softly under skin, neural port at base of skull, data-jack behind ear, holographic interface projected near hand, matrix-code reflections in eyes',
+    },
+    solo: {
+      description: 'combat specialist, mercenary, bodyguard, street enforcer, corporate wetwork operator',
+      clothing: 'heavy tactical vest with ballistic plating, combat harness with magazine pouches, armored jacket with reinforced shoulders, tactical pants with integrated knee pads, military-grade webbing',
+      accessories: 'targeting monocle or cyber-optic, tactical earpiece, ammo bandolier, combat knife sheath, trauma kit pouch',
+      techDetails: 'combat augmented limbs, targeting reticle visible in eye, dermal armor plating, reinforced bone structure visible at joints, combat-grade muscle enhancement',
+    },
+    fixer: {
+      description: 'dealmaker, information broker, black market contact, underworld connector, middleman',
+      clothing: 'expensive tailored suit with subtle tech integration, designer jacket with hidden pockets, high-end street fashion with corporate edge, statement accessories showing wealth and connections',
+      accessories: 'multiple encrypted phones, credstick holder, expensive watch with hidden scanner, designer AR glasses, discrete earpiece',
+      techDetails: 'subtle facial recognition implant, enhanced hearing, encrypted neural-phone, social enhancement augmentations, voice modulator',
+    },
+    techie: {
+      description: 'hardware specialist, cybernetics installer, gadget inventor, tech expert, ripperdoc assistant',
+      clothing: 'work apron over tech-casual clothes, tool harness with many pockets, anti-static coat, magnification visor pushed up on forehead, utility belt loaded with tools',
+      accessories: 'soldering equipment, diagnostic scanner, spare parts pouches, magnifying loupe, circuit tester, cybernetic maintenance kit',
+      techDetails: 'precision-enhanced fingers, zoom-capable eyes, steady-hand implants, diagnostic overlays in vision, neural interface for machines',
+    },
+    rockerboy: {
+      description: 'rebel artist, street performer, revolutionary voice, anti-corporate activist, underground celebrity',
+      clothing: 'flashy stage outfit with LED elements, custom leather jacket covered in patches and art, ripped designer clothes, statement fashion pushing boundaries, provocative anti-establishment style',
+      accessories: 'cybernetic instrument mods, throat-mounted vocal enhancer, glowing body art, fan merchandise of self, encrypted broadcast equipment',
+      techDetails: 'enhanced vocal cords, audio-jack ports, stage lighting skin implants, recording eye implant, charisma-enhancing pheromone system',
+    },
+    media: {
+      description: 'combat journalist, truth-seeker, war correspondent, underground broadcaster, investigative reporter',
+      clothing: 'tactical journalist vest with recording equipment, practical street clothes for quick escapes, camera-integrated eyewear, press credentials both real and fake, armored journalist coat',
+      accessories: 'multi-spectrum camera drone, recording implants, editing deck, broadcast equipment, encrypted storage, fake IDs',
+      techDetails: 'recording eye with zoom and lowlight, enhanced hearing for interviews, data storage in skull, secure uplink for live broadcasts, facial recognition blocker',
+    },
+    nomad: {
+      description: 'road warrior, convoy driver, wasteland survivor, family-pack member, motorhead',
+      clothing: 'road-worn leather jacket with pack emblems, practical layers for desert and cold, vehicle-themed accessories, welding goggles, protective riding gear with patches',
+      accessories: 'vehicle repair tools, fuel canister, road maps, family pack tokens, salvage collection, vehicle keys on chain',
+      techDetails: 'vehicle-interface implants, dust-filter lungs, UV-resistant eyes, waste-processing kidneys, extended endurance modifications',
+    },
+    corpo: {
+      description: 'corporate executive, company operative, suit, wage-slave turned player, corporate spy',
+      clothing: 'immaculate corporate suit with hidden tech, designer clothing with subtle company branding, expensive minimalist style, perfectly tailored with secret pockets, power-dressing to intimidate',
+      accessories: 'corporate ID badge, encrypted datapad, designer briefcase, executive commlink, corporate credit chips, loyalty monitoring device',
+      techDetails: 'behavioral monitoring implant, corporate neural-link, loyalty-verified brain chip, expensive cosmetic surgery, stress-management implant',
+    },
+  },
+  
+  // Sci-fi roles
+  scifi: {
+    captain: {
+      description: 'starship commander, fleet officer, crew leader, exploration pioneer',
+      clothing: 'command uniform with rank insignia, reinforced duty jacket, tactical command vest, utility belt with communicator',
+      accessories: 'command insignia, communicator badge, datapad, sidearm holster, command key chip',
+      techDetails: 'neural command interface, strategic overlay implant, crew-monitoring link, translation implant',
+    },
+    pilot: {
+      description: 'ace flyer, starfighter jockey, shuttle operator, racing champion',
+      clothing: 'flight suit with life support connections, pressurized undersuit, pilot jacket with squadron patches, anti-g webbing',
+      accessories: 'flight helmet with HUD, breathing mask, ejection harness, flight recorder, lucky charm',
+      techDetails: 'enhanced reflexes, spatial awareness augmentation, g-force tolerance mods, neural flight interface',
+    },
+    engineer: {
+      description: 'ship mechanic, systems specialist, tech genius, problem solver',
+      clothing: 'engineering jumpsuit with tool loops, protective work gear, heavy gloves, scanner goggles on forehead',
+      accessories: 'multi-tool, diagnostic scanner, spare parts pouches, reactor key, repair drone',
+      techDetails: 'enhanced precision hands, technical database implant, radiation resistance, diagnostic vision',
+    },
+    scientist: {
+      description: 'researcher, xenobiologist, theoretical physicist, lab specialist',
+      clothing: 'lab coat or research uniform, protective eyewear, clean-suit elements, data-recording badge',
+      accessories: 'research datapad, specimen containers, analysis equipment, holographic display projector',
+      techDetails: 'enhanced memory, analytical processing implant, microscopic vision, data recording corneal implant',
+    },
+  },
+  
+  // Fantasy roles
+  fantasy: {
+    warrior: {
+      description: 'battle-hardened fighter, shield-bearer, sword master, defender',
+      clothing: 'well-maintained chainmail or plate armor, warrior tabard, sword belt, cloak for travel',
+      accessories: 'shield on back, sword sheath, dagger, waterskin, campaign medals',
+      techDetails: 'battle scars showing experience, calloused sword hands, military posture, weathered face',
+    },
+    mage: {
+      description: 'arcane spellcaster, wizard, sorcerer, magic wielder',
+      clothing: 'flowing robes with arcane symbols, enchanted cloak, comfortable spell-casting attire, mystical accessories',
+      accessories: 'spell component pouch, arcane focus crystal, tome of spells, runic jewelry, magical familiar nearby',
+      techDetails: 'glowing arcane markings on skin, mystical energy visible around hands, ancient eyes, otherworldly aura',
+    },
+    rogue: {
+      description: 'thief, assassin, spy, infiltrator, shadow walker',
+      clothing: 'dark leather armor, hood and mask options, silent movement gear, many hidden pockets',
+      accessories: 'lockpicks, throwing knives, grappling hook, poison vials, stolen trinkets',
+      techDetails: 'nimble fingers, sharp observant eyes, light-footed stance, calculating expression',
+    },
+    ranger: {
+      description: 'wilderness expert, hunter, tracker, nature guardian',
+      clothing: 'forest green and brown leathers, camouflage cloak, practical outdoor gear, weather-ready',
+      accessories: 'bow and quiver, hunting knife, animal companion nearby, herb pouches, tracking tools',
+      techDetails: 'keen eyes, weathered outdoor skin, animal-like awareness, connection to nature visible',
+    },
+    cleric: {
+      description: 'divine servant, healer, holy warrior, temple representative',
+      clothing: 'religious vestments, holy symbols, armored robes for combat clerics, devotional accessories',
+      accessories: 'holy symbol prominent, prayer beads, sacred text, healing kit, divine focus',
+      techDetails: 'divine light in eyes, peaceful aura, blessed markings, serene but powerful presence',
+    },
+  },
+  
+  // Horror roles
+  horror: {
+    survivor: {
+      description: 'final girl, last one standing, resourceful victim, trauma survivor',
+      clothing: 'torn and bloodied everyday clothes, improvised protection, practical shoes for running',
+      accessories: 'improvised weapon, flashlight, first aid supplies, keys clutched tight',
+      techDetails: 'wide terrified eyes, adrenaline-fueled alertness, survival determination, traumatic stress visible',
+    },
+    hunter: {
+      description: 'monster hunter, supernatural investigator, slayer, occult expert',
+      clothing: 'reinforced leather coat, tactical gear with holy symbols, monster-hunting utility belt, protected neck',
+      accessories: 'silver weapons, holy water vials, religious symbols, monster identification journal, specialized ammunition',
+      techDetails: 'scarred from previous hunts, experienced calculating eyes, supernatural awareness, grim determination',
+    },
+    investigator: {
+      description: 'occult researcher, paranormal detective, truth-seeker in darkness',
+      clothing: 'practical professional attire, protective charms woven in, comfortable for long investigations',
+      accessories: 'research journal, camera for evidence, protective talismans, recording equipment, ancient texts',
+      techDetails: 'dark circles from sleepless research, haunted eyes from what theyve seen, obsessive attention to detail',
+    },
+  },
+  
+  // Western roles
+  western: {
+    sheriff: {
+      description: 'lawman, town protector, justice bringer, badge wearer',
+      clothing: 'worn but maintained law-enforcement attire, star badge prominent, practical hat, gun belt',
+      accessories: 'sheriff badge, handcuffs, wanted posters, law book, keys to jail',
+      techDetails: 'commanding presence, justice in eyes, authority posture, protective stance',
+    },
+    outlaw: {
+      description: 'criminal, bank robber, train thief, wanted fugitive',
+      clothing: 'road-worn layers, bandana for face-covering, dusty trail clothes, intimidating appearance',
+      accessories: 'wanted poster of self, lockpicks, stolen valuables, bandana, spurs',
+      techDetails: 'dangerous eyes, quick-draw stance, outlaw swagger, survival instincts visible',
+    },
+    bounty_hunter: {
+      description: 'manhunter, tracker, collector of rewards, hunter of outlaws',
+      clothing: 'practical hunting gear, reinforced coat, many weapons visible, trail-ready attire',
+      accessories: 'bounty notices, restraints, tracking tools, multiple weapons, trophy collection',
+      techDetails: 'predator eyes, patient hunter stance, scars from captures, relentless determination',
+    },
+  },
+  
+  // Military/War roles
+  war: {
+    soldier: {
+      description: 'infantry fighter, enlisted personnel, frontline combatant, ground trooper',
+      clothing: 'full combat uniform, body armor, helmet, load-bearing equipment, tactical gear',
+      accessories: 'rifle nearby, ammunition pouches, first aid kit, radio, grenades',
+      techDetails: 'thousand-yard stare option, combat alertness, military bearing, fatigue and determination',
+    },
+    officer: {
+      description: 'military commander, tactical leader, unit commander, strategic mind',
+      clothing: 'officer uniform with rank insignia, command accessories, practical but distinguished',
+      accessories: 'command radio, tactical map, sidearm, unit insignia, planning tools',
+      techDetails: 'command presence, strategic thinking visible, burden of leadership, respect-demanding posture',
+    },
+    medic: {
+      description: 'combat medic, field surgeon, life-saver, doc',
+      clothing: 'medical-marked combat gear, accessible medical pouches, practical uniform, blood-stained from work',
+      accessories: 'medical kit prominent, stethoscope, bandages ready, stretcher nearby, dog tags of lost',
+      techDetails: 'compassionate but hardened eyes, steady healer hands, exhaustion from saves, determined to help',
+    },
+    sniper: {
+      description: 'marksman, long-range specialist, overwatch, silent killer',
+      clothing: 'camouflage appropriate to terrain, ghillie suit elements, minimal equipment, silent gear',
+      accessories: 'rifle scope, spotting equipment, range finder, camouflage netting, patience supplies',
+      techDetails: 'patient calculating eyes, utter stillness capability, breath control, extreme focus',
+    },
+  },
+};
+
+// ============================================================================
 // GENRE NORMALIZATION - Maps genre strings to GENRE_STYLES keys
 // ============================================================================
 
@@ -1269,13 +1467,6 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     parts.push(anatomyHints.join(', '));
   }
   
-  // Role/Class
-  if (characterClass) parts.push(characterClass);
-  
-  // ========== GENDER CUT OPTION ==========
-  const cutOption = CUT_OPTIONS[gender || 'other'] || CUT_OPTIONS.other;
-  parts.push(cutOption);
-  
   // ========== GENRE STYLING MODULE WITH SUB-GENRE MATCHING ==========
   const rawGenre = (genre || 'modern').toLowerCase().trim();
   
@@ -1285,9 +1476,100 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   console.log(`Genre matching: "${rawGenre}" -> "${genreKey}"`);
   
-  // Apply genre-specific styling (expanded 3x details)
-  parts.push(style.clothing);
-  if (style.accessories) parts.push(style.accessories);
+  // ========== ROLE/CLASS STYLING - Genre-specific role details ==========
+  const normalizedRole = (characterClass || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+  
+  // Find role styling for this genre + role combination
+  const genreRoles = ROLE_STYLES[genreKey] || {};
+  let roleStyle = genreRoles[normalizedRole];
+  
+  // Try parent genre if specific genre not found
+  if (!roleStyle && GENRE_FALLBACKS[genreKey]) {
+    const parentGenre = GENRE_FALLBACKS[genreKey];
+    const parentRoles = ROLE_STYLES[parentGenre] || {};
+    roleStyle = parentRoles[normalizedRole];
+  }
+  
+  // Try common role variations
+  if (!roleStyle) {
+    const roleAliases: Record<string, string> = {
+      'net_runner': 'netrunner',
+      'net-runner': 'netrunner', 
+      'decker': 'netrunner',
+      'hacker': 'netrunner',
+      'combat_specialist': 'solo',
+      'merc': 'solo',
+      'mercenary': 'solo',
+      'bodyguard': 'solo',
+      'street_samurai': 'solo',
+      'tech': 'techie',
+      'technician': 'techie',
+      'ripperdoc': 'techie',
+      'mechanic': 'techie',
+      'rocker': 'rockerboy',
+      'musician': 'rockerboy',
+      'performer': 'rockerboy',
+      'journalist': 'media',
+      'reporter': 'media',
+      'exec': 'corpo',
+      'corporate': 'corpo',
+      'executive': 'corpo',
+      'suit': 'corpo',
+      'wizard': 'mage',
+      'sorcerer': 'mage',
+      'witch': 'mage',
+      'warlock': 'mage',
+      'fighter': 'warrior',
+      'knight': 'warrior',
+      'paladin': 'warrior',
+      'barbarian': 'warrior',
+      'thief': 'rogue',
+      'assassin': 'solo',  // Cyberpunk assassin = solo, fantasy assassin = rogue handled by genre
+      'bard': 'rockerboy',
+      'druid': 'ranger',
+      'hunter': 'ranger',
+      'priest': 'cleric',
+      'healer': 'cleric',
+    };
+    
+    const aliasedRole = roleAliases[normalizedRole];
+    if (aliasedRole) {
+      const cyberpunkRoles = ROLE_STYLES['cyberpunk'] || {};
+      const fantasyRoles = ROLE_STYLES['fantasy'] || {};
+      const scifiRoles = ROLE_STYLES['scifi'] || {};
+      const horrorRoles = ROLE_STYLES['horror'] || {};
+      const westernRoles = ROLE_STYLES['western'] || {};
+      const warRoles = ROLE_STYLES['war'] || {};
+      
+      roleStyle = cyberpunkRoles[aliasedRole] || fantasyRoles[aliasedRole] || 
+                  scifiRoles[aliasedRole] || horrorRoles[aliasedRole] ||
+                  westernRoles[aliasedRole] || warRoles[aliasedRole];
+    }
+  }
+  
+  if (roleStyle) {
+    console.log(`Role matching: "${characterClass}" -> found role styling for "${genreKey}"`);
+    // Add role-specific elements BEFORE generic genre styling
+    parts.push(`ROLE: ${roleStyle.description}`);
+    parts.push(`ROLE CLOTHING: ${roleStyle.clothing}`);
+    parts.push(`ROLE GEAR: ${roleStyle.accessories}`);
+    parts.push(`ROLE TECH/DETAILS: ${roleStyle.techDetails}`);
+  } else if (characterClass) {
+    // Fallback: just mention the role name
+    console.log(`Role matching: "${characterClass}" -> no specific styling, using generic`);
+    parts.push(`occupation/role: ${characterClass}`);
+  }
+  
+  // ========== GENDER CUT OPTION ==========
+  const cutOption = CUT_OPTIONS[gender || 'other'] || CUT_OPTIONS.other;
+  parts.push(cutOption);
+  
+  // Apply genre-specific styling (expanded 3x details) - BUT respect role overrides
+  if (!roleStyle) {
+    // Only use generic genre clothing if no role-specific styling
+    parts.push(style.clothing);
+  }
+  if (style.accessories && !roleStyle) parts.push(style.accessories);
   parts.push(style.jewelry);
   if (style.footwear) parts.push(style.footwear);
   if (style.hairStyling) parts.push(style.hairStyling);
