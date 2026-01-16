@@ -6,175 +6,260 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STRUCTURED LAYERED PROMPT SYSTEM
-// Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
+// ULTIMATE FLUX1.DEV CHARACTER PORTRAIT PROMPT STRUCTURE
 // ============================================================================
 
-// LAYER 4: Photography Style - PHOTOREALISTIC, CAMERA LOCKED
-const LAYER_STYLE = {
-  // Photorealistic base
-  medium: 'photorealistic portrait photograph, professional studio photography, DSLR camera with 85mm lens',
-  
-  // Photo quality
-  quality: 'photorealistic, hyperrealistic skin texture, natural skin pores, realistic eye reflections, sharp focus, natural lighting, 8K resolution',
-  
-  // LOCKED FRAMING: Body facing camera, knee to head, no closer
-  framing: 'full three-quarter body shot from knees to head only, body facing directly toward camera, front-facing pose, standing upright, arms visible at sides, direct eye contact with camera, neutral natural stance, full torso and hips visible, both legs visible from knees up',
-};
+// [CAMERA & COMPOSITION - LOCKED]
+const CAMERA_COMPOSITION = `Direct frontal portrait photograph, knee to head height framing, character body positioned at slight 15-degree angle while face and eyes look directly at camera, establishing intimate eye contact with viewer, professional studio lighting setup with three-point lighting configuration`;
 
-// Comprehensive negative prompts - enforce framing
-const NEGATIVE_PROMPT = [
-  // FRAMING ENFORCEMENT - prevent close-ups
-  'close-up, closeup, headshot, face only, bust shot, chest up, shoulders up, waist up',
-  'cropped at waist, cropped at chest, cropped body, partial body',
-  'zoomed in, too close, tight framing',
-  // Pose exclusions
-  'looking away, looking to the side, turned away, back view, profile view, looking over shoulder',
-  'side profile, rear view, from behind, angled body, twisted pose',
-  // Body anomalies
-  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
-  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
-  'deformed face, ugly face, disfigured, mutation, mutated, deformed body',
-  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs',
-  'long neck, extra head, duplicate, clone, twin',
-  // Quality issues
-  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature',
-  'cropped, cut off, poorly framed',
-  // Style exclusions
-  'cartoon, anime, chibi, 3d render, plastic, doll-like',
-  'painting, illustration, drawing, sketch, artwork, digital art, concept art',
-  'overexposed, underexposed, flat lighting',
-].join(', ');
+// [QUALITY ASSURANCE TAGS]
+const QUALITY_TAGS = `Professional portrait photography, studio quality, magazine editorial standard, high-end retouching, natural beauty enhancement, cinematic lighting, shallow depth of field, bokeh background, sharp focus on subject, professional color grading, award-winning portrait, masterful composition, technically perfect, emotionally resonant, character-driven storytelling`;
 
-// Keywords that indicate outfit/clothing override in character additionals
-const OUTFIT_OVERRIDE_KEYWORDS = [
-  'wearing', 'dressed', 'clothing', 'clothes', 'outfit', 'uniform', 'armor', 'suit',
-  'military', 'ww1', 'ww2', 'world war', 'victorian', 'medieval', 'modern', 'futuristic',
-  'casual', 'formal', 'tactical', 'combat', 'dress', 'gown', 'jacket', 'coat',
-  'jeans', 'pants', 'skirt', 'shirt', 'hoodie', 'sweater', 'leather', 'denim',
-];
+// [NEGATIVE PROMPTS TO AVOID]
+const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, headshot, bust shot, face only, zoomed in, too close`;
 
 // ============================================================================
-// LAYER 3: GENRE CONTEXT - Environment and Setting
+// GENRE BACKGROUNDS - ATMOSPHERIC CONTEXT
 // ============================================================================
 
-const GENRE_CONTEXT: Record<string, { outfit: string; setting: string }> = {
+const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; elements: string }> = {
   // Modern/Contemporary
-  modern: { outfit: 'modern tactical gear, body armor, combat clothing', setting: 'urban cityscape, modern architecture' },
-  modern_life: { outfit: 'contemporary casual clothing, modern fashion', setting: 'coffee shop, modern apartment' },
-  contemporary: { outfit: 'everyday modern clothing', setting: 'city street, modern interior' },
+  modern: { 
+    setting: 'contemporary urban cityscape', 
+    atmosphere: 'modern metropolitan energy, clean lines', 
+    elements: 'glass buildings, city lights, modern architecture' 
+  },
+  modern_life: { 
+    setting: 'contemporary everyday location', 
+    atmosphere: 'warm comfortable ambiance', 
+    elements: 'coffee shop, modern apartment, street scene' 
+  },
   
   // Sci-Fi
-  cyberpunk: { outfit: 'cyberpunk tactical armor, chrome cybernetic arm, neon accents, combat gear, holding futuristic weapon', setting: 'neon-lit cyberpunk city, holographic billboards, rain, dark atmosphere' },
-  scifi: { outfit: 'sleek futuristic uniform, advanced materials, tech accessories', setting: 'spaceship interior, space station, futuristic city' },
-  space_opera: { outfit: 'space military uniform, insignia, utility belt', setting: 'starship bridge, alien planet vista' },
-  mecha: { outfit: 'pilot suit with interface ports, tactical vest', setting: 'hangar bay, giant mecha in background' },
+  cyberpunk: { 
+    setting: 'neon-lit cyberpunk city at night', 
+    atmosphere: 'high-tech low-life, rain-slicked streets, neon glow', 
+    elements: 'holographic billboards, chrome and neon, urban decay meets technology' 
+  },
+  scifi: { 
+    setting: 'futuristic environment', 
+    atmosphere: 'advanced technology, clean futurism', 
+    elements: 'spaceship interior, space station, sleek technology' 
+  },
+  space_opera: { 
+    setting: 'starship bridge or alien vista', 
+    atmosphere: 'epic galactic scale, cosmic wonder', 
+    elements: 'control panels, viewports to space, distant planets' 
+  },
   
   // War/Military
-  war: { outfit: 'military combat uniform, tactical vest, dog tags, rifle', setting: 'battlefield, military base' },
-  ww2: { outfit: '1940s military uniform, period equipment, vintage weapons', setting: 'wartime Europe, military camp' },
-  ww1: { outfit: 'WWI era uniform, trench gear, gas mask on belt', setting: 'muddy trenches, war-torn landscape' },
-  vietnam: { outfit: 'jungle fatigues, M16 rifle, dog tags', setting: 'vietnamese jungle, firebase' },
-  cold_war: { outfit: 'period military or spy attire, formal suits', setting: 'berlin wall, soviet architecture' },
+  war: { 
+    setting: 'battlefield or military installation', 
+    atmosphere: 'tense combat readiness, military precision', 
+    elements: 'military equipment, fortifications, combat zone' 
+  },
+  ww2: { 
+    setting: '1940s wartime Europe', 
+    atmosphere: 'period-authentic World War 2 setting', 
+    elements: 'military camp, vintage equipment, war-era structures' 
+  },
+  ww1: { 
+    setting: 'World War 1 trenches', 
+    atmosphere: 'grim trench warfare, muddy desolation', 
+    elements: 'muddy trenches, barbed wire, war-torn landscape' 
+  },
+  vietnam: { 
+    setting: 'Vietnamese jungle', 
+    atmosphere: 'humid tropical warfare, dense vegetation', 
+    elements: 'jungle foliage, firebase, humid environment' 
+  },
   
-  // Post-Apocalyptic/Survival
-  postapoc: { outfit: 'weathered survival gear, patched leather, scavenged clothing, improvised armor', setting: 'wasteland ruins, abandoned buildings' },
-  zombie: { outfit: 'apocalypse survivor gear, reinforced clothing, melee weapon', setting: 'overrun city, barricaded building' },
-  survival: { outfit: 'outdoor survival gear, hiking clothing, backpack', setting: 'wilderness, forest campsite' },
-  fallout: { outfit: 'retro-futuristic wasteland gear, vault suit elements', setting: 'nuclear wasteland, ruined city' },
+  // Post-Apocalyptic
+  postapoc: { 
+    setting: 'post-apocalyptic wasteland', 
+    atmosphere: 'desolate survival, civilization collapse', 
+    elements: 'ruined buildings, overgrown decay, scavenged world' 
+  },
+  zombie: { 
+    setting: 'zombie apocalypse city', 
+    atmosphere: 'desperate survival horror', 
+    elements: 'barricaded buildings, abandoned streets, survival setup' 
+  },
+  fallout: { 
+    setting: 'retro-futuristic nuclear wasteland', 
+    atmosphere: 'atomic age post-apocalypse', 
+    elements: 'rusted technology, radiation signs, vault structures' 
+  },
   
   // Fantasy
-  fantasy: { outfit: 'fantasy attire, leather armor, mystical accessories, medieval clothing', setting: 'enchanted forest, ancient castle, fantasy tavern' },
-  medieval: { outfit: 'medieval clothing, leather and wool, period armor', setting: 'stone castle, medieval village' },
-  dark_fantasy: { outfit: 'dark ornate armor, gothic accessories, dark clothing', setting: 'dark castle, cursed forest' },
-  high_fantasy: { outfit: 'elaborate magical robes, enchanted jewelry, fantasy armor', setting: 'magical kingdom, crystal palace' },
-  sword_sorcery: { outfit: 'barbarian gear, chainmail, tribal accessories', setting: 'ancient ruins, mystical temple' },
+  fantasy: { 
+    setting: 'enchanted fantasy realm', 
+    atmosphere: 'magical mystical wonder', 
+    elements: 'ancient castle, enchanted forest, mystical lighting' 
+  },
+  medieval: { 
+    setting: 'medieval castle or village', 
+    atmosphere: 'historical medieval authenticity', 
+    elements: 'stone walls, timber buildings, period architecture' 
+  },
+  dark_fantasy: { 
+    setting: 'dark gothic fantasy realm', 
+    atmosphere: 'ominous dark magic, gothic horror', 
+    elements: 'cursed castle, dead trees, eerie fog' 
+  },
+  high_fantasy: { 
+    setting: 'magical fantasy kingdom', 
+    atmosphere: 'bright heroic fantasy, magical wonder', 
+    elements: 'crystal spires, magical auras, enchanted landscape' 
+  },
   
-  // Horror/Dark
-  horror: { outfit: 'worn everyday clothes, survival gear, disheveled appearance', setting: 'abandoned building, foggy night, creepy atmosphere' },
-  vampire: { outfit: 'gothic aristocratic attire, dark elegant clothing, cape', setting: 'gothic castle, moonlit cemetery' },
-  werewolf: { outfit: 'torn rugged clothing, wild appearance', setting: 'foggy forest, full moon' },
-  lovecraft: { outfit: '1920s period clothing, investigator attire', setting: 'eldritch atmosphere, cosmic horror hints' },
+  // Horror
+  horror: { 
+    setting: 'haunted location', 
+    atmosphere: 'creeping dread, supernatural menace', 
+    elements: 'abandoned building, fog, eerie lighting' 
+  },
+  vampire: { 
+    setting: 'gothic castle or cemetery', 
+    atmosphere: 'aristocratic darkness, eternal night', 
+    elements: 'moonlit architecture, gothic elements, candlelight' 
+  },
+  lovecraft: { 
+    setting: '1920s New England', 
+    atmosphere: 'cosmic horror, eldritch unease', 
+    elements: 'old buildings, mysterious shadows, unsettling geometry' 
+  },
   
   // Historical
-  western: { outfit: 'wild west attire, duster coat, cowboy hat, holstered revolver', setting: 'dusty frontier town, desert canyon' },
-  noir: { outfit: '1940s detective attire, fedora, trench coat', setting: 'rainy night street, dim office' },
-  victorian: { outfit: 'victorian era clothing, formal attire', setting: 'london streets, victorian mansion' },
-  renaissance: { outfit: 'renaissance clothing, doublet and hose, noble attire', setting: 'italian palazzo, renaissance court' },
-  ancient: { outfit: 'ancient robes, roman toga, greek chiton', setting: 'ancient temple, roman forum' },
-  
-  // Genre Mashups
-  steampunk: { outfit: 'victorian steampunk fashion, brass goggles, clockwork accessories, cogs', setting: 'steam-powered factory, airship, victorian street' },
-  dieselpunk: { outfit: '1930s-40s retro-futuristic, leather aviator gear', setting: 'art deco city, industrial factory' },
-  pirate: { outfit: 'pirate attire, weathered sea clothing, cutlass, tricorn hat', setting: 'ship deck, tropical port' },
+  western: { 
+    setting: 'wild west frontier', 
+    atmosphere: 'dusty frontier lawlessness', 
+    elements: 'desert canyon, wooden buildings, dusty streets' 
+  },
+  noir: { 
+    setting: '1940s noir city', 
+    atmosphere: 'shadowy mystery, moral ambiguity', 
+    elements: 'rain-slicked streets, neon signs, venetian blind shadows' 
+  },
+  victorian: { 
+    setting: 'Victorian era London', 
+    atmosphere: 'industrial age elegance and grime', 
+    elements: 'gas lamps, cobblestones, period architecture' 
+  },
+  steampunk: { 
+    setting: 'steampunk Victorian city', 
+    atmosphere: 'brass and steam technology, retro-futurism', 
+    elements: 'clockwork machinery, steam pipes, brass and copper' 
+  },
   
   // Thriller/Crime
-  mystery: { outfit: 'professional attire, investigator look, subtle accessories', setting: 'victorian study, foggy street' },
-  spy: { outfit: 'tailored suit, sophisticated attire, concealed weapon', setting: 'luxury casino, secret base' },
-  crime: { outfit: 'street clothes, gang attire, urban fashion', setting: 'dark alley, city night' },
-  heist: { outfit: 'tactical black clothing, professional thief gear', setting: 'museum night, vault room' },
+  spy: { 
+    setting: 'sophisticated spy location', 
+    atmosphere: 'international intrigue, high stakes', 
+    elements: 'luxury casino, secret base, exotic locale' 
+  },
+  crime: { 
+    setting: 'urban crime scene', 
+    atmosphere: 'gritty underworld tension', 
+    elements: 'dark alley, city night, urban environment' 
+  },
   
-  // Superhero/Power
-  superhero: { outfit: 'heroic suit, emblem, powerful presence, cape optional', setting: 'city rooftop, dramatic sky' },
-  supervillain: { outfit: 'menacing costume, dramatic accessories', setting: 'villainous lair, destroyed city' },
-  
-  // Misc
-  slice_of_life: { outfit: 'casual everyday clothing, comfortable attire', setting: 'cozy home, neighborhood street' },
-  romance: { outfit: 'attractive stylish clothing, date outfit', setting: 'romantic setting, candlelit restaurant' },
-  comedy: { outfit: 'expressive casual clothing', setting: 'colorful environment, everyday location' },
+  // Other
+  superhero: { 
+    setting: 'heroic cityscape', 
+    atmosphere: 'larger than life heroism', 
+    elements: 'city rooftop, dramatic sky, urban backdrop' 
+  },
+  romance: { 
+    setting: 'romantic setting', 
+    atmosphere: 'intimate warmth, emotional connection', 
+    elements: 'soft lighting, elegant venue, romantic ambiance' 
+  },
+  slice_of_life: { 
+    setting: 'everyday comfortable location', 
+    atmosphere: 'warm familiar comfort', 
+    elements: 'cozy home, neighborhood, everyday spaces' 
+  },
 };
 
 // ============================================================================
-// ORIGIN/BACKGROUND MODIFIERS - How background affects appearance
+// ROLE STYLES - Character occupation/class descriptions
 // ============================================================================
 
-const ORIGIN_MODIFIERS: Record<string, string> = {
-  // Legacy spawn points
-  'college': 'young student look, casual academic style, backpack',
-  'home': 'comfortable casual appearance, well-maintained',
-  'homeless': 'weathered appearance, worn clothes, survival hardened',
-  
-  // Background effects
-  'Stable upbringing': 'well-groomed, healthy appearance, confident posture',
-  'Turbulent past': 'guarded expression, visible wear, street-smart look',
-  'Sheltered life': 'innocent appearance, clean and neat, slightly naive expression',
-  'Street survivor': 'hardened expression, survival scars, street-worn appearance',
-  
-  // Generic fallbacks
-  'wealthy': 'expensive clothing, well-groomed, refined appearance',
-  'poor': 'worn but maintained clothing, resourceful look',
-  'military': 'disciplined posture, fit appearance, military bearing',
-  'criminal': 'street smart appearance, edgy style, guarded expression',
-  'academic': 'intellectual appearance, glasses optional, thoughtful expression',
-  'noble': 'aristocratic bearing, fine clothing, elegant posture',
-  'peasant': 'simple working clothes, weathered hands, humble appearance',
-  'merchant': 'practical but quality clothing, shrewd expression',
+const ROLE_STYLES: Record<string, string> = {
+  // Military/Combat
+  soldier: 'professional soldier, tactical vest, combat gear, military bearing',
+  medic: 'combat medic, medical gear, red cross insignia, healing focus',
+  sniper: 'precision sniper, scope rifle, patient deadly focus',
+  heavy: 'heavy weapons specialist, machine gun, imposing presence',
+  engineer: 'combat engineer, tools and equipment, tactical goggles',
+  pilot: 'aircraft pilot, flight suit, aviator bearing',
+  officer: 'military officer, decorated uniform, command presence',
+  spec_ops: 'special operations operator, elite tactical gear, lethal efficiency',
+  commando: 'elite commando, black tactical equipment, deadly professional',
+  marine: 'combat marine, USMC bearing, warrior discipline',
+
+  // Fantasy Classes
+  knight: 'armored knight, plate armor, sword and shield, noble bearing',
+  rogue: 'stealthy rogue, leather armor, daggers, cunning expression',
+  mage: 'powerful mage, mystical robes, arcane energy, wise eyes',
+  wizard: 'learned wizard, magical staff, spellbook, ancient knowledge',
+  warlock: 'dark warlock, eldritch pact markings, otherworldly power',
+  paladin: 'holy paladin, blessed shining armor, righteous aura',
+  berserker: 'fierce berserker, war paint, massive weapon, rage barely contained',
+  warrior: 'battle-hardened warrior, practical armor, experienced fighter',
+  cleric: 'divine cleric, religious vestments, holy symbol, healing grace',
+  druid: 'nature druid, organic robes, wooden staff, wild connection',
+  monk: 'disciplined monk, simple robes, martial arts stance, inner peace',
+  barbarian: 'tribal barbarian, primitive gear, raw physical power',
+  archer: 'skilled archer, bow and quiver, keen eyes, steady aim',
+  assassin: 'deadly assassin, dark hooded attire, hidden blades, lethal grace',
+  necromancer: 'dark necromancer, skull motifs, death magic aura',
+  alchemist: 'experimental alchemist, potions and vials, chemical knowledge',
+
+  // Cyberpunk
+  solo: 'elite mercenary solo, chrome cybernetics, tactical armor, dangerous',
+  netrunner: 'hacker netrunner, neural interface, data cables, digital focus',
+  fixer: 'connected fixer, expensive street fashion, chrome accents, smooth operator',
+  techie: 'tech specialist, cybernetic eye, tools and gadgets',
+  nomad: 'road warrior nomad, dust-worn armor, chrome modifications',
+  corpo: 'corporate agent, sleek tactical suit, hidden enhancements',
+
+  // Sci-Fi
+  captain: 'starship captain, command uniform, leadership bearing',
+  bounty_hunter: 'bounty hunter, worn armor, multiple weapons, hardened tracker',
+  smuggler: 'spacer smuggler, practical clothes, blaster, roguish charm',
+  android: 'synthetic android, perfect features, visible synthetic elements',
+  cyborg: 'cybernetic cyborg, visible mechanical enhancements',
+
+  // Horror
+  survivor: 'horror survivor, everyday clothes, frightened determination',
+  investigator: 'occult investigator, period clothing, flashlight, journal',
+  hunter: 'monster hunter, specialized weapons, experienced killer',
+
+  // Noir/Crime
+  detective: 'hardboiled detective, long coat, badge, seen-it-all eyes',
+  criminal: 'street criminal, urban clothing, concealed weapon',
+  gangster: 'period gangster, sharp suit, dangerous reputation',
+  thief: 'skilled thief, dark stealth clothing, nimble',
+  hitman: 'professional hitman, clean suit, cold efficiency',
+
+  // Western
+  gunslinger: 'fast-draw gunslinger, dual revolvers, duster coat, cowboy hat',
+  sheriff: 'frontier sheriff, badge, rifle, law and order',
+  outlaw: 'wanted outlaw, dusty clothes, bandana, guns',
+
+  // Civilian
+  mercenary: 'professional mercenary, mixed gear, weapons, dangerous for hire',
+  rebel: 'resistance fighter, improvised gear, rebel insignia, defiant',
+  hacker: 'skilled hacker, tech gear, digital specialist',
+  merchant: 'wealthy merchant, quality clothing, shrewd',
+  noble: 'aristocratic noble, fine clothing, refined bearing',
+  scholar: 'learned scholar, academic robes, books, intellectual',
 };
 
 // ============================================================================
-// CLOTHING STYLE MODIFIERS - Override or enhance genre defaults
-// ============================================================================
-
-const CLOTHING_STYLE_MODIFIERS: Record<string, string> = {
-  'genre_default': '', // Use genre outfit
-  'formal': 'wearing formal business attire, suit or elegant dress',
-  'casual': 'wearing casual comfortable clothing',
-  'streetwear': 'wearing urban streetwear, trendy branded clothing',
-  'punk': 'wearing punk style with ripped clothes, spikes, patches, chains',
-  'goth': 'wearing gothic dark clothing, victorian influences, black colors',
-  'military': 'wearing military tactical clothing, combat ready',
-  'athletic': 'wearing athletic sporty clothing, performance wear',
-  'bohemian': 'wearing bohemian flowing clothes, natural fabrics, earthy tones',
-  'vintage': 'wearing vintage retro clothing from past era',
-  'minimalist': 'wearing minimalist simple clothing, clean lines',
-  'extravagant': 'wearing extravagant flashy clothing, bold statement pieces',
-  'revealing': 'wearing revealing clothing showing skin',
-  'modest': 'wearing modest conservative full coverage clothing',
-  'cosplay': 'wearing costume or themed character outfit',
-};
-
-// ============================================================================
-// LAYER 2: PHYSICAL ATTRIBUTES - Core appearance
+// PHYSICAL ATTRIBUTE MAPPINGS
 // ============================================================================
 
 const PHYSICAL = {
@@ -184,271 +269,295 @@ const PHYSICAL = {
     nonbinary: 'person with androgynous features',
     other: 'person',
   } as Record<string, string>,
-  
+
   build: {
-    athletic: 'athletic muscular build',
-    lean: 'lean agile build',
-    muscular: 'heavily muscular build',
-    average: 'average build',
-    slim: 'slim slender build',
-    stocky: 'stocky sturdy build',
-    large: 'large imposing build',
-    heavyset: 'heavyset large build',
-    curvy: 'curvy hourglass figure',
-    petite: 'petite small frame',
-    tall: 'tall imposing stature',
-    thick: 'thick curvy build',
-    lithe: 'lithe graceful build',
+    athletic: 'athletic muscular build with defined muscle tone, broad shoulders, tapered waist',
+    lean: 'lean agile build with wiry muscles, efficient movement suggested',
+    muscular: 'heavily muscular build with prominent muscle definition, powerful physique',
+    average: 'average healthy build with balanced proportions',
+    slim: 'slim slender build with delicate frame, graceful proportions',
+    stocky: 'stocky sturdy build with thick frame, solid presence',
+    large: 'large imposing build with broad frame, commanding physical presence',
+    heavyset: 'heavyset build with substantial frame, powerful mass',
+    curvy: 'curvy hourglass figure with pronounced curves, feminine silhouette',
+    petite: 'petite small frame with delicate proportions',
+    thick: 'thick curvy build with full figure, substantial curves',
+    lithe: 'lithe graceful build with elegant proportions, dancer physique',
   } as Record<string, string>,
-  
+
+  height: {
+    'very short': 'very short stature creating compact vertical presence',
+    'short': 'short stature with smaller frame',
+    'average': 'average height with balanced proportions',
+    'tall': 'tall stature creating commanding vertical presence',
+    'very tall': 'very tall imposing stature with elongated proportions',
+  } as Record<string, string>,
+
   skin: {
-    pale: 'pale fair skin',
-    light: 'light skin',
-    fair: 'fair skin',
-    medium: 'medium skin tone',
-    tan: 'tanned skin',
-    olive: 'olive skin tone',
-    brown: 'brown skin',
-    dark: 'dark skin',
-    ebony: 'deep ebony skin',
-    porcelain: 'porcelain pale skin',
+    pale: 'pale fair skin with porcelain undertones, visible veins',
+    light: 'light skin with warm undertones',
+    fair: 'fair skin with neutral undertones',
+    medium: 'medium skin tone with warm undertones',
+    tan: 'tanned skin with golden undertones',
+    olive: 'olive skin tone with Mediterranean warmth',
+    brown: 'brown skin with rich warm undertones',
+    dark: 'dark skin with deep warm undertones',
+    ebony: 'deep ebony skin with rich dark tones',
+    porcelain: 'porcelain pale skin with luminous quality',
   } as Record<string, string>,
-  
+
   hairColor: {
-    black: 'jet black hair',
-    brown: 'brown hair',
-    darkBrown: 'dark brown hair',
-    lightBrown: 'light brown hair',
-    blonde: 'blonde hair',
-    dirtyBlonde: 'dirty blonde hair',
-    platinum: 'platinum blonde hair',
-    red: 'red hair',
-    auburn: 'auburn hair',
-    ginger: 'ginger hair',
-    white: 'white hair',
-    gray: 'gray hair',
-    silver: 'silver hair',
+    black: 'jet black hair with blue-black sheen',
+    brown: 'brown hair with natural highlights',
+    darkBrown: 'dark brown hair with depth',
+    lightBrown: 'light brown hair with warm tones',
+    blonde: 'blonde hair with golden highlights',
+    dirtyBlonde: 'dirty blonde hair with mixed tones',
+    platinum: 'platinum blonde hair almost white',
+    red: 'vibrant red hair with copper undertones',
+    auburn: 'auburn hair with red-brown warmth',
+    ginger: 'ginger orange-red hair',
+    white: 'pure white hair',
+    gray: 'natural gray hair with silver streaks',
+    silver: 'metallic silver hair',
     blue: 'bright blue dyed hair',
     pink: 'pink dyed hair',
     purple: 'purple dyed hair',
     green: 'green dyed hair',
   } as Record<string, string>,
-  
+
   hairStyle: {
-    short: 'short cropped hair',
-    medium: 'medium length hair',
-    military: 'military buzz cut',
-    mohawk: 'mohawk hairstyle',
-    shaved: 'shaved head',
-    bald: 'bald head',
-    long: 'long flowing hair',
-    ponytail: 'hair in ponytail',
-    braided: 'braided hair',
-    undercut: 'undercut hairstyle',
-    messy: 'messy tousled hair',
-    slicked: 'slicked back hair',
-    curly: 'curly textured hair',
-    dreads: 'dreadlocks',
-    wavy: 'wavy hair',
-    spiky: 'spiky styled hair',
+    short: 'short cropped hair close to head',
+    medium: 'medium length hair falling to shoulders',
+    military: 'military buzz cut extremely short',
+    mohawk: 'mohawk hairstyle with shaved sides',
+    shaved: 'completely shaved head',
+    bald: 'naturally bald head, smooth scalp',
+    long: 'long flowing hair past shoulders',
+    ponytail: 'hair pulled back in ponytail',
+    braided: 'hair styled in braids',
+    undercut: 'undercut hairstyle with longer top',
+    messy: 'messy tousled hair with natural texture',
+    slicked: 'slicked back hair with product shine',
+    curly: 'naturally curly textured hair with defined curls',
+    dreads: 'hair styled in dreadlocks',
+    wavy: 'naturally wavy hair with soft waves',
+    spiky: 'spiky styled hair with product',
+    pixie: 'short pixie cut feminine style',
+    bob: 'chin-length bob cut',
   } as Record<string, string>,
-  
+
   eyeColor: {
-    brown: 'brown eyes',
-    blue: 'blue eyes',
-    green: 'green eyes',
-    hazel: 'hazel eyes',
-    gray: 'gray eyes',
-    amber: 'amber eyes',
-    heterochromia: 'heterochromia different colored eyes',
-    cybernetic: 'glowing cybernetic eyes',
-    violet: 'violet eyes',
-    golden: 'golden eyes',
+    brown: 'deep brown eyes with warm tones and light reflections',
+    blue: 'clear blue eyes with depth and catchlights',
+    green: 'vivid green eyes with gold flecks',
+    hazel: 'hazel eyes shifting between green and brown',
+    gray: 'cool gray eyes with silver tones',
+    amber: 'striking amber eyes with golden warmth',
+    heterochromia: 'heterochromia with two different colored eyes',
+    violet: 'rare violet eyes',
+    golden: 'unusual golden eyes',
+    cybernetic: 'glowing cybernetic eyes with digital elements',
   } as Record<string, string>,
-  
+
   faceShape: {
-    oval: 'oval face shape',
-    round: 'round face',
-    square: 'square jawline',
-    heart: 'heart-shaped face',
-    long: 'long face',
-    angular: 'angular sharp features',
+    oval: 'oval face shape with balanced proportions',
+    round: 'round face with soft contours',
+    square: 'square face with strong jawline and angular features',
+    heart: 'heart-shaped face with wider forehead tapering to chin',
+    long: 'long face with elongated proportions',
+    angular: 'angular face with sharp defined bone structure',
+    diamond: 'diamond face shape with high cheekbones',
   } as Record<string, string>,
 };
 
 // ============================================================================
-// LAYER 2.5: DISTINGUISHING DETAILS - Important visual markers
+// DISTINGUISHING FEATURES MAPPINGS
 // ============================================================================
 
-const DETAIL_MAP: Record<string, string> = {
-  // Facial features
-  'Facial scar': 'prominent facial scar',
-  'Dimples': 'cute dimples when smiling',
-  'Freckles': 'freckles across face and nose',
-  'Beauty mark': 'beauty mark on face',
-  'Cleft chin': 'cleft chin',
-  'High cheekbones': 'high pronounced cheekbones',
-  'Strong jaw': 'strong defined jawline',
-  'Soft features': 'soft gentle facial features',
-  'Sharp features': 'sharp angular features',
-  'Weathered': 'weathered experienced face',
-  'Youthful': 'youthful smooth face',
-  
+const FEATURE_DESCRIPTIONS: Record<string, string> = {
+  // Facial scars
+  'Facial scar': 'prominent facial scar with healed tissue, telling of past violence',
+  'Scar across eye': 'dramatic scar running across eye area, weathered with age',
+  'Burn scars': 'burn scar tissue with texture variation, healed but visible',
+
+  // Skin features
+  'Freckles': 'freckles scattered across nose and cheeks, natural sun-kissed pattern',
+  'Dimples': 'charming dimples in cheeks',
+  'Beauty mark': 'distinctive beauty mark on face',
+  'Moles': 'natural moles as distinguishing marks',
+
+  // Facial structure
+  'Cleft chin': 'defined cleft chin',
+  'High cheekbones': 'high prominent cheekbones casting shadows',
+  'Strong jaw': 'strong defined jawline with powerful structure',
+  'Soft features': 'soft gentle facial features with rounded contours',
+  'Sharp features': 'sharp angular features with defined planes',
+  'Weathered face': 'weathered experienced face showing life lived',
+  'Youthful face': 'youthful smooth face with fresh vitality',
+
   // Facial hair
-  'Beard': 'full beard',
-  'Stubble': 'stubble facial hair',
-  'Mustache': 'mustache',
-  'Goatee': 'goatee',
-  'Clean shaven': 'clean shaven face',
-  
-  // Accessories
-  'Necklace': 'wearing necklace',
-  'Choker': 'wearing choker necklace',
-  'Ring': 'wearing rings',
-  'Bracelet': 'wearing bracelet',
-  'Earrings': 'wearing earrings',
-  'Glasses': 'wearing glasses',
-  'Sunglasses': 'wearing sunglasses',
-  'Eyepatch': 'eyepatch over one eye',
-  'Bandana': 'wearing bandana',
-  'Headband': 'wearing headband',
-  'Hat': 'wearing hat',
-  'Scarf': 'wearing scarf',
-  
-  // Makeup/cosmetic
-  'Heavy makeup': 'wearing heavy dramatic makeup',
-  'Natural makeup': 'natural subtle makeup',
-  'War paint': 'war paint on face',
-  'Tattoo face': 'facial tattoos',
+  'Beard': 'full beard with natural texture and volume',
+  'Stubble': 'rugged stubble across jaw and chin',
+  'Mustache': 'styled mustache',
+  'Goatee': 'neat goatee beard',
+  'Clean shaven': 'clean shaven smooth face',
+
+  // Eye features
+  'Eyepatch': 'eyepatch covering one eye, weathered leather or fabric',
+
+  // Body features
+  'Body scars': 'visible scars on body telling stories of survival',
+  'Birthmark': 'natural birthmark as distinguishing feature',
 };
 
 // ============================================================================
-// LAYER 1: ROLE IDENTITY - Character class/role (highest priority)
+// ACCESSORY DESCRIPTIONS
 // ============================================================================
 
-const ROLE_IDENTITY: Record<string, string> = {
-  // === MILITARY/COMBAT ROLES ===
-  soldier: 'soldier with tactical vest and rifle',
-  medic: 'combat medic with medical gear and red cross',
-  sniper: 'sniper with scope and ghillie elements',
-  heavy: 'heavy weapons specialist with machine gun',
-  engineer: 'combat engineer with tools and goggles',
-  pilot: 'pilot in flight suit with helmet',
-  tank: 'tank commander with tanker helmet',
-  officer: 'military officer in decorated uniform',
-  scout: 'recon scout in light gear',
-  spec_ops: 'special forces operator with night vision',
-  commando: 'elite commando in black tactical gear',
-  marine: 'marine in combat uniform, USMC',
-  ranger: 'army ranger in tactical gear',
-  paratrooper: 'paratrooper with jump gear',
-  
-  // === FANTASY CLASSES ===
-  knight: 'armored knight in plate armor with sword and shield',
-  rogue: 'rogue in leather armor with daggers, hooded',
-  mage: 'mage in magical robes with arcane glow and staff',
-  wizard: 'wizard in mystical robes with staff and spellbook',
-  sorcerer: 'sorcerer with innate magical energy emanating',
-  warlock: 'warlock with dark pact markings and eldritch signs',
-  paladin: 'paladin in blessed shining armor with holy symbol',
-  berserker: 'berserker with war paint and massive weapon, fierce',
-  warrior: 'warrior in practical battle armor',
-  cleric: 'cleric in religious vestments with holy symbol',
-  priest: 'priest in religious robes',
-  bard: 'bard in colorful clothing with musical instrument',
-  druid: 'druid in natural robes with wooden staff, nature motifs',
-  monk: 'monk in simple robes, martial artist stance',
-  barbarian: 'barbarian in tribal gear with massive weapon',
-  archer: 'archer with bow and quiver, ranger attire',
-  assassin: 'assassin in dark hooded attire with hidden blades',
-  necromancer: 'necromancer in dark robes with skull motifs',
-  summoner: 'summoner with magical circles and glowing runes',
-  alchemist: 'alchemist with potions and vials, leather apron',
-  
-  // === CYBERPUNK ROLES ===
-  solo: 'elite solo mercenary, chrome cybernetic arm, tactical body armor, holding assault rifle, dangerous confident pose',
-  netrunner: 'netrunner hacker, glowing neural interface, data cables, holographic displays around head',
-  fixer: 'fixer in expensive street fashion, chrome accessories, confident smirk',
-  techie: 'techie with cybernetic eye implant, tools, gadgets',
-  nomad: 'nomad warrior in road-worn armored gear, dust and chrome',
-  corpo: 'corporate agent in sleek tactical business attire, hidden chrome',
-  rockerboy: 'rockerboy in flashy stage clothes, cybernetic music implants',
-  media: 'media journalist with recording implants, stylish clothes',
-  
-  // === SCI-FI ROLES ===
-  captain: 'starship captain in command uniform with insignia',
-  engineer_scifi: 'ship engineer with tools and jumpsuit',
-  scientist: 'scientist in lab coat with tech equipment',
-  space_marine: 'space marine in powered armor with plasma weapon',
-  bounty_hunter: 'bounty hunter in worn armor with various weapons',
-  smuggler: 'smuggler in practical spacer clothes with blaster',
-  android: 'android with visible synthetic parts, perfect features',
-  cyborg: 'cyborg with visible cybernetic enhancements',
-  
-  // === HORROR ROLES ===
-  survivor: 'survivor in torn everyday clothes, frightened but determined',
-  investigator: 'occult investigator with flashlight and journal',
-  hunter: 'monster hunter with specialized weapons and gear',
-  psychic: 'psychic with intense gaze, subtle supernatural aura',
-  exorcist: 'exorcist with religious symbols and holy water',
-  
-  // === NOIR/CRIME ROLES ===
-  detective: 'detective in long coat with badge and gun',
-  criminal: 'criminal in street clothes with concealed weapon',
-  gangster: 'gangster in period suit with tommy gun',
-  thief: 'thief in dark stealthy clothing with lockpicks',
-  hitman: 'hitman in professional suit with silenced pistol',
-  cop: 'police officer in uniform with badge and service weapon',
-  
-  // === WESTERN ROLES ===
-  gunslinger: 'gunslinger with dual revolvers, cowboy hat, duster',
-  sheriff: 'sheriff with badge, cowboy hat, lever action rifle',
-  outlaw: 'outlaw in dusty clothes with bandana and guns',
-  bounty: 'bounty hunter in worn leather with wanted posters',
-  
-  // === CIVILIAN/OTHER ===
-  mercenary: 'mercenary with mixed military gear and weapons',
-  rebel: 'resistance fighter in improvised gear with rebel insignia',
-  hacker: 'hacker in cyberpunk style with tech gear and laptop',
-  merchant: 'merchant in quality clothing with coin purse',
-  noble: 'noble in fine aristocratic clothing with jewelry',
-  peasant: 'peasant in simple working clothes',
-  scholar: 'scholar in academic robes with books and scrolls',
-  healer: 'healer with medical supplies and gentle demeanor',
-  artisan: 'artisan with tools of their trade',
-  entertainer: 'entertainer in performance costume',
+const ACCESSORY_DESCRIPTIONS: Record<string, string> = {
+  // Eyewear
+  'Glasses': 'wearing glasses with visible frames, lens catching light',
+  'Sunglasses': 'wearing sunglasses with reflective or tinted lenses',
+  'Goggles': 'goggles either worn or resting on head',
+
+  // Earrings
+  'Earrings': 'earrings catching light, metal or gemstone',
+  'Ear studs': 'subtle ear studs',
+  'Hoop earrings': 'hoop earrings of visible size',
+  'Dangle earrings': 'dangle earrings with movement',
+
+  // Necklaces
+  'Necklace': 'necklace visible against skin or clothing',
+  'Choker': 'choker worn close around neck',
+  'Pendant': 'pendant necklace with meaningful charm',
+  'Chain': 'chain necklace in metal',
+  'Dog tags': 'military dog tags on chain',
+
+  // Rings & Bracelets
+  'Ring': 'ring on finger, metal band visible',
+  'Rings': 'multiple rings on fingers',
+  'Bracelet': 'bracelet on wrist',
+  'Watch': 'watch on wrist with visible face',
+  'Cuff': 'cuff bracelet on wrist',
+
+  // Head accessories
+  'Hat': 'wearing appropriate hat for setting',
+  'Bandana': 'bandana worn on head or around neck',
+  'Headband': 'headband keeping hair in place',
+  'Circlet': 'circlet or headpiece across forehead',
+  'Crown': 'crown or coronet denoting royalty',
+  'Hood': 'hood pulled up or resting on shoulders',
+
+  // Neck & Face
+  'Scarf': 'scarf draped around neck',
+  'Mask': 'mask covering part of face',
+  'Collar': 'distinctive collar on clothing',
+
+  // Other
+  'Tattoo face': 'visible facial tattoos with intentional design',
+  'War paint': 'war paint or face markings with tribal or combat significance',
+  'Heavy makeup': 'dramatic heavy makeup with bold choices',
+  'Natural makeup': 'subtle natural makeup enhancing features',
 };
 
 // ============================================================================
-// LAYERED PROMPT BUILDER
+// BODY MODIFICATIONS
 // ============================================================================
 
-function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: string } {
+const MODIFICATION_DESCRIPTIONS = {
+  tattoos: (locations: string[], style?: string) => {
+    const styleDesc = style ? `${style} style` : 'detailed';
+    return `${styleDesc} tattoos visible on ${locations.join(', ')}, ink work with artistic design`;
+  },
+
+  piercings: (locations: string[]) => {
+    return `piercings: ${locations.join(', ')}, metal jewelry catching light`;
+  },
+
+  scars: (locations: string[]) => {
+    return `visible scars on ${locations.join(', ')}, healed tissue showing history`;
+  },
+
+  implants: (types: string[]) => {
+    return `cybernetic implants: ${types.join(', ')}, technology integrated with flesh`;
+  },
+
+  prosthetics: (types: string[]) => {
+    return `prosthetic: ${types.join(', ')}, mechanical replacement visible`;
+  },
+
+  mutations: (types: string[]) => {
+    return `mutations: ${types.join(', ')}, inhuman alterations to form`;
+  },
+};
+
+// ============================================================================
+// EXPRESSION & EMOTION MAPPING
+// ============================================================================
+
+const EXPRESSION_MAP: Record<string, string> = {
+  // Dispositions
+  'Bold': 'confident assertive expression with direct intensity',
+  'Cautious': 'alert watchful expression with guarded awareness',
+  'Adaptable': 'calm collected expression with easy composure',
+
+  // Social styles
+  'Charming': 'charming slight smile with magnetic warmth',
+  'Reserved': 'reserved composed expression with quiet dignity',
+  'Blunt': 'direct intense gaze with unflinching honesty',
+
+  // Emotions
+  'neutral': 'neutral calm expression with quiet confidence',
+  'happy': 'genuine warm smile reaching the eyes',
+  'angry': 'fierce intense expression with controlled rage',
+  'sad': 'melancholy expression with deep emotion in eyes',
+  'determined': 'resolute determined expression with steel will',
+  'confident': 'self-assured confident expression radiating competence',
+  'mysterious': 'enigmatic mysterious expression hiding secrets',
+  'fierce': 'fierce aggressive expression ready for conflict',
+  'kind': 'gentle kind expression with warmth and empathy',
+  'tired': 'weary tired expression showing exhaustion',
+  'serious': 'serious focused expression with gravity',
+  'playful': 'playful mischievous expression with hints of fun',
+};
+
+// ============================================================================
+// MAIN PROMPT BUILDER - ULTIMATE STRUCTURE
+// ============================================================================
+
+function buildUltimatePrompt(body: any): { prompt: string; negative_prompt: string } {
   const {
+    // Core identity
     gender,
+    age,
+    height,
+    // Physical
     build,
     skinTone,
     hairColor,
     hairStyle,
     eyeColor,
     faceShape,
+    // Additional details text field - ABSOLUTE PRIORITY
+    additionalDetails,
+    characterAdditionals,
+    customDescription,
+    // Role/Class
     characterClass,
+    // Genre
     genre,
-    age,
-    height,
-    // Origin and background
+    // Origin/Background
     origin,
     spawnPoint,
     background,
-    // Clothing style override
-    clothingStyle,
-    clothingDetails,
-    // Distinguishing details - IMPORTANT
+    // Distinguishing features
     details,
     distinguishingFeatures,
-    accessories,
     facialFeatures,
     distinguishingMarks,
+    // Accessories
+    accessories,
     // Body modifications
     piercings,
     tattoos,
@@ -457,23 +566,31 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     implants,
     prosthetics,
     mutations,
-    // Portrait hints from class
-    portraitHints,
-    // Personality for expression hints
+    // Clothing
+    clothingStyle,
+    clothingDetails,
+    // Expression
     disposition,
     socialStyle,
+    emotionVariant,
+    // Portrait hints
+    portraitHints,
   } = body;
 
-  console.log("=== LAYERED PROMPT BUILDER ===");
-  console.log("Input:", JSON.stringify({ 
-    gender, build, skinTone, hairColor, hairStyle, eyeColor, characterClass, genre, age,
-    origin, spawnPoint, clothingStyle,
-    detailsCount: details?.length || 0,
-    distinguishingFeaturesCount: distinguishingFeatures?.length || 0,
-    accessoriesCount: accessories?.length || 0,
-  }));
-
-  // Helper: find value in map (case-insensitive)
+  console.log("=== ULTIMATE PROMPT BUILDER ===");
+  
+  // =========================================================================
+  // 🎯 PRIORITY: USER ADDITIONAL DETAILS - ABSOLUTE CONTROL
+  // This section FULLY overrides any conflicting base settings
+  // =========================================================================
+  
+  const userAdditionalDetails = additionalDetails || characterAdditionals || customDescription || '';
+  console.log("User Additional Details (PRIORITY):", userAdditionalDetails || "(none)");
+  
+  // =========================================================================
+  // [FOUNDATION: CORE PHYSICAL STRUCTURE]
+  // =========================================================================
+  
   const lookup = (map: Record<string, string>, key: string | undefined, fallback: string): string => {
     if (!key) return fallback;
     const directMatch = map[key];
@@ -482,108 +599,76 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     for (const k of Object.keys(map)) {
       if (k.toLowerCase() === lowerKey) return map[k];
     }
-    return key; // Return raw value if no match
+    return key;
   };
-
-  // Get genre context
-  const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
-  const genreCtx = GENRE_CONTEXT[genreKey] || GENRE_CONTEXT[genre] || GENRE_CONTEXT.fantasy;
-  console.log("Genre context for:", genreKey, genreCtx);
-
-  // =========================================================================
-  // LAYER 1: IDENTITY (Highest Priority - Who is this person?)
-  // =========================================================================
+  
+  // Gender and age
   const genderStr = lookup(PHYSICAL.gender, gender, 'person');
   const ageStr = age ? `${age} year old` : 'adult';
+  const heightStr = height ? lookup(PHYSICAL.height, height, `${height} stature`) : '';
   
-  // Find role from character class - try exact match first, then partial
-  let roleStr = '';
-  const classLower = (characterClass || '').toLowerCase().replace(/[\s-]/g, '_');
+  // Build - detailed body architecture
+  const buildStr = lookup(PHYSICAL.build, build, 'average healthy build');
   
-  // Try exact match
-  if (ROLE_IDENTITY[classLower]) {
-    roleStr = ROLE_IDENTITY[classLower];
-  } else {
-    // Try partial match
-    for (const key of Object.keys(ROLE_IDENTITY)) {
-      if (classLower.includes(key) || key.includes(classLower)) {
-        roleStr = ROLE_IDENTITY[key];
-        break;
-      }
-    }
-  }
+  // Skin
+  const skinStr = lookup(PHYSICAL.skin, skinTone, 'medium skin tone with natural undertones');
   
-  // Fallback to class name if no match
-  if (!roleStr && characterClass) {
-    roleStr = characterClass;
-  }
-  
-  const layer1 = `${ageStr} ${genderStr}${roleStr ? `, ${roleStr}` : ''}`;
-  console.log("Layer 1 (Identity):", layer1);
-
-  // =========================================================================
-  // LAYER 1.5: ORIGIN/BACKGROUND MODIFIER (Affects demeanor and wear)
-  // =========================================================================
-  let originModifier = '';
-  
-  // Check spawn point first (more specific)
-  if (spawnPoint && ORIGIN_MODIFIERS[spawnPoint]) {
-    originModifier = ORIGIN_MODIFIERS[spawnPoint];
-  }
-  // Then check origin/background
-  else if (origin && ORIGIN_MODIFIERS[origin]) {
-    originModifier = ORIGIN_MODIFIERS[origin];
-  }
-  else if (background && ORIGIN_MODIFIERS[background]) {
-    originModifier = ORIGIN_MODIFIERS[background];
-  }
-  
-  if (originModifier) {
-    console.log("Layer 1.5 (Origin):", originModifier);
-  }
-
-  // =========================================================================
-  // LAYER 2: PHYSICAL (Core appearance)
-  // =========================================================================
-  const buildStr = lookup(PHYSICAL.build, build, 'average build');
-  const skinStr = lookup(PHYSICAL.skin, skinTone, 'medium skin tone');
-  const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, 'brown hair');
-  const hairStyleStr = lookup(PHYSICAL.hairStyle, hairStyle, 'short hair');
-  const eyeColorStr = lookup(PHYSICAL.eyeColor, eyeColor, 'brown eyes');
+  // Face
   const faceStr = faceShape ? lookup(PHYSICAL.faceShape, faceShape, '') : '';
   
-  const physicalParts = [buildStr, skinStr, `${hairColorStr} in ${hairStyleStr}`, eyeColorStr];
-  if (faceStr) physicalParts.push(faceStr);
-  if (height) physicalParts.push(`${height} height`);
+  // Eyes
+  const eyeStr = lookup(PHYSICAL.eyeColor, eyeColor, 'expressive eyes with depth');
   
-  const layer2 = physicalParts.join(', ');
-  console.log("Layer 2 (Physical):", layer2);
-
-  // =========================================================================
-  // LAYER 2.5: DISTINGUISHING DETAILS (Important visual markers)
-  // =========================================================================
-  const detailParts: string[] = [];
+  // Hair
+  const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, 'natural hair');
+  const hairStyleStr = lookup(PHYSICAL.hairStyle, hairStyle, 'styled hair');
   
-  // Process details array (combined features + accessories from character creation)
+  // Build foundation section
+  const foundationParts: string[] = [];
+  foundationParts.push(`${ageStr} ${genderStr} presenting individual`);
+  if (heightStr) foundationParts.push(heightStr);
+  foundationParts.push(`Body Architecture: ${buildStr}`);
+  foundationParts.push(`posture: body angled 15 degrees for depth while maintaining frontal presence, confident natural stance`);
+  
+  const foundationStr = foundationParts.join(', ');
+  console.log("Foundation:", foundationStr);
+  
+  // =========================================================================
+  // [FACIAL ARCHITECTURE - MAXIMUM DETAIL]
+  // =========================================================================
+  
+  const facialParts: string[] = [];
+  if (faceStr) facialParts.push(`Face Shape: ${faceStr}`);
+  facialParts.push(`Skin: ${skinStr}, natural texture with visible pores, natural skin variations`);
+  facialParts.push(`Eyes: ${eyeStr}, direct camera gaze with emotional depth, catchlights reflecting`);
+  facialParts.push(`Hair: ${hairColorStr} ${hairStyleStr}, natural texture and dimension`);
+  
+  const facialStr = facialParts.join(', ');
+  console.log("Facial Architecture:", facialStr);
+  
+  // =========================================================================
+  // [DISTINGUISHING FEATURES - LAYERED DETAIL]
+  // =========================================================================
+  
+  const featureParts: string[] = [];
+  
+  // Process details array
   if (details && Array.isArray(details)) {
     details.forEach((d: string) => {
-      const mapped = DETAIL_MAP[d];
-      if (mapped) {
-        detailParts.push(mapped);
-      } else if (d) {
-        detailParts.push(d.toLowerCase());
-      }
+      const mapped = FEATURE_DESCRIPTIONS[d] || ACCESSORY_DESCRIPTIONS[d];
+      if (mapped) featureParts.push(mapped);
+      else if (d) featureParts.push(d);
     });
   }
   
-  // Process separate distinguishing features
+  // Process distinguishing features
   if (distinguishingFeatures && Array.isArray(distinguishingFeatures)) {
     distinguishingFeatures.forEach((f: string) => {
-      const mapped = DETAIL_MAP[f];
-      if (mapped && !detailParts.includes(mapped)) {
-        detailParts.push(mapped);
-      } else if (f && !detailParts.includes(f.toLowerCase())) {
-        detailParts.push(f.toLowerCase());
+      const mapped = FEATURE_DESCRIPTIONS[f];
+      if (mapped && !featureParts.some(p => p.includes(mapped))) {
+        featureParts.push(mapped);
+      } else if (f) {
+        featureParts.push(f);
       }
     });
   }
@@ -591,188 +676,196 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   // Process accessories
   if (accessories && Array.isArray(accessories)) {
     accessories.forEach((a: string) => {
-      const mapped = DETAIL_MAP[a];
-      if (mapped && !detailParts.includes(mapped)) {
-        detailParts.push(mapped);
-      } else if (a && !detailParts.includes(a.toLowerCase())) {
-        detailParts.push(`wearing ${a.toLowerCase()}`);
+      const mapped = ACCESSORY_DESCRIPTIONS[a];
+      if (mapped && !featureParts.some(p => p.includes(mapped))) {
+        featureParts.push(mapped);
+      } else if (a) {
+        featureParts.push(`wearing ${a}`);
       }
     });
   }
   
   // Add facial features text
-  if (facialFeatures) {
-    detailParts.push(facialFeatures);
-  }
+  if (facialFeatures) featureParts.push(facialFeatures);
+  if (distinguishingMarks) featureParts.push(distinguishingMarks);
   
-  // Add distinguishing marks text
-  if (distinguishingMarks) {
-    detailParts.push(distinguishingMarks);
-  }
-  
-  // Add portrait hints from class
+  // Add portrait hints
   if (portraitHints && Array.isArray(portraitHints)) {
     portraitHints.forEach((hint: string) => {
-      if (hint && !detailParts.includes(hint)) {
-        detailParts.push(hint);
-      }
+      if (hint && !featureParts.includes(hint)) featureParts.push(hint);
     });
   }
   
-  // Process body modifications if any
-  if (scars && Array.isArray(scars) && scars.length > 0) {
-    detailParts.push(`visible scars: ${scars.join(', ')}`);
-  }
+  const featuresStr = featureParts.length > 0 
+    ? `Distinguishing Features: ${featureParts.join(', ')}`
+    : '';
+  console.log("Features:", featuresStr || "(none)");
+  
+  // =========================================================================
+  // [BODY MODIFICATIONS]
+  // =========================================================================
+  
+  const modParts: string[] = [];
+  
   if (tattoos && Array.isArray(tattoos) && tattoos.length > 0) {
-    const tattooDesc = tattooStyle ? `${tattooStyle} style tattoos` : 'tattoos';
-    detailParts.push(`${tattooDesc} on ${tattoos.join(', ')}`);
+    modParts.push(MODIFICATION_DESCRIPTIONS.tattoos(tattoos, tattooStyle));
   }
   if (piercings && Array.isArray(piercings) && piercings.length > 0) {
-    detailParts.push(`piercings: ${piercings.join(', ')}`);
+    modParts.push(MODIFICATION_DESCRIPTIONS.piercings(piercings));
+  }
+  if (scars && Array.isArray(scars) && scars.length > 0) {
+    modParts.push(MODIFICATION_DESCRIPTIONS.scars(scars));
   }
   if (implants && Array.isArray(implants) && implants.length > 0) {
-    detailParts.push(`cybernetic implants: ${implants.join(', ')}`);
+    modParts.push(MODIFICATION_DESCRIPTIONS.implants(implants));
   }
   if (prosthetics && Array.isArray(prosthetics) && prosthetics.length > 0) {
-    detailParts.push(`prosthetic: ${prosthetics.join(', ')}`);
+    modParts.push(MODIFICATION_DESCRIPTIONS.prosthetics(prosthetics));
   }
   if (mutations && Array.isArray(mutations) && mutations.length > 0) {
-    detailParts.push(`mutations: ${mutations.join(', ')}`);
+    modParts.push(MODIFICATION_DESCRIPTIONS.mutations(mutations));
   }
   
-  const layer25 = detailParts.length > 0 ? `IMPORTANT DETAILS: ${detailParts.join(', ')}` : '';
-  console.log("Layer 2.5 (Details):", layer25 || "(none)");
-
+  const modsStr = modParts.length > 0 
+    ? `Body Modifications: ${modParts.join(', ')}`
+    : '';
+  console.log("Modifications:", modsStr || "(none)");
+  
   // =========================================================================
-  // LAYER 3: CONTEXT (What are they wearing? Where are they?)
-  // Check if character additionals contain outfit overrides
+  // [CLOTHING]
+  // Check if user additional details contain clothing - if so, use that instead
   // =========================================================================
   
-  // Check if any detail parts contain outfit override keywords
-  const detailsLower = detailParts.join(' ').toLowerCase();
-  const hasOutfitOverride = OUTFIT_OVERRIDE_KEYWORDS.some(keyword => detailsLower.includes(keyword));
+  const userDetailsLower = userAdditionalDetails.toLowerCase();
+  const hasUserClothing = [
+    'wearing', 'dressed', 'clothing', 'clothes', 'outfit', 'uniform', 'armor', 'suit',
+    'military', 'ww1', 'ww2', 'world war', 'victorian', 'medieval', 'modern', 'futuristic',
+    'casual', 'formal', 'tactical', 'dress', 'gown', 'jacket', 'coat', 'jeans', 'pants',
+    'skirt', 'shirt', 'hoodie', 'leather', 'denim', 'robe', 'cloak', 'cape',
+  ].some(keyword => userDetailsLower.includes(keyword));
   
-  // Determine outfit - character additionals override genre if outfit keywords present
-  let outfitStr = '';
-  let settingStr = genreCtx.setting;
-  
-  if (hasOutfitOverride) {
-    // Character additionals contain outfit info - DON'T add genre outfit
-    // The outfit will come from the character additionals (layer25)
-    console.log("OUTFIT OVERRIDE DETECTED - using character additionals for outfit");
-    outfitStr = ''; // Skip genre outfit entirely
-  } else if (clothingStyle && clothingStyle !== 'genre_default' && CLOTHING_STYLE_MODIFIERS[clothingStyle]) {
-    // Use clothing style selector
-    outfitStr = CLOTHING_STYLE_MODIFIERS[clothingStyle];
-    console.log("Clothing style override:", clothingStyle);
-  } else {
-    // Use genre default
-    outfitStr = genreCtx.outfit;
-  }
-  
-  // Add specific clothing details if provided
-  if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
-    outfitStr += (outfitStr ? ', ' : '') + clothingDetails.join(', ');
-  }
-  
-  const layer3 = outfitStr 
-    ? `wearing ${outfitStr}, ${settingStr} background`
-    : `${settingStr} background`;
-  console.log("Layer 3 (Context):", layer3);
-
-  // =========================================================================
-  // LAYER 3.5: PERSONALITY/EXPRESSION (Demeanor and pose hints)
-  // =========================================================================
-  let expressionHint = '';
-  
-  if (disposition) {
-    const dispositionExpression: Record<string, string> = {
-      'Bold': 'confident assertive expression',
-      'Cautious': 'alert watchful expression',
-      'Adaptable': 'calm collected expression',
-    };
-    if (dispositionExpression[disposition]) {
-      expressionHint = dispositionExpression[disposition];
+  let clothingStr = '';
+  if (!hasUserClothing) {
+    // Use clothing details or genre defaults
+    if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
+      clothingStr = `Clothing: ${clothingDetails.join(', ')}`;
+    } else if (clothingStyle) {
+      clothingStr = `Clothing style: ${clothingStyle}`;
     }
   }
+  console.log("Clothing:", clothingStr || "(from user details or genre)");
   
-  if (socialStyle && !expressionHint) {
-    const socialExpression: Record<string, string> = {
-      'Charming': 'charming slight smile',
-      'Reserved': 'reserved composed expression',
-      'Blunt': 'direct intense gaze',
-    };
-    if (socialExpression[socialStyle]) {
-      expressionHint = socialExpression[socialStyle];
-    }
-  }
-
   // =========================================================================
-  // ASSEMBLE FINAL PROMPT - PHOTOREALISTIC, CHARACTER-FOCUSED
-  // Priority: [Photo Style] [Framing] [Physical Essentials] [CHARACTER ADDITIONALS - PRIMARY] [Genre/Origin Context] [Quality]
+  // [EXPRESSION & EMOTION]
   // =========================================================================
   
-  // Build physical essentials string (hair, eyes, face, skin, body, bust)
-  const physicalEssentials: string[] = [];
+  let expressionStr = 'Expression: direct eye contact with camera, engaging the viewer';
   
-  // Gender/age identity
-  physicalEssentials.push(`${ageStr} ${genderStr}`);
-  
-  // Body essentials
-  physicalEssentials.push(skinStr);
-  physicalEssentials.push(buildStr);
-  if (height) physicalEssentials.push(`${height} height`);
-  
-  // Face essentials
-  if (faceStr) physicalEssentials.push(faceStr);
-  physicalEssentials.push(eyeColorStr);
-  
-  // Hair essentials
-  physicalEssentials.push(`${hairColorStr} ${hairStyleStr}`);
-  
-  const essentialsStr = physicalEssentials.join(', ');
-  console.log("Physical Essentials:", essentialsStr);
-  
-  // Start building prompt - Photo style first
-  const promptParts = [
-    LAYER_STYLE.medium,           // "photorealistic portrait photograph..."
-    LAYER_STYLE.framing,          // "three-quarter body, facing viewer..."
-    essentialsStr,                // Character physical essentials FIRST
-  ];
-  
-  // CHARACTER ADDITIONALS - PRIMARY FOCUS (distinguishing features, accessories, details)
-  if (layer25) {
-    promptParts.push(layer25);     // "IMPORTANT: facial scar, freckles, necklace, choker..."
-    console.log("Character Additionals (PRIMARY):", layer25);
+  if (emotionVariant && EXPRESSION_MAP[emotionVariant]) {
+    expressionStr = `Expression: ${EXPRESSION_MAP[emotionVariant]}, direct eye contact with camera`;
+  } else if (disposition && EXPRESSION_MAP[disposition]) {
+    expressionStr = `Expression: ${EXPRESSION_MAP[disposition]}, direct eye contact with camera`;
+  } else if (socialStyle && EXPRESSION_MAP[socialStyle]) {
+    expressionStr = `Expression: ${EXPRESSION_MAP[socialStyle]}, direct eye contact with camera`;
   }
   
-  // Role/class identity (what they ARE)
-  if (roleStr) {
-    promptParts.push(roleStr);
+  console.log("Expression:", expressionStr);
+  
+  // =========================================================================
+  // [ROLE/CLASS IDENTITY]
+  // =========================================================================
+  
+  let roleStr = '';
+  if (characterClass) {
+    const classLower = characterClass.toLowerCase().replace(/[\s-]/g, '_');
+    roleStr = ROLE_STYLES[classLower] || characterClass;
+  }
+  console.log("Role:", roleStr || "(none)");
+  
+  // =========================================================================
+  // [GENRE BACKGROUND]
+  // =========================================================================
+  
+  const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
+  const genreData = GENRE_BACKGROUNDS[genreKey] || GENRE_BACKGROUNDS.fantasy;
+  
+  const backgroundStr = `Background: ${genreData.setting} softly blurred (f/1.8 depth of field), ${genreData.atmosphere}, visible elements: ${genreData.elements}`;
+  console.log("Background:", backgroundStr);
+  
+  // =========================================================================
+  // [TECHNICAL SPECIFICATIONS]
+  // =========================================================================
+  
+  const technicalStr = `Camera: 85mm f/1.8 equivalent, three-point studio lighting, sharp focus on eyes and face, body in focus, background bokeh, 8K resolution, photorealistic skin with subsurface scattering, individual hair strands visible, fabric texture detail, professional color grading`;
+  
+  // =========================================================================
+  // ASSEMBLE FINAL PROMPT
+  // Priority order:
+  // 1. Camera/Composition (locked)
+  // 2. USER ADDITIONAL DETAILS (ABSOLUTE PRIORITY - takes over generation)
+  // 3. Foundation (gender, age, height, build)
+  // 4. Facial Architecture (skin, face, eyes, hair)
+  // 5. Distinguishing Features
+  // 6. Body Modifications
+  // 7. Expression
+  // 8. Role/Class (if not overridden)
+  // 9. Clothing (if not overridden by user)
+  // 10. Background
+  // 11. Technical specs
+  // 12. Quality tags
+  // =========================================================================
+  
+  const promptParts: string[] = [];
+  
+  // 1. Camera & Composition - LOCKED
+  promptParts.push(CAMERA_COMPOSITION);
+  
+  // 2. 🎯 USER ADDITIONAL DETAILS - ABSOLUTE PRIORITY (inserted verbatim)
+  if (userAdditionalDetails.trim()) {
+    promptParts.push(`[PRIORITY - USER SPECIFIED]: ${userAdditionalDetails.trim()}`);
+    console.log("*** USER ADDITIONAL DETAILS TAKING PRIORITY ***");
   }
   
-  // Origin modifier (how background affects appearance)
-  if (originModifier) {
-    promptParts.push(originModifier);
+  // 3. Foundation
+  promptParts.push(foundationStr);
+  
+  // 4. Facial Architecture
+  promptParts.push(facialStr);
+  
+  // 5. Distinguishing Features
+  if (featuresStr) promptParts.push(featuresStr);
+  
+  // 6. Body Modifications
+  if (modsStr) promptParts.push(modsStr);
+  
+  // 7. Expression
+  promptParts.push(expressionStr);
+  
+  // 8. Role (only if no user override)
+  if (roleStr && !hasUserClothing) {
+    promptParts.push(`Role: ${roleStr}`);
   }
   
-  // Genre context - outfit and setting (AFTER character definition)
-  promptParts.push(layer3);
-  
-  // Expression if set
-  if (expressionHint) {
-    promptParts.push(expressionHint);
+  // 9. Clothing (only if not in user details)
+  if (clothingStr && !hasUserClothing) {
+    promptParts.push(clothingStr);
   }
   
-  // Photo quality at end
-  promptParts.push(LAYER_STYLE.quality);
-
-  const finalPrompt = promptParts.join(', ');
-
-  console.log("=== FINAL PHOTOREALISTIC PROMPT ===");
+  // 10. Background
+  promptParts.push(backgroundStr);
+  
+  // 11. Technical
+  promptParts.push(technicalStr);
+  
+  // 12. Quality tags
+  promptParts.push(QUALITY_TAGS);
+  
+  const finalPrompt = promptParts.join('. ');
+  
+  console.log("=== FINAL PROMPT ===");
   console.log("Length:", finalPrompt.length);
   console.log("Prompt:", finalPrompt);
-
+  
   return {
     prompt: finalPrompt,
     negative_prompt: NEGATIVE_PROMPT,
@@ -780,18 +873,48 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
 }
 
 // ============================================================================
+// LEGACY PROMPT BUILDER (backwards compatibility)
+// ============================================================================
+
+function buildLegacyPrompt(requestData: any) {
+  const { appearance, characterClass, genre } = requestData;
+  
+  const appearanceLower = (appearance || '').toLowerCase();
+  
+  let gender = 'male';
+  if (appearanceLower.includes('female') || appearanceLower.includes('woman')) {
+    gender = 'female';
+  }
+  
+  let build = 'average';
+  for (const key of Object.keys(PHYSICAL.build)) {
+    if (appearanceLower.includes(key)) {
+      build = key;
+      break;
+    }
+  }
+
+  return buildUltimatePrompt({
+    gender,
+    build,
+    characterClass,
+    genre: genre || 'fantasy',
+  });
+}
+
+// ============================================================================
 // TOGETHER.AI IMAGE GENERATION
 // ============================================================================
 
-async function generateWithTogetherAI(prompt: string): Promise<string> {
+async function generateWithTogetherAI(prompt: string, negativePrompt: string): Promise<string> {
   const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
   
   if (!TOGETHER_API_KEY) {
     throw new Error("TOGETHER_API_KEY is not configured");
   }
 
-  console.log("Generating with FLUX.1-dev (higher quality)");
-  console.log("Prompt preview:", prompt.substring(0, 250) + "...");
+  console.log("Generating with FLUX.1-dev (photorealistic portrait)");
+  console.log("Prompt preview:", prompt.substring(0, 300) + "...");
 
   const response = await fetch('https://api.together.xyz/v1/images/generations', {
     method: 'POST',
@@ -807,7 +930,7 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
       steps: 28,
       n: 1,
       response_format: 'b64_json',
-      negative_prompt: NEGATIVE_PROMPT,
+      negative_prompt: negativePrompt,
     }),
   });
 
@@ -837,38 +960,6 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
 }
 
 // ============================================================================
-// LEGACY PROMPT BUILDER (for backwards compatibility)
-// ============================================================================
-
-function buildLegacyPrompt(requestData: any) {
-  const { appearance, characterClass, genre } = requestData;
-  
-  const appearanceLower = (appearance || '').toLowerCase();
-  
-  // Extract basic attributes from appearance string
-  let gender = 'male';
-  if (appearanceLower.includes('female') || appearanceLower.includes('woman')) {
-    gender = 'female';
-  }
-  
-  let build = 'average';
-  for (const key of Object.keys(PHYSICAL.build)) {
-    if (appearanceLower.includes(key)) {
-      build = key;
-      break;
-    }
-  }
-
-  // Build using layered system
-  return buildLayeredPrompt({
-    gender,
-    build,
-    characterClass,
-    genre: genre || 'fantasy',
-  });
-}
-
-// ============================================================================
 // MAIN HANDLER
 // ============================================================================
 
@@ -879,24 +970,24 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { name, gender, characterClass, genre, emotionVariant } = body;
+    const { name, gender, emotionVariant } = body;
 
     console.log("Portrait request for:", name || "Unknown");
-    console.log("Genre:", genre, "| Class:", characterClass);
+    console.log("Request body keys:", Object.keys(body).join(', '));
     
     let promptData;
     
-    // Use layered builder for new-style requests (has gender field)
+    // Use ultimate builder for new-style requests (has gender field)
     if (gender) {
-      console.log("Using layered prompt builder");
-      promptData = buildLayeredPrompt(body);
+      console.log("Using ULTIMATE prompt builder");
+      promptData = buildUltimatePrompt(body);
     } else {
       // Legacy mode for old requests
       console.log("Using legacy prompt builder");
       promptData = buildLegacyPrompt(body);
     }
 
-    const imageUrl = await generateWithTogetherAI(promptData.prompt);
+    const imageUrl = await generateWithTogetherAI(promptData.prompt, promptData.negative_prompt);
 
     console.log("Portrait generated successfully for:", name);
 
