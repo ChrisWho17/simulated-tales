@@ -85,6 +85,7 @@ import { StoryRecap } from './StoryRecap';
 import { ClothingShop } from './ClothingShop';
 import { ClothingItem } from '@/game/clothingItemSystem';
 import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/components/debug/StorageDiagnosticsSplash';
+import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -334,6 +335,9 @@ export function GameUI() {
   
   // Storage diagnostics (secret command: /StorageDiag)
   const storageDiagnostics = useStorageDiagnosticsCommand();
+  
+  // Cheat mode (secret command: /ImACheater)
+  const cheatMode = useCheatModeCommand();
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
   
   // Game polish systems (optional - gracefully degrade if not available)
@@ -577,6 +581,11 @@ export function GameUI() {
     
     // Storage diagnostics command (secret debug feature)
     if (storageDiagnostics.checkCommand(input)) {
+      return;
+    }
+    
+    // Cheat mode command (secret debug feature)
+    if (cheatMode.checkCommand(input)) {
       return;
     }
     
@@ -1584,6 +1593,64 @@ export function GameUI() {
       <StorageDiagnosticsSplash
         isOpen={storageDiagnostics.isOpen}
         onClose={() => storageDiagnostics.setIsOpen(false)}
+      />
+      
+      {/* Cheat Mode (secret: /ImACheater) */}
+      <CheatModeSplash
+        isOpen={cheatMode.isOpen}
+        onClose={() => cheatMode.setIsOpen(false)}
+        character={gameState.lifeSim ? {
+          name: gameState.player.name,
+          level: 1,
+          experience: 0,
+          classId: '',
+          backgroundId: '',
+          traits: [],
+          stats: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10,
+          },
+          currentHealth: gameState.lifeSim.needs.physical.health,
+          maxHealth: 100,
+          gold: gameState.lifeSim.economy.money,
+          inventory: [],
+          skills: [],
+          abilities: [],
+        } : undefined}
+        onUpdateCharacter={(updated) => {
+          // Update game state with cheat mode changes
+          setGameState(prev => ({
+            ...prev,
+            player: {
+              ...prev.player,
+              name: updated.name,
+              stats: {
+                ...prev.player.stats,
+                health: updated.currentHealth,
+                gold: updated.gold,
+              },
+            },
+            lifeSim: prev.lifeSim ? {
+              ...prev.lifeSim,
+              needs: {
+                ...prev.lifeSim.needs,
+                physical: {
+                  ...prev.lifeSim.needs.physical,
+                  health: updated.currentHealth,
+                },
+              },
+              economy: {
+                ...prev.lifeSim.economy,
+                money: updated.gold,
+              },
+            } : null,
+          }));
+        }}
+        genre="fantasy"
       />
     </div>
   );

@@ -1270,6 +1270,34 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
               </div>
               
+              {/* Secret Commands */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-medium">Secret Commands</h3>
+                </div>
+                
+                <div className="grid gap-2">
+                  {[
+                    { command: '/StorageDiag', desc: 'Open Storage Diagnostics panel' },
+                    { command: '/ImACheater', desc: 'Open Cheat Mode (edit character)' },
+                  ].map((cmd) => (
+                    <div 
+                      key={cmd.command}
+                      className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                    >
+                      <span className="text-xs text-muted-foreground">{cmd.desc}</span>
+                      <kbd className="text-xs font-mono bg-amber-500/20 text-amber-400 px-2 py-1 rounded border border-amber-500/30">
+                        {cmd.command}
+                      </kbd>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground/70 italic">
+                  Type these commands in the game chat input
+                </p>
+              </div>
+              
               {/* Tips */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
