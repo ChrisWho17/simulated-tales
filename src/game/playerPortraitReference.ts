@@ -37,6 +37,17 @@ export interface PlayerPortraitReference {
   // Portrait hints from class
   portraitHints?: string[];
   
+  // Body modifications - critical for cyberpunk and other genres
+  piercings?: string[];
+  tattoos?: string[];
+  tattooStyle?: string;
+  scars?: string[];
+  prosthetics?: string[];
+  implants?: string[];
+  mutations?: string[];
+  clothingStyle?: string;
+  clothingDetails?: string[];
+  
   // Created timestamp
   createdAt: number;
 }
@@ -67,6 +78,9 @@ export function savePlayerPortraitReference(
   className?: string,
   portraitHints?: string[]
 ): void {
+  // Extract body modifications from tieredAppearance.full
+  const fullAppearance = characterData.tieredAppearance?.full;
+  
   const reference: PlayerPortraitReference = {
     name: characterData.name,
     gender: characterData.gender || 'male',
@@ -84,8 +98,25 @@ export function savePlayerPortraitReference(
     fullVisualDescription: characterData.appearanceDescription || buildFullDescription(characterData),
     tieredAppearance: characterData.tieredAppearance,
     portraitHints,
+    // Body modifications - extract from full appearance tier
+    piercings: fullAppearance?.piercings || [],
+    tattoos: fullAppearance?.tattoos || [],
+    tattooStyle: fullAppearance?.tattooStyle,
+    scars: fullAppearance?.scars || [],
+    prosthetics: fullAppearance?.prosthetics || [],
+    implants: fullAppearance?.implants || [],
+    mutations: fullAppearance?.mutations || [],
+    clothingStyle: fullAppearance?.clothingStyle,
+    clothingDetails: fullAppearance?.clothingDetails || [],
     createdAt: Date.now(),
   };
+  
+  console.log('[PlayerPortrait] Saving portrait reference with body mods:', {
+    piercings: reference.piercings?.length,
+    tattoos: reference.tattoos?.length,
+    implants: reference.implants?.length,
+    prosthetics: reference.prosthetics?.length,
+  });
   
   try {
     localStorage.setItem(PLAYER_PORTRAIT_REFERENCE_KEY, JSON.stringify(reference));
