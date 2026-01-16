@@ -10,27 +10,45 @@ const corsHeaders = {
 // Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style - Enforcing FRONTAL pose, KNEES TO HEAD framing
+// LAYER 4: Photography Style - FLUX.1-dev INTENSIFIED for maximum quality
 const LAYER_STYLE = {
-  medium: 'cinematic digital art portrait, highly detailed, artstation quality',
-  quality: 'sharp focus, detailed skin, dramatic lighting, detailed eyes, 8k resolution',
-  framing: 'three-quarter body portrait from knees to head, body facing viewer with slight angle, looking straight at camera with confident expression, eye contact',
+  // Intensified medium for FLUX.1-dev's capabilities
+  medium: 'masterpiece ultra-detailed cinematic portrait, award-winning digital illustration, trending on artstation and CGSociety, concept art quality, AAA game character design, rendered in Unreal Engine 5 with ray-traced global illumination',
+  
+  // Enhanced quality descriptors
+  quality: 'photorealistic skin with subsurface scattering, intricate fabric textures with visible weave patterns, hyper-detailed eyes with realistic iris patterns and light reflections, individual hair strands visible, volumetric atmospheric lighting, film grain, chromatic aberration, professional color grading, 8K UHD resolution, HDR, physically based rendering',
+  
+  // Intensified framing with cinematographic direction
+  framing: 'three-quarter body portrait from knees to head, dynamic slight angle pose, powerful confident stance, direct eye contact with the viewer, cinematic shallow depth of field with bokeh background, rim lighting highlighting silhouette, dramatic chiaroscuro lighting from above-left',
+  
+  // Additional style layers for FLUX.1-dev
+  atmosphere: 'moody atmospheric haze, dust particles catching light, environmental storytelling through background details',
+  
+  // Artistic direction
+  artisticStyle: 'inspired by Craig Mullins, Ruan Jia, Greg Rutkowski, Artgerm, and Alphonse Mucha, blending realism with painterly brush strokes',
 };
 
-// Comprehensive negative prompts including body anomalies and pose issues
+// Intensified negative prompts with comprehensive exclusions
 const NEGATIVE_PROMPT = [
   // Pose exclusions - prevent looking away
   'looking away, looking to the side, turned away, back view, profile view, looking over shoulder',
-  'side profile, rear view, from behind',
+  'side profile, rear view, from behind, three-quarter back view',
   // Body anomalies
-  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
-  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
-  'deformed face, ugly face, disfigured, mutation, mutated, deformed body',
-  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs',
-  'long neck, extra head, duplicate, clone, twin',
+  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers, six fingers',
+  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands, floating hands',
+  'deformed face, ugly face, disfigured, mutation, mutated, deformed body, twisted body',
+  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs, floating limbs',
+  'long neck, extra head, duplicate, clone, twin, conjoined, double image',
   // Quality issues
-  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature',
-  'cropped, cut off, poorly framed',
+  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature, logo',
+  'cropped, cut off, poorly framed, partial body, out of frame',
+  // Style exclusions
+  'cartoon, anime, chibi, 3d render, plastic, doll-like, uncanny valley',
+  'overexposed, underexposed, flat lighting, harsh shadows on face',
+  'amateur, beginner, sketch, rough, unfinished, draft',
+  // Composition issues
+  'centered composition, passport photo, mugshot, boring pose, stiff pose, t-pose',
+  'empty background, plain background, gradient background only',
 ].join(', ');
 
 // ============================================================================
@@ -671,18 +689,18 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   }
 
   // =========================================================================
-  // LAYER 4: STYLE (How should this be rendered?)
+  // LAYER 4: STYLE (How should this be rendered?) - INTENSIFIED FOR FLUX.1-DEV
   // =========================================================================
-  const layer4 = `${LAYER_STYLE.quality}`;
+  const layer4 = `${LAYER_STYLE.quality}, ${LAYER_STYLE.atmosphere}, ${LAYER_STYLE.artisticStyle}`;
   console.log("Layer 4 (Style):", layer4);
 
   // =========================================================================
-  // ASSEMBLE FINAL PROMPT
-  // Structure: [Medium] [Framing/Pose] [Identity] [Origin] [Physical] [DETAILS] [Context] [Expression] [Quality]
+  // ASSEMBLE FINAL PROMPT - INTENSIFIED STRUCTURE FOR FLUX.1-DEV
+  // Structure: [Medium] [Artistic] [Framing/Pose] [Identity] [Origin] [Physical] [DETAILS] [Context] [Expression] [Atmosphere] [Quality]
   // =========================================================================
   const promptParts = [
-    LAYER_STYLE.medium,           // "cinematic digital art portrait"
-    LAYER_STYLE.framing,          // "front-facing, looking at camera"
+    LAYER_STYLE.medium,           // "masterpiece ultra-detailed cinematic portrait..."
+    LAYER_STYLE.framing,          // "three-quarter body, dynamic pose, rim lighting..."
     layer1,                        // WHO: "adult woman solo mercenary"
   ];
   
@@ -705,11 +723,11 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     promptParts.push(expressionHint); // EXPRESSION: "confident assertive expression"
   }
   
-  promptParts.push(layer4);        // QUALITY: "sharp focus, dramatic lighting"
+  promptParts.push(layer4);        // QUALITY + ATMOSPHERE + ARTISTIC STYLE
 
   const finalPrompt = promptParts.join(', ');
 
-  console.log("=== FINAL PROMPT ===");
+  console.log("=== FINAL INTENSIFIED PROMPT ===");
   console.log("Length:", finalPrompt.length);
   console.log("Prompt:", finalPrompt);
 
