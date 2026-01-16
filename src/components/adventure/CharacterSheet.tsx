@@ -243,9 +243,25 @@ function PortraitDisplay({
           hairStyle: portraitReference.hairStyle,
           eyeColor: portraitReference.eyeColor,
           details: portraitReference.details,
+          // Body modifications - critical for cyberpunk and other genres
+          piercings: portraitReference.piercings || [],
+          tattoos: portraitReference.tattoos || [],
+          tattooStyle: portraitReference.tattooStyle,
+          scars: portraitReference.scars || [],
+          prosthetics: portraitReference.prosthetics || [],
+          implants: portraitReference.implants || [],
+          mutations: portraitReference.mutations || [],
+          clothingStyle: portraitReference.clothingStyle,
+          clothingDetails: portraitReference.clothingDetails || [],
           // Environment context for scene adaptation
           environmentContext: environmentContext,
         };
+        
+        console.log('[Portrait] Regenerating with body mods:', {
+          piercings: portraitReference.piercings?.length,
+          tattoos: portraitReference.tattoos?.length,
+          implants: portraitReference.implants?.length,
+        });
       } else {
         // Fallback to basic generation (shouldn't happen in normal gameplay)
         console.log('[Portrait] No locked reference found, using basic generation');
