@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap, Wand2, Sword, Skull, Rocket, Eye, Moon, Shield, User } from 'lucide-react';
+import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap, Wand2, Sword, Skull, Rocket, Eye, Moon, Shield, User, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   TieredAppearance,
@@ -7,6 +7,24 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   SCAR_OPTIONS, PROSTHETIC_OPTIONS, IMPLANT_OPTIONS, MUTATION_OPTIONS,
 } from '@/types/characterCreation';
+
+// Favorites storage key
+const SLASH_FAVORITES_KEY = 'untold_slash_favorites';
+
+// Get favorites from localStorage
+const getFavorites = (): string[] => {
+  try {
+    const stored = localStorage.getItem(SLASH_FAVORITES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Save favorites to localStorage
+const saveFavorites = (favorites: string[]) => {
+  localStorage.setItem(SLASH_FAVORITES_KEY, JSON.stringify(favorites));
+};
 
 // Slash command definitions - categories of presets
 export interface SlashCommand {
@@ -113,6 +131,11 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [favorites, setFavorites] = useState<string[]>(() => getFavorites());
+  const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [holdingCommand, setHoldingCommand] = useState<string | null>(null);
+  const [editingCommand, setEditingCommand] = useState<string | null>(null);
+  const [editedKeywords, setEditedKeywords] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const toggleSection = useCallback((section: AccordionSection) => {
@@ -126,14 +149,9 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     cmd.category.toLowerCase().includes(slashFilter.toLowerCase())
   );
 
-  // Group commands by category
-  const groupedCommands = filteredCommands.reduce((acc, cmd) => {
-    if (!acc[cmd.category]) acc[cmd.category] = [];
-    acc[cmd.category].push(cmd);
-    return acc;
-  }, {} as Record<string, SlashCommand[]>);
 
   const categoryLabels: Record<string, string> = {
+    favorites: '⭐ Favorites',
     personality: '🎭 Personality',
     genre: '🌍 Genre',
     clothing: '👗 Clothing',
@@ -143,15 +161,53 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     style: '✨ Style Blend',
   };
 
-  const applySlashCommand = useCallback((cmd: SlashCommand) => {
+  // Toggle favorite with hold gesture
+  const handlePointerDown = useCallback((cmd: SlashCommand) => {
+    setHoldingCommand(cmd.command);
+    const timeout = setTimeout(() => {
+      setFavorites(prev => {
+        const newFavorites = prev.includes(cmd.command)
+          ? prev.filter(c => c !== cmd.command)
+          : [...prev, cmd.command];
+        saveFavorites(newFavorites);
+        return newFavorites;
+      });
+      setHoldingCommand(null);
+    }, 600);
+    setHoldTimeout(timeout);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (holdTimeout) {
+      clearTimeout(holdTimeout);
+      setHoldTimeout(null);
+    }
+    setHoldingCommand(null);
+  }, [holdTimeout]);
+
+  // Group commands by category with favorites first
+  const groupedCommands = filteredCommands.reduce((acc, cmd) => {
+    // Add to favorites category if favorited
+    if (favorites.includes(cmd.command)) {
+      if (!acc['favorites']) acc['favorites'] = [];
+      acc['favorites'].push(cmd);
+    }
+    // Also add to regular category
+    if (!acc[cmd.category]) acc[cmd.category] = [];
+    acc[cmd.category].push(cmd);
+    return acc;
+  }, {} as Record<string, SlashCommand[]>);
+
+  const applySlashCommand = useCallback((cmd: SlashCommand, customKeywords?: string) => {
     const currentDetails = appearance.full?.intimateDetails || '';
     
     // Remove the slash command text from input
     const cleanedDetails = currentDetails.replace(/\/\w*$/, '').trim();
+    const keywordsToUse = customKeywords || cmd.keywords;
     
     // Check if already applied - toggle off
     if (appliedCommands.includes(cmd.command)) {
-      const keywordsToRemove = cmd.keywords.split(', ');
+      const keywordsToRemove = keywordsToUse.split(', ');
       let newDetails = cleanedDetails;
       keywordsToRemove.forEach(keyword => {
         newDetails = newDetails.replace(new RegExp(`\\b${keyword}\\b,?\\s*`, 'gi'), '');
@@ -162,14 +218,15 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     } else {
       // Apply the command
       const newDetails = cleanedDetails 
-        ? `${cleanedDetails}, ${cmd.keywords}` 
-        : cmd.keywords;
+        ? `${cleanedDetails}, ${keywordsToUse}` 
+        : keywordsToUse;
       onUpdateAppearance('full', 'intimateDetails', newDetails.slice(0, 500));
       setAppliedCommands(prev => [...prev, cmd.command]);
     }
     
     setShowSlashMenu(false);
     setSlashFilter('');
+    setEditingCommand(null);
   }, [appearance.full?.intimateDetails, onUpdateAppearance, appliedCommands]);
 
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -289,22 +346,69 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Specific Items (optional)</label>
-            <div className="flex flex-wrap gap-1">
-              {CLOTHING_DETAIL_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => toggleArrayItem('clothingDetails', opt.value)}
-                  className={cn(
-                    "px-2 py-1 rounded text-xs transition-all",
-                    appearance.full?.clothingDetails?.includes(opt.value)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background/50 border border-border/30 hover:border-primary/50"
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <label className="text-xs text-muted-foreground mb-2 block">Specific Items (optional)</label>
+            
+            {/* Female Clothing */}
+            <div className="mb-3">
+              <span className="text-[10px] text-pink-400 uppercase tracking-wider font-semibold block mb-1">♀ Female</span>
+              <div className="flex flex-wrap gap-1">
+                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'female').map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
+                    className={cn(
+                      "px-2 py-1 rounded text-xs transition-all",
+                      appearance.full?.clothingDetails?.includes(opt.value)
+                        ? "bg-pink-500 text-white"
+                        : "bg-background/50 border border-pink-500/30 hover:border-pink-500/60"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Androgynous Clothing */}
+            <div className="mb-3">
+              <span className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold block mb-1">⚧ Unisex</span>
+              <div className="flex flex-wrap gap-1">
+                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'androgynous').map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
+                    className={cn(
+                      "px-2 py-1 rounded text-xs transition-all",
+                      appearance.full?.clothingDetails?.includes(opt.value)
+                        ? "bg-purple-500 text-white"
+                        : "bg-background/50 border border-purple-500/30 hover:border-purple-500/60"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Male Clothing */}
+            <div className="mb-1">
+              <span className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold block mb-1">♂ Male</span>
+              <div className="flex flex-wrap gap-1">
+                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'male').map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
+                    className={cn(
+                      "px-2 py-1 rounded text-xs transition-all",
+                      appearance.full?.clothingDetails?.includes(opt.value)
+                        ? "bg-blue-500 text-white"
+                        : "bg-background/50 border border-blue-500/30 hover:border-blue-500/60"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -558,7 +662,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
         )}
 
         <p className="text-xs text-muted-foreground mb-2">
-          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets
+          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <span className="text-amber-400">Hold to ⭐ favorite</span>
         </p>
         
         <div className="relative">
@@ -588,43 +692,109 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                   Type to filter • {filteredCommands.length} commands available
                 </p>
               </div>
-              {Object.entries(groupedCommands).map(([category, commands]) => (
+              {Object.entries(groupedCommands)
+                .sort(([a], [b]) => a === 'favorites' ? -1 : b === 'favorites' ? 1 : 0)
+                .map(([category, commands]) => (
                 <div key={category}>
-                  <div className="px-2 py-1 bg-muted/20 text-xs font-semibold text-muted-foreground sticky top-0">
+                  <div className={cn(
+                    "px-2 py-1 text-xs font-semibold sticky top-0",
+                    category === 'favorites' ? "bg-amber-500/20 text-amber-400" : "bg-muted/20 text-muted-foreground"
+                  )}>
                     {categoryLabels[category] || category}
                   </div>
                   {commands.map(cmd => {
                     const IconComponent = cmd.icon;
                     const isApplied = appliedCommands.includes(cmd.command);
+                    const isFavorite = favorites.includes(cmd.command);
+                    const isHolding = holdingCommand === cmd.command;
+                    const isEditing = editingCommand === cmd.command;
+                    
                     return (
-                      <button
-                        key={cmd.command}
-                        type="button"
-                        onClick={() => applySlashCommand(cmd)}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-3 py-2 text-left transition-all",
-                          "hover:bg-primary/10",
-                          isApplied && "bg-primary/20"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-6 h-6 rounded flex items-center justify-center bg-gradient-to-br",
-                          cmd.color
-                        )}>
-                          <IconComponent className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm text-primary">/{cmd.command}</span>
-                            <span className="text-xs text-muted-foreground truncate">{cmd.description}</span>
+                      <div key={`${category}-${cmd.command}`} className="relative">
+                        {isEditing ? (
+                          <div className="p-2 bg-muted/30 border-l-2 border-primary">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-mono text-sm text-primary">/{cmd.command}</span>
+                              <span className="text-xs text-muted-foreground">Edit keywords for {genre || 'your'} genre:</span>
+                            </div>
+                            <input
+                              type="text"
+                              value={editedKeywords}
+                              onChange={(e) => setEditedKeywords(e.target.value)}
+                              className="w-full p-2 rounded text-xs bg-background border border-border/50 mb-2"
+                              placeholder={cmd.keywords}
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  applySlashCommand(cmd, editedKeywords || cmd.keywords);
+                                }}
+                                className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground"
+                              >
+                                Apply
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingCommand(null);
+                                  setEditedKeywords('');
+                                }}
+                                className="px-3 py-1 rounded text-xs bg-muted"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        {isApplied && (
-                          <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
-                            Active
-                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCommand(cmd.command);
+                              setEditedKeywords(cmd.keywords);
+                            }}
+                            onPointerDown={() => handlePointerDown(cmd)}
+                            onPointerUp={handlePointerUp}
+                            onPointerLeave={handlePointerUp}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2 text-left transition-all",
+                              "hover:bg-primary/10",
+                              isApplied && "bg-primary/20",
+                              isHolding && "bg-amber-500/20"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-6 h-6 rounded flex items-center justify-center bg-gradient-to-br relative",
+                              cmd.color
+                            )}>
+                              <IconComponent className="w-3.5 h-3.5 text-white" />
+                              {isFavorite && (
+                                <Star className="w-2.5 h-2.5 absolute -top-1 -right-1 text-amber-400 fill-amber-400 animate-pulse" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm text-primary">/{cmd.command}</span>
+                                <span className="text-xs text-muted-foreground truncate">{cmd.description}</span>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground/60 truncate">{cmd.keywords.slice(0, 50)}...</div>
+                            </div>
+                            {isFavorite && (
+                              <span className={cn(
+                                "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
+                                "bg-gradient-to-r from-amber-400/30 to-yellow-400/30 text-amber-300",
+                                "animate-shimmer bg-[length:200%_100%]"
+                              )}>
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              </span>
+                            )}
+                            {isApplied && (
+                              <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded">
+                                Active
+                              </span>
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
