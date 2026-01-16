@@ -1174,16 +1174,9 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
     throw new Error("No image returned from Replicate");
   }
 
-  // Fetch the image and convert to base64
-  const imageResponse = await fetch(imageUrl);
-  if (!imageResponse.ok) {
-    throw new Error("Failed to fetch generated image");
-  }
-  
-  const imageBuffer = await imageResponse.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-  
-  return `data:image/png;base64,${base64}`;
+  // Return the direct URL from Replicate (it's already publicly accessible)
+  console.log("Portrait generated successfully:", imageUrl);
+  return imageUrl;
 }
 
 // ============================================================================
