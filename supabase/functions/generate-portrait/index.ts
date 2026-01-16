@@ -497,17 +497,17 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     clothingDesc = `${userDesc}, ${selectedCostume}`;
   }
   
-  // STRICT FRAMING: Lock camera from knees up - reinforce at start and end of prompt
-  const framingInstruction = 'FRAMING: three-quarter body shot, cropped from knees to top of head, DO NOT show feet or full body, DO NOT crop at waist or shoulders';
+  // HARD LOCK FRAMING: Knees to head, no zoom variation
+  const framingInstruction = 'STRICT CAMERA: three-quarter body portrait showing from knees to head only, fixed medium shot, no zoom, no close-up, no full body, frame cuts at knee level at bottom and above head at top';
   
-  const prompt = `${framingInstruction}, Hyper-realistic skin with detailed pores, subsurface scattering, realistic skin texture and lighting, semi-realistic stylized body proportions, exaggerated body attributes clearly visible, soft cinematic lighting, stylized expressive eyes, vibrant colored hair, 4K detailed render, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, ${framingInstruction}`;
+  const prompt = `${framingInstruction}, semi-realistic art style, stylized proportions, soft skin rendering, expressive features, visible body shape and curves, soft cinematic lighting, painterly quality with clean details, 4K render, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, MAINTAIN FRAMING: knees to head only`;
   
   console.log('Final prompt:', prompt);
   console.log('Selected costume:', selectedCostume);
   
   return {
     prompt,
-    negative: 'headshot only, bust shot, close-up face, face only, shoulders up, chest up, waist up, full body with feet, feet visible, shoes visible, ground visible, floor visible, legs cut off at ankles, casual modern clothes out of genre, deformed, bad anatomy, blurry, low quality, wrong framing',
+    negative: 'zoomed in, zoomed out, close-up, headshot, bust shot, face only, shoulders up, chest up, waist up, full body, feet visible, shoes visible, ground visible, floor visible, ankles visible, photo-realistic, hyper-realistic, deformed, bad anatomy, blurry, low quality',
   };
 }
 
