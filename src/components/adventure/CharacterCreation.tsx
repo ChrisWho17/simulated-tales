@@ -796,17 +796,16 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     )}
 
-                    {/* Free-form description - CRITICAL for custom clothing */}
+                    {/* Free-form description */}
                     <div>
-                      <label className="text-sm text-muted-foreground">Additional Details (clothing, features, etc.)</label>
+                      <label className="text-sm text-muted-foreground">Additional Details</label>
                       <Textarea
                         value={appearance.full?.intimateDetails || ''}
                         onChange={(e) => updateAppearance('full', 'intimateDetails', e.target.value)}
-                        placeholder="Describe custom clothing (e.g., 'wearing a tube top and mini skirt with fishnet stockings'), unique features, or anything else..."
+                        placeholder="Additional details"
                         className="mt-1 bg-background border-border/50"
                         maxLength={500}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">This text is sent directly to the portrait generator</p>
                     </div>
                   </div>
                 )}
