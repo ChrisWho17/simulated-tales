@@ -12,17 +12,13 @@ const corsHeaders = {
 // NOT a studio photoshoot - character portrait in their natural habitat
 // ============================================================================
 
-// [CHARACTER IN ENVIRONMENT - PRIMARY FRAMING]
+// [CHARACTER FRAMING - LOCKED]
 const CHARACTER_IN_ENVIRONMENT = `
-Character portrait in environment: Full portrait from knees to head, vertical orientation, character standing naturally in their world with visible surroundings, body angled 15-20 degrees with face looking directly at viewer, environment visible behind and around character.
+Three-quarter length portrait from knees to head, vertical orientation. Shows knees at bottom edge, thighs, hips, torso, arms, shoulders, and head at top with space above. Body angled 15-20 degrees, face and eyes looking directly at camera. Background softly blurred with visible environment context.
+`.trim();
 
-Framing: Knees visible at bottom, head with hair at top, natural pose in setting NOT posed for camera, character sharp focus with background softly blurred but clearly present.
-
-Environmental lighting from scene: Light sources from environment not studio, natural depth and atmosphere, character integrated into their world.
-`.trim().replace(/\n\n/g, '. ').replace(/\n/g, ' ');
-
-// [QUALITY TAGS - Concise]
-const QUALITY_TAGS = `Photorealistic, high detail, environmental context visible, cinematic color grading, 8K, natural skin texture, character in scene`;
+// [QUALITY TAGS]
+const QUALITY_TAGS = `Photorealistic, high detail, sharp focus on face and body, blurred background, 8K, natural lighting`;
 
 // [NEGATIVE PROMPTS TO AVOID - Anti-modeling]
 const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot, studio background, seamless backdrop, gradient background, fashion photography, modeling pose, catalog shoot, isolated subject, no environmental context, plain backdrop, white background, gray background`;
