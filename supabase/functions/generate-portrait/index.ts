@@ -181,14 +181,29 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   desc.push(`${charAge} year old ${eth} ${genderWord}`);
   
-  // Body shape for female characters
+  // Body shape for female characters - ALWAYS include bust/hip for females
   if (gender === 'female' || gender === 'other') {
-    if (bustSize && bustSize !== 'medium') {
-      desc.push(`${bustSize} breasts`);
-    }
-    if (hipWidth && hipWidth !== 'average') {
-      desc.push(`${hipWidth} hips`);
-    }
+    // Map bust sizes to more explicit descriptions
+    const bustMap: Record<string, string> = {
+      'small': 'small breasts, flat chest',
+      'medium': 'medium-sized breasts',
+      'large': 'large breasts, big bust, voluptuous',
+      'very large': 'very large breasts, huge bust, extremely voluptuous',
+    };
+    const bust = bustSize || 'medium';
+    const bustDesc = bustMap[bust.toLowerCase()] || `${bust} breasts`;
+    desc.push(bustDesc);
+    
+    // Map hip sizes
+    const hipMap: Record<string, string> = {
+      'narrow': 'narrow hips, slim waist',
+      'average': 'average hips',
+      'wide': 'wide hips, curvy',
+      'very wide': 'very wide hips, extremely curvy, hourglass figure',
+    };
+    const hip = hipWidth || 'average';
+    const hipDesc = hipMap[hip.toLowerCase()] || `${hip} hips`;
+    desc.push(hipDesc);
   }
   
   // Build and muscle
@@ -227,9 +242,8 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   // Role/class
   if (characterClass) desc.push(characterClass);
   
-  // User's custom description - THIS IS WHERE CLOTHING COMES FROM
+  // User's custom description - HIGH PRIORITY for clothing/appearance overrides
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
-  if (userDesc) desc.push(userDesc);
   
   // Get genre styling
   const genreKey = (genre || 'fantasy').toLowerCase().replace(/[\s-]/g, '_');
@@ -243,8 +257,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  // Build prompt with strong genre-specific costume and environment
-  const prompt = `Three-quarter body portrait from knees to head, ${character}, wearing ${style.costume}, background: ${style.background}, ${style.lighting}, HDR, vibrant colors, cinematic`;
+  // Build prompt - user custom description takes priority over genre costume if specified
+  // Put user description FIRST for maximum effect
+  let clothingDesc = style.costume;
+  if (userDesc) {
+    // If user specified clothing/outfit, use their description prominently
+    clothingDesc = `${userDesc}, ${style.costume}`;
+  }
+  
+  const prompt = `Three-quarter body portrait from knees to head, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, HDR, vibrant colors, cinematic`;
   
   console.log('Final prompt:', prompt);
   
