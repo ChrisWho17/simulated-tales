@@ -1391,11 +1391,12 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'very large': 'very large, exceptionally prominent bust with dramatic voluptuous curves, extremely full-figured chest, eye-catching proportions',
   };
   
+  // Buttocks shape (flat to plump) - reduced intensity, not width
   const HIP_AMPLIFIER: Record<string, string> = {
-    'narrow': 'narrow, slim hips with straight silhouette',
-    'average': 'average hips with balanced proportions',
-    'wide': 'wide, curvy hips with prominent hourglass figure, noticeably shapely lower body',
-    'very wide': 'very wide, dramatically curvy hips with exaggerated hourglass figure, exceptionally shapely lower body, striking proportions',
+    'narrow': 'flat, small rear',
+    'average': 'average, balanced rear shape',
+    'wide': 'rounded, plump rear',
+    'very wide': 'full, prominently plump rear',
   };
 
   const BUILD_AMPLIFIER: Record<string, string> = {
