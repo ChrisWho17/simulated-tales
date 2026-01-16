@@ -424,23 +424,64 @@ function getOriginModifier(nationality?: string, ethnicity?: string): string {
   return '';
 }
 
-// Select a costume based on character class or random for variety
+// Select a costume based on character class - prioritize class matching
 function selectCostume(costumes: string[], characterClass?: string): string {
-  // If character has a class, try to match it, otherwise random
   if (characterClass) {
     const classLower = characterClass.toLowerCase();
-    // Find a costume that might match the class
-    const match = costumes.find(c => {
-      const cLower = c.toLowerCase();
-      return cLower.includes(classLower) || 
-             (classLower.includes('mage') && cLower.includes('mage')) ||
-             (classLower.includes('warrior') && (cLower.includes('armor') || cLower.includes('knight'))) ||
-             (classLower.includes('rogue') && (cLower.includes('leather') || cLower.includes('hood'))) ||
-             (classLower.includes('healer') && (cLower.includes('medic') || cLower.includes('nurse')));
-    });
-    if (match) return match;
+    
+    // Direct match first
+    const directMatch = costumes.find(c => c.toLowerCase().includes(classLower));
+    if (directMatch) return directMatch;
+    
+    // Keyword mapping for common class types
+    const classKeywords: Record<string, string[]> = {
+      // Fantasy
+      'mage': ['mage', 'wizard', 'robes', 'arcane', 'spell'],
+      'wizard': ['mage', 'wizard', 'robes', 'arcane'],
+      'warrior': ['armor', 'knight', 'plate', 'combat', 'soldier'],
+      'fighter': ['armor', 'knight', 'combat', 'soldier'],
+      'rogue': ['leather', 'hood', 'cloak', 'thief', 'shadow'],
+      'thief': ['leather', 'hood', 'cloak', 'thief'],
+      'healer': ['medic', 'nurse', 'robes', 'white'],
+      'cleric': ['robes', 'holy', 'priest'],
+      'ranger': ['ranger', 'hood', 'cloak', 'leather', 'bow'],
+      'paladin': ['armor', 'plate', 'knight', 'holy'],
+      'bard': ['colorful', 'performer', 'elegant'],
+      'druid': ['druid', 'natural', 'vine', 'leather'],
+      // Cyberpunk
+      'netrunner': ['netrunner', 'data port', 'cable', 'hoodie', 'tech'],
+      'hacker': ['netrunner', 'data port', 'hoodie', 'tech'],
+      'solo': ['combat', 'tactical', 'armor', 'mercenary'],
+      'mercenary': ['mercenary', 'combat', 'tactical', 'vest'],
+      'fixer': ['suit', 'corporate', 'sleek', 'exec'],
+      'techie': ['engineer', 'jumpsuit', 'tool', 'tech'],
+      'rockerboy': ['club', 'performer', 'holographic', 'vinyl'],
+      'nomad': ['scaveng', 'patch', 'survival', 'road'],
+      'corporate': ['corporate', 'suit', 'exec', 'sleek'],
+      'exec': ['corporate', 'suit', 'exec', 'sleek'],
+      // Sci-fi
+      'pilot': ['pilot', 'flight', 'jumpsuit'],
+      'engineer': ['engineer', 'jumpsuit', 'tool', 'coverall'],
+      'scientist': ['scientist', 'lab coat', 'research'],
+      'captain': ['captain', 'officer', 'uniform', 'admiral'],
+      'bounty hunter': ['bounty', 'armor', 'hunter', 'tactical'],
+      // Horror/Modern
+      'detective': ['detective', 'coat', 'investigator', 'suit'],
+      'survivor': ['survivor', 'torn', 'bloody', 'tactical'],
+      'investigator': ['investigator', 'detective', 'suit'],
+      // Western
+      'gunslinger': ['outlaw', 'duster', 'holster', 'cowboy'],
+      'sheriff': ['sheriff', 'badge', 'vest', 'star'],
+      'outlaw': ['outlaw', 'duster', 'bandana'],
+    };
+    
+    const keywords = classKeywords[classLower] || [];
+    for (const keyword of keywords) {
+      const match = costumes.find(c => c.toLowerCase().includes(keyword));
+      if (match) return match;
+    }
   }
-  // Random selection for variety
+  // Random selection if no match
   return costumes[Math.floor(Math.random() * costumes.length)];
 }
 
@@ -572,14 +613,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Origin modifier:', originModifier);
   console.log('Final clothing:', clothingDesc);
   
-  // Professional art style prompt
-  const prompt = `Knees-to-head standing character portrait, centered full figure crop at the knees, facing camera, confident neutral stance, clean silhouette, readable design, ${character}, wearing ${clothingDesc}, High-end digital illustration with stylized realism: realistic anatomy and materials, painterly gradients, crisp edges, controlled detail, polished concept-art finish, Cinematic lighting: soft key light + subtle rim light, realistic specular highlights on hard surfaces, gentle bloom, atmospheric depth, background bokeh, Material fidelity: visible fabric weave, metal micro-scratches, leather grain, skin texture kept tasteful and natural, Background: ${style.background}, ${style.lighting}, genre-neutral ambient environment with depth, soft shapes, no distracting focal points, character is the focus, Camera: 50mm look, eye-level, slight depth of field, sharp face/eyes, clean composition, professional key art, Design coherence: consistent color palette, unified visual language across clothing/gear/accessories, no random add-ons, Quality: correct hands, correct proportions, no artifacts, no extra limbs, no text unless explicitly requested`;
+  // Professional realistic art style prompt - NO cartoon/stylized elements
+  const prompt = `Knees-to-head standing character portrait, centered full figure crop at the knees, facing camera, confident neutral stance, clean silhouette, readable design, ${character}, MUST BE WEARING: ${clothingDesc}, High-end digital illustration with realistic rendering: realistic anatomy, realistic materials and fabrics, realistic skin with natural texture and pores, photographic quality lighting, crisp details, polished AAA game character art finish, Cinematic lighting: soft key light + subtle rim light, realistic specular highlights on hard surfaces, gentle bloom, atmospheric depth, background bokeh, Material fidelity: visible fabric weave and stitching, metal reflections and micro-scratches, leather grain, realistic cloth physics, Background: ${style.background}, ${style.lighting}, depth and atmosphere, character is the focus, Camera: 50mm portrait lens, eye-level, slight depth of field, sharp face and eyes, clean professional composition, Design coherence: outfit matches character role and genre, consistent color palette, unified visual language, Quality: correct hands with 5 fingers, correct human proportions, no artifacts, no extra limbs`;
   
   console.log('Final prompt:', prompt);
+  console.log('Character class for costume:', characterClass);
   
   return {
     prompt,
-    negative: 'photorealistic, anime, cartoon, lowpoly, pixel art, sketchy lineart, washed out, over-saturated, muddy lighting, blurry, low-res, jpeg artifacts, watermark, logo, unreadable gibberish text, extra fingers, extra limbs, deformed hands, asymmetrical eyes, uncanny doll skin, plastic skin, bad anatomy, cropped head, cut-off face, full body with feet, feet visible, ground visible, floor visible',
+    negative: 'cartoon, anime, cel-shaded, stylized, illustrated, painted look, flat colors, lowpoly, pixel art, sketchy, lineart, washed out, over-saturated, muddy lighting, blurry, low-res, jpeg artifacts, watermark, logo, text, extra fingers, extra limbs, deformed hands, asymmetrical eyes, plastic skin, bad anatomy, cropped head, cut-off face, full body with feet, feet visible, ground visible, casual clothes when should be genre-specific, wrong outfit for character class',
   };
 }
 
