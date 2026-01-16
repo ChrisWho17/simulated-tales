@@ -1584,7 +1584,7 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'promiscuous', 'uninhibited', 'brazen', 'shameless', 'erotic'
   ];
   
-  // COLOR keywords for clothing
+  // COLOR keywords for clothing - ONLY used if explicitly mentioned
   const COLOR_KEYWORDS: Record<string, string> = {
     'red': 'deep red, crimson colored',
     'crimson': 'rich crimson red',
@@ -1619,6 +1619,61 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'coral': 'coral colored',
     'lavender': 'soft lavender',
   };
+  
+  // Genre-specific random color palettes for when no color is specified
+  const GENRE_COLOR_PALETTES: Record<string, string[]> = {
+    fantasy: ['earth brown', 'forest green', 'deep burgundy', 'weathered tan', 'charcoal gray', 'faded blue', 'rust orange', 'moss green'],
+    dark_fantasy: ['pitch black', 'blood red', 'dark purple', 'midnight blue', 'charcoal', 'bone white', 'ashen gray', 'deep crimson'],
+    medieval: ['royal blue', 'rich burgundy', 'forest green', 'golden brown', 'cream white', 'heraldic red', 'steel gray', 'warm brown'],
+    high_fantasy: ['shimmering silver', 'ethereal white', 'celestial blue', 'moonlit purple', 'starlight gold', 'mystic teal', 'pearl white', 'aurora pink'],
+    cyberpunk: ['neon pink', 'electric blue', 'toxic green', 'chrome silver', 'matte black', 'hot magenta', 'cyber yellow', 'holographic purple'],
+    scifi: ['metallic silver', 'clean white', 'space blue', 'tech gray', 'sleek black', 'holographic blue', 'plasma orange', 'sterile white'],
+    space_opera: ['starship gray', 'nebula purple', 'cosmic blue', 'alien green', 'solar gold', 'void black', 'plasma red', 'quantum blue'],
+    modern: ['classic black', 'crisp white', 'denim blue', 'khaki tan', 'charcoal gray', 'navy blue', 'olive green', 'burgundy'],
+    modern_life: ['casual blue', 'soft gray', 'warm beige', 'dusty rose', 'sage green', 'cream white', 'light denim', 'muted coral'],
+    western: ['dusty brown', 'leather tan', 'faded denim', 'sand beige', 'rust red', 'weathered gray', 'sun-bleached white', 'desert orange'],
+    noir: ['classic black', 'smoke gray', 'midnight blue', 'cream white', 'deep burgundy', 'charcoal', 'shadowy brown', 'film grain sepia'],
+    horror: ['blood red', 'corpse gray', 'decay green', 'shadow black', 'bone white', 'bruise purple', 'rust brown', 'sickly yellow'],
+    gothic_horror: ['midnight black', 'crimson red', 'ghostly white', 'deep purple', 'dried blood brown', 'candlelight gold', 'grave gray', 'raven black'],
+    postapoc: ['rust orange', 'dirty brown', 'faded olive', 'ash gray', 'mud brown', 'bleached tan', 'corroded green', 'scavenged blue'],
+    steampunk: ['brass gold', 'copper bronze', 'rich mahogany', 'cream white', 'smoke gray', 'leather brown', 'aged brass', 'polished copper'],
+    victorian: ['deep burgundy', 'midnight blue', 'forest green', 'cream ivory', 'rich plum', 'antique gold', 'charcoal gray', 'rose pink'],
+    superhero: ['bold red', 'heroic blue', 'powerful yellow', 'striking black', 'justice white', 'emerald green', 'cosmic purple', 'electric orange'],
+    urban_fantasy: ['midnight blue', 'city gray', 'magic purple', 'neon pink', 'shadow black', 'enchanted green', 'mystic silver', 'streetlight gold'],
+    war: ['military olive', 'camouflage green', 'tactical black', 'desert tan', 'steel gray', 'dirt brown', 'forest camo', 'navy blue'],
+    spy: ['sleek black', 'midnight blue', 'elegant gray', 'crisp white', 'subtle silver', 'covert charcoal', 'sophisticated burgundy', 'tactical navy'],
+    survival: ['earth brown', 'forest green', 'survival tan', 'mud gray', 'bark brown', 'leaf green', 'stone gray', 'natural beige'],
+    romance: ['soft rose', 'blush pink', 'champagne gold', 'dreamy white', 'tender lavender', 'warm peach', 'gentle coral', 'romantic red'],
+    pirate: ['weathered tan', 'sea blue', 'rope brown', 'sail white', 'treasure gold', 'barnacle gray', 'rum amber', 'storm gray'],
+  };
+  
+  // Function to get random genre-appropriate color
+  function getRandomGenreColor(genreKey: string, characterGender: string, hairColor?: string, skinTone?: string): string {
+    const palette = GENRE_COLOR_PALETTES[genreKey] || GENRE_COLOR_PALETTES['modern'];
+    
+    // Create a seeded randomizer based on character traits for consistency
+    const seed = `${characterGender}-${hairColor || 'default'}-${skinTone || 'default'}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      const char = seed.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    
+    // Pick 2-3 colors from palette based on seed
+    const numColors = 2 + (Math.abs(hash) % 2); // 2-3 colors
+    const selectedColors: string[] = [];
+    for (let i = 0; i < numColors; i++) {
+      const index = Math.abs(hash + i * 17) % palette.length;
+      if (!selectedColors.includes(palette[index])) {
+        selectedColors.push(palette[index]);
+      }
+    }
+    
+    return selectedColors.length > 0 
+      ? `varied color scheme featuring ${selectedColors.join(' and ')}`
+      : `genre-appropriate ${genreKey} color palette`;
+  }
   
   // PATTERN keywords for clothing
   const PATTERN_KEYWORDS: Record<string, string> = {
@@ -1786,7 +1841,19 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   
   // Build additional modifiers from detected keywords
   const additionalClothingMods: string[] = [];
-  if (colorMods.length > 0) additionalClothingMods.push(`clothing colors: ${colorMods.join(', ')}`);
+  
+  // ONLY use explicit colors if mentioned in text, otherwise generate random genre-appropriate colors
+  if (colorMods.length > 0) {
+    // User explicitly mentioned colors - use them
+    additionalClothingMods.push(`clothing colors: ${colorMods.join(', ')}`);
+    console.log('Explicit colors detected in text:', colorMods);
+  } else {
+    // No explicit colors - generate random genre-appropriate palette
+    const randomColorScheme = getRandomGenreColor(genreKey, gender || 'other', hairColor, skinTone);
+    additionalClothingMods.push(`clothing color scheme: ${randomColorScheme}`);
+    console.log('No explicit colors - using random genre palette:', randomColorScheme);
+  }
+  
   if (patternMods.length > 0) additionalClothingMods.push(`clothing patterns: ${patternMods.join(', ')}`);
   if (clothFitMods.length > 0) additionalClothingMods.push(`clothing fit: ${clothFitMods.join(', ')}`);
   
@@ -1804,6 +1871,7 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     patternMods,
     physiqueMods,
     clothFitMods,
+    usedRandomColors: colorMods.length === 0,
   };
 
   // ========== GENRE ISOLATION RULES ==========
