@@ -6,9 +6,9 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STYLE LOCK - Cinematic art style with dramatic lighting
+// STYLE LOCK - Hyper-dramatic cinematic art style
 // ============================================================================
-const STYLE_LOCK = `cinematic character portrait, dramatic film lighting with strong key light and atmospheric rim light, movie poster quality, rich color grading, depth of field with bokeh, volumetric lighting, lens flare accents, professional cinematography aesthetic, 85mm portrait lens look, shallow focus on face, moody atmospheric shadows, Hollywood blockbuster visual style, detailed fabric textures, subtle film grain, epic composition, no text, no watermark`;
+const STYLE_LOCK = `hyper-dramatic cinematic character portrait, intense chiaroscuro lighting with deep shadows and bright highlights, epic movie poster composition, saturated rich color grading, strong backlight creating silhouette edges, volumetric god rays, dramatic lens flares, intense atmospheric fog and haze, professional Hollywood cinematography, anamorphic lens distortion, extreme shallow depth of field with heavy bokeh, moody storm lighting, theatrical spotlight effects, blockbuster action movie aesthetic, heroic low angle implied, intense emotional atmosphere, film noir shadow play, dramatic rim lighting outlining figure, visible light beams cutting through atmosphere, no text, no watermark`;
 
 // ============================================================================
 // PROMPT PRIORITY - AI must follow these rules exactly
