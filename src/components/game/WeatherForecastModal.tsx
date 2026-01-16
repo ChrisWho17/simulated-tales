@@ -1,16 +1,18 @@
 // Weather Forecast Modal - Meteorologist-style predictions with inaccuracy
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { 
   Cloud, CloudRain, CloudLightning, CloudSnow, CloudFog, 
   Sun, Wind, Flame, TrendingUp, TrendingDown, Minus,
-  AlertTriangle, Thermometer, Droplets, Eye
+  AlertTriangle, Droplets, Eye
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { WeatherState, WeatherType, WEATHER_CONFIGS, WEATHER_GAMEPLAY_EFFECTS } from '@/game/weatherSystem';
+import { 
+  WeatherState, WeatherType, WEATHER_CONFIGS, WEATHER_GAMEPLAY_EFFECTS,
+  generateWeatherForecast, ForecastEntry
+} from '@/game/weatherSystem';
 
 interface WeatherForecastModalProps {
   open: boolean;
@@ -18,98 +20,29 @@ interface WeatherForecastModalProps {
   weatherState: WeatherState;
 }
 
-interface ForecastPeriod {
-  label: string;
-  weather: WeatherType;
-  confidence: number; // 0-100
+// Extended forecast with UI-friendly data
+interface UIForecastEntry extends ForecastEntry {
   tempTrend: 'rising' | 'falling' | 'stable';
-  precipitation: number; // 0-100 chance
+  precipitation: number;
 }
 
-// Generate forecasts with intentional inaccuracy
-function generateForecast(weatherState: WeatherState): ForecastPeriod[] {
-  const forecasts: ForecastPeriod[] = [];
-  const currentWeather = weatherState.current;
-  const ticksRemaining = weatherState.ticksRemaining;
-  const totalDuration = weatherState.totalDuration;
+// Generate UI-ready forecasts using the weighted system
+function generateUIForecast(weatherState: WeatherState): UIForecastEntry[] {
+  // Get the 3 predictions from the proper weighted forecast system
+  const baseForecast = generateWeatherForecast(weatherState);
   
-  // Current conditions - high accuracy
-  forecasts.push({
-    label: 'Now',
-    weather: currentWeather,
-    confidence: 95 + Math.floor(Math.random() * 5),
-    tempTrend: 'stable',
-    precipitation: getPrecipitationChance(currentWeather),
+  // Enhance with UI data
+  let previousWeather = weatherState.current;
+  
+  return baseForecast.map(entry => {
+    const enhanced: UIForecastEntry = {
+      ...entry,
+      tempTrend: getTempTrend(previousWeather, entry.predictedWeather),
+      precipitation: getPrecipitationChance(entry.predictedWeather),
+    };
+    previousWeather = entry.predictedWeather;
+    return enhanced;
   });
-  
-  // Near future (next few hours) - medium-high accuracy
-  const progress = 1 - (ticksRemaining / totalDuration);
-  let nextWeather = currentWeather;
-  
-  // If transitioning, use that
-  if (weatherState.transitioningTo) {
-    nextWeather = weatherState.transitioningTo;
-  } else if (progress > 0.7) {
-    // Weather is ending soon, guess at next
-    nextWeather = predictNextWeather(currentWeather);
-  }
-  
-  forecasts.push({
-    label: 'Next Few Hours',
-    weather: nextWeather,
-    confidence: weatherState.transitioningTo ? 75 + Math.floor(Math.random() * 15) : 50 + Math.floor(Math.random() * 25),
-    tempTrend: getTempTrend(currentWeather, nextWeather),
-    precipitation: getPrecipitationChance(nextWeather),
-  });
-  
-  // Later today - medium accuracy with potential for being wrong
-  const laterWeather = maybeWrongPrediction(predictNextWeather(nextWeather), 30);
-  forecasts.push({
-    label: 'Later Today',
-    weather: laterWeather,
-    confidence: 35 + Math.floor(Math.random() * 30),
-    tempTrend: getTempTrend(nextWeather, laterWeather),
-    precipitation: getPrecipitationChance(laterWeather),
-  });
-  
-  // Tomorrow - low accuracy, often wrong
-  const tomorrowWeather = maybeWrongPrediction(predictNextWeather(laterWeather), 50);
-  forecasts.push({
-    label: 'Tomorrow',
-    weather: tomorrowWeather,
-    confidence: 20 + Math.floor(Math.random() * 25),
-    tempTrend: getTempTrend(laterWeather, tomorrowWeather),
-    precipitation: getPrecipitationChance(tomorrowWeather),
-  });
-  
-  return forecasts;
-}
-
-function predictNextWeather(current: WeatherType): WeatherType {
-  // Simple weather progression tendencies
-  const progressions: Record<WeatherType, WeatherType[]> = {
-    clear: ['clear', 'cloudy', 'wind'],
-    cloudy: ['rain', 'clear', 'fog', 'cloudy'],
-    rain: ['cloudy', 'storm', 'rain', 'clear'],
-    storm: ['rain', 'cloudy', 'wind'],
-    fog: ['cloudy', 'clear', 'rain'],
-    snow: ['cloudy', 'snow', 'clear'],
-    heat_wave: ['clear', 'heat_wave', 'cloudy'],
-    wind: ['clear', 'cloudy', 'rain'],
-  };
-  
-  const options = progressions[current] || ['clear'];
-  return options[Math.floor(Math.random() * options.length)];
-}
-
-function maybeWrongPrediction(predicted: WeatherType, wrongChance: number): WeatherType {
-  if (Math.random() * 100 < wrongChance) {
-    // Return a random different weather
-    const allWeather: WeatherType[] = ['clear', 'cloudy', 'rain', 'storm', 'fog', 'snow', 'heat_wave', 'wind'];
-    const filtered = allWeather.filter(w => w !== predicted);
-    return filtered[Math.floor(Math.random() * filtered.length)];
-  }
-  return predicted;
 }
 
 function getPrecipitationChance(weather: WeatherType): number {
@@ -144,6 +77,7 @@ function getTempTrend(from: WeatherType, to: WeatherType): 'rising' | 'falling' 
   if (diff < -5) return 'falling';
   return 'stable';
 }
+
 
 function getWeatherIcon(weather: WeatherType, className: string = "w-6 h-6") {
   switch (weather) {
@@ -183,7 +117,8 @@ const METEOROLOGIST_PHRASES = [
 ];
 
 export function WeatherForecastModal({ open, onOpenChange, weatherState }: WeatherForecastModalProps) {
-  const forecasts = useMemo(() => generateForecast(weatherState), [weatherState, open]);
+  // Use the proper weighted forecast system that generates exactly 3 predictions
+  const forecasts = useMemo(() => generateUIForecast(weatherState), [weatherState, open]);
   const randomPhrase = useMemo(() => 
     METEOROLOGIST_PHRASES[Math.floor(Math.random() * METEOROLOGIST_PHRASES.length)], 
   [open]);
@@ -256,17 +191,17 @@ export function WeatherForecastModal({ open, onOpenChange, weatherState }: Weath
             </h4>
             
             <div className="grid gap-2">
-              {forecasts.slice(1).map((forecast, idx) => (
+              {forecasts.map((forecast, idx) => (
                 <div 
                   key={idx}
                   className="flex items-center justify-between bg-muted/20 rounded-lg p-3 border border-border/30"
                 >
                   <div className="flex items-center gap-3">
-                    {getWeatherIcon(forecast.weather, "w-5 h-5")}
+                    {getWeatherIcon(forecast.predictedWeather, "w-5 h-5")}
                     <div>
                       <p className="text-sm font-medium">{forecast.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {WEATHER_CONFIGS[forecast.weather].name}
+                        {WEATHER_CONFIGS[forecast.predictedWeather].name}
                       </p>
                     </div>
                   </div>
