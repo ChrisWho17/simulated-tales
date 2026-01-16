@@ -500,7 +500,7 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
   const apiKey = Deno.env.get("TOGETHER_API_KEY");
   if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
 
-  console.log("Generating portrait with Together.ai (FLUX.1-schnell)");
+  console.log("Generating portrait with Together.ai (FLUX.1-dev)");
   console.log("Prompt:", prompt.substring(0, 200) + "...");
 
   const response = await fetch("https://api.together.ai/v1/images/generations", {
@@ -510,12 +510,12 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "black-forest-labs/FLUX.1-schnell",
+      model: "black-forest-labs/FLUX.1-dev",
       prompt: prompt,
       negative_prompt: negative,
       width: 832,
       height: 1216,
-      steps: 4,
+      steps: 28,
       n: 1,
       response_format: "b64_json"
     }),
