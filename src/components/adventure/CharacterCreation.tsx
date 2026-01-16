@@ -306,8 +306,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         prosthetics: appearance.full?.prosthetics || [],
         implants: appearance.full?.implants || [],
         mutations: appearance.full?.mutations || [],
-        clothingStyle: appearance.full?.clothingStyle,
-        clothingDetails: appearance.full?.clothingDetails || [],
         // CRITICAL: Free-form description from "Additional Details" textarea
         additionalDetails: appearance.full?.intimateDetails || '',
         // Class info for role-appropriate styling
@@ -797,49 +795,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </div>
                       </div>
                     )}
-
-                    {/* Clothing Style */}
-                    <Collapsible open={openSections.clothing} onOpenChange={() => toggleSection('clothing')}>
-                      <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground w-full justify-between py-2">
-                        <span className="flex items-center gap-2">
-                          <Shirt className="w-4 h-4" />
-                          Clothing & Style
-                        </span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.clothing ? 'rotate-180' : ''}`} />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-3 pt-2">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Clothing Style</label>
-                          <select
-                            value={appearance.full?.clothingStyle || 'genre_default'}
-                            onChange={(e) => updateAppearance('full', 'clothingStyle', e.target.value)}
-                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                          >
-                            {CLOTHING_STYLE_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label} - {opt.description}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Clothing Items</label>
-                          <div className="flex flex-wrap gap-1 mt-1 max-h-32 overflow-y-auto">
-                            {CLOTHING_DETAIL_OPTIONS.map(item => (
-                              <button
-                                key={item.value}
-                                onClick={() => toggleClothingDetail(item.value)}
-                                className={`px-2 py-1 rounded text-xs transition-all ${
-                                  appearance.full?.clothingDetails?.includes(item.value)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-background/50 border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                {item.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
 
                     {/* Free-form description - CRITICAL for custom clothing */}
                     <div>
