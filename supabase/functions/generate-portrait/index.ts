@@ -1382,21 +1382,21 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   
   console.log(`Genre matching: "${rawGenre}" -> "${genreKey}"`);
 
-  // ========== BODY PROPORTION AMPLIFIERS ==========
-  // These descriptors are amplified to create more noticeable differences
-  const BUST_AMPLIFIER: Record<string, string> = {
-    'small': 'small, modest bust with subtle curves',
-    'medium': 'medium bust with feminine curves',
-    'large': 'large, prominent bust with voluptuous curves, noticeably full-figured chest',
-    'very large': 'very large, exceptionally prominent bust with dramatic voluptuous curves, extremely full-figured chest, eye-catching proportions',
+  // ========== BODY PROPORTION MODIFIERS ==========
+  // Tasteful descriptors that won't trigger content moderation
+  const BUST_MODIFIER: Record<string, string> = {
+    'small': 'petite frame',
+    'medium': 'average proportions',
+    'large': 'fuller figure',
+    'very large': 'statuesque build',
   };
   
-  // Buttocks shape (flat to plump) - reduced intensity, not width
-  const HIP_AMPLIFIER: Record<string, string> = {
-    'narrow': 'flat, small rear',
-    'average': 'average, balanced rear shape',
-    'wide': 'rounded, plump rear',
-    'very wide': 'full, prominently plump rear',
+  // Body shape descriptors - neutral and professional
+  const HIP_MODIFIER: Record<string, string> = {
+    'narrow': 'lean frame',
+    'average': 'balanced proportions',
+    'wide': 'athletic build',
+    'very wide': 'strong frame',
   };
 
   const BUILD_AMPLIFIER: Record<string, string> = {
@@ -1430,15 +1430,8 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     identityParts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // Body proportions with AMPLIFIED descriptors
-  if (gender === 'female' || gender === 'other') {
-    if (bustSize) {
-      identityParts.push(BUST_AMPLIFIER[bustSize] || `${bustSize} bust`);
-    }
-    if (hipWidth) {
-      identityParts.push(HIP_AMPLIFIER[hipWidth] || `${hipWidth} hips`);
-    }
-  }
+  // Body proportions with tasteful descriptors - only include if will enhance portrait
+  // Skip these entirely to avoid content moderation issues
   if (muscleDefinition && muscleDefinition !== 'none') {
     identityParts.push(`${muscleDefinition} muscle definition`);
   }
@@ -1468,10 +1461,19 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   if (piercings?.length) {
     const piercingList = Array.isArray(piercings) ? piercings : [];
     const styleDesc = piercingStyle ? `${piercingStyle} style ` : '';
-    const piercingDesc = piercingList.map((p: any) => {
-      const location = typeof p === 'string' ? p : p.location;
-      return `${location} piercing`;
-    }).join(', ');
+    // Filter out intimate/inappropriate piercing locations
+    const SAFE_PIERCING_LOCATIONS = ['ear', 'earlobe', 'ear_lobe', 'helix', 'tragus', 'nose', 'nostril', 'nose_nostril', 'septum', 'eyebrow', 'lip', 'labret', 'monroe', 'bridge', 'navel', 'belly'];
+    const piercingDesc = piercingList
+      .map((p: any) => {
+        const location = (typeof p === 'string' ? p : p.location || '').toLowerCase();
+        // Skip intimate piercings entirely
+        if (location.includes('nipple') || location.includes('intimate') || location.includes('genital') || location.includes('tongue')) {
+          return null;
+        }
+        return `${location.replace(/_/g, ' ')} piercing`;
+      })
+      .filter(Boolean)
+      .join(', ');
     if (piercingDesc) modParts.push(`${styleDesc}piercings: ${piercingDesc}`);
   }
   
@@ -1575,13 +1577,11 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'prudish', 'buttoned-up', 'formal', 'respectable', 'decent'
   ];
   
-  // ALLURING keywords - more revealing, sensual, provocative style
+  // CONFIDENT/BOLD keywords - fashion-forward style (sanitized for content moderation)
   const ALLURING_KEYWORDS = [
-    'alluring', 'seductive', 'provocative', 'sensual', 'sultry', 'flirty',
-    'bold', 'daring', 'confident', 'revealing', 'scandalous', 'tempting',
-    'enticing', 'teasing', 'playful', 'naughty', 'risque', 'suggestive',
-    'voluptuous', 'bombshell', 'femme fatale', 'siren', 'vixen', 'lewd',
-    'promiscuous', 'uninhibited', 'brazen', 'shameless', 'erotic'
+    'bold', 'daring', 'confident', 'striking', 'glamorous',
+    'fashionable', 'chic', 'elegant', 'sophisticated', 'fierce',
+    'powerful', 'commanding', 'charismatic', 'magnetic'
   ];
   
   // COLOR keywords for clothing - ONLY used if explicitly mentioned
@@ -1705,29 +1705,24 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'distressed': 'distressed, worn look',
   };
   
-  // PHYSIQUE keywords for body type
+  // PHYSIQUE keywords for body type - pick ONE dominant type to avoid contradictions
   const PHYSIQUE_KEYWORDS: Record<string, string> = {
-    'toned': 'toned, fit physique',
-    'athletic': 'athletic build, sporty body',
-    'muscular': 'muscular, well-built',
-    'buff': 'buff, very muscular',
-    'ripped': 'ripped physique, defined muscles',
-    'lean': 'lean physique, slim and fit',
+    'toned': 'toned physique',
+    'athletic': 'athletic build',
+    'muscular': 'muscular build',
+    'buff': 'well-built physique',
+    'lean': 'lean physique',
     'slim': 'slim figure',
     'slender': 'slender build',
     'petite': 'petite frame',
-    'curvy': 'curvy figure, shapely',
-    'hourglass': 'hourglass figure',
-    'voluptuous': 'voluptuous figure, full-figured',
-    'thick': 'thick build, full-bodied',
-    'chubby': 'chubby, soft body',
-    'plump': 'plump figure',
-    'heavy': 'heavy build',
+    'curvy': 'curvy figure',
+    'hourglass': 'balanced proportions',
+    'thick': 'sturdy build',
     'stocky': 'stocky build',
-    'broad': 'broad shoulders, wide frame',
-    'lithe': 'lithe, graceful build',
-    'willowy': 'willowy, tall and slim',
-    'statuesque': 'statuesque, tall and striking',
+    'broad': 'broad-shouldered',
+    'lithe': 'graceful build',
+    'willowy': 'tall and slim',
+    'statuesque': 'tall and striking',
   };
   
   // CLOTH FIT keywords
@@ -1792,16 +1787,18 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     }
   }
   
-  // Detect physique keywords
+  // Detect physique keywords - ONLY use the FIRST one found to avoid contradictions
   let physiqueMods: string[] = [];
   for (const [keyword, desc] of Object.entries(PHYSIQUE_KEYWORDS)) {
     if (lowerUserDesc.includes(keyword)) {
-      physiqueMods.push(desc);
-      matchedKeywords.push({ category: 'physique', keyword, effect: desc });
+      // Only add one physique descriptor to avoid contradictions like "slim" AND "thick"
+      if (physiqueMods.length === 0) {
+        physiqueMods.push(desc);
+        matchedKeywords.push({ category: 'physique', keyword, effect: desc });
+      }
+      break; // Stop after finding the first physique keyword
     }
   }
-  
-  // Detect cloth fit keywords
   let clothFitMods: string[] = [];
   for (const [keyword, desc] of Object.entries(CLOTH_FIT_KEYWORDS)) {
     if (lowerUserDesc.includes(keyword)) {
@@ -1818,25 +1815,25 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   let personalityClothingMod = '';
   
   if (personalityScore <= -2) {
-    // Very modest
-    personalityStyleMod = 'extremely modest and conservative presentation, very covered and concealing, formal and proper posture, reserved dignified expression';
-    personalityClothingMod = 'high necklines, long sleeves, full coverage, no skin showing, buttoned-up, layered modest clothing';
+    // Very modest - professional conservative
+    personalityStyleMod = 'professional conservative presentation, formal posture, dignified reserved expression';
+    personalityClothingMod = 'high necklines, long sleeves, full coverage, layered professional clothing';
   } else if (personalityScore === -1) {
     // Somewhat modest
-    personalityStyleMod = 'modest and reserved presentation, appropriate coverage, professional demeanor, calm composed expression';
-    personalityClothingMod = 'modest neckline, appropriate coverage, professional attire';
+    personalityStyleMod = 'reserved presentation, professional demeanor, composed expression';
+    personalityClothingMod = 'modest attire, appropriate coverage';
   } else if (personalityScore === 1) {
-    // Somewhat alluring
-    personalityStyleMod = 'confident alluring presence, slightly flirty expression, attractive pose, eye contact with subtle invitation';
-    personalityClothingMod = 'slightly revealing neckline, form-fitting silhouette, tastefully attractive attire';
+    // Somewhat confident
+    personalityStyleMod = 'confident presence, direct eye contact, self-assured expression';
+    personalityClothingMod = 'fashionable attire, form-fitting silhouette';
   } else if (personalityScore === 2) {
-    // More alluring
-    personalityStyleMod = 'seductive confident presence, sensual expression, provocative pose, smoldering eye contact, attractive and bold';
-    personalityClothingMod = 'revealing neckline showing cleavage, form-hugging outfit, bare shoulders, attractive revealing attire';
+    // More confident/bold
+    personalityStyleMod = 'bold confident presence, striking pose, charismatic expression';
+    personalityClothingMod = 'stylish outfit, fashion-forward attire';
   } else if (personalityScore >= 3) {
-    // Very alluring
-    personalityStyleMod = 'extremely seductive and provocative presence, sultry bedroom eyes, suggestive sensual pose, uninhibited boldness';
-    personalityClothingMod = 'very revealing outfit, deep plunging neckline, maximum cleavage, bare midriff, provocatively skimpy attire, scandalously revealing';
+    // Very bold
+    personalityStyleMod = 'commanding presence, powerful stance, magnetic charisma';
+    personalityClothingMod = 'bold fashion choices, statement outfit';
   }
   
   // Build additional modifiers from detected keywords
