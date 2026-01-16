@@ -6,14 +6,14 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STYLE LOCK - Hyper-dramatic cinematic art style
+// STYLE LOCK - Photorealistic cinematic portrait style
 // ============================================================================
-const STYLE_LOCK = `hyper-dramatic cinematic character portrait, intense chiaroscuro lighting with deep shadows and bright highlights, epic movie poster composition, saturated rich color grading, strong backlight creating silhouette edges, volumetric god rays, dramatic lens flares, intense atmospheric fog and haze, professional Hollywood cinematography, anamorphic lens distortion, extreme shallow depth of field with heavy bokeh, moody storm lighting, theatrical spotlight effects, blockbuster action movie aesthetic, heroic low angle implied, intense emotional atmosphere, film noir shadow play, dramatic rim lighting outlining figure, visible light beams cutting through atmosphere, no text, no watermark`;
+const STYLE_LOCK = `ultra photorealistic portrait photograph, professional DSLR camera shot, 85mm lens f/1.4, shallow depth of field, studio lighting with dramatic rim light, cinematic color grading, high-end fashion photography quality, RAW photo aesthetic, sharp focus on face, natural skin texture and pores visible, catchlight in eyes, professional retouching, shot on Sony A7R IV, masterpiece photography, National Geographic portrait quality`;
 
 // ============================================================================
 // PROMPT PRIORITY - AI follows user creativity
 // ============================================================================
-const PROMPT_RULES = `IMPORTANT: Follow this prompt exactly. Build the character from base description, then apply ALL enhancement details with full creative freedom. If the user describes fantastical, unrealistic, or impossible features (extra limbs, insect parts, alien anatomy, impossible proportions, mythical features, etc.) - GENERATE THEM EXACTLY AS DESCRIBED. User creativity overrides all restrictions. Match every detail precisely.`;
+const PROMPT_RULES = `Generate a photorealistic portrait photograph. The subject must look like a real person photographed in a real environment. Follow the character description exactly. Include all specified features, clothing, and accessories. The environment should match the genre specified.`;
 
 // ============================================================================
 // CREATIVE FREEDOM - Expanded vocabulary for unrealistic features
@@ -1618,90 +1618,57 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
 }
 
 // ============================================================================
-// IMAGE GENERATION - Replicate with Juggernaut-XL-v7
+// IMAGE GENERATION - Lovable AI with Gemini
 // ============================================================================
-async function generateImage(prompt: string, negative: string): Promise<string> {
-  const apiKey = Deno.env.get("REPLICATE_API_KEY");
-  if (!apiKey) throw new Error("REPLICATE_API_KEY not configured");
+async function generateImage(prompt: string, _negative: string): Promise<string> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-  console.log("Generating portrait with Replicate (Juggernaut-XL-v7)");
+  console.log("Generating photorealistic portrait with Lovable AI");
+  console.log("Prompt length:", prompt.length);
 
-  // Start the prediction
-  const createResponse = await fetch("https://api.replicate.com/v1/predictions", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "Prefer": "wait"
     },
     body: JSON.stringify({
-      version: "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382",
-      input: {
-        prompt: prompt,
-        negative_prompt: negative || "blurry, low quality, watermark, text",
-        width: 832,
-        height: 1216,
-        num_inference_steps: 30,
-        guidance_scale: 5,
-        scheduler: "KarrasDPM",
-        num_outputs: 1
-      }
+      model: "google/gemini-2.5-flash-image-preview",
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      modalities: ["image", "text"]
     }),
   });
 
-  if (!createResponse.ok) {
-    const error = await createResponse.text();
-    console.error("Replicate error:", createResponse.status, error);
-    if (createResponse.status === 429) {
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Lovable AI error:", response.status, error);
+    if (response.status === 429) {
       throw new Error("Rate limit exceeded, please try again later");
     }
-    throw new Error(`Generation failed: ${createResponse.status} - ${error}`);
-  }
-
-  let prediction = await createResponse.json();
-  console.log("Prediction started:", prediction.id, "Status:", prediction.status);
-
-  // Poll for completion if not using "Prefer: wait" or if still processing
-  let attempts = 0;
-  const maxAttempts = 60; // 60 seconds timeout
-  
-  while (prediction.status !== "succeeded" && prediction.status !== "failed" && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-      headers: { Authorization: `Bearer ${apiKey}` }
-    });
-    
-    if (!pollResponse.ok) {
-      throw new Error(`Failed to poll prediction: ${pollResponse.status}`);
+    if (response.status === 402) {
+      throw new Error("Payment required, please add credits to your workspace");
     }
-    
-    prediction = await pollResponse.json();
-    attempts++;
-    
-    if (attempts % 5 === 0) {
-      console.log(`Polling attempt ${attempts}, status: ${prediction.status}`);
-    }
+    throw new Error(`Generation failed: ${response.status} - ${error}`);
   }
 
-  if (prediction.status === "failed") {
-    console.error("Prediction failed:", prediction.error);
-    throw new Error(`Image generation failed: ${prediction.error}`);
-  }
+  const data = await response.json();
+  console.log("Lovable AI response received");
 
-  if (prediction.status !== "succeeded") {
-    throw new Error("Image generation timed out");
-  }
-
-  const imageUrl = prediction.output?.[0];
+  // Extract image from response
+  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   
   if (!imageUrl) {
-    console.error("No image in response:", JSON.stringify(prediction));
-    throw new Error("No image returned from Replicate");
+    console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+    throw new Error("No image returned from Lovable AI");
   }
 
-  // Return the direct URL from Replicate (it's already publicly accessible)
-  console.log("Portrait generated successfully:", imageUrl);
+  console.log("Portrait generated successfully (base64 length:", imageUrl.length, ")");
   return imageUrl;
 }
 
