@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,6 +26,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useGame } from '@/contexts/GameContext';
 
 interface NarratorSettingsModalProps {
   open: boolean;
@@ -49,10 +50,20 @@ export function NarratorSettingsModal({
   onConfirm,
   initialSettings,
 }: NarratorSettingsModalProps) {
+  const { settings: gameSettings, updateSettings: updateGameSettings } = useGame();
+  
+  // Sync with global settings - use gameSettings.directorSettings as source of truth
   const [settings, setSettings] = useState<DirectorSettings>(
-    initialSettings || DEFAULT_DIRECTOR_SETTINGS
+    initialSettings || gameSettings.directorSettings || DEFAULT_DIRECTOR_SETTINGS
   );
   const [expandedCategory, setExpandedCategory] = useState<string | null>('story');
+  
+  // Sync local state when global settings change
+  useEffect(() => {
+    if (gameSettings.directorSettings) {
+      setSettings(gameSettings.directorSettings);
+    }
+  }, [gameSettings.directorSettings]);
 
   const handleModeChange = (mode: DirectiveMode) => {
     setSettings(prev => ({ ...prev, mode }));
@@ -373,7 +384,11 @@ export function NarratorSettingsModal({
           <Button variant="outline" onClick={onClose}>
             Skip for Now
           </Button>
-          <Button onClick={() => onConfirm(settings)}>
+          <Button onClick={() => {
+            // Sync to global settings first
+            updateGameSettings({ directorSettings: settings });
+            onConfirm(settings);
+          }}>
             Begin Adventure
           </Button>
         </DialogFooter>
