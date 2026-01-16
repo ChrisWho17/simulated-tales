@@ -6,16 +6,18 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// CHARACTER PORTRAIT PROMPT SYSTEM
-// Clean game-focused portrait generation
+// STRICT CHARACTER PORTRAIT PROMPT SYSTEM
+// Precise literal descriptions - minimal AI interpretation
 // ============================================================================
 
-// Core framing - knee to head, face at viewer
-const PORTRAIT_FRAMING = `Portrait from knees to head showing thighs torso arms shoulders and head, body angled 15 degrees, face looking directly at viewer, blurred background`;
+// STRICT framing - exact composition requirements
+const PORTRAIT_FRAMING = `Photographic portrait, three-quarter length, framed from knees to top of head. Subject centered, body angled 15 degrees, face and eyes looking directly at camera. Sharp focus on subject, background blurred`;
 
-// Quality and negative prompts
-const QUALITY_TAGS = `Photorealistic, detailed, sharp focus, 8K`;
-const NEGATIVE_PROMPT = `anime, cartoon, illustration, 3d render, painting, sketch, looking away, profile view, extra limbs, deformed, cropped, close-up, headshot, bust, full body, feet visible, plain background`;
+// Quality - emphasize accuracy to description
+const QUALITY_TAGS = `Photorealistic, sharp details, accurate to description, 8K, professional lighting`;
+
+// STRICT negative - prevent AI from changing described features
+const NEGATIVE_PROMPT = `anime, cartoon, illustration, 3d render, painting, sketch, stylized, artistic interpretation, looking away, profile view, side view, extra limbs, deformed, cropped, close-up only, headshot only, bust only, full body, feet visible, plain solid background, added accessories not in description, changed clothing from description, different hair than described, wrong eye color, wrong skin tone, artistic license`;
 
 // ============================================================================
 // GENRE DATA - Environment, lighting, colors, clothing defaults
@@ -696,32 +698,35 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
     disposition, socialStyle, emotionVariant,
   } = body;
 
-  console.log("=== BUILDING PROMPT ===");
+  console.log("=== BUILDING STRICT PROMPT ===");
   
-  // User additional details - HIGHEST PRIORITY for overrides
+  // User additionals - HIGHEST PRIORITY, must be rendered exactly
   const userAdditionals = additionalDetails || characterAdditionals || customDescription || '';
-  const hasUserClothing = userAdditionals.toLowerCase().match(/wearing|dressed|clothing|outfit|uniform|armor|suit|jacket|coat|dress|robe/);
+  const hasUserClothing = userAdditionals.toLowerCase().match(/wearing|dressed|clothing|outfit|uniform|armor|suit|jacket|coat|dress|robe|shirt|pants|boots/);
   
   // Genre
   const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
   const { environment, clothing: genreClothing } = buildGenreDescription(genreKey);
   
-  // Physical foundation
+  // =========================================================================
+  // STRICT PHYSICAL ATTRIBUTES - Exact descriptions
+  // =========================================================================
+  
   const genderStr = lookup(PHYSICAL.gender, gender, 'person');
-  const ageStr = age ? `${age} year old` : 'adult';
+  const ageStr = age ? `exactly ${age} years old` : 'adult';
   const heightStr = height ? lookup(PHYSICAL.height, height, '') : '';
-  const buildStr = lookup(PHYSICAL.build, build, 'average build');
-  const skinStr = lookup(PHYSICAL.skin, skinTone, 'natural skin tone');
+  const buildStr = lookup(PHYSICAL.build, build, '');
+  const skinStr = lookup(PHYSICAL.skin, skinTone, '');
   const faceStr = faceShape ? lookup(PHYSICAL.faceShape, faceShape, '') : '';
-  const eyeStr = lookup(PHYSICAL.eyeColor, eyeColor, 'expressive eyes');
-  const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, 'natural hair');
+  const eyeStr = lookup(PHYSICAL.eyeColor, eyeColor, '');
+  const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, '');
   const hairStyleStr = lookup(PHYSICAL.hairStyle, hairStyle, '');
   
-  // Role/Class
+  // Role
   const roleKey = characterClass?.toLowerCase().replace(/[\s-]/g, '_') || '';
   const roleStr = ROLES[roleKey] || characterClass || '';
   
-  // Features
+  // Explicit features list
   const featureParts: string[] = [];
   if (details && Array.isArray(details)) {
     details.forEach((d: string) => {
@@ -737,108 +742,110 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
   }
   if (accessories && Array.isArray(accessories)) {
     accessories.forEach((a: string) => {
-      const mapped = ACCESSORIES[a] || `wearing ${a}`;
+      const mapped = ACCESSORIES[a] || a;
       if (!featureParts.includes(mapped)) featureParts.push(mapped);
     });
   }
   
-  // Body modifications
+  // Body modifications - explicit placement
   const modParts: string[] = [];
-  if (tattoos?.length) modParts.push(`${tattooStyle || 'detailed'} tattoos on ${tattoos.join(', ')}`);
-  if (piercings?.length) modParts.push(`piercings: ${piercings.join(', ')}`);
-  if (scars?.length) modParts.push(`scars on ${scars.join(', ')}`);
-  if (implants?.length) modParts.push(`cybernetic implants: ${implants.join(', ')}`);
-  if (prosthetics?.length) modParts.push(`prosthetics: ${prosthetics.join(', ')}`);
-  if (mutations?.length) modParts.push(`mutations: ${mutations.join(', ')}`);
+  if (tattoos?.length) modParts.push(`visible tattoos: ${tattooStyle || ''} style on ${tattoos.join(' and ')}`);
+  if (piercings?.length) modParts.push(`visible piercings on ${piercings.join(' and ')}`);
+  if (scars?.length) modParts.push(`visible scars on ${scars.join(' and ')}`);
+  if (implants?.length) modParts.push(`visible cybernetic implants: ${implants.join(' and ')}`);
+  if (prosthetics?.length) modParts.push(`visible prosthetics: ${prosthetics.join(' and ')}`);
+  if (mutations?.length) modParts.push(`visible mutations: ${mutations.join(' and ')}`);
   
   // Expression
-  let expressionStr = 'direct eye contact with viewer';
+  let expressionStr = 'neutral expression, eyes looking directly at camera';
   if (emotionVariant && EXPRESSIONS[emotionVariant]) {
-    expressionStr = `${EXPRESSIONS[emotionVariant]}, looking at viewer`;
+    expressionStr = `${EXPRESSIONS[emotionVariant]}, eyes at camera`;
   } else if (disposition && EXPRESSIONS[disposition]) {
-    expressionStr = `${EXPRESSIONS[disposition]}, looking at viewer`;
+    expressionStr = `${EXPRESSIONS[disposition]}, eyes at camera`;
   } else if (socialStyle && EXPRESSIONS[socialStyle]) {
-    expressionStr = `${EXPRESSIONS[socialStyle]}, looking at viewer`;
+    expressionStr = `${EXPRESSIONS[socialStyle]}, eyes at camera`;
   }
   
-  // Clothing - genre default OR user specified
+  // Clothing - user override OR genre default
   let clothingStr = '';
   if (hasUserClothing) {
-    // User specified clothing in additionals - don't add extra
     clothingStr = '';
   } else if (clothingDetails?.length) {
-    clothingStr = clothingDetails.join(', ');
+    clothingStr = `wearing exactly: ${clothingDetails.join(', ')}`;
   } else if (clothingStyle) {
-    clothingStr = clothingStyle;
+    clothingStr = `wearing: ${clothingStyle}`;
   } else if (roleStr) {
-    // Role includes clothing hints
     clothingStr = '';
   } else {
-    // Fall back to genre default clothing
-    clothingStr = genreClothing;
+    clothingStr = `wearing: ${genreClothing}`;
   }
   
   // =========================================================================
-  // ASSEMBLE PROMPT
-  // Order: Framing → Environment → User Additionals → Physical → Features → Role → Clothing → Expression → Quality
+  // STRICT PROMPT ASSEMBLY
+  // Format: [FRAMING] [SUBJECT] [PHYSICAL] [FEATURES] [CLOTHING] [EXPRESSION] [ENVIRONMENT] [QUALITY]
+  // Using explicit markers to reduce AI interpretation
   // =========================================================================
   
-  const parts: string[] = [];
+  const sections: string[] = [];
   
-  // 1. Core framing
-  parts.push(PORTRAIT_FRAMING);
+  // 1. Strict framing instruction
+  sections.push(`[COMPOSITION] ${PORTRAIT_FRAMING}`);
   
-  // 2. Genre environment
-  parts.push(`Environment: ${environment}`);
+  // 2. Subject identification
+  sections.push(`[SUBJECT] Single ${ageStr} ${genderStr}`);
   
-  // 3. User additional details (PRIORITY - overrides when present)
+  // 3. Physical attributes - explicit and exact
+  const physicalList: string[] = [];
+  if (buildStr) physicalList.push(buildStr);
+  if (heightStr) physicalList.push(heightStr);
+  if (skinStr) physicalList.push(`skin: ${skinStr}`);
+  if (faceStr) physicalList.push(`face: ${faceStr}`);
+  if (eyeStr) physicalList.push(`eyes: ${eyeStr}`);
+  if (hairColorStr || hairStyleStr) physicalList.push(`hair: ${hairColorStr} ${hairStyleStr}`.trim());
+  
+  if (physicalList.length) {
+    sections.push(`[PHYSICAL] ${physicalList.join('. ')}`);
+  }
+  
+  // 4. User specified details - EXACT RENDERING REQUIRED
   if (userAdditionals.trim()) {
-    parts.push(userAdditionals.trim());
-    console.log("User additionals applied:", userAdditionals.trim());
+    sections.push(`[MUST INCLUDE] ${userAdditionals.trim()}`);
+    console.log("MUST INCLUDE user details:", userAdditionals.trim());
   }
-  
-  // 4. Physical description
-  const physicalParts = [
-    `${ageStr} ${genderStr}`,
-    buildStr,
-    heightStr,
-    skinStr,
-    faceStr,
-    `${eyeStr}`,
-    `${hairColorStr} ${hairStyleStr}`.trim(),
-  ].filter(Boolean);
-  parts.push(physicalParts.join(', '));
   
   // 5. Distinguishing features
   if (featureParts.length) {
-    parts.push(featureParts.join(', '));
+    sections.push(`[FEATURES] ${featureParts.join('. ')}`);
   }
   
   // 6. Body modifications
   if (modParts.length) {
-    parts.push(modParts.join(', '));
+    sections.push(`[MODIFICATIONS] ${modParts.join('. ')}`);
   }
   
-  // 7. Role/class (if not overridden by user)
+  // 7. Role/class
   if (roleStr && !hasUserClothing) {
-    parts.push(roleStr);
+    sections.push(`[ROLE] ${roleStr}`);
   }
   
-  // 8. Clothing (if not in user additionals)
-  if (clothingStr && !hasUserClothing) {
-    parts.push(`Wearing: ${clothingStr}`);
+  // 8. Clothing
+  if (clothingStr) {
+    sections.push(`[ATTIRE] ${clothingStr}`);
   }
   
   // 9. Expression
-  parts.push(expressionStr);
+  sections.push(`[EXPRESSION] ${expressionStr}`);
   
-  // 10. Quality tags
-  parts.push(QUALITY_TAGS);
+  // 10. Environment
+  sections.push(`[BACKGROUND] Blurred ${environment}`);
   
-  const finalPrompt = parts.join('. ');
+  // 11. Quality
+  sections.push(`[QUALITY] ${QUALITY_TAGS}`);
   
-  console.log("Final prompt length:", finalPrompt.length);
-  console.log("Prompt:", finalPrompt);
+  const finalPrompt = sections.join('. ');
+  
+  console.log("Strict prompt assembled, length:", finalPrompt.length);
+  console.log("Full prompt:", finalPrompt);
   
   return { prompt: finalPrompt, negative_prompt: NEGATIVE_PROMPT };
 }
