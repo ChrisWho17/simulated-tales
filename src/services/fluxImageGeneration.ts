@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface PortraitCharacterData {
   name?: string;
   gender?: string;
+  age?: number | string;
   build?: string;
   height?: string;
   hairColor?: string;
@@ -15,6 +16,11 @@ export interface PortraitCharacterData {
   distinguishingFeatures?: string[];
   accessories?: string[];
   details?: string[];
+  // Body shape details
+  bustSize?: string;
+  hipWidth?: string;
+  muscleDefinition?: string;
+  bodyHair?: string;
   // Body modifications
   piercings?: string[];
   tattoos?: string[];
@@ -83,6 +89,7 @@ export async function generatePortraitWithCharacterData(
     body: {
       name: characterData.name || 'Character',
       gender: characterData.gender || 'male',
+      age: characterData.age,
       build: characterData.build || 'average',
       height: characterData.height || 'average',
       hairColor: characterData.hairColor || 'brown',
@@ -93,6 +100,11 @@ export async function generatePortraitWithCharacterData(
       details: characterData.details || [],
       distinguishingFeatures: characterData.distinguishingFeatures || [],
       accessories: characterData.accessories || [],
+      // Body shape details
+      bustSize: characterData.bustSize,
+      hipWidth: characterData.hipWidth,
+      muscleDefinition: characterData.muscleDefinition,
+      bodyHair: characterData.bodyHair,
       // Critical body modifications - passed explicitly
       piercings: characterData.piercings || [],
       tattoos: characterData.tattoos || [],

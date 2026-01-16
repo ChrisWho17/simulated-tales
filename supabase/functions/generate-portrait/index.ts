@@ -46,25 +46,43 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     additionalDetails, characterAdditionals, customDescription,
     characterClass, genre, origin, nationality, ethnicity,
     details, distinguishingFeatures, accessories,
-    piercings, tattoos, scars, implants, prosthetics,
+    piercings, tattoos, tattooStyle, scars, implants, prosthetics, mutations,
     clothingStyle, clothingDetails,
+    // Body shape
+    bustSize, hipWidth, muscleDefinition, bodyHair,
   } = body;
 
   // Build character description
   const desc: string[] = [];
   
+  // Age defaults to 18
+  const charAge = age || 18;
+  
   // Demographics
   const eth = ethnicity || nationality || origin || 'American Caucasian';
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
-  desc.push(`${age || 'adult'} year old ${eth} ${genderWord}`);
+  desc.push(`${charAge} year old ${eth} ${genderWord}`);
   
-  // Body
-  if (build) desc.push(`${build} body type`);
-  if (height) desc.push(`${height} stature`);
+  // Body shape - CRITICAL for female characters
+  if (gender === 'female' || gender === 'other') {
+    if (bustSize && bustSize !== 'medium') {
+      desc.push(`${bustSize} breasts`);
+    }
+    if (hipWidth && hipWidth !== 'average') {
+      desc.push(`${hipWidth} hips`);
+    }
+  }
+  
+  // Build and muscle for all genders
+  if (build) desc.push(`${build} body`);
+  if (muscleDefinition && muscleDefinition !== 'none' && muscleDefinition !== 'toned') {
+    desc.push(`${muscleDefinition} muscles`);
+  }
+  if (height) desc.push(`${height} height`);
   if (skinTone) desc.push(`${skinTone} skin`);
   
   // Face
-  if (faceShape) desc.push(`${faceShape} face shape`);
+  if (faceShape) desc.push(`${faceShape} face`);
   if (eyeColor) desc.push(`${eyeColor} eyes`);
   if (hairColor || hairStyle) {
     desc.push(`${hairColor || ''} ${hairStyle || 'styled'} hair`.trim());
@@ -78,24 +96,28 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   if (allFeatures.length) desc.push(allFeatures.join(', '));
   
   // Body modifications
-  if (tattoos?.length) desc.push('visible tattoos');
+  if (tattoos?.length) {
+    const style = tattooStyle ? `${tattooStyle} style ` : '';
+    desc.push(`${style}tattoos on visible skin`);
+  }
   if (piercings?.length) desc.push('visible piercings');
   if (scars?.length) desc.push('visible scars');
   if (implants?.length) desc.push('cybernetic implants');
   if (prosthetics?.length) desc.push('prosthetic limbs');
+  if (mutations?.length) desc.push('visible mutations');
   
-  // Clothing
+  // Clothing - IMPORTANT
   if (clothingDetails?.length) {
-    desc.push(`wearing ${clothingDetails.join(' and ')}`);
+    desc.push(`wearing ${clothingDetails.join(', ')}`);
   } else if (clothingStyle && clothingStyle !== 'genre_default') {
     desc.push(`wearing ${clothingStyle} style outfit`);
   }
-  // Let AI pick clothing based on role/genre if not specified
+  // If no clothing specified, AI will choose based on role/genre
   
   // Role/class
-  if (characterClass) desc.push(`as a ${characterClass}`);
+  if (characterClass) desc.push(`${characterClass} profession`);
   
-  // User's custom description
+  // User's custom description (can override anything)
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
   if (userDesc) desc.push(userDesc);
   
@@ -105,15 +127,18 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   const character = desc.join(', ');
   
-  // Strong framing instructions at the START of the prompt
-  const prompt = `Three-quarter length portrait photograph showing the subject from knees up to head. Medium wide shot, subject fills 80% of the frame vertically. Full torso, arms, and hands must be visible. The subject is: ${character}. Standing in a ${bg}, soft bokeh background. Professional photography, natural lighting, sharp focus, 8K quality.`;
+  console.log('Building portrait for:', name);
+  console.log('Gender:', gender, '| Build:', build, '| Bust:', bustSize, '| Clothing:', clothingStyle);
+  console.log('Character description:', character);
   
-  console.log('Character:', name, '| Genre:', genre, '| Class:', characterClass);
-  console.log('Full prompt:', prompt);
+  // Strong framing at START - three-quarter body from knees up
+  const prompt = `Three-quarter body portrait photograph from knees to head. Medium-wide shot showing full torso with arms and hands visible. Subject standing, facing camera. ${character}. Background: ${bg}, softly blurred bokeh. Professional photography, natural lighting, sharp focus, photorealistic.`;
+  
+  console.log('Final prompt:', prompt);
   
   return {
     prompt,
-    negative: 'headshot, bust shot, close-up, face only, shoulders up, chest up, cropped at waist, cropped at hips, full body showing feet, anime, cartoon, illustration, painting, 3D render, deformed, bad anatomy, extra limbs, blurry',
+    negative: 'headshot, bust shot, close-up, face only, shoulders up, chest up, waist up, cropped at waist, cropped at hips, full body with feet visible, sitting, anime, cartoon, illustration, painting, 3D render, CGI, deformed, bad anatomy, extra limbs, blurry, low quality',
   };
 }
 
