@@ -2558,7 +2558,10 @@ export function AdventureGame() {
     return (
       <AdventureCreator 
         onSelect={handleScenarioSelect} 
-        onLoadCampaign={() => window.location.reload()} 
+        onLoadCampaign={(campaignId) => {
+          console.log('[AdventureGame] Loading campaign:', campaignId);
+          window.location.reload();
+        }} 
         isLoading={isLoading} 
       />
     );
@@ -2648,7 +2651,10 @@ export function AdventureGame() {
   return (
     <AdventureCreator 
       onSelect={handleScenarioSelect} 
-      onLoadCampaign={() => window.location.reload()} 
+      onLoadCampaign={(campaignId) => {
+        console.log('[AdventureGame] Loading campaign:', campaignId);
+        window.location.reload();
+      }} 
       isLoading={isLoading} 
     />
   );
