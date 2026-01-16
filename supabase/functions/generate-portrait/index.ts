@@ -265,7 +265,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     clothingDesc = `${userDesc}, ${style.costume}`;
   }
   
-  const prompt = `Three-quarter body portrait from knees to head, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, HDR, vibrant colors, cinematic`;
+  const prompt = `Semi-realistic stylized portrait, three-quarter body from knees to head, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, semi-realism art style, vibrant colors, painterly quality, digital art`;
   
   console.log('Final prompt:', prompt);
   
