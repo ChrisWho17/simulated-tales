@@ -11,9 +11,9 @@ const corsHeaders = {
 const STYLE_LOCK = `HYPER-REALISTIC portrait with subtle artistic enhancements, photorealistic human anatomy and skin with visible pores, subsurface scattering, realistic texture, natural imperfections, professional photography quality, 85mm lens f/1.4 perspective, shallow depth of field, dramatic cinematic lighting with rim light, RAW photo aesthetic, SUBTLE STYLIZATION ONLY: slightly enhanced colors, softened background bokeh, gentle painterly touches on hair highlights and clothing folds for artistic flair while maintaining realism, enhanced eye catchlights, refined facial features with artistic polish, National Geographic portrait meets fine art photography, real person in real environment with creative color grading and lighting enhancement, NO CARTOON NO ANIME NO ILLUSTRATION - must look like a real photograph with artistic post-processing`;
 
 // ============================================================================
-// PROMPT PRIORITY - Hyper-realistic with creative flexibility
+// PROMPT PRIORITY - Genre-specific hyper-realism
 // ============================================================================
-const PROMPT_RULES = `Generate a HYPER-REALISTIC portrait photograph. The subject must look like a REAL PERSON photographed professionally. Skin, body, face, hair must all be photorealistic with natural texture and lighting. Allow SUBTLE artistic enhancements: softened backgrounds, enhanced lighting, refined features, artistic color grading - but the person must still look REAL, not illustrated or cartoon. The character must match their specified genre authentically - fantasy characters in period-appropriate settings, modern characters in contemporary environments, sci-fi in futuristic spaces. NEVER default to cyberpunk aesthetics unless explicitly specified. Follow all character details exactly.`;
+const PROMPT_RULES = `Generate a HYPER-REALISTIC portrait photograph of this character. The subject must look like a REAL PERSON photographed professionally. All features (skin, body, face, hair, clothing) must be photorealistic with natural texture and lighting. The character's setting, clothing, and accessories must match their specified GENRE exactly - fantasy uses medieval/magical elements, modern uses contemporary fashion, western uses frontier clothing, horror uses dark atmospheric settings, etc. DO NOT add futuristic, cyberpunk, neon, or tech elements unless the genre explicitly requires them. Follow ALL character details exactly as specified.`;
 
 // ============================================================================
 // CREATIVE FREEDOM - Expanded vocabulary for unrealistic features
@@ -1381,8 +1381,8 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const eth = ethnicity || nationality || origin || '';
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   
-  // Subject line
-  parts.push(`adult ${genderWord}, standing portrait, knees-to-head crop, centered, facing camera, neutral confident stance`);
+  // Subject line - tighter crop for more character focus
+  parts.push(`adult ${genderWord}, portrait from waist up, medium close-up framing, centered composition, facing camera, natural confident pose`);
   
   // Core identity that never changes
   parts.push(`${charAge} year old ${eth} ${genderWord}`.trim());
@@ -1424,15 +1424,17 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     parts.push(`${styleDesc}piercings: ${piercingDescriptions}` || 'tasteful body piercings');
   }
   
-  // Tattoos with style vocabulary
+  // Tattoos with optional style vocabulary
   if (tattoos?.length) {
     const tattooList = Array.isArray(tattoos) ? tattoos : [];
-    const styleDesc = tattooStyle ? `${tattooStyle} style ` : '';
+    // Only apply style if tattooStyle is set and not empty
+    const styleDesc = tattooStyle && tattooStyle.trim() !== '' ? `${tattooStyle} style ` : '';
     const tattooDescriptions = tattooList.map((t: any) => {
       const location = typeof t === 'string' ? t : t.location;
       return `${location} tattoo`;
     }).join(', ');
-    parts.push(`${styleDesc}tattoos: ${tattooDescriptions}` || 'artistic tattoos');
+    // If no style, just list tattoo locations without style prefix
+    parts.push(styleDesc ? `${styleDesc}tattoos: ${tattooDescriptions}` : `tattoos at: ${tattooDescriptions}`);
   }
   
   // Clothing style override - handle gear/underwear logic
@@ -1454,14 +1456,14 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     }
   }
   
-  // Cybernetic implants with specific vocabulary
+  // Implants - genre-appropriate description (not always cybernetic)
   if (implants?.length) {
     const implantList = Array.isArray(implants) ? implants : [];
     const implantDescriptions = implantList.map((i: any) => {
       const type = typeof i === 'string' ? i : i.type || i.location;
-      return `visible ${type} cybernetic implant with detailed tech aesthetic`;
+      return `visible ${type} implant`;
     }).join(', ');
-    parts.push(implantDescriptions || 'visible high-tech cybernetic implants');
+    parts.push(implantDescriptions);
   }
   
   // Prosthetics with material detail

@@ -187,6 +187,7 @@ export const BODY_HAIR_OPTIONS = [{ value: 'none', label: 'None' }, { value: 'li
 
 // Tattoo style options
 export const TATTOO_STYLE_OPTIONS = [
+  { value: '', label: 'None/Natural', description: 'No specific style applied' },
   { value: 'traditional', label: 'Traditional/American', description: 'Bold lines, bright colors' },
   { value: 'tribal', label: 'Tribal', description: 'Bold black patterns' },
   { value: 'realistic', label: 'Realistic/Portrait', description: 'Photorealistic designs' },
