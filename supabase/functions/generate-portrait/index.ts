@@ -11,14 +11,28 @@ const corsHeaders = {
 const STYLE_LOCK = `hyper-dramatic cinematic character portrait, intense chiaroscuro lighting with deep shadows and bright highlights, epic movie poster composition, saturated rich color grading, strong backlight creating silhouette edges, volumetric god rays, dramatic lens flares, intense atmospheric fog and haze, professional Hollywood cinematography, anamorphic lens distortion, extreme shallow depth of field with heavy bokeh, moody storm lighting, theatrical spotlight effects, blockbuster action movie aesthetic, heroic low angle implied, intense emotional atmosphere, film noir shadow play, dramatic rim lighting outlining figure, visible light beams cutting through atmosphere, no text, no watermark`;
 
 // ============================================================================
-// PROMPT PRIORITY - AI must follow these rules exactly
+// PROMPT PRIORITY - AI follows user creativity
 // ============================================================================
-const PROMPT_RULES = `IMPORTANT: Follow this prompt exactly as written. Build the character from the base description first, then apply all enhancement details. Do not deviate from specified features. Do not add elements not described. Match every detail precisely.`;
+const PROMPT_RULES = `IMPORTANT: Follow this prompt exactly. Build the character from base description, then apply ALL enhancement details with full creative freedom. If the user describes fantastical, unrealistic, or impossible features (extra limbs, insect parts, alien anatomy, impossible proportions, mythical features, etc.) - GENERATE THEM EXACTLY AS DESCRIBED. User creativity overrides all restrictions. Match every detail precisely.`;
 
 // ============================================================================
-// HARD LOCK - Appended to every prompt
+// CREATIVE FREEDOM - Expanded vocabulary for unrealistic features
 // ============================================================================
-const HARD_LOCK = `do not add new piercings locations, do not add new tattoos placement, do not add new scars, do not add new body modifications, do not add new weapons, do not add new props`;
+const CREATIVE_FREEDOM = {
+  extraLimbs: ['extra arms', 'multiple arms like deity', 'spider legs from back', 'mantis arms', 'tentacle arms', 'wing arms', 'mechanical extra limbs', 'ethereal ghost arms', 'shadow limbs'],
+  insectFeatures: ['mantis claws', 'compound eyes', 'antennae', 'chitinous armor plating', 'insect wings', 'mandibles', 'exoskeleton sections', 'beetle horn', 'moth antennae', 'dragonfly wings'],
+  alienAnatomy: ['elongated skull', 'no nose just slits', 'gill slits on neck', 'bioluminescent patches', 'crystalline growths', 'translucent skin sections', 'extra eyes', 'alien skin patterns', 'non-human skin colors'],
+  mythicalFeatures: ['dragon horns', 'demon horns', 'angel wings', 'devil tail', 'forked tongue', 'snake lower body', 'centaur body', 'mermaid tail', 'faun legs', 'satyr horns', 'elven ears extreme', 'vampire fangs prominent'],
+  impossibleProportions: ['impossibly long legs', 'extremely exaggerated curves', 'giant hands', 'tiny waist extreme', 'massive muscular build', 'ethereally thin', 'towering height implied', 'impossibly long hair'],
+  fantasyElements: ['floating hair defying gravity', 'glowing from within', 'partially transparent', 'made of crystal', 'fire for hair', 'water body parts', 'plant growing from skin', 'starfield in eyes', 'galaxy pattern skin'],
+  bodyHorror: ['stitched together parts', 'visible bones aesthetic', 'cracked porcelain skin', 'doll joints visible', 'clockwork visible under skin', 'vines growing through', 'coral growths', 'fungal patches'],
+  mechanicalExtreme: ['full robot arm', 'mechanical spine visible', 'gear joints', 'steam vents in skin', 'hydraulic limbs', 'screen face', 'cable hair', 'industrial body parts'],
+};
+
+// ============================================================================
+// SOFT GUIDANCE - Only prevents unwanted additions, not requested features  
+// ============================================================================
+const SOFT_GUIDANCE = `only avoid adding elements the user did not request - if they describe something, include it no matter how fantastical`;
 
 // ============================================================================
 // ANATOMY & MODIFICATION VOCABULARY - Comprehensive AI knowledge base
@@ -1065,7 +1079,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   }
   
   promptParts.push(`ART STYLE: ${STYLE_LOCK}`);
-  promptParts.push(`RESTRICTIONS: ${HARD_LOCK}`);
+  promptParts.push(`GUIDANCE: ${SOFT_GUIDANCE}`);
   
   const prompt = promptParts.join('. ');
   
@@ -1073,7 +1087,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   return {
     prompt,
-    negative: 'blurry, watermark, text, low quality, amateur, deformed, bad anatomy, extra limbs, missing limbs, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, bad proportions, gross proportions, malformed, poorly drawn, bad hands, missing fingers, extra fingers, fused fingers, too many fingers, long neck, username, signature, words, letters, nsfw, nude, naked, topless, exposed chest, lingerie, underwear, bra, panties',
+    negative: 'blurry, watermark, text, low quality, amateur, poorly drawn, bad hands, username, signature, words, letters, nsfw, nude, naked, topless, exposed chest, lingerie, underwear, bra, panties',
   };
 }
 
