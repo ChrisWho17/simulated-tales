@@ -484,15 +484,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Origin clothing style:', originClothingStyle);
   console.log('Final clothing direction:', clothingDesc);
   
-  // Loosened creative prompt - give AI artistic freedom while maintaining quality
-  const prompt = `Character portrait of ${character}, wearing ${clothingDesc}, high quality digital art, realistic proportions and anatomy, ${style.background}, ${style.lighting}, professional composition, detailed and expressive, cinematic feel`;
+  // Maximum creative freedom - minimal constraints, let AI interpret freely
+  const prompt = `${character}, ${clothingDesc}, ${style.background}, ${style.lighting}`;
   
   console.log('Final prompt:', prompt);
   console.log('Character class for costume:', characterClass);
   
   return {
     prompt,
-    negative: 'blurry, low quality, watermark, text, extra fingers, extra limbs, deformed',
+    negative: 'blurry, watermark, text',
   };
 }
 
