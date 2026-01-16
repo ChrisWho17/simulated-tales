@@ -522,6 +522,8 @@ export function buildPortraitPrompt(
       const desc = PIERCING_PROMPT_MAP[piercing];
       if (desc) {
         details.push(desc);
+      } else {
+        details.push(`${piercing} piercing`);
       }
     }
   }
@@ -532,7 +534,81 @@ export function buildPortraitPrompt(
       const desc = TATTOO_PROMPT_MAP[tattoo];
       if (desc) {
         details.push(desc);
+      } else {
+        details.push(`${tattoo} tattoo`);
       }
+    }
+  }
+  
+  // Extended body modifications - scars
+  if (character.scars && character.scars.length > 0) {
+    for (const scar of character.scars) {
+      const desc = SCAR_PROMPT_MAP[scar];
+      if (desc) {
+        details.push(desc);
+      } else {
+        details.push(`${scar} scar`);
+      }
+    }
+  }
+  
+  // Extended body modifications - prosthetics (critical for cyberpunk)
+  if (character.prosthetics && character.prosthetics.length > 0) {
+    for (const prosthetic of character.prosthetics) {
+      const desc = PROSTHETIC_PROMPT_MAP[prosthetic];
+      if (desc) {
+        details.push(desc);
+      } else {
+        details.push(`${prosthetic} prosthetic`);
+      }
+    }
+  }
+  
+  // Extended body modifications - cybernetic implants (critical for cyberpunk)
+  if (character.implants && character.implants.length > 0) {
+    for (const implant of character.implants) {
+      const desc = IMPLANT_PROMPT_MAP[implant];
+      if (desc) {
+        details.push(desc);
+      } else {
+        details.push(`${implant} cybernetic implant, chrome augmentation`);
+      }
+    }
+  }
+  
+  // Extended body modifications - mutations
+  if (character.mutations && character.mutations.length > 0) {
+    for (const mutation of character.mutations) {
+      const desc = MUTATION_PROMPT_MAP[mutation];
+      if (desc) {
+        details.push(desc);
+      } else {
+        details.push(`${mutation} mutation`);
+      }
+    }
+  }
+  
+  // Clothing style override
+  let clothingOverride = '';
+  if (character.clothingStyle && character.clothingStyle !== 'genre_default') {
+    const CLOTHING_STYLE_DESCRIPTIONS: Record<string, string> = {
+      'streetwear': 'urban streetwear fashion, hoodies, sneakers',
+      'formal': 'formal attire, suit and tie',
+      'casual': 'casual everyday clothing',
+      'punk': 'punk fashion, leather jacket, spikes, chains',
+      'goth': 'gothic fashion, black clothing, dark aesthetic',
+      'military': 'military style clothing, tactical gear',
+      'sporty': 'athletic sportswear',
+      'vintage': 'vintage retro fashion',
+      'haute_couture': 'high fashion, designer clothing',
+      'cyberpunk_street': 'cyberpunk streetwear, neon accents, tech-wear',
+      'corporate': 'corporate professional attire',
+      'nomad': 'nomad wasteland clothing, dusty road-worn',
+      'rocker': 'rock and roll fashion, band shirts, leather',
+    };
+    clothingOverride = CLOTHING_STYLE_DESCRIPTIONS[character.clothingStyle] || character.clothingStyle;
+    if (clothingOverride) {
+      details.push(`clothing style: ${clothingOverride}`);
     }
   }
   
@@ -548,7 +624,13 @@ export function buildPortraitPrompt(
   // Deduplicate details
   const uniqueDetails = [...new Set(details)];
   
-  return [
+  // Separate body modifications for emphasis
+  const bodyModKeywords = ['piercing', 'tattoo', 'scar', 'prosthetic', 'implant', 'cybernetic', 'mutation', 'chrome', 'mechanical'];
+  const bodyMods = uniqueDetails.filter(d => bodyModKeywords.some(kw => d.toLowerCase().includes(kw)));
+  const otherDetails = uniqueDetails.filter(d => !bodyModKeywords.some(kw => d.toLowerCase().includes(kw)));
+  
+  // Build final prompt with body mods emphasized
+  const promptParts = [
     STYLE_BASE,
     gender,
     buildDesc,
@@ -556,12 +638,16 @@ export function buildPortraitPrompt(
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,
     eyeColor,
+    // BODY MODIFICATIONS - emphasized for visibility
+    bodyMods.length > 0 ? `IMPORTANT visible body modifications: ${bodyMods.join(', ')}` : '',
     roleStyle,
     genreConfig.style,
     emotionStyle,
-    uniqueDetails.join(', '),
+    otherDetails.length > 0 ? otherDetails.join(', ') : '',
     `dramatic background: ${background}`,
-  ].filter(Boolean).join(', ');
+  ];
+  
+  return promptParts.filter(Boolean).join(', ');
 }
 
 // Quick prompt builder for simpler use cases
