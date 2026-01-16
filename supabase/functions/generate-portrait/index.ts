@@ -484,15 +484,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Origin clothing style:', originClothingStyle);
   console.log('Final clothing direction:', clothingDesc);
   
-  // Professional realistic art style prompt - NO cartoon/stylized elements
-  const prompt = `Knees-to-head standing character portrait, centered full figure crop at the knees, facing camera, confident neutral stance, clean silhouette, readable design, ${character}, MUST BE WEARING: ${clothingDesc}, High-end digital illustration with realistic rendering: realistic anatomy, realistic materials and fabrics, realistic skin with natural texture and pores, photographic quality lighting, crisp details, polished AAA game character art finish, Cinematic lighting: soft key light + subtle rim light, realistic specular highlights on hard surfaces, gentle bloom, atmospheric depth, background bokeh, Material fidelity: visible fabric weave and stitching, metal reflections and micro-scratches, leather grain, realistic cloth physics, Background: ${style.background}, ${style.lighting}, depth and atmosphere, character is the focus, Camera: 50mm portrait lens, eye-level, slight depth of field, sharp face and eyes, clean professional composition, Design coherence: outfit matches character role and genre, consistent color palette, unified visual language, Quality: correct hands with 5 fingers, correct human proportions, no artifacts, no extra limbs`;
+  // Loosened creative prompt - give AI artistic freedom while maintaining quality
+  const prompt = `Character portrait of ${character}, wearing ${clothingDesc}, high quality digital art, realistic proportions and anatomy, ${style.background}, ${style.lighting}, professional composition, detailed and expressive, cinematic feel`;
   
   console.log('Final prompt:', prompt);
   console.log('Character class for costume:', characterClass);
   
   return {
     prompt,
-    negative: 'cartoon, anime, cel-shaded, stylized, illustrated, painted look, flat colors, lowpoly, pixel art, sketchy, lineart, washed out, over-saturated, muddy lighting, blurry, low-res, jpeg artifacts, watermark, logo, text, extra fingers, extra limbs, deformed hands, asymmetrical eyes, plastic skin, bad anatomy, cropped head, cut-off face, full body with feet, feet visible, ground visible, casual clothes when should be genre-specific, wrong outfit for character class',
+    negative: 'blurry, low quality, watermark, text, extra fingers, extra limbs, deformed',
   };
 }
 
