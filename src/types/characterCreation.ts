@@ -81,61 +81,103 @@ export const ACCESSORIES = ['Glasses', 'Sunglasses', 'Earrings', 'Necklace', 'Ch
 
 // Extended body modification options
 export const PIERCING_OPTIONS = [
-  // Face
-  { value: 'ear_lobe', label: 'Ear Lobe', category: 'face' },
-  { value: 'ear_helix', label: 'Ear Helix', category: 'face' },
-  { value: 'ear_industrial', label: 'Industrial Bar', category: 'face' },
+  // Head - Ears
+  { value: 'ear_lobe', label: 'Ear Lobe', category: 'ears' },
+  { value: 'ear_helix', label: 'Ear Helix', category: 'ears' },
+  { value: 'ear_industrial', label: 'Industrial Bar', category: 'ears' },
+  { value: 'ear_tragus', label: 'Tragus', category: 'ears' },
+  { value: 'ear_conch', label: 'Conch', category: 'ears' },
+  { value: 'ear_daith', label: 'Daith', category: 'ears' },
+  // Head - Face
   { value: 'nose_nostril', label: 'Nostril', category: 'face' },
   { value: 'nose_septum', label: 'Septum', category: 'face' },
-  { value: 'lip_labret', label: 'Labret', category: 'face' },
-  { value: 'lip_snake_bites', label: 'Snake Bites', category: 'face' },
-  { value: 'lip_monroe', label: 'Monroe', category: 'face' },
+  { value: 'nose_bridge', label: 'Bridge', category: 'face' },
   { value: 'eyebrow', label: 'Eyebrow', category: 'face' },
-  { value: 'tongue', label: 'Tongue', category: 'face' },
-  // Body
-  { value: 'navel', label: 'Navel/Belly Button', category: 'body' },
-  { value: 'nipple', label: 'Nipple', category: 'body' },
-  { value: 'dermal_chest', label: 'Chest Dermals', category: 'body' },
-  { value: 'dermal_hips', label: 'Hip Dermals', category: 'body' },
+  { value: 'anti_eyebrow', label: 'Anti-Eyebrow', category: 'face' },
+  { value: 'cheek_dermal', label: 'Cheek Dermal', category: 'face' },
+  // Head - Mouth
+  { value: 'lip_labret', label: 'Labret', category: 'mouth' },
+  { value: 'lip_snake_bites', label: 'Snake Bites', category: 'mouth' },
+  { value: 'lip_angel_bites', label: 'Angel Bites', category: 'mouth' },
+  { value: 'lip_monroe', label: 'Monroe', category: 'mouth' },
+  { value: 'lip_medusa', label: 'Medusa', category: 'mouth' },
+  { value: 'tongue', label: 'Tongue', category: 'mouth' },
+  { value: 'tongue_web', label: 'Tongue Web', category: 'mouth' },
+  { value: 'smiley', label: 'Smiley', category: 'mouth' },
+  // Body - Torso
+  { value: 'navel', label: 'Navel/Belly Button', category: 'torso' },
+  { value: 'nipple', label: 'Nipple', category: 'torso' },
+  { value: 'dermal_chest', label: 'Chest Dermals', category: 'torso' },
+  { value: 'dermal_sternum', label: 'Sternum Dermals', category: 'torso' },
+  { value: 'dermal_hips', label: 'Hip Dermals', category: 'torso' },
+  { value: 'corset_piercings', label: 'Corset Piercings', category: 'torso' },
   // Intimate (18+)
   { value: 'intimate_male', label: 'Prince Albert', category: 'intimate' },
   { value: 'intimate_female', label: 'VCH', category: 'intimate' },
+  { value: 'intimate_other', label: 'Other Intimate', category: 'intimate' },
 ];
 
 export const TATTOO_OPTIONS = [
-  // Face & Neck
+  // Head - Face
   { value: 'face_tribal', label: 'Face Tribal', category: 'face' },
   { value: 'face_tears', label: 'Tear Drops', category: 'face' },
   { value: 'face_makeup', label: 'Cosmetic/Makeup', category: 'face' },
+  { value: 'face_forehead', label: 'Forehead', category: 'face' },
+  { value: 'face_temple', label: 'Temple', category: 'face' },
+  // Head - Neck
   { value: 'neck_front', label: 'Front Neck', category: 'neck' },
   { value: 'neck_sides', label: 'Side Neck', category: 'neck' },
   { value: 'neck_back', label: 'Back of Neck', category: 'neck' },
-  // Arms
-  { value: 'arm_sleeve_full', label: 'Full Sleeve', category: 'arms' },
-  { value: 'arm_sleeve_half', label: 'Half Sleeve', category: 'arms' },
-  { value: 'arm_forearm', label: 'Forearm Only', category: 'arms' },
-  { value: 'arm_bicep', label: 'Bicep', category: 'arms' },
-  { value: 'hand', label: 'Hand/Finger', category: 'arms' },
-  // Torso
-  { value: 'chest_full', label: 'Full Chest Piece', category: 'torso' },
-  { value: 'chest_side', label: 'Side Chest', category: 'torso' },
-  { value: 'sternum', label: 'Sternum', category: 'torso' },
-  { value: 'ribs', label: 'Rib Cage', category: 'torso' },
-  { value: 'stomach', label: 'Stomach', category: 'torso' },
-  // Back
-  { value: 'back_full', label: 'Full Back', category: 'back' },
-  { value: 'back_upper', label: 'Upper Back', category: 'back' },
-  { value: 'back_lower', label: 'Lower Back', category: 'back' },
-  { value: 'back_spine', label: 'Spine', category: 'back' },
-  { value: 'shoulder_blade', label: 'Shoulder Blade', category: 'back' },
-  // Legs
-  { value: 'thigh', label: 'Thigh', category: 'legs' },
-  { value: 'calf', label: 'Calf', category: 'legs' },
-  { value: 'leg_sleeve', label: 'Leg Sleeve', category: 'legs' },
-  { value: 'ankle', label: 'Ankle', category: 'legs' },
+  { value: 'neck_throat', label: 'Throat', category: 'neck' },
+  // Head - Scalp
+  { value: 'scalp', label: 'Scalp', category: 'head' },
+  { value: 'behind_ear', label: 'Behind Ear', category: 'head' },
+  // Arms - Upper
+  { value: 'arm_sleeve_full', label: 'Full Sleeve', category: 'upper arms' },
+  { value: 'arm_sleeve_half', label: 'Half Sleeve', category: 'upper arms' },
+  { value: 'arm_bicep', label: 'Bicep', category: 'upper arms' },
+  { value: 'shoulder', label: 'Shoulder', category: 'upper arms' },
+  // Arms - Lower
+  { value: 'arm_forearm', label: 'Forearm', category: 'lower arms' },
+  { value: 'arm_inner_forearm', label: 'Inner Forearm', category: 'lower arms' },
+  { value: 'wrist', label: 'Wrist', category: 'lower arms' },
+  { value: 'hand', label: 'Hand', category: 'lower arms' },
+  { value: 'fingers', label: 'Fingers', category: 'lower arms' },
+  { value: 'knuckles', label: 'Knuckles', category: 'lower arms' },
+  // Torso - Front
+  { value: 'chest_full', label: 'Full Chest Piece', category: 'chest' },
+  { value: 'chest_side', label: 'Side Chest', category: 'chest' },
+  { value: 'sternum', label: 'Sternum', category: 'chest' },
+  { value: 'under_breast', label: 'Under Breast', category: 'chest' },
+  // Torso - Sides
+  { value: 'ribs', label: 'Rib Cage', category: 'sides' },
+  { value: 'side_torso', label: 'Side Torso', category: 'sides' },
+  // Torso - Abdomen
+  { value: 'stomach', label: 'Stomach', category: 'abdomen' },
+  { value: 'navel_area', label: 'Navel Area', category: 'abdomen' },
+  { value: 'hip_bones', label: 'Hip Bones', category: 'abdomen' },
+  // Back - Upper
+  { value: 'back_full', label: 'Full Back', category: 'upper back' },
+  { value: 'back_upper', label: 'Upper Back', category: 'upper back' },
+  { value: 'shoulder_blade', label: 'Shoulder Blade', category: 'upper back' },
+  // Back - Lower
+  { value: 'back_lower', label: 'Lower Back', category: 'lower back' },
+  { value: 'back_spine', label: 'Spine', category: 'lower back' },
+  { value: 'sacrum', label: 'Sacrum', category: 'lower back' },
+  // Legs - Upper
+  { value: 'thigh_front', label: 'Front Thigh', category: 'upper legs' },
+  { value: 'thigh_side', label: 'Side Thigh', category: 'upper legs' },
+  { value: 'thigh_back', label: 'Back Thigh', category: 'upper legs' },
+  // Legs - Lower
+  { value: 'calf', label: 'Calf', category: 'lower legs' },
+  { value: 'shin', label: 'Shin', category: 'lower legs' },
+  { value: 'leg_sleeve', label: 'Leg Sleeve', category: 'lower legs' },
+  { value: 'ankle', label: 'Ankle', category: 'lower legs' },
+  { value: 'foot', label: 'Foot', category: 'lower legs' },
   // Intimate (18+)
   { value: 'intimate_area', label: 'Intimate Area', category: 'intimate' },
   { value: 'inner_thigh', label: 'Inner Thigh', category: 'intimate' },
+  { value: 'buttocks', label: 'Buttocks', category: 'intimate' },
 ];
 
 export const BUST_OPTIONS = [{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'very large', label: 'Very Large' }];
