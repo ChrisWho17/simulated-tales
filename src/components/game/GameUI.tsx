@@ -121,7 +121,8 @@ async function generateAIDialogue(
   isFirst: boolean,
   memoryStore?: NPCMemoryStore,
   conversationHistory?: Array<{ playerSaid: string; npcResponse: string }>,
-  isFarewell?: boolean
+  isFarewell?: boolean,
+  genre?: string
 ): Promise<{ dialogue: string; importantTopics: string[]; indicators?: DialogueIndicators } | null> {
   try {
     // Build memory context for the NPC
@@ -173,6 +174,29 @@ async function generateAIDialogue(
       // Clothing system not available
     }
     
+    // Get body modification context (piercings, tattoos) for NPC reactions
+    let playerAppearanceContext = '';
+    try {
+      const { buildAppearanceContextForAI } = await import('@/game/appearanceReactionSystem');
+      // Load character from localStorage
+      const savedCharacter = localStorage.getItem(CHARACTER_KEY);
+      if (savedCharacter) {
+        const character = JSON.parse(savedCharacter);
+        if (character?.appearance?.full) {
+          const full = character.appearance.full;
+          playerAppearanceContext = buildAppearanceContextForAI(
+            full.piercingStyle,
+            full.tattooStyle,
+            full.piercings || [],
+            full.tattoos || [],
+            genre || 'urban'
+          );
+        }
+      }
+    } catch (e) {
+      // Appearance reaction system not available
+    }
+    
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-npc-dialogue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -196,6 +220,7 @@ async function generateAIDialogue(
           recentMemories,
           patterns,
           playerClothingContext,
+          playerAppearanceContext,
         },
         playerInput,
         location,

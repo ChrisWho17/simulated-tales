@@ -50,6 +50,8 @@ interface NPCContext {
   relationshipMilestone?: MilestoneType;
   // Clothing/fashion context
   playerClothingContext?: string;
+  // Body modification context (piercings, tattoos)
+  playerAppearanceContext?: string;
 }
 
 interface ConversationExchange {
@@ -184,6 +186,20 @@ serve(async (req) => {
     let clothingContext = '';
     if (npc.playerClothingContext) {
       clothingContext = `\n\n${npc.playerClothingContext}\n\nYou may comment on the player's outfit if it seems remarkable (very stylish, intimidating, or poorly put together). Don't force comments - only mention clothing if it's genuinely noteworthy and fits the conversation naturally.`;
+    }
+
+    // Body modification context (piercings, tattoos) - separate from clothing
+    let appearanceModContext = '';
+    if (npc.playerAppearanceContext) {
+      appearanceModContext = `\n\n===== PLAYER BODY MODIFICATIONS =====\n${npc.playerAppearanceContext}
+
+BODY MODIFICATION REACTIONS:
+- On FIRST meeting, you may notice and react to visible piercings/tattoos based on your personality and the genre
+- Conservative NPCs may be uncomfortable with extreme modifications
+- Artists/rebels may appreciate or compliment unique ink/piercings  
+- In some genres (cyberpunk, punk) heavy mods are normal; in others (medieval, business) they're shocking
+- Don't force comments - only react if your character would genuinely notice/care
+- Use markers: [APPEARANCE_REACTION] when commenting on their body mods`;
     }
 
     // ============= PLAYER STATE REACTIONS =============
@@ -357,6 +373,7 @@ SETTING:
 ${conversationContext}
 ${farewellContext}
 ${clothingContext}
+${appearanceModContext}
 ${playerStateContext}
 ${weatherSection}
 
