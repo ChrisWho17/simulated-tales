@@ -500,7 +500,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   // STRICT FRAMING: Lock camera from knees up - reinforce at start and end of prompt
   const framingInstruction = 'FRAMING: three-quarter body shot, cropped from knees to top of head, DO NOT show feet or full body, DO NOT crop at waist or shoulders';
   
-  const prompt = `${framingInstruction}, Semi-realistic portrait, realistic skin texture with pores and subsurface scattering, soft cinematic lighting, stylized anime-inspired eyes, vibrant hair, clean line art, 4K detailed render, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, ${framingInstruction}`;
+  const prompt = `${framingInstruction}, Hyper-realistic skin with detailed pores, subsurface scattering, realistic skin texture and lighting, semi-realistic stylized body proportions, exaggerated body attributes clearly visible, soft cinematic lighting, stylized expressive eyes, vibrant colored hair, 4K detailed render, ${character}, wearing ${clothingDesc}, background: ${style.background}, ${style.lighting}, ${framingInstruction}`;
   
   console.log('Final prompt:', prompt);
   console.log('Selected costume:', selectedCostume);
