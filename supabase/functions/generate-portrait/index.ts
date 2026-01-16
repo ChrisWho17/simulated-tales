@@ -897,15 +897,12 @@ function buildLockedReferencePrompt(body: any) {
     expression = 'intense combat-ready expression, focused determined eyes';
   }
   
-  // Determine final clothing - use override if specified, otherwise use role/genre default
-  const finalClothing = clothingOverride || roleStyle;
-  
   // =========================================================================
-  // BUILD PHOTOREALISTIC PROMPT
-  // Structure: [Photo Type] [Subject Description] [Outfit] [Setting] [Technical]
+  // BUILD PHOTOREALISTIC PROMPT - Clean, minimal, no genre clothing
+  // Structure: [Photo Type] [Subject] [Setting] [Technical]
   // =========================================================================
   
-  // Subject description - who is this person
+  // Subject description - physical attributes only
   const subjectParts = [
     `${ageDesc} ${genderDesc}`,
     buildDesc,
@@ -921,27 +918,24 @@ function buildLockedReferencePrompt(body: any) {
   
   const subjectDesc = subjectParts.join(', ');
   
-  // Build the final prompt in optimal order for photorealism
+  // Build clean prompt - NO genre clothing, just the person
   const finalPrompt = [
-    // 1. Photography style first - tells model this is a photo
+    // 1. Photography style
     PHOTO_PREFIX,
     
     // 2. Framing
     PHOTO_FRAMING,
     
-    // 3. Subject (the person)
+    // 3. Subject (the person - physical only)
     subjectDesc,
     
-    // 4. Clothing/outfit
-    finalClothing,
-    
-    // 5. Expression
+    // 4. Simple expression
     expression,
     
-    // 6. Background/setting
-    `background: ${background}`,
+    // 5. Neutral background
+    'simple neutral background',
     
-    // 7. Technical quality markers
+    // 6. Technical quality
     PHOTO_QUALITY,
   ].filter(Boolean).join(', ');
   
