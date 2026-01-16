@@ -14,14 +14,14 @@ const corsHeaders = {
 
 // [CHARACTER FRAMING - LOCKED]
 const CHARACTER_IN_ENVIRONMENT = `
-Three-quarter length portrait from knees to head, vertical orientation. Shows knees at bottom edge, thighs, hips, torso, arms, shoulders, and head at top with space above. Body angled 15-20 degrees, face and eyes looking directly at camera. Background softly blurred with visible environment context.
+Character portrait from knees to head, vertical orientation. Shows knees at bottom, thighs, torso, arms, shoulders, head at top. Body angled 15-20 degrees, face and eyes looking at viewer. Blurred background with genre environment.
 `.trim();
 
 // [QUALITY TAGS]
-const QUALITY_TAGS = `Photorealistic, high detail, sharp focus on face and body, blurred background, 8K, natural lighting`;
+const QUALITY_TAGS = `Photorealistic, detailed, sharp focus on character, blurred background, 8K`;
 
-// [NEGATIVE PROMPTS TO AVOID - Anti-modeling]
-const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot, studio background, seamless backdrop, gradient background, fashion photography, modeling pose, catalog shoot, isolated subject, no environmental context, plain backdrop, white background, gray background`;
+// [NEGATIVE PROMPTS]
+const NEGATIVE_PROMPT = `anime, cartoon, illustration, 3d render, CGI, painting, sketch, drawing, looking away, back view, profile view, side glance, extra limbs, deformed, bad anatomy, cropped at waist, cropped at chest, close-up, headshot, bust shot, face only, chest up, waist up, full body, feet visible, below knees, plain background, white background, gray background`;
 
 // ============================================================================
 // 🎨 GENRE VISUAL LOCK - ATMOSPHERIC FRAMEWORK
