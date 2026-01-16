@@ -10,11 +10,11 @@ const corsHeaders = {
 // Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style - Enforcing FRONTAL pose
+// LAYER 4: Photography Style - Enforcing FRONTAL pose, KNEES TO HEAD framing
 const LAYER_STYLE = {
   medium: 'cinematic digital art portrait, highly detailed, artstation quality',
   quality: 'sharp focus, detailed skin, dramatic lighting, detailed eyes, 8k resolution',
-  framing: 'front-facing portrait from waist up, facing viewer directly, looking straight at camera with confident expression, symmetrical pose',
+  framing: 'three-quarter body portrait from knees to head, body facing viewer with slight angle, looking straight at camera with confident expression, eye contact',
 };
 
 // Comprehensive negative prompts including body anomalies and pose issues
