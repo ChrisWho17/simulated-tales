@@ -6,10 +6,9 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// PORTRAIT STYLE CONSTANTS - Realistic waist-up portraits
+// PORTRAIT STYLE CONSTANTS - Realistic knee-to-head portraits
 // ============================================================================
 
-// Realistic photo style - knees up to head framing
 const PORTRAIT_STYLE_BASE = [
   'ultra realistic photograph',
   'professional portrait photography',
@@ -24,6 +23,8 @@ const PORTRAIT_STYLE_BASE = [
   'detailed eyes with natural reflections',
   'natural hair texture',
   'authentic clothing fabric textures',
+  'full environment visible in background',
+  'character in foreground with detailed background scenery',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
@@ -48,10 +49,13 @@ const PORTRAIT_NEGATIVE = [
   'doll-like',
   'oversaturated',
   'overexposed',
+  'simple background',
+  'plain background',
+  'white background',
 ].join(', ');
 
 // ============================================================================
-// GENRE STYLES FOR NPCs - Detailed environments
+// GENRE STYLES - Detailed environments matching genre
 // ============================================================================
 
 const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
@@ -142,75 +146,291 @@ const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
 };
 
 // ============================================================================
+// PHYSICAL ATTRIBUTE STYLES
+// ============================================================================
+
+const GENDER_STYLES: Record<string, string> = {
+  male: 'male, masculine features, strong defined jawline',
+  female: 'female, feminine features, beautiful face, soft cheekbones',
+  nonbinary: 'androgynous features, ambiguous gender presentation',
+};
+
+const BUILD_STYLES: Record<string, string> = {
+  athletic: 'athletic muscular build, toned physique, fit',
+  lean: 'lean agile build, wiry muscles, quick',
+  muscular: 'heavily muscular imposing build, broad shoulders, powerful',
+  average: 'average build, normal proportions',
+  slim: 'slim slender build, thin frame',
+  stocky: 'stocky sturdy build, compact powerful',
+  large: 'large heavy build, big frame, intimidating size',
+  heavyset: 'heavyset large build, broad heavy frame, imposing presence',
+  curvy: 'curvy hourglass figure, full figured, voluptuous feminine silhouette',
+  petite: 'petite small frame, delicate build',
+  tall: 'tall imposing height, long limbs',
+  thick: 'thick curvy build, full figured, soft curves',
+  lithe: 'lithe graceful build, elegant slender, dancer physique',
+};
+
+const SKIN_TONES: Record<string, string> = {
+  pale: 'pale fair skin',
+  light: 'light skin tone',
+  fair: 'fair skin tone',
+  medium: 'medium skin tone',
+  tan: 'tanned skin',
+  olive: 'olive skin tone',
+  brown: 'brown skin tone',
+  dark: 'dark skin tone',
+  ebony: 'deep ebony skin tone',
+};
+
+const HAIR_STYLES: Record<string, string> = {
+  short: 'short cropped hair',
+  military: 'military buzz cut, regulation length',
+  mohawk: 'mohawk hairstyle, shaved sides',
+  shaved: 'completely shaved head, bald',
+  bald: 'bald head',
+  long: 'long flowing hair',
+  ponytail: 'hair tied back in ponytail',
+  braided: 'braided hair, warrior braids',
+  undercut: 'undercut hairstyle, longer on top',
+  messy: 'messy unkempt hair',
+  slicked: 'slicked back hair',
+  curly: 'curly textured hair',
+  dreads: 'dreadlocks hairstyle',
+  wavy: 'wavy flowing hair',
+  spiky: 'spiky styled hair',
+};
+
+const HAIR_COLORS: Record<string, string> = {
+  black: 'jet black hair',
+  brown: 'brown hair',
+  darkBrown: 'dark brown hair',
+  lightBrown: 'light brown hair',
+  blonde: 'blonde hair',
+  dirtyBlonde: 'dirty blonde hair',
+  platinum: 'platinum blonde hair',
+  red: 'red hair, auburn',
+  auburn: 'auburn red hair',
+  ginger: 'ginger orange hair',
+  white: 'white silver hair',
+  gray: 'gray graying hair',
+  silver: 'silver white hair',
+  blue: 'blue dyed hair',
+  pink: 'pink dyed hair',
+  purple: 'purple dyed hair',
+  green: 'green dyed hair',
+};
+
+const EYE_COLORS: Record<string, string> = {
+  brown: 'brown eyes',
+  blue: 'blue eyes',
+  green: 'green eyes',
+  hazel: 'hazel eyes',
+  gray: 'gray eyes',
+  amber: 'amber golden eyes',
+  heterochromia: 'heterochromia different colored eyes',
+  cybernetic: 'glowing cybernetic eyes',
+  violet: 'violet purple eyes',
+};
+
+// ============================================================================
+// DETAIL OPTIONS
+// ============================================================================
+
+const DETAIL_OPTIONS: Record<string, string> = {
+  scars: 'facial scars, battle damage marks, healed wounds',
+  tattoos: 'tattoos, sleeve tattoos, meaningful ink, tribal markings',
+  cybernetics: 'cybernetic augmentations, mechanical parts, tech implants, chrome',
+  eyepatch: 'eyepatch over one eye, missing eye',
+  beard: 'beard, facial hair, stubble',
+  cleanShaven: 'clean shaven, smooth face',
+  glasses: 'glasses, eyewear',
+  goggles: 'goggles on forehead, protective eyewear',
+  freckles: 'freckles across face and nose',
+  weathered: 'weathered skin, sun-damaged, experienced looking',
+  young: 'youthful face, young looking',
+  aged: 'aged mature face, wrinkles, experienced',
+  piercings: 'ear piercings, facial piercings',
+  makeup: 'makeup, face paint',
+  mask: 'face mask, balaclava pulled down',
+  helmet: 'combat helmet on head',
+  headset: 'headset, communication gear',
+  dirty: 'dirt and grime on face, unwashed',
+  clean: 'clean well-maintained appearance',
+};
+
+// ============================================================================
+// ROLE/OCCUPATION STYLES
+// ============================================================================
+
+const ROLE_STYLES: Record<string, string> = {
+  soldier: 'soldier, assault rifle, tactical vest, combat helmet, dog tags',
+  medic: 'combat medic, medical supplies, first aid pouch',
+  sniper: 'sniper specialist, scoped rifle, camouflage',
+  heavy: 'heavy weapons specialist, large weapon, ammo belts, reinforced armor',
+  engineer: 'engineer, tool belt, welding goggles, work uniform',
+  pilot: 'pilot, flight suit, aviator gear',
+  officer: 'officer, decorated uniform, command presence, medals',
+  scout: 'scout, light tactical gear, binoculars, stealth equipment',
+  knight: 'armored knight, plate armor, noble bearing',
+  rogue: 'rogue, dark leather armor, hidden blades, hood',
+  mage: 'mage, mystical robes, magical staff, arcane symbols',
+  wizard: 'wizard, mystical robes, ancient tome, magical aura',
+  ranger: 'ranger, bow and quiver, forest cloak, animal fur trim',
+  paladin: 'paladin, blessed armor, divine symbols, holy light',
+  warrior: 'battle-hardened warrior, practical armor, veteran stance',
+  cleric: 'cleric, religious vestments, divine symbol',
+  bard: 'bard, colorful clothing, musical instrument',
+  survivor: 'survivor, makeshift armor, scavenged gear',
+  mercenary: 'mercenary, mixed military gear, no insignia',
+  detective: 'detective, long coat, badge visible',
+  criminal: 'criminal, street clothes, dangerous look',
+  scientist: 'scientist, lab coat, data pad, protective goggles',
+  rebel: 'resistance fighter, improvised gear, revolutionary symbols',
+  hacker: 'hacker, cyberpunk style, neural interface',
+  thief: 'thief, dark practical clothing, lockpicks',
+  assassin: 'assassin, dark hooded attire, concealed weapons',
+  merchant: 'merchant, fine clothing, money pouch',
+  noble: 'noble, elegant expensive clothing, jewelry',
+  peasant: 'peasant, simple worn clothing, humble appearance',
+  bartender: 'bartender, apron, rolled sleeves',
+  innkeeper: 'innkeeper, casual work clothing, welcoming demeanor',
+  guard: 'guard, uniform, weapon at side, vigilant',
+  sheriff: 'sheriff, star badge, western lawman attire',
+  doctor: 'doctor, medical attire, professional demeanor',
+  priest: 'priest, religious robes, holy symbols',
+  blacksmith: 'blacksmith, leather apron, muscular arms, soot marks',
+  farmer: 'farmer, work clothes, weathered hands',
+};
+
+// ============================================================================
 // EMOTION STYLES
 // ============================================================================
 
 const EMOTION_STYLES: Record<string, string> = {
   neutral: 'neutral calm expression, steady professional gaze',
   happy: 'happy joyful expression, genuine smile',
-  angry: 'angry furious expression, snarling rage, intense',
+  angry: 'angry furious expression, intense',
   sad: 'melancholic expression, distant sorrowful eyes',
   scared: 'fearful expression, wide eyes, tense anxious',
   suspicious: 'suspicious wary expression, narrowed eyes',
-  confident: 'confident slight smile, self-assured, victorious',
+  confident: 'confident slight smile, self-assured',
   friendly: 'friendly warm expression, welcoming smile',
   hostile: 'hostile aggressive expression, threatening',
   nervous: 'nervous anxious expression, worried',
   determined: 'determined fierce expression, intense focused eyes, set jaw',
   serious: 'serious stoic expression, professional unreadable',
-  cold: 'cold emotionless expression, calculating, predatory',
+  cold: 'cold emotionless expression, calculating',
   tired: 'exhausted tired expression, bags under eyes, weary',
+  smirk: 'confident smirk, cocky expression, knowing look',
+  hopeful: 'hopeful expression, slight optimism',
+  grief: 'grief-stricken expression, loss',
 };
 
 // ============================================================================
-// PROMPT BUILDER FOR NPCs
+// PROMPT BUILDER FOR NPCs - Using Character Creation Settings
 // ============================================================================
 
 function buildNPCPrompt(npc: any, config: any): string {
   const genre = config?.genre || 'fantasy';
-  const emotion = config?.emotion || 'neutral';
+  const emotion = config?.emotion || npc.meta?.emotion || 'neutral';
   
   const genreConfig = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
   const emotionStyle = EMOTION_STYLES[emotion] || EMOTION_STYLES.neutral;
   
-  // Build NPC description from meta
-  const npcParts = [];
+  // Extract character creation settings from NPC meta
+  const meta = npc.meta || {};
   
-  if (npc.meta?.name) {
-    npcParts.push(`portrait of ${npc.meta.name}`);
+  // Build physical description from character creation settings
+  const physicalParts: string[] = [];
+  
+  // Gender
+  const genderKey = (meta.gender || 'male').toLowerCase();
+  physicalParts.push(GENDER_STYLES[genderKey] || GENDER_STYLES.male);
+  
+  // Age
+  if (meta.age) {
+    physicalParts.push(`${meta.age} year old`);
   }
   
-  if (npc.meta?.age) {
-    npcParts.push(`${npc.meta.age} year old`);
+  // Build
+  const buildKey = (meta.build || 'average').toLowerCase();
+  if (BUILD_STYLES[buildKey]) {
+    physicalParts.push(BUILD_STYLES[buildKey]);
   }
   
-  if (npc.meta?.gender) {
-    npcParts.push(npc.meta.gender === 'female' ? 'woman' : npc.meta.gender === 'male' ? 'man' : 'person');
+  // Skin tone
+  const skinKey = (meta.skinTone || meta.skin || 'medium').toLowerCase();
+  if (SKIN_TONES[skinKey]) {
+    physicalParts.push(SKIN_TONES[skinKey]);
   }
   
-  if (npc.meta?.occupation) {
-    npcParts.push(npc.meta.occupation);
+  // Hair color
+  const hairColorKey = (meta.hairColor || 'brown').toLowerCase();
+  if (HAIR_COLORS[hairColorKey]) {
+    physicalParts.push(HAIR_COLORS[hairColorKey]);
   }
   
-  if (npc.meta?.description) {
-    npcParts.push(npc.meta.description);
+  // Hair style
+  const hairStyleKey = (meta.hairStyle || 'short').toLowerCase();
+  if (HAIR_STYLES[hairStyleKey]) {
+    physicalParts.push(HAIR_STYLES[hairStyleKey]);
   }
   
-  const npcDesc = npcParts.join(', ') || 'character portrait';
+  // Eye color
+  const eyeColorKey = (meta.eyeColor || 'brown').toLowerCase();
+  if (EYE_COLORS[eyeColorKey]) {
+    physicalParts.push(EYE_COLORS[eyeColorKey]);
+  }
   
-  // Select random background from genre
+  // Details (scars, tattoos, etc.)
+  if (meta.details && Array.isArray(meta.details)) {
+    meta.details.forEach((detail: string) => {
+      const detailKey = detail.toLowerCase();
+      if (DETAIL_OPTIONS[detailKey]) {
+        physicalParts.push(DETAIL_OPTIONS[detailKey]);
+      } else if (detail) {
+        physicalParts.push(detail);
+      }
+    });
+  }
+  
+  // Role/occupation
+  let roleStyle = '';
+  const occupationKey = (meta.occupation || meta.role || '').toLowerCase();
+  for (const key of Object.keys(ROLE_STYLES)) {
+    if (occupationKey.includes(key)) {
+      roleStyle = ROLE_STYLES[key];
+      break;
+    }
+  }
+  
+  // If no specific role found, use genre style
+  if (!roleStyle) {
+    roleStyle = genreConfig.style;
+  }
+  
+  // Name for context
+  const nameContext = meta.name ? `portrait of ${meta.name}` : 'character portrait';
+  
+  // Custom description if provided
+  const customDesc = meta.description || '';
+  
+  // Select random background from genre that matches the setting
   const background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
   
-  // Build complete realistic prompt
-  const prompt = [
+  // Build complete realistic prompt with all character creation settings
+  const promptParts = [
     PORTRAIT_STYLE_BASE,
-    npcDesc,
-    genreConfig.style,
+    nameContext,
+    physicalParts.join(', '),
+    roleStyle,
     emotionStyle,
+    customDesc,
     `background: ${background}`,
-  ].filter(Boolean).join(', ');
+  ].filter(Boolean);
   
-  return prompt;
+  return promptParts.join(', ');
 }
 
 // ============================================================================
