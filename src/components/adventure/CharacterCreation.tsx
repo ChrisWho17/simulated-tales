@@ -796,16 +796,27 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     )}
 
-                    {/* Free-form description */}
-                    <div>
-                      <label className="text-sm text-muted-foreground">Additional Details</label>
+                    {/* Free-form description - AI Priority Enhancement */}
+                    <div className="border border-primary/30 rounded-lg p-3 bg-primary/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <label className="text-sm font-medium text-primary">AI Enhancement Details</label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        ✨ <strong>Priority field</strong> — These details are emphasized to the AI after your base character is built. 
+                        Describe accessories, augmentations, cosmetic surgery, unique features, specific outfit details, 
+                        jewelry styles, makeup looks, or any other enhancements you want the AI to prioritize.
+                      </p>
                       <Textarea
                         value={appearance.full?.intimateDetails || ''}
                         onChange={(e) => updateAppearance('full', 'intimateDetails', e.target.value)}
-                        placeholder="Additional details"
-                        className="mt-1 bg-background border-border/50"
+                        placeholder="e.g., Rose gold nose ring, sleeve tattoo of cherry blossoms, subtle lip fillers, chrome cybernetic left arm, vintage aviator sunglasses, silver ear cuffs..."
+                        className="mt-1 bg-background border-border/50 min-h-[80px]"
                         maxLength={500}
                       />
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        {(appearance.full?.intimateDetails || '').length}/500
+                      </p>
                     </div>
                   </div>
                 )}
