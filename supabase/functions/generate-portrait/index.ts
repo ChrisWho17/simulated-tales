@@ -415,71 +415,169 @@ const GENRES: Record<string, GenreData> = {
 // ROLE/CLASS DEFINITIONS
 // ============================================================================
 
+// Role clothing by genre - role + genre = specific outfit
+const ROLE_GENRE_CLOTHING: Record<string, Record<string, string>> = {
+  // Cyberpunk roles
+  solo: {
+    cyberpunk: 'tactical black jacket with armored plates, cargo pants, combat boots, chrome cybernetic arm',
+    default: 'tactical combat gear, body armor, military-grade equipment',
+  },
+  netrunner: {
+    cyberpunk: 'tech-enhanced hoodie with LED strips, neural interface headgear, fingerless gloves with circuits',
+    default: 'casual tech-wear with visible interface ports',
+  },
+  fixer: {
+    cyberpunk: 'expensive street fashion suit, chrome accessories, designer tech-wear',
+    default: 'sharp business casual with hidden tech',
+  },
+  techie: {
+    cyberpunk: 'work coveralls with tool belt, cybernetic eye lens, utility vest',
+    default: 'practical work clothes with tech accessories',
+  },
+  nomad: {
+    cyberpunk: 'dusty leather jacket with tribal patches, road-worn boots, desert goggles',
+    postapoc: 'scavenged leather armor, dust mask, tribal tattoos visible',
+    default: 'rugged travel gear, weather-worn clothing',
+  },
+  corpo: {
+    cyberpunk: 'sleek designer suit, subtle chrome implants, expensive watch',
+    default: 'high-end business attire',
+  },
+  // Fantasy roles
+  knight: {
+    fantasy: 'polished plate armor with heraldic surcoat, sword at hip',
+    dark_fantasy: 'battle-worn dark steel armor, scratched and dented',
+    medieval: 'chainmail and tabard with lord\'s colors',
+    default: 'plate armor with sword',
+  },
+  mage: {
+    fantasy: 'flowing arcane robes with glowing runes, mystical staff',
+    dark_fantasy: 'tattered dark robes, skull ornaments, corrupted magic traces',
+    high_fantasy: 'elegant elven-style robes with crystalline accents',
+    default: 'magical robes with arcane symbols',
+  },
+  rogue: {
+    fantasy: 'dark leather armor, hooded cloak, visible daggers',
+    medieval: 'practical leather jerkin, dark wool cloak',
+    urban_fantasy: 'modern black tactical clothing, hidden weapons',
+    default: 'leather armor with hood and daggers',
+  },
+  warrior: {
+    fantasy: 'battle-worn plate and chainmail, greatsword on back',
+    grimdark: 'blood-stained heavy armor, brutal weapons',
+    default: 'practical heavy armor with weapons',
+  },
+  // Horror roles
+  survivor: {
+    horror: 'everyday clothes showing wear and blood stains, improvised weapons',
+    zombie: 'torn civilian clothes, makeshift armor pieces, survival gear',
+    postapoc: 'scavenged clothing, protective layers, survival equipment',
+    default: 'worn everyday clothes with survival gear',
+  },
+  investigator: {
+    horror: '1920s suit and overcoat, fedora, leather satchel',
+    lovecraft: 'period-accurate 1920s attire, academic accessories',
+    noir: 'detective trench coat, fedora, cigarette',
+    default: 'investigator attire with period-appropriate accessories',
+  },
+  // Western roles
+  gunslinger: {
+    western: 'dusty duster coat, cowboy hat, dual revolvers in holsters, spurred boots',
+    default: 'western gunslinger attire with revolvers',
+  },
+  sheriff: {
+    western: 'tan vest with sheriff badge, cowboy hat, lever-action rifle, leather boots',
+    default: 'lawman attire with badge and rifle',
+  },
+  // Sci-Fi roles
+  captain: {
+    scifi: 'starship command uniform with rank insignia, communicator badge',
+    space_opera: 'military-style captain\'s coat with medals, command sash',
+    default: 'captain\'s uniform with command insignia',
+  },
+  bounty_hunter: {
+    scifi: 'worn bounty hunter armor with helmet, utility belt, blaster',
+    space_opera: 'Mandalorian-style armor, jetpack, multiple weapons',
+    default: 'bounty hunter armor with weapons',
+  },
+};
+
 const ROLES: Record<string, string> = {
   // Military
-  soldier: 'professional soldier with tactical gear',
-  medic: 'combat medic with medical equipment',
-  sniper: 'precision sniper with scope rifle',
-  officer: 'military officer with command presence',
-  spec_ops: 'special operations operator with elite gear',
-  pilot: 'aircraft pilot with flight suit',
+  soldier: 'professional soldier',
+  medic: 'combat medic',
+  sniper: 'precision sniper',
+  officer: 'military officer',
+  spec_ops: 'special operations operator',
+  pilot: 'aircraft pilot',
   
   // Fantasy
-  knight: 'armored knight with sword and shield',
-  rogue: 'stealthy rogue with leather armor and daggers',
-  mage: 'powerful mage with mystical robes',
-  wizard: 'learned wizard with staff and spellbook',
-  warlock: 'dark warlock with eldritch markings',
-  paladin: 'holy paladin with blessed armor',
-  warrior: 'battle-hardened warrior with practical armor',
-  cleric: 'divine cleric with religious vestments',
-  druid: 'nature druid with organic robes',
-  monk: 'disciplined monk with simple robes',
-  barbarian: 'tribal barbarian with primitive gear',
-  archer: 'skilled archer with bow and quiver',
-  assassin: 'deadly assassin with dark hooded attire',
-  necromancer: 'dark necromancer with skull motifs',
-  berserker: 'fierce berserker with war paint',
+  knight: 'armored knight',
+  rogue: 'stealthy rogue',
+  mage: 'powerful mage',
+  wizard: 'learned wizard',
+  warlock: 'dark warlock',
+  paladin: 'holy paladin',
+  warrior: 'battle-hardened warrior',
+  cleric: 'divine cleric',
+  druid: 'nature druid',
+  monk: 'disciplined monk',
+  barbarian: 'tribal barbarian',
+  archer: 'skilled archer',
+  assassin: 'deadly assassin',
+  necromancer: 'dark necromancer',
+  berserker: 'fierce berserker',
   
   // Cyberpunk
-  solo: 'elite mercenary with chrome cybernetics',
-  netrunner: 'hacker with neural interface',
-  fixer: 'connected fixer with street fashion',
-  techie: 'tech specialist with cybernetic eye',
-  nomad: 'road warrior with dust-worn gear',
-  corpo: 'corporate agent with sleek suit',
+  solo: 'elite mercenary',
+  netrunner: 'hacker specialist',
+  fixer: 'connected fixer',
+  techie: 'tech specialist',
+  nomad: 'road warrior',
+  corpo: 'corporate agent',
   
   // Sci-Fi
-  captain: 'starship captain with command uniform',
-  bounty_hunter: 'bounty hunter with worn armor',
-  smuggler: 'spacer smuggler with roguish charm',
-  android: 'synthetic android with perfect features',
-  cyborg: 'cybernetic cyborg with mechanical enhancements',
+  captain: 'starship captain',
+  bounty_hunter: 'bounty hunter',
+  smuggler: 'spacer smuggler',
+  android: 'synthetic android',
+  cyborg: 'cybernetic cyborg',
   
   // Horror
-  survivor: 'horror survivor with everyday clothes',
-  investigator: 'occult investigator with period clothing',
-  hunter: 'monster hunter with specialized weapons',
+  survivor: 'survivor',
+  investigator: 'investigator',
+  hunter: 'monster hunter',
   
   // Noir/Crime
-  detective: 'hardboiled detective with long coat',
-  criminal: 'street criminal with urban clothing',
-  gangster: 'period gangster with sharp suit',
-  thief: 'skilled thief with dark stealth clothing',
-  hitman: 'professional hitman with clean suit',
+  detective: 'hardboiled detective',
+  criminal: 'street criminal',
+  gangster: 'period gangster',
+  thief: 'skilled thief',
+  hitman: 'professional hitman',
   
   // Western
-  gunslinger: 'fast-draw gunslinger with dual revolvers',
-  sheriff: 'frontier sheriff with badge and rifle',
-  outlaw: 'wanted outlaw with dusty clothes',
+  gunslinger: 'fast-draw gunslinger',
+  sheriff: 'frontier sheriff',
+  outlaw: 'wanted outlaw',
   
   // General
-  mercenary: 'professional mercenary with mixed gear',
-  rebel: 'resistance fighter with improvised gear',
-  noble: 'aristocratic noble with fine clothing',
-  scholar: 'learned scholar with academic robes',
-  merchant: 'wealthy merchant with quality clothing',
+  mercenary: 'professional mercenary',
+  rebel: 'resistance fighter',
+  noble: 'aristocratic noble',
+  scholar: 'learned scholar',
+  merchant: 'wealthy merchant',
 };
+
+// Get role-specific clothing for genre
+function getRoleClothing(role: string, genre: string): string | null {
+  const roleKey = role.toLowerCase().replace(/[\s-]/g, '_');
+  const genreKey = genre.toLowerCase().replace(/[\s-]/g, '_');
+  
+  const roleClothes = ROLE_GENRE_CLOTHING[roleKey];
+  if (!roleClothes) return null;
+  
+  return roleClothes[genreKey] || roleClothes['default'] || null;
+}
 
 // ============================================================================
 // PHYSICAL ATTRIBUTES
@@ -691,7 +789,7 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
   const {
     gender, age, height, build, skinTone, hairColor, hairStyle, eyeColor, faceShape,
     additionalDetails, characterAdditionals, customDescription,
-    characterClass, genre,
+    characterClass, genre, origin, nationality, ethnicity,
     details, distinguishingFeatures, accessories,
     piercings, tattoos, tattooStyle, scars, implants, prosthetics, mutations,
     clothingStyle, clothingDetails,
@@ -699,21 +797,47 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
   } = body;
 
   console.log("=== BUILDING STRICT PROMPT ===");
+  console.log("Input - Role:", characterClass, "| Genre:", genre, "| Origin:", origin);
   
-  // User additionals - HIGHEST PRIORITY, must be rendered exactly
+  // User additionals - HIGHEST PRIORITY, check for ethnicity/nationality override
   const userAdditionals = additionalDetails || characterAdditionals || customDescription || '';
-  const hasUserClothing = userAdditionals.toLowerCase().match(/wearing|dressed|clothing|outfit|uniform|armor|suit|jacket|coat|dress|robe|shirt|pants|boots/);
+  const userAdditionalsLower = userAdditionals.toLowerCase();
+  const hasUserClothing = userAdditionalsLower.match(/wearing|dressed|clothing|outfit|uniform|armor|suit|jacket|coat|dress|robe|shirt|pants|boots/);
+  const hasUserEthnicity = userAdditionalsLower.match(/asian|african|hispanic|latino|latina|middle eastern|indian|european|british|german|french|italian|japanese|chinese|korean|russian|brazilian|mexican|american/);
   
-  // Genre
+  // Genre processing
   const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
   const { environment, clothing: genreClothing } = buildGenreDescription(genreKey);
   
+  // Role processing
+  const roleKey = characterClass?.toLowerCase().replace(/[\s-]/g, '_') || '';
+  const roleStr = ROLES[roleKey] || characterClass || '';
+  
   // =========================================================================
-  // STRICT PHYSICAL ATTRIBUTES - Exact descriptions
+  // ETHNICITY/NATIONALITY - Default to American Caucasian unless specified
+  // =========================================================================
+  
+  let ethnicityStr = '';
+  if (hasUserEthnicity) {
+    // User specified in additionals - don't add default
+    ethnicityStr = '';
+  } else if (ethnicity) {
+    ethnicityStr = ethnicity;
+  } else if (nationality) {
+    ethnicityStr = nationality;
+  } else if (origin) {
+    ethnicityStr = origin;
+  } else {
+    // DEFAULT: American Caucasian
+    ethnicityStr = 'American Caucasian';
+  }
+  
+  // =========================================================================
+  // PHYSICAL ATTRIBUTES - Exact descriptions
   // =========================================================================
   
   const genderStr = lookup(PHYSICAL.gender, gender, 'person');
-  const ageStr = age ? `exactly ${age} years old` : 'adult';
+  const ageStr = age ? `${age} years old` : 'adult';
   const heightStr = height ? lookup(PHYSICAL.height, height, '') : '';
   const buildStr = lookup(PHYSICAL.build, build, '');
   const skinStr = lookup(PHYSICAL.skin, skinTone, '');
@@ -722,11 +846,38 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
   const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, '');
   const hairStyleStr = lookup(PHYSICAL.hairStyle, hairStyle, '');
   
-  // Role
-  const roleKey = characterClass?.toLowerCase().replace(/[\s-]/g, '_') || '';
-  const roleStr = ROLES[roleKey] || characterClass || '';
+  // =========================================================================
+  // CLOTHING - Priority: User > Explicit clothingStyle > Role+Genre > Genre default
+  // =========================================================================
   
-  // Explicit features list
+  let clothingStr = '';
+  if (hasUserClothing) {
+    // User specified in additionals - will be in MUST INCLUDE section
+    clothingStr = '';
+  } else if (clothingDetails?.length) {
+    clothingStr = clothingDetails.join(', ');
+  } else if (clothingStyle && clothingStyle !== 'genre_default') {
+    clothingStr = clothingStyle;
+  } else if (roleKey) {
+    // Get role-specific clothing for this genre
+    const roleClothing = getRoleClothing(roleKey, genreKey);
+    if (roleClothing) {
+      clothingStr = roleClothing;
+    } else {
+      // Fall back to genre clothing
+      clothingStr = genreClothing;
+    }
+  } else {
+    // No role - use genre default
+    clothingStr = genreClothing;
+  }
+  
+  console.log("Clothing resolved:", clothingStr);
+  
+  // =========================================================================
+  // FEATURES - Explicit list
+  // =========================================================================
+  
   const featureParts: string[] = [];
   if (details && Array.isArray(details)) {
     details.forEach((d: string) => {
@@ -747,7 +898,7 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
     });
   }
   
-  // Body modifications - explicit placement
+  // Body modifications
   const modParts: string[] = [];
   if (tattoos?.length) modParts.push(`visible tattoos: ${tattooStyle || ''} style on ${tattoos.join(' and ')}`);
   if (piercings?.length) modParts.push(`visible piercings on ${piercings.join(' and ')}`);
@@ -766,35 +917,20 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
     expressionStr = `${EXPRESSIONS[socialStyle]}, eyes at camera`;
   }
   
-  // Clothing - user override OR genre default
-  let clothingStr = '';
-  if (hasUserClothing) {
-    clothingStr = '';
-  } else if (clothingDetails?.length) {
-    clothingStr = `wearing exactly: ${clothingDetails.join(', ')}`;
-  } else if (clothingStyle) {
-    clothingStr = `wearing: ${clothingStyle}`;
-  } else if (roleStr) {
-    clothingStr = '';
-  } else {
-    clothingStr = `wearing: ${genreClothing}`;
-  }
-  
   // =========================================================================
-  // STRICT PROMPT ASSEMBLY
-  // Format: [FRAMING] [SUBJECT] [PHYSICAL] [FEATURES] [CLOTHING] [EXPRESSION] [ENVIRONMENT] [QUALITY]
-  // Using explicit markers to reduce AI interpretation
+  // PROMPT ASSEMBLY - Structured sections for AI precision
   // =========================================================================
   
   const sections: string[] = [];
   
-  // 1. Strict framing instruction
+  // 1. Composition
   sections.push(`[COMPOSITION] ${PORTRAIT_FRAMING}`);
   
-  // 2. Subject identification
-  sections.push(`[SUBJECT] Single ${ageStr} ${genderStr}`);
+  // 2. Subject with ethnicity
+  const subjectParts = [ageStr, ethnicityStr, genderStr].filter(Boolean);
+  sections.push(`[SUBJECT] Single ${subjectParts.join(' ')}`);
   
-  // 3. Physical attributes - explicit and exact
+  // 3. Physical attributes
   const physicalList: string[] = [];
   if (buildStr) physicalList.push(buildStr);
   if (heightStr) physicalList.push(heightStr);
@@ -807,7 +943,7 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
     sections.push(`[PHYSICAL] ${physicalList.join('. ')}`);
   }
   
-  // 4. User specified details - EXACT RENDERING REQUIRED
+  // 4. User specified details - HIGHEST PRIORITY
   if (userAdditionals.trim()) {
     sections.push(`[MUST INCLUDE] ${userAdditionals.trim()}`);
     console.log("MUST INCLUDE user details:", userAdditionals.trim());
@@ -823,20 +959,20 @@ function buildPrompt(body: any): { prompt: string; negative_prompt: string } {
     sections.push(`[MODIFICATIONS] ${modParts.join('. ')}`);
   }
   
-  // 7. Role/class
+  // 7. Role (without clothing - clothing is separate)
   if (roleStr && !hasUserClothing) {
     sections.push(`[ROLE] ${roleStr}`);
   }
   
-  // 8. Clothing
-  if (clothingStr) {
+  // 8. Clothing - ALWAYS include unless user specified
+  if (clothingStr && !hasUserClothing) {
     sections.push(`[ATTIRE] ${clothingStr}`);
   }
   
   // 9. Expression
   sections.push(`[EXPRESSION] ${expressionStr}`);
   
-  // 10. Environment
+  // 10. Environment (genre-specific)
   sections.push(`[BACKGROUND] Blurred ${environment}`);
   
   // 11. Quality
