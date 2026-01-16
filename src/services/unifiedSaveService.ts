@@ -441,6 +441,9 @@ class UnifiedSaveServiceClass {
         this.setActiveCampaignId(null);
       }
 
+      // CRITICAL: Also clean up ALL related localStorage keys for this campaign
+      this.cleanupCampaignLocalStorage(campaignId);
+
       console.log(`[UnifiedSave] Cloud deleted: ${campaignId}`);
       return { success: true };
     } catch (e) {
@@ -540,11 +543,84 @@ class UnifiedSaveServiceClass {
         this.setActiveCampaignId(null);
       }
 
+      // CRITICAL: Also clean up ALL related localStorage keys for this campaign
+      this.cleanupCampaignLocalStorage(campaignId);
+
       console.log(`[UnifiedSave] Guest deleted: ${campaignId}`);
       return { success: true };
     } catch (e) {
       console.error('[UnifiedSave] Guest delete failed:', e);
       return { success: false, error: 'Delete failed' };
+    }
+  }
+
+  // Clean up all localStorage keys related to a campaign
+  private cleanupCampaignLocalStorage(campaignId: string): void {
+    try {
+      const keysToRemove: string[] = [];
+      
+      // Scan all localStorage keys for any containing this campaign ID
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes(campaignId)) {
+          keysToRemove.push(key);
+        }
+      }
+
+      // Also check for known key patterns
+      const knownPatterns = [
+        `lwe_campaign_${campaignId}`,
+        `lwe_inventory_${campaignId}`,
+        `lwe_gamestate_${campaignId}`,
+        `lwe_save_${campaignId}`,
+        `lwe_autosave_${campaignId}`,
+        `guest_local_${campaignId}`,
+        `untold_campaign_${campaignId}`,
+        `untold_inventory_${campaignId}`,
+        `untold_gamestate_${campaignId}`,
+        `campaign_${campaignId}`,
+        `inventory_${campaignId}`,
+      ];
+
+      knownPatterns.forEach(pattern => {
+        if (!keysToRemove.includes(pattern) && localStorage.getItem(pattern)) {
+          keysToRemove.push(pattern);
+        }
+      });
+
+      // Remove all found keys
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`[UnifiedSave] Cleaned up key: ${key}`);
+      });
+
+      // Also update the lwe_campaign_index to remove this campaign
+      try {
+        const indexStr = localStorage.getItem('lwe_campaign_index');
+        if (indexStr) {
+          const index = JSON.parse(indexStr);
+          if (Array.isArray(index)) {
+            const filtered = index.filter((c: { id: string }) => c.id !== campaignId);
+            localStorage.setItem('lwe_campaign_index', JSON.stringify(filtered));
+          }
+        }
+      } catch { /* ignore index update errors */ }
+
+      // Also update the lwe_saves_index
+      try {
+        const savesIndexStr = localStorage.getItem('lwe_saves_index');
+        if (savesIndexStr) {
+          const savesIndex = JSON.parse(savesIndexStr);
+          if (Array.isArray(savesIndex)) {
+            const filtered = savesIndex.filter((s: { id: string }) => s.id !== campaignId);
+            localStorage.setItem('lwe_saves_index', JSON.stringify(filtered));
+          }
+        }
+      } catch { /* ignore index update errors */ }
+
+      console.log(`[UnifiedSave] Cleaned up ${keysToRemove.length} localStorage keys for campaign: ${campaignId}`);
+    } catch (e) {
+      console.error('[UnifiedSave] Cleanup failed:', e);
     }
   }
 
@@ -630,7 +706,7 @@ class UnifiedSaveServiceClass {
       }
     }
 
-    // Clear all local storage
+    // Clear all local storage with comprehensive pattern matching
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -638,10 +714,27 @@ class UnifiedSaveServiceClass {
         key.startsWith(GUEST_PREFIX) ||
         key.startsWith('lwe_') ||
         key.startsWith('simtales_') ||
+        key.startsWith('untold_') ||  // Fixed: underscore not dash
         key.startsWith('untold-') ||
         key.startsWith('campaign_') ||
+        key.startsWith('save_') ||
+        key.startsWith('autosave_') ||
+        key.startsWith('game_') ||
+        key.startsWith('inventory_') ||
+        key.startsWith('npc_') ||
+        key.startsWith('world_') ||
+        key.startsWith('story_') ||
+        key.startsWith('narrative_') ||
+        key.startsWith('checkpoint_') ||
         key === GUEST_INDEX_KEY ||
-        key === ACTIVE_CAMPAIGN_KEY
+        key === ACTIVE_CAMPAIGN_KEY ||
+        key === 'lwe_campaign_index' ||
+        key === 'lwe_saves_index' ||
+        key === 'session_stats' ||
+        key === 'narrator_settings' ||
+        key === 'audio_settings' ||
+        key === 'game_settings' ||
+        key === 'onboarding_completed'
       )) {
         keysToRemove.push(key);
       }
