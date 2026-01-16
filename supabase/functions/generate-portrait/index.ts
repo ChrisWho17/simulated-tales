@@ -38,86 +38,118 @@ const NEGATIVE_PROMPT = [
 // ============================================================================
 
 const GENRE_CONTEXT: Record<string, { outfit: string; setting: string }> = {
-  modern: {
-    outfit: 'modern tactical gear, body armor, combat clothing',
-    setting: 'urban cityscape, modern architecture',
-  },
-  war: {
-    outfit: 'military combat uniform, tactical vest, dog tags',
-    setting: 'battlefield, military base',
-  },
-  cyberpunk: {
-    outfit: 'cyberpunk tactical armor, chrome cybernetic arm, neon accents, combat gear, holding futuristic weapon',
-    setting: 'neon-lit cyberpunk city, holographic billboards, rain, dark atmosphere',
-  },
-  postapoc: {
-    outfit: 'weathered survival gear, patched leather, scavenged clothing',
-    setting: 'wasteland ruins, abandoned buildings',
-  },
-  scifi: {
-    outfit: 'sleek futuristic uniform, advanced materials',
-    setting: 'spaceship interior, space station',
-  },
-  ww2: {
-    outfit: '1940s military uniform, period equipment',
-    setting: 'wartime Europe, military camp',
-  },
-  medieval: {
-    outfit: 'medieval clothing, leather and wool, period armor',
-    setting: 'stone castle, medieval village',
-  },
-  fantasy: {
-    outfit: 'fantasy attire, leather armor, mystical accessories',
-    setting: 'enchanted forest, ancient castle',
-  },
-  horror: {
-    outfit: 'worn everyday clothes, survival gear',
-    setting: 'abandoned building, foggy night',
-  },
-  western: {
-    outfit: 'wild west attire, duster coat, cowboy hat',
-    setting: 'dusty frontier town, desert canyon',
-  },
-  noir: {
-    outfit: '1940s detective attire, fedora, trench coat',
-    setting: 'rainy night street, dim office',
-  },
-  mystery: {
-    outfit: 'professional attire, investigator look',
-    setting: 'victorian study, foggy street',
-  },
-  pirate: {
-    outfit: 'pirate attire, weathered sea clothing',
-    setting: 'ship deck, tropical port',
-  },
-  survival: {
-    outfit: 'outdoor survival gear, hiking clothing',
-    setting: 'wilderness, forest campsite',
-  },
-  steampunk: {
-    outfit: 'victorian steampunk fashion, brass goggles, clockwork',
-    setting: 'steam-powered factory, airship',
-  },
-  vampire: {
-    outfit: 'gothic aristocratic attire, dark elegant clothing',
-    setting: 'gothic castle, moonlit cemetery',
-  },
-  zombie: {
-    outfit: 'apocalypse survivor gear, reinforced clothing',
-    setting: 'overrun city, barricaded building',
-  },
-  superhero: {
-    outfit: 'heroic suit, emblem, powerful presence',
-    setting: 'city rooftop, dramatic sky',
-  },
-  spy: {
-    outfit: 'tailored suit, sophisticated attire',
-    setting: 'luxury casino, secret base',
-  },
-  modern_life: {
-    outfit: 'contemporary casual clothing, modern fashion',
-    setting: 'coffee shop, modern apartment',
-  },
+  // Modern/Contemporary
+  modern: { outfit: 'modern tactical gear, body armor, combat clothing', setting: 'urban cityscape, modern architecture' },
+  modern_life: { outfit: 'contemporary casual clothing, modern fashion', setting: 'coffee shop, modern apartment' },
+  contemporary: { outfit: 'everyday modern clothing', setting: 'city street, modern interior' },
+  
+  // Sci-Fi
+  cyberpunk: { outfit: 'cyberpunk tactical armor, chrome cybernetic arm, neon accents, combat gear, holding futuristic weapon', setting: 'neon-lit cyberpunk city, holographic billboards, rain, dark atmosphere' },
+  scifi: { outfit: 'sleek futuristic uniform, advanced materials, tech accessories', setting: 'spaceship interior, space station, futuristic city' },
+  space_opera: { outfit: 'space military uniform, insignia, utility belt', setting: 'starship bridge, alien planet vista' },
+  mecha: { outfit: 'pilot suit with interface ports, tactical vest', setting: 'hangar bay, giant mecha in background' },
+  
+  // War/Military
+  war: { outfit: 'military combat uniform, tactical vest, dog tags, rifle', setting: 'battlefield, military base' },
+  ww2: { outfit: '1940s military uniform, period equipment, vintage weapons', setting: 'wartime Europe, military camp' },
+  ww1: { outfit: 'WWI era uniform, trench gear, gas mask on belt', setting: 'muddy trenches, war-torn landscape' },
+  vietnam: { outfit: 'jungle fatigues, M16 rifle, dog tags', setting: 'vietnamese jungle, firebase' },
+  cold_war: { outfit: 'period military or spy attire, formal suits', setting: 'berlin wall, soviet architecture' },
+  
+  // Post-Apocalyptic/Survival
+  postapoc: { outfit: 'weathered survival gear, patched leather, scavenged clothing, improvised armor', setting: 'wasteland ruins, abandoned buildings' },
+  zombie: { outfit: 'apocalypse survivor gear, reinforced clothing, melee weapon', setting: 'overrun city, barricaded building' },
+  survival: { outfit: 'outdoor survival gear, hiking clothing, backpack', setting: 'wilderness, forest campsite' },
+  fallout: { outfit: 'retro-futuristic wasteland gear, vault suit elements', setting: 'nuclear wasteland, ruined city' },
+  
+  // Fantasy
+  fantasy: { outfit: 'fantasy attire, leather armor, mystical accessories, medieval clothing', setting: 'enchanted forest, ancient castle, fantasy tavern' },
+  medieval: { outfit: 'medieval clothing, leather and wool, period armor', setting: 'stone castle, medieval village' },
+  dark_fantasy: { outfit: 'dark ornate armor, gothic accessories, dark clothing', setting: 'dark castle, cursed forest' },
+  high_fantasy: { outfit: 'elaborate magical robes, enchanted jewelry, fantasy armor', setting: 'magical kingdom, crystal palace' },
+  sword_sorcery: { outfit: 'barbarian gear, chainmail, tribal accessories', setting: 'ancient ruins, mystical temple' },
+  
+  // Horror/Dark
+  horror: { outfit: 'worn everyday clothes, survival gear, disheveled appearance', setting: 'abandoned building, foggy night, creepy atmosphere' },
+  vampire: { outfit: 'gothic aristocratic attire, dark elegant clothing, cape', setting: 'gothic castle, moonlit cemetery' },
+  werewolf: { outfit: 'torn rugged clothing, wild appearance', setting: 'foggy forest, full moon' },
+  lovecraft: { outfit: '1920s period clothing, investigator attire', setting: 'eldritch atmosphere, cosmic horror hints' },
+  
+  // Historical
+  western: { outfit: 'wild west attire, duster coat, cowboy hat, holstered revolver', setting: 'dusty frontier town, desert canyon' },
+  noir: { outfit: '1940s detective attire, fedora, trench coat', setting: 'rainy night street, dim office' },
+  victorian: { outfit: 'victorian era clothing, formal attire', setting: 'london streets, victorian mansion' },
+  renaissance: { outfit: 'renaissance clothing, doublet and hose, noble attire', setting: 'italian palazzo, renaissance court' },
+  ancient: { outfit: 'ancient robes, roman toga, greek chiton', setting: 'ancient temple, roman forum' },
+  
+  // Genre Mashups
+  steampunk: { outfit: 'victorian steampunk fashion, brass goggles, clockwork accessories, cogs', setting: 'steam-powered factory, airship, victorian street' },
+  dieselpunk: { outfit: '1930s-40s retro-futuristic, leather aviator gear', setting: 'art deco city, industrial factory' },
+  pirate: { outfit: 'pirate attire, weathered sea clothing, cutlass, tricorn hat', setting: 'ship deck, tropical port' },
+  
+  // Thriller/Crime
+  mystery: { outfit: 'professional attire, investigator look, subtle accessories', setting: 'victorian study, foggy street' },
+  spy: { outfit: 'tailored suit, sophisticated attire, concealed weapon', setting: 'luxury casino, secret base' },
+  crime: { outfit: 'street clothes, gang attire, urban fashion', setting: 'dark alley, city night' },
+  heist: { outfit: 'tactical black clothing, professional thief gear', setting: 'museum night, vault room' },
+  
+  // Superhero/Power
+  superhero: { outfit: 'heroic suit, emblem, powerful presence, cape optional', setting: 'city rooftop, dramatic sky' },
+  supervillain: { outfit: 'menacing costume, dramatic accessories', setting: 'villainous lair, destroyed city' },
+  
+  // Misc
+  slice_of_life: { outfit: 'casual everyday clothing, comfortable attire', setting: 'cozy home, neighborhood street' },
+  romance: { outfit: 'attractive stylish clothing, date outfit', setting: 'romantic setting, candlelit restaurant' },
+  comedy: { outfit: 'expressive casual clothing', setting: 'colorful environment, everyday location' },
+};
+
+// ============================================================================
+// ORIGIN/BACKGROUND MODIFIERS - How background affects appearance
+// ============================================================================
+
+const ORIGIN_MODIFIERS: Record<string, string> = {
+  // Legacy spawn points
+  'college': 'young student look, casual academic style, backpack',
+  'home': 'comfortable casual appearance, well-maintained',
+  'homeless': 'weathered appearance, worn clothes, survival hardened',
+  
+  // Background effects
+  'Stable upbringing': 'well-groomed, healthy appearance, confident posture',
+  'Turbulent past': 'guarded expression, visible wear, street-smart look',
+  'Sheltered life': 'innocent appearance, clean and neat, slightly naive expression',
+  'Street survivor': 'hardened expression, survival scars, street-worn appearance',
+  
+  // Generic fallbacks
+  'wealthy': 'expensive clothing, well-groomed, refined appearance',
+  'poor': 'worn but maintained clothing, resourceful look',
+  'military': 'disciplined posture, fit appearance, military bearing',
+  'criminal': 'street smart appearance, edgy style, guarded expression',
+  'academic': 'intellectual appearance, glasses optional, thoughtful expression',
+  'noble': 'aristocratic bearing, fine clothing, elegant posture',
+  'peasant': 'simple working clothes, weathered hands, humble appearance',
+  'merchant': 'practical but quality clothing, shrewd expression',
+};
+
+// ============================================================================
+// CLOTHING STYLE MODIFIERS - Override or enhance genre defaults
+// ============================================================================
+
+const CLOTHING_STYLE_MODIFIERS: Record<string, string> = {
+  'genre_default': '', // Use genre outfit
+  'formal': 'wearing formal business attire, suit or elegant dress',
+  'casual': 'wearing casual comfortable clothing',
+  'streetwear': 'wearing urban streetwear, trendy branded clothing',
+  'punk': 'wearing punk style with ripped clothes, spikes, patches, chains',
+  'goth': 'wearing gothic dark clothing, victorian influences, black colors',
+  'military': 'wearing military tactical clothing, combat ready',
+  'athletic': 'wearing athletic sporty clothing, performance wear',
+  'bohemian': 'wearing bohemian flowing clothes, natural fabrics, earthy tones',
+  'vintage': 'wearing vintage retro clothing from past era',
+  'minimalist': 'wearing minimalist simple clothing, clean lines',
+  'extravagant': 'wearing extravagant flashy clothing, bold statement pieces',
+  'revealing': 'wearing revealing clothing showing skin',
+  'modest': 'wearing modest conservative full coverage clothing',
+  'cosplay': 'wearing costume or themed character outfit',
 };
 
 // ============================================================================
@@ -274,48 +306,96 @@ const DETAIL_MAP: Record<string, string> = {
 // ============================================================================
 
 const ROLE_IDENTITY: Record<string, string> = {
-  // Combat roles
+  // === MILITARY/COMBAT ROLES ===
   soldier: 'soldier with tactical vest and rifle',
-  medic: 'combat medic with medical gear',
+  medic: 'combat medic with medical gear and red cross',
   sniper: 'sniper with scope and ghillie elements',
   heavy: 'heavy weapons specialist with machine gun',
   engineer: 'combat engineer with tools and goggles',
-  pilot: 'pilot in flight suit',
+  pilot: 'pilot in flight suit with helmet',
   tank: 'tank commander with tanker helmet',
   officer: 'military officer in decorated uniform',
   scout: 'recon scout in light gear',
   spec_ops: 'special forces operator with night vision',
+  commando: 'elite commando in black tactical gear',
+  marine: 'marine in combat uniform, USMC',
+  ranger: 'army ranger in tactical gear',
+  paratrooper: 'paratrooper with jump gear',
   
-  // Fantasy roles
-  knight: 'armored knight with plate armor and sword',
-  rogue: 'rogue in leather armor with daggers',
-  mage: 'mage in magical robes with arcane glow',
-  wizard: 'wizard in mystical robes with staff',
-  ranger: 'ranger with bow and forest cloak',
-  paladin: 'paladin in blessed armor',
-  berserker: 'berserker with war paint and massive weapon',
-  warrior: 'warrior in practical armor',
-  cleric: 'cleric in religious vestments',
-  bard: 'bard in colorful clothing with instrument',
+  // === FANTASY CLASSES ===
+  knight: 'armored knight in plate armor with sword and shield',
+  rogue: 'rogue in leather armor with daggers, hooded',
+  mage: 'mage in magical robes with arcane glow and staff',
+  wizard: 'wizard in mystical robes with staff and spellbook',
+  sorcerer: 'sorcerer with innate magical energy emanating',
+  warlock: 'warlock with dark pact markings and eldritch signs',
+  paladin: 'paladin in blessed shining armor with holy symbol',
+  berserker: 'berserker with war paint and massive weapon, fierce',
+  warrior: 'warrior in practical battle armor',
+  cleric: 'cleric in religious vestments with holy symbol',
+  priest: 'priest in religious robes',
+  bard: 'bard in colorful clothing with musical instrument',
+  druid: 'druid in natural robes with wooden staff, nature motifs',
+  monk: 'monk in simple robes, martial artist stance',
+  barbarian: 'barbarian in tribal gear with massive weapon',
+  archer: 'archer with bow and quiver, ranger attire',
+  assassin: 'assassin in dark hooded attire with hidden blades',
+  necromancer: 'necromancer in dark robes with skull motifs',
+  summoner: 'summoner with magical circles and glowing runes',
+  alchemist: 'alchemist with potions and vials, leather apron',
   
-  // Cyberpunk roles - with weapons and chrome
+  // === CYBERPUNK ROLES ===
   solo: 'elite solo mercenary, chrome cybernetic arm, tactical body armor, holding assault rifle, dangerous confident pose',
   netrunner: 'netrunner hacker, glowing neural interface, data cables, holographic displays around head',
   fixer: 'fixer in expensive street fashion, chrome accessories, confident smirk',
   techie: 'techie with cybernetic eye implant, tools, gadgets',
   nomad: 'nomad warrior in road-worn armored gear, dust and chrome',
   corpo: 'corporate agent in sleek tactical business attire, hidden chrome',
+  rockerboy: 'rockerboy in flashy stage clothes, cybernetic music implants',
+  media: 'media journalist with recording implants, stylish clothes',
   
-  // Civilian/Other
-  survivor: 'survivor in makeshift gear',
-  mercenary: 'mercenary with mixed military gear',
-  detective: 'detective in long coat with badge',
-  criminal: 'criminal in street clothes',
-  scientist: 'scientist in lab coat',
-  rebel: 'resistance fighter in improvised gear',
-  hacker: 'hacker in cyberpunk style with tech gear',
-  thief: 'thief in dark stealthy clothing',
-  assassin: 'assassin in hooded attire',
+  // === SCI-FI ROLES ===
+  captain: 'starship captain in command uniform with insignia',
+  engineer_scifi: 'ship engineer with tools and jumpsuit',
+  scientist: 'scientist in lab coat with tech equipment',
+  space_marine: 'space marine in powered armor with plasma weapon',
+  bounty_hunter: 'bounty hunter in worn armor with various weapons',
+  smuggler: 'smuggler in practical spacer clothes with blaster',
+  android: 'android with visible synthetic parts, perfect features',
+  cyborg: 'cyborg with visible cybernetic enhancements',
+  
+  // === HORROR ROLES ===
+  survivor: 'survivor in torn everyday clothes, frightened but determined',
+  investigator: 'occult investigator with flashlight and journal',
+  hunter: 'monster hunter with specialized weapons and gear',
+  psychic: 'psychic with intense gaze, subtle supernatural aura',
+  exorcist: 'exorcist with religious symbols and holy water',
+  
+  // === NOIR/CRIME ROLES ===
+  detective: 'detective in long coat with badge and gun',
+  criminal: 'criminal in street clothes with concealed weapon',
+  gangster: 'gangster in period suit with tommy gun',
+  thief: 'thief in dark stealthy clothing with lockpicks',
+  hitman: 'hitman in professional suit with silenced pistol',
+  cop: 'police officer in uniform with badge and service weapon',
+  
+  // === WESTERN ROLES ===
+  gunslinger: 'gunslinger with dual revolvers, cowboy hat, duster',
+  sheriff: 'sheriff with badge, cowboy hat, lever action rifle',
+  outlaw: 'outlaw in dusty clothes with bandana and guns',
+  bounty: 'bounty hunter in worn leather with wanted posters',
+  
+  // === CIVILIAN/OTHER ===
+  mercenary: 'mercenary with mixed military gear and weapons',
+  rebel: 'resistance fighter in improvised gear with rebel insignia',
+  hacker: 'hacker in cyberpunk style with tech gear and laptop',
+  merchant: 'merchant in quality clothing with coin purse',
+  noble: 'noble in fine aristocratic clothing with jewelry',
+  peasant: 'peasant in simple working clothes',
+  scholar: 'scholar in academic robes with books and scrolls',
+  healer: 'healer with medical supplies and gentle demeanor',
+  artisan: 'artisan with tools of their trade',
+  entertainer: 'entertainer in performance costume',
 };
 
 // ============================================================================
@@ -335,6 +415,13 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     genre,
     age,
     height,
+    // Origin and background
+    origin,
+    spawnPoint,
+    background,
+    // Clothing style override
+    clothingStyle,
+    clothingDetails,
     // Distinguishing details - IMPORTANT
     details,
     distinguishingFeatures,
@@ -351,11 +438,15 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     mutations,
     // Portrait hints from class
     portraitHints,
+    // Personality for expression hints
+    disposition,
+    socialStyle,
   } = body;
 
   console.log("=== LAYERED PROMPT BUILDER ===");
   console.log("Input:", JSON.stringify({ 
     gender, build, skinTone, hairColor, hairStyle, eyeColor, characterClass, genre, age,
+    origin, spawnPoint, clothingStyle,
     detailsCount: details?.length || 0,
     distinguishingFeaturesCount: distinguishingFeatures?.length || 0,
     accessoriesCount: accessories?.length || 0,
@@ -374,7 +465,9 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   };
 
   // Get genre context
-  const genreCtx = GENRE_CONTEXT[genre] || GENRE_CONTEXT.fantasy;
+  const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
+  const genreCtx = GENRE_CONTEXT[genreKey] || GENRE_CONTEXT[genre] || GENRE_CONTEXT.fantasy;
+  console.log("Genre context for:", genreKey, genreCtx);
 
   // =========================================================================
   // LAYER 1: IDENTITY (Highest Priority - Who is this person?)
@@ -382,15 +475,23 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   const genderStr = lookup(PHYSICAL.gender, gender, 'person');
   const ageStr = age ? `${age} year old` : 'adult';
   
-  // Find role from character class
+  // Find role from character class - try exact match first, then partial
   let roleStr = '';
-  const classLower = (characterClass || '').toLowerCase();
-  for (const key of Object.keys(ROLE_IDENTITY)) {
-    if (classLower.includes(key)) {
-      roleStr = ROLE_IDENTITY[key];
-      break;
+  const classLower = (characterClass || '').toLowerCase().replace(/[\s-]/g, '_');
+  
+  // Try exact match
+  if (ROLE_IDENTITY[classLower]) {
+    roleStr = ROLE_IDENTITY[classLower];
+  } else {
+    // Try partial match
+    for (const key of Object.keys(ROLE_IDENTITY)) {
+      if (classLower.includes(key) || key.includes(classLower)) {
+        roleStr = ROLE_IDENTITY[key];
+        break;
+      }
     }
   }
+  
   // Fallback to class name if no match
   if (!roleStr && characterClass) {
     roleStr = characterClass;
@@ -398,6 +499,27 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   
   const layer1 = `${ageStr} ${genderStr}${roleStr ? `, ${roleStr}` : ''}`;
   console.log("Layer 1 (Identity):", layer1);
+
+  // =========================================================================
+  // LAYER 1.5: ORIGIN/BACKGROUND MODIFIER (Affects demeanor and wear)
+  // =========================================================================
+  let originModifier = '';
+  
+  // Check spawn point first (more specific)
+  if (spawnPoint && ORIGIN_MODIFIERS[spawnPoint]) {
+    originModifier = ORIGIN_MODIFIERS[spawnPoint];
+  }
+  // Then check origin/background
+  else if (origin && ORIGIN_MODIFIERS[origin]) {
+    originModifier = ORIGIN_MODIFIERS[origin];
+  }
+  else if (background && ORIGIN_MODIFIERS[background]) {
+    originModifier = ORIGIN_MODIFIERS[background];
+  }
+  
+  if (originModifier) {
+    console.log("Layer 1.5 (Origin):", originModifier);
+  }
 
   // =========================================================================
   // LAYER 2: PHYSICAL (Core appearance)
@@ -439,6 +561,8 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
       const mapped = DETAIL_MAP[f];
       if (mapped && !detailParts.includes(mapped)) {
         detailParts.push(mapped);
+      } else if (f && !detailParts.includes(f.toLowerCase())) {
+        detailParts.push(f.toLowerCase());
       }
     });
   }
@@ -449,6 +573,8 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
       const mapped = DETAIL_MAP[a];
       if (mapped && !detailParts.includes(mapped)) {
         detailParts.push(mapped);
+      } else if (a && !detailParts.includes(a.toLowerCase())) {
+        detailParts.push(`wearing ${a.toLowerCase()}`);
       }
     });
   }
@@ -499,8 +625,50 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   // =========================================================================
   // LAYER 3: CONTEXT (What are they wearing? Where are they?)
   // =========================================================================
-  const layer3 = `wearing ${genreCtx.outfit}, ${genreCtx.setting} background`;
+  
+  // Determine outfit - clothing style can override genre default
+  let outfitStr = genreCtx.outfit;
+  
+  if (clothingStyle && clothingStyle !== 'genre_default' && CLOTHING_STYLE_MODIFIERS[clothingStyle]) {
+    // Override with clothing style
+    outfitStr = CLOTHING_STYLE_MODIFIERS[clothingStyle];
+    console.log("Clothing style override:", clothingStyle);
+  }
+  
+  // Add specific clothing details if provided
+  if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
+    outfitStr += `, specifically ${clothingDetails.join(', ')}`;
+  }
+  
+  const layer3 = `wearing ${outfitStr}, ${genreCtx.setting} background`;
   console.log("Layer 3 (Context):", layer3);
+
+  // =========================================================================
+  // LAYER 3.5: PERSONALITY/EXPRESSION (Demeanor and pose hints)
+  // =========================================================================
+  let expressionHint = '';
+  
+  if (disposition) {
+    const dispositionExpression: Record<string, string> = {
+      'Bold': 'confident assertive expression',
+      'Cautious': 'alert watchful expression',
+      'Adaptable': 'calm collected expression',
+    };
+    if (dispositionExpression[disposition]) {
+      expressionHint = dispositionExpression[disposition];
+    }
+  }
+  
+  if (socialStyle && !expressionHint) {
+    const socialExpression: Record<string, string> = {
+      'Charming': 'charming slight smile',
+      'Reserved': 'reserved composed expression',
+      'Blunt': 'direct intense gaze',
+    };
+    if (socialExpression[socialStyle]) {
+      expressionHint = socialExpression[socialStyle];
+    }
+  }
 
   // =========================================================================
   // LAYER 4: STYLE (How should this be rendered?)
@@ -510,14 +678,20 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
 
   // =========================================================================
   // ASSEMBLE FINAL PROMPT
-  // Structure: [Medium] [Framing/Pose] [Identity] [Physical] [DETAILS] [Context] [Quality]
+  // Structure: [Medium] [Framing/Pose] [Identity] [Origin] [Physical] [DETAILS] [Context] [Expression] [Quality]
   // =========================================================================
   const promptParts = [
-    LAYER_STYLE.medium,           // "professional photograph, RAW photo"
-    LAYER_STYLE.framing,          // "three-quarter body, slightly angled, looking at camera"
+    LAYER_STYLE.medium,           // "cinematic digital art portrait"
+    LAYER_STYLE.framing,          // "front-facing, looking at camera"
     layer1,                        // WHO: "adult woman solo mercenary"
-    layer2,                        // LOOKS: "athletic build, olive skin, black hair..."
   ];
+  
+  // Add origin modifier if present
+  if (originModifier) {
+    promptParts.push(originModifier); // ORIGIN: "hardened expression, survival scars"
+  }
+  
+  promptParts.push(layer2);        // LOOKS: "athletic build, olive skin, black hair..."
   
   // Add details with emphasis if present
   if (layer25) {
@@ -525,7 +699,13 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   }
   
   promptParts.push(layer3);        // CONTEXT: "wearing futuristic streetwear, neon city"
-  promptParts.push(layer4);        // QUALITY: "sharp focus, natural skin texture"
+  
+  // Add expression hint if present
+  if (expressionHint) {
+    promptParts.push(expressionHint); // EXPRESSION: "confident assertive expression"
+  }
+  
+  promptParts.push(layer4);        // QUALITY: "sharp focus, dramatic lighting"
 
   const finalPrompt = promptParts.join(', ');
 
