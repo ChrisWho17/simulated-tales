@@ -29,6 +29,7 @@ export interface FullAppearance {
   isHermaphrodite?: boolean;
   // Extended body modifications
   piercings?: string[];
+  piercingStyle?: string; // Affects NPC reactions
   tattoos?: string[];
   tattooStyle?: string;
   // Physical modifications
@@ -287,11 +288,12 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
     }
     // Extended body modifications
     if (full.piercings?.length) {
+      const piercingStyle = (full as any).piercingStyle ? ` (${(full as any).piercingStyle} style)` : '';
       const piercingLabels = full.piercings.map(p => {
         const opt = PIERCING_OPTIONS.find(o => o.value === p);
         return opt ? opt.label.toLowerCase() + ' piercing' : p;
       });
-      description += `, with ${piercingLabels.join(', ')}`;
+      description += `, with${piercingStyle} ${piercingLabels.join(', ')}`;
     }
     if (full.tattoos?.length) {
       const tattooStyle = full.tattooStyle ? TATTOO_STYLE_OPTIONS.find(s => s.value === full.tattooStyle)?.label || '' : '';

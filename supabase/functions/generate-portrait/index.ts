@@ -1368,8 +1368,8 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     hairColor, hairStyle, eyeColor,
     additionalDetails, characterAdditionals, customDescription,
     characterClass, genre, nationality, ethnicity, origin,
-    tattoos, piercings, scars, implants, prosthetics, mutations,
-    bustSize, hipWidth,
+    tattoos, tattooStyle, piercings, piercingStyle, scars, implants, prosthetics, mutations,
+    bustSize, hipWidth, clothingStyle, clothingDetails,
   } = body;
 
   const parts: string[] = [];
@@ -1411,24 +1411,34 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     parts.push(scarDescriptions || 'visible battle scars');
   }
   
-  // Piercings with jewelry material hints
+  // Piercings with style and jewelry material hints
   if (piercings?.length) {
     const piercingList = Array.isArray(piercings) ? piercings : [];
+    const styleDesc = piercingStyle ? `${piercingStyle} style ` : '';
     const piercingDescriptions = piercingList.map((p: any) => {
       const location = typeof p === 'string' ? p : p.location;
-      return `${location} piercing with quality jewelry`;
+      return `${location} piercing`;
     }).join(', ');
-    parts.push(piercingDescriptions || 'tasteful body piercings');
+    parts.push(`${styleDesc}piercings: ${piercingDescriptions}` || 'tasteful body piercings');
   }
   
   // Tattoos with style vocabulary
   if (tattoos?.length) {
     const tattooList = Array.isArray(tattoos) ? tattoos : [];
+    const styleDesc = tattooStyle ? `${tattooStyle} style ` : '';
     const tattooDescriptions = tattooList.map((t: any) => {
       const location = typeof t === 'string' ? t : t.location;
-      return `detailed tattoo art on ${location}`;
+      return `${location} tattoo`;
     }).join(', ');
-    parts.push(tattooDescriptions || 'artistic tattoos');
+    parts.push(`${styleDesc}tattoos: ${tattooDescriptions}` || 'artistic tattoos');
+  }
+  
+  // Clothing style override (if not genre default)
+  if (clothingStyle && clothingStyle !== 'genre_default') {
+    parts.push(`wearing ${clothingStyle} style clothing`);
+    if (clothingDetails?.length) {
+      parts.push(`specifically: ${clothingDetails.join(', ')}`);
+    }
   }
   
   // Cybernetic implants with specific vocabulary
