@@ -1362,7 +1362,7 @@ function normalizeGenre(rawGenre: string): string {
 // ============================================================================
 // BUILD PROMPT FUNCTION
 // ============================================================================
-function buildPrompt(body: any): { prompt: string; negative: string } {
+function buildPrompt(body: any): { prompt: string; negative: string; detectedKeywords: any } {
   const {
     name, gender, age, build, skinTone, height,
     hairColor, hairStyle, eyeColor, faceShape,
@@ -1583,21 +1583,174 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     'promiscuous', 'uninhibited', 'brazen', 'shameless', 'erotic'
   ];
   
+  // COLOR keywords for clothing
+  const COLOR_KEYWORDS: Record<string, string> = {
+    'red': 'deep red, crimson colored',
+    'crimson': 'rich crimson red',
+    'scarlet': 'vivid scarlet red',
+    'blue': 'blue colored',
+    'navy': 'dark navy blue',
+    'azure': 'bright azure blue',
+    'royal blue': 'rich royal blue',
+    'green': 'green colored',
+    'emerald': 'vivid emerald green',
+    'forest green': 'deep forest green',
+    'black': 'black colored, dark',
+    'white': 'white colored, pristine',
+    'gold': 'gold colored, gilded accents',
+    'golden': 'golden hued',
+    'silver': 'silver colored, metallic silver accents',
+    'purple': 'purple colored, violet',
+    'violet': 'rich violet purple',
+    'pink': 'pink colored',
+    'rose': 'rose pink, soft rose',
+    'orange': 'orange colored, amber',
+    'yellow': 'yellow colored, bright',
+    'brown': 'brown colored, earthy brown',
+    'tan': 'tan, sandy colored',
+    'beige': 'beige, cream colored',
+    'grey': 'grey colored',
+    'gray': 'gray colored',
+    'teal': 'teal colored, blue-green',
+    'burgundy': 'deep burgundy',
+    'maroon': 'dark maroon',
+    'ivory': 'ivory, off-white',
+    'coral': 'coral colored',
+    'lavender': 'soft lavender',
+  };
+  
+  // PATTERN keywords for clothing
+  const PATTERN_KEYWORDS: Record<string, string> = {
+    'striped': 'striped pattern',
+    'stripes': 'striped pattern',
+    'plaid': 'plaid pattern',
+    'checkered': 'checkered pattern',
+    'polka dot': 'polka dot pattern',
+    'floral': 'floral pattern',
+    'paisley': 'paisley pattern',
+    'camo': 'camouflage pattern',
+    'camouflage': 'camouflage pattern',
+    'leopard': 'leopard print',
+    'animal print': 'animal print pattern',
+    'lace': 'delicate lace pattern',
+    'embroidered': 'embroidered details',
+    'sequined': 'sequined, sparkly',
+    'glitter': 'glittery, sparkling',
+    'metallic': 'metallic sheen',
+    'leather': 'leather material',
+    'velvet': 'velvet fabric',
+    'silk': 'silk fabric, silky',
+    'satin': 'satin fabric, shiny satin',
+    'denim': 'denim fabric',
+    'mesh': 'mesh fabric, see-through mesh',
+    'sheer': 'sheer fabric, translucent',
+    'fishnet': 'fishnet pattern',
+    'ripped': 'ripped, torn aesthetic',
+    'distressed': 'distressed, worn look',
+  };
+  
+  // PHYSIQUE keywords for body type
+  const PHYSIQUE_KEYWORDS: Record<string, string> = {
+    'toned': 'toned, fit physique',
+    'athletic': 'athletic build, sporty body',
+    'muscular': 'muscular, well-built',
+    'buff': 'buff, very muscular',
+    'ripped': 'ripped physique, defined muscles',
+    'lean': 'lean physique, slim and fit',
+    'slim': 'slim figure',
+    'slender': 'slender build',
+    'petite': 'petite frame',
+    'curvy': 'curvy figure, shapely',
+    'hourglass': 'hourglass figure',
+    'voluptuous': 'voluptuous figure, full-figured',
+    'thick': 'thick build, full-bodied',
+    'chubby': 'chubby, soft body',
+    'plump': 'plump figure',
+    'heavy': 'heavy build',
+    'stocky': 'stocky build',
+    'broad': 'broad shoulders, wide frame',
+    'lithe': 'lithe, graceful build',
+    'willowy': 'willowy, tall and slim',
+    'statuesque': 'statuesque, tall and striking',
+  };
+  
+  // CLOTH FIT keywords
+  const CLOTH_FIT_KEYWORDS: Record<string, string> = {
+    'tight': 'skin-tight, form-fitting clothing',
+    'form-fitting': 'form-fitting, hugging silhouette',
+    'skin-tight': 'skin-tight, body-hugging',
+    'clingy': 'clingy fabric, body-conforming',
+    'bodycon': 'bodycon style, tight and stretchy',
+    'fitted': 'fitted clothing, tailored fit',
+    'loose': 'loose-fitting, relaxed clothing',
+    'baggy': 'baggy, oversized clothing',
+    'oversized': 'oversized, loose and flowing',
+    'flowy': 'flowy, draping fabric',
+    'draped': 'draped fabric, loose folds',
+    'billowing': 'billowing, voluminous fabric',
+    'relaxed': 'relaxed fit',
+    'tailored': 'tailored, well-fitted',
+    'boxy': 'boxy silhouette',
+    'cropped': 'cropped, shorter length',
+    'high-waisted': 'high-waisted',
+    'low-rise': 'low-rise, sitting low on hips',
+    'mini': 'mini length, very short',
+    'maxi': 'maxi length, floor-length',
+    'short': 'short length',
+    'long': 'long length',
+  };
+  
   // Calculate personality score (-1 to 1, negative = modest, positive = alluring)
   let personalityScore = 0;
-  let matchedKeywords: string[] = [];
+  let matchedKeywords: { category: string; keyword: string; effect: string }[] = [];
   
   for (const keyword of MODEST_KEYWORDS) {
     if (lowerUserDesc.includes(keyword)) {
       personalityScore -= 1;
-      matchedKeywords.push(`modest:${keyword}`);
+      matchedKeywords.push({ category: 'personality', keyword, effect: 'modest' });
     }
   }
   
   for (const keyword of ALLURING_KEYWORDS) {
     if (lowerUserDesc.includes(keyword)) {
       personalityScore += 1;
-      matchedKeywords.push(`alluring:${keyword}`);
+      matchedKeywords.push({ category: 'personality', keyword, effect: 'alluring' });
+    }
+  }
+  
+  // Detect color keywords
+  let colorMods: string[] = [];
+  for (const [keyword, desc] of Object.entries(COLOR_KEYWORDS)) {
+    if (lowerUserDesc.includes(keyword)) {
+      colorMods.push(desc);
+      matchedKeywords.push({ category: 'color', keyword, effect: desc });
+    }
+  }
+  
+  // Detect pattern keywords
+  let patternMods: string[] = [];
+  for (const [keyword, desc] of Object.entries(PATTERN_KEYWORDS)) {
+    if (lowerUserDesc.includes(keyword)) {
+      patternMods.push(desc);
+      matchedKeywords.push({ category: 'pattern', keyword, effect: desc });
+    }
+  }
+  
+  // Detect physique keywords
+  let physiqueMods: string[] = [];
+  for (const [keyword, desc] of Object.entries(PHYSIQUE_KEYWORDS)) {
+    if (lowerUserDesc.includes(keyword)) {
+      physiqueMods.push(desc);
+      matchedKeywords.push({ category: 'physique', keyword, effect: desc });
+    }
+  }
+  
+  // Detect cloth fit keywords
+  let clothFitMods: string[] = [];
+  for (const [keyword, desc] of Object.entries(CLOTH_FIT_KEYWORDS)) {
+    if (lowerUserDesc.includes(keyword)) {
+      clothFitMods.push(desc);
+      matchedKeywords.push({ category: 'fit', keyword, effect: desc });
     }
   }
   
@@ -1630,9 +1783,27 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     personalityClothingMod = 'very revealing outfit, deep plunging neckline, maximum cleavage, bare midriff, provocatively skimpy attire, scandalously revealing';
   }
   
+  // Build additional modifiers from detected keywords
+  const additionalClothingMods: string[] = [];
+  if (colorMods.length > 0) additionalClothingMods.push(`clothing colors: ${colorMods.join(', ')}`);
+  if (patternMods.length > 0) additionalClothingMods.push(`clothing patterns: ${patternMods.join(', ')}`);
+  if (clothFitMods.length > 0) additionalClothingMods.push(`clothing fit: ${clothFitMods.join(', ')}`);
+  
+  const additionalPhysiqueMods = physiqueMods.length > 0 ? `body type: ${physiqueMods.join(', ')}` : '';
+  
   if (matchedKeywords.length > 0) {
-    console.log('Personality keywords detected:', matchedKeywords.join(', '), '| Score:', personalityScore);
+    console.log('Keywords detected:', JSON.stringify(matchedKeywords), '| Personality Score:', personalityScore);
   }
+  
+  // Store detected keywords for response
+  const detectedKeywords = {
+    personalityScore,
+    keywords: matchedKeywords,
+    colorMods,
+    patternMods,
+    physiqueMods,
+    clothFitMods,
+  };
 
   // ========== GENRE ISOLATION RULES ==========
   const genreIsolation: Record<string, string> = {
@@ -1680,12 +1851,15 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     promptSections.push(`BODY MODIFICATIONS: ${modParts.join(', ')}`);
   }
   
-  // 6. Clothing (with personality modifier)
+  // 6. Clothing (with personality and keyword modifiers)
+  let clothingSection = clothingDesc;
   if (personalityClothingMod) {
-    promptSections.push(`${clothingDesc} [PERSONALITY STYLE: ${personalityClothingMod}]`);
-  } else {
-    promptSections.push(clothingDesc);
+    clothingSection += ` [PERSONALITY STYLE: ${personalityClothingMod}]`;
   }
+  if (additionalClothingMods.length > 0) {
+    clothingSection += ` [${additionalClothingMods.join(', ')}]`;
+  }
+  promptSections.push(clothingSection);
   
   // 7. Role (if specified)
   if (roleDesc) {
@@ -1697,17 +1871,22 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     promptSections.push(`PERSONALITY/DEMEANOR: ${personalityStyleMod}`);
   }
   
-  // 9. Genre-specific styling
+  // 9. Physique modifiers from keywords
+  if (additionalPhysiqueMods) {
+    promptSections.push(`PHYSIQUE: ${additionalPhysiqueMods}`);
+  }
+  
+  // 10. Genre-specific styling
   promptSections.push(`SCENE/BACKGROUND: ${style.background}`);
   promptSections.push(`JEWELRY/ACCESSORIES: ${style.jewelry}`);
   promptSections.push(`MAKEUP/GROOMING: ${style.makeup}`);
   
-  // 10. User custom details - PRIORITY
+  // 11. User custom details - PRIORITY
   if (userDesc) {
     promptSections.push(`[USER PRIORITY - MUST FOLLOW: ${userDesc}]`);
   }
   
-  // 11. Art style
+  // 12. Art style
   promptSections.push(`ART STYLE: ${STYLE_LOCK}`);
   
   const prompt = promptSections.join('. ');
@@ -1731,6 +1910,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   return {
     prompt,
     negative: genreNegative ? `${baseNegative}, ${genreNegative}` : baseNegative,
+    detectedKeywords,
   };
 }
 
@@ -1808,10 +1988,10 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, negative } = buildPrompt(body);
+    const { prompt, negative, detectedKeywords } = buildPrompt(body);
     const imageUrl = await generateImage(prompt, negative);
 
-    return new Response(JSON.stringify({ imageUrl }), {
+    return new Response(JSON.stringify({ imageUrl, detectedKeywords }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

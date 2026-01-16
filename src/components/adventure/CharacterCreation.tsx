@@ -131,6 +131,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   // Portrait state
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [detectedKeywords, setDetectedKeywords] = useState<{
+    personalityScore: number;
+    keywords: { category: string; keyword: string; effect: string }[];
+    colorMods: string[];
+    patternMods: string[];
+    physiqueMods: string[];
+    clothFitMods: string[];
+  } | null>(null);
   
   // Custom class state
   const [showCustomClassBuilder, setShowCustomClassBuilder] = useState(false);
@@ -326,8 +334,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         mutations: characterData.mutations.length,
       });
       
-      const imageUrl = await generatePortraitWithCharacterData(characterData, genre);
-      setPortraitUrl(imageUrl);
+      const result = await generatePortraitWithCharacterData(characterData, genre);
+      setPortraitUrl(result.imageUrl);
+      setDetectedKeywords(result.detectedKeywords || null);
       toast.success('Portrait generated!');
     } catch (error) {
       console.error('Error generating portrait:', error);
@@ -1231,6 +1240,81 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   <p className="text-xs text-muted-foreground text-center">
                     Portrait is optional. You can skip this step.
                   </p>
+                  
+                  {/* Detected Keywords Feedback */}
+                  {detectedKeywords && detectedKeywords.keywords.length > 0 && (
+                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                      <h4 className="text-sm font-medium text-primary flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Detected Style Keywords
+                      </h4>
+                      
+                      {/* Personality Score */}
+                      {detectedKeywords.personalityScore !== 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Personality:</span>
+                          <span className={`font-medium ${
+                            detectedKeywords.personalityScore < 0 
+                              ? 'text-blue-500' 
+                              : detectedKeywords.personalityScore > 0 
+                                ? 'text-rose-500' 
+                                : 'text-muted-foreground'
+                          }`}>
+                            {detectedKeywords.personalityScore <= -2 ? 'Very Modest' :
+                             detectedKeywords.personalityScore === -1 ? 'Modest' :
+                             detectedKeywords.personalityScore === 1 ? 'Alluring' :
+                             detectedKeywords.personalityScore === 2 ? 'Seductive' :
+                             detectedKeywords.personalityScore >= 3 ? 'Very Provocative' : 'Neutral'}
+                          </span>
+                          <span className="text-muted-foreground/60">
+                            (score: {detectedKeywords.personalityScore})
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Keywords by Category */}
+                      <div className="flex flex-wrap gap-1">
+                        {detectedKeywords.keywords.map((kw, idx) => (
+                          <span 
+                            key={idx}
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                              kw.category === 'personality' 
+                                ? kw.effect === 'modest' 
+                                  ? 'bg-blue-500/20 text-blue-400'
+                                  : 'bg-rose-500/20 text-rose-400'
+                                : kw.category === 'color'
+                                  ? 'bg-purple-500/20 text-purple-400'
+                                  : kw.category === 'pattern'
+                                    ? 'bg-amber-500/20 text-amber-400'
+                                    : kw.category === 'physique'
+                                      ? 'bg-green-500/20 text-green-400'
+                                      : kw.category === 'fit'
+                                        ? 'bg-cyan-500/20 text-cyan-400'
+                                        : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {kw.category}: {kw.keyword}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* Summary by category */}
+                      <div className="text-[10px] text-muted-foreground space-y-0.5 pt-1 border-t border-border/30">
+                        {detectedKeywords.colorMods.length > 0 && (
+                          <div><Palette className="w-3 h-3 inline mr-1" />Colors: {detectedKeywords.colorMods.join(', ')}</div>
+                        )}
+                        {detectedKeywords.patternMods.length > 0 && (
+                          <div><Shirt className="w-3 h-3 inline mr-1" />Patterns: {detectedKeywords.patternMods.join(', ')}</div>
+                        )}
+                        {detectedKeywords.physiqueMods.length > 0 && (
+                          <div><User className="w-3 h-3 inline mr-1" />Physique: {detectedKeywords.physiqueMods.join(', ')}</div>
+                        )}
+                        {detectedKeywords.clothFitMods.length > 0 && (
+                          <div><Scissors className="w-3 h-3 inline mr-1" />Clothing Fit: {detectedKeywords.clothFitMods.join(', ')}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
