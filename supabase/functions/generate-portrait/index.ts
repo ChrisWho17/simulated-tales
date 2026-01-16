@@ -10,17 +10,18 @@ const corsHeaders = {
 // Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style
+// LAYER 4: Photography Style - Enforcing FRONTAL pose
 const LAYER_STYLE = {
-  medium: 'professional photograph, RAW photo',
-  quality: 'sharp focus, natural skin texture, realistic lighting, detailed eyes with catchlights',
-  framing: 'three-quarter body portrait from thighs up, body slightly angled, face looking directly at camera, eye contact with viewer',
+  medium: 'cinematic digital art portrait, highly detailed, artstation quality',
+  quality: 'sharp focus, detailed skin, dramatic lighting, detailed eyes, 8k resolution',
+  framing: 'front-facing portrait from waist up, facing viewer directly, looking straight at camera with confident expression, symmetrical pose',
 };
 
-// Comprehensive negative prompts including body anomalies
+// Comprehensive negative prompts including body anomalies and pose issues
 const NEGATIVE_PROMPT = [
-  // Style exclusions
-  'cartoon, anime, illustration, 3d render, painting, digital art, artificial, plastic',
+  // Pose exclusions - prevent looking away
+  'looking away, looking to the side, turned away, back view, profile view, looking over shoulder',
+  'side profile, rear view, from behind',
   // Body anomalies
   'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
   'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
@@ -46,8 +47,8 @@ const GENRE_CONTEXT: Record<string, { outfit: string; setting: string }> = {
     setting: 'battlefield, military base',
   },
   cyberpunk: {
-    outfit: 'futuristic streetwear, neon accents, tech-wear jacket',
-    setting: 'neon-lit night city, rain-slicked streets, holographic signs',
+    outfit: 'cyberpunk tactical armor, chrome cybernetic arm, neon accents, combat gear, holding futuristic weapon',
+    setting: 'neon-lit cyberpunk city, holographic billboards, rain, dark atmosphere',
   },
   postapoc: {
     outfit: 'weathered survival gear, patched leather, scavenged clothing',
@@ -297,13 +298,13 @@ const ROLE_IDENTITY: Record<string, string> = {
   cleric: 'cleric in religious vestments',
   bard: 'bard in colorful clothing with instrument',
   
-  // Cyberpunk roles
-  solo: 'solo mercenary with combat implants',
-  netrunner: 'netrunner with neural interface and data cables',
-  fixer: 'fixer in stylish street clothes',
-  techie: 'techie with tools and gadgets',
-  nomad: 'nomad in road-worn gear',
-  corpo: 'corporate agent in sleek business attire',
+  // Cyberpunk roles - with weapons and chrome
+  solo: 'elite solo mercenary, chrome cybernetic arm, tactical body armor, holding assault rifle, dangerous confident pose',
+  netrunner: 'netrunner hacker, glowing neural interface, data cables, holographic displays around head',
+  fixer: 'fixer in expensive street fashion, chrome accessories, confident smirk',
+  techie: 'techie with cybernetic eye implant, tools, gadgets',
+  nomad: 'nomad warrior in road-worn armored gear, dust and chrome',
+  corpo: 'corporate agent in sleek tactical business attire, hidden chrome',
   
   // Civilian/Other
   survivor: 'survivor in makeshift gear',
