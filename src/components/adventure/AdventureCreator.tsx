@@ -112,12 +112,15 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
   const handleLoad = (campaignId: string) => {
     setActiveCampaignId(campaignId);
     setIsOpen(false);
-    if (onLoad) {
-      onLoad(campaignId);
-    } else {
-      // Fallback: reload page to trigger campaign load
-      window.location.reload();
-    }
+    // Use setTimeout to ensure localStorage write completes before reload
+    setTimeout(() => {
+      if (onLoad) {
+        onLoad(campaignId);
+      } else {
+        // Fallback: reload page to trigger campaign load
+        window.location.reload();
+      }
+    }, 50);
   };
 
   const handleDelete = (e: React.MouseEvent, campaignId: string, campaignName: string) => {
