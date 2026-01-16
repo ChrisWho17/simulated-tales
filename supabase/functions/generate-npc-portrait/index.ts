@@ -9,74 +9,136 @@ const corsHeaders = {
 // PORTRAIT STYLE CONSTANTS - Realistic waist-up portraits
 // ============================================================================
 
-// Safe, professional prompt that avoids content filter triggers
+// Realistic photo style - knees up to head framing
 const PORTRAIT_STYLE_BASE = [
-  'professional character illustration',
-  'high quality digital art',
-  'three-quarter length portrait showing from knees to head',
-  'detailed background environment',
-  'natural lighting',
-  'looking at camera',
+  'ultra realistic photograph',
+  'professional portrait photography',
+  'sharp focus on face',
+  'natural skin texture',
+  'photorealistic',
+  'three-quarter body shot from knees up to head',
   'detailed facial features',
-  'appropriate professional attire',
-  'clean composition',
+  'looking at viewer',
+  'studio quality lighting',
+  'high resolution',
+  'detailed eyes with natural reflections',
+  'natural hair texture',
+  'authentic clothing fabric textures',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
-  'worst quality',
-  'low quality',
+  'cartoon',
+  'anime',
+  'illustration',
+  'painting',
+  'drawing',
+  'sketch',
+  'digital art',
+  'CGI',
+  '3D render',
   'blurry',
   'bad anatomy',
-  'bad hands',
-  'missing fingers',
-  'extra fingers',
+  'distorted face',
+  'extra limbs',
   'watermark',
-  'signature',
   'text',
   'logo',
-  'cropped',
-  'out of frame',
-  'duplicate',
-  'deformed',
-  'disfigured',
-  'ugly',
-  'anime',
-  'cartoon',
-  '3d render',
-  'plastic',
-  'cgi',
-  'simple background',
-  'plain background',
-  'white background',
+  'plastic skin',
+  'mannequin',
+  'doll-like',
+  'oversaturated',
+  'overexposed',
 ].join(', ');
 
 // ============================================================================
-// GENRE STYLES FOR NPCs
+// GENRE STYLES FOR NPCs - Detailed environments
 // ============================================================================
 
-// Genre styles with safe, non-triggering descriptions
-const GENRE_STYLES: Record<string, string> = {
-  modern: 'modern casual clothing, city street background',
-  'modern-life': 'modern casual clothing, city street background',
-  war: 'military uniform, outdoor field background',
-  cyberpunk: 'futuristic clothing with tech accessories, neon city background',
-  postapoc: 'worn practical clothing, desert landscape background',
-  scifi: 'futuristic uniform, space station background',
-  fantasy: 'medieval fantasy robes and light armor, forest background',
-  medieval: 'medieval period clothing, castle courtyard background',
-  horror: 'dark casual clothing, dimly lit room background',
-  western: 'western frontier clothing, desert town background',
-  noir: '1940s business attire, office with venetian blinds background',
-  mystery: '1940s detective clothing, study room background',
-  pirate: 'historical sailing era clothing, ship deck background',
-  ww2: '1940s period uniform, European countryside background',
-  survival: 'outdoor hiking gear, wilderness background',
-  steampunk: 'Victorian era clothing with brass accessories, industrial background',
-  apocalypse: 'rugged practical clothing, abandoned building background',
-  vampire: 'elegant Victorian formal wear, mansion interior background',
-  zombie: 'practical survivor clothing, empty street background',
-  superhero: 'colorful athletic costume, city rooftop background',
-  spy: 'formal business attire, modern office background',
+const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
+  modern: {
+    style: 'modern casual clothing, practical gear',
+    backgrounds: ['urban city street with tall buildings', 'modern office interior with glass windows', 'suburban neighborhood at golden hour', 'rooftop overlooking city skyline'],
+  },
+  'modern-life': {
+    style: 'contemporary casual clothing, modern everyday fashion',
+    backgrounds: ['cozy coffee shop interior', 'modern apartment living room', 'city park with trees', 'busy urban sidewalk'],
+  },
+  war: {
+    style: 'military combat uniform, tactical body armor, worn battle-ready gear',
+    backgrounds: ['battlefield with smoke and debris', 'military base interior', 'desert terrain with vehicles', 'forest combat zone'],
+  },
+  cyberpunk: {
+    style: 'futuristic streetwear, neon accents, subtle cybernetic enhancements, tech-wear fashion',
+    backgrounds: ['neon-lit city street at night with rain', 'futuristic nightclub interior', 'high-tech apartment with holographic displays', 'crowded asian-inspired night market'],
+  },
+  postapoc: {
+    style: 'weathered survival clothing, patched leather jacket, scavenged accessories, dust-covered gear',
+    backgrounds: ['desolate wasteland with ruined buildings', 'abandoned highway with wrecked cars', 'makeshift survivor camp', 'overgrown city ruins with nature reclaiming'],
+  },
+  scifi: {
+    style: 'sleek futuristic uniform, advanced fabric materials, subtle tech accessories',
+    backgrounds: ['spaceship interior with viewports', 'space station corridor', 'alien planet surface with strange sky', 'futuristic lab with holographic screens'],
+  },
+  fantasy: {
+    style: 'fantasy-inspired practical clothing, leather armor, cloth robes, mystical accessories',
+    backgrounds: ['enchanted forest with soft magical lighting', 'stone castle interior with torches', 'mountain vista at sunset', 'ancient ruins with overgrown vegetation'],
+  },
+  medieval: {
+    style: 'realistic medieval clothing, period-accurate armor pieces, leather and wool fabrics',
+    backgrounds: ['stone castle courtyard', 'medieval village marketplace', 'forest clearing with ancient trees', 'torch-lit dungeon corridor'],
+  },
+  horror: {
+    style: 'worn everyday clothing, survival gear, practical horror survivor attire',
+    backgrounds: ['abandoned hospital corridor with flickering lights', 'foggy graveyard at night', 'decrepit mansion interior', 'dark forest path'],
+  },
+  western: {
+    style: 'authentic wild west attire, leather duster, cowboy hat, period-accurate western clothing',
+    backgrounds: ['dusty frontier town main street', 'desert canyon at sunset', 'wooden saloon interior', 'open prairie under dramatic sky'],
+  },
+  noir: {
+    style: 'classic 1940s detective attire, fedora, trench coat, vintage formal wear',
+    backgrounds: ['rainy city street at night with streetlamps', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with neon signs'],
+  },
+  mystery: {
+    style: 'professional investigator attire, smart casual clothing, detective accessories',
+    backgrounds: ['victorian study with bookshelves', 'crime scene with police tape', 'foggy london street', 'library interior with old books'],
+  },
+  pirate: {
+    style: 'golden age pirate attire, weathered sea clothing, captain coat, nautical accessories',
+    backgrounds: ['ship deck with ocean horizon', 'tropical island beach', 'port tavern interior', 'hidden cove with anchored ships'],
+  },
+  ww2: {
+    style: '1940s period military uniform, vintage combat gear, authentic era equipment',
+    backgrounds: ['European village street 1940s', 'military barracks interior', 'countryside battlefield', 'bunker with maps and radio'],
+  },
+  survival: {
+    style: 'outdoor survival gear, hiking clothing, practical backpack, weathered explorer attire',
+    backgrounds: ['dense forest campsite', 'mountain trail with scenic view', 'abandoned cabin in woods', 'riverside with wilderness'],
+  },
+  steampunk: {
+    style: 'victorian steampunk fashion, brass accessories, goggles, clockwork details, leather and copper',
+    backgrounds: ['victorian industrial factory with steam', 'airship observation deck', 'clockwork laboratory', 'brass and copper workshop'],
+  },
+  apocalypse: {
+    style: 'rugged practical clothing, reinforced gear, weathered attire',
+    backgrounds: ['desolate wasteland with ruined buildings', 'abandoned highway', 'makeshift survivor camp'],
+  },
+  vampire: {
+    style: 'gothic aristocratic attire, dark elegant clothing, victorian formal wear, mysterious sophistication',
+    backgrounds: ['gothic castle ballroom', 'moonlit cemetery with mist', 'victorian mansion parlor', 'dark forest with pale moonlight'],
+  },
+  zombie: {
+    style: 'apocalypse survivor clothing, reinforced practical gear, weathered attire',
+    backgrounds: ['overrun city street with abandoned cars', 'barricaded building interior', 'empty shopping mall', 'foggy suburban neighborhood'],
+  },
+  superhero: {
+    style: 'heroic costume or tactical suit, symbol or emblem, cape or mask optional, powerful presence',
+    backgrounds: ['city rooftop at sunset', 'metropolis skyline', 'secret headquarters interior', 'dramatic sky with clouds'],
+  },
+  spy: {
+    style: 'sleek formal attire, tailored suit, subtle tactical elements, sophisticated fashion',
+    backgrounds: ['casino interior with chandeliers', 'luxury hotel lobby', 'secret underground base', 'exotic foreign city'],
+  },
 };
 
 // ============================================================================
@@ -84,16 +146,20 @@ const GENRE_STYLES: Record<string, string> = {
 // ============================================================================
 
 const EMOTION_STYLES: Record<string, string> = {
-  neutral: 'neutral calm expression, steady gaze',
+  neutral: 'neutral calm expression, steady professional gaze',
   happy: 'happy joyful expression, genuine smile',
-  angry: 'angry expression, furrowed brow, intense',
-  sad: 'melancholic expression, sorrowful eyes',
-  scared: 'fearful expression, wide eyes, tense',
+  angry: 'angry furious expression, snarling rage, intense',
+  sad: 'melancholic expression, distant sorrowful eyes',
+  scared: 'fearful expression, wide eyes, tense anxious',
   suspicious: 'suspicious wary expression, narrowed eyes',
-  confident: 'confident expression, self-assured',
+  confident: 'confident slight smile, self-assured, victorious',
   friendly: 'friendly warm expression, welcoming smile',
   hostile: 'hostile aggressive expression, threatening',
   nervous: 'nervous anxious expression, worried',
+  determined: 'determined fierce expression, intense focused eyes, set jaw',
+  serious: 'serious stoic expression, professional unreadable',
+  cold: 'cold emotionless expression, calculating, predatory',
+  tired: 'exhausted tired expression, bags under eyes, weary',
 };
 
 // ============================================================================
@@ -104,7 +170,7 @@ function buildNPCPrompt(npc: any, config: any): string {
   const genre = config?.genre || 'fantasy';
   const emotion = config?.emotion || 'neutral';
   
-  const genreStyle = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
+  const genreConfig = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
   const emotionStyle = EMOTION_STYLES[emotion] || EMOTION_STYLES.neutral;
   
   // Build NPC description from meta
@@ -118,6 +184,10 @@ function buildNPCPrompt(npc: any, config: any): string {
     npcParts.push(`${npc.meta.age} year old`);
   }
   
+  if (npc.meta?.gender) {
+    npcParts.push(npc.meta.gender === 'female' ? 'woman' : npc.meta.gender === 'male' ? 'man' : 'person');
+  }
+  
   if (npc.meta?.occupation) {
     npcParts.push(npc.meta.occupation);
   }
@@ -128,12 +198,16 @@ function buildNPCPrompt(npc: any, config: any): string {
   
   const npcDesc = npcParts.join(', ') || 'character portrait';
   
-  // Keep it simple and professional to avoid content filters
+  // Select random background from genre
+  const background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
+  
+  // Build complete realistic prompt
   const prompt = [
     PORTRAIT_STYLE_BASE,
     npcDesc,
-    genreStyle,
+    genreConfig.style,
     emotionStyle,
+    `background: ${background}`,
   ].filter(Boolean).join(', ');
   
   return prompt;
