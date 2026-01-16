@@ -107,6 +107,114 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { command: 'gothic', label: 'Gothic', category: 'style', keywords: 'gothic beauty, dark romantic, Victorian elegance, lace and velvet, pale complexion, dramatic dark makeup', description: 'Dark romance', color: 'from-purple-800 to-gray-900', icon: Heart },
   { command: 'grimdark', label: 'Grimdark', category: 'style', keywords: 'grimdark aesthetic, brutal world, hopeless beauty, war-torn, gritty realism, harsh lighting, survival horror', description: 'Brutal reality', color: 'from-gray-800 to-red-900', icon: Skull },
 ];
+// Genre-specific keyword enhancements that modify presets based on current genre
+export const GENRE_KEYWORD_ENHANCEMENTS: Record<string, Record<string, string>> = {
+  fantasy: {
+    goddess: 'divine elven queen, mystical crown, ethereal glow, flowing enchanted robes, magical aura',
+    fierce: 'battle-hardened warrior, arcane scars, enchanted blade wielder, glowing war paint',
+    regal: 'high elf nobility, ornate magical jewelry, ancient bloodline elegance, throne of the fae',
+    mysterious: 'hooded mage, arcane secrets, cryptic runic tattoos, shadowy familiar',
+    elegant: 'silk elven gown, moonlight threads, starlit fabric, enchanted jewelry',
+    tactical: 'ranger leather armor, elven scout gear, forest camouflage, quiver and bow',
+    heavyarmor: 'dwarven forged plate, runic engravings, mithril reinforcement, ancestral crest',
+    juggernaut: 'golem-like enchanted armor, rune-covered plates, magical fortress, impenetrable ward',
+    paladin: 'holy crusader plate, divine light emanating, blessed steel, angelic motifs',
+    darkknight: 'cursed black armor, soul-draining aura, demonic helmet, shadow magic infused',
+  },
+  cyberpunk: {
+    goddess: 'chrome goddess, holographic crown, neon halo effect, synthetic divine beauty',
+    fierce: 'street samurai, combat cyberware, LED-lit scars, targeting implant glowing',
+    regal: 'corporate elite, designer cyberware, platinum chrome accents, executive power suit',
+    mysterious: 'masked netrunner, encrypted identity, holographic disguise, shadow operative',
+    elegant: 'haute couture techwear, fiber optic dress, LED jewelry, designer implants',
+    tactical: 'military-grade cyberware, urban combat gear, smart weapon interface',
+    heavyarmor: 'industrial exoframe, corporate security rig, ballistic plating, servo motors',
+    juggernaut: 'full-body combat chassis, tank-class exoskeleton, integrated weapon systems',
+    powerarmor: 'militech power suit, neural-linked exoframe, HUD visor, hydraulic limbs',
+    darkknight: 'blackout stealth armor, EMP-shielded, menacing LED eyes, shadow corporation',
+  },
+  scifi: {
+    goddess: 'space empress, zero-gravity flowing gown, stellar crown, cosmic radiance',
+    fierce: 'battle-scarred starship captain, plasma burn marks, commanding presence',
+    regal: 'galactic royalty, anti-gravity throne, quantum-threaded regalia',
+    mysterious: 'enigmatic alien hybrid, unknown species traits, psychic aura',
+    elegant: 'diplomatic formal wear, crystalline accessories, space-age fashion',
+    tactical: 'federation uniform, utility belt, phaser holster, communicator badge',
+    heavyarmor: 'planetary assault armor, void-sealed, magnetic boots, oxygen recycler',
+    juggernaut: 'siege mech pilot suit, fully integrated life support, walking battleship',
+    powerarmor: 'EVA combat frame, thruster pack, energy shield generator',
+  },
+  western: {
+    goddess: 'frontier legend, dusty elegance, sun-weathered grace, mythic gunslinger',
+    fierce: 'scarred outlaw, ruthless eyes, quick-draw stance, wanted poster face',
+    regal: 'wealthy rancher, embroidered vest, silver spurs, cattle baron dignity',
+    mysterious: 'drifter with hidden past, pulled-low hat, unseen eyes, stranger in town',
+    elegant: 'saloon owner finest, Victorian frontier dress, pearl jewelry',
+    tactical: 'trail rider gear, saddlebags, rope coiled, survival kit',
+    heavyarmor: 'iron-plated lawman, reinforced duster, steel chest plate',
+    juggernaut: 'walking iron fortress, improvised tank armor, gatling gun carrier',
+  },
+  noir: {
+    goddess: 'femme fatale divine, smoky elegance, dangerous beauty, mysterious allure',
+    fierce: 'hardboiled detective, shadowy scars, intense gaze, seen too much',
+    regal: 'crime boss sophistication, expensive suit, power and menace',
+    mysterious: 'shadow-dwelling informant, face half-hidden, secrets for sale',
+    elegant: 'vintage glamour, silk evening gown, art deco jewelry',
+    tactical: 'private eye trenchcoat, concealed weapons, observant stance',
+  },
+  horror: {
+    goddess: 'dark goddess, otherworldly horror beauty, eldritch elegance, cursed divinity',
+    fierce: 'survivor of nightmares, trauma-hardened, monster-killing scars',
+    regal: 'vampire nobility, ancient aristocratic terror, blood-red elegance',
+    mysterious: 'cult leader aura, forbidden knowledge, unsettling calm',
+    elegant: 'gothic mourning dress, Victorian funeral chic, death-touched beauty',
+    haunted: 'possession survivor, hollow eyes, spectral pallor, death-touched',
+    darkknight: 'death knight armor, skull motifs, necrotic corruption, fear aura',
+  },
+  steampunk: {
+    goddess: 'clockwork divinity, brass and copper elegance, steam-powered grace',
+    fierce: 'airship pirate captain, brass prosthetics, goggle-scarred face',
+    regal: 'industrial magnate, gear-emblazoned regalia, mechanical throne',
+    mysterious: 'masked inventor, hidden contraptions, steam-shrouded',
+    elegant: 'Victorian haute couture, brass clockwork accessories, corset with gears',
+    tactical: 'explorer gear, multi-tool belt, pneumatic grapple, adventure ready',
+    heavyarmor: 'steam-powered iron suit, coal-fired protection, piston-driven joints',
+    juggernaut: 'walking steamtank, boiler-powered armor, chimney stack exhaust',
+  },
+  'post-apocalyptic': {
+    goddess: 'wasteland queen, scavenged crown, radiation-touched beauty, tribal divinity',
+    fierce: 'raider warlord, survival scars, kill trophies, predator presence',
+    regal: 'settlement leader, earned respect, weathered authority',
+    mysterious: 'wandering stranger, unknown origin, possibly dangerous',
+    elegant: 'pre-war finery preserved, salvaged luxury, memory of civilization',
+    tactical: 'scavenger loadout, jury-rigged gear, survival pack',
+    heavyarmor: 'car door plates, tire shoulder pads, improvised tank',
+    juggernaut: 'walking scrap fortress, welded metal cocoon, unstoppable wasteland',
+  },
+};
+
+// Get genre-enhanced keywords for a command
+export const getGenreEnhancedKeywords = (cmd: SlashCommand, genre: string): string => {
+  const normalizedGenre = genre.toLowerCase().replace(/[^a-z-]/g, '');
+  const enhancements = GENRE_KEYWORD_ENHANCEMENTS[normalizedGenre];
+  if (enhancements && enhancements[cmd.command]) {
+    return enhancements[cmd.command];
+  }
+  return cmd.keywords;
+};
+
+// Commands that are especially relevant for each genre
+export const GENRE_SUGGESTED_COMMANDS: Record<string, string[]> = {
+  fantasy: ['fantasy', 'goddess', 'paladin', 'darkfantasy', 'robe', 'platearmor', 'mysterious', 'regal'],
+  cyberpunk: ['cyberpunk', 'powerarmor', 'fierce', 'techfantasy', 'tactical', 'cunning'],
+  scifi: ['scifi', 'powerarmor', 'tactical', 'futuristic', 'elegant', 'stoic'],
+  western: ['western', 'stoic', 'fierce', 'lightarmor', 'casual', 'haunted'],
+  noir: ['noir', 'mysterious', 'cunning', 'formal', 'gothic', 'haunted'],
+  horror: ['horror', 'haunted', 'darkknight', 'grimdark', 'mysterious', 'gothic'],
+  steampunk: ['steampunk', 'regal', 'elegant', 'tactical', 'heavyarmor', 'cunning'],
+  'post-apocalyptic': ['postapoc', 'grimdark', 'fierce', 'tactical', 'juggernaut', 'wild'],
+};
+
 // Piercing style options that affect NPC reactions
 export const PIERCING_STYLE_OPTIONS = [
   { value: 'minimal', label: 'Minimal', description: 'Subtle, tasteful jewelry', reputation: 'professional' },
@@ -142,6 +250,10 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     setOpenSection(prev => prev === section ? null : section);
   }, []);
 
+  // Normalize genre for matching
+  const normalizedGenre = genre.toLowerCase().replace(/[^a-z-]/g, '');
+  const genreSuggestions = GENRE_SUGGESTED_COMMANDS[normalizedGenre] || [];
+
   // Filter commands based on current input
   const filteredCommands = SLASH_COMMANDS.filter(cmd => 
     cmd.command.toLowerCase().includes(slashFilter.toLowerCase()) ||
@@ -149,9 +261,14 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     cmd.category.toLowerCase().includes(slashFilter.toLowerCase())
   );
 
+  // Check if a command is genre-suggested
+  const isGenreSuggested = useCallback((cmd: SlashCommand) => {
+    return genreSuggestions.includes(cmd.command);
+  }, [genreSuggestions]);
 
   const categoryLabels: Record<string, string> = {
     favorites: '⭐ Favorites',
+    suggested: `🎯 ${genre || 'Genre'} Suggestions`,
     personality: '🎭 Personality',
     genre: '🌍 Genre',
     clothing: '👗 Clothing',
@@ -185,12 +302,17 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     setHoldingCommand(null);
   }, [holdTimeout]);
 
-  // Group commands by category with favorites first
+  // Group commands by category with favorites first, then genre suggestions
   const groupedCommands = filteredCommands.reduce((acc, cmd) => {
     // Add to favorites category if favorited
     if (favorites.includes(cmd.command)) {
       if (!acc['favorites']) acc['favorites'] = [];
       acc['favorites'].push(cmd);
+    }
+    // Add to suggested category if genre-relevant (but not if already favorited to avoid duplication at top)
+    if (isGenreSuggested(cmd) && !favorites.includes(cmd.command)) {
+      if (!acc['suggested']) acc['suggested'] = [];
+      acc['suggested'].push(cmd);
     }
     // Also add to regular category
     if (!acc[cmd.category]) acc[cmd.category] = [];
@@ -203,7 +325,9 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     
     // Remove the slash command text from input
     const cleanedDetails = currentDetails.replace(/\/\w*$/, '').trim();
-    const keywordsToUse = customKeywords || cmd.keywords;
+    // Use custom keywords, or genre-enhanced keywords, or default keywords
+    const genreKeywords = getGenreEnhancedKeywords(cmd, genre);
+    const keywordsToUse = customKeywords || genreKeywords;
     
     // Check if already applied - toggle off
     if (appliedCommands.includes(cmd.command)) {
@@ -227,7 +351,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     setShowSlashMenu(false);
     setSlashFilter('');
     setEditingCommand(null);
-  }, [appearance.full?.intimateDetails, onUpdateAppearance, appliedCommands]);
+  }, [appearance.full?.intimateDetails, onUpdateAppearance, appliedCommands, genre]);
 
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -662,7 +786,9 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
         )}
 
         <p className="text-xs text-muted-foreground mb-2">
-          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <span className="text-amber-400">Hold to ⭐ favorite</span>
+          ✨ Type <code className="bg-muted px-1 rounded">/</code> for style presets
+          {genre && <span className="text-primary"> • Genre-tuned for <strong>{genre}</strong></span>}
+          <span className="text-amber-400 ml-1">• Hold to ⭐ favorite</span>
         </p>
         
         <div className="relative">
@@ -693,12 +819,17 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                 </p>
               </div>
               {Object.entries(groupedCommands)
-                .sort(([a], [b]) => a === 'favorites' ? -1 : b === 'favorites' ? 1 : 0)
+                .sort(([a], [b]) => {
+                  const order = ['favorites', 'suggested', 'personality', 'genre', 'clothing', 'armor', 'stance', 'pose', 'style'];
+                  return order.indexOf(a) - order.indexOf(b);
+                })
                 .map(([category, commands]) => (
                 <div key={category}>
                   <div className={cn(
                     "px-2 py-1 text-xs font-semibold sticky top-0",
-                    category === 'favorites' ? "bg-amber-500/20 text-amber-400" : "bg-muted/20 text-muted-foreground"
+                    category === 'favorites' ? "bg-amber-500/20 text-amber-400" :
+                    category === 'suggested' ? "bg-primary/20 text-primary" :
+                    "bg-muted/20 text-muted-foreground"
                   )}>
                     {categoryLabels[category] || category}
                   </div>
@@ -708,6 +839,9 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                     const isFavorite = favorites.includes(cmd.command);
                     const isHolding = holdingCommand === cmd.command;
                     const isEditing = editingCommand === cmd.command;
+                    const isSuggested = isGenreSuggested(cmd);
+                    const genreKeywords = getGenreEnhancedKeywords(cmd, genre);
+                    const hasGenreEnhancement = genreKeywords !== cmd.keywords;
                     
                     return (
                       <div key={`${category}-${cmd.command}`} className="relative">
@@ -722,13 +856,19 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                               value={editedKeywords}
                               onChange={(e) => setEditedKeywords(e.target.value)}
                               className="w-full p-2 rounded text-xs bg-background border border-border/50 mb-2"
-                              placeholder={cmd.keywords}
+                              placeholder={genreKeywords}
                               autoFocus
                             />
+                            {hasGenreEnhancement && (
+                              <p className="text-[10px] text-primary/70 mb-2 flex items-center gap-1">
+                                <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                Genre-optimized for {genre}
+                              </p>
+                            )}
                             <div className="flex gap-2">
                               <button
                                 onClick={() => {
-                                  applySlashCommand(cmd, editedKeywords || cmd.keywords);
+                                  applySlashCommand(cmd, editedKeywords || genreKeywords);
                                 }}
                                 className="px-3 py-1 rounded text-xs bg-primary text-primary-foreground"
                               >
@@ -750,7 +890,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                             type="button"
                             onClick={() => {
                               setEditingCommand(cmd.command);
-                              setEditedKeywords(cmd.keywords);
+                              setEditedKeywords(genreKeywords);
                             }}
                             onPointerDown={() => handlePointerDown(cmd)}
                             onPointerUp={handlePointerUp}
@@ -759,7 +899,8 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                               "w-full flex items-center gap-2 px-3 py-2 text-left transition-all",
                               "hover:bg-primary/10",
                               isApplied && "bg-primary/20",
-                              isHolding && "bg-amber-500/20"
+                              isHolding && "bg-amber-500/20",
+                              isSuggested && !isFavorite && category !== 'suggested' && "ring-1 ring-primary/30"
                             )}
                           >
                             <div className={cn(
@@ -775,8 +916,15 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                               <div className="flex items-center gap-2">
                                 <span className="font-mono text-sm text-primary">/{cmd.command}</span>
                                 <span className="text-xs text-muted-foreground truncate">{cmd.description}</span>
+                                {hasGenreEnhancement && (
+                                  <span className="text-[9px] px-1 py-0.5 rounded bg-primary/20 text-primary font-medium">
+                                    {genre}
+                                  </span>
+                                )}
                               </div>
-                              <div className="text-[10px] text-muted-foreground/60 truncate">{cmd.keywords.slice(0, 50)}...</div>
+                              <div className="text-[10px] text-muted-foreground/60 truncate">
+                                {hasGenreEnhancement ? genreKeywords.slice(0, 50) : cmd.keywords.slice(0, 50)}...
+                              </div>
                             </div>
                             {isFavorite && (
                               <span className={cn(
