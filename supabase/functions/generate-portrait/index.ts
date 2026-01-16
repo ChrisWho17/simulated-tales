@@ -5,551 +5,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Genre themes - just aesthetic direction, let AI be creative with outfits
-const GENRE_STYLES: Record<string, { background: string; aesthetic: string; lighting: string }> = {
-  fantasy: { 
-    background: 'medieval fantasy setting',
-    aesthetic: 'medieval fantasy clothing appropriate for their role',
-    lighting: 'warm torchlight, mystical glow'
-  },
-  medieval: { 
-    background: 'stone castle or medieval village',
-    aesthetic: 'authentic medieval period clothing befitting their station',
-    lighting: 'dramatic candlelight shadows'
-  },
-  dark_fantasy: { 
-    background: 'gothic dark fantasy environment',
-    aesthetic: 'dark gothic fantasy attire with ominous undertones',
-    lighting: 'moonlight, eerie glow'
-  },
-  high_fantasy: { 
-    background: 'magical realm with ethereal elements',
-    aesthetic: 'elegant high fantasy clothing with magical flourishes',
-    lighting: 'ethereal magical luminescence'
-  },
-  cyberpunk: { 
-    background: 'neon-lit megacity with holographic ads',
-    aesthetic: 'cyberpunk fashion - techwear, neon accents, urban tech style fitting their role',
-    lighting: 'harsh neon pink and cyan, rain reflections'
-  },
-  scifi: { 
-    background: 'sleek spaceship or space station interior',
-    aesthetic: 'science fiction attire appropriate for space-faring civilization',
-    lighting: 'cool blue LED ambient'
-  },
-  sci_fi: { 
-    background: 'futuristic sci-fi environment',
-    aesthetic: 'futuristic clothing matching their profession',
-    lighting: 'starlight and holographic displays'
-  },
-  space_opera: { 
-    background: 'grand starship or alien world',
-    aesthetic: 'dramatic space opera costume - bold, theatrical, epic',
-    lighting: 'dramatic space lighting with nebula colors'
-  },
-  horror: { 
-    background: 'abandoned creepy location',
-    aesthetic: 'practical survivor or investigator clothing',
-    lighting: 'harsh flashlight beam, deep shadows'
-  },
-  vampire: { 
-    background: 'Victorian gothic manor',
-    aesthetic: 'gothic elegant attire with Victorian influences',
-    lighting: 'candlelit crimson atmosphere'
-  },
-  zombie: { 
-    background: 'post-outbreak survivor camp',
-    aesthetic: 'apocalypse survivor gear, practical and worn',
-    lighting: 'gritty overcast, emergency lights'
-  },
-  western: { 
-    background: 'Old West frontier town',
-    aesthetic: 'authentic Wild West clothing for their role',
-    lighting: 'golden hour desert sun'
-  },
-  pirate: { 
-    background: 'wooden ship deck or port town',
-    aesthetic: 'age of sail pirate or naval attire',
-    lighting: 'sunset over ocean, lantern glow'
-  },
-  victorian: { 
-    background: 'foggy Victorian era street',
-    aesthetic: 'period-accurate Victorian clothing for their class',
-    lighting: 'atmospheric fog with gaslight'
-  },
-  steampunk: { 
-    background: 'brass and steam industrial setting',
-    aesthetic: 'steampunk fashion with gears, goggles, brass accessories',
-    lighting: 'warm amber industrial lighting'
-  },
-  noir: { 
-    background: 'rain-slicked 1940s city night',
-    aesthetic: 'classic film noir fashion - trench coats, fedoras, elegant evening wear',
-    lighting: 'dramatic film noir shadows, streetlight'
-  },
-  mystery: { 
-    background: 'detective office or crime scene',
-    aesthetic: 'investigator or suspect clothing appropriate to the mystery',
-    lighting: 'desk lamp creating dramatic shadows'
-  },
-  spy: { 
-    background: 'luxury casino or covert location',
-    aesthetic: 'sophisticated spy attire - sleek, elegant, deadly',
-    lighting: 'glamorous golden casino lighting'
-  },
-  crime: { 
-    background: 'gritty urban environment',
-    aesthetic: 'street-smart urban fashion for their criminal role',
-    lighting: 'harsh streetlight, urban night'
-  },
-  postapoc: { 
-    background: 'wasteland ruins',
-    aesthetic: 'post-apocalyptic scavenged and improvised clothing',
-    lighting: 'dusty orange apocalyptic sunset'
-  },
-  post_apocalyptic: { 
-    background: 'collapsed civilization ruins',
-    aesthetic: 'survivor clothing - practical, weathered, resourceful',
-    lighting: 'overcast wasteland atmosphere'
-  },
-  war: { 
-    background: 'military base or battlefield',
-    aesthetic: 'military uniform and gear for their rank and role',
-    lighting: 'harsh military lighting'
-  },
-  ww2: { 
-    background: 'WWII era setting',
-    aesthetic: 'period-accurate WWII clothing or uniform',
-    lighting: 'gritty wartime atmosphere'
-  },
-  superhero: { 
-    background: 'city rooftop at night',
-    aesthetic: 'superhero costume matching their powers and persona',
-    lighting: 'dramatic moonlight and city lights'
-  },
-  modern: { 
-    background: 'modern urban cityscape',
-    aesthetic: 'contemporary modern fashion for their lifestyle',
-    lighting: 'natural daylight'
-  },
-  modern_life: { 
-    background: 'contemporary city street',
-    aesthetic: 'everyday modern clothing for their occupation',
-    lighting: 'bright natural light'
-  },
-  contemporary: { 
-    background: 'trendy urban location',
-    aesthetic: 'current fashion trends matching their personality',
-    lighting: 'warm cafe ambiance'
-  },
-  slice_of_life: { 
-    background: 'cozy everyday environment',
-    aesthetic: 'comfortable casual clothing for daily life',
-    lighting: 'soft natural window light'
-  },
-  romance: { 
-    background: 'romantic elegant setting',
-    aesthetic: 'romantic attire - elegant, alluring, date-worthy',
-    lighting: 'romantic soft golden hour'
-  },
-  urban_fantasy: { 
-    background: 'modern city with hidden magical elements',
-    aesthetic: 'modern clothing with subtle magical or supernatural hints',
-    lighting: 'urban night with magical glow'
-  },
+// Simple genre backgrounds
+const GENRE_BACKGROUNDS: Record<string, string> = {
+  fantasy: 'fantasy setting',
+  medieval: 'medieval castle',
+  cyberpunk: 'neon city',
+  scifi: 'spaceship interior',
+  horror: 'dark atmosphere',
+  western: 'wild west',
+  modern: 'urban city',
+  noir: 'film noir shadows',
+  steampunk: 'brass and steam',
+  postapoc: 'wasteland ruins',
+  romance: 'romantic setting',
+  vampire: 'gothic manor',
+  pirate: 'ship deck',
+  spy: 'luxury casino',
+  war: 'military base',
+  superhero: 'city rooftop',
 };
-
-// Origin-based clothing styles - PRIMARY fashion direction
-const ORIGIN_CLOTHING_STYLES: Record<string, { traditional: string; modern: string; fusion: string }> = {
-  // Asian origins
-  'japanese': {
-    traditional: 'kimono-inspired wrap silhouettes, obi belts, hakama pants, samue workwear',
-    modern: 'Tokyo streetwear, minimalist Japanese cuts, layered asymmetric pieces',
-    fusion: 'neo-kimono elements, haori-inspired jackets, Japanese punk fusion'
-  },
-  'chinese': {
-    traditional: 'qipao elements, mandarin collars, changshan inspired, silk brocade patterns, knot buttons',
-    modern: 'Shanghai fashion, Chinese streetwear, modern tangzhuang styling',
-    fusion: 'contemporary hanfu elements, East-meets-West fusion cuts'
-  },
-  'korean': {
-    traditional: 'hanbok-inspired silhouettes, jeogori collar styling, flowing skirt elements',
-    modern: 'K-fashion layering, Seoul streetwear, oversized minimalism',
-    fusion: 'modern hanbok fusion, Korean avant-garde cuts'
-  },
-  'indian': {
-    traditional: 'kurta and churidar elements, sari draping influences, sherwanis, dupattas',
-    modern: 'Mumbai fashion, Indo-Western fusion, contemporary Indian cuts',
-    fusion: 'modern lehenga styling, Indo-punk fusion, festival-ready Indian fashion'
-  },
-  'thai': {
-    traditional: 'sabai draping, Thai silk patterns, chut thai elements',
-    modern: 'Bangkok fashion forward, tropical elegant cuts',
-    fusion: 'modern Thai ceremonial fusion, Southeast Asian contemporary'
-  },
-  'vietnamese': {
-    traditional: 'ao dai inspired long tunics, elegant flowing silhouettes',
-    modern: 'Saigon chic, Vietnamese minimalist modern',
-    fusion: 'contemporary ao dai elements, Viet-Western fusion'
-  },
-  // European origins
-  'british': {
-    traditional: 'Savile Row tailoring, tweed and wool, proper British cuts, waistcoats',
-    modern: 'London streetwear, British punk influence, mod styling',
-    fusion: 'neo-Victorian elements, British avant-garde'
-  },
-  'french': {
-    traditional: 'Parisian haute couture influences, elegant draped silhouettes, chic tailoring',
-    modern: 'French effortless style, Parisian casual elegance',
-    fusion: 'contemporary French fashion, artsy Parisian cuts'
-  },
-  'italian': {
-    traditional: 'Milanese tailoring, Mediterranean elegance, quality Italian craftsmanship',
-    modern: 'Italian street style, bold Mediterranean fashion',
-    fusion: 'Italian designer fusion, contemporary Roman elegance'
-  },
-  'german': {
-    traditional: 'dirndl or lederhosen elements, Bavarian influences, precision tailoring',
-    modern: 'Berlin industrial fashion, German minimalist design',
-    fusion: 'Germanic futuristic cuts, industrial-meets-elegant'
-  },
-  'spanish': {
-    traditional: 'flamenco-inspired elements, Iberian dramatic flair, matador touches',
-    modern: 'Barcelona fashion forward, Spanish contemporary',
-    fusion: 'modern Spanish passion, flamenco-punk fusion'
-  },
-  'russian': {
-    traditional: 'fur-trimmed elegance, ornate Russian patterns, kosovorotka elements',
-    modern: 'Moscow high fashion, Russian avant-garde',
-    fusion: 'neo-Russian imperial elements, Slavic futurism'
-  },
-  'scandinavian': {
-    traditional: 'Viking-inspired elements, runic patterns, Nordic folk motifs',
-    modern: 'Scandi minimalism, hygge cozy fashion, Nordic functional design',
-    fusion: 'Norse futurism, Scandinavian tech-wear'
-  },
-  'irish': {
-    traditional: 'Celtic knot patterns, Aran knit elements, Irish wool crafts',
-    modern: 'Dublin contemporary, Irish casual elegance',
-    fusion: 'Celtic-punk fusion, modern Gaelic styling'
-  },
-  'scottish': {
-    traditional: 'tartan patterns, kilt-inspired elements, Highland dress touches',
-    modern: 'Edinburgh fashion, Scottish contemporary',
-    fusion: 'modern tartan fusion, Scottish punk heritage'
-  },
-  'greek': {
-    traditional: 'Grecian draping, chiton-inspired silhouettes, classical elegance',
-    modern: 'Athens fashion, Mediterranean island style',
-    fusion: 'neo-Hellenic fashion, modern goddess styling'
-  },
-  // American origins
-  'american': {
-    traditional: 'denim heritage, workwear Americana, Western influences',
-    modern: 'NYC streetwear, LA casual, American contemporary',
-    fusion: 'neo-Americana, US avant-garde fusion'
-  },
-  'mexican': {
-    traditional: 'embroidered huipil elements, charro influences, vibrant Oaxacan patterns',
-    modern: 'Mexico City fashion, contemporary Mexican design',
-    fusion: 'modern Mexican folk fusion, Dia de los Muertos inspired'
-  },
-  'brazilian': {
-    traditional: 'carnival-inspired elements, capoeira influences, indigenous patterns',
-    modern: 'Rio fashion, Brazilian beach-to-street style',
-    fusion: 'tropical avant-garde, Brazilian contemporary fusion'
-  },
-  'caribbean': {
-    traditional: 'island patterns, reggae influences, tropical folk elements',
-    modern: 'Caribbean island contemporary, tropical urban',
-    fusion: 'Caribbean diaspora fusion, island-meets-city'
-  },
-  // African origins
-  'african': {
-    traditional: 'kente cloth patterns, ankara prints, dashiki styling, African textiles',
-    modern: 'Afropolitan fashion, Lagos streetwear, Johannesburg contemporary',
-    fusion: 'Afrofuturism fashion, pan-African modern fusion'
-  },
-  'nigerian': {
-    traditional: 'agbada robes, iro and buba, gele headwrap influences, Yoruba patterns',
-    modern: 'Nigerian pop culture fashion, Lagos high fashion',
-    fusion: 'modern Nigerian traditional fusion, Naija contemporary'
-  },
-  'egyptian': {
-    traditional: 'ancient Egyptian motifs, pharaonic elegance, lotus and scarab patterns',
-    modern: 'Cairo contemporary, Egyptian modern style',
-    fusion: 'neo-Egyptian fashion, pyramids-meet-future'
-  },
-  'moroccan': {
-    traditional: 'caftan elegance, djellaba influences, Berber patterns, zellige motifs',
-    modern: 'Marrakech fashion, Moroccan bohemian',
-    fusion: 'North African fusion, Moroccan-global hybrid'
-  },
-  'ethiopian': {
-    traditional: 'habesha kemis embroidery, Ethiopian cross patterns, shamma draping',
-    modern: 'Addis Ababa contemporary, Ethiopian modern',
-    fusion: 'Ethiopian diaspora fashion, East African fusion'
-  },
-  // Middle Eastern origins
-  'arabian': {
-    traditional: 'thobe elegance, abaya styling, keffiyeh elements, intricate gold embroidery',
-    modern: 'Dubai high fashion, Gulf contemporary luxury',
-    fusion: 'modern Arabian nights, Middle Eastern futurism'
-  },
-  'persian': {
-    traditional: 'Persian carpet patterns, Iranian royal motifs, Qajar-inspired elegance',
-    modern: 'Tehran contemporary, Iranian diaspora fashion',
-    fusion: 'neo-Persian luxury, Iranian avant-garde'
-  },
-  'turkish': {
-    traditional: 'Ottoman-inspired elegance, Turkish embroidery, kaftan elements',
-    modern: 'Istanbul fashion, Turkish contemporary',
-    fusion: 'neo-Ottoman fusion, Anatolian modern'
-  },
-  'israeli': {
-    traditional: 'Mediterranean influences, Middle Eastern heritage elements',
-    modern: 'Tel Aviv fashion, Israeli casual chic, desert modern',
-    fusion: 'Israeli-global fusion, Mediterranean contemporary'
-  },
-  // Other
-  'australian': {
-    traditional: 'outback rugged wear, bush ranger influences, Aboriginal dot patterns',
-    modern: 'Sydney fashion, Australian surf-meets-city',
-    fusion: 'Australian contemporary fusion, down-under avant-garde'
-  },
-  'polynesian': {
-    traditional: 'tapa cloth patterns, tribal tattoo-inspired prints, island florals',
-    modern: 'Pacific Island contemporary, Hawaiian fashion',
-    fusion: 'Polynesian futurism, island warrior modern'
-  },
-  'native american': {
-    traditional: 'indigenous beadwork, fringe elements, tribal patterns, natural materials',
-    modern: 'Native contemporary, indigenous streetwear',
-    fusion: 'Native futurism, First Nations avant-garde'
-  },
-};
-
-// Origin-based BADASS vibes - make every character look formidable
-const ORIGIN_BADASS_VIBES: Record<string, string[]> = {
-  // Asian origins
-  'japanese': ['samurai warrior spirit', 'yakuza boss energy', 'ronin wanderer intensity', 'shinobi lethal grace'],
-  'chinese': ['wuxia martial master', 'triad enforcer presence', 'Shaolin warrior monk', 'imperial assassin poise'],
-  'korean': ['K-drama anti-hero swagger', 'special forces operative', 'underground fighter stance', 'revenge-driven intensity'],
-  'indian': ['Bollywood action hero presence', 'warrior caste nobility', 'mythic deity avatar', 'royal bodyguard intensity'],
-  'thai': ['Muay Thai champion presence', 'jungle guerrilla fighter', 'ancient warrior spirit', 'lethal elegance'],
-  'vietnamese': ['war-hardened survivor', 'special ops operative', 'guerrilla fighter resilience', 'quiet deadly intensity'],
-  // European origins
-  'british': ['SAS operative coldness', 'London underworld kingpin', 'Victorian assassin elegance', 'punk rock rebellion'],
-  'french': ['French Foreign Legion hardness', 'resistance fighter spirit', 'aristocratic duel master', 'parkour traceur agility'],
-  'italian': ['mafia don authority', 'Roman gladiator presence', 'Renaissance assassin grace', 'street-smart survivor'],
-  'german': ['Teutonic knight severity', 'industrial overlord power', 'precision killer coldness', 'underground techno warrior'],
-  'spanish': ['matador fearless swagger', 'conquistador ruthlessness', 'flamenco passion intensity', 'guerrilla fighter fire'],
-  'russian': ['Spetsnaz lethality', 'Bratva enforcer menace', 'Siberian survivor hardness', 'cold war operative steeliness'],
-  'scandinavian': ['Viking berserker fury', 'Norse god presence', 'frozen warrior resilience', 'death metal intensity'],
-  'irish': ['IRA rebel fire', 'bare-knuckle boxer toughness', 'Celtic warrior spirit', 'street fighter scrappiness'],
-  'scottish': ['Highland warrior ferocity', 'claymore-wielding intensity', 'clan chief authority', 'rebellious freedom fighter'],
-  'greek': ['Spartan warrior discipline', 'Olympian god presence', 'mythic hero destiny', 'ancient warrior philosopher'],
-  // American origins
-  'american': ['Navy SEAL operator', 'outlaw biker gang leader', 'Wild West gunslinger', 'street gang kingpin presence'],
-  'mexican': ['cartel sicario intensity', 'luchador mystique', 'revolucionario fire', 'border town survivor grit'],
-  'brazilian': ['favela warrior survival', 'Jiu-Jitsu champion presence', 'capoeira fighter grace', 'jungle predator instinct'],
-  'caribbean': ['pirate captain swagger', 'voodoo priest mysticism', 'island rebel spirit', 'hurricane survivor resilience'],
-  // African origins
-  'african': ['Wakandan warrior royalty', 'tribal warrior chief', 'savanna predator presence', 'Afrofuturist power'],
-  'nigerian': ['Lagos kingpin presence', '419 mastermind cunning', 'tribal warrior heritage', 'Nollywood action star'],
-  'egyptian': ['pharaoh god-king presence', 'ancient guardian power', 'desert warrior survival', 'Medjay protector duty'],
-  'moroccan': ['Berber mountain warrior', 'Marrakech underworld boss', 'desert nomad resilience', 'ancient fortress defender'],
-  'ethiopian': ['Aksumite warrior nobility', 'undefeated empire pride', 'highland warrior strength', 'ancient bloodline power'],
-  // Middle Eastern origins
-  'arabian': ['desert sheikh authority', 'Bedouin warrior nomad', 'Gulf billionaire power', 'ancient assassin order'],
-  'persian': ['immortal warrior legacy', 'Persian empire nobility', 'desert storm survivor', 'ancient dynasty power'],
-  'turkish': ['Ottoman Janissary elite', 'Istanbul underworld boss', 'Anatolian wolf warrior', 'empire builder ambition'],
-  'israeli': ['Mossad operative lethality', 'IDF special forces hardness', 'Krav Maga master', 'desert warrior survival'],
-  // Other
-  'australian': ['outback survivor toughness', 'Mad Max road warrior', 'crocodile hunter fearlessness', 'convict rebellion spirit'],
-  'polynesian': ['Maori warrior haka intensity', 'island god presence', 'ocean navigator fearlessness', 'tribal tattoo power'],
-  'native american': ['Apache warrior stealth', 'spirit warrior mysticism', 'plains warrior nobility', 'First Nations pride'],
-};
-
-// Get origin-based clothing style
-function getOriginClothingStyle(nationality?: string, ethnicity?: string, origin?: string): string {
-  const searchStr = (nationality || ethnicity || origin || '').toLowerCase();
-  
-  for (const [key, styles] of Object.entries(ORIGIN_CLOTHING_STYLES)) {
-    if (searchStr.includes(key)) {
-      // Randomly pick traditional, modern, or fusion for variety
-      const styleType = ['traditional', 'modern', 'fusion'][Math.floor(Math.random() * 3)] as keyof typeof styles;
-      return styles[styleType];
-    }
-  }
-  return '';
-}
-
-// Get origin-based badass vibe
-function getOriginBadassVibe(nationality?: string, ethnicity?: string, origin?: string): string {
-  const searchStr = (nationality || ethnicity || origin || '').toLowerCase();
-  
-  for (const [key, vibes] of Object.entries(ORIGIN_BADASS_VIBES)) {
-    if (searchStr.includes(key)) {
-      // Randomly pick one badass vibe
-      return vibes[Math.floor(Math.random() * vibes.length)];
-    }
-  }
-  // Default badass vibes for unknown origins
-  const defaultVibes = ['dangerous confidence', 'battle-hardened survivor', 'natural born leader', 'apex predator presence'];
-  return defaultVibes[Math.floor(Math.random() * defaultVibes.length)];
-}
-
-// Build clothing description: user additionals SUPERSEDE all else, then origin drives style, genre provides context
-function buildClothingDescription(
-  genreAesthetic: string,
-  characterClass?: string,
-  originClothingStyle?: string, 
-  userAdditionals?: string
-): string {
-  // User additionals completely override everything else
-  if (userAdditionals && userAdditionals.trim()) {
-    return `EXACTLY AS SPECIFIED: ${userAdditionals} (ignore other clothing suggestions, user has specified the outfit)`;
-  }
-  
-  const parts: string[] = [];
-  
-  // Origin-based clothing is PRIMARY style driver for diversity
-  if (originClothingStyle) {
-    parts.push(`unique outfit featuring ${originClothingStyle}`);
-    // Add genre context as secondary influence
-    parts.push(`adapted for ${genreAesthetic.replace(/clothing|attire|fashion/gi, 'setting').trim()}`);
-  } else {
-    // No origin specified - use genre aesthetic directly
-    parts.push(genreAesthetic);
-  }
-  
-  // Character role adds functional elements
-  if (characterClass) {
-    parts.push(`with practical elements for a ${characterClass} role`);
-  }
-  
-  // Encourage creativity
-  parts.push('creative unique design, avoid generic outfits');
-  
-  return parts.join(', ');
-}
 
 function buildPrompt(body: any): { prompt: string; negative: string } {
   const {
-    name, gender, age, build, height, skinTone, 
-    hairColor, hairStyle, eyeColor, faceShape,
+    name, gender, age, build, skinTone, 
+    hairColor, hairStyle, eyeColor,
     additionalDetails, characterAdditionals, customDescription,
-    characterClass, genre, origin, nationality, ethnicity,
-    details, distinguishingFeatures, accessories,
-    piercings, tattoos, tattooStyle, scars, implants, prosthetics, mutations,
-    // Body shape
-    bustSize, hipWidth, muscleDefinition,
+    characterClass, genre, nationality, ethnicity, origin,
+    tattoos, piercings, scars, implants, prosthetics, mutations,
+    bustSize, hipWidth,
   } = body;
 
-  const desc: string[] = [];
+  const parts: string[] = [];
   
-  // Age defaults to 18
+  // Basic character description
   const charAge = age || 18;
-  
-  // Demographics
-  const eth = ethnicity || nationality || origin || 'American Caucasian';
+  const eth = ethnicity || nationality || origin || '';
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
-  desc.push(`${charAge} year old ${eth} ${genderWord}`);
   
-  // Body shape for female characters - breasts and butt only
+  parts.push(`${charAge} year old ${eth} ${genderWord}`.trim());
+  
+  // Body
   if (gender === 'female' || gender === 'other') {
-    // Bust sizes: small/medium/large/extra
-    const bustMap: Record<string, string> = {
-      'small': 'small breasts',
-      'medium': 'medium breasts',
-      'large': 'large breasts',
-      'extra': 'extra large breasts',
-    };
-    const bust = bustSize || 'medium';
-    const bustDesc = bustMap[bust.toLowerCase()] || `${bust} breasts`;
-    desc.push(bustDesc);
-    
-    // Hip sizes: small/medium/large/extra
-    const hipMap: Record<string, string> = {
-      'small': 'small butt',
-      'medium': 'medium butt',
-      'large': 'large butt',
-      'extra': 'extra large butt',
-    };
-    const hip = hipWidth || 'medium';
-    const hipDesc = hipMap[hip.toLowerCase()] || `${hip} butt`;
-    desc.push(hipDesc);
+    if (bustSize) parts.push(`${bustSize} bust`);
+    if (hipWidth) parts.push(`${hipWidth} hips`);
   }
+  if (build) parts.push(`${build} build`);
+  if (skinTone) parts.push(`${skinTone} skin`);
   
-  // Build and muscle
-  if (build) desc.push(`${build} body`);
-  if (muscleDefinition && muscleDefinition !== 'none' && muscleDefinition !== 'toned') {
-    desc.push(`${muscleDefinition} muscles`);
-  }
-  if (height) desc.push(`${height} height`);
-  if (skinTone) desc.push(`${skinTone} skin`);
-  
-  // Face
-  if (faceShape) desc.push(`${faceShape} face`);
-  if (eyeColor) desc.push(`${eyeColor} eyes`);
+  // Face and hair
+  if (eyeColor) parts.push(`${eyeColor} eyes`);
   if (hairColor || hairStyle) {
-    desc.push(`${hairColor || ''} ${hairStyle || 'styled'} hair`.trim());
+    parts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // Features and accessories
-  const allFeatures: string[] = [];
-  if (details?.length) allFeatures.push(...details);
-  if (distinguishingFeatures?.length) allFeatures.push(...distinguishingFeatures);
-  if (accessories?.length) allFeatures.push(...accessories);
-  if (allFeatures.length) desc.push(allFeatures.join(', '));
+  // Modifications
+  if (tattoos?.length) parts.push('tattoos');
+  if (piercings?.length) parts.push('piercings');
+  if (scars?.length) parts.push('scars');
+  if (implants?.length) parts.push('cybernetic implants');
+  if (prosthetics?.length) parts.push('prosthetics');
+  if (mutations?.length) parts.push('mutations');
   
-  // Body modifications
-  if (tattoos?.length) {
-    const style = tattooStyle ? `${tattooStyle} style ` : '';
-    desc.push(`${style}tattoos`);
-  }
-  if (piercings?.length) desc.push('piercings');
-  if (scars?.length) desc.push('scars');
-  if (implants?.length) desc.push('cybernetic implants');
-  if (prosthetics?.length) desc.push('prosthetic limbs');
-  if (mutations?.length) desc.push('mutations');
+  // Role
+  if (characterClass) parts.push(characterClass);
   
-  // Role/class
-  if (characterClass) desc.push(characterClass);
-  
-  // User's custom description - HIGH PRIORITY for clothing/appearance overrides
+  // User custom description - this is the main styling input
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
+  if (userDesc) parts.push(userDesc);
   
-  // Get genre styling
-  const genreKey = (genre || 'fantasy').toLowerCase().replace(/[\s-]/g, '_');
-  const style = GENRE_STYLES[genreKey] || GENRE_STYLES.modern;
+  // Background from genre
+  const genreKey = (genre || 'modern').toLowerCase().replace(/[\s-]/g, '_');
+  const background = GENRE_BACKGROUNDS[genreKey] || GENRE_BACKGROUNDS.modern;
   
-  const character = desc.join(', ');
+  const character = parts.join(', ');
+  const prompt = `${character}, ${background}`;
   
-  console.log('Portrait for:', name, '| Genre:', genre);
-  console.log('Genre key:', genreKey);
-  console.log('Genre style:', JSON.stringify(style));
-  console.log('Additional details:', userDesc);
-  console.log('Full description:', character);
-  
-  // Build clothing: origin drives style, genre provides context, user additionals supersede all
-  const originClothingStyle = getOriginClothingStyle(nationality, ethnicity, origin);
-  const clothingDesc = buildClothingDescription(style.aesthetic, characterClass, originClothingStyle, userDesc);
-  
-  // Get origin-based badass vibe
-  const badassVibe = getOriginBadassVibe(nationality, ethnicity, origin);
-  
-  console.log('Genre aesthetic:', style.aesthetic);
-  console.log('Origin clothing style:', originClothingStyle);
-  console.log('Badass vibe:', badassVibe);
-  console.log('Final clothing direction:', clothingDesc);
-  
-  // Maximum creative freedom with badass energy
-  const prompt = `${character}, ${badassVibe}, ${clothingDesc}, ${style.background}, ${style.lighting}`;
-  
-  console.log('Final prompt:', prompt);
-  console.log('Character class for costume:', characterClass);
+  console.log('Portrait prompt:', prompt);
   
   return {
     prompt,
@@ -562,7 +93,6 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
   if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
 
   console.log("Generating portrait with Together.ai (FLUX.1-dev)");
-  console.log("Prompt:", prompt.substring(0, 200) + "...");
 
   const response = await fetch("https://api.together.ai/v1/images/generations", {
     method: "POST",
@@ -599,7 +129,6 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
     throw new Error("No image returned from Together.ai");
   }
 
-  // Return as base64 data URL
   return `data:image/png;base64,${b64Data}`;
 }
 
@@ -611,6 +140,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     
+    // Custom prompt mode
     if (body.customPrompt && !body.gender) {
       const imageUrl = await generateImage(body.customPrompt, '');
       return new Response(JSON.stringify({ imageUrl }), {
