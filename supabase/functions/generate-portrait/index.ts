@@ -958,24 +958,7 @@ const GENRE_VISUAL_LOCKS: Record<string, GenreVisualLock> = {
     eraFeeling: 'Cold War era 1950s-1989',
   },
 
-  space_opera: {
-    settings: ['starship bridge', 'alien planet', 'space station', 'galactic senate'],
-    architecture: 'grand space structures, alien architecture',
-    genreElements: 'diverse aliens, space technology, galactic scope',
-    props: 'blasters, communicators, space equipment',
-    lightSources: 'starship lighting, alien suns, dramatic space',
-    lightQuality: 'cinematic space drama',
-    colorTemperature: 'varied dramatic',
-    atmosphericEffects: 'space views, alien atmospheres',
-    mood: 'epic, adventurous, dramatic',
-    dominantColors: 'space black, starship colors, alien hues',
-    accentColors: 'energy weapons, alien colors',
-    metalTones: 'starship alloys, alien metals',
-    overallPalette: 'epic space opera',
-    style: 'Star Wars, space opera epic',
-    textureEmphasis: 'space materials, alien textures',
-    eraFeeling: 'galactic civilization',
-  },
+  // Note: space_opera already defined above, duplicate removed
 
   mythology: {
     settings: ['divine realm', 'ancient temple', 'mythic landscape', 'celestial plane'],
@@ -1705,9 +1688,9 @@ function buildUltimatePrompt(body: any): { prompt: string; negative_prompt: stri
   // =========================================================================
   
   const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
-  const genreData = GENRE_BACKGROUNDS[genreKey] || GENRE_BACKGROUNDS.fantasy;
+  const genreVisualDescription = buildGenreVisualDescription(genreKey);
   
-  const backgroundStr = `Background: ${genreData.setting} softly blurred (f/1.8 depth of field), ${genreData.atmosphere}, visible elements: ${genreData.elements}`;
+  const backgroundStr = genreVisualDescription;
   console.log("Background:", backgroundStr);
   
   // =========================================================================
