@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wand2, X, Save, RefreshCw, Loader2, User, Heart, Shield, Sword, 
   Brain, Zap, Star, Coins, ChevronDown, ChevronUp, AlertTriangle,
   Shirt, Sparkles
 } from 'lucide-react';
+import { useAchievementsOptional } from '@/components/game/Achievements';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -95,6 +96,9 @@ export function CheatModeSplash({
   onUpdateCharacter,
   genre = 'fantasy'
 }: CheatModeSplashProps) {
+  const achievements = useAchievementsOptional();
+  const hasUnlockedCheaterAchievement = useRef(false);
+  
   // Character stats
   const [name, setName] = useState(character?.name || '');
   const [level, setLevel] = useState(character?.level || 1);
@@ -121,6 +125,14 @@ export function CheatModeSplash({
   const [hasEquippedGear, setHasEquippedGear] = useState(true);
   
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Unlock cheater achievement when cheat mode is first opened
+  useEffect(() => {
+    if (isOpen && !hasUnlockedCheaterAchievement.current && achievements) {
+      achievements.unlockAchievement('cheater');
+      hasUnlockedCheaterAchievement.current = true;
+    }
+  }, [isOpen, achievements]);
   
   // Load character data when opened
   useEffect(() => {

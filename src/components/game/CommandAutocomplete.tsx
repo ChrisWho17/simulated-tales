@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   Backpack, ScrollText, Heart, Settings, HelpCircle,
   Bookmark, Map, Users, Dices, RotateCcw, Search, Cloud,
-  Clock, BookOpen
+  Clock, BookOpen, Database, Wand2
 } from 'lucide-react';
 
 export interface SlashCommand {
@@ -13,7 +13,7 @@ export interface SlashCommand {
   aliases: string[];
   description: string;
   icon: React.ReactNode;
-  category: 'navigation' | 'game' | 'social' | 'system';
+  category: 'navigation' | 'game' | 'social' | 'system' | 'secret';
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
@@ -108,6 +108,21 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     icon: <HelpCircle className="w-4 h-4" />,
     category: 'system',
   },
+  // Secret commands
+  {
+    command: '/StorageDiag',
+    aliases: [],
+    description: 'Open storage diagnostics panel',
+    icon: <Database className="w-4 h-4" />,
+    category: 'secret',
+  },
+  {
+    command: '/ImACheater',
+    aliases: [],
+    description: 'Enable cheat mode',
+    icon: <Wand2 className="w-4 h-4" />,
+    category: 'secret',
+  },
 ];
 
 interface CommandAutocompleteProps {
@@ -160,6 +175,7 @@ export function CommandAutocomplete({
     game: 'Game',
     social: 'Social',
     system: 'System',
+    secret: '🤫 Secret',
   };
   
   // Group by category
