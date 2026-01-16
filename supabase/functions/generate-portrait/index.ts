@@ -5,115 +5,281 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Simple genre settings
-const GENRES: Record<string, { setting: string; clothing: string }> = {
-  fantasy: { setting: 'medieval tavern with candlelight', clothing: 'leather armor and adventurer gear' },
-  medieval: { setting: 'castle interior with torchlight', clothing: 'period medieval clothing' },
-  dark_fantasy: { setting: 'dark cathedral with moonlight', clothing: 'dark worn armor and tattered cloak' },
-  cyberpunk: { setting: 'neon-lit alley with rain reflections', clothing: 'tech-enhanced jacket and tactical gear' },
-  scifi: { setting: 'spaceship interior with blue lighting', clothing: 'sleek space uniform' },
-  sci_fi: { setting: 'space station with screen glow', clothing: 'utility space suit' },
-  horror: { setting: 'abandoned building with harsh shadows', clothing: 'worn everyday clothes' },
-  western: { setting: 'old west saloon with warm light', clothing: 'cowboy hat and duster coat' },
-  postapoc: { setting: 'wasteland ruins with harsh sunlight', clothing: 'scavenged tactical gear' },
-  post_apocalyptic: { setting: 'collapsed city with dust haze', clothing: 'improvised survival armor' },
-  noir: { setting: 'rain-slicked street with neon signs', clothing: 'sharp suit and trench coat' },
-  modern: { setting: 'urban environment with natural light', clothing: 'casual modern clothes' },
-  steampunk: { setting: 'Victorian factory with brass machinery', clothing: 'Victorian attire with goggles and gears' },
-  victorian: { setting: 'London street with gas lamps', clothing: 'period Victorian formal wear' },
-  vampire: { setting: 'gothic castle with candlelight', clothing: 'elegant Victorian velvet coat' },
-  pirate: { setting: 'ship deck with ocean background', clothing: 'pirate coat and bandana' },
-  samurai: { setting: 'Japanese castle with natural light', clothing: 'samurai armor or hakama' },
-  spy: { setting: 'elegant casino with dramatic lighting', clothing: 'tailored formal suit' },
-  superhero: { setting: 'city rooftop at night', clothing: 'hero costume with emblem' },
-  zombie: { setting: 'barricaded building', clothing: 'blood-stained survival gear' },
-  war: { setting: 'military base', clothing: 'combat uniform and tactical vest' },
+// =============================================================================
+// GAME-INTEGRATED PORTRAIT SYSTEM
+// Generates character portraits from knee to head with blurred genre backgrounds
+// =============================================================================
+
+// Genre environments and default clothing
+const GENRES: Record<string, { bg: string; clothes: string }> = {
+  // Fantasy
+  fantasy: { bg: 'medieval tavern, candlelight, warm wood tones', clothes: 'leather armor, adventurer gear' },
+  medieval: { bg: 'castle interior, torchlight, stone walls', clothes: 'period medieval tunic and cloak' },
+  dark_fantasy: { bg: 'dark cathedral, moonlight through stained glass', clothes: 'dark worn armor, tattered cloak' },
+  high_fantasy: { bg: 'elven palace, magical light, crystalline', clothes: 'elegant enchanted robes' },
+  grimdark: { bg: 'muddy battlefield, overcast sky', clothes: 'blood-stained plate armor' },
+  
+  // Sci-Fi
+  scifi: { bg: 'spaceship bridge, blue LED lighting, screens', clothes: 'sleek space uniform' },
+  sci_fi: { bg: 'space station corridor, cool lighting', clothes: 'utility jumpsuit with tech' },
+  space_opera: { bg: 'starship interior, dramatic lighting', clothes: 'captain uniform with insignia' },
+  cyberpunk: { bg: 'neon-lit alley, rain, pink and cyan lights', clothes: 'tech jacket, chrome accessories' },
+  
+  // Horror
+  horror: { bg: 'abandoned building, harsh shadows, flickering light', clothes: 'everyday clothes, worn' },
+  vampire: { bg: 'gothic manor, candlelight, red velvet', clothes: 'elegant Victorian coat' },
+  lovecraft: { bg: '1920s study, gas lamp, leather books', clothes: 'tweed jacket, period attire' },
+  zombie: { bg: 'barricaded room, harsh light', clothes: 'tactical survival gear' },
+  
+  // Western/Historical
+  western: { bg: 'old west saloon, warm oil lamp', clothes: 'cowboy hat, duster coat' },
+  pirate: { bg: 'ship cabin, lantern light, ocean view', clothes: 'pirate coat, bandana' },
+  victorian: { bg: 'London street, gas lamps, fog', clothes: 'Victorian formal wear' },
+  steampunk: { bg: 'brass workshop, steam, gears', clothes: 'Victorian with goggles and gears' },
+  samurai: { bg: 'Japanese castle, paper lanterns', clothes: 'samurai armor or hakama' },
+  wuxia: { bg: 'mountain temple, mist, lanterns', clothes: 'flowing martial arts robes' },
+  renaissance: { bg: 'Italian palazzo, golden light', clothes: 'Renaissance doublet and cape' },
+  ancient: { bg: 'Roman forum, Mediterranean sun', clothes: 'toga or gladiator armor' },
+  
+  // Modern/Contemporary
+  modern: { bg: 'urban environment, natural daylight', clothes: 'casual modern clothes' },
+  contemporary: { bg: 'city street, natural light', clothes: 'contemporary fashion' },
+  noir: { bg: 'rain-slicked street, neon signs, shadows', clothes: 'sharp suit, trench coat' },
+  mystery: { bg: 'detective office, venetian blind shadows', clothes: 'detective attire' },
+  spy: { bg: 'luxury casino, elegant lighting', clothes: 'tailored formal suit' },
+  crime: { bg: 'dark alley, neon, harsh shadows', clothes: 'street clothes, leather jacket' },
+  
+  // Post-Apocalyptic
+  postapoc: { bg: 'wasteland ruins, harsh desert sun', clothes: 'scavenged tactical gear' },
+  post_apocalyptic: { bg: 'collapsed city, dust haze', clothes: 'improvised armor' },
+  fallout: { bg: 'retro bunker, fluorescent lights', clothes: 'vault suit or wasteland gear' },
+  
+  // War
+  war: { bg: 'military base, harsh lighting', clothes: 'combat uniform, tactical vest' },
+  ww1: { bg: 'WWI trench, overcast, mud', clothes: 'WWI uniform, greatcoat' },
+  ww2: { bg: 'WWII bunker, harsh light', clothes: 'WWII military uniform' },
+  cold_war: { bg: 'Soviet office, cold light', clothes: 'Cold War era suit' },
+  
+  // Other
+  superhero: { bg: 'city rooftop at night, dramatic', clothes: 'hero costume with emblem' },
+  supervillain: { bg: 'dark lair, dramatic underlighting', clothes: 'villain costume' },
+  mecha: { bg: 'mech hangar, industrial', clothes: 'pilot suit' },
+  dystopia: { bg: 'oppressive city, gray concrete', clothes: 'utilitarian uniform' },
+  survival: { bg: 'wilderness, natural light', clothes: 'outdoor survival gear' },
+  romance: { bg: 'elegant setting, soft golden light', clothes: 'formal elegant attire' },
+  comedy: { bg: 'bright colorful environment', clothes: 'casual colorful clothes' },
+  heist: { bg: 'museum at night, dramatic shadows', clothes: 'tactical black outfit' },
+  mythology: { bg: 'ancient temple, divine light', clothes: 'mythic robes or armor' },
+  urban_fantasy: { bg: 'modern city with magical hints', clothes: 'modern with hidden magical items' },
+  slice_of_life: { bg: 'cozy home, warm light', clothes: 'comfortable everyday wear' },
 };
 
-// Role to clothing mapping
-const ROLE_CLOTHING: Record<string, string> = {
-  knight: 'plate armor with sword',
-  mage: 'mystical robes with staff',
-  rogue: 'leather armor with hood and daggers',
-  warrior: 'battle-worn heavy armor',
-  soldier: 'military combat gear',
-  detective: 'trench coat and fedora',
-  gunslinger: 'cowboy hat with dual revolvers',
-  captain: 'command uniform with insignia',
-  bounty_hunter: 'worn bounty hunter armor',
-  solo: 'tactical jacket with cybernetic arm',
-  netrunner: 'tech hoodie with neural interface',
-  survivor: 'practical survival clothes',
+// Role-specific clothing that overrides genre defaults
+const ROLE_CLOTHES: Record<string, string> = {
+  // Fantasy
+  knight: 'polished plate armor, sword at hip, heraldic tabard',
+  paladin: 'blessed white and gold armor, holy symbols',
+  warrior: 'battle-worn heavy armor, weapons on back',
+  barbarian: 'fur and leather, tribal markings, bare arms',
+  rogue: 'dark leather armor, hood, visible daggers',
+  assassin: 'black leather, hooded cloak, hidden blades',
+  mage: 'mystical robes with arcane symbols, staff',
+  wizard: 'long robes, pointy hat, spellbook',
+  warlock: 'dark robes, eldritch symbols, glowing eyes',
+  sorcerer: 'elegant robes with magical energy effects',
+  cleric: 'religious vestments, holy symbol, blessed armor',
+  druid: 'natural robes with leaves and vines, wooden staff',
+  monk: 'simple robes, bare hands, prayer beads',
+  ranger: 'green cloak, leather armor, bow and quiver',
+  archer: 'light armor, quiver on back, bow',
+  bard: 'colorful performer clothes, musical instrument',
+  necromancer: 'black robes, skull motifs, dark magic effects',
+  
+  // Cyberpunk
+  solo: 'tactical jacket with armor plates, cybernetic arm, weapons',
+  netrunner: 'tech hoodie with LED strips, neural interface on temple',
+  fixer: 'expensive street fashion, chrome jewelry, sleek suit',
+  techie: 'work coveralls with tools, cybernetic eye lens',
+  nomad: 'dusty leather jacket, road-worn boots, goggles',
+  corpo: 'corporate suit, subtle chrome implants, expensive watch',
+  
+  // Sci-Fi
+  captain: 'command uniform with rank insignia, confident pose',
+  bounty_hunter: 'worn bounty hunter armor, multiple weapons',
+  smuggler: 'roguish spacer clothes, blaster at hip',
+  pilot: 'flight suit with patches and gear',
+  
+  // Horror/Investigation
+  investigator: 'period suit, overcoat, investigation tools',
+  survivor: 'everyday clothes with survival modifications',
+  hunter: 'tactical gear with specialized monster-hunting weapons',
+  detective: 'trench coat, fedora, sharp eyes',
+  
+  // Western
+  gunslinger: 'cowboy hat, duster coat, dual revolvers in holsters',
+  sheriff: 'star badge on vest, cowboy hat, rifle',
+  outlaw: 'dusty worn clothes, bandana, weathered look',
+  
+  // Military
+  soldier: 'military combat uniform, tactical gear, rifle',
+  medic: 'combat medic uniform, medical pouches',
+  sniper: 'ghillie elements, precision rifle',
+  officer: 'military officer uniform, command presence',
+  spec_ops: 'black tactical gear, advanced weapons',
+  
+  // General
+  mercenary: 'mixed tactical gear, multiple weapons',
+  noble: 'expensive fine clothing, jewelry, regal bearing',
+  scholar: 'academic robes, glasses, books',
+  merchant: 'quality traveling clothes, merchant tools',
+  thief: 'dark practical clothes, lock picks visible',
 };
 
+// Skin tone descriptions
+const SKIN_TONES: Record<string, string> = {
+  porcelain: 'very pale porcelain skin',
+  ivory: 'pale ivory skin',
+  fair: 'fair skin',
+  light: 'light skin',
+  medium: 'medium skin tone',
+  olive: 'olive skin tone',
+  tan: 'tanned skin',
+  caramel: 'caramel brown skin',
+  brown: 'brown skin',
+  'dark brown': 'dark brown skin',
+  ebony: 'deep ebony skin',
+  'pale blue': 'pale blue skin',
+  green: 'green-tinted skin',
+  purple: 'purple-tinted skin',
+  gray: 'gray skin',
+  silver: 'silvery skin',
+};
+
+// Build prompt from character data
 function buildPrompt(body: any): { prompt: string; negative: string } {
   const {
-    gender, age, build, skinTone, hairColor, hairStyle, eyeColor,
+    name, gender, age, build, height, skinTone, hairColor, hairStyle, eyeColor, faceShape,
     additionalDetails, characterAdditionals, customDescription,
     characterClass, genre, origin, nationality, ethnicity,
     details, distinguishingFeatures, accessories,
-    piercings, tattoos, scars,
+    piercings, tattoos, tattooStyle, scars, prosthetics, implants, mutations,
+    clothingStyle, clothingDetails,
   } = body;
 
-  // User additions override everything
-  const userDetails = additionalDetails || characterAdditionals || customDescription || '';
-  
-  // Genre
+  // Get genre data
   const genreKey = (genre || 'fantasy').toLowerCase().replace(/[\s-]/g, '_');
   const genreData = GENRES[genreKey] || GENRES.fantasy;
   
-  // Role
+  // Get role-specific clothing
   const roleKey = (characterClass || '').toLowerCase().replace(/[\s-]/g, '_');
-  const roleClothing = ROLE_CLOTHING[roleKey];
+  const roleClothes = ROLE_CLOTHES[roleKey];
+  
+  // User custom description takes priority
+  const userDesc = additionalDetails || characterAdditionals || customDescription || '';
+  const hasUserClothing = /wearing|dressed|outfit|armor|suit|jacket|coat|dress|robe|uniform/.test(userDesc.toLowerCase());
   
   // Build description parts
   const parts: string[] = [];
   
-  // Subject
+  // === SUBJECT ===
+  // Ethnicity defaults to American Caucasian unless specified
   const eth = ethnicity || nationality || origin || 'American Caucasian';
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
-  parts.push(`${age || 'adult'} year old ${eth} ${genderWord}`);
+  const ageNum = age ? `${age} year old` : 'adult';
+  parts.push(`${ageNum} ${eth} ${genderWord}`);
   
-  // Physical
-  if (build) parts.push(build + ' build');
-  if (skinTone) parts.push(skinTone + ' skin');
-  if (hairColor || hairStyle) parts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
-  if (eyeColor) parts.push(eyeColor + ' eyes');
+  // === PHYSICAL ===
+  if (build && build !== 'average') parts.push(`${build} build`);
+  if (height && height !== 'average') parts.push(`${height} height`);
   
-  // Features
-  const featureList: string[] = [];
-  if (details?.length) featureList.push(...details);
-  if (distinguishingFeatures?.length) featureList.push(...distinguishingFeatures);
-  if (accessories?.length) featureList.push(...accessories.map((a: string) => 'wearing ' + a));
-  if (tattoos?.length) featureList.push('tattoos on ' + tattoos.join(' and '));
-  if (piercings?.length) featureList.push('piercings on ' + piercings.join(' and '));
-  if (scars?.length) featureList.push('scars on ' + scars.join(' and '));
-  if (featureList.length) parts.push(featureList.join(', '));
+  // Skin
+  const skinDesc = SKIN_TONES[skinTone?.toLowerCase()] || (skinTone ? `${skinTone} skin` : '');
+  if (skinDesc) parts.push(skinDesc);
   
-  // Clothing - priority: user > role > genre
-  const hasUserClothing = userDetails.toLowerCase().match(/wearing|dressed|outfit|armor|suit|jacket|coat|dress|robe/);
-  if (!hasUserClothing) {
-    parts.push('wearing ' + (roleClothing || genreData.clothing));
+  // Face
+  if (faceShape) parts.push(`${faceShape} face`);
+  if (eyeColor) parts.push(`${eyeColor} eyes`);
+  
+  // Hair
+  if (hairColor || hairStyle) {
+    parts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // User details
-  if (userDetails) parts.push(userDetails);
+  // === FEATURES ===
+  const features: string[] = [];
+  if (details?.length) features.push(...details);
+  if (distinguishingFeatures?.length) features.push(...distinguishingFeatures);
+  if (accessories?.length) features.push(...accessories.map((a: string) => `wearing ${a}`));
+  if (features.length) parts.push(features.join(', '));
   
-  // Role label
-  if (characterClass && !hasUserClothing) parts.push(characterClass);
+  // === BODY MODIFICATIONS ===
+  if (tattoos?.length) {
+    const style = tattooStyle ? `${tattooStyle} style ` : '';
+    parts.push(`${style}tattoos on ${tattoos.join(' and ')}`);
+  }
+  if (piercings?.length) parts.push(`piercings on ${piercings.join(' and ')}`);
+  if (scars?.length) parts.push(`scars on ${scars.join(' and ')}`);
+  if (implants?.length) parts.push(`cybernetic implants: ${implants.join(', ')}`);
+  if (prosthetics?.length) parts.push(`prosthetics: ${prosthetics.join(', ')}`);
+  if (mutations?.length) parts.push(`mutations: ${mutations.join(', ')}`);
   
-  // Compose final prompt
+  // === CLOTHING ===
+  // Priority: user description > explicit clothingDetails > role-specific > genre default
+  let clothes = '';
+  if (hasUserClothing) {
+    // User specified in description, will be added via userDesc
+    clothes = '';
+  } else if (clothingDetails?.length) {
+    clothes = `wearing ${clothingDetails.join(', ')}`;
+  } else if (clothingStyle && clothingStyle !== 'genre_default') {
+    clothes = `wearing ${clothingStyle} style clothing`;
+  } else if (roleClothes) {
+    clothes = `wearing ${roleClothes}`;
+  } else {
+    clothes = `wearing ${genreData.clothes}`;
+  }
+  if (clothes) parts.push(clothes);
+  
+  // === ROLE ===
+  if (characterClass && !hasUserClothing) {
+    parts.push(characterClass);
+  }
+  
+  // === USER CUSTOM DESCRIPTION ===
+  if (userDesc) parts.push(userDesc);
+  
+  // === COMPOSE FINAL PROMPT ===
   const subject = parts.join(', ');
-  const prompt = `Portrait from knees to head, ${subject}, looking at camera, ${genreData.setting}, blurred background, photorealistic, sharp focus, 8K`;
   
-  console.log("Portrait prompt:", prompt);
+  // Wide lens, knee-to-head framing, looking at camera
+  const prompt = [
+    // Framing - wide lens, 3/4 body
+    'Wide angle lens portrait',
+    'three-quarter body shot from knees to head',
+    'subject centered in frame',
+    'body slightly angled',
+    'face and eyes looking directly at camera',
+    // Subject description
+    subject,
+    // Background
+    `background: ${genreData.bg}`,
+    'background softly blurred',
+    // Quality
+    'photorealistic',
+    'sharp focus on subject',
+    'professional photography',
+    '8K quality',
+  ].join(', ');
+  
+  console.log('Portrait prompt:', prompt);
   
   return {
     prompt,
-    negative: 'anime, cartoon, 3d render, painting, looking away, profile view, deformed, cropped, headshot only, full body, feet visible'
+    negative: 'anime, cartoon, 3d render, painting, illustration, looking away, profile, side view, close-up, headshot only, bust only, full body, feet visible, cropped, deformed, extra limbs, bad anatomy, bad hands, bad face, blurry, low quality',
   };
 }
 
+// Generate image with Together API
 async function generateImage(prompt: string, negative: string): Promise<string> {
   const apiKey = Deno.env.get("TOGETHER_API_KEY");
   if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
@@ -149,6 +315,7 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
   return `data:image/png;base64,${base64}`;
 }
 
+// Main handler
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -156,12 +323,12 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("Portrait request:", body.name || "unnamed");
+    console.log("Portrait request:", body.name || "character", "| Genre:", body.genre, "| Class:", body.characterClass);
 
-    // Handle legacy prompt-only requests
+    // Handle legacy custom prompt requests
     if (body.customPrompt && !body.gender) {
-      const result = await generateImage(body.customPrompt, 'anime, cartoon, deformed');
-      return new Response(JSON.stringify({ imageUrl: result }), {
+      const imageUrl = await generateImage(body.customPrompt, 'anime, cartoon, deformed');
+      return new Response(JSON.stringify({ imageUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -169,7 +336,7 @@ serve(async (req) => {
     const { prompt, negative } = buildPrompt(body);
     const imageUrl = await generateImage(prompt, negative);
 
-    console.log("Portrait generated for:", body.name || "unnamed");
+    console.log("Portrait generated for:", body.name || "character");
     return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
