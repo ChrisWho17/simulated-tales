@@ -1364,281 +1364,292 @@ function normalizeGenre(rawGenre: string): string {
 // ============================================================================
 function buildPrompt(body: any): { prompt: string; negative: string } {
   const {
-    name, gender, age, build, skinTone,
-    hairColor, hairStyle, eyeColor,
+    name, gender, age, build, skinTone, height,
+    hairColor, hairStyle, eyeColor, faceShape,
     additionalDetails, characterAdditionals, customDescription,
     characterClass, genre, nationality, ethnicity, origin,
     tattoos, tattooStyle, piercings, piercingStyle, scars, implants, prosthetics, mutations,
-    bustSize, hipWidth, clothingStyle, clothingDetails,
+    bustSize, hipWidth, muscleDefinition, bodyHair,
+    clothingStyle, clothingDetails, distinguishingFeatures, accessories,
     // Gear override for cheat mode
     hasEquippedGear, currentGearDescription,
   } = body;
 
-  const parts: string[] = [];
-  
-  // ========== CHARACTER LOCK: Same identity every image ==========
-  const charAge = age || 25;
-  const eth = ethnicity || nationality || origin || '';
-  const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
-  
-  // Subject line - tighter crop for more character focus
-  parts.push(`adult ${genderWord}, portrait from waist up, medium close-up framing, centered composition, facing camera, natural confident pose`);
-  
-  // Core identity that never changes
-  parts.push(`${charAge} year old ${eth} ${genderWord}`.trim());
-  
-  // Face structure and features (LOCKED - never changes)
-  if (eyeColor) parts.push(`${eyeColor} eyes`);
-  if (hairColor || hairStyle) {
-    parts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
-  }
-  if (skinTone) parts.push(`${skinTone} skin tone`);
-  if (build) parts.push(`${build} build`);
-  
-  // Body proportions (LOCKED - never changes)
-  if (gender === 'female' || gender === 'other') {
-    if (bustSize) parts.push(`${bustSize} bust`);
-    if (hipWidth) parts.push(`${hipWidth} hips`);
-  }
-  
-  // ========== BODY MODIFICATIONS (Detailed with AI vocabulary) ==========
-  
-  // Scars with descriptive vocabulary
-  if (scars?.length) {
-    const scarList = Array.isArray(scars) ? scars : [];
-    const scarDescriptions = scarList.map((s: any) => {
-      const location = typeof s === 'string' ? s : s.location;
-      return `healed scar at ${location}`;
-    }).join(', ');
-    parts.push(scarDescriptions || 'visible battle scars');
-  }
-  
-  // Piercings with style and jewelry material hints
-  if (piercings?.length) {
-    const piercingList = Array.isArray(piercings) ? piercings : [];
-    const styleDesc = piercingStyle ? `${piercingStyle} style ` : '';
-    const piercingDescriptions = piercingList.map((p: any) => {
-      const location = typeof p === 'string' ? p : p.location;
-      return `${location} piercing`;
-    }).join(', ');
-    parts.push(`${styleDesc}piercings: ${piercingDescriptions}` || 'tasteful body piercings');
-  }
-  
-  // Tattoos with optional style vocabulary
-  if (tattoos?.length) {
-    const tattooList = Array.isArray(tattoos) ? tattoos : [];
-    // Only apply style if tattooStyle is set and not empty
-    const styleDesc = tattooStyle && tattooStyle.trim() !== '' ? `${tattooStyle} style ` : '';
-    const tattooDescriptions = tattooList.map((t: any) => {
-      const location = typeof t === 'string' ? t : t.location;
-      return `${location} tattoo`;
-    }).join(', ');
-    // If no style, just list tattoo locations without style prefix
-    parts.push(styleDesc ? `${styleDesc}tattoos: ${tattooDescriptions}` : `tattoos at: ${tattooDescriptions}`);
-  }
-  
-  // Clothing style override - handle gear/underwear logic
-  if (hasEquippedGear === false) {
-    // No gear equipped - show in tasteful underwear (SFW)
-    const underwearDesc = gender === 'female' 
-      ? 'wearing simple tasteful undergarments, sports bra and shorts style, clean and modest'
-      : gender === 'male'
-      ? 'wearing simple boxer briefs, clean and modest'
-      : 'wearing simple tasteful undergarments, clean and modest';
-    parts.push(underwearDesc);
-  } else if (currentGearDescription) {
-    // Custom gear description from cheat mode
-    parts.push(`wearing: ${currentGearDescription}`);
-  } else if (clothingStyle && clothingStyle !== 'genre_default') {
-    parts.push(`wearing ${clothingStyle} style clothing`);
-    if (clothingDetails?.length) {
-      parts.push(`specifically: ${clothingDetails.join(', ')}`);
-    }
-  }
-  
-  // Implants - genre-appropriate description (not always cybernetic)
-  if (implants?.length) {
-    const implantList = Array.isArray(implants) ? implants : [];
-    const implantDescriptions = implantList.map((i: any) => {
-      const type = typeof i === 'string' ? i : i.type || i.location;
-      return `visible ${type} implant`;
-    }).join(', ');
-    parts.push(implantDescriptions);
-  }
-  
-  // Prosthetics with material detail
-  if (prosthetics?.length) {
-    const prostheticList = Array.isArray(prosthetics) ? prosthetics : [];
-    const prostheticDescriptions = prostheticList.map((p: any) => {
-      const type = typeof p === 'string' ? p : p.type || p.location;
-      return `${type} prosthetic with realistic mechanical detail`;
-    }).join(', ');
-    parts.push(prostheticDescriptions || 'detailed prosthetic limbs');
-  }
-  
-  // Mutations with fantasy/sci-fi vocabulary
-  if (mutations?.length) {
-    const mutationList = Array.isArray(mutations) ? mutations : [];
-    const mutationDescriptions = mutationList.map((m: any) => {
-      const type = typeof m === 'string' ? m : m.type;
-      return `${type} mutation rendered with biological detail`;
-    }).join(', ');
-    parts.push(mutationDescriptions || 'visible fantastical mutations');
-  }
-  
-  // Get anatomy hints from body data
-  const anatomyHints = getAnatomyHints(body);
-  if (anatomyHints.length > 0) {
-    parts.push(anatomyHints.join(', '));
-  }
-  
-  // ========== GENRE STYLING MODULE WITH SUB-GENRE MATCHING ==========
+  // ========== GENRE DETECTION FIRST - Everything flows from this ==========
   const rawGenre = (genre || 'modern').toLowerCase().trim();
-  
-  // Genre normalization and sub-genre matching
   const genreKey = normalizeGenre(rawGenre);
   const style = GENRE_STYLES[genreKey] || GENRE_STYLES.modern;
   
   console.log(`Genre matching: "${rawGenre}" -> "${genreKey}"`);
+
+  // ========== BODY PROPORTION AMPLIFIERS ==========
+  // These descriptors are amplified to create more noticeable differences
+  const BUST_AMPLIFIER: Record<string, string> = {
+    'small': 'small, modest bust with subtle curves',
+    'medium': 'medium bust with feminine curves',
+    'large': 'large, prominent bust with voluptuous curves, noticeably full-figured chest',
+    'very large': 'very large, exceptionally prominent bust with dramatic voluptuous curves, extremely full-figured chest, eye-catching proportions',
+  };
   
-  // ========== ROLE/CLASS STYLING - Genre-specific role details ==========
-  const normalizedRole = (characterClass || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+  const HIP_AMPLIFIER: Record<string, string> = {
+    'narrow': 'narrow, slim hips with straight silhouette',
+    'average': 'average hips with balanced proportions',
+    'wide': 'wide, curvy hips with prominent hourglass figure, noticeably shapely lower body',
+    'very wide': 'very wide, dramatically curvy hips with exaggerated hourglass figure, exceptionally shapely lower body, striking proportions',
+  };
+
+  const BUILD_AMPLIFIER: Record<string, string> = {
+    'slim': 'slim, slender physique',
+    'average': 'average, healthy build',
+    'athletic': 'athletic, toned physique with visible fitness',
+    'muscular': 'muscular, powerful physique with defined muscles',
+    'heavyset': 'heavyset, larger frame with substantial build',
+    'curvy': 'curvy, shapely figure with pronounced curves',
+  };
+
+  // ========== CHARACTER IDENTITY ==========
+  const charAge = age || 25;
+  const eth = ethnicity || nationality || origin || '';
+  const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   
-  // Find role styling for this genre + role combination
-  const genreRoles = ROLE_STYLES[genreKey] || {};
-  let roleStyle = genreRoles[normalizedRole];
+  const identityParts: string[] = [];
   
-  // Try parent genre if specific genre not found
-  if (!roleStyle && GENRE_FALLBACKS[genreKey]) {
-    const parentGenre = GENRE_FALLBACKS[genreKey];
-    const parentRoles = ROLE_STYLES[parentGenre] || {};
-    roleStyle = parentRoles[normalizedRole];
+  // Core identity
+  identityParts.push(`${charAge} year old ${eth} ${genderWord}`.trim());
+  
+  // Physical attributes
+  if (height) identityParts.push(`${height} height`);
+  if (build) identityParts.push(BUILD_AMPLIFIER[build] || `${build} build`);
+  if (skinTone) identityParts.push(`${skinTone} skin tone with realistic texture`);
+  
+  // Face
+  if (faceShape) identityParts.push(`${faceShape} face shape`);
+  if (eyeColor) identityParts.push(`${eyeColor} eyes`);
+  if (hairColor || hairStyle) {
+    identityParts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // Try common role variations
-  if (!roleStyle) {
-    const roleAliases: Record<string, string> = {
-      'net_runner': 'netrunner',
-      'net-runner': 'netrunner', 
-      'decker': 'netrunner',
-      'hacker': 'netrunner',
-      'combat_specialist': 'solo',
-      'merc': 'solo',
-      'mercenary': 'solo',
-      'bodyguard': 'solo',
-      'street_samurai': 'solo',
-      'tech': 'techie',
-      'technician': 'techie',
-      'ripperdoc': 'techie',
-      'mechanic': 'techie',
-      'rocker': 'rockerboy',
-      'musician': 'rockerboy',
-      'performer': 'rockerboy',
-      'journalist': 'media',
-      'reporter': 'media',
-      'exec': 'corpo',
-      'corporate': 'corpo',
-      'executive': 'corpo',
-      'suit': 'corpo',
-      'wizard': 'mage',
-      'sorcerer': 'mage',
-      'witch': 'mage',
-      'warlock': 'mage',
-      'fighter': 'warrior',
-      'knight': 'warrior',
-      'paladin': 'warrior',
-      'barbarian': 'warrior',
-      'thief': 'rogue',
-      'assassin': 'solo',  // Cyberpunk assassin = solo, fantasy assassin = rogue handled by genre
-      'bard': 'rockerboy',
-      'druid': 'ranger',
-      'hunter': 'ranger',
-      'priest': 'cleric',
-      'healer': 'cleric',
-    };
-    
-    const aliasedRole = roleAliases[normalizedRole];
-    if (aliasedRole) {
-      const cyberpunkRoles = ROLE_STYLES['cyberpunk'] || {};
-      const fantasyRoles = ROLE_STYLES['fantasy'] || {};
-      const scifiRoles = ROLE_STYLES['scifi'] || {};
-      const horrorRoles = ROLE_STYLES['horror'] || {};
-      const westernRoles = ROLE_STYLES['western'] || {};
-      const warRoles = ROLE_STYLES['war'] || {};
-      
-      roleStyle = cyberpunkRoles[aliasedRole] || fantasyRoles[aliasedRole] || 
-                  scifiRoles[aliasedRole] || horrorRoles[aliasedRole] ||
-                  westernRoles[aliasedRole] || warRoles[aliasedRole];
+  // Body proportions with AMPLIFIED descriptors
+  if (gender === 'female' || gender === 'other') {
+    if (bustSize) {
+      identityParts.push(BUST_AMPLIFIER[bustSize] || `${bustSize} bust`);
+    }
+    if (hipWidth) {
+      identityParts.push(HIP_AMPLIFIER[hipWidth] || `${hipWidth} hips`);
     }
   }
-  
-  if (roleStyle) {
-    console.log(`Role matching: "${characterClass}" -> found role styling for "${genreKey}"`);
-    // Add role-specific elements BEFORE generic genre styling
-    parts.push(`ROLE: ${roleStyle.description}`);
-    parts.push(`ROLE CLOTHING: ${roleStyle.clothing}`);
-    parts.push(`ROLE GEAR: ${roleStyle.accessories}`);
-    parts.push(`ROLE TECH/DETAILS: ${roleStyle.techDetails}`);
-  } else if (characterClass) {
-    // Fallback: just mention the role name
-    console.log(`Role matching: "${characterClass}" -> no specific styling, using generic`);
-    parts.push(`occupation/role: ${characterClass}`);
+  if (muscleDefinition && muscleDefinition !== 'none') {
+    identityParts.push(`${muscleDefinition} muscle definition`);
   }
   
-  // ========== GENDER CUT OPTION ==========
-  const cutOption = CUT_OPTIONS[gender || 'other'] || CUT_OPTIONS.other;
-  parts.push(cutOption);
-  
-  // Apply genre-specific styling (expanded 3x details) - BUT respect role overrides
-  if (!roleStyle) {
-    // Only use generic genre clothing if no role-specific styling
-    parts.push(style.clothing);
+  // Distinguishing features
+  if (distinguishingFeatures?.length) {
+    identityParts.push(`distinguishing features: ${distinguishingFeatures.join(', ')}`);
   }
-  if (style.accessories && !roleStyle) parts.push(style.accessories);
-  parts.push(style.jewelry);
-  if (style.footwear) parts.push(style.footwear);
-  if (style.hairStyling) parts.push(style.hairStyling);
-  parts.push(style.makeup);
-  if (style.weathering) parts.push(style.weathering);
   
-  // Apply tattoo STYLE (not placement - that's locked)
+  // Accessories (genre-neutral, user-selected)
+  if (accessories?.length) {
+    identityParts.push(`wearing accessories: ${accessories.join(', ')}`);
+  }
+
+  // ========== BODY MODIFICATIONS ==========
+  const modParts: string[] = [];
+  
+  if (scars?.length) {
+    const scarList = Array.isArray(scars) ? scars : [];
+    const scarDesc = scarList.map((s: any) => {
+      const location = typeof s === 'string' ? s : s.location;
+      return `healed scar at ${location}`;
+    }).join(', ');
+    if (scarDesc) modParts.push(scarDesc);
+  }
+  
+  if (piercings?.length) {
+    const piercingList = Array.isArray(piercings) ? piercings : [];
+    const styleDesc = piercingStyle ? `${piercingStyle} style ` : '';
+    const piercingDesc = piercingList.map((p: any) => {
+      const location = typeof p === 'string' ? p : p.location;
+      return `${location} piercing`;
+    }).join(', ');
+    if (piercingDesc) modParts.push(`${styleDesc}piercings: ${piercingDesc}`);
+  }
+  
   if (tattoos?.length) {
-    parts.push(`tattoo aesthetic: ${style.tattooStyle}`);
+    const tattooList = Array.isArray(tattoos) ? tattoos : [];
+    const styleDesc = tattooStyle && tattooStyle.trim() !== '' ? `${tattooStyle} style ` : '';
+    const tattooDesc = tattooList.map((t: any) => {
+      const location = typeof t === 'string' ? t : t.location;
+      return `${location} tattoo`;
+    }).join(', ');
+    if (tattooDesc) modParts.push(styleDesc ? `${styleDesc}tattoos: ${tattooDesc}` : `tattoos at: ${tattooDesc}`);
   }
   
-  // ========== USER ENHANCEMENT DETAILS (PRIORITY - BOLDED) ==========
-  // This section takes priority for generative enhancements after base character
+  // Genre-appropriate modifications
+  if (implants?.length) {
+    const implantList = Array.isArray(implants) ? implants : [];
+    const implantDesc = implantList.map((i: any) => {
+      const type = typeof i === 'string' ? i : i.type || i.location;
+      // Only add tech aesthetic if genre supports it
+      const isTechGenre = ['cyberpunk', 'scifi', 'space_opera', 'post_apocalyptic'].includes(genreKey);
+      return isTechGenre ? `visible ${type} cybernetic implant` : `visible ${type} implant`;
+    }).join(', ');
+    if (implantDesc) modParts.push(implantDesc);
+  }
+  
+  if (prosthetics?.length) {
+    const prostheticList = Array.isArray(prosthetics) ? prosthetics : [];
+    const prostheticDesc = prostheticList.map((p: any) => {
+      const type = typeof p === 'string' ? p : p.type || p.location;
+      return `${type} prosthetic`;
+    }).join(', ');
+    if (prostheticDesc) modParts.push(prostheticDesc);
+  }
+  
+  if (mutations?.length) {
+    const mutationList = Array.isArray(mutations) ? mutations : [];
+    const mutationDesc = mutationList.map((m: any) => {
+      const type = typeof m === 'string' ? m : m.type;
+      return `${type} mutation`;
+    }).join(', ');
+    if (mutationDesc) modParts.push(mutationDesc);
+  }
+
+  // ========== CLOTHING - STRICT GENRE ADHERENCE ==========
+  let clothingDesc = '';
+  
+  if (hasEquippedGear === false) {
+    // No gear - tasteful underwear
+    clothingDesc = gender === 'female' 
+      ? 'wearing simple tasteful undergarments, sports bra and shorts style, clean and modest'
+      : gender === 'male'
+      ? 'wearing simple boxer briefs, clean and modest'
+      : 'wearing simple tasteful undergarments, clean and modest';
+  } else if (currentGearDescription) {
+    clothingDesc = `wearing: ${currentGearDescription}`;
+  } else if (clothingStyle && clothingStyle !== 'genre_default') {
+    clothingDesc = `wearing ${clothingStyle} style clothing`;
+    if (clothingDetails?.length) {
+      clothingDesc += `, specifically: ${clothingDetails.join(', ')}`;
+    }
+  } else {
+    // Use genre-specific clothing ONLY
+    clothingDesc = `CLOTHING: ${style.clothing}`;
+  }
+
+  // ========== ROLE/CLASS - ONLY USE IF MATCHES GENRE ==========
+  let roleDesc = '';
+  const normalizedRole = (characterClass || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+  
+  if (normalizedRole) {
+    const genreRoles = ROLE_STYLES[genreKey] || {};
+    let roleStyle = genreRoles[normalizedRole];
+    
+    // Try parent genre
+    if (!roleStyle && GENRE_FALLBACKS[genreKey]) {
+      const parentGenre = GENRE_FALLBACKS[genreKey];
+      const parentRoles = ROLE_STYLES[parentGenre] || {};
+      roleStyle = parentRoles[normalizedRole];
+    }
+    
+    if (roleStyle) {
+      roleDesc = `ROLE: ${roleStyle.description}, ${roleStyle.clothing}`;
+    } else {
+      // Generic role mention without style bleeding
+      roleDesc = `occupation: ${characterClass}`;
+    }
+  }
+
+  // ========== USER CUSTOM DETAILS - HIGHEST PRIORITY ==========
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
-  let enhancementBlock = '';
-  if (userDesc) {
-    enhancementBlock = `[PRIORITY ENHANCEMENT DETAILS - MUST FOLLOW EXACTLY: ${userDesc}]`;
-  }
-  
+
+  // ========== GENRE ISOLATION RULES ==========
+  const genreIsolation: Record<string, string> = {
+    'fantasy': 'STRICT GENRE RULES: Medieval fantasy setting ONLY. NO modern technology, NO electricity, NO cybernetics, NO neon lights, NO futuristic elements. Use torches, candles, magic, swords, leather, cloth, medieval architecture.',
+    'dark_fantasy': 'STRICT GENRE RULES: Dark medieval fantasy ONLY. Gothic, supernatural, cursed. NO modern tech, NO cybernetics, NO neon. Use dark magic, gothic architecture, candlelight, ancient evil.',
+    'medieval': 'STRICT GENRE RULES: Historical medieval ONLY. NO modern elements whatsoever. Castles, knights, peasants, torchlight, stone walls.',
+    'cyberpunk': 'STRICT GENRE RULES: Cyberpunk ONLY. Neon lights, chrome, cybernetics, megacities, rain-slicked streets, holographic ads, high-tech low-life.',
+    'scifi': 'STRICT GENRE RULES: Science fiction ONLY. Spaceships, advanced tech, clean futuristic environments, space stations, alien worlds.',
+    'space_opera': 'STRICT GENRE RULES: Space opera ONLY. Epic space settings, starships, exotic aliens, grand scale.',
+    'modern': 'STRICT GENRE RULES: Modern day realistic ONLY. Contemporary fashion, real-world settings, current technology only.',
+    'modern_life': 'STRICT GENRE RULES: Slice of life, modern realistic ONLY. Everyday contemporary settings, casual fashion.',
+    'western': 'STRICT GENRE RULES: Wild West ONLY. Dusty frontier towns, saloons, horses, cowboy attire, 1800s American frontier.',
+    'noir': 'STRICT GENRE RULES: Film noir ONLY. 1940s-50s detective aesthetic, fedoras, trench coats, smoky bars, black and white mood.',
+    'horror': 'STRICT GENRE RULES: Horror genre ONLY. Creepy, unsettling, dark shadows, abandoned places, dread atmosphere.',
+    'post_apocalyptic': 'STRICT GENRE RULES: Post-apocalyptic ONLY. Ruined civilization, scavenged gear, wasteland, survival aesthetic.',
+    'steampunk': 'STRICT GENRE RULES: Steampunk ONLY. Victorian era with steam-powered tech, brass, gears, goggles, airships.',
+    'victorian': 'STRICT GENRE RULES: Victorian era ONLY. 1800s fashion, gaslight, carriages, formal attire.',
+    'superhero': 'STRICT GENRE RULES: Superhero genre ONLY. Comic book aesthetic, costumes, powers, heroic poses.',
+    'urban_fantasy': 'STRICT GENRE RULES: Urban fantasy ONLY. Modern city with hidden magic, supernatural in mundane settings.',
+    'war': 'STRICT GENRE RULES: Military/war ONLY. Appropriate era military uniforms, weapons, battlefield settings.',
+    'spy': 'STRICT GENRE RULES: Espionage ONLY. Sleek suits, gadgets, intrigue, sophisticated settings.',
+    'survival': 'STRICT GENRE RULES: Survival genre ONLY. Wilderness, practical gear, nature settings.',
+    'romance': 'STRICT GENRE RULES: Romance genre. Soft lighting, intimate settings, emotional atmosphere.',
+  };
+
+  const genreRule = genreIsolation[genreKey] || genreIsolation['modern'];
+
   // ========== ASSEMBLE FINAL PROMPT ==========
-  const character = parts.join(', ');
+  const promptSections: string[] = [];
   
-  // Structure: Rules -> Base Character -> Genre Style -> User Enhancements -> Art Style -> Hard Lock
-  const promptParts = [
-    PROMPT_RULES,
-    `BASE CHARACTER: ${character}`,
-    `SCENE: ${style.background}`,
-  ];
+  // 1. Genre isolation rule FIRST
+  promptSections.push(genreRule);
   
-  // Add user enhancements with priority if present
-  if (enhancementBlock) {
-    promptParts.push(enhancementBlock);
+  // 2. Core prompt rules
+  promptSections.push(PROMPT_RULES);
+  
+  // 3. Framing
+  promptSections.push(`FRAMING: Portrait from waist up, medium close-up, centered composition, facing camera, natural confident pose`);
+  
+  // 4. Character identity
+  promptSections.push(`CHARACTER: ${identityParts.join(', ')}`);
+  
+  // 5. Body modifications (if any)
+  if (modParts.length > 0) {
+    promptSections.push(`BODY MODIFICATIONS: ${modParts.join(', ')}`);
   }
   
-  promptParts.push(`ART STYLE: ${STYLE_LOCK}`);
-  promptParts.push(`GUIDANCE: ${SOFT_GUIDANCE}`);
+  // 6. Clothing
+  promptSections.push(clothingDesc);
   
-  const prompt = promptParts.join('. ');
+  // 7. Role (if specified)
+  if (roleDesc) {
+    promptSections.push(roleDesc);
+  }
+  
+  // 8. Genre-specific styling
+  promptSections.push(`SCENE/BACKGROUND: ${style.background}`);
+  promptSections.push(`JEWELRY/ACCESSORIES: ${style.jewelry}`);
+  promptSections.push(`MAKEUP/GROOMING: ${style.makeup}`);
+  
+  // 9. User custom details - PRIORITY
+  if (userDesc) {
+    promptSections.push(`[USER PRIORITY - MUST FOLLOW: ${userDesc}]`);
+  }
+  
+  // 10. Art style
+  promptSections.push(`ART STYLE: ${STYLE_LOCK}`);
+  
+  const prompt = promptSections.join('. ');
+  
+  // Genre-specific negative prompts to prevent bleeding
+  const genreNegatives: Record<string, string> = {
+    'fantasy': 'cyberpunk, neon lights, modern technology, computers, cars, electricity, LED lights, chrome, futuristic',
+    'dark_fantasy': 'cyberpunk, neon lights, modern technology, bright colors, happy atmosphere, futuristic',
+    'medieval': 'modern, futuristic, technology, cyberpunk, neon, electricity, cars',
+    'cyberpunk': 'medieval, fantasy, magic wands, swords, horses, castles, nature settings',
+    'modern': 'fantasy, medieval, futuristic, cyberpunk, magic, supernatural',
+    'modern_life': 'fantasy, medieval, futuristic, cyberpunk, magic, supernatural, costumes',
+    'western': 'modern technology, cyberpunk, futuristic, neon lights, cars, electricity',
+  };
+  
+  const genreNegative = genreNegatives[genreKey] || '';
+  const baseNegative = 'blurry, out of focus, watermark, text, low quality, amateur, poorly drawn, cartoon, anime, illustration, painting style';
   
   console.log('Portrait prompt:', prompt);
   
   return {
     prompt,
-    negative: 'blurry, out of focus, watermark, text, low quality, amateur, poorly drawn, username, signature, words, letters, low resolution, pixelated, jpeg artifacts, noise, overexposed, underexposed',
+    negative: genreNegative ? `${baseNegative}, ${genreNegative}` : baseNegative,
   };
 }
 
