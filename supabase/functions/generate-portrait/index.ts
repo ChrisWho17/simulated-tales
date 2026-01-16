@@ -6,9 +6,14 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STYLE LOCK - Universal cinematic key art style (never changes)
+// STYLE LOCK - Realistic art style with texture fidelity
 // ============================================================================
-const STYLE_LOCK = `stylized character art, cartoon proportions with realistic textures, high definition illustration, visible fabric weave, metal scratches, leather grain, expressive features, clean linework with detailed shading, strong material fidelity, crisp edges, soft key light with subtle rim light, slight depth of field, no text, no watermark, anime-inspired realism, polished digital painting`;
+const STYLE_LOCK = `highly detailed digital portrait, realistic art style, visible fabric weave, metal micro-scratches, leather grain, skin texture kept tasteful and natural, cinematic lighting with soft key light and subtle rim light, 50mm camera look, eye-level, slight depth of field, sharp face and eyes, clean composition, professional character key art, no text, no watermark`;
+
+// ============================================================================
+// PROMPT PRIORITY - AI must follow these rules exactly
+// ============================================================================
+const PROMPT_RULES = `IMPORTANT: Follow this prompt exactly as written. Build the character from the base description first, then apply all enhancement details. Do not deviate from specified features. Do not add elements not described. Match every detail precisely.`;
 
 // ============================================================================
 // HARD LOCK - Appended to every prompt
@@ -329,10 +334,6 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   // Role/Class
   if (characterClass) parts.push(characterClass);
   
-  // User custom additions
-  const userDesc = additionalDetails || characterAdditionals || customDescription || '';
-  if (userDesc) parts.push(userDesc);
-  
   // ========== GENDER CUT OPTION ==========
   const cutOption = CUT_OPTIONS[gender || 'other'] || CUT_OPTIONS.other;
   parts.push(cutOption);
@@ -351,15 +352,33 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     parts.push(`tattoo aesthetic: ${style.tattooStyle}`);
   }
   
+  // ========== USER ENHANCEMENT DETAILS (PRIORITY - BOLDED) ==========
+  // This section takes priority for generative enhancements after base character
+  const userDesc = additionalDetails || characterAdditionals || customDescription || '';
+  let enhancementBlock = '';
+  if (userDesc) {
+    enhancementBlock = `[PRIORITY ENHANCEMENT DETAILS - MUST FOLLOW EXACTLY: ${userDesc}]`;
+  }
+  
   // ========== ASSEMBLE FINAL PROMPT ==========
   const character = parts.join(', ');
   
-  const prompt = [
-    character,
-    style.background,
-    STYLE_LOCK,
-    HARD_LOCK,
-  ].join('. ');
+  // Structure: Rules -> Base Character -> Genre Style -> User Enhancements -> Art Style -> Hard Lock
+  const promptParts = [
+    PROMPT_RULES,
+    `BASE CHARACTER: ${character}`,
+    `SCENE: ${style.background}`,
+  ];
+  
+  // Add user enhancements with priority if present
+  if (enhancementBlock) {
+    promptParts.push(enhancementBlock);
+  }
+  
+  promptParts.push(`ART STYLE: ${STYLE_LOCK}`);
+  promptParts.push(`RESTRICTIONS: ${HARD_LOCK}`);
+  
+  const prompt = promptParts.join('. ');
   
   console.log('Portrait prompt:', prompt);
   
