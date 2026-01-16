@@ -47,12 +47,10 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     characterClass, genre, origin, nationality, ethnicity,
     details, distinguishingFeatures, accessories,
     piercings, tattoos, tattooStyle, scars, implants, prosthetics, mutations,
-    clothingStyle, clothingDetails,
     // Body shape
-    bustSize, hipWidth, muscleDefinition, bodyHair,
+    bustSize, hipWidth, muscleDefinition,
   } = body;
 
-  // Build character description
   const desc: string[] = [];
   
   // Age defaults to 18
@@ -63,7 +61,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   desc.push(`${charAge} year old ${eth} ${genderWord}`);
   
-  // Body shape - CRITICAL for female characters
+  // Body shape for female characters
   if (gender === 'female' || gender === 'other') {
     if (bustSize && bustSize !== 'medium') {
       desc.push(`${bustSize} breasts`);
@@ -73,7 +71,7 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     }
   }
   
-  // Build and muscle for all genders
+  // Build and muscle
   if (build) desc.push(`${build} body`);
   if (muscleDefinition && muscleDefinition !== 'none' && muscleDefinition !== 'toned') {
     desc.push(`${muscleDefinition} muscles`);
@@ -98,26 +96,18 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   // Body modifications
   if (tattoos?.length) {
     const style = tattooStyle ? `${tattooStyle} style ` : '';
-    desc.push(`${style}tattoos on visible skin`);
+    desc.push(`${style}tattoos`);
   }
-  if (piercings?.length) desc.push('visible piercings');
-  if (scars?.length) desc.push('visible scars');
+  if (piercings?.length) desc.push('piercings');
+  if (scars?.length) desc.push('scars');
   if (implants?.length) desc.push('cybernetic implants');
   if (prosthetics?.length) desc.push('prosthetic limbs');
-  if (mutations?.length) desc.push('visible mutations');
-  
-  // Clothing - IMPORTANT
-  if (clothingDetails?.length) {
-    desc.push(`wearing ${clothingDetails.join(', ')}`);
-  } else if (clothingStyle && clothingStyle !== 'genre_default') {
-    desc.push(`wearing ${clothingStyle} style outfit`);
-  }
-  // If no clothing specified, AI will choose based on role/genre
+  if (mutations?.length) desc.push('mutations');
   
   // Role/class
-  if (characterClass) desc.push(`${characterClass} profession`);
+  if (characterClass) desc.push(characterClass);
   
-  // User's custom description (can override anything)
+  // User's custom description - THIS IS WHERE CLOTHING COMES FROM
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
   if (userDesc) desc.push(userDesc);
   
@@ -127,20 +117,17 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   
   const character = desc.join(', ');
   
-  console.log('Building portrait for:', name);
-  console.log('Gender:', gender, '| Build:', build, '| Bust:', bustSize, '| Hips:', hipWidth);
-  console.log('Clothing style:', clothingStyle, '| Clothing details:', clothingDetails);
+  console.log('Portrait for:', name, '| Genre:', genre);
   console.log('Additional details:', userDesc);
-  console.log('Character description:', character);
+  console.log('Full description:', character);
   
-  // Strong framing at START - three-quarter body from knees up
-  const prompt = `Three-quarter body portrait photograph from knees to head. Medium-wide shot showing full torso with arms and hands visible. Subject standing, facing camera. ${character}. Background: ${bg}, softly blurred bokeh. Professional photography, natural lighting, sharp focus, photorealistic.`;
+  const prompt = `Three-quarter body portrait from knees to head, ${character}, background: ${bg}, photorealistic photography`;
   
   console.log('Final prompt:', prompt);
   
   return {
     prompt,
-    negative: 'headshot, bust shot, close-up, face only, shoulders up, chest up, waist up, cropped at waist, cropped at hips, full body with feet visible, sitting, anime, cartoon, illustration, painting, 3D render, CGI, deformed, bad anatomy, extra limbs, blurry, low quality',
+    negative: 'headshot, bust shot, close-up, face only, shoulders up, full body with feet, anime, cartoon, illustration, 3D render, deformed, bad anatomy',
   };
 }
 
