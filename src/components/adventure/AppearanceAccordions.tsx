@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap, Wand2, Sword, Skull, Rocket } from 'lucide-react';
+import { ChevronDown, Shirt, Scissors, Palette, Sparkles, Syringe, Crown, Heart, Flame, Zap, Wand2, Sword, Skull, Rocket, Eye, Moon, Shield, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
   TieredAppearance,
@@ -12,7 +12,7 @@ import {
 export interface SlashCommand {
   command: string;
   label: string;
-  category: 'personality' | 'genre' | 'clothing' | 'pose' | 'style';
+  category: 'personality' | 'genre' | 'clothing' | 'armor' | 'stance' | 'pose' | 'style';
   keywords: string;
   description: string;
   color: string;
@@ -28,6 +28,14 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { command: 'flirty', label: 'Flirty', category: 'personality', keywords: 'playful, charming, confident, stylish, form-fitting, flattering, coy smile, alluring eyes, fashionable', description: 'Playful charm', color: 'from-pink-400 to-rose-400', icon: Sparkles },
   { command: 'provocative', label: 'Provocative', category: 'personality', keywords: 'bold, daring, confident, striking, dramatic, attention-grabbing, fierce pose, intense gaze, powerful', description: 'Bold presence', color: 'from-orange-500 to-red-500', icon: Flame },
   { command: 'alluring', label: 'Alluring', category: 'personality', keywords: 'captivating, magnetic, enticing, sultry gaze, confident pose, passionate, enchanting presence', description: 'Magnetic aura', color: 'from-purple-500 to-pink-500', icon: Flame },
+  { command: 'mysterious', label: 'Mysterious', category: 'personality', keywords: 'enigmatic, hooded, obscured features, cryptic smile, shadowy presence, hidden depths, secretive aura', description: 'Enigmatic soul', color: 'from-indigo-600 to-purple-800', icon: Eye },
+  { command: 'fierce', label: 'Fierce', category: 'personality', keywords: 'intense gaze, battle-hardened, scarred warrior, unyielding determination, predatory presence, dangerous beauty', description: 'Untamed power', color: 'from-red-700 to-orange-600', icon: Flame },
+  { command: 'regal', label: 'Regal', category: 'personality', keywords: 'noble bearing, commanding presence, aristocratic elegance, imperious, authoritative stance, royal dignity', description: 'Noble authority', color: 'from-yellow-600 to-amber-500', icon: Crown },
+  { command: 'stoic', label: 'Stoic', category: 'personality', keywords: 'composed, unreadable expression, disciplined, emotionally controlled, calm under pressure, resolute', description: 'Unshakable calm', color: 'from-slate-500 to-gray-600', icon: Shield },
+  { command: 'wild', label: 'Wild', category: 'personality', keywords: 'untamed, feral beauty, primal energy, windswept, nature-touched, savage grace, animalistic', description: 'Primal nature', color: 'from-green-600 to-emerald-700', icon: Flame },
+  { command: 'haunted', label: 'Haunted', category: 'personality', keywords: 'melancholic, hollow eyes, weary, battle-worn, traumatized expression, distant gaze, ghostly pallor', description: 'Troubled soul', color: 'from-gray-600 to-slate-700', icon: Moon },
+  { command: 'serene', label: 'Serene', category: 'personality', keywords: 'peaceful, tranquil expression, inner calm, meditative, gentle wisdom, quiet strength, harmonious', description: 'Inner peace', color: 'from-cyan-400 to-blue-400', icon: Heart },
+  { command: 'cunning', label: 'Cunning', category: 'personality', keywords: 'calculating gaze, sly smile, shrewd intelligence, scheming, clever expression, knowing look', description: 'Sharp wit', color: 'from-emerald-600 to-teal-600', icon: Eye },
   
   // ===== GENRE PRESETS =====
   { command: 'fantasy', label: 'Fantasy', category: 'genre', keywords: 'mystical, enchanted, medieval fantasy, arcane details, magical aura, flowing cape, elven inspired, ornate jewelry', description: 'High fantasy style', color: 'from-purple-600 to-indigo-500', icon: Wand2 },
@@ -41,23 +49,45 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   // ===== CLOTHING STYLE PRESETS =====
   { command: 'elegant', label: 'Elegant', category: 'clothing', keywords: 'elegant gown, flowing fabric, luxurious silk, refined tailoring, graceful draping, sophisticated style', description: 'Refined elegance', color: 'from-rose-400 to-purple-400', icon: Shirt },
   { command: 'casual', label: 'Casual', category: 'clothing', keywords: 'casual wear, comfortable clothing, relaxed fit, everyday style, simple but stylish, natural look', description: 'Relaxed style', color: 'from-green-400 to-teal-400', icon: Shirt },
-  { command: 'armor', label: 'Armored', category: 'clothing', keywords: 'protective armor, battle-ready, plate mail, leather armor straps, warrior gear, combat ready', description: 'Battle gear', color: 'from-slate-500 to-gray-600', icon: Sword },
   { command: 'formal', label: 'Formal', category: 'clothing', keywords: 'formal attire, business professional, sharp tailoring, pressed suit, polished appearance, executive style', description: 'Professional look', color: 'from-gray-600 to-slate-700', icon: Shirt },
   { command: 'revealing', label: 'Revealing', category: 'clothing', keywords: 'revealing outfit, form-fitting, low-cut, bare midriff, tight clothing, showing skin, daring neckline', description: 'Daring style', color: 'from-red-500 to-pink-500', icon: Sparkles },
   { command: 'tactical', label: 'Tactical', category: 'clothing', keywords: 'tactical gear, military style, utility vest, cargo pockets, combat boots, practical equipment', description: 'Combat ready', color: 'from-green-700 to-stone-600', icon: Sword },
   { command: 'royal', label: 'Royal', category: 'clothing', keywords: 'royal garments, crown, regal cape, velvet robes, gold trim, jeweled accessories, throne-worthy', description: 'Regal attire', color: 'from-amber-400 to-yellow-300', icon: Crown },
+  { command: 'skimpy', label: 'Skimpy', category: 'clothing', keywords: 'minimal coverage, bikini armor, strappy design, exposed skin, decorative only, maximum skin visibility', description: 'Minimal attire', color: 'from-pink-500 to-rose-500', icon: Sparkles },
+  { command: 'robe', label: 'Robed', category: 'clothing', keywords: 'flowing robes, monk attire, wizard robe, hooded cloak, mystical garments, loose draping fabric', description: 'Mystic robes', color: 'from-indigo-500 to-purple-600', icon: Wand2 },
+  
+  // ===== ARMOR PRESETS =====
+  { command: 'lightarmor', label: 'Light Armor', category: 'armor', keywords: 'leather armor, agile protection, scout gear, flexible padding, ranger outfit, mobile warrior, minimal metal', description: 'Agile protection', color: 'from-amber-500 to-yellow-600', icon: Shield },
+  { command: 'chainmail', label: 'Chainmail', category: 'armor', keywords: 'chain armor, mail shirt, medieval soldier, linked metal rings, gambeson, practical protection', description: 'Classic mail', color: 'from-gray-400 to-slate-500', icon: Shield },
+  { command: 'platearmor', label: 'Plate Armor', category: 'armor', keywords: 'full plate armor, knight in shining armor, polished steel, articulated plates, gorget, gauntlets, greaves, pauldrons', description: 'Knight plate', color: 'from-slate-400 to-gray-500', icon: Shield },
+  { command: 'heavyarmor', label: 'Heavy Armor', category: 'armor', keywords: 'massive plate armor, full body coverage, thick steel plates, imposing silhouette, reinforced joints, helmet with visor, no exposed skin, tank-like protection', description: 'Tank protection', color: 'from-gray-600 to-slate-700', icon: Shield },
+  { command: 'juggernaut', label: 'Juggernaut', category: 'armor', keywords: 'walking fortress, massive hulking armor, fully enclosed suit, impenetrable plates, towering presence, unstoppable tank, siege armor, no visible skin whatsoever, mechanical joints, walking weapon', description: 'Living fortress', color: 'from-slate-700 to-gray-800', icon: Shield },
+  { command: 'powerarmor', label: 'Power Armor', category: 'armor', keywords: 'exosuit, powered exoskeleton, futuristic heavy armor, hydraulic joints, fully sealed suit, HUD visor, bulky mechanical frame, enhanced strength', description: 'Mech suit', color: 'from-blue-700 to-cyan-600', icon: Shield },
+  { command: 'darkknight', label: 'Dark Knight', category: 'armor', keywords: 'black plate armor, intimidating, spiked pauldrons, demonic aesthetics, corrupted metal, evil knight, menacing helmet, dark steel, villain armor', description: 'Evil knight', color: 'from-gray-900 to-purple-900', icon: Sword },
+  { command: 'paladin', label: 'Paladin', category: 'armor', keywords: 'holy armor, white and gold plate, divine symbols, radiant, blessed steel, crusader, ornate engravings, sacred warrior, full coverage, glowing runes', description: 'Holy warrior', color: 'from-yellow-400 to-amber-300', icon: Shield },
+  { command: 'dreadnought', label: 'Dreadnought', category: 'armor', keywords: 'oversized armor plating, walking tank, massive shoulder guards, completely encased, industrial war machine, zero mobility zero exposure, fortress body', description: 'War machine', color: 'from-stone-700 to-gray-900', icon: Shield },
+  
+  // ===== STANCE PRESETS =====
+  { command: 'standing', label: 'Standing', category: 'stance', keywords: 'upright stance, feet planted, standing tall, vertical posture, balanced weight, grounded position', description: 'Upright pose', color: 'from-blue-500 to-indigo-500', icon: User },
+  { command: 'sitting', label: 'Sitting', category: 'stance', keywords: 'seated pose, sitting down, relaxed sitting, chair pose, bench seated, weight resting', description: 'Seated pose', color: 'from-teal-500 to-cyan-500', icon: User },
+  { command: 'kneeling', label: 'Kneeling', category: 'stance', keywords: 'both knees down, kneeling position, prayer stance, genuflecting, humble posture, lowered stance', description: 'Both knees down', color: 'from-purple-500 to-violet-500', icon: User },
+  { command: 'oneknee', label: 'One Knee', category: 'stance', keywords: 'one knee down, proposing stance, knight kneeling, heroic kneel, reverent pose, tactical kneel', description: 'Single knee', color: 'from-amber-500 to-orange-500', icon: User },
+  { command: 'laying', label: 'Laying Down', category: 'stance', keywords: 'lying down, reclined position, horizontal pose, resting, sprawled, lounging, supine', description: 'Reclined pose', color: 'from-rose-500 to-pink-500', icon: User },
+  { command: 'crouching', label: 'Crouching', category: 'stance', keywords: 'crouched low, squatting, ready to spring, coiled stance, low profile, stealth crouch', description: 'Low crouch', color: 'from-green-600 to-emerald-600', icon: User },
+  { command: 'leaning', label: 'Leaning', category: 'stance', keywords: 'leaning against wall, casual lean, weight shifted, relaxed lean, slouched against surface, nonchalant', description: 'Casual lean', color: 'from-slate-500 to-gray-500', icon: User },
   
   // ===== POSE PRESETS =====
   { command: 'confident', label: 'Confident', category: 'pose', keywords: 'confident stance, hands on hips, head held high, powerful pose, assertive posture, commanding presence', description: 'Power pose', color: 'from-orange-400 to-amber-400', icon: Zap },
   { command: 'relaxed', label: 'Relaxed', category: 'pose', keywords: 'relaxed pose, leaning casually, easy smile, comfortable stance, laid-back posture, at ease', description: 'Easy stance', color: 'from-teal-400 to-cyan-400', icon: Heart },
   { command: 'action', label: 'Action', category: 'pose', keywords: 'dynamic pose, mid-action, battle stance, movement blur, intense focus, ready to strike', description: 'Dynamic action', color: 'from-red-500 to-orange-500', icon: Sword },
-  { command: 'mysterious', label: 'Mysterious', category: 'pose', keywords: 'mysterious pose, partially hidden, shadowy, enigmatic expression, turned away slightly, secretive', description: 'Enigmatic', color: 'from-purple-600 to-gray-700', icon: Skull },
+  { command: 'dramatic', label: 'Dramatic', category: 'pose', keywords: 'dramatic pose, theatrical, grand gesture, sweeping movement, intense emotion, storytelling pose', description: 'Theatrical', color: 'from-purple-600 to-red-600', icon: Flame },
   
   // ===== BLENDED STYLE PRESETS =====
   { command: 'darkfantasy', label: 'Dark Fantasy', category: 'style', keywords: 'dark fantasy, corrupted elegance, shadowy magic, twisted beauty, ominous glow, cursed aesthetic', description: 'Corrupted magic', color: 'from-purple-900 to-gray-900', icon: Skull },
   { command: 'techfantasy', label: 'Tech Fantasy', category: 'style', keywords: 'magitech, arcane circuits, glowing runes on chrome, magical cybernetics, enchanted technology', description: 'Magic meets tech', color: 'from-cyan-500 to-purple-500', icon: Wand2 },
   { command: 'postapoc', label: 'Post-Apocalyptic', category: 'style', keywords: 'wasteland survivor, scavenged gear, weathered look, survival aesthetic, rugged and worn, makeshift repairs', description: 'Wasteland style', color: 'from-stone-600 to-amber-700', icon: Skull },
   { command: 'gothic', label: 'Gothic', category: 'style', keywords: 'gothic beauty, dark romantic, Victorian elegance, lace and velvet, pale complexion, dramatic dark makeup', description: 'Dark romance', color: 'from-purple-800 to-gray-900', icon: Heart },
+  { command: 'grimdark', label: 'Grimdark', category: 'style', keywords: 'grimdark aesthetic, brutal world, hopeless beauty, war-torn, gritty realism, harsh lighting, survival horror', description: 'Brutal reality', color: 'from-gray-800 to-red-900', icon: Skull },
 ];
 // Piercing style options that affect NPC reactions
 export const PIERCING_STYLE_OPTIONS = [
@@ -107,7 +137,9 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
     personality: '🎭 Personality',
     genre: '🌍 Genre',
     clothing: '👗 Clothing',
-    pose: '🧍 Pose',
+    armor: '🛡️ Armor',
+    stance: '🧍 Stance',
+    pose: '💪 Pose',
     style: '✨ Style Blend',
   };
 
@@ -526,7 +558,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
         )}
 
         <p className="text-xs text-muted-foreground mb-2">
-          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <code className="bg-muted px-1 rounded">/fantasy</code> <code className="bg-muted px-1 rounded">/elegant</code> <code className="bg-muted px-1 rounded">/alluring</code>
+          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets
         </p>
         
         <div className="relative">
