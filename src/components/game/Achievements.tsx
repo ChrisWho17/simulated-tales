@@ -106,6 +106,9 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'collector_master', name: 'Collector Master', description: 'Complete all collector achievements', icon: '🎁', category: 'secret', rarity: 'epic' },
   { id: 'diplomat_master', name: 'Diplomat Master', description: 'Complete all diplomat achievements', icon: '🤝', category: 'secret', rarity: 'epic' },
   { id: 'perfectionist', name: 'Perfectionist', description: 'Unlock every achievement in the game', icon: '👑', category: 'secret', rarity: 'legendary' },
+  
+  // Cheater achievement
+  { id: 'cheater', name: 'I Saw What You Did', description: 'I saw what you did 👀', icon: '👀', category: 'secret', rarity: 'legendary' },
 ];
 
 interface AchievementsContextType {
