@@ -1370,6 +1370,8 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     characterClass, genre, nationality, ethnicity, origin,
     tattoos, tattooStyle, piercings, piercingStyle, scars, implants, prosthetics, mutations,
     bustSize, hipWidth, clothingStyle, clothingDetails,
+    // Gear override for cheat mode
+    hasEquippedGear, currentGearDescription,
   } = body;
 
   const parts: string[] = [];
@@ -1433,8 +1435,19 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     parts.push(`${styleDesc}tattoos: ${tattooDescriptions}` || 'artistic tattoos');
   }
   
-  // Clothing style override (if not genre default)
-  if (clothingStyle && clothingStyle !== 'genre_default') {
+  // Clothing style override - handle gear/underwear logic
+  if (hasEquippedGear === false) {
+    // No gear equipped - show in tasteful underwear (SFW)
+    const underwearDesc = gender === 'female' 
+      ? 'wearing simple tasteful undergarments, sports bra and shorts style, clean and modest'
+      : gender === 'male'
+      ? 'wearing simple boxer briefs, clean and modest'
+      : 'wearing simple tasteful undergarments, clean and modest';
+    parts.push(underwearDesc);
+  } else if (currentGearDescription) {
+    // Custom gear description from cheat mode
+    parts.push(`wearing: ${currentGearDescription}`);
+  } else if (clothingStyle && clothingStyle !== 'genre_default') {
     parts.push(`wearing ${clothingStyle} style clothing`);
     if (clothingDetails?.length) {
       parts.push(`specifically: ${clothingDetails.join(', ')}`);
