@@ -21,6 +21,107 @@ const PROMPT_RULES = `IMPORTANT: Follow this prompt exactly as written. Build th
 const HARD_LOCK = `do not add new piercings locations, do not add new tattoos placement, do not add new scars, do not add new body modifications, do not add new weapons, do not add new props`;
 
 // ============================================================================
+// ANATOMY & MODIFICATION VOCABULARY - Comprehensive AI knowledge base
+// ============================================================================
+
+// Facial anatomy vocabulary for precise generation
+const FACIAL_FEATURES = {
+  eyeShapes: ['almond eyes', 'round eyes', 'hooded eyes', 'monolid eyes', 'upturned eyes', 'downturned eyes', 'deep-set eyes', 'wide-set eyes', 'close-set eyes'],
+  noseShapes: ['straight nose', 'roman nose', 'button nose', 'aquiline nose', 'snub nose', 'wide nose', 'narrow nose', 'upturned nose'],
+  lipShapes: ['full lips', 'thin lips', 'bow-shaped lips', 'wide lips', 'heart-shaped lips', 'asymmetrical lips'],
+  jawlines: ['sharp jawline', 'soft jawline', 'square jaw', 'rounded jaw', 'angular jaw', 'v-shaped jaw', 'prominent chin', 'cleft chin'],
+  cheekbones: ['high cheekbones', 'flat cheekbones', 'prominent cheekbones', 'subtle cheekbones', 'hollow cheeks'],
+  brows: ['arched brows', 'straight brows', 'thick brows', 'thin brows', 'feathered brows', 'angular brows', 'soft brows'],
+};
+
+// Body proportion vocabulary
+const BODY_ANATOMY = {
+  builds: ['slim', 'athletic', 'muscular', 'curvy', 'petite', 'tall and lean', 'broad-shouldered', 'hourglass', 'pear-shaped', 'inverted triangle', 'rectangle build'],
+  muscleDefinition: ['toned muscles', 'defined abs', 'visible muscle definition', 'soft physique', 'bodybuilder physique', 'swimmer build', 'dancer physique', 'martial artist build'],
+  skinTextures: ['smooth skin', 'freckled skin', 'sun-kissed skin', 'weathered skin', 'porcelain skin', 'skin with beauty marks', 'vitiligo patches'],
+};
+
+// Accessory vocabulary for AI understanding
+const ACCESSORIES_VOCAB = {
+  eyewear: ['round glasses', 'aviator sunglasses', 'cat-eye glasses', 'rectangular frames', 'rimless glasses', 'cybernetic visor', 'AR glasses', 'monocle', 'welding goggles', 'tactical goggles'],
+  headwear: ['beanie', 'fedora', 'beret', 'bandana', 'headband', 'hair clips', 'hair pins', 'tiara', 'circlet', 'hood', 'helmet'],
+  neckwear: ['choker', 'pendant necklace', 'layered chains', 'collar', 'scarf', 'bandana', 'dog tags', 'statement necklace', 'pearl necklace'],
+  earAccessories: ['stud earrings', 'hoop earrings', 'dangle earrings', 'ear cuffs', 'industrial bar', 'multiple ear piercings', 'gauge earrings', 'climber earrings'],
+  handAccessories: ['rings on multiple fingers', 'statement ring', 'bracelet stack', 'cuff bracelet', 'watch', 'fingerless gloves', 'hand tattoos', 'henna patterns'],
+};
+
+// Cosmetic surgery and enhancements vocabulary
+const COSMETIC_ENHANCEMENTS = {
+  facialSurgery: ['refined nose', 'subtle lip fillers', 'defined cheekbone implants', 'chin augmentation', 'brow lift appearance', 'cat-eye lift'],
+  bodyEnhancements: ['enhanced curves', 'sculpted physique', 'subtle augmentation', 'athletic enhancement'],
+  skinTreatments: ['flawless skin', 'glass skin effect', 'dewy skin', 'matte skin finish', 'luminous complexion'],
+};
+
+// Cybernetic and augmentation vocabulary
+const AUGMENTATIONS = {
+  cyberneticLimbs: ['chrome cybernetic arm', 'matte black prosthetic leg', 'skeletal mechanical hand', 'sleek bionic arm with visible servos', 'military-grade prosthetic', 'elegant chrome fingers'],
+  cyberneticEyes: ['glowing cybernetic eyes', 'red optical implant', 'camera-lens eye', 'multi-spectrum cyber eyes', 'targeting reticle in iris'],
+  neuralImplants: ['visible neural port on temple', 'data jack behind ear', 'glowing circuitry under skin', 'cranial interface plate'],
+  bodyAugments: ['subdermal armor plating', 'visible spine reinforcement', 'enhanced musculature with visible tech', 'breathing apparatus integration'],
+};
+
+// Piercing vocabulary with specific placements
+const PIERCING_VOCAB = {
+  facial: ['septum ring', 'nostril stud', 'bridge piercing', 'eyebrow piercing', 'lip ring', 'labret', 'medusa piercing', 'snake bites', 'monroe piercing'],
+  ear: ['helix piercing', 'tragus', 'conch', 'daith', 'rook', 'industrial bar', 'forward helix', 'anti-tragus', 'stretched lobes'],
+  body: ['navel piercing', 'surface piercings', 'dermal anchors', 'nipple piercings (implied/covered)'],
+  materials: ['gold jewelry', 'silver jewelry', 'titanium jewelry', 'black metal jewelry', 'rose gold jewelry', 'gemstone studs', 'minimalist jewelry'],
+};
+
+// Tattoo vocabulary with styles and placements
+const TATTOO_VOCAB = {
+  styles: ['fine-line tattoos', 'blackwork tattoos', 'traditional tattoos', 'neo-traditional', 'watercolor tattoos', 'geometric tattoos', 'tribal patterns', 'Japanese irezumi', 'dotwork', 'realistic portrait tattoos', 'minimalist tattoos', 'ornamental tattoos'],
+  placements: ['neck tattoo', 'hand tattoos', 'finger tattoos', 'forearm sleeve', 'full sleeve', 'chest piece', 'back piece', 'shoulder tattoo', 'collarbone tattoo', 'behind ear tattoo', 'face tattoo'],
+  subjects: ['floral tattoos', 'skull imagery', 'animal tattoos', 'script lettering', 'symbolic tattoos', 'abstract patterns', 'celestial designs', 'botanical illustrations'],
+};
+
+// Scar vocabulary
+const SCAR_VOCAB = {
+  types: ['thin scar line', 'raised keloid scar', 'burn scar texture', 'surgical scar', 'battle scar', 'healed wound scar', 'scattered small scars', 'dramatic facial scar'],
+  placements: ['scar across eyebrow', 'cheek scar', 'lip scar', 'neck scar', 'hand scars', 'forearm scars', 'knuckle scars'],
+};
+
+// Mutation vocabulary for fantasy/sci-fi
+const MUTATION_VOCAB = {
+  subtle: ['heterochromia', 'unusually colored eyes', 'pointed ears', 'elongated canines', 'unnaturally colored hair', 'bioluminescent markings'],
+  moderate: ['scaled patches of skin', 'feathered accents', 'small horns', 'tail (visible)', 'clawed fingertips', 'patterned skin like animal'],
+  dramatic: ['full body scales', 'large horns', 'wings (folded)', 'multiple eyes', 'inhuman skin color', 'ethereal glow'],
+};
+
+// Function to get relevant vocabulary hints based on user input
+function getAnatomyHints(body: any): string[] {
+  const hints: string[] = [];
+  
+  // Add facial structure hints
+  if (body.faceShape) hints.push(`${body.faceShape} face`);
+  
+  // Add accessory-specific vocabulary
+  if (body.accessories?.length) {
+    body.accessories.forEach((acc: string) => {
+      const lowerAcc = acc.toLowerCase();
+      if (lowerAcc.includes('glass') || lowerAcc.includes('sunglass')) hints.push('wearing eyewear');
+      if (lowerAcc.includes('earring') || lowerAcc.includes('ear')) hints.push('decorative ear jewelry');
+      if (lowerAcc.includes('necklace') || lowerAcc.includes('chain')) hints.push('neckwear jewelry');
+      if (lowerAcc.includes('ring') || lowerAcc.includes('bracelet')) hints.push('hand jewelry');
+    });
+  }
+  
+  // Add muscle definition hints
+  if (body.muscleDefinition) {
+    const muscle = body.muscleDefinition.toLowerCase();
+    if (muscle.includes('athletic') || muscle.includes('toned')) hints.push('visible muscle definition');
+    if (muscle.includes('muscular') || muscle.includes('built')) hints.push('pronounced muscular physique');
+  }
+  
+  return hints;
+}
+
+// ============================================================================
 // GENDER CUT OPTIONS - Tailored silhouettes by gender
 // ============================================================================
 const CUT_OPTIONS: Record<string, string> = {
@@ -314,22 +415,73 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
     if (hipWidth) parts.push(`${hipWidth} hips`);
   }
   
-  // Modification PLACEMENTS (LOCKED - only style changes)
+  // ========== BODY MODIFICATIONS (Detailed with AI vocabulary) ==========
+  
+  // Scars with descriptive vocabulary
   if (scars?.length) {
-    const scarPlacements = Array.isArray(scars) ? scars.map((s: any) => typeof s === 'string' ? s : s.location).join(', ') : 'visible scars';
-    parts.push(`scars at ${scarPlacements}`);
+    const scarList = Array.isArray(scars) ? scars : [];
+    const scarDescriptions = scarList.map((s: any) => {
+      const location = typeof s === 'string' ? s : s.location;
+      return `healed scar at ${location}`;
+    }).join(', ');
+    parts.push(scarDescriptions || 'visible battle scars');
   }
+  
+  // Piercings with jewelry material hints
   if (piercings?.length) {
-    const piercingPlacements = Array.isArray(piercings) ? piercings.map((p: any) => typeof p === 'string' ? p : p.location).join(', ') : 'piercings';
-    parts.push(`piercings at ${piercingPlacements}`);
+    const piercingList = Array.isArray(piercings) ? piercings : [];
+    const piercingDescriptions = piercingList.map((p: any) => {
+      const location = typeof p === 'string' ? p : p.location;
+      return `${location} piercing with quality jewelry`;
+    }).join(', ');
+    parts.push(piercingDescriptions || 'tasteful body piercings');
   }
+  
+  // Tattoos with style vocabulary
   if (tattoos?.length) {
-    const tattooPlacements = Array.isArray(tattoos) ? tattoos.map((t: any) => typeof t === 'string' ? t : t.location).join(', ') : 'tattoos';
-    parts.push(`tattoos at ${tattooPlacements}`);
+    const tattooList = Array.isArray(tattoos) ? tattoos : [];
+    const tattooDescriptions = tattooList.map((t: any) => {
+      const location = typeof t === 'string' ? t : t.location;
+      return `detailed tattoo art on ${location}`;
+    }).join(', ');
+    parts.push(tattooDescriptions || 'artistic tattoos');
   }
-  if (implants?.length) parts.push('visible cybernetic implants');
-  if (prosthetics?.length) parts.push('prosthetic limbs');
-  if (mutations?.length) parts.push('visible mutations');
+  
+  // Cybernetic implants with specific vocabulary
+  if (implants?.length) {
+    const implantList = Array.isArray(implants) ? implants : [];
+    const implantDescriptions = implantList.map((i: any) => {
+      const type = typeof i === 'string' ? i : i.type || i.location;
+      return `visible ${type} cybernetic implant with detailed tech aesthetic`;
+    }).join(', ');
+    parts.push(implantDescriptions || 'visible high-tech cybernetic implants');
+  }
+  
+  // Prosthetics with material detail
+  if (prosthetics?.length) {
+    const prostheticList = Array.isArray(prosthetics) ? prosthetics : [];
+    const prostheticDescriptions = prostheticList.map((p: any) => {
+      const type = typeof p === 'string' ? p : p.type || p.location;
+      return `${type} prosthetic with realistic mechanical detail`;
+    }).join(', ');
+    parts.push(prostheticDescriptions || 'detailed prosthetic limbs');
+  }
+  
+  // Mutations with fantasy/sci-fi vocabulary
+  if (mutations?.length) {
+    const mutationList = Array.isArray(mutations) ? mutations : [];
+    const mutationDescriptions = mutationList.map((m: any) => {
+      const type = typeof m === 'string' ? m : m.type;
+      return `${type} mutation rendered with biological detail`;
+    }).join(', ');
+    parts.push(mutationDescriptions || 'visible fantastical mutations');
+  }
+  
+  // Get anatomy hints from body data
+  const anatomyHints = getAnatomyHints(body);
+  if (anatomyHints.length > 0) {
+    parts.push(anatomyHints.join(', '));
+  }
   
   // Role/Class
   if (characterClass) parts.push(characterClass);
