@@ -390,7 +390,7 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
       negative_prompt: negative,
       width: 832,
       height: 1216,
-      steps: 28,
+      steps: 20,
       n: 1,
       response_format: "b64_json"
     }),
