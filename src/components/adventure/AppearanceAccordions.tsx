@@ -27,7 +27,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { command: 'neutral', label: 'Neutral', category: 'personality', keywords: 'natural, casual, relaxed, comfortable, everyday, practical, neutral posture, balanced', description: 'Everyday look', color: 'from-gray-400 to-slate-400', icon: Zap },
   { command: 'flirty', label: 'Flirty', category: 'personality', keywords: 'playful, charming, confident, stylish, form-fitting, flattering, coy smile, alluring eyes, fashionable', description: 'Playful charm', color: 'from-pink-400 to-rose-400', icon: Sparkles },
   { command: 'provocative', label: 'Provocative', category: 'personality', keywords: 'bold, daring, confident, striking, dramatic, attention-grabbing, fierce pose, intense gaze, powerful', description: 'Bold presence', color: 'from-orange-500 to-red-500', icon: Flame },
-  { command: 'lusty', label: 'Lusty', category: 'personality', keywords: 'seductive, sensual, alluring, captivating, magnetic, enticing, sultry gaze, confident pose, passionate', description: 'Magnetic aura', color: 'from-purple-500 to-pink-500', icon: Flame },
+  { command: 'alluring', label: 'Alluring', category: 'personality', keywords: 'captivating, magnetic, enticing, sultry gaze, confident pose, passionate, enchanting presence', description: 'Magnetic aura', color: 'from-purple-500 to-pink-500', icon: Flame },
   
   // ===== GENRE PRESETS =====
   { command: 'fantasy', label: 'Fantasy', category: 'genre', keywords: 'mystical, enchanted, medieval fantasy, arcane details, magical aura, flowing cape, elven inspired, ornate jewelry', description: 'High fantasy style', color: 'from-purple-600 to-indigo-500', icon: Wand2 },
@@ -526,7 +526,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
         )}
 
         <p className="text-xs text-muted-foreground mb-2">
-          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <code className="bg-muted px-1 rounded">/fantasy</code> <code className="bg-muted px-1 rounded">/elegant</code> <code className="bg-muted px-1 rounded">/lusty</code>
+          ✨ Type <code className="bg-muted px-1 rounded">/</code> to see style presets • <code className="bg-muted px-1 rounded">/fantasy</code> <code className="bg-muted px-1 rounded">/elegant</code> <code className="bg-muted px-1 rounded">/alluring</code>
         </p>
         
         <div className="relative">
