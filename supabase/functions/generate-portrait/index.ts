@@ -5,366 +5,156 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Genre-specific styling with backgrounds and diverse costume options
-const GENRE_STYLES: Record<string, { background: string; costumes: string[]; lighting: string }> = {
+// Genre themes - just aesthetic direction, let AI be creative with outfits
+const GENRE_STYLES: Record<string, { background: string; aesthetic: string; lighting: string }> = {
   fantasy: { 
-    background: 'medieval tavern with wooden beams and candlelight',
-    costumes: [
-      'worn leather traveling cloak with fur trim, simple linen tunic',
-      'ornate mage robes with arcane symbols, crystal pendant',
-      'steel plate armor with engraved heraldry, red cape',
-      'ranger outfit with hooded green cloak, quiver and bow',
-      'barmaid dress with corset and apron',
-      'noble silk garments with gold embroidery',
-    ],
+    background: 'medieval fantasy setting',
+    aesthetic: 'medieval fantasy clothing appropriate for their role',
     lighting: 'warm torchlight, mystical glow'
   },
   medieval: { 
-    background: 'stone castle corridor with torches',
-    costumes: [
-      'peasant tunic with leather belt and simple boots',
-      'knight chainmail with surcoat bearing family crest',
-      'noble velvet doublet with fur-lined collar',
-      'monk brown robes with rope belt',
-      'blacksmith leather apron over rough-spun clothes',
-      'lady-in-waiting embroidered gown with headdress',
-    ],
+    background: 'stone castle or medieval village',
+    aesthetic: 'authentic medieval period clothing befitting their station',
     lighting: 'dramatic candlelight shadows'
   },
   dark_fantasy: { 
-    background: 'gothic cathedral with stained glass',
-    costumes: [
-      'tattered black cloak with silver skull clasp',
-      'dark plate armor with thorny motifs, blood-red accents',
-      'witch hunter leather coat with blessed silver weapons',
-      'cursed noble attire, once-fine clothes now corrupted',
-      'necromancer robes with bone jewelry',
-      'fallen paladin dented armor with torn holy symbols',
-    ],
-    lighting: 'moonlight through stained glass, eerie glow'
+    background: 'gothic dark fantasy environment',
+    aesthetic: 'dark gothic fantasy attire with ominous undertones',
+    lighting: 'moonlight, eerie glow'
   },
   high_fantasy: { 
-    background: 'magical elven palace with floating crystals',
-    costumes: [
-      'flowing elven silk robes with leaf patterns',
-      'archmage vestments glowing with enchantments',
-      'celestial armor with golden wings motif',
-      'druid natural fiber clothes with living vines',
-      'royal elven court dress with moonstone jewelry',
-      'battle mage reinforced robes with spell components',
-    ],
+    background: 'magical realm with ethereal elements',
+    aesthetic: 'elegant high fantasy clothing with magical flourishes',
     lighting: 'ethereal magical luminescence'
   },
   cyberpunk: { 
-    background: 'neon-lit rain-soaked megacity alley with holographic ads',
-    costumes: [
-      'tactical techwear jacket with LED strips, cargo pants',
-      'corporate exec sleek suit with hidden tech implants',
-      'street samurai armored longcoat with neon trim',
-      'netrunner hoodie covered in data ports and cables',
-      'club kid holographic vinyl outfit with glow accessories',
-      'mercenary combat vest with modular gear attachments',
-    ],
+    background: 'neon-lit megacity with holographic ads',
+    aesthetic: 'cyberpunk fashion - techwear, neon accents, urban tech style fitting their role',
     lighting: 'harsh neon pink and cyan, rain reflections'
   },
   scifi: { 
-    background: 'sleek spaceship corridor with glowing panels',
-    costumes: [
-      'starship officer uniform with rank insignia',
-      'engineer jumpsuit with tool belt and grease stains',
-      'scientist lab coat over futuristic bodysuit',
-      'pilot flight suit with helmet under arm',
-      'diplomat formal robes blending alien cultures',
-      'security officer tactical armor with energy shields',
-    ],
+    background: 'sleek spaceship or space station interior',
+    aesthetic: 'science fiction attire appropriate for space-faring civilization',
     lighting: 'cool blue LED ambient'
   },
   sci_fi: { 
-    background: 'orbital space station observation deck',
-    costumes: [
-      'explorer exosuit with environmental sensors',
-      'medic sterile white uniform with holographic displays',
-      'bounty hunter mismatched armor pieces',
-      'colonist practical work clothes with patches',
-      'android sleek synthetic skin-tight suit',
-      'smuggler worn leather jacket over ship coveralls',
-    ],
+    background: 'futuristic sci-fi environment',
+    aesthetic: 'futuristic clothing matching their profession',
     lighting: 'starlight and holographic displays'
   },
   space_opera: { 
-    background: 'grand starship bridge with view of nebula',
-    costumes: [
-      'admiral dress uniform with medals and cape',
-      'rebel freedom fighter patched military surplus',
-      'alien ambassador exotic robes with cultural symbols',
-      'space pirate flamboyant coat with energy cutlass',
-      'princess elegant gown with royal sash',
-      'mystic warrior monk robes with energy blade',
-    ],
+    background: 'grand starship or alien world',
+    aesthetic: 'dramatic space opera costume - bold, theatrical, epic',
     lighting: 'dramatic space lighting with nebula colors'
   },
   horror: { 
-    background: 'abandoned asylum corridor with peeling walls',
-    costumes: [
-      'survivor blood-stained casual clothes, torn',
-      'investigator rumpled suit with flashlight',
-      'nurse dirty medical scrubs',
-      'patient hospital gown with restraint marks',
-      'paranormal researcher tactical vest with detection gear',
-      'cult escapee torn ceremonial robe',
-    ],
+    background: 'abandoned creepy location',
+    aesthetic: 'practical survivor or investigator clothing',
     lighting: 'harsh flashlight beam, deep shadows'
   },
   vampire: { 
-    background: 'Victorian gothic manor with red velvet',
-    costumes: [
-      'aristocrat velvet coat with lace cravat',
-      'hunter leather duster with silver accessories',
-      'ancient vampire ornate medieval noble attire',
-      'thrall servant simple but elegant uniform',
-      'nightclub predator modern goth fashion',
-      'scholar dusty academic robes with old books',
-    ],
+    background: 'Victorian gothic manor',
+    aesthetic: 'gothic elegant attire with Victorian influences',
     lighting: 'candlelit crimson atmosphere'
   },
   zombie: { 
-    background: 'barricaded survivor camp with debris',
-    costumes: [
-      'survivor tactical vest over bloody civilian clothes',
-      'military deserter torn uniform with scavenged gear',
-      'medic bloodstained scrubs with improvised armor',
-      'mechanic oil-stained coveralls with tools',
-      'hunter camouflage with handmade weapons',
-      'former cop tattered police uniform',
-    ],
+    background: 'post-outbreak survivor camp',
+    aesthetic: 'apocalypse survivor gear, practical and worn',
     lighting: 'gritty overcast, emergency lights'
   },
   western: { 
-    background: 'dusty saloon with swinging doors',
-    costumes: [
-      'outlaw dusty duster coat, bandana, worn boots',
-      'sheriff star badge, formal vest, gun belt',
-      'rancher work-worn jeans, checked shirt, hat',
-      'saloon dancer corset dress with feathers',
-      'native scout leather and beadwork traditional wear',
-      'bounty hunter long coat with multiple holsters',
-    ],
+    background: 'Old West frontier town',
+    aesthetic: 'authentic Wild West clothing for their role',
     lighting: 'golden hour desert sun'
   },
   pirate: { 
-    background: 'wooden ship deck with sails and rigging',
-    costumes: [
-      'captain ornate coat with tricorn hat, gold buttons',
-      'deckhand simple striped shirt, bandana, bare feet',
-      'first mate leather vest with navigation tools',
-      'naval officer pristine uniform with cutlass',
-      'sea witch tattered dress with shells and bones',
-      'buccaneer colorful sash, loose shirt, eye patch',
-    ],
+    background: 'wooden ship deck or port town',
+    aesthetic: 'age of sail pirate or naval attire',
     lighting: 'sunset over ocean, lantern glow'
   },
   victorian: { 
-    background: 'foggy gaslit London street',
-    costumes: [
-      'gentleman tailored suit with top hat and cane',
-      'lady elegant bustle dress with parasol',
-      'detective tweed coat with deerstalker cap',
-      'street urchin patched clothes, newsboy cap',
-      'factory worker soot-stained work clothes',
-      'society lady elaborate evening gown with jewels',
-    ],
+    background: 'foggy Victorian era street',
+    aesthetic: 'period-accurate Victorian clothing for their class',
     lighting: 'atmospheric fog with gaslight'
   },
   steampunk: { 
-    background: 'brass workshop with gears and steam pipes',
-    costumes: [
-      'inventor leather apron with brass goggles, tool belt',
-      'airship captain military coat with gear accessories',
-      'automaton engineer oil-stained vest with mechanical arm',
-      'aristocrat corset/vest with clockwork jewelry',
-      'sky pirate goggles, aviator jacket, mechanical leg',
-      'scientist lab coat with steam-powered gadgets',
-    ],
+    background: 'brass and steam industrial setting',
+    aesthetic: 'steampunk fashion with gears, goggles, brass accessories',
     lighting: 'warm amber industrial lighting'
   },
   noir: { 
-    background: 'rain-slicked city street at night',
-    costumes: [
-      'detective rumpled trench coat, fedora, loose tie',
-      'femme fatale slinky evening dress, fur stole',
-      'mobster pinstripe suit, silk tie, pocket square',
-      'journalist worn suit with press badge',
-      'nightclub singer sequined dress, long gloves',
-      'dirty cop wrinkled uniform, suspicious bulges',
-    ],
+    background: 'rain-slicked 1940s city night',
+    aesthetic: 'classic film noir fashion - trench coats, fedoras, elegant evening wear',
     lighting: 'dramatic film noir shadows, streetlight'
   },
   mystery: { 
-    background: 'private detective office with case files',
-    costumes: [
-      'investigator casual blazer with notebook',
-      'amateur sleuth cardigan and comfortable shoes',
-      'forensic expert lab coat with magnifying glass',
-      'suspect nervous formal attire',
-      'witness ordinary everyday clothes',
-      'police consultant smart casual with badge',
-    ],
+    background: 'detective office or crime scene',
+    aesthetic: 'investigator or suspect clothing appropriate to the mystery',
     lighting: 'desk lamp creating dramatic shadows'
   },
   spy: { 
-    background: 'luxury casino with chandeliers',
-    costumes: [
-      'agent tailored tuxedo with hidden weapons',
-      'femme fatale elegant cocktail dress with concealed blade',
-      'tech specialist casual genius look with gadgets',
-      'handler sophisticated business attire',
-      'double agent forgettable grey suit',
-      'assassin sleek all-black tactical formal wear',
-    ],
+    background: 'luxury casino or covert location',
+    aesthetic: 'sophisticated spy attire - sleek, elegant, deadly',
     lighting: 'glamorous golden casino lighting'
   },
   crime: { 
-    background: 'gritty urban alley with graffiti',
-    costumes: [
-      'gang member street clothes with colors, chains',
-      'undercover cop deliberately casual disguise',
-      'dealer flashy jewelry, designer labels',
-      'enforcer leather jacket, intimidating presence',
-      'informant nervous in hood and sunglasses',
-      'crime boss expensive but understated suit',
-    ],
+    background: 'gritty urban environment',
+    aesthetic: 'street-smart urban fashion for their criminal role',
     lighting: 'harsh streetlight, urban night'
   },
   postapoc: { 
-    background: 'wasteland ruins with rusted vehicles',
-    costumes: [
-      'wastelander scavenged mismatched armor, gas mask',
-      'raider tribal war paint, spiky leather, bones',
-      'vault dweller clean blue jumpsuit, pip-boy',
-      'caravan guard layered travel clothes with weapons',
-      'mutant survivor hooded cloak hiding deformities',
-      'tech scavenger goggles, tool bandolier, salvaged tech',
-    ],
+    background: 'wasteland ruins',
+    aesthetic: 'post-apocalyptic scavenged and improvised clothing',
     lighting: 'dusty orange apocalyptic sunset'
   },
   post_apocalyptic: { 
-    background: 'collapsed city overgrown with vegetation',
-    costumes: [
-      'nature reclaimer vine-wrapped clothes, garden tools',
-      'bunker dweller clean preserved pre-war clothes',
-      'tribal warrior animal furs with scrap metal armor',
-      'medic tattered white coat with precious supplies',
-      'wanderer layered weathered traveling clothes',
-      'community leader practical leader attire with symbols',
-    ],
+    background: 'collapsed civilization ruins',
+    aesthetic: 'survivor clothing - practical, weathered, resourceful',
     lighting: 'overcast wasteland atmosphere'
   },
   war: { 
-    background: 'military forward operating base',
-    costumes: [
-      'infantry soldier full combat uniform, helmet, rifle',
-      'officer dress uniform with command insignia',
-      'medic red cross armband, medical pack',
-      'sniper ghillie elements, camouflage face paint',
-      'tank crew coveralls with headset',
-      'special forces black tactical gear, night vision',
-    ],
+    background: 'military base or battlefield',
+    aesthetic: 'military uniform and gear for their rank and role',
     lighting: 'harsh military lighting'
   },
   ww2: { 
-    background: 'WWII bunker with sandbags',
-    costumes: [
-      'GI soldier olive drab uniform, M1 helmet',
-      'resistance fighter civilian clothes with hidden weapons',
-      'nurse period military nurse uniform',
-      'pilot leather bomber jacket, flight goggles',
-      'spy period civilian suit blending in',
-      'officer period-accurate dress uniform',
-    ],
+    background: 'WWII era setting',
+    aesthetic: 'period-accurate WWII clothing or uniform',
     lighting: 'gritty wartime atmosphere'
   },
   superhero: { 
-    background: 'city rooftop at night with skyline',
-    costumes: [
-      'classic hero bright spandex suit with cape, emblem',
-      'dark vigilante armored black suit, utility belt',
-      'tech hero powered armor suit with glowing elements',
-      'mystic hero robes with magical accessories',
-      'speedster aerodynamic suit with lightning motifs',
-      'civilian identity glasses, ordinary clothes',
-    ],
+    background: 'city rooftop at night',
+    aesthetic: 'superhero costume matching their powers and persona',
     lighting: 'dramatic moonlight and city lights'
   },
   modern: { 
     background: 'modern urban cityscape',
-    costumes: [
-      'business professional tailored suit or blazer',
-      'student casual jeans and graphic tee',
-      'artist creative eclectic mix of styles',
-      'athlete sporty activewear',
-      'goth alternative black clothing with silver',
-      'hipster vintage thrift store aesthetic',
-    ],
+    aesthetic: 'contemporary modern fashion for their lifestyle',
     lighting: 'natural daylight'
   },
   modern_life: { 
-    background: 'contemporary city sidewalk with shops',
-    costumes: [
-      'office worker business casual attire',
-      'barista apron over trendy clothes',
-      'delivery driver uniform with company logo',
-      'shopper comfortable casual with bags',
-      'jogger athletic wear with earbuds',
-      'street performer colorful attention-grabbing outfit',
-    ],
+    background: 'contemporary city street',
+    aesthetic: 'everyday modern clothing for their occupation',
     lighting: 'bright natural light'
   },
   contemporary: { 
-    background: 'trendy urban cafe interior',
-    costumes: [
-      'influencer curated instagram-worthy outfit',
-      'tech worker hoodie and premium sneakers',
-      'creative designer unique handmade pieces',
-      'minimalist neutral tones clean lines',
-      'maximalist bold patterns and colors mixed',
-      'vintage collector retro authentic pieces',
-    ],
+    background: 'trendy urban location',
+    aesthetic: 'current fashion trends matching their personality',
     lighting: 'warm cafe ambiance'
   },
   slice_of_life: { 
-    background: 'cozy modern apartment living room',
-    costumes: [
-      'homebody comfortable loungewear, fuzzy socks',
-      'work from home smart top, pajama pants',
-      'weekend casual jeans and favorite sweater',
-      'cooking enthusiast apron over casual clothes',
-      'gamer gaming headset, band t-shirt',
-      'reader cozy cardigan, reading glasses',
-    ],
+    background: 'cozy everyday environment',
+    aesthetic: 'comfortable casual clothing for daily life',
     lighting: 'soft natural window light'
   },
   romance: { 
-    background: 'elegant ballroom or garden venue',
-    costumes: [
-      'date night elegant dress or sharp suit',
-      'casual romance sundress or linen shirt',
-      'wedding guest formal cocktail attire',
-      'first date carefully chosen impressive outfit',
-      'anniversary elegant but comfortable favorite outfit',
-      'secret admirer ordinary clothes hiding feelings',
-    ],
+    background: 'romantic elegant setting',
+    aesthetic: 'romantic attire - elegant, alluring, date-worthy',
     lighting: 'romantic soft golden hour'
   },
   urban_fantasy: { 
-    background: 'modern city alley with magical elements',
-    costumes: [
-      'hidden mage modern clothes with concealed magical items',
-      'vampire modern goth chic with ancient accessories',
-      'werewolf rugged casual that can survive transformation',
-      'fae glamoured trendy fashion hiding otherworldly nature',
-      'witch occult shop owner bohemian with subtle symbols',
-      'hunter tactical casual with blessed weapons hidden',
-    ],
+    background: 'modern city with hidden magical elements',
+    aesthetic: 'modern clothing with subtle magical or supernatural hints',
     lighting: 'urban night with magical glow'
   },
 };
@@ -424,86 +214,34 @@ function getOriginModifier(nationality?: string, ethnicity?: string): string {
   return '';
 }
 
-// Select a costume based on character class - prioritize class matching
-function selectCostume(costumes: string[], characterClass?: string): string {
-  if (characterClass) {
-    const classLower = characterClass.toLowerCase();
-    
-    // Direct match first
-    const directMatch = costumes.find(c => c.toLowerCase().includes(classLower));
-    if (directMatch) return directMatch;
-    
-    // Keyword mapping for common class types
-    const classKeywords: Record<string, string[]> = {
-      // Fantasy
-      'mage': ['mage', 'wizard', 'robes', 'arcane', 'spell'],
-      'wizard': ['mage', 'wizard', 'robes', 'arcane'],
-      'warrior': ['armor', 'knight', 'plate', 'combat', 'soldier'],
-      'fighter': ['armor', 'knight', 'combat', 'soldier'],
-      'rogue': ['leather', 'hood', 'cloak', 'thief', 'shadow'],
-      'thief': ['leather', 'hood', 'cloak', 'thief'],
-      'healer': ['medic', 'nurse', 'robes', 'white'],
-      'cleric': ['robes', 'holy', 'priest'],
-      'ranger': ['ranger', 'hood', 'cloak', 'leather', 'bow'],
-      'paladin': ['armor', 'plate', 'knight', 'holy'],
-      'bard': ['colorful', 'performer', 'elegant'],
-      'druid': ['druid', 'natural', 'vine', 'leather'],
-      // Cyberpunk
-      'netrunner': ['netrunner', 'data port', 'cable', 'hoodie', 'tech'],
-      'hacker': ['netrunner', 'data port', 'hoodie', 'tech'],
-      'solo': ['combat', 'tactical', 'armor', 'mercenary'],
-      'mercenary': ['mercenary', 'combat', 'tactical', 'vest'],
-      'fixer': ['suit', 'corporate', 'sleek', 'exec'],
-      'techie': ['engineer', 'jumpsuit', 'tool', 'tech'],
-      'rockerboy': ['club', 'performer', 'holographic', 'vinyl'],
-      'nomad': ['scaveng', 'patch', 'survival', 'road'],
-      'corporate': ['corporate', 'suit', 'exec', 'sleek'],
-      'exec': ['corporate', 'suit', 'exec', 'sleek'],
-      // Sci-fi
-      'pilot': ['pilot', 'flight', 'jumpsuit'],
-      'engineer': ['engineer', 'jumpsuit', 'tool', 'coverall'],
-      'scientist': ['scientist', 'lab coat', 'research'],
-      'captain': ['captain', 'officer', 'uniform', 'admiral'],
-      'bounty hunter': ['bounty', 'armor', 'hunter', 'tactical'],
-      // Horror/Modern
-      'detective': ['detective', 'coat', 'investigator', 'suit'],
-      'survivor': ['survivor', 'torn', 'bloody', 'tactical'],
-      'investigator': ['investigator', 'detective', 'suit'],
-      // Western
-      'gunslinger': ['outlaw', 'duster', 'holster', 'cowboy'],
-      'sheriff': ['sheriff', 'badge', 'vest', 'star'],
-      'outlaw': ['outlaw', 'duster', 'bandana'],
-    };
-    
-    const keywords = classKeywords[classLower] || [];
-    for (const keyword of keywords) {
-      const match = costumes.find(c => c.toLowerCase().includes(keyword));
-      if (match) return match;
-    }
-  }
-  // Random selection if no match
-  return costumes[Math.floor(Math.random() * costumes.length)];
-}
-
-// Build complete clothing description: genre costume + origin style + user additionals
+// Build clothing description: let AI be creative within genre + role + origin + user additionals
 function buildClothingDescription(
-  baseCostume: string, 
-  originModifier: string, 
+  genreAesthetic: string,
+  characterClass?: string,
+  originModifier?: string, 
   userAdditionals?: string
 ): string {
-  let clothing = baseCostume;
+  const parts: string[] = [];
   
-  // Add origin cultural influence
-  if (originModifier) {
-    clothing = `${clothing} ${originModifier}`;
-  }
-  
-  // User additionals enhance and override
+  // User additionals come first (highest priority)
   if (userAdditionals && userAdditionals.trim()) {
-    clothing = `${userAdditionals}, ${clothing}`;
+    parts.push(userAdditionals);
   }
   
-  return clothing;
+  // Character role/class guides the outfit
+  if (characterClass) {
+    parts.push(`clothing appropriate for a ${characterClass}`);
+  }
+  
+  // Genre aesthetic provides the style direction
+  parts.push(genreAesthetic);
+  
+  // Cultural origin influences the design
+  if (originModifier) {
+    parts.push(originModifier);
+  }
+  
+  return parts.join(', ');
 }
 
 function buildPrompt(body: any): { prompt: string; negative: string } {
@@ -604,14 +342,13 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  // Build clothing: genre costume + origin cultural style + user additionals
-  const selectedCostume = selectCostume(style.costumes, characterClass);
+  // Build clothing: genre aesthetic + character role + origin + user additionals (AI is creative)
   const originModifier = getOriginModifier(nationality, ethnicity);
-  const clothingDesc = buildClothingDescription(selectedCostume, originModifier, userDesc);
+  const clothingDesc = buildClothingDescription(style.aesthetic, characterClass, originModifier, userDesc);
   
-  console.log('Selected costume:', selectedCostume);
+  console.log('Genre aesthetic:', style.aesthetic);
   console.log('Origin modifier:', originModifier);
-  console.log('Final clothing:', clothingDesc);
+  console.log('Final clothing direction:', clothingDesc);
   
   // Professional realistic art style prompt - NO cartoon/stylized elements
   const prompt = `Knees-to-head standing character portrait, centered full figure crop at the knees, facing camera, confident neutral stance, clean silhouette, readable design, ${character}, MUST BE WEARING: ${clothingDesc}, High-end digital illustration with realistic rendering: realistic anatomy, realistic materials and fabrics, realistic skin with natural texture and pores, photographic quality lighting, crisp details, polished AAA game character art finish, Cinematic lighting: soft key light + subtle rim light, realistic specular highlights on hard surfaces, gentle bloom, atmospheric depth, background bokeh, Material fidelity: visible fabric weave and stitching, metal reflections and micro-scratches, leather grain, realistic cloth physics, Background: ${style.background}, ${style.lighting}, depth and atmosphere, character is the focus, Camera: 50mm portrait lens, eye-level, slight depth of field, sharp face and eyes, clean professional composition, Design coherence: outfit matches character role and genre, consistent color palette, unified visual language, Quality: correct hands with 5 fingers, correct human proportions, no artifacts, no extra limbs`;
