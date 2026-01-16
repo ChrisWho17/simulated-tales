@@ -8,33 +8,33 @@ const corsHeaders = {
 // ============================================================================
 // ULTIMATE FLUX1.DEV CHARACTER PORTRAIT PROMPT STRUCTURE
 // ============================================================================
+// ANTI-MODELING FIX: Environment-first approach, character exists IN world
+// NOT a studio photoshoot - character portrait in their natural habitat
+// ============================================================================
 
-// [CAMERA & COMPOSITION - LOCKED SPECIFICATIONS]
-const CAMERA_COMPOSITION = `
-FRAMING - KNEE TO HEAD HEIGHT: Full character portrait extending from knees to top of head, vertical portrait orientation composition, character occupies 70-80% of frame height, knees visible at bottom edge of frame, adequate headroom at top (approximately 10% of frame above head), 3/4 length portrait showing knees thighs hips torso shoulders neck and complete head with hair.
+// [CHARACTER IN ENVIRONMENT - PRIMARY FRAMING]
+// Emphasizes character existing in their world, NOT studio photography
+const CHARACTER_IN_ENVIRONMENT = `
+CHARACTER IN ENVIRONMENT PORTRAIT: Full character portrait showing person standing naturally in their environment, framed from knees to top of head in vertical portrait orientation, character positioned within visible surroundings, body angled 15-20 degrees for dimensional depth while face looks directly at viewer, THIS IS A CHARACTER PORTRAIT showing a person in their world NOT a studio photoshoot.
 
-BODY POSITIONING: Character body rotated 15-20 degrees to subject left or right creating dimensional depth and flattering silhouette, hips and shoulders maintain angled position, weight shifted to one leg creating natural hip tilt and relaxed posture, torso shows depth and dimension from the angle.
+ENVIRONMENT PRESENCE CRITICAL: Character exists within visible genre environment, background elements clearly present but softer focus than character, setting is VISIBLE and CONTEXTUAL establishing where this character lives works exists, background provides story context while character remains primary focus, environment surrounds character on all sides.
 
-FACE AND EYE CONTACT CRITICAL: Face turned toward camera despite body angle establishing direct frontal view, eyes looking DIRECTLY into camera lens creating intimate connection with viewer, head may have subtle tilt 5-10 degrees but maintains frontal orientation, NO profile view NO side glance NO looking away, gaze is confident direct and engages viewer.
+FRAMING SPECIFICS: Vertical portrait orientation showing character from knees upward, character occupies center-to-three-quarters of frame, knees visible at bottom of frame, head with full hair visible with space above, shows complete legs from knees plus hips torso arms shoulders neck head hair, natural standing pose within environment NOT posed for camera.
 
-CAMERA TECHNICAL: 85mm portrait lens equivalent with flattering compression and natural perspective, camera positioned at subject chest solar plexus level for neutral flattering angle, f/1.8 to f/2.8 aperture with subject in sharp focus and background softly blurred, vertical portrait format 9:16 or 2:3 aspect ratio, professional studio setup.
+PERSPECTIVE AND ANGLE: Camera positioned at character mid-torso height capturing natural perspective as if viewer stands before them in their environment, body turned slightly 15-20 degrees creating dimensional depth, face oriented toward viewer, eyes making direct contact, natural posture showing character in their element.
 
-DEPTH OF FIELD: Critical focus plane on eyes and face tack sharp maximum detail, secondary focus on upper body shoulders arms sharp to slightly soft transition, tertiary focus on lower body knees in acceptable focus but slightly softer, background creamy bokeh blur f/1.8-f/2.8 environmental context visible but not distracting.
+CHARACTER FOCUS IN ENVIRONMENT: Sharp focus on character face and eyes with detailed features visible, body remains in clear focus, background softly blurred with environmental context visible but not competing, depth of field creates natural separation with character sharp and environment recognizable but softer.
 
-COMPOSITION RULES: Rule of thirds with eyes positioned in upper third of frame, balanced negative space on sides of subject slightly more above head than below knees, body positioning slightly off-center if angled creating dynamic composition.
+ENVIRONMENTAL LIGHTING: Lighting appropriate to genre setting, light sources come from environment itself NOT studio setup, natural directionality from scene elements creates depth and form on character, lighting tells story of where character is located, practical light sources only.
 
-POSE DYNAMICS: Stance with weight on back leg front leg slightly bent or extended creating natural stance, arms hanging naturally at sides or one hand on hip or arms crossed loosely avoid stiff soldier pose, shoulders relaxed not hunched or rigid natural slope, posture confident but natural slight S-curve to body.
-
-LIGHTING THREE-POINT STUDIO: Key light at 45-degree angle from camera 1:2 lighting ratio defines face planes and body contours, fill light opposite side from key 1/4 to 1/2 intensity of key softens shadows without eliminating them, rim hair light behind and above subject separates from background creates edge definition and hair highlights, catchlights in eyes at 10 and 2 o'clock positions.
-
-Professional studio portrait photograph knee-to-head framing showing complete character in dimensional space, face engaging viewer directly with confident eye contact, body positioned at flattering angle creating depth, cinematic lighting creating form and separation, magazine editorial quality casting-style headshot meets fashion portrait aesthetic.
+THIS IS A CHARACTER EXISTING IN THEIR WORLD - NOT A MODELING PHOTOSHOOT
 `.trim().replace(/\n\n/g, '. ').replace(/\n/g, ' ');
 
-// [QUALITY ASSURANCE TAGS]
-const QUALITY_TAGS = `Professional portrait photography, studio quality, magazine editorial standard, high-end retouching, natural beauty enhancement, cinematic lighting, shallow depth of field, bokeh background, sharp focus on subject, professional color grading, award-winning portrait, masterful composition, technically perfect, emotionally resonant, character-driven storytelling, 8K resolution, photorealistic`;
+// [QUALITY ASSURANCE TAGS - Environment-focused, NOT studio]
+const QUALITY_TAGS = `Photorealistic digital art, high character detail, environmental context clearly visible, natural depth showing character in their space, cinematic color grading matching genre atmosphere, 8K resolution, detailed skin texture natural subsurface scattering, individual hair strands visible, fabric and material detail, character integrated into environment, immersive scene composition, atmospheric genre rendering`;
 
-// [NEGATIVE PROMPTS TO AVOID]
-const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot`;
+// [NEGATIVE PROMPTS TO AVOID - Anti-modeling]
+const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot, studio background, seamless backdrop, gradient background, fashion photography, modeling pose, catalog shoot, isolated subject, no environmental context, plain backdrop, white background, gray background`;
 
 // ============================================================================
 // 🎨 GENRE VISUAL LOCK - ATMOSPHERIC FRAMEWORK
@@ -1057,23 +1057,32 @@ const GENRE_VISUAL_LOCKS: Record<string, GenreVisualLock> = {
 };
 
 // Function to build genre visual description from lock
+// ENVIRONMENT-FIRST approach: Character exists IN this world
 function buildGenreVisualDescription(genreKey: string): string {
   const lock = GENRE_VISUAL_LOCKS[genreKey] || GENRE_VISUAL_LOCKS['fantasy'];
   
   const setting = lock.settings[Math.floor(Math.random() * lock.settings.length)];
   
+  // Build immersive world description - character is IN this environment
   const parts = [
-    `BACKGROUND ENVIRONMENT: ${setting}`,
-    `Architecture: ${lock.architecture}`,
-    `Genre elements: ${lock.genreElements}`,
-    `LIGHTING: ${lock.lightSources}, ${lock.lightQuality}`,
-    `Color temperature: ${lock.colorTemperature}`,
-    `Atmospheric effects: ${lock.atmosphericEffects}`,
-    `MOOD: ${lock.mood}`,
-    `COLOR PALETTE: Dominant colors ${lock.dominantColors}, accent colors ${lock.accentColors}`,
-    `Metal tones: ${lock.metalTones}`,
-    `Overall palette: ${lock.overallPalette}`,
-    `AESTHETIC: ${lock.style}, texture emphasis ${lock.textureEmphasis}, era feeling ${lock.eraFeeling}`,
+    `THE WORLD THIS CHARACTER INHABITS: ${setting}`,
+    `visible architecture and structures around character: ${lock.architecture}`,
+    `genre-specific elements surrounding character: ${lock.genreElements}`,
+    `props and objects visible in scene near character: ${lock.props}`,
+    
+    `CHARACTER STANDING IN SCENE: Character positioned in this environment with ${setting} visible behind and around them, ${lock.genreElements} creating immersive world, character is PART OF this environment not separated from it`,
+    
+    `ENVIRONMENTAL LIGHTING FROM SCENE: ${lock.lightSources}, ${lock.lightQuality}, color temperature ${lock.colorTemperature}, light sources come from environment not studio setup`,
+    
+    `ATMOSPHERIC DEPTH: ${lock.atmosphericEffects}, foreground elements at character feet, mid-ground where character stands, background ${setting} softly blurred, depth cues creating immersive space`,
+    
+    `WORLD DETAILS VISIBLE: Background shows ${lock.architecture}, distant details visible in blur, character integrated into this world, environmental storytelling through visible setting`,
+    
+    `COLOR FROM ENVIRONMENT: ${lock.dominantColors} dominant in scene, ${lock.accentColors} accents from environment naturally illuminating character, ${lock.metalTones} metal tones, ${lock.overallPalette}`,
+    
+    `MOOD OF WORLD: ${lock.mood}, ${lock.style}, texture emphasis ${lock.textureEmphasis}, era feeling ${lock.eraFeeling}`,
+    
+    `CHARACTER IS IN THIS WORLD - WORLD IS AROUND CHARACTER - NOT BACKDROP`,
   ];
 
   if (lock.criticalNotes) {
@@ -1684,81 +1693,72 @@ function buildUltimatePrompt(body: any): { prompt: string; negative_prompt: stri
   console.log("Role:", roleStr || "(none)");
   
   // =========================================================================
-  // [GENRE BACKGROUND]
+  // [GENRE ENVIRONMENT - Character's World]
+  // Environment-first approach: character exists IN this world
   // =========================================================================
   
   const genreKey = genre?.toLowerCase().replace(/[\s-]/g, '_') || 'fantasy';
   const genreVisualDescription = buildGenreVisualDescription(genreKey);
   
   const backgroundStr = genreVisualDescription;
-  console.log("Background:", backgroundStr);
-  
-  // =========================================================================
-  // [TECHNICAL SPECIFICATIONS]
-  // =========================================================================
-  
-  const technicalStr = `Camera: 85mm f/1.8 equivalent, three-point studio lighting, sharp focus on eyes and face, body in focus, background bokeh, 8K resolution, photorealistic skin with subsurface scattering, individual hair strands visible, fabric texture detail, professional color grading`;
+  console.log("Genre Environment:", backgroundStr.substring(0, 200) + "...");
   
   // =========================================================================
   // ASSEMBLE FINAL PROMPT
-  // Priority order:
-  // 1. Camera/Composition (locked)
-  // 2. USER ADDITIONAL DETAILS (ABSOLUTE PRIORITY - takes over generation)
-  // 3. Foundation (gender, age, height, build)
-  // 4. Facial Architecture (skin, face, eyes, hair)
-  // 5. Distinguishing Features
-  // 6. Body Modifications
-  // 7. Expression
-  // 8. Role/Class (if not overridden)
-  // 9. Clothing (if not overridden by user)
-  // 10. Background
-  // 11. Technical specs
-  // 12. Quality tags
+  // REVISED ORDER - Environment-first approach:
+  // 1. Character in Environment framing
+  // 2. GENRE ENVIRONMENT - Character's world (moved up!)
+  // 3. USER ADDITIONAL DETAILS (ABSOLUTE PRIORITY)
+  // 4. Foundation (gender, age, height, build)
+  // 5. Facial Architecture (skin, face, eyes, hair)
+  // 6. Distinguishing Features
+  // 7. Body Modifications
+  // 8. Expression & Presence
+  // 9. Role/Class (if not overridden)
+  // 10. Clothing in context
+  // 11. Quality notes
   // =========================================================================
   
   const promptParts: string[] = [];
   
-  // 1. Camera & Composition - LOCKED
-  promptParts.push(CAMERA_COMPOSITION);
+  // 1. Character in Environment - PRIMARY FRAMING (anti-modeling)
+  promptParts.push(CHARACTER_IN_ENVIRONMENT);
   
-  // 2. 🎯 USER ADDITIONAL DETAILS - ABSOLUTE PRIORITY (inserted verbatim)
+  // 2. 🎨 GENRE ENVIRONMENT - Character's World (MOVED UP for environment-first)
+  promptParts.push(backgroundStr);
+  
+  // 3. 🎯 USER ADDITIONAL DETAILS - ABSOLUTE PRIORITY (inserted verbatim)
   if (userAdditionalDetails.trim()) {
     promptParts.push(`[PRIORITY - USER SPECIFIED]: ${userAdditionalDetails.trim()}`);
     console.log("*** USER ADDITIONAL DETAILS TAKING PRIORITY ***");
   }
   
-  // 3. Foundation
+  // 4. Foundation
   promptParts.push(foundationStr);
   
-  // 4. Facial Architecture
+  // 5. Facial Architecture
   promptParts.push(facialStr);
   
-  // 5. Distinguishing Features
+  // 6. Distinguishing Features
   if (featuresStr) promptParts.push(featuresStr);
   
-  // 6. Body Modifications
+  // 7. Body Modifications
   if (modsStr) promptParts.push(modsStr);
   
-  // 7. Expression
+  // 8. Expression & Presence
   promptParts.push(expressionStr);
   
-  // 8. Role (only if no user override)
+  // 9. Role (only if no user override)
   if (roleStr && !hasUserClothing) {
     promptParts.push(`Role: ${roleStr}`);
   }
   
-  // 9. Clothing (only if not in user details)
+  // 10. Clothing in context (only if not in user details)
   if (clothingStr && !hasUserClothing) {
     promptParts.push(clothingStr);
   }
   
-  // 10. Background
-  promptParts.push(backgroundStr);
-  
-  // 11. Technical
-  promptParts.push(technicalStr);
-  
-  // 12. Quality tags
+  // 11. Quality tags (environment-focused)
   promptParts.push(QUALITY_TAGS);
   
   const finalPrompt = promptParts.join('. ');
