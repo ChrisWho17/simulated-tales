@@ -84,28 +84,6 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
 
   return (
     <div className="space-y-2">
-      {/* AI Enhancement Priority Field - Always visible at top */}
-      <div className="border border-primary/30 rounded-lg p-3 bg-primary/5 mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <label className="text-sm font-medium text-primary">Priority Enhancement Details</label>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2">
-          ✨ These details are <strong>emphasized</strong> to the AI. Describe unique features, 
-          accessories, or specific looks you want prioritized.
-        </p>
-        <textarea
-          value={appearance.full?.intimateDetails || ''}
-          onChange={(e) => onUpdateAppearance('full', 'intimateDetails', e.target.value)}
-          placeholder="e.g., Rose gold jewelry, sleeve tattoo with cherry blossoms, chrome cybernetic arm, vintage aviator glasses..."
-          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50 text-sm min-h-[60px] resize-none"
-          maxLength={500}
-        />
-        <p className="text-xs text-muted-foreground mt-1 text-right">
-          {(appearance.full?.intimateDetails || '').length}/500
-        </p>
-      </div>
-
       {/* Clothing Style Accordion */}
       {renderAccordionHeader('clothing', <Shirt className="w-4 h-4 text-primary" />, 'Clothing Style', clothingCount)}
       {openSection === 'clothing' && (
@@ -367,6 +345,27 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
           </div>
         </div>
       )}
+
+      {/* AI Enhancement Priority Field - After accordions */}
+      <div className="border border-primary/30 rounded-lg p-3 bg-primary/5 mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <label className="text-sm font-medium text-primary">Additional Details</label>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">
+          ✨ Describe unique features, accessories, or specific looks you want emphasized in your portrait.
+        </p>
+        <textarea
+          value={appearance.full?.intimateDetails || ''}
+          onChange={(e) => onUpdateAppearance('full', 'intimateDetails', e.target.value)}
+          placeholder="e.g., Rose gold jewelry, sleeve tattoo with cherry blossoms, chrome cybernetic arm, vintage aviator glasses..."
+          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50 text-sm min-h-[60px] resize-none"
+          maxLength={500}
+        />
+        <p className="text-xs text-muted-foreground mt-1 text-right">
+          {(appearance.full?.intimateDetails || '').length}/500
+        </p>
+      </div>
     </div>
   );
 }
