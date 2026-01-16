@@ -140,64 +140,62 @@ function buildNPCPrompt(npc: any, config: any): string {
 }
 
 // ============================================================================
-// LOVABLE AI IMAGE GENERATION (Using Gemini Flash Image)
+// TOGETHER.AI IMAGE GENERATION (Using FLUX.1 Schnell)
 // ============================================================================
 
-async function generateWithLovableAI(prompt: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+async function generateWithTogetherAI(prompt: string): Promise<string> {
+  const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
   
-  if (!LOVABLE_API_KEY) {
-    throw new Error("LOVABLE_API_KEY is not configured");
+  if (!TOGETHER_API_KEY) {
+    throw new Error("TOGETHER_API_KEY is not configured");
   }
 
-  console.log("Generating NPC portrait with Lovable AI (Gemini Flash Image)");
-  console.log("Prompt:", prompt.substring(0, 200) + "...");
+  console.log("Generating NPC portrait with Together.ai (FLUX.1 Schnell)");
+  console.log("Prompt:", prompt.substring(0, 300) + "...");
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const response = await fetch('https://api.together.xyz/v1/images/generations', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Authorization': `Bearer ${TOGETHER_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-image-preview',
-      messages: [
-        { 
-          role: 'user', 
-          content: `Create a professional character portrait for a game: ${prompt}. The character should be shown in appropriate attire for their setting.` 
-        }
-      ],
-      modalities: ['image', 'text'],
+      model: 'black-forest-labs/FLUX.1-schnell',
+      prompt: prompt,
+      width: 768,
+      height: 1024,
+      steps: 4,
+      n: 1,
+      response_format: 'b64_json',
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Lovable AI error:", response.status, errorText);
+    console.error("Together.ai error:", response.status, errorText);
     
     if (response.status === 429) {
       throw new Error("Rate limit exceeded, please try again later.");
     }
-    if (response.status === 402) {
-      throw new Error("Usage limit reached, please add credits.");
+    if (response.status === 402 || response.status === 401) {
+      throw new Error("API key issue or credits exhausted.");
     }
     
-    throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+    throw new Error(`Together.ai error: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  console.log("Lovable AI response received");
+  console.log("Together.ai response received");
   
-  // Extract the image URL from the response
-  const imageData = result.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  const b64Data = result.data?.[0]?.b64_json;
   
-  if (!imageData) {
+  if (!b64Data) {
     console.error("No image in response:", JSON.stringify(result).substring(0, 500));
     throw new Error("No image generated");
   }
 
-  // Return the base64 data URL directly
-  return imageData;
+  // Return as data URL
+  return `data:image/png;base64,${b64Data}`;
 }
 
 // ============================================================================
@@ -229,7 +227,7 @@ serve(async (req) => {
 
     console.log("Final prompt:", finalPrompt.substring(0, 200) + "...");
 
-    const imageUrl = await generateWithLovableAI(finalPrompt);
+    const imageUrl = await generateWithTogetherAI(finalPrompt);
 
     console.log("NPC portrait generated successfully for:", npc.meta.name);
 
