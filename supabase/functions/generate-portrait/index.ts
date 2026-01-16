@@ -9,14 +9,32 @@ const corsHeaders = {
 // ULTIMATE FLUX1.DEV CHARACTER PORTRAIT PROMPT STRUCTURE
 // ============================================================================
 
-// [CAMERA & COMPOSITION - LOCKED]
-const CAMERA_COMPOSITION = `Direct frontal portrait photograph, knee to head height framing, character body positioned at slight 15-degree angle while face and eyes look directly at camera, establishing intimate eye contact with viewer, professional studio lighting setup with three-point lighting configuration`;
+// [CAMERA & COMPOSITION - LOCKED SPECIFICATIONS]
+const CAMERA_COMPOSITION = `
+FRAMING - KNEE TO HEAD HEIGHT: Full character portrait extending from knees to top of head, vertical portrait orientation composition, character occupies 70-80% of frame height, knees visible at bottom edge of frame, adequate headroom at top (approximately 10% of frame above head), 3/4 length portrait showing knees thighs hips torso shoulders neck and complete head with hair.
+
+BODY POSITIONING: Character body rotated 15-20 degrees to subject left or right creating dimensional depth and flattering silhouette, hips and shoulders maintain angled position, weight shifted to one leg creating natural hip tilt and relaxed posture, torso shows depth and dimension from the angle.
+
+FACE AND EYE CONTACT CRITICAL: Face turned toward camera despite body angle establishing direct frontal view, eyes looking DIRECTLY into camera lens creating intimate connection with viewer, head may have subtle tilt 5-10 degrees but maintains frontal orientation, NO profile view NO side glance NO looking away, gaze is confident direct and engages viewer.
+
+CAMERA TECHNICAL: 85mm portrait lens equivalent with flattering compression and natural perspective, camera positioned at subject chest solar plexus level for neutral flattering angle, f/1.8 to f/2.8 aperture with subject in sharp focus and background softly blurred, vertical portrait format 9:16 or 2:3 aspect ratio, professional studio setup.
+
+DEPTH OF FIELD: Critical focus plane on eyes and face tack sharp maximum detail, secondary focus on upper body shoulders arms sharp to slightly soft transition, tertiary focus on lower body knees in acceptable focus but slightly softer, background creamy bokeh blur f/1.8-f/2.8 environmental context visible but not distracting.
+
+COMPOSITION RULES: Rule of thirds with eyes positioned in upper third of frame, balanced negative space on sides of subject slightly more above head than below knees, body positioning slightly off-center if angled creating dynamic composition.
+
+POSE DYNAMICS: Stance with weight on back leg front leg slightly bent or extended creating natural stance, arms hanging naturally at sides or one hand on hip or arms crossed loosely avoid stiff soldier pose, shoulders relaxed not hunched or rigid natural slope, posture confident but natural slight S-curve to body.
+
+LIGHTING THREE-POINT STUDIO: Key light at 45-degree angle from camera 1:2 lighting ratio defines face planes and body contours, fill light opposite side from key 1/4 to 1/2 intensity of key softens shadows without eliminating them, rim hair light behind and above subject separates from background creates edge definition and hair highlights, catchlights in eyes at 10 and 2 o'clock positions.
+
+Professional studio portrait photograph knee-to-head framing showing complete character in dimensional space, face engaging viewer directly with confident eye contact, body positioned at flattering angle creating depth, cinematic lighting creating form and separation, magazine editorial quality casting-style headshot meets fashion portrait aesthetic.
+`.trim().replace(/\n\n/g, '. ').replace(/\n/g, ' ');
 
 // [QUALITY ASSURANCE TAGS]
-const QUALITY_TAGS = `Professional portrait photography, studio quality, magazine editorial standard, high-end retouching, natural beauty enhancement, cinematic lighting, shallow depth of field, bokeh background, sharp focus on subject, professional color grading, award-winning portrait, masterful composition, technically perfect, emotionally resonant, character-driven storytelling`;
+const QUALITY_TAGS = `Professional portrait photography, studio quality, magazine editorial standard, high-end retouching, natural beauty enhancement, cinematic lighting, shallow depth of field, bokeh background, sharp focus on subject, professional color grading, award-winning portrait, masterful composition, technically perfect, emotionally resonant, character-driven storytelling, 8K resolution, photorealistic`;
 
 // [NEGATIVE PROMPTS TO AVOID]
-const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, headshot, bust shot, face only, zoomed in, too close`;
+const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot`;
 
 // ============================================================================
 // GENRE BACKGROUNDS - ATMOSPHERIC CONTEXT
