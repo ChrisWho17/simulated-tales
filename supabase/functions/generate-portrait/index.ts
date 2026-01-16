@@ -5,38 +5,158 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Genre backgrounds
-const BACKGROUNDS: Record<string, string> = {
-  fantasy: 'medieval tavern interior',
-  medieval: 'castle stone corridor',
-  dark_fantasy: 'gothic cathedral',
-  high_fantasy: 'magical elven palace',
-  cyberpunk: 'neon-lit rainy city alley',
-  scifi: 'spaceship corridor',
-  sci_fi: 'space station',
-  space_opera: 'starship bridge',
-  horror: 'abandoned dark building',
-  vampire: 'gothic manor',
-  zombie: 'barricaded room',
-  western: 'old west saloon',
-  pirate: 'ship deck',
-  victorian: 'foggy London street',
-  steampunk: 'brass gear workshop',
-  noir: 'rain-slicked night street',
-  mystery: 'detective office',
-  spy: 'luxury casino',
-  crime: 'dark urban alley',
-  postapoc: 'wasteland ruins',
-  post_apocalyptic: 'collapsed city',
-  war: 'military base',
-  ww2: 'WWII bunker',
-  superhero: 'city rooftop night',
-  modern: 'modern urban street',
-  modern_life: 'contemporary city sidewalk',
-  contemporary: 'trendy urban cafe',
-  slice_of_life: 'cozy modern apartment',
-  romance: 'elegant venue',
-  urban_fantasy: 'modern city street',
+// Genre-specific styling with backgrounds and costume descriptions
+const GENRE_STYLES: Record<string, { background: string; costume: string; lighting: string }> = {
+  fantasy: { 
+    background: 'medieval tavern with wooden beams and candlelight',
+    costume: 'leather armor, fantasy robes, medieval adventurer garb',
+    lighting: 'warm torchlight, mystical glow'
+  },
+  medieval: { 
+    background: 'stone castle corridor with torches',
+    costume: 'chainmail, surcoat, medieval noble attire',
+    lighting: 'dramatic candlelight shadows'
+  },
+  dark_fantasy: { 
+    background: 'gothic cathedral with stained glass',
+    costume: 'dark ornate armor, black robes, gothic attire with silver accents',
+    lighting: 'moonlight through stained glass, eerie glow'
+  },
+  high_fantasy: { 
+    background: 'magical elven palace with floating crystals',
+    costume: 'elegant elven robes, enchanted armor, magical accessories',
+    lighting: 'ethereal magical luminescence'
+  },
+  cyberpunk: { 
+    background: 'neon-lit rain-soaked megacity alley with holographic ads',
+    costume: 'tactical combat vest, cybernetic implants visible, techwear jacket, combat boots, LED accents, mercenary tactical gear',
+    lighting: 'harsh neon pink and cyan, rain reflections'
+  },
+  scifi: { 
+    background: 'sleek spaceship corridor with glowing panels',
+    costume: 'futuristic jumpsuit, space crew uniform, tech accessories',
+    lighting: 'cool blue LED ambient'
+  },
+  sci_fi: { 
+    background: 'orbital space station observation deck',
+    costume: 'advanced sci-fi combat suit, utility belt, tech visor',
+    lighting: 'starlight and holographic displays'
+  },
+  space_opera: { 
+    background: 'grand starship bridge with view of nebula',
+    costume: 'elegant space captain uniform, flowing cape, ornate medals',
+    lighting: 'dramatic space lighting with nebula colors'
+  },
+  horror: { 
+    background: 'abandoned asylum corridor with peeling walls',
+    costume: 'torn clothing, survival gear, bloodstained attire',
+    lighting: 'harsh flashlight beam, deep shadows'
+  },
+  vampire: { 
+    background: 'Victorian gothic manor with red velvet',
+    costume: 'elegant Victorian coat, high collar, gothic aristocrat attire',
+    lighting: 'candlelit crimson atmosphere'
+  },
+  zombie: { 
+    background: 'barricaded survivor camp with debris',
+    costume: 'weathered survivor clothes, tactical vest, makeshift armor',
+    lighting: 'gritty overcast, emergency lights'
+  },
+  western: { 
+    background: 'dusty saloon with swinging doors',
+    costume: 'cowboy hat, leather duster, gun belt, boots with spurs',
+    lighting: 'golden hour desert sun'
+  },
+  pirate: { 
+    background: 'wooden ship deck with sails and rigging',
+    costume: 'pirate coat, tricorn hat, sash, cutlass belt, sea-worn boots',
+    lighting: 'sunset over ocean, lantern glow'
+  },
+  victorian: { 
+    background: 'foggy gaslit London street',
+    costume: 'tailored Victorian suit, top hat, walking cane, pocket watch',
+    lighting: 'atmospheric fog with gaslight'
+  },
+  steampunk: { 
+    background: 'brass workshop with gears and steam pipes',
+    costume: 'goggles, brass gadgets, leather corset/vest, Victorian steampunk attire',
+    lighting: 'warm amber industrial lighting'
+  },
+  noir: { 
+    background: 'rain-slicked city street at night',
+    costume: 'trench coat, fedora hat, 1940s detective attire',
+    lighting: 'dramatic film noir shadows, streetlight'
+  },
+  mystery: { 
+    background: 'private detective office with case files',
+    costume: 'smart casual investigator clothes, reading glasses',
+    lighting: 'desk lamp creating dramatic shadows'
+  },
+  spy: { 
+    background: 'luxury casino with chandeliers',
+    costume: 'tailored black tactical suit, elegant formal spy attire',
+    lighting: 'glamorous golden casino lighting'
+  },
+  crime: { 
+    background: 'gritty urban alley with graffiti',
+    costume: 'street clothes, leather jacket, urban tactical gear',
+    lighting: 'harsh streetlight, urban night'
+  },
+  postapoc: { 
+    background: 'wasteland ruins with rusted vehicles',
+    costume: 'scavenged armor, gas mask, post-apocalyptic survivor gear, makeshift weapons',
+    lighting: 'dusty orange apocalyptic sunset'
+  },
+  post_apocalyptic: { 
+    background: 'collapsed city overgrown with vegetation',
+    costume: 'patched together survival gear, scavenged military equipment',
+    lighting: 'overcast wasteland atmosphere'
+  },
+  war: { 
+    background: 'military forward operating base',
+    costume: 'full military combat uniform, body armor, tactical gear',
+    lighting: 'harsh military lighting'
+  },
+  ww2: { 
+    background: 'WWII bunker with sandbags',
+    costume: 'period-accurate military uniform, helmet, combat gear',
+    lighting: 'gritty wartime atmosphere'
+  },
+  superhero: { 
+    background: 'city rooftop at night with skyline',
+    costume: 'superhero costume with cape, mask, emblem',
+    lighting: 'dramatic moonlight and city lights'
+  },
+  modern: { 
+    background: 'modern urban cityscape',
+    costume: 'contemporary casual clothes, modern fashion',
+    lighting: 'natural daylight'
+  },
+  modern_life: { 
+    background: 'contemporary city sidewalk with shops',
+    costume: 'everyday modern clothing, casual style',
+    lighting: 'bright natural light'
+  },
+  contemporary: { 
+    background: 'trendy urban cafe interior',
+    costume: 'fashionable modern outfit, current trends',
+    lighting: 'warm cafe ambiance'
+  },
+  slice_of_life: { 
+    background: 'cozy modern apartment living room',
+    costume: 'comfortable casual home clothes',
+    lighting: 'soft natural window light'
+  },
+  romance: { 
+    background: 'elegant ballroom or garden venue',
+    costume: 'formal evening wear, elegant dress or suit',
+    lighting: 'romantic soft golden hour'
+  },
+  urban_fantasy: { 
+    background: 'modern city alley with magical elements',
+    costume: 'modern clothes with hidden magical accessories, subtle supernatural hints',
+    lighting: 'urban night with magical glow'
+  },
 };
 
 function buildPrompt(body: any): { prompt: string; negative: string } {
@@ -111,23 +231,26 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const userDesc = additionalDetails || characterAdditionals || customDescription || '';
   if (userDesc) desc.push(userDesc);
   
-  // Background
+  // Get genre styling
   const genreKey = (genre || 'fantasy').toLowerCase().replace(/[\s-]/g, '_');
-  const bg = BACKGROUNDS[genreKey] || BACKGROUNDS.modern;
+  const style = GENRE_STYLES[genreKey] || GENRE_STYLES.modern;
   
   const character = desc.join(', ');
   
   console.log('Portrait for:', name, '| Genre:', genre);
+  console.log('Genre key:', genreKey);
+  console.log('Genre style:', JSON.stringify(style));
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  const prompt = `Three-quarter body portrait from knees to head, ${character}, background: ${bg}, HDR, vibrant colors, artistic style, high detail`;
+  // Build prompt with strong genre-specific costume and environment
+  const prompt = `Three-quarter body portrait from knees to head, ${character}, wearing ${style.costume}, background: ${style.background}, ${style.lighting}, HDR, vibrant colors, cinematic`;
   
   console.log('Final prompt:', prompt);
   
   return {
     prompt,
-    negative: 'headshot, bust shot, close-up, face only, shoulders up, full body with feet, deformed, bad anatomy, blurry, low quality',
+    negative: 'headshot, bust shot, close-up, face only, shoulders up, full body with feet, casual modern clothes, t-shirt, jeans, deformed, bad anatomy, blurry, low quality',
   };
 }
 
