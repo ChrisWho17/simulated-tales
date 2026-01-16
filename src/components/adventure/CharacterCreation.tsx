@@ -293,6 +293,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
+        // Body shape details (bust, hips, muscle)
+        bustSize: appearance.full?.bustSize,
+        hipWidth: appearance.full?.hipWidth,
+        muscleDefinition: appearance.full?.muscleDefinition,
+        bodyHair: appearance.full?.bodyHair,
         // CRITICAL: Body modifications - passed directly to edge function
         piercings: appearance.full?.piercings || [],
         tattoos: appearance.full?.tattoos || [],
