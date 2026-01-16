@@ -121,13 +121,13 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  const prompt = `Three-quarter body portrait from knees to head, ${character}, background: ${bg}, photorealistic photography`;
+  const prompt = `Three-quarter body portrait from knees to head, ${character}, background: ${bg}, HDR, vibrant colors, artistic style, high detail`;
   
   console.log('Final prompt:', prompt);
   
   return {
     prompt,
-    negative: 'headshot, bust shot, close-up, face only, shoulders up, full body with feet, anime, cartoon, illustration, 3D render, deformed, bad anatomy',
+    negative: 'headshot, bust shot, close-up, face only, shoulders up, full body with feet, deformed, bad anatomy, blurry, low quality',
   };
 }
 
