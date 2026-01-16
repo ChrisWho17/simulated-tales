@@ -730,7 +730,7 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
     throw new Error("TOGETHER_API_KEY is not configured");
   }
 
-  console.log("Generating with FLUX.1 Schnell");
+  console.log("Generating with FLUX.1-dev (higher quality)");
   console.log("Prompt preview:", prompt.substring(0, 250) + "...");
 
   const response = await fetch('https://api.together.xyz/v1/images/generations', {
@@ -740,11 +740,11 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell',
+      model: 'black-forest-labs/FLUX.1-dev',
       prompt: prompt,
       width: 832,
       height: 1216,
-      steps: 4,
+      steps: 28,
       n: 1,
       response_format: 'b64_json',
       negative_prompt: NEGATIVE_PROMPT,
