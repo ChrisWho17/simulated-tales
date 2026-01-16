@@ -1,6 +1,22 @@
 // FLUX.1 Portrait Generation - Secure server-side implementation via edge function
 import { supabase } from '@/integrations/supabase/client';
 
+// Detected keywords response from portrait generation
+export interface DetectedKeywords {
+  personalityScore: number;
+  keywords: { category: string; keyword: string; effect: string }[];
+  colorMods: string[];
+  patternMods: string[];
+  physiqueMods: string[];
+  clothFitMods: string[];
+}
+
+// Portrait generation result
+export interface PortraitResult {
+  imageUrl: string;
+  detectedKeywords?: DetectedKeywords;
+}
+
 // Character data interface for portrait generation
 export interface PortraitCharacterData {
   name?: string;
@@ -34,6 +50,8 @@ export interface PortraitCharacterData {
   // Class/role info
   characterClass?: string;
   portraitHints?: string[];
+  // Additional details with keywords
+  additionalDetails?: string;
   // Environment context for scene adaptation
   environmentContext?: {
     location?: string;
@@ -69,10 +87,11 @@ export async function generatePortraitWithFlux(prompt: string): Promise<string> 
 }
 
 // Full character data function - passes structured data for accurate body modifications
+// Returns both image URL and detected keywords for UI feedback
 export async function generatePortraitWithCharacterData(
   characterData: PortraitCharacterData,
   genre: string = 'modern'
-): Promise<string> {
+): Promise<PortraitResult> {
   console.log('[Portrait] Calling edge function with full character data:', {
     name: characterData.name,
     gender: characterData.gender,
@@ -83,6 +102,7 @@ export async function generatePortraitWithCharacterData(
     prosthetics: characterData.prosthetics?.length,
     mutations: characterData.mutations?.length,
     clothingStyle: characterData.clothingStyle,
+    additionalDetails: characterData.additionalDetails?.substring(0, 50),
   });
   
   const { data, error } = await supabase.functions.invoke('generate-portrait', {
@@ -115,6 +135,8 @@ export async function generatePortraitWithCharacterData(
       mutations: characterData.mutations || [],
       clothingStyle: characterData.clothingStyle,
       clothingDetails: characterData.clothingDetails || [],
+      // Additional details with keywords
+      additionalDetails: characterData.additionalDetails || '',
       // Class/role info
       characterClass: characterData.characterClass,
       portraitHints: characterData.portraitHints || [],
@@ -136,5 +158,10 @@ export async function generatePortraitWithCharacterData(
   }
 
   console.log('[Portrait] Successfully generated portrait with body modifications');
-  return data.imageUrl;
+  console.log('[Portrait] Detected keywords:', data.detectedKeywords);
+  
+  return {
+    imageUrl: data.imageUrl,
+    detectedKeywords: data.detectedKeywords,
+  };
 }
