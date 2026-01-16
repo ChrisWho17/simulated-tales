@@ -6,9 +6,9 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STYLE LOCK - Realistic art style with texture fidelity
+// STYLE LOCK - Cinematic art style with dramatic lighting
 // ============================================================================
-const STYLE_LOCK = `highly detailed digital portrait, realistic art style, visible fabric weave, metal micro-scratches, leather grain, skin texture kept tasteful and natural, cinematic lighting with soft key light and subtle rim light, 50mm camera look, eye-level, slight depth of field, sharp face and eyes, clean composition, professional character key art, no text, no watermark`;
+const STYLE_LOCK = `cinematic character portrait, dramatic film lighting with strong key light and atmospheric rim light, movie poster quality, rich color grading, depth of field with bokeh, volumetric lighting, lens flare accents, professional cinematography aesthetic, 85mm portrait lens look, shallow focus on face, moody atmospheric shadows, Hollywood blockbuster visual style, detailed fabric textures, subtle film grain, epic composition, no text, no watermark`;
 
 // ============================================================================
 // PROMPT PRIORITY - AI must follow these rules exactly
