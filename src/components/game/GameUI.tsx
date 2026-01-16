@@ -84,6 +84,7 @@ import { useAchievementsOptional, AchievementsDisplay } from './Achievements';
 import { StoryRecap } from './StoryRecap';
 import { ClothingShop } from './ClothingShop';
 import { ClothingItem } from '@/game/clothingItemSystem';
+import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/components/debug/StorageDiagnosticsSplash';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -330,6 +331,9 @@ export function GameUI() {
   const [showSessionStats, setShowSessionStats] = useState(false);
   const [showClothingShop, setShowClothingShop] = useState(false);
   const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
+  
+  // Storage diagnostics (secret command: /StorageDiag)
+  const storageDiagnostics = useStorageDiagnosticsCommand();
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
   
   // Game polish systems (optional - gracefully degrade if not available)
@@ -570,6 +574,11 @@ export function GameUI() {
     
     // Handle RPG system commands before normal processing
     const lowerInput = input.toLowerCase().trim();
+    
+    // Storage diagnostics command (secret debug feature)
+    if (storageDiagnostics.checkCommand(input)) {
+      return;
+    }
     
     // Quest journal command
     if (lowerInput === 'journal' || lowerInput === 'quests' || lowerInput === 'j') {
@@ -1569,6 +1578,12 @@ export function GameUI() {
         onSell={handleClothingSell}
         isOpen={showClothingShop}
         onOpenChange={setShowClothingShop}
+      />
+      
+      {/* Storage Diagnostics (secret: /StorageDiag) */}
+      <StorageDiagnosticsSplash
+        isOpen={storageDiagnostics.isOpen}
+        onClose={() => storageDiagnostics.setIsOpen(false)}
       />
     </div>
   );
