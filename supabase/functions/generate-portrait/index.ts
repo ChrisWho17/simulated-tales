@@ -1109,7 +1109,7 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
       "Prefer": "wait"
     },
     body: JSON.stringify({
-      version: "6a52feace43ce1f6bbc2cdabfc68423cb6c7f4ad0c5f8f8b3d9b9d07b529e74a",
+      version: "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382",
       input: {
         prompt: prompt,
         negative_prompt: negative || "blurry, low quality, watermark, text",
