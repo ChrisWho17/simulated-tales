@@ -13,25 +13,16 @@ const corsHeaders = {
 // ============================================================================
 
 // [CHARACTER IN ENVIRONMENT - PRIMARY FRAMING]
-// Emphasizes character existing in their world, NOT studio photography
 const CHARACTER_IN_ENVIRONMENT = `
-CHARACTER IN ENVIRONMENT PORTRAIT: Full character portrait showing person standing naturally in their environment, framed from knees to top of head in vertical portrait orientation, character positioned within visible surroundings, body angled 15-20 degrees for dimensional depth while face looks directly at viewer, THIS IS A CHARACTER PORTRAIT showing a person in their world NOT a studio photoshoot.
+Character portrait in environment: Full portrait from knees to head, vertical orientation, character standing naturally in their world with visible surroundings, body angled 15-20 degrees with face looking directly at viewer, environment visible behind and around character.
 
-ENVIRONMENT PRESENCE CRITICAL: Character exists within visible genre environment, background elements clearly present but softer focus than character, setting is VISIBLE and CONTEXTUAL establishing where this character lives works exists, background provides story context while character remains primary focus, environment surrounds character on all sides.
+Framing: Knees visible at bottom, head with hair at top, natural pose in setting NOT posed for camera, character sharp focus with background softly blurred but clearly present.
 
-FRAMING SPECIFICS: Vertical portrait orientation showing character from knees upward, character occupies center-to-three-quarters of frame, knees visible at bottom of frame, head with full hair visible with space above, shows complete legs from knees plus hips torso arms shoulders neck head hair, natural standing pose within environment NOT posed for camera.
-
-PERSPECTIVE AND ANGLE: Camera positioned at character mid-torso height capturing natural perspective as if viewer stands before them in their environment, body turned slightly 15-20 degrees creating dimensional depth, face oriented toward viewer, eyes making direct contact, natural posture showing character in their element.
-
-CHARACTER FOCUS IN ENVIRONMENT: Sharp focus on character face and eyes with detailed features visible, body remains in clear focus, background softly blurred with environmental context visible but not competing, depth of field creates natural separation with character sharp and environment recognizable but softer.
-
-ENVIRONMENTAL LIGHTING: Lighting appropriate to genre setting, light sources come from environment itself NOT studio setup, natural directionality from scene elements creates depth and form on character, lighting tells story of where character is located, practical light sources only.
-
-THIS IS A CHARACTER EXISTING IN THEIR WORLD - NOT A MODELING PHOTOSHOOT
+Environmental lighting from scene: Light sources from environment not studio, natural depth and atmosphere, character integrated into their world.
 `.trim().replace(/\n\n/g, '. ').replace(/\n/g, ' ');
 
-// [QUALITY ASSURANCE TAGS - Environment-focused, NOT studio]
-const QUALITY_TAGS = `Photorealistic digital art, high character detail, environmental context clearly visible, natural depth showing character in their space, cinematic color grading matching genre atmosphere, 8K resolution, detailed skin texture natural subsurface scattering, individual hair strands visible, fabric and material detail, character integrated into environment, immersive scene composition, atmospheric genre rendering`;
+// [QUALITY TAGS - Concise]
+const QUALITY_TAGS = `Photorealistic, high detail, environmental context visible, cinematic color grading, 8K, natural skin texture, character in scene`;
 
 // [NEGATIVE PROMPTS TO AVOID - Anti-modeling]
 const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot, studio background, seamless backdrop, gradient background, fashion photography, modeling pose, catalog shoot, isolated subject, no environmental context, plain backdrop, white background, gray background`;
@@ -1056,39 +1047,21 @@ const GENRE_VISUAL_LOCKS: Record<string, GenreVisualLock> = {
   },
 };
 
-// Function to build genre visual description from lock
-// ENVIRONMENT-FIRST approach: Character exists IN this world
+// Function to build genre visual description - CONCISE version
 function buildGenreVisualDescription(genreKey: string): string {
   const lock = GENRE_VISUAL_LOCKS[genreKey] || GENRE_VISUAL_LOCKS['fantasy'];
-  
   const setting = lock.settings[Math.floor(Math.random() * lock.settings.length)];
   
-  // Build immersive world description - character is IN this environment
   const parts = [
-    `THE WORLD THIS CHARACTER INHABITS: ${setting}`,
-    `visible architecture and structures around character: ${lock.architecture}`,
-    `genre-specific elements surrounding character: ${lock.genreElements}`,
-    `props and objects visible in scene near character: ${lock.props}`,
-    
-    `CHARACTER STANDING IN SCENE: Character positioned in this environment with ${setting} visible behind and around them, ${lock.genreElements} creating immersive world, character is PART OF this environment not separated from it`,
-    
-    `ENVIRONMENTAL LIGHTING FROM SCENE: ${lock.lightSources}, ${lock.lightQuality}, color temperature ${lock.colorTemperature}, light sources come from environment not studio setup`,
-    
-    `ATMOSPHERIC DEPTH: ${lock.atmosphericEffects}, foreground elements at character feet, mid-ground where character stands, background ${setting} softly blurred, depth cues creating immersive space`,
-    
-    `WORLD DETAILS VISIBLE: Background shows ${lock.architecture}, distant details visible in blur, character integrated into this world, environmental storytelling through visible setting`,
-    
-    `COLOR FROM ENVIRONMENT: ${lock.dominantColors} dominant in scene, ${lock.accentColors} accents from environment naturally illuminating character, ${lock.metalTones} metal tones, ${lock.overallPalette}`,
-    
-    `MOOD OF WORLD: ${lock.mood}, ${lock.style}, texture emphasis ${lock.textureEmphasis}, era feeling ${lock.eraFeeling}`,
-    
-    `CHARACTER IS IN THIS WORLD - WORLD IS AROUND CHARACTER - NOT BACKDROP`,
+    `Environment: ${setting}`,
+    `${lock.architecture}, ${lock.genreElements}`,
+    `Lighting: ${lock.lightSources}, ${lock.lightQuality}`,
+    `Atmosphere: ${lock.atmosphericEffects}, ${lock.mood}`,
+    `Colors: ${lock.dominantColors}, accents ${lock.accentColors}`,
+    `Style: ${lock.style}, ${lock.eraFeeling}`,
   ];
 
-  if (lock.criticalNotes) {
-    parts.push(lock.criticalNotes);
-  }
-
+  if (lock.criticalNotes) parts.push(lock.criticalNotes);
   return parts.join('. ');
 }
 
