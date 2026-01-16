@@ -369,6 +369,60 @@ const GENRE_STYLES: Record<string, { background: string; costumes: string[]; lig
   },
 };
 
+// Origin/cultural style modifiers that enhance genre costumes
+const ORIGIN_STYLE_MODIFIERS: Record<string, string> = {
+  // Asian origins
+  'japanese': 'with Japanese aesthetic influences, elegant minimalist details',
+  'chinese': 'with Chinese cultural motifs, silk accents, traditional patterns',
+  'korean': 'with Korean fashion influences, clean modern lines',
+  'indian': 'with Indian textile patterns, rich embroidery, vibrant colors',
+  'thai': 'with Thai decorative elements, gold accents',
+  'vietnamese': 'with Vietnamese traditional influences, ao dai inspired elements',
+  // European origins
+  'british': 'with British tailoring, refined classic style',
+  'french': 'with French haute couture influences, elegant sophistication',
+  'italian': 'with Italian fashion flair, stylish and bold',
+  'german': 'with Germanic practical precision, quality craftsmanship',
+  'spanish': 'with Spanish flair, dramatic passionate style',
+  'russian': 'with Russian influences, fur accents, bold patterns',
+  'scandinavian': 'with Scandinavian minimalist design, functional beauty',
+  'irish': 'with Celtic influences, earthy tones, knit patterns',
+  'scottish': 'with Scottish heritage elements, tartan accents',
+  'greek': 'with Grecian draping, classical elegance',
+  // American origins
+  'american': 'with American style, practical yet bold',
+  'mexican': 'with Mexican vibrant colors, traditional embroidery',
+  'brazilian': 'with Brazilian flair, colorful and lively',
+  'caribbean': 'with Caribbean tropical influences, bright patterns',
+  // African origins
+  'african': 'with African textile patterns, bold geometric designs',
+  'nigerian': 'with Nigerian fashion, rich fabrics, elaborate designs',
+  'egyptian': 'with Egyptian motifs, gold accents, ancient elegance',
+  'moroccan': 'with Moroccan influences, intricate patterns, jewel tones',
+  'ethiopian': 'with Ethiopian traditional elements, woven patterns',
+  // Middle Eastern origins
+  'arabian': 'with Arabian elegance, flowing fabrics, ornate details',
+  'persian': 'with Persian artistic influences, intricate patterns',
+  'turkish': 'with Turkish design elements, rich textures',
+  'israeli': 'with Israeli modern style, practical elegance',
+  // Other
+  'australian': 'with Australian outback influences, rugged practicality',
+  'polynesian': 'with Polynesian traditional patterns, tropical elements',
+  'native american': 'with Native American traditional elements, beadwork, natural materials',
+};
+
+// Get origin modifier based on ethnicity/nationality/origin
+function getOriginModifier(origin?: string, nationality?: string, ethnicity?: string): string {
+  const originStr = (origin || nationality || ethnicity || '').toLowerCase();
+  
+  for (const [key, modifier] of Object.entries(ORIGIN_STYLE_MODIFIERS)) {
+    if (originStr.includes(key)) {
+      return modifier;
+    }
+  }
+  return '';
+}
+
 // Select a costume based on character class or random for variety
 function selectCostume(costumes: string[], characterClass?: string): string {
   // If character has a class, try to match it, otherwise random
@@ -387,6 +441,27 @@ function selectCostume(costumes: string[], characterClass?: string): string {
   }
   // Random selection for variety
   return costumes[Math.floor(Math.random() * costumes.length)];
+}
+
+// Build complete clothing description: genre costume + origin style + user additionals
+function buildClothingDescription(
+  baseCostume: string, 
+  originModifier: string, 
+  userAdditionals?: string
+): string {
+  let clothing = baseCostume;
+  
+  // Add origin cultural influence
+  if (originModifier) {
+    clothing = `${clothing} ${originModifier}`;
+  }
+  
+  // User additionals enhance and override
+  if (userAdditionals && userAdditionals.trim()) {
+    clothing = `${userAdditionals}, ${clothing}`;
+  }
+  
+  return clothing;
 }
 
 function buildPrompt(body: any): { prompt: string; negative: string } {
@@ -487,15 +562,14 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  // Build prompt - select costume based on character class for variety
+  // Build clothing: genre costume + origin cultural style + user additionals
   const selectedCostume = selectCostume(style.costumes, characterClass);
+  const originModifier = getOriginModifier(origin, nationality, ethnicity);
+  const clothingDesc = buildClothingDescription(selectedCostume, originModifier, userDesc);
   
-  // User custom description takes priority over genre costume if specified
-  let clothingDesc = selectedCostume;
-  if (userDesc) {
-    // If user specified clothing/outfit, use their description prominently
-    clothingDesc = `${userDesc}, ${selectedCostume}`;
-  }
+  console.log('Selected costume:', selectedCostume);
+  console.log('Origin modifier:', originModifier);
+  console.log('Final clothing:', clothingDesc);
   
   // HARD LOCK FRAMING: Knees to head, no zoom variation
   const framingInstruction = 'STRICT CAMERA: three-quarter body portrait showing from knees to head only, fixed medium shot, no zoom, no close-up, no full body, frame cuts at knee level at bottom and above head at top';
