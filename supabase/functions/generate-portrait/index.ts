@@ -7,18 +7,30 @@ const corsHeaders = {
 
 // ============================================================================
 // STRUCTURED LAYERED PROMPT SYSTEM
-// Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 3 (Context) → Layer 4 (Style)
+// Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style (lowest priority - applied last)
+// LAYER 4: Photography Style
 const LAYER_STYLE = {
-  medium: 'professional photograph',
-  quality: 'sharp focus, natural skin texture, realistic lighting',
-  framing: 'three-quarter body portrait, from thighs up',
+  medium: 'professional photograph, RAW photo',
+  quality: 'sharp focus, natural skin texture, realistic lighting, detailed eyes with catchlights',
+  framing: 'three-quarter body portrait from thighs up, body slightly angled, face looking directly at camera, eye contact with viewer',
 };
 
-// Negative prompts - minimal and focused
-const NEGATIVE_PROMPT = 'cartoon, anime, illustration, 3d render, painting, artificial, plastic, oversaturated, blurry';
+// Comprehensive negative prompts including body anomalies
+const NEGATIVE_PROMPT = [
+  // Style exclusions
+  'cartoon, anime, illustration, 3d render, painting, digital art, artificial, plastic',
+  // Body anomalies
+  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
+  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
+  'deformed face, ugly face, disfigured, mutation, mutated, deformed body',
+  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs',
+  'long neck, extra head, duplicate, clone, twin',
+  // Quality issues
+  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature',
+  'cropped, cut off, poorly framed',
+].join(', ');
 
 // ============================================================================
 // LAYER 3: GENRE CONTEXT - Environment and Setting
@@ -34,7 +46,7 @@ const GENRE_CONTEXT: Record<string, { outfit: string; setting: string }> = {
     setting: 'battlefield, military base',
   },
   cyberpunk: {
-    outfit: 'futuristic streetwear, neon accents, tech-wear',
+    outfit: 'futuristic streetwear, neon accents, tech-wear jacket',
     setting: 'neon-lit night city, rain-slicked streets, holographic signs',
   },
   postapoc: {
@@ -116,73 +128,75 @@ const PHYSICAL = {
     male: 'man',
     female: 'woman',
     nonbinary: 'person with androgynous features',
+    other: 'person',
   } as Record<string, string>,
   
   build: {
-    athletic: 'athletic build',
-    lean: 'lean build',
-    muscular: 'muscular build',
+    athletic: 'athletic muscular build',
+    lean: 'lean agile build',
+    muscular: 'heavily muscular build',
     average: 'average build',
-    slim: 'slim build',
-    stocky: 'stocky build',
-    large: 'large build',
-    heavyset: 'heavyset build',
-    curvy: 'curvy figure',
-    petite: 'petite build',
-    tall: 'tall stature',
-    thick: 'thick build',
-    lithe: 'lithe build',
+    slim: 'slim slender build',
+    stocky: 'stocky sturdy build',
+    large: 'large imposing build',
+    heavyset: 'heavyset large build',
+    curvy: 'curvy hourglass figure',
+    petite: 'petite small frame',
+    tall: 'tall imposing stature',
+    thick: 'thick curvy build',
+    lithe: 'lithe graceful build',
   } as Record<string, string>,
   
   skin: {
-    pale: 'pale skin',
+    pale: 'pale fair skin',
     light: 'light skin',
     fair: 'fair skin',
     medium: 'medium skin tone',
     tan: 'tanned skin',
-    olive: 'olive skin',
+    olive: 'olive skin tone',
     brown: 'brown skin',
     dark: 'dark skin',
-    ebony: 'ebony skin',
-    porcelain: 'porcelain skin',
+    ebony: 'deep ebony skin',
+    porcelain: 'porcelain pale skin',
   } as Record<string, string>,
   
   hairColor: {
-    black: 'black hair',
+    black: 'jet black hair',
     brown: 'brown hair',
     darkBrown: 'dark brown hair',
     lightBrown: 'light brown hair',
     blonde: 'blonde hair',
     dirtyBlonde: 'dirty blonde hair',
-    platinum: 'platinum hair',
+    platinum: 'platinum blonde hair',
     red: 'red hair',
     auburn: 'auburn hair',
     ginger: 'ginger hair',
     white: 'white hair',
     gray: 'gray hair',
     silver: 'silver hair',
-    blue: 'blue hair',
-    pink: 'pink hair',
-    purple: 'purple hair',
-    green: 'green hair',
+    blue: 'bright blue dyed hair',
+    pink: 'pink dyed hair',
+    purple: 'purple dyed hair',
+    green: 'green dyed hair',
   } as Record<string, string>,
   
   hairStyle: {
-    short: 'short hair',
-    military: 'military cut',
-    mohawk: 'mohawk',
+    short: 'short cropped hair',
+    medium: 'medium length hair',
+    military: 'military buzz cut',
+    mohawk: 'mohawk hairstyle',
     shaved: 'shaved head',
-    bald: 'bald',
-    long: 'long hair',
-    ponytail: 'ponytail',
+    bald: 'bald head',
+    long: 'long flowing hair',
+    ponytail: 'hair in ponytail',
     braided: 'braided hair',
-    undercut: 'undercut',
-    messy: 'messy hair',
+    undercut: 'undercut hairstyle',
+    messy: 'messy tousled hair',
     slicked: 'slicked back hair',
-    curly: 'curly hair',
+    curly: 'curly textured hair',
     dreads: 'dreadlocks',
     wavy: 'wavy hair',
-    spiky: 'spiky hair',
+    spiky: 'spiky styled hair',
   } as Record<string, string>,
   
   eyeColor: {
@@ -192,11 +206,66 @@ const PHYSICAL = {
     hazel: 'hazel eyes',
     gray: 'gray eyes',
     amber: 'amber eyes',
-    heterochromia: 'heterochromia eyes',
+    heterochromia: 'heterochromia different colored eyes',
     cybernetic: 'glowing cybernetic eyes',
     violet: 'violet eyes',
     golden: 'golden eyes',
   } as Record<string, string>,
+  
+  faceShape: {
+    oval: 'oval face shape',
+    round: 'round face',
+    square: 'square jawline',
+    heart: 'heart-shaped face',
+    long: 'long face',
+    angular: 'angular sharp features',
+  } as Record<string, string>,
+};
+
+// ============================================================================
+// LAYER 2.5: DISTINGUISHING DETAILS - Important visual markers
+// ============================================================================
+
+const DETAIL_MAP: Record<string, string> = {
+  // Facial features
+  'Facial scar': 'prominent facial scar',
+  'Dimples': 'cute dimples when smiling',
+  'Freckles': 'freckles across face and nose',
+  'Beauty mark': 'beauty mark on face',
+  'Cleft chin': 'cleft chin',
+  'High cheekbones': 'high pronounced cheekbones',
+  'Strong jaw': 'strong defined jawline',
+  'Soft features': 'soft gentle facial features',
+  'Sharp features': 'sharp angular features',
+  'Weathered': 'weathered experienced face',
+  'Youthful': 'youthful smooth face',
+  
+  // Facial hair
+  'Beard': 'full beard',
+  'Stubble': 'stubble facial hair',
+  'Mustache': 'mustache',
+  'Goatee': 'goatee',
+  'Clean shaven': 'clean shaven face',
+  
+  // Accessories
+  'Necklace': 'wearing necklace',
+  'Choker': 'wearing choker necklace',
+  'Ring': 'wearing rings',
+  'Bracelet': 'wearing bracelet',
+  'Earrings': 'wearing earrings',
+  'Glasses': 'wearing glasses',
+  'Sunglasses': 'wearing sunglasses',
+  'Eyepatch': 'eyepatch over one eye',
+  'Bandana': 'wearing bandana',
+  'Headband': 'wearing headband',
+  'Hat': 'wearing hat',
+  'Scarf': 'wearing scarf',
+  
+  // Makeup/cosmetic
+  'Heavy makeup': 'wearing heavy dramatic makeup',
+  'Natural makeup': 'natural subtle makeup',
+  'War paint': 'war paint on face',
+  'Tattoo face': 'facial tattoos',
 };
 
 // ============================================================================
@@ -205,53 +274,52 @@ const PHYSICAL = {
 
 const ROLE_IDENTITY: Record<string, string> = {
   // Combat roles
-  soldier: 'soldier, tactical vest, rifle',
-  medic: 'combat medic, medical gear, red cross',
-  sniper: 'sniper, ghillie elements, scope',
-  heavy: 'heavy weapons specialist, machine gun, ammo belt',
-  engineer: 'combat engineer, tools, goggles',
-  pilot: 'pilot, flight suit, aviator gear',
-  tank: 'tank commander, tanker helmet',
-  officer: 'military officer, decorated uniform',
-  scout: 'recon scout, light gear',
-  spec_ops: 'special forces, night vision, suppressed weapon',
+  soldier: 'soldier with tactical vest and rifle',
+  medic: 'combat medic with medical gear',
+  sniper: 'sniper with scope and ghillie elements',
+  heavy: 'heavy weapons specialist with machine gun',
+  engineer: 'combat engineer with tools and goggles',
+  pilot: 'pilot in flight suit',
+  tank: 'tank commander with tanker helmet',
+  officer: 'military officer in decorated uniform',
+  scout: 'recon scout in light gear',
+  spec_ops: 'special forces operator with night vision',
   
   // Fantasy roles
-  knight: 'armored knight, plate armor, sword',
-  rogue: 'rogue, leather armor, daggers',
-  mage: 'mage, magical robes, arcane glow',
-  wizard: 'wizard, mystical robes, staff',
-  ranger: 'ranger, bow, forest cloak',
-  paladin: 'paladin, blessed armor, holy symbol',
-  berserker: 'berserker, war paint, massive weapon',
-  warrior: 'warrior, practical armor, veteran',
-  cleric: 'cleric, religious vestments',
-  bard: 'bard, colorful clothing, instrument',
+  knight: 'armored knight with plate armor and sword',
+  rogue: 'rogue in leather armor with daggers',
+  mage: 'mage in magical robes with arcane glow',
+  wizard: 'wizard in mystical robes with staff',
+  ranger: 'ranger with bow and forest cloak',
+  paladin: 'paladin in blessed armor',
+  berserker: 'berserker with war paint and massive weapon',
+  warrior: 'warrior in practical armor',
+  cleric: 'cleric in religious vestments',
+  bard: 'bard in colorful clothing with instrument',
+  
+  // Cyberpunk roles
+  solo: 'solo mercenary with combat implants',
+  netrunner: 'netrunner with neural interface and data cables',
+  fixer: 'fixer in stylish street clothes',
+  techie: 'techie with tools and gadgets',
+  nomad: 'nomad in road-worn gear',
+  corpo: 'corporate agent in sleek business attire',
   
   // Civilian/Other
-  survivor: 'survivor, makeshift gear, determined',
-  mercenary: 'mercenary, mixed military gear, no insignia',
-  detective: 'detective, long coat, badge',
-  criminal: 'criminal, street clothes, dangerous',
-  scientist: 'scientist, lab coat, equipment',
-  rebel: 'resistance fighter, improvised gear',
-  hacker: 'hacker, cyberpunk style, tech gear',
-  netrunner: 'netrunner, cyber deck, data cables',
-  thief: 'thief, dark clothing, stealthy',
-  assassin: 'assassin, hooded attire, concealed weapons',
-  solo: 'solo mercenary, combat gear, weapons',
+  survivor: 'survivor in makeshift gear',
+  mercenary: 'mercenary with mixed military gear',
+  detective: 'detective in long coat with badge',
+  criminal: 'criminal in street clothes',
+  scientist: 'scientist in lab coat',
+  rebel: 'resistance fighter in improvised gear',
+  hacker: 'hacker in cyberpunk style with tech gear',
+  thief: 'thief in dark stealthy clothing',
+  assassin: 'assassin in hooded attire',
 };
 
 // ============================================================================
 // LAYERED PROMPT BUILDER
 // ============================================================================
-
-interface PromptLayers {
-  layer1_identity: string;   // WHO (role, gender, age)
-  layer2_physical: string;   // WHAT THEY LOOK LIKE (build, skin, hair, eyes)
-  layer3_context: string;    // WHERE/WHAT WEARING (genre outfit, setting)
-  layer4_style: string;      // HOW TO RENDER (photography style)
-}
 
 function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: string } {
   const {
@@ -261,13 +329,36 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
     hairColor,
     hairStyle,
     eyeColor,
+    faceShape,
     characterClass,
     genre,
     age,
+    height,
+    // Distinguishing details - IMPORTANT
+    details,
+    distinguishingFeatures,
+    accessories,
+    facialFeatures,
+    distinguishingMarks,
+    // Body modifications
+    piercings,
+    tattoos,
+    tattooStyle,
+    scars,
+    implants,
+    prosthetics,
+    mutations,
+    // Portrait hints from class
+    portraitHints,
   } = body;
 
   console.log("=== LAYERED PROMPT BUILDER ===");
-  console.log("Input:", JSON.stringify({ gender, build, skinTone, hairColor, hairStyle, eyeColor, characterClass, genre, age }));
+  console.log("Input:", JSON.stringify({ 
+    gender, build, skinTone, hairColor, hairStyle, eyeColor, characterClass, genre, age,
+    detailsCount: details?.length || 0,
+    distinguishingFeaturesCount: distinguishingFeatures?.length || 0,
+    accessoriesCount: accessories?.length || 0,
+  }));
 
   // Helper: find value in map (case-insensitive)
   const lookup = (map: Record<string, string>, key: string | undefined, fallback: string): string => {
@@ -299,21 +390,110 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
       break;
     }
   }
+  // Fallback to class name if no match
+  if (!roleStr && characterClass) {
+    roleStr = characterClass;
+  }
   
-  const layer1 = [ageStr, genderStr, roleStr].filter(Boolean).join(' ');
+  const layer1 = `${ageStr} ${genderStr}${roleStr ? `, ${roleStr}` : ''}`;
   console.log("Layer 1 (Identity):", layer1);
 
   // =========================================================================
-  // LAYER 2: PHYSICAL (What do they look like?)
+  // LAYER 2: PHYSICAL (Core appearance)
   // =========================================================================
   const buildStr = lookup(PHYSICAL.build, build, 'average build');
   const skinStr = lookup(PHYSICAL.skin, skinTone, 'medium skin tone');
   const hairColorStr = lookup(PHYSICAL.hairColor, hairColor, 'brown hair');
   const hairStyleStr = lookup(PHYSICAL.hairStyle, hairStyle, 'short hair');
   const eyeColorStr = lookup(PHYSICAL.eyeColor, eyeColor, 'brown eyes');
+  const faceStr = faceShape ? lookup(PHYSICAL.faceShape, faceShape, '') : '';
   
-  const layer2 = [buildStr, skinStr, `${hairColorStr} styled in ${hairStyleStr}`, eyeColorStr].join(', ');
+  const physicalParts = [buildStr, skinStr, `${hairColorStr} in ${hairStyleStr}`, eyeColorStr];
+  if (faceStr) physicalParts.push(faceStr);
+  if (height) physicalParts.push(`${height} height`);
+  
+  const layer2 = physicalParts.join(', ');
   console.log("Layer 2 (Physical):", layer2);
+
+  // =========================================================================
+  // LAYER 2.5: DISTINGUISHING DETAILS (Important visual markers)
+  // =========================================================================
+  const detailParts: string[] = [];
+  
+  // Process details array (combined features + accessories from character creation)
+  if (details && Array.isArray(details)) {
+    details.forEach((d: string) => {
+      const mapped = DETAIL_MAP[d];
+      if (mapped) {
+        detailParts.push(mapped);
+      } else if (d) {
+        detailParts.push(d.toLowerCase());
+      }
+    });
+  }
+  
+  // Process separate distinguishing features
+  if (distinguishingFeatures && Array.isArray(distinguishingFeatures)) {
+    distinguishingFeatures.forEach((f: string) => {
+      const mapped = DETAIL_MAP[f];
+      if (mapped && !detailParts.includes(mapped)) {
+        detailParts.push(mapped);
+      }
+    });
+  }
+  
+  // Process accessories
+  if (accessories && Array.isArray(accessories)) {
+    accessories.forEach((a: string) => {
+      const mapped = DETAIL_MAP[a];
+      if (mapped && !detailParts.includes(mapped)) {
+        detailParts.push(mapped);
+      }
+    });
+  }
+  
+  // Add facial features text
+  if (facialFeatures) {
+    detailParts.push(facialFeatures);
+  }
+  
+  // Add distinguishing marks text
+  if (distinguishingMarks) {
+    detailParts.push(distinguishingMarks);
+  }
+  
+  // Add portrait hints from class
+  if (portraitHints && Array.isArray(portraitHints)) {
+    portraitHints.forEach((hint: string) => {
+      if (hint && !detailParts.includes(hint)) {
+        detailParts.push(hint);
+      }
+    });
+  }
+  
+  // Process body modifications if any
+  if (scars && Array.isArray(scars) && scars.length > 0) {
+    detailParts.push(`visible scars: ${scars.join(', ')}`);
+  }
+  if (tattoos && Array.isArray(tattoos) && tattoos.length > 0) {
+    const tattooDesc = tattooStyle ? `${tattooStyle} style tattoos` : 'tattoos';
+    detailParts.push(`${tattooDesc} on ${tattoos.join(', ')}`);
+  }
+  if (piercings && Array.isArray(piercings) && piercings.length > 0) {
+    detailParts.push(`piercings: ${piercings.join(', ')}`);
+  }
+  if (implants && Array.isArray(implants) && implants.length > 0) {
+    detailParts.push(`cybernetic implants: ${implants.join(', ')}`);
+  }
+  if (prosthetics && Array.isArray(prosthetics) && prosthetics.length > 0) {
+    detailParts.push(`prosthetic: ${prosthetics.join(', ')}`);
+  }
+  if (mutations && Array.isArray(mutations) && mutations.length > 0) {
+    detailParts.push(`mutations: ${mutations.join(', ')}`);
+  }
+  
+  const layer25 = detailParts.length > 0 ? `IMPORTANT DETAILS: ${detailParts.join(', ')}` : '';
+  console.log("Layer 2.5 (Details):", layer25 || "(none)");
 
   // =========================================================================
   // LAYER 3: CONTEXT (What are they wearing? Where are they?)
@@ -324,21 +504,29 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   // =========================================================================
   // LAYER 4: STYLE (How should this be rendered?)
   // =========================================================================
-  const layer4 = `${LAYER_STYLE.medium}, ${LAYER_STYLE.framing}, ${LAYER_STYLE.quality}`;
+  const layer4 = `${LAYER_STYLE.quality}`;
   console.log("Layer 4 (Style):", layer4);
 
   // =========================================================================
   // ASSEMBLE FINAL PROMPT
-  // Order: Style framing first (tells model what we're making), then identity → physical → context → quality
+  // Structure: [Medium] [Framing/Pose] [Identity] [Physical] [DETAILS] [Context] [Quality]
   // =========================================================================
-  const finalPrompt = [
-    LAYER_STYLE.medium,           // "professional photograph"
-    LAYER_STYLE.framing,          // "three-quarter body portrait"
+  const promptParts = [
+    LAYER_STYLE.medium,           // "professional photograph, RAW photo"
+    LAYER_STYLE.framing,          // "three-quarter body, slightly angled, looking at camera"
     layer1,                        // WHO: "adult woman solo mercenary"
     layer2,                        // LOOKS: "athletic build, olive skin, black hair..."
-    layer3,                        // CONTEXT: "wearing futuristic streetwear, neon city"
-    LAYER_STYLE.quality,          // QUALITY: "sharp focus, natural skin texture"
-  ].join(', ');
+  ];
+  
+  // Add details with emphasis if present
+  if (layer25) {
+    promptParts.push(layer25);     // DETAILS: "IMPORTANT DETAILS: freckles, scar, necklace..."
+  }
+  
+  promptParts.push(layer3);        // CONTEXT: "wearing futuristic streetwear, neon city"
+  promptParts.push(layer4);        // QUALITY: "sharp focus, natural skin texture"
+
+  const finalPrompt = promptParts.join(', ');
 
   console.log("=== FINAL PROMPT ===");
   console.log("Length:", finalPrompt.length);
@@ -362,7 +550,7 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
   }
 
   console.log("Generating with FLUX.1 Schnell");
-  console.log("Prompt preview:", prompt.substring(0, 200) + "...");
+  console.log("Prompt preview:", prompt.substring(0, 250) + "...");
 
   const response = await fetch('https://api.together.xyz/v1/images/generations', {
     method: 'POST',
@@ -412,7 +600,7 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
 // ============================================================================
 
 function buildLegacyPrompt(requestData: any) {
-  const { appearance, characterClass, genre, portraitHints, emotionVariant } = requestData;
+  const { appearance, characterClass, genre } = requestData;
   
   const appearanceLower = (appearance || '').toLowerCase();
   
