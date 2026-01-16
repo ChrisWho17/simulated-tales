@@ -9,138 +9,132 @@ const corsHeaders = {
 // CORE STYLE TEMPLATE - Realistic waist-up portraits with detailed environments
 // ============================================================================
 
+// Realistic photo style - knees up to head framing
 const PORTRAIT_STYLE_BASE = [
-  'masterpiece',
-  'best quality',
-  'ultra detailed digital painting',
-  'realistic style',
-  'cinematic lighting',
-  'dramatic atmosphere',
-  'three-quarter body shot from knees up',
-  'full environment visible in background',
-  'character in foreground with detailed background scenery',
+  'ultra realistic photograph',
+  'professional portrait photography',
+  'sharp focus on face',
+  'natural skin texture',
+  'photorealistic',
+  'three-quarter body shot from knees up to head',
+  'detailed facial features',
   'looking at viewer',
-  'highly detailed face and eyes',
-  'intricate clothing and gear details',
-  'professional illustration',
-  '8k resolution',
-  'volumetric lighting',
-  'depth of field',
-  'wide shot composition',
+  'studio quality lighting',
+  'high resolution',
+  'detailed eyes with natural reflections',
+  'natural hair texture',
+  'authentic clothing fabric textures',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
-  'worst quality',
-  'low quality',
+  'cartoon',
+  'anime',
+  'illustration',
+  'painting',
+  'drawing',
+  'sketch',
+  'digital art',
+  'CGI',
+  '3D render',
   'blurry',
   'bad anatomy',
-  'bad hands',
-  'missing fingers',
-  'extra fingers',
+  'distorted face',
+  'extra limbs',
   'watermark',
-  'signature',
   'text',
   'logo',
-  'cropped',
-  'out of frame',
-  'duplicate',
-  'deformed',
-  'disfigured',
-  'ugly',
-  'anime',
-  'cartoon',
-  '3d render',
-  'plastic',
-  'cgi',
-  'simple background',
-  'plain background',
-  'white background',
+  'plastic skin',
+  'mannequin',
+  'doll-like',
+  'oversaturated',
+  'overexposed',
 ].join(', ');
 
 // ============================================================================
 // GENRE STYLES - Detailed environments for waist-up portraits
 // ============================================================================
 
+// Realistic environment backgrounds per genre
 const GENRE_STYLES: Record<string, { style: string; backgrounds: string[] }> = {
   modern: {
-    style: 'modern military tactical gear, realistic combat equipment, kevlar body armor, tactical vest with pouches, military radio, combat harness, worn battle gear',
-    backgrounds: ['dramatic warzone with explosions and smoke in background', 'destroyed urban battlefield with burning buildings', 'military forward operating base at golden hour', 'intense combat zone with debris and fire', 'smoky battlefield with distant explosions'],
+    style: 'modern tactical clothing, practical combat gear, body armor, military-style equipment',
+    backgrounds: ['urban city street with tall buildings', 'modern office interior with glass windows', 'suburban neighborhood at golden hour', 'parking garage with concrete pillars', 'rooftop overlooking city skyline'],
   },
   war: {
-    style: 'military combat uniform, tactical body armor, ammunition pouches, combat webbing, military radio equipment, dog tags, battle-worn gear',
-    backgrounds: ['epic warzone battlefield with explosions and black smoke', 'burning urban combat zone with destroyed vehicles', 'intense firefight scene with tracer rounds', 'military base under attack with dramatic lighting', 'trench warfare with artillery explosions'],
+    style: 'military combat uniform, tactical body armor, ammunition pouches, dog tags, worn battle-ready gear',
+    backgrounds: ['battlefield with smoke and debris', 'military base interior', 'desert terrain with vehicles', 'forest combat zone', 'bombed urban street'],
   },
   cyberpunk: {
-    style: 'cyberpunk tactical gear, glowing cybernetic augmentations, high-tech body armor with neon accents, holographic HUD elements, chrome cybernetic limbs',
-    backgrounds: ['neon-lit cyberpunk megacity at night with rain and holograms', 'dark cyberpunk alleyway with neon signs and steam', 'high-tech corporate facility with holographic displays', 'dystopian cityscape with massive neon advertisements'],
+    style: 'futuristic streetwear, neon accents, subtle cybernetic enhancements, tech-wear fashion',
+    backgrounds: ['neon-lit city street at night with rain', 'futuristic nightclub interior', 'high-tech apartment with holographic displays', 'crowded asian-inspired night market'],
   },
   postapoc: {
-    style: 'post-apocalyptic scavenged armor, makeshift tactical gear, weathered leather and metal, survival equipment, gas mask, improvised weapons',
-    backgrounds: ['desolate wasteland with ruined city skyline', 'overgrown abandoned city with nature reclaiming buildings', 'dusty desert wasteland with wrecked vehicles', 'radioactive ruins with ominous sky'],
+    style: 'weathered survival clothing, patched leather jacket, scavenged accessories, dust-covered gear',
+    backgrounds: ['desolate wasteland with ruined buildings', 'abandoned highway with wrecked cars', 'makeshift survivor camp', 'overgrown city ruins with nature reclaiming'],
   },
   scifi: {
-    style: 'advanced sci-fi power armor, futuristic tactical suit, energy shields, high-tech helmet with HUD, sleek military equipment, glowing power cells',
-    backgrounds: ['massive spaceship bridge with holographic displays', 'alien planet surface with strange atmosphere', 'futuristic space station interior', 'epic space battle visible through viewport'],
+    style: 'sleek futuristic uniform, advanced fabric materials, subtle tech accessories, clean professional attire',
+    backgrounds: ['spaceship interior with viewports', 'space station corridor', 'alien planet surface with strange sky', 'futuristic lab with holographic screens'],
   },
   ww2: {
-    style: '1940s military uniform, period-accurate combat gear, M1 helmet, vintage military equipment, leather boots, canvas webbing',
-    backgrounds: ['World War 2 European battlefield with trenches', 'bombed French village with rubble', 'D-Day beach with obstacles', 'underground bunker with maps and radio equipment'],
+    style: '1940s period military uniform, vintage combat gear, authentic era equipment, leather boots',
+    backgrounds: ['European village street 1940s', 'military barracks interior', 'countryside battlefield', 'bunker with maps and radio'],
   },
   medieval: {
-    style: 'realistic medieval plate armor, chainmail underneath, leather straps and buckles, heraldic symbols, battle-damaged metal, sword and shield',
-    backgrounds: ['epic medieval castle siege with catapults', 'dark enchanted forest with mystical fog', 'bloody medieval battlefield with fallen warriors', 'grand castle throne room with banners'],
+    style: 'realistic medieval clothing, period-accurate armor pieces, leather and wool fabrics, historical attire',
+    backgrounds: ['stone castle courtyard', 'medieval village marketplace', 'forest clearing with ancient trees', 'torch-lit dungeon corridor'],
   },
   fantasy: {
-    style: 'high fantasy armor and robes, magical enchanted equipment, glowing runes and symbols, mystical accessories, elaborate fantasy weapons',
-    backgrounds: ['ancient magical forest with glowing particles', 'epic fantasy castle with dramatic sky', 'mystical realm with floating islands', 'dragon lair with treasure'],
+    style: 'fantasy-inspired practical clothing, leather armor, cloth robes, mystical accessories',
+    backgrounds: ['enchanted forest with soft magical lighting', 'stone castle interior with torches', 'mountain vista at sunset', 'ancient ruins with overgrown vegetation'],
   },
   horror: {
-    style: 'survival horror gear, blood-stained clothing, improvised weapons, torn and dirty attire, flashlight or lantern',
-    backgrounds: ['abandoned hospital corridor with flickering lights', 'fog-shrouded graveyard at night', 'decrepit haunted mansion interior', 'dark forest with ominous shadows'],
+    style: 'worn everyday clothing, survival gear, blood-stained or torn fabric, practical horror survivor attire',
+    backgrounds: ['abandoned hospital corridor with flickering lights', 'foggy graveyard at night', 'decrepit mansion interior', 'dark forest path'],
   },
   western: {
-    style: 'authentic wild west attire, dusty leather duster, cowboy hat, period-accurate revolvers, worn boots, bandolier',
-    backgrounds: ['dusty frontier town main street at high noon', 'dramatic desert canyon at sunset', 'old western saloon interior', 'vast prairie with storm approaching'],
+    style: 'authentic wild west attire, leather duster, cowboy hat, period-accurate western clothing',
+    backgrounds: ['dusty frontier town main street', 'desert canyon at sunset', 'wooden saloon interior', 'open prairie under dramatic sky'],
   },
   noir: {
-    style: 'classic film noir attire, 1940s fedora and trench coat, dramatic shadows on face, vintage firearms, cigarette smoke',
-    backgrounds: ['rainy noir city street with neon signs', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with single streetlight'],
+    style: 'classic 1940s detective attire, fedora, trench coat, vintage formal wear',
+    backgrounds: ['rainy city street at night with streetlamps', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with neon signs'],
   },
   mystery: {
-    style: 'classic film noir attire, 1940s fedora and trench coat, dramatic shadows on face, vintage firearms',
-    backgrounds: ['rainy noir city street with neon signs', 'smoky detective office with venetian blinds', 'dimly lit jazz bar', 'dark alleyway with single streetlight'],
+    style: 'professional investigator attire, smart casual clothing, detective accessories',
+    backgrounds: ['victorian study with bookshelves', 'crime scene with police tape', 'foggy london street', 'library interior with old books'],
   },
   pirate: {
-    style: 'golden age pirate attire, weathered captain coat, tricorn hat, cutlass and flintlock pistol, sea-worn appearance',
-    backgrounds: ['ship deck during dramatic storm', 'tropical island cove at sunset', 'port tavern with candlelight', 'treasure cave with gold'],
+    style: 'golden age pirate attire, weathered sea clothing, captain coat, nautical accessories',
+    backgrounds: ['ship deck with ocean horizon', 'tropical island beach', 'port tavern interior', 'hidden cove with anchored ships'],
   },
   survival: {
-    style: 'rugged survival gear, weathered outdoor clothing, backpack with supplies, hunting equipment, practical tools',
-    backgrounds: ['wilderness campsite in dense forest', 'abandoned mountain cabin', 'harsh winter environment', 'dense jungle with ancient ruins'],
+    style: 'outdoor survival gear, hiking clothing, practical backpack, weathered explorer attire',
+    backgrounds: ['dense forest campsite', 'mountain trail with scenic view', 'abandoned cabin in woods', 'riverside with wilderness'],
   },
   steampunk: {
-    style: 'Victorian steampunk attire, brass goggles, clockwork mechanisms, leather and copper accessories, steam-powered gadgets',
-    backgrounds: ['Victorian industrial city with steam and smoke', 'airship deck above clouds', 'clockwork laboratory with gears', 'steampunk factory interior'],
-  },
-  apocalypse: {
-    style: 'post-apocalyptic survivor gear, scavenged armor pieces, makeshift weapons, gas mask, weathered practical clothing',
-    backgrounds: ['nuclear wasteland with ruined buildings', 'abandoned highway with wrecked vehicles', 'survivor camp in ruins', 'toxic environment with hazmat zones'],
+    style: 'victorian steampunk fashion, brass accessories, goggles, clockwork details, leather and copper',
+    backgrounds: ['victorian industrial factory with steam', 'airship observation deck', 'clockwork laboratory', 'brass and copper workshop'],
   },
   vampire: {
-    style: 'gothic vampire aristocrat attire, Victorian dark elegance, pale complexion, blood-red accents, mysterious dangerous',
-    backgrounds: ['gothic castle interior at night', 'moonlit graveyard with mist', 'Victorian ballroom with candles', 'dark forest with pale moonlight'],
+    style: 'gothic aristocratic attire, dark elegant clothing, victorian formal wear, mysterious sophistication',
+    backgrounds: ['gothic castle ballroom', 'moonlit cemetery with mist', 'victorian mansion parlor', 'dark forest with pale moonlight'],
   },
   zombie: {
-    style: 'zombie apocalypse survivor gear, reinforced clothing, improvised armor, blood-stained, desperate determined',
-    backgrounds: ['overrun city streets with abandoned cars', 'barricaded building interior', 'deserted shopping mall', 'foggy highway with shambling figures'],
+    style: 'apocalypse survivor clothing, reinforced practical gear, weathered and stained attire',
+    backgrounds: ['overrun city street with abandoned cars', 'barricaded building interior', 'empty shopping mall', 'foggy suburban neighborhood'],
   },
   superhero: {
-    style: 'superhero costume with cape or tactical suit, symbol on chest, dramatic heroic pose, powerful confident',
-    backgrounds: ['city skyline at sunset', 'rooftop overlooking metropolis', 'secret base interior', 'dramatic sky with clouds'],
+    style: 'heroic costume or tactical suit, symbol or emblem, cape or mask optional, powerful presence',
+    backgrounds: ['city rooftop at sunset', 'metropolis skyline', 'secret headquarters interior', 'dramatic sky with clouds'],
   },
   spy: {
-    style: 'sleek spy attire, tailored suit or tactical stealth gear, concealed weapons, sophisticated gadgets, mysterious',
-    backgrounds: ['casino interior with lights', 'secret underground base', 'exotic foreign location', 'high-tech surveillance room'],
+    style: 'sleek formal attire, tailored suit, subtle tactical elements, sophisticated spy fashion',
+    backgrounds: ['casino interior with chandeliers', 'luxury hotel lobby', 'secret underground base', 'exotic foreign city'],
+  },
+  modern_life: {
+    style: 'contemporary casual clothing, modern everyday fashion, realistic modern attire',
+    backgrounds: ['cozy coffee shop interior', 'modern apartment living room', 'city park with trees', 'busy urban sidewalk'],
   },
 };
 
@@ -546,12 +540,13 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
 }
 
 // ============================================================================
-// LOCKED REFERENCE PROMPT BUILDER (for gameplay regeneration with character lock)
+// LOCKED REFERENCE PROMPT BUILDER - Realistic portraits using character creation settings
 // ============================================================================
 
 function buildLockedReferencePrompt(body: any) {
   const { 
     customPrompt,
+    name,
     gender, 
     build, 
     skinTone, 
@@ -562,74 +557,108 @@ function buildLockedReferencePrompt(body: any) {
     characterClass,
     genre,
     portraitHints,
-    environmentContext 
+    environmentContext,
+    age,
+    height,
+    facialFeatures,
+    distinguishingMarks
   } = body;
   
-  // If a custom prompt is provided (from the locked reference system), use it
-  if (customPrompt) {
-    return { prompt: customPrompt, negative_prompt: PORTRAIT_NEGATIVE };
-  }
-  
-  // Otherwise build from structured data
+  // Get genre config for style and backgrounds
   const genreConfig = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
   
-  const genderStr = GENDER_STYLES[gender || 'male'] || GENDER_STYLES.male;
-  const buildStr = BUILD_STYLES[build || 'athletic'] || BUILD_STYLES.athletic;
-  const skinStr = SKIN_TONES[skinTone || 'medium'] || SKIN_TONES.medium;
-  const hairStyleStr = HAIR_STYLES[hairStyle || 'short'] || HAIR_STYLES.short;
-  const hairColorStr = HAIR_COLORS[hairColor || 'brown'] || HAIR_COLORS.brown;
-  const eyeColorStr = EYE_COLORS[eyeColor || 'brown'] || EYE_COLORS.brown;
+  // Build character physical description from creation settings
+  const genderDesc = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
+  const ageDesc = age ? `${age} year old` : 'adult';
+  const buildDesc = BUILD_STYLES[build || 'average'] || 'average build';
+  const heightDesc = height ? `${height} height` : '';
+  const skinDesc = SKIN_TONES[skinTone?.toLowerCase() || 'medium'] || 'medium skin tone';
+  const hairColorDesc = HAIR_COLORS[hairColor?.toLowerCase() || 'brown'] || 'brown hair';
+  const hairStyleDesc = HAIR_STYLES[hairStyle?.toLowerCase() || 'short'] || 'short hair';
+  const eyeColorDesc = EYE_COLORS[eyeColor?.toLowerCase() || 'brown'] || 'brown eyes';
   
-  // Map class to role
+  // Map character class to appropriate role style
   const classLower = (characterClass || '').toLowerCase();
-  let role = 'warrior';
+  let roleStyle = '';
   for (const key of Object.keys(ROLE_STYLES)) {
     if (classLower.includes(key)) {
-      role = key;
+      roleStyle = ROLE_STYLES[key];
       break;
     }
   }
-  const roleStr = ROLE_STYLES[role] || ROLE_STYLES.warrior;
+  if (!roleStyle) {
+    roleStyle = genreConfig.style;
+  }
   
-  // Build details string
-  const detailsStr = (details || [])
-    .map((d: string) => DETAIL_OPTIONS[d] || d)
-    .filter(Boolean)
-    .join(', ');
+  // Build details from character creation
+  const detailParts: string[] = [];
+  if (details && Array.isArray(details)) {
+    details.forEach((d: string) => {
+      const mapped = DETAIL_OPTIONS[d];
+      if (mapped) detailParts.push(mapped);
+      else if (d) detailParts.push(d);
+    });
+  }
+  if (facialFeatures) detailParts.push(facialFeatures);
+  if (distinguishingMarks) detailParts.push(distinguishingMarks);
   
-  // Handle environment context for mood
-  let emotionStr = EMOTION_STYLES.neutral;
+  // Handle expression from environment mood
+  let expression = 'calm neutral expression';
   if (environmentContext?.mood) {
-    emotionStr = EMOTION_STYLES[environmentContext.mood] || EMOTION_STYLES.neutral;
+    expression = EMOTION_STYLES[environmentContext.mood] || EMOTION_STYLES.neutral;
   }
   
-  // Build environment background from context
+  // Select appropriate background from genre
   let background = '';
-  if (environmentContext) {
-    const bgParts = [];
-    if (environmentContext.weather) bgParts.push(environmentContext.weather + ' weather');
-    if (environmentContext.location) bgParts.push(environmentContext.location);
-    if (environmentContext.isInCombat) bgParts.push('combat atmosphere, intense action');
-    background = bgParts.length > 0 ? bgParts.join(', ') : '';
-  }
-  if (!background) {
+  if (environmentContext?.location) {
+    background = environmentContext.location;
+    if (environmentContext.weather) {
+      background += `, ${environmentContext.weather} weather`;
+    }
+    if (environmentContext.timeOfDay) {
+      background += `, ${environmentContext.timeOfDay} lighting`;
+    }
+  } else {
+    // Pick random genre-appropriate background
     background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
   }
   
+  // Add combat context if applicable
+  if (environmentContext?.isInCombat) {
+    expression = 'intense combat-ready expression, focused determined eyes';
+  }
+  
+  // Build the realistic portrait prompt
   const promptParts = [
+    // Core realistic photo style
     PORTRAIT_STYLE_BASE,
-    genderStr,
-    buildStr,
-    skinStr,
-    `${hairColorStr}, ${hairStyleStr}`,
-    eyeColorStr,
-    roleStr,
-    genreConfig.style,
-    emotionStr,
-    detailsStr,
+    
+    // Character identity
+    `${ageDesc} ${genderDesc}`,
+    buildDesc,
+    heightDesc,
+    skinDesc,
+    `${hairColorDesc}, ${hairStyleDesc}`,
+    eyeColorDesc,
+    
+    // Character details
+    detailParts.length > 0 ? detailParts.join(', ') : '',
+    
+    // Clothing/gear based on class and genre
+    roleStyle,
+    
+    // Expression
+    expression,
+    
+    // Portrait hints from class selection
     portraitHints?.join(', ') || '',
-    background ? `background: ${background}` : '',
-    'CRITICAL: Maintain exact same facial features and body type as character reference',
+    
+    // Environment background
+    `realistic environment background: ${background}`,
+    
+    // Depth and atmosphere
+    'shallow depth of field, background slightly blurred',
+    'natural atmospheric lighting',
   ].filter(Boolean);
   
   return {
