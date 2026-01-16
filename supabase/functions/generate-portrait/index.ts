@@ -37,385 +37,1068 @@ const QUALITY_TAGS = `Professional portrait photography, studio quality, magazin
 const NEGATIVE_PROMPT = `No anime style, no cartoon, no illustration, no 3d render, no CGI, no digital art, no painting, no sketch, no drawing, no watercolor, no oil painting, looking away, back view, profile view, side profile, looking to the side, eyes looking away, averted gaze, extra limbs, extra arms, extra legs, extra fingers, missing fingers, deformed hands, malformed hands, bad hands, deformed face, ugly face, disfigured, mutation, mutated, bad anatomy, bad proportions, cropped at waist, cropped at chest, close-up, closeup, headshot, bust shot, face only, chest up, shoulders up, waist up, zoomed in, too close, tight framing, full body, feet visible, below knees, wide shot`;
 
 // ============================================================================
-// GENRE BACKGROUNDS - ATMOSPHERIC CONTEXT
+// 🎨 GENRE VISUAL LOCK - ATMOSPHERIC FRAMEWORK
+// Genre determines background, lighting mood, color palette, and atmospheric effects
+// Genre elements SUPPORT character but NEVER override user's Additional Details
+// Background remains softly blurred - character is always primary focus
 // ============================================================================
 
-const GENRE_BACKGROUNDS: Record<string, { setting: string; atmosphere: string; elements: string }> = {
-  // Modern/Contemporary
-  modern: { 
-    setting: 'contemporary urban cityscape', 
-    atmosphere: 'modern metropolitan energy, clean lines', 
-    elements: 'glass buildings, city lights, modern architecture' 
-  },
-  modern_life: { 
-    setting: 'contemporary everyday location', 
-    atmosphere: 'warm comfortable ambiance', 
-    elements: 'coffee shop, modern apartment, street scene' 
-  },
-  contemporary: { 
-    setting: 'modern day setting', 
-    atmosphere: 'realistic present-day world', 
-    elements: 'urban streets, modern interiors, everyday locations' 
-  },
-  
-  // Sci-Fi
-  cyberpunk: { 
-    setting: 'neon-lit cyberpunk city at night', 
-    atmosphere: 'high-tech low-life, rain-slicked streets, neon glow', 
-    elements: 'holographic billboards, chrome and neon, urban decay meets technology' 
-  },
-  scifi: { 
-    setting: 'futuristic environment', 
-    atmosphere: 'advanced technology, clean futurism', 
-    elements: 'spaceship interior, space station, sleek technology' 
-  },
-  sci_fi: { 
-    setting: 'futuristic environment', 
-    atmosphere: 'advanced technology, clean futurism', 
-    elements: 'spaceship interior, space station, sleek technology' 
-  },
-  space_opera: { 
-    setting: 'starship bridge or alien vista', 
-    atmosphere: 'epic galactic scale, cosmic wonder', 
-    elements: 'control panels, viewports to space, distant planets' 
-  },
-  mecha: { 
-    setting: 'giant robot hangar bay', 
-    atmosphere: 'massive scale mechanical warfare', 
-    elements: 'towering mecha, industrial hangar, pilot interfaces' 
-  },
-  
-  // War/Military
-  war: { 
-    setting: 'battlefield or military installation', 
-    atmosphere: 'tense combat readiness, military precision', 
-    elements: 'military equipment, fortifications, combat zone' 
-  },
-  military: { 
-    setting: 'military base or combat zone', 
-    atmosphere: 'disciplined military environment', 
-    elements: 'barracks, equipment, military vehicles' 
-  },
-  ww2: { 
-    setting: '1940s wartime Europe', 
-    atmosphere: 'period-authentic World War 2 setting', 
-    elements: 'military camp, vintage equipment, war-era structures' 
-  },
-  ww1: { 
-    setting: 'World War 1 trenches', 
-    atmosphere: 'grim trench warfare, muddy desolation', 
-    elements: 'muddy trenches, barbed wire, war-torn landscape' 
-  },
-  vietnam: { 
-    setting: 'Vietnamese jungle', 
-    atmosphere: 'humid tropical warfare, dense vegetation', 
-    elements: 'jungle foliage, firebase, humid environment' 
-  },
-  cold_war: { 
-    setting: 'Cold War era Eastern Europe', 
-    atmosphere: 'espionage tension, ideological conflict', 
-    elements: 'Berlin Wall, Soviet architecture, period spy aesthetics' 
+interface GenreVisualLock {
+  // Background environment
+  settings: string[];
+  architecture: string;
+  genreElements: string;
+  props: string;
+  // Lighting & atmosphere
+  lightSources: string;
+  lightQuality: string;
+  colorTemperature: string;
+  atmosphericEffects: string;
+  mood: string;
+  // Color palette
+  dominantColors: string;
+  accentColors: string;
+  metalTones: string;
+  overallPalette: string;
+  // Aesthetic
+  style: string;
+  textureEmphasis: string;
+  eraFeeling: string;
+  criticalNotes?: string;
+}
+
+const GENRE_VISUAL_LOCKS: Record<string, GenreVisualLock> = {
+  // ═══════════════════════════════════════════════════════════════
+  // 🏰 FANTASY GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  fantasy: {
+    settings: ['medieval tavern interior with wooden beams and stone walls', 'ancient library with towering bookshelves', 'mystical forest clearing with ancient trees', 'castle throne room with tapestries', 'magical workshop with floating artifacts', 'enchanted grove with fairy lights'],
+    architecture: 'stone, weathered wood, gothic arches, ornate carvings, aged materials',
+    genreElements: 'subtle glowing runes on walls, floating motes of light, ethereal mist, candles with unusual flame colors, enchanted objects softly glowing',
+    props: 'leather-bound books, potion bottles, crystals, medieval weapons on walls, mystical symbols',
+    lightSources: 'warm candlelight, torches, magical illumination soft blues purples golds, firelight',
+    lightQuality: 'warm atmospheric mysterious with pools of light and shadow',
+    colorTemperature: 'warm amber golden with cool mystical accent lights',
+    atmosphericEffects: 'light fog, dust motes in light beams, subtle magical particle effects',
+    mood: 'enchanting, mysterious, timeless, magical',
+    dominantColors: 'deep burgundy, forest green, royal purple, midnight blue, aged gold',
+    accentColors: 'emerald, sapphire, ruby tones, magical glowing blues and purples',
+    metalTones: 'aged bronze, tarnished gold, weathered silver',
+    overallPalette: 'rich saturated jewel-toned with warm shadows',
+    style: 'high fantasy, medieval fantasy, or dark fantasy depending on character mood',
+    textureEmphasis: 'leather, velvet, aged wood, stone, metal with patina',
+    eraFeeling: 'timeless medieval renaissance with magical enhancement',
   },
   
-  // Post-Apocalyptic
-  postapoc: { 
-    setting: 'post-apocalyptic wasteland', 
-    atmosphere: 'desolate survival, civilization collapse', 
-    elements: 'ruined buildings, overgrown decay, scavenged world' 
+  medieval: {
+    settings: ['castle great hall with stone walls', 'village tavern with timber beams', 'monastery scriptorium', 'blacksmith forge', 'market square'],
+    architecture: 'stone castles, timber frame buildings, thatched roofs, cobblestone',
+    genreElements: 'torches, banners, heraldic symbols, period weapons and armor',
+    props: 'swords, shields, goblets, scrolls, candles, wooden furniture',
+    lightSources: 'torchlight, candlelight, fireplace, window light',
+    lightQuality: 'warm flickering, dramatic shadows from flames',
+    colorTemperature: 'warm amber and gold from fire sources',
+    atmosphericEffects: 'smoke from fires, dust in sunbeams, cool stone atmosphere',
+    mood: 'historical, grounded, authentic medieval life',
+    dominantColors: 'stone gray, wood brown, iron black, wool cream',
+    accentColors: 'heraldic red, royal blue, gold trim',
+    metalTones: 'iron, steel, bronze, pewter',
+    overallPalette: 'earthy muted tones with rich accent colors',
+    style: 'historical medieval realism',
+    textureEmphasis: 'rough stone, weathered wood, hammered metal, woven fabric',
+    eraFeeling: 'European medieval 1100-1400',
   },
-  post_apocalyptic: { 
-    setting: 'post-apocalyptic wasteland', 
-    atmosphere: 'desolate survival, civilization collapse', 
-    elements: 'ruined buildings, overgrown decay, scavenged world' 
+
+  dark_fantasy: {
+    settings: ['cursed castle with crumbling towers', 'dead forest with twisted trees', 'necromancer tower', 'haunted battlefield', 'dark cathedral'],
+    architecture: 'gothic decay, corrupted stonework, thorny overgrowth, skull motifs',
+    genreElements: 'dark magic auras, ominous shadows, corrupted nature, death imagery',
+    props: 'cursed artifacts, bones, dark grimoires, ritual circles',
+    lightSources: 'sickly magical glow, moonlight through clouds, eerie bioluminescence',
+    lightQuality: 'low key lighting, deep shadows, occasional harsh highlights',
+    colorTemperature: 'cold with sickly green or purple accents',
+    atmosphericEffects: 'thick fog, ash falling, dark mist, supernatural cold',
+    mood: 'ominous, dread, dark beauty, corruption',
+    dominantColors: 'deep black, charcoal, dead brown, bruise purple',
+    accentColors: 'sickly green, blood red, ghostly blue, corrupt purple',
+    metalTones: 'blackened steel, tarnished silver, corroded bronze',
+    overallPalette: 'desaturated dark with selective eerie color',
+    style: 'dark souls aesthetic, gothic horror fantasy',
+    textureEmphasis: 'decay, corruption, thorns, bone, tattered fabric',
+    eraFeeling: 'timeless dark medieval with supernatural corruption',
   },
-  zombie: { 
-    setting: 'zombie apocalypse city', 
-    atmosphere: 'desperate survival horror', 
-    elements: 'barricaded buildings, abandoned streets, survival setup' 
+
+  high_fantasy: {
+    settings: ['crystal palace throne room', 'elven forest city', 'magical academy', 'celestial temple', 'enchanted garden'],
+    architecture: 'elegant spires, flowing organic forms, crystalline structures, magical construction',
+    genreElements: 'bright magical auras, floating objects, enchanted crystals, divine light',
+    props: 'magical staves, glowing artifacts, elegant weapons, spellbooks',
+    lightSources: 'magical radiance, sunlight through stained glass, enchanted orbs',
+    lightQuality: 'bright and luminous, ethereal glow, divine radiance',
+    colorTemperature: 'warm golden light with cool magical accents',
+    atmosphericEffects: 'magical sparkles, floating light motes, gentle mist',
+    mood: 'wonder, heroic, magical, hopeful',
+    dominantColors: 'royal blue, elven green, celestial gold, pure white',
+    accentColors: 'magical cyan, divine gold, enchanted purple',
+    metalTones: 'polished gold, mithril silver, enchanted bronze',
+    overallPalette: 'vibrant saturated fantasy colors',
+    style: 'Tolkien-esque high fantasy, heroic fantasy',
+    textureEmphasis: 'fine fabric, polished metal, magical materials, organic elegance',
+    eraFeeling: 'timeless mythic fantasy realm',
   },
-  survival: { 
-    setting: 'wilderness survival setting', 
-    atmosphere: 'harsh nature, human endurance', 
-    elements: 'forest camp, makeshift shelter, survival gear' 
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🚀 SCI-FI GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  scifi: {
+    settings: ['spaceship interior with glowing panels', 'futuristic laboratory', 'space station viewport showing stars', 'high-tech command center', 'cybernetic enhancement facility', 'colony hab module'],
+    architecture: 'clean lines, metallic surfaces, LED panels, holographic displays, geometric precision',
+    genreElements: 'floating holographic interfaces, blinking status lights, energy conduits visible, computer terminals, robotic elements',
+    props: 'data pads, futuristic weapons, scientific equipment, containment pods, star maps',
+    lightSources: 'LED strips, holographic projections, bioluminescent panels, harsh fluorescent whites, colored accent lighting cyan blue green purple',
+    lightQuality: 'clinical and clean, or darker with accent lighting for dramatic sci-fi',
+    colorTemperature: 'cool blues and whites with colored accent lighting',
+    atmosphericEffects: 'light lens flares, holographic glitches, energy fields, atmospheric processors creating subtle haze',
+    mood: 'advanced, clinical, mysterious, or ominous depending on subgenre',
+    dominantColors: 'metallic grays, deep space blacks, stark whites, steel blues',
+    accentColors: 'neon cyan, electric blue, plasma green, warning orange, energy purple',
+    metalTones: 'chrome, brushed aluminum, polished titanium, gunmetal',
+    overallPalette: 'cool high-tech with strategic neon accents',
+    style: 'hard sci-fi realism, space opera, or dystopian tech',
+    textureEmphasis: 'smooth metals, glass, synthetic materials, LED-lit panels',
+    eraFeeling: 'near future 2100s to far future 2400s plus',
   },
-  fallout: { 
-    setting: 'retro-futuristic nuclear wasteland', 
-    atmosphere: 'atomic age post-apocalypse', 
-    elements: 'rusted technology, radiation signs, vault structures' 
+
+  sci_fi: {
+    settings: ['spaceship interior with glowing panels', 'futuristic laboratory', 'space station viewport showing stars', 'high-tech command center'],
+    architecture: 'clean lines, metallic surfaces, LED panels, holographic displays',
+    genreElements: 'floating holographic interfaces, blinking status lights, energy conduits visible',
+    props: 'data pads, futuristic weapons, scientific equipment, star maps',
+    lightSources: 'LED strips, holographic projections, bioluminescent panels',
+    lightQuality: 'clinical and clean with accent lighting',
+    colorTemperature: 'cool blues and whites with colored accent lighting',
+    atmosphericEffects: 'light lens flares, holographic glitches, energy fields',
+    mood: 'advanced, clinical, mysterious',
+    dominantColors: 'metallic grays, deep space blacks, stark whites, steel blues',
+    accentColors: 'neon cyan, electric blue, plasma green, warning orange',
+    metalTones: 'chrome, brushed aluminum, polished titanium',
+    overallPalette: 'cool high-tech with strategic neon accents',
+    style: 'hard sci-fi realism, space opera',
+    textureEmphasis: 'smooth metals, glass, synthetic materials',
+    eraFeeling: 'far future space age',
   },
+
+  space_opera: {
+    settings: ['starship bridge with panoramic viewport', 'alien planet vista', 'space station promenade', 'galactic senate chamber'],
+    architecture: 'grand scale spacecraft, alien architecture, massive viewports',
+    genreElements: 'distant stars and planets, starship interiors, diverse alien elements',
+    props: 'command consoles, holographic star maps, elegant space weapons',
+    lightSources: 'starlight, ship ambient lighting, dramatic spotlights',
+    lightQuality: 'cinematic, dramatic, epic scale lighting',
+    colorTemperature: 'varied - warm ship interiors, cool space views',
+    atmosphericEffects: 'stars visible, nebula colors, atmospheric shields',
+    mood: 'epic, adventurous, cosmic wonder, heroic',
+    dominantColors: 'deep space black, starship silver, nebula purples',
+    accentColors: 'starlight white, plasma blue, energy gold',
+    metalTones: 'polished starship chrome, decorative gold trim',
+    overallPalette: 'cosmic with rich accent colors',
+    style: 'Star Wars/Trek aesthetic, grand space adventure',
+    textureEmphasis: 'polished metals, alien materials, sophisticated tech',
+    eraFeeling: 'galactic civilization era',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ⚡ CYBERPUNK GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  cyberpunk: {
+    settings: ['neon-lit urban alley with rain', 'high-tech nightclub', 'megacorporation interior', 'cybernetic enhancement clinic', 'underground hacker den', 'rooftop overlooking neon cityscape'],
+    architecture: 'towering skyscrapers, dense urban sprawl, industrial decay mixed with high-tech, Asian-influenced signage',
+    genreElements: 'neon signs in Japanese Chinese characters, holographic advertisements, cybernetic enhancement shops, dense cables and wires, steam vents',
+    props: 'datapads, cybernetic implants visible, futuristic weapons, tech interfaces, corporate logos',
+    lightSources: 'neon signs pink cyan blue purple, LED strips, holographic projections, harsh fluorescents, dramatic rim lighting',
+    lightQuality: 'high contrast with deep blacks and glowing neons, wet surfaces reflecting light',
+    colorTemperature: 'cool with hot neon accents - cyan magenta purple electric blue toxic green',
+    atmosphericEffects: 'rain always present, steam from vents, smoke, light beams through fog, holographic glitches',
+    mood: 'dystopian, gritty, high-tech-low-life, dangerous, electric energy',
+    dominantColors: 'deep blacks, dark grays, midnight blue, urban concrete',
+    accentColors: 'neon pink magenta, cyan electric blue, toxic green, purple, warning orange',
+    metalTones: 'chrome, brushed steel, carbon fiber, reflective surfaces',
+    overallPalette: 'high contrast neon-saturated wet and reflective',
+    style: 'Blade Runner aesthetic, Ghost in the Shell, dark cyberpunk',
+    textureEmphasis: 'wet asphalt, chrome, carbon fiber, holographic interfaces, rain-slicked surfaces',
+    eraFeeling: 'near-future dystopia 2077-style',
+    criticalNotes: 'CRITICAL: Almost always raining or recently rained, neon reflections essential',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 💀 HORROR GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  horror: {
+    settings: ['abandoned asylum corridor', 'decrepit Victorian mansion', 'dark forest with dead trees', 'dimly lit basement', 'fog-shrouded graveyard', 'decaying hospital', 'haunted church interior'],
+    architecture: 'decaying, Gothic, Victorian, industrial decay, peeling walls, broken windows',
+    genreElements: 'deep shadows with unsettling shapes, barely visible disturbing details, fog mist, cobwebs, decay',
+    props: 'medical equipment aged bloody, occult symbols, candles, chains, damaged religious iconography',
+    lightSources: 'single harsh light creating deep shadows, flickering fluorescents, dying candlelight, moonlight through broken windows, lightning flashes',
+    lightQuality: 'high contrast with deep blacks, dramatic shadows, rim lighting on edges',
+    colorTemperature: 'cold blues, sickly greens, desaturated with strategic colored lighting',
+    atmosphericEffects: 'heavy fog, dust in air, volumetric light rays, darkness pressing in',
+    mood: 'dread, unease, foreboding, claustrophobic tension',
+    dominantColors: 'deep blacks, charcoal grays, dark browns, midnight blues',
+    accentColors: 'blood red, sickly green, bruise purple, corpse pale blue',
+    metalTones: 'rusted iron, tarnished silver, oxidized copper',
+    overallPalette: 'desaturated with selective color for emphasis, heavy shadows',
+    style: 'Gothic horror, psychological horror, or survival horror',
+    textureEmphasis: 'decay, rust, mold, cracked surfaces, organic corruption',
+    eraFeeling: 'Victorian era to modern abandoned locations',
+  },
+
+  vampire: {
+    settings: ['gothic castle interior', 'moonlit cemetery', 'Victorian mansion parlor', 'candlelit crypt', 'aristocratic ballroom'],
+    architecture: 'Gothic architecture, ornate Victorian, castle stonework, elaborate ironwork',
+    genreElements: 'candlelight, velvet drapes, antique furniture, mirrors, gothic statuary',
+    props: 'wine glasses with red liquid, antique books, candelabras, portraits, roses',
+    lightSources: 'candlelight, moonlight, fireplace, dim gas lamps',
+    lightQuality: 'romantic yet ominous, warm candlelight with cold moonlight',
+    colorTemperature: 'warm fire tones contrasting with cold moonlight blues',
+    atmosphericEffects: 'mist, dust motes, flickering shadows, moonbeams',
+    mood: 'aristocratic darkness, seductive danger, eternal night, gothic romance',
+    dominantColors: 'deep crimson, black velvet, midnight purple, bone white',
+    accentColors: 'blood red, moonlight silver, candlelight gold',
+    metalTones: 'tarnished silver, antique gold, wrought iron',
+    overallPalette: 'rich dark colors with warm and cool contrast',
+    style: 'gothic vampire romance, aristocratic horror',
+    textureEmphasis: 'velvet, silk, aged stone, polished wood, antique metals',
+    eraFeeling: 'Victorian gothic timeless',
+  },
+
+  lovecraft: {
+    settings: ['1920s New England study', 'misty coastal town', 'ancient library with forbidden tomes', 'decrepit mansion', 'foggy docks at night'],
+    architecture: 'colonial New England, weathered wood, strange geometry hints, aged buildings',
+    genreElements: 'unsettling angles, mysterious shadows, hints of the unknowable, eldritch symbols',
+    props: 'ancient tomes, strange artifacts, nautical equipment, period items',
+    lightSources: 'gas lamps, oil lamps, lightning, dim period lighting',
+    lightQuality: 'low and atmospheric, with unexplained shadows',
+    colorTemperature: 'desaturated, sickly yellow-green undertones',
+    atmosphericEffects: 'heavy fog, sea mist, unnatural shadows, cosmic hints',
+    mood: 'cosmic dread, intellectual horror, reality questioning, eldritch unease',
+    dominantColors: 'sea-gray, aged brown, sickly green, deep shadow',
+    accentColors: 'eldritch green, void purple, cosmic blue',
+    metalTones: 'tarnished brass, corroded copper, strange alloys',
+    overallPalette: 'desaturated period tones with unsettling accents',
+    style: 'Lovecraftian cosmic horror, 1920s period',
+    textureEmphasis: 'aged paper, weathered wood, barnacles, strange textures',
+    eraFeeling: '1920s-1930s New England',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🔍 MYSTERY GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  mystery: {
+    settings: ['1920s-40s detective office with venetian blinds', 'noir alley with rain', 'upscale study with dark wood', 'foggy Victorian London street', 'modern crime scene', 'shadowy jazz club'],
+    architecture: 'period-appropriate buildings, film noir aesthetic, atmospheric urban or elegant indoor',
+    genreElements: 'shadows, silhouettes, clues barely visible, atmospheric smoke fog',
+    props: 'detective equipment, newspapers, files, vintage phones, magnifying glass, evidence markers',
+    lightSources: 'window blinds creating striped shadows, single desk lamp, street lights in fog, dramatic single-source lighting',
+    lightQuality: 'film noir style - high contrast, dramatic shadows, chiaroscuro',
+    colorTemperature: 'warm amber for vintage, cool blue for modern, monochromatic feeling',
+    atmosphericEffects: 'cigarette smoke, fog, rain visible in light, dust particles',
+    mood: 'mysterious, contemplative, noir atmosphere, intellectual intrigue',
+    dominantColors: 'deep browns, charcoal blacks, slate grays, sepia tones',
+    accentColors: 'warm amber, cool blue-gray, muted gold, burgundy',
+    metalTones: 'brass, aged bronze, gunmetal',
+    overallPalette: 'low saturation noir-inspired almost monochromatic with strategic color',
+    style: 'film noir, Victorian detective, modern thriller',
+    textureEmphasis: 'leather, aged paper, wood grain, worn fabrics, wet streets',
+    eraFeeling: '1920s-1940s classic noir, Victorian gaslight, or modern urban',
+  },
+
+  noir: {
+    settings: ['rain-slicked city street at night', 'smoky jazz club', 'detective office with venetian blinds', 'seedy motel room', 'dark alley'],
+    architecture: '1940s urban, art deco elements, period signage',
+    genreElements: 'venetian blind shadows, neon signs, wet pavement reflections, cigarette smoke',
+    props: 'fedoras, trench coats, revolvers, whiskey glasses, newspapers',
+    lightSources: 'single harsh light, neon signs, streetlights, venetian blind striped light',
+    lightQuality: 'extreme chiaroscuro, film noir lighting',
+    colorTemperature: 'predominantly cool with warm accent from signs',
+    atmosphericEffects: 'rain, fog, cigarette smoke, steam from manholes',
+    mood: 'fatalistic, morally ambiguous, dangerous, romantic cynicism',
+    dominantColors: 'black, dark gray, deep shadow',
+    accentColors: 'neon sign colors, lipstick red, cigarette ember orange',
+    metalTones: 'chrome, gunmetal, brass',
+    overallPalette: 'essentially black and white with selective color',
+    style: 'classic film noir 1940s',
+    textureEmphasis: 'wet surfaces, wool fabric, leather, smoke',
+    eraFeeling: '1940s-1950s urban America',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ☠️ PIRATE GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  pirate: {
+    settings: ['ship captain cabin with maps and treasures', 'tropical beach at sunset', 'port tavern interior', 'ship deck with rigging', 'coastal cliff hideout', 'Caribbean port town'],
+    architecture: 'weathered wood, rope rigging, nautical elements, tropical colonial buildings',
+    genreElements: 'ship wheels, barrels, ropes, maps, compasses, treasure chests, naval flags',
+    props: 'cutlasses, flintlock pistols, treasure, rum bottles, navigation equipment, spyglasses',
+    lightSources: 'lantern light, tropical sun, sunset sunrise, moonlight on water, ship lamps',
+    lightQuality: 'warm and adventurous, golden hour lighting, or atmospheric low-light aboard ship',
+    colorTemperature: 'warm golden sunset tones, or cool moonlit blue for night scenes',
+    atmosphericEffects: 'ocean spray, tropical humidity haze, smoke from cannons, sea fog',
+    mood: 'adventurous, freedom, danger, tropical paradise or stormy peril',
+    dominantColors: 'ocean blues, weathered wood browns, sandy beiges, sail cream',
+    accentColors: 'treasure gold, tropical sunset oranges, Caribbean turquoise, blood red',
+    metalTones: 'tarnished brass, oxidized copper, weathered iron',
+    overallPalette: 'warm and saturated for tropical, or cool and dramatic for stormy seas',
+    style: 'golden age of piracy 1650-1730, romantic adventure',
+    textureEmphasis: 'weathered wood, rope, canvas sails, sea-worn leather, salt-crusted metal',
+    eraFeeling: 'Caribbean 17th-18th century',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🤠 WESTERN GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  western: {
+    settings: ['old west saloon interior', 'dusty main street', 'desert landscape with mesas', 'frontier general store', 'ranch homestead', 'canyon landscape'],
+    architecture: 'weathered wood buildings, false fronts, log construction, adobe structures',
+    genreElements: 'wooden posts, wagon wheels, whiskey barrels, wanted posters, oil lamps',
+    props: 'six-shooters, rifles, cowboy hats, lassos, spurs, saddles, playing cards, whiskey bottles',
+    lightSources: 'harsh desert sun, saloon oil lamps, golden hour sun, campfire, dim interior light through dusty windows',
+    lightQuality: 'high contrast with strong sun, warm interior lighting, dusty atmosphere',
+    colorTemperature: 'warm amber and gold, hot desert sun tones',
+    atmosphericEffects: 'dust in air, heat shimmer, tumbleweeds, gunsmoke',
+    mood: 'rugged, frontier spirit, lawless, dusty, survivalist',
+    dominantColors: 'desert tan, weathered wood brown, dusty orange, faded denim blue',
+    accentColors: 'sunset red, brass gold, leather brown, faded bandana red',
+    metalTones: 'tarnished silver, brass, weathered iron',
+    overallPalette: 'warm desaturated dusty with sepia undertones',
+    style: 'classic western, spaghetti western, or frontier realism',
+    textureEmphasis: 'worn leather, weathered wood, dusty fabric, sun-baked earth',
+    eraFeeling: 'American frontier 1860s-1890s',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ☢️ POST-APOCALYPTIC GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  postapoc: {
+    settings: ['ruined city with collapsed buildings', 'desert wasteland', 'abandoned military bunker', 'overgrown urban decay', 'makeshift survivor settlement', 'desolate highway'],
+    architecture: 'crumbling concrete, rusted metal, nature reclaiming buildings, improvised shelters, fortified positions',
+    genreElements: 'radiation symbols, destroyed vehicles, scattered supplies, makeshift weapons, warning signs, bones skulls',
+    props: 'gas masks, improvised weapons, scavenged equipment, water containers, survival gear, bullet casings',
+    lightSources: 'harsh sunlight through dust, fires from barrels, emergency lights red, harsh shadows, nuclear sunset',
+    lightQuality: 'harsh and unforgiving, or dim and oppressive in interiors',
+    colorTemperature: 'desaturated with sickly yellow green tint, or warm orange from fires and dust',
+    atmosphericEffects: 'dust storms, ash falling, toxic fog, heat shimmer, smoke from fires',
+    mood: 'desolate, survivalist, harsh, desperate, end-of-world',
+    dominantColors: 'desert tan, rust brown, concrete gray, ash black, dead vegetation brown',
+    accentColors: 'rust orange, toxic green, radiation yellow, dried blood red, fire orange',
+    metalTones: 'heavily rusted, corroded, oxidized everything',
+    overallPalette: 'heavily desaturated dusty rust-dominated',
+    style: 'Fallout-style wasteland, Mad Max aesthetic, The Last of Us overgrown',
+    textureEmphasis: 'rust, decay, cracked concrete, weathered metal, dried earth, tattered fabric',
+    eraFeeling: 'post-nuclear war, post-pandemic, or general collapse 10-100 years after',
+  },
+
+  post_apocalyptic: {
+    settings: ['ruined city with collapsed buildings', 'desert wasteland', 'abandoned military bunker', 'overgrown urban decay'],
+    architecture: 'crumbling concrete, rusted metal, nature reclaiming buildings, improvised shelters',
+    genreElements: 'radiation symbols, destroyed vehicles, scattered supplies, makeshift weapons',
+    props: 'gas masks, improvised weapons, scavenged equipment, survival gear',
+    lightSources: 'harsh sunlight through dust, fires from barrels, emergency lights',
+    lightQuality: 'harsh and unforgiving',
+    colorTemperature: 'desaturated with sickly yellow green tint',
+    atmosphericEffects: 'dust storms, ash falling, toxic fog, heat shimmer',
+    mood: 'desolate, survivalist, harsh, desperate',
+    dominantColors: 'desert tan, rust brown, concrete gray, ash black',
+    accentColors: 'rust orange, toxic green, radiation yellow, fire orange',
+    metalTones: 'heavily rusted, corroded, oxidized',
+    overallPalette: 'heavily desaturated dusty rust-dominated',
+    style: 'Fallout-style wasteland, Mad Max aesthetic',
+    textureEmphasis: 'rust, decay, cracked concrete, weathered metal',
+    eraFeeling: 'post-apocalypse 10-100 years after collapse',
+  },
+
+  fallout: {
+    settings: ['retro-futuristic bunker', 'nuclear wasteland', 'ruined 1950s suburb', 'vault interior', 'irradiated town'],
+    architecture: 'atomic age design, vault-tec aesthetic, ruined Americana',
+    genreElements: 'Nuka Cola signs, vault suits, pip-boys, atomic symbols, 1950s robots',
+    props: 'laser weapons, stimpaks, bottle caps, retro tech, radiation suits',
+    lightSources: 'harsh wasteland sun, vault fluorescents, nuclear glow',
+    lightQuality: 'high contrast wasteland, clinical vault interiors',
+    colorTemperature: 'sickly yellow-green tint with retro accents',
+    atmosphericEffects: 'radiation haze, dust, nuclear sunset colors',
+    mood: 'retro-apocalypse, dark humor, survival',
+    dominantColors: 'vault blue, rust orange, wasteland tan, nuclear green',
+    accentColors: 'Nuka red, radioactive green, chrome silver',
+    metalTones: 'chrome and rust together, corroded steel',
+    overallPalette: 'retro-futuristic meets wasteland decay',
+    style: 'Fallout games aesthetic specifically',
+    textureEmphasis: '1950s materials aged and irradiated, chrome and rust',
+    eraFeeling: 'alternate history post-nuclear 2077 and after',
+  },
+
+  zombie: {
+    settings: ['barricaded building', 'overrun city street', 'abandoned mall', 'survivor camp', 'hospital corridors'],
+    architecture: 'barricades, boarded windows, improvised fortifications, urban decay',
+    genreElements: 'blood stains, abandoned cars, warning signs, makeshift weapons',
+    props: 'baseball bats, shotguns, medical supplies, canned food, barbed wire',
+    lightSources: 'emergency lighting, flashlights, fires, harsh daylight',
+    lightQuality: 'harsh and clinical or dark and threatening',
+    colorTemperature: 'desaturated, cold, sickly',
+    atmosphericEffects: 'fog, smoke, dust, decay smell implied',
+    mood: 'desperate survival, constant threat, horror',
+    dominantColors: 'gray, dried blood brown, sickly pale',
+    accentColors: 'blood red, warning yellow, zombie pale green',
+    metalTones: 'rusted, bloody, industrial',
+    overallPalette: 'desaturated survival horror',
+    style: 'Walking Dead, Last of Us survival horror',
+    textureEmphasis: 'blood, decay, makeshift repairs, weathered',
+    eraFeeling: 'modern day collapse, weeks to years into outbreak',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ⚔️ WAR GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  war: {
+    settings: ['WWI WWII trench', 'military command center', 'battlefield with smoke', 'bombed-out building', 'military base', 'aircraft carrier deck', 'war-torn urban environment'],
+    architecture: 'military structures, fortifications, bunkers, destroyed buildings, sandbag positions',
+    genreElements: 'military equipment, weapons, ammunition, maps, communication equipment, destroyed vehicles, smoke',
+    props: 'weapons era-appropriate, helmets, dog tags, field equipment, rations, medals, military insignia',
+    lightSources: 'harsh daylight, explosions illuminating scene, searchlights, muzzle flashes, fire from burning structures',
+    lightQuality: 'high contrast, dramatic, documentary-style realism',
+    colorTemperature: 'desaturated for historical, cooler tones, or warm from fires and explosions',
+    atmosphericEffects: 'smoke from explosions, dust, fog, rain, ash, gunpowder smoke',
+    mood: 'intense, gritty, realistic, dangerous, historical weight',
+    dominantColors: 'military olive drab, field gray, khaki, mud brown, steel gray',
+    accentColors: 'explosive orange, tracer fire, blood red, German gray, Allied green',
+    metalTones: 'gunmetal, weathered steel, brass casings, worn aluminum',
+    overallPalette: 'desaturated realistic period-accurate color grading',
+    style: 'gritty realism, historical accuracy, Saving Private Ryan aesthetic',
+    textureEmphasis: 'mud, worn fabric, metal, leather, dirt, weathered equipment',
+    eraFeeling: 'WWI 1914-1918, WWII 1939-1945, Vietnam, or modern warfare depending on character equipment',
+  },
+
+  ww2: {
+    settings: ['1940s European battlefield', 'bombed city', 'military camp', 'bunker interior', 'beach landing'],
+    architecture: 'period military structures, European buildings damaged, fortifications',
+    genreElements: 'period weapons, vehicles, uniforms, propaganda posters',
+    props: 'M1 Garands, Thompson SMGs, German equipment, period gear',
+    lightSources: 'harsh daylight, explosions, fires, dim interiors',
+    lightQuality: 'documentary realism, Band of Brothers style',
+    colorTemperature: 'desaturated, period film stock look',
+    atmosphericEffects: 'smoke, mud, rain, dust, explosive debris',
+    mood: 'historical gravity, brotherhood, sacrifice, war horror',
+    dominantColors: 'olive drab, field gray, khaki, mud brown',
+    accentColors: 'blood red, fire orange, muzzle flash yellow',
+    metalTones: 'gunmetal, brass, weathered steel',
+    overallPalette: 'Saving Private Ryan color grade - desaturated period',
+    style: 'WWII historical realism',
+    textureEmphasis: 'wool uniforms, leather, mud, aged metal',
+    eraFeeling: 'World War II 1939-1945',
+  },
+
+  ww1: {
+    settings: ['muddy trench', 'no mans land', 'field hospital', 'artillery position', 'gas attack'],
+    architecture: 'trenches, sandbags, barbed wire, destroyed landscape',
+    genreElements: 'gas masks, artillery shells, barbed wire, mud everywhere',
+    props: 'bolt action rifles, bayonets, trench gear, period equipment',
+    lightSources: 'overcast sky, artillery flashes, gas lamp, fires',
+    lightQuality: 'grim, overcast, oppressive',
+    colorTemperature: 'cold, muddy, desaturated',
+    atmosphericEffects: 'mustard gas clouds, mud, rain, smoke',
+    mood: 'grim, hopeless, industrial horror of war',
+    dominantColors: 'mud brown, gray, khaki, blood',
+    accentColors: 'mustard yellow gas, fire orange, blood red',
+    metalTones: 'corroded, bloody, industrial iron',
+    overallPalette: 'brown and gray mud-dominated, desaturated',
+    style: '1917 film aesthetic, WWI realism',
+    textureEmphasis: 'mud, water-logged fabric, corroded metal, blood',
+    eraFeeling: 'World War I 1914-1918 trenches',
+  },
+
+  vietnam: {
+    settings: ['jungle patrol', 'firebase', 'helicopter interior', 'village', 'river patrol boat'],
+    architecture: 'jungle, military base structures, Vietnamese buildings',
+    genreElements: 'helicopters, M16s, period equipment, jungle foliage',
+    props: 'M16 rifles, grenades, radios, period gear, peace symbols',
+    lightSources: 'harsh tropical sun, helicopter searchlights, fires',
+    lightQuality: 'humid, harsh, sweaty',
+    colorTemperature: 'warm tropical but harsh and unforgiving',
+    atmosphericEffects: 'jungle humidity, smoke, helicopter wash',
+    mood: 'surreal war, moral ambiguity, survival',
+    dominantColors: 'jungle green, mud brown, olive drab',
+    accentColors: 'blood red, fire orange, river brown',
+    metalTones: 'worn aluminum, weathered steel, brass',
+    overallPalette: 'humid tropical green-dominated',
+    style: 'Apocalypse Now, Platoon aesthetic',
+    textureEmphasis: 'sweat-soaked fabric, mud, jungle rot, worn gear',
+    eraFeeling: 'Vietnam War 1965-1975',
+  },
+
+  military: {
+    settings: ['modern military base', 'tactical operations center', 'barracks', 'training facility', 'deployed position'],
+    architecture: 'military structures, modular buildings, tactical setups',
+    genreElements: 'modern military equipment, tactical gear, communications',
+    props: 'modern weapons, body armor, helmets, tactical equipment',
+    lightSources: 'fluorescent base lighting, tactical lights, harsh exterior',
+    lightQuality: 'clinical indoors, harsh tactical outdoors',
+    colorTemperature: 'neutral to cool military',
+    atmosphericEffects: 'dust, controlled environment',
+    mood: 'professional, disciplined, tactical',
+    dominantColors: 'multicam pattern, coyote tan, olive drab, black',
+    accentColors: 'unit colors, American flag',
+    metalTones: 'black tactical, gunmetal, anodized',
+    overallPalette: 'modern tactical earth tones',
+    style: 'modern military realism',
+    textureEmphasis: 'tactical nylon, polymer, modern materials',
+    eraFeeling: 'modern military 2000s-present',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 🏡 MODERN LIFE GENRE LOCK
+  // ═══════════════════════════════════════════════════════════════
+  modern: {
+    settings: ['contemporary urban apartment', 'modern office', 'coffee shop', 'city street', 'suburban home', 'shopping district', 'gym', 'park', 'public transit'],
+    architecture: 'contemporary design, clean lines, modern materials, glass and steel, current architectural styles',
+    genreElements: 'smartphones visible, laptops, modern furniture, contemporary art, current fashion, branded products generic',
+    props: 'coffee cups, phones, headphones, modern bags, contemporary accessories, urban elements',
+    lightSources: 'natural window light, LED fluorescent lighting, street lights, neon business signs, smartphone screens',
+    lightQuality: 'natural, realistic, contemporary photography aesthetic',
+    colorTemperature: 'neutral to warm indoor lighting, natural daylight, urban night lighting',
+    atmosphericEffects: 'city haze, rain on urban streets, natural weather, clean air',
+    mood: 'contemporary, realistic, relatable, everyday life, urban energy or suburban calm',
+    dominantColors: 'neutral grays, whites, blacks, denim blues, urban neutrals',
+    accentColors: 'brand colors, fashion trends, natural tones, diverse contemporary colors',
+    metalTones: 'brushed steel, aluminum, modern metallics',
+    overallPalette: 'natural contemporary realistic color palette',
+    style: 'contemporary realism, lifestyle photography, urban documentary',
+    textureEmphasis: 'modern fabrics, concrete, glass, contemporary materials',
+    eraFeeling: 'present day 2020s, recognizable as current era',
+  },
+
+  modern_life: {
+    settings: ['apartment living room', 'coffee shop', 'office space', 'city street', 'shopping mall', 'park'],
+    architecture: 'modern residential, commercial spaces, urban environment',
+    genreElements: 'everyday modern items, technology, contemporary decor',
+    props: 'smartphones, coffee cups, laptops, everyday items',
+    lightSources: 'natural daylight, interior lighting, screen glow',
+    lightQuality: 'natural and realistic, lifestyle photography',
+    colorTemperature: 'warm and inviting or cool and urban',
+    atmosphericEffects: 'natural weather, city atmosphere',
+    mood: 'relatable, comfortable, everyday',
+    dominantColors: 'neutrals, natural tones, urban grays',
+    accentColors: 'personal style colors, brand colors',
+    metalTones: 'modern stainless, aluminum',
+    overallPalette: 'natural realistic contemporary',
+    style: 'lifestyle photography, slice of life',
+    textureEmphasis: 'everyday fabrics, modern materials',
+    eraFeeling: 'present day contemporary',
+  },
+
+  contemporary: {
+    settings: ['modern city', 'contemporary home', 'urban environment', 'business district'],
+    architecture: 'current architectural styles, glass and steel',
+    genreElements: 'modern technology, contemporary fashion',
+    props: 'current technology, modern accessories',
+    lightSources: 'natural and artificial modern lighting',
+    lightQuality: 'realistic contemporary',
+    colorTemperature: 'natural modern',
+    atmosphericEffects: 'urban atmosphere',
+    mood: 'current, realistic, grounded',
+    dominantColors: 'urban neutrals, contemporary palette',
+    accentColors: 'modern accent colors',
+    metalTones: 'contemporary metals',
+    overallPalette: 'realistic modern palette',
+    style: 'contemporary realism',
+    textureEmphasis: 'modern materials and fabrics',
+    eraFeeling: 'current day',
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ADDITIONAL GENRES
+  // ═══════════════════════════════════════════════════════════════
   
-  // Fantasy
-  fantasy: { 
-    setting: 'enchanted fantasy realm', 
-    atmosphere: 'magical mystical wonder', 
-    elements: 'ancient castle, enchanted forest, mystical lighting' 
+  steampunk: {
+    settings: ['Victorian factory with brass machinery', 'airship interior', 'clockwork laboratory', 'steam-powered city street'],
+    architecture: 'Victorian industrial, brass and copper pipes, gears visible',
+    genreElements: 'clockwork mechanisms, steam vents, brass goggles, cogs',
+    props: 'goggles, mechanical arms, brass weapons, pocket watches, gears',
+    lightSources: 'gas lamps, furnace glow, steam-filtered light',
+    lightQuality: 'warm industrial, brass reflections',
+    colorTemperature: 'warm brass and copper tones',
+    atmosphericEffects: 'steam clouds, coal smoke, industrial haze',
+    mood: 'inventive, adventurous, industrial romance',
+    dominantColors: 'brass gold, copper brown, leather tan, iron gray',
+    accentColors: 'polished brass, copper, emerald green',
+    metalTones: 'brass, copper, bronze, iron',
+    overallPalette: 'warm metallic Victorian',
+    style: 'Victorian science fiction, retro-futurism',
+    textureEmphasis: 'brass, leather, wood, gears, rivets',
+    eraFeeling: 'alternate Victorian era with steam technology',
   },
-  medieval: { 
-    setting: 'medieval castle or village', 
-    atmosphere: 'historical medieval authenticity', 
-    elements: 'stone walls, timber buildings, period architecture' 
+
+  victorian: {
+    settings: ['London street with gas lamps', 'Victorian parlor', 'industrial factory', 'foggy docks'],
+    architecture: 'Victorian buildings, ornate ironwork, industrial structures',
+    genreElements: 'gas lamps, cobblestones, horse carriages, period dress',
+    props: 'walking canes, pocket watches, period clothing, newspapers',
+    lightSources: 'gas lamps, candles, firelight, foggy daylight',
+    lightQuality: 'atmospheric, foggy, romantic',
+    colorTemperature: 'warm gas light, cool fog',
+    atmosphericEffects: 'London fog, coal smoke, rain',
+    mood: 'mysterious, elegant, industrial age',
+    dominantColors: 'dark browns, blacks, deep reds, gray',
+    accentColors: 'brass, gold trim, deep jewel tones',
+    metalTones: 'brass, iron, silver',
+    overallPalette: 'dark elegant Victorian',
+    style: 'Victorian London, Sherlock Holmes aesthetic',
+    textureEmphasis: 'wool, velvet, leather, stone, iron',
+    eraFeeling: 'Victorian era 1837-1901',
   },
-  dark_fantasy: { 
-    setting: 'dark gothic fantasy realm', 
-    atmosphere: 'ominous dark magic, gothic horror', 
-    elements: 'cursed castle, dead trees, eerie fog' 
+
+  superhero: {
+    settings: ['city rooftop at night', 'secret base', 'urban skyline', 'dramatic sky backdrop'],
+    architecture: 'modern city, dramatic vertical spaces',
+    genreElements: 'hero silhouettes, dramatic lighting, action potential',
+    props: 'hero gear, dramatic capes, symbols',
+    lightSources: 'dramatic backlighting, city lights, lightning',
+    lightQuality: 'dramatic, high contrast, heroic',
+    colorTemperature: 'bold and dramatic',
+    atmosphericEffects: 'dramatic clouds, wind, energy effects',
+    mood: 'heroic, powerful, larger than life',
+    dominantColors: 'bold primary colors, dramatic darks',
+    accentColors: 'hero colors - red, blue, gold',
+    metalTones: 'polished hero metals',
+    overallPalette: 'bold superhero comic colors',
+    style: 'comic book hero, cinematic superhero',
+    textureEmphasis: 'hero suit materials, dramatic fabrics',
+    eraFeeling: 'modern superhero',
   },
-  high_fantasy: { 
-    setting: 'magical fantasy kingdom', 
-    atmosphere: 'bright heroic fantasy, magical wonder', 
-    elements: 'crystal spires, magical auras, enchanted landscape' 
+
+  samurai: {
+    settings: ['Japanese castle', 'bamboo forest', 'Zen garden', 'feudal village', 'battlefield'],
+    architecture: 'traditional Japanese architecture, castle walls, wooden buildings',
+    genreElements: 'cherry blossoms, paper screens, tatami, katanas',
+    props: 'katanas, samurai armor, fans, scrolls, tea ceremony items',
+    lightSources: 'paper lanterns, natural light, sunset',
+    lightQuality: 'soft and atmospheric, or harsh battle light',
+    colorTemperature: 'warm natural or cool moonlit',
+    atmosphericEffects: 'cherry blossom petals, mist, incense smoke',
+    mood: 'honorable, disciplined, beautiful violence',
+    dominantColors: 'black, red, white, gold, nature greens',
+    accentColors: 'blood red, cherry blossom pink, gold trim',
+    metalTones: 'polished steel, gold, lacquered',
+    overallPalette: 'Japanese traditional colors',
+    style: 'feudal Japan, samurai film aesthetic',
+    textureEmphasis: 'silk, lacquer, folded steel, bamboo, paper',
+    eraFeeling: 'feudal Japan Sengoku to Edo period',
   },
-  sword_sorcery: { 
-    setting: 'barbaric ancient world', 
-    atmosphere: 'raw primal fantasy, ancient mysteries', 
-    elements: 'ancient ruins, mystical temples, savage wilderness' 
+
+  wuxia: {
+    settings: ['Chinese mountain temple', 'bamboo forest', 'ancient martial arts school', 'teahouse'],
+    architecture: 'traditional Chinese architecture, pagodas, bridges',
+    genreElements: 'martial arts poses, flowing robes, ancient weapons',
+    props: 'jian swords, staffs, tea sets, scrolls, martial arts weapons',
+    lightSources: 'dramatic natural light, lanterns, mystical glow',
+    lightQuality: 'cinematic, wire-fu dramatic',
+    colorTemperature: 'varied dramatic',
+    atmosphericEffects: 'mist, cherry blossoms, dramatic wind',
+    mood: 'honor, martial excellence, romantic adventure',
+    dominantColors: 'red, gold, white, black, jade green',
+    accentColors: 'imperial yellow, vermillion red',
+    metalTones: 'ancient bronze, jade, gold',
+    overallPalette: 'traditional Chinese cinema colors',
+    style: 'Wuxia martial arts cinema, Crouching Tiger aesthetic',
+    textureEmphasis: 'silk, jade, ancient metals, natural materials',
+    eraFeeling: 'mythic ancient China',
   },
-  sword_and_sorcery: { 
-    setting: 'barbaric ancient world', 
-    atmosphere: 'raw primal fantasy, ancient mysteries', 
-    elements: 'ancient ruins, mystical temples, savage wilderness' 
+
+  urban_fantasy: {
+    settings: ['modern city with hidden magic', 'supernatural bar', 'magical shop in alley', 'urban ritual space'],
+    architecture: 'modern buildings with hidden magical elements',
+    genreElements: 'hidden magical symbols, supernatural beings in modern clothes',
+    props: 'enchanted modern items, hidden weapons, magical talismans',
+    lightSources: 'neon mixed with magical glow, urban lighting',
+    lightQuality: 'modern with supernatural accents',
+    colorTemperature: 'urban cool with magical warm accents',
+    atmosphericEffects: 'subtle magic effects, urban weather',
+    mood: 'hidden world, modern magic, secret supernatural',
+    dominantColors: 'urban grays with magical colors',
+    accentColors: 'magical blues, purples, supernatural green',
+    metalTones: 'modern and ancient mixed',
+    overallPalette: 'modern urban with magical highlights',
+    style: 'Dresden Files, modern supernatural',
+    textureEmphasis: 'modern clothes with magical accessories',
+    eraFeeling: 'modern day with hidden supernatural',
   },
-  
-  // Horror
-  horror: { 
-    setting: 'haunted location', 
-    atmosphere: 'creeping dread, supernatural menace', 
-    elements: 'abandoned building, fog, eerie lighting' 
+
+  grimdark: {
+    settings: ['brutal medieval battlefield', 'corrupt castle', 'plague-ridden city', 'dark forest'],
+    architecture: 'harsh medieval, functional brutality',
+    genreElements: 'blood, mud, moral ambiguity, harsh reality',
+    props: 'practical weapons, worn armor, survival gear',
+    lightSources: 'overcast, fires, harsh natural light',
+    lightQuality: 'grim, unforgiving, realistic',
+    colorTemperature: 'cold and harsh',
+    atmosphericEffects: 'rain, mud, blood, smoke',
+    mood: 'brutal, morally gray, survival, hopeless',
+    dominantColors: 'mud brown, blood red, steel gray, black',
+    accentColors: 'dried blood, rust, sickly pale',
+    metalTones: 'weathered steel, rusted iron, blood-stained',
+    overallPalette: 'desaturated brutal realism',
+    style: 'Game of Thrones dark, grimdark fantasy',
+    textureEmphasis: 'blood, mud, worn metal, tattered cloth',
+    eraFeeling: 'brutal dark ages fantasy',
   },
-  vampire: { 
-    setting: 'gothic castle or cemetery', 
-    atmosphere: 'aristocratic darkness, eternal night', 
-    elements: 'moonlit architecture, gothic elements, candlelight' 
+
+  romance: {
+    settings: ['romantic restaurant', 'sunset beach', 'garden party', 'cozy cafe', 'elegant ballroom'],
+    architecture: 'elegant, romantic, inviting spaces',
+    genreElements: 'flowers, soft furnishings, romantic ambiance',
+    props: 'flowers, wine glasses, love letters, elegant accessories',
+    lightSources: 'candles, golden hour sun, soft ambient',
+    lightQuality: 'soft, flattering, warm',
+    colorTemperature: 'warm golden, romantic pink',
+    atmosphericEffects: 'soft focus, gentle breezes, flower petals',
+    mood: 'romantic, intimate, hopeful, emotional',
+    dominantColors: 'soft pink, cream, gold, white',
+    accentColors: 'rose red, champagne gold, blush',
+    metalTones: 'rose gold, polished gold, silver',
+    overallPalette: 'soft romantic pastels and warm tones',
+    style: 'romantic drama, love story',
+    textureEmphasis: 'silk, lace, flowers, soft fabrics',
+    eraFeeling: 'timeless romantic',
   },
-  werewolf: { 
-    setting: 'foggy wilderness under full moon', 
-    atmosphere: 'bestial horror, primal fear', 
-    elements: 'full moon, dark forest, mist, wild nature' 
+
+  slice_of_life: {
+    settings: ['home interior', 'neighborhood street', 'local shop', 'park bench', 'school'],
+    architecture: 'everyday buildings, comfortable spaces',
+    genreElements: 'ordinary life, comfortable normalcy',
+    props: 'everyday items, personal belongings',
+    lightSources: 'natural daylight, comfortable interior lighting',
+    lightQuality: 'natural, warm, inviting',
+    colorTemperature: 'warm and comfortable',
+    atmosphericEffects: 'natural weather, comfortable atmosphere',
+    mood: 'warm, relatable, comfortable, nostalgic',
+    dominantColors: 'warm naturals, comfortable tones',
+    accentColors: 'personal accent colors',
+    metalTones: 'everyday metals',
+    overallPalette: 'warm comfortable naturalistic',
+    style: 'everyday realism, comfortable normalcy',
+    textureEmphasis: 'comfortable everyday materials',
+    eraFeeling: 'contemporary everyday life',
   },
-  lovecraft: { 
-    setting: '1920s New England', 
-    atmosphere: 'cosmic horror, eldritch unease', 
-    elements: 'old buildings, mysterious shadows, unsettling geometry' 
+
+  spy: {
+    settings: ['luxury casino', 'secret base', 'exotic location', 'high-tech facility', 'embassy gala'],
+    architecture: 'elegant international, high-security, luxury',
+    genreElements: 'hidden weapons, surveillance equipment, disguises',
+    props: 'concealed weapons, gadgets, formal wear, champagne',
+    lightSources: 'elegant lighting, dramatic shadows, screen glow',
+    lightQuality: 'sophisticated, dramatic, international',
+    colorTemperature: 'cool and sophisticated with warm accents',
+    atmosphericEffects: 'cigarette smoke, tension',
+    mood: 'sophisticated danger, international intrigue, cool competence',
+    dominantColors: 'black, midnight blue, silver, gold',
+    accentColors: 'blood red, gold, martini clear',
+    metalTones: 'polished chrome, gold, gunmetal',
+    overallPalette: 'sophisticated international spy',
+    style: 'James Bond, modern espionage',
+    textureEmphasis: 'fine suits, polished metal, luxury materials',
+    eraFeeling: 'modern international spy',
   },
-  lovecraftian: { 
-    setting: '1920s New England', 
-    atmosphere: 'cosmic horror, eldritch unease', 
-    elements: 'old buildings, mysterious shadows, unsettling geometry' 
+
+  crime: {
+    settings: ['dark alley', 'interrogation room', 'crime scene', 'underworld bar', 'prison'],
+    architecture: 'urban decay, institutional, underground',
+    genreElements: 'evidence, weapons, criminal elements',
+    props: 'guns, money, evidence, criminal tools',
+    lightSources: 'harsh interrogation, neon signs, street lights',
+    lightQuality: 'harsh, unflattering, dramatic',
+    colorTemperature: 'cold and harsh',
+    atmosphericEffects: 'smoke, rain, urban grime',
+    mood: 'dangerous, gritty, morally complex',
+    dominantColors: 'black, gray, blood red, neon',
+    accentColors: 'neon, blood red, money green',
+    metalTones: 'gunmetal, chrome, rusted',
+    overallPalette: 'gritty urban crime',
+    style: 'crime drama, neo-noir',
+    textureEmphasis: 'leather, concrete, metal, urban grime',
+    eraFeeling: 'modern urban crime',
   },
-  cosmic_horror: { 
-    setting: 'reality-bending space', 
-    atmosphere: 'incomprehensible cosmic dread', 
-    elements: 'impossible geometry, stars, void' 
+
+  mecha: {
+    settings: ['giant robot hangar', 'cockpit interior', 'military base', 'destroyed city'],
+    architecture: 'massive scale industrial, military facilities',
+    genreElements: 'giant robots, pilot suits, military tech',
+    props: 'pilot suits, interface equipment, military gear',
+    lightSources: 'industrial lighting, cockpit glow, dramatic external',
+    lightQuality: 'industrial and dramatic',
+    colorTemperature: 'cool tech with warm cockpit',
+    atmosphericEffects: 'steam, sparks, dramatic lighting',
+    mood: 'epic scale, military drama, technological wonder',
+    dominantColors: 'military colors, steel, dramatic accents',
+    accentColors: 'unit colors, warning colors, energy effects',
+    metalTones: 'massive industrial metals',
+    overallPalette: 'military industrial with unit accents',
+    style: 'Gundam, mecha anime aesthetic',
+    textureEmphasis: 'pilot suits, industrial metal, tech interfaces',
+    eraFeeling: 'futuristic mecha warfare',
   },
-  
-  // Historical
-  western: { 
-    setting: 'wild west frontier', 
-    atmosphere: 'dusty frontier lawlessness', 
-    elements: 'desert canyon, wooden buildings, dusty streets' 
+
+  dystopia: {
+    settings: ['oppressive city', 'propaganda plaza', 'surveillance state', 'resistance hideout'],
+    architecture: 'brutalist, oppressive, uniform',
+    genreElements: 'surveillance, propaganda, control symbols',
+    props: 'identification papers, resistance symbols, propaganda',
+    lightSources: 'harsh industrial, searchlights, screen glow',
+    lightQuality: 'harsh, clinical, oppressive',
+    colorTemperature: 'cold and sterile',
+    atmosphericEffects: 'smog, industrial haze',
+    mood: 'oppressive, resistant, paranoid, hopeful rebellion',
+    dominantColors: 'gray, concrete, uniform colors, black',
+    accentColors: 'propaganda red, resistance colors',
+    metalTones: 'industrial steel, surveillance chrome',
+    overallPalette: 'oppressive industrial monotone',
+    style: '1984, Hunger Games dystopia',
+    textureEmphasis: 'concrete, uniform fabric, industrial',
+    eraFeeling: 'totalitarian dystopian future',
   },
-  noir: { 
-    setting: '1940s noir city', 
-    atmosphere: 'shadowy mystery, moral ambiguity', 
-    elements: 'rain-slicked streets, neon signs, venetian blind shadows' 
+
+  comedy: {
+    settings: ['bright everyday location', 'colorful environment', 'casual social space'],
+    architecture: 'normal but with comedic potential',
+    genreElements: 'everyday absurdity, colorful props',
+    props: 'everyday items with comedic potential',
+    lightSources: 'bright natural lighting',
+    lightQuality: 'bright, even, flattering',
+    colorTemperature: 'warm and inviting',
+    atmosphericEffects: 'bright and clear',
+    mood: 'lighthearted, fun, energetic',
+    dominantColors: 'bright, cheerful colors',
+    accentColors: 'vibrant accent colors',
+    metalTones: 'bright and reflective',
+    overallPalette: 'bright cheerful comedy',
+    style: 'comedy, sitcom aesthetic',
+    textureEmphasis: 'everyday comfortable materials',
+    eraFeeling: 'contemporary comedy',
   },
-  victorian: { 
-    setting: 'Victorian era London', 
-    atmosphere: 'industrial age elegance and grime', 
-    elements: 'gas lamps, cobblestones, period architecture' 
+
+  heist: {
+    settings: ['museum at night', 'bank vault', 'casino floor', 'planning room with blueprints'],
+    architecture: 'high-security locations, elegant targets',
+    genreElements: 'security systems, blueprints, disguises',
+    props: 'tools, blueprints, disguises, tech equipment',
+    lightSources: 'security lighting, dramatic shadows',
+    lightQuality: 'dramatic thriller lighting',
+    colorTemperature: 'cool and tense',
+    atmosphericEffects: 'tension, laser beams, alarms',
+    mood: 'tense, clever, exciting, precise',
+    dominantColors: 'black, dark blue, silver, gold targets',
+    accentColors: 'laser red, gold, security green',
+    metalTones: 'vault steel, gold, chrome',
+    overallPalette: 'sophisticated heist thriller',
+    style: "Ocean's Eleven, heist thriller",
+    textureEmphasis: 'tactical gear, formal wear, high-tech',
+    eraFeeling: 'modern sophisticated heist',
   },
-  renaissance: { 
-    setting: 'Italian Renaissance city', 
-    atmosphere: 'artistic golden age, intrigue', 
-    elements: 'palazzo architecture, marble, artistic grandeur' 
+
+  supervillain: {
+    settings: ['villainous lair', 'destroyed cityscape', 'dark throne room', 'secret base'],
+    architecture: 'dramatic evil aesthetic, intimidating scale',
+    genreElements: 'villain iconography, destruction, power symbols',
+    props: 'villain weapons, dramatic props, power artifacts',
+    lightSources: 'dramatic underlighting, energy effects, ominous',
+    lightQuality: 'dramatic villain lighting',
+    colorTemperature: 'dramatic and threatening',
+    atmosphericEffects: 'smoke, energy effects, destruction',
+    mood: 'powerful, menacing, theatrical evil',
+    dominantColors: 'black, dark purple, blood red, silver',
+    accentColors: 'villain energy colors, power effects',
+    metalTones: 'dark metals, chrome, dramatic gold',
+    overallPalette: 'dramatic villain aesthetic',
+    style: 'comic book villain, theatrical evil',
+    textureEmphasis: 'dramatic costume materials, power effects',
+    eraFeeling: 'theatrical supervillain',
   },
-  ancient: { 
-    setting: 'ancient classical world', 
-    atmosphere: 'timeless antiquity, mythic grandeur', 
-    elements: 'Roman forum, Greek temples, classical columns' 
+
+  survival: {
+    settings: ['wilderness camp', 'mountain terrain', 'forest survival shelter', 'harsh environment'],
+    architecture: 'natural or improvised shelters',
+    genreElements: 'survival gear, natural challenges, resourcefulness',
+    props: 'survival tools, improvised equipment, natural materials',
+    lightSources: 'natural light, campfire, harsh elements',
+    lightQuality: 'natural and harsh',
+    colorTemperature: 'natural environment colors',
+    atmosphericEffects: 'weather, natural atmosphere',
+    mood: 'survival, determination, human vs nature',
+    dominantColors: 'natural greens, earth browns, sky colors',
+    accentColors: 'survival gear colors, fire orange',
+    metalTones: 'survival tools, weathered',
+    overallPalette: 'natural wilderness survival',
+    style: 'survival realism, man vs wild',
+    textureEmphasis: 'outdoor gear, natural materials',
+    eraFeeling: 'timeless wilderness survival',
   },
-  ancient_rome: { 
-    setting: 'ancient Roman Empire', 
-    atmosphere: 'imperial grandeur, classical civilization', 
-    elements: 'Roman architecture, columns, marble' 
+
+  cold_war: {
+    settings: ['Berlin Wall', 'Soviet office', 'CIA safe house', 'Eastern European street'],
+    architecture: 'Cold War era buildings, brutalist Soviet',
+    genreElements: 'period technology, surveillance equipment, propaganda',
+    props: 'period spy equipment, documents, period weapons',
+    lightSources: 'harsh fluorescent, period lighting',
+    lightQuality: 'cold and institutional',
+    colorTemperature: 'cold, institutional',
+    atmosphericEffects: 'fog, tension, paranoia',
+    mood: 'paranoid, tense, ideological conflict',
+    dominantColors: 'gray, brown, muted Soviet colors',
+    accentColors: 'red Soviet, American blue',
+    metalTones: 'industrial Soviet, period metals',
+    overallPalette: 'desaturated Cold War period',
+    style: 'Cold War thriller, period espionage',
+    textureEmphasis: 'period fabrics, institutional materials',
+    eraFeeling: 'Cold War era 1950s-1989',
   },
-  ancient_greece: { 
-    setting: 'ancient Greek city-state', 
-    atmosphere: 'philosophical golden age', 
-    elements: 'Greek temples, olive groves, Mediterranean' 
+
+  space_opera: {
+    settings: ['starship bridge', 'alien planet', 'space station', 'galactic senate'],
+    architecture: 'grand space structures, alien architecture',
+    genreElements: 'diverse aliens, space technology, galactic scope',
+    props: 'blasters, communicators, space equipment',
+    lightSources: 'starship lighting, alien suns, dramatic space',
+    lightQuality: 'cinematic space drama',
+    colorTemperature: 'varied dramatic',
+    atmosphericEffects: 'space views, alien atmospheres',
+    mood: 'epic, adventurous, dramatic',
+    dominantColors: 'space black, starship colors, alien hues',
+    accentColors: 'energy weapons, alien colors',
+    metalTones: 'starship alloys, alien metals',
+    overallPalette: 'epic space opera',
+    style: 'Star Wars, space opera epic',
+    textureEmphasis: 'space materials, alien textures',
+    eraFeeling: 'galactic civilization',
   },
-  
-  // Punk genres
-  steampunk: { 
-    setting: 'steampunk Victorian city', 
-    atmosphere: 'brass and steam technology, retro-futurism', 
-    elements: 'clockwork machinery, steam pipes, brass and copper' 
+
+  mythology: {
+    settings: ['divine realm', 'ancient temple', 'mythic landscape', 'celestial plane'],
+    architecture: 'divine temples, mythic structures',
+    genreElements: 'divine symbols, mythic creatures, sacred objects',
+    props: 'divine weapons, sacred artifacts, mythic items',
+    lightSources: 'divine light, mythic glow, celestial',
+    lightQuality: 'ethereal and divine',
+    colorTemperature: 'warm divine or varied by pantheon',
+    atmosphericEffects: 'divine mist, celestial light',
+    mood: 'mythic, divine, legendary',
+    dominantColors: 'divine gold, celestial colors',
+    accentColors: 'deity-specific colors',
+    metalTones: 'divine gold, mythic metals',
+    overallPalette: 'mythic divine palette',
+    style: 'classical mythology, divine epic',
+    textureEmphasis: 'divine materials, mythic elements',
+    eraFeeling: 'timeless mythological',
   },
-  dieselpunk: { 
-    setting: '1930s-40s retro-futuristic city', 
-    atmosphere: 'art deco industrial power', 
-    elements: 'art deco architecture, massive machines, propaganda' 
+
+  renaissance: {
+    settings: ['Italian palazzo', 'art studio', 'court gathering', 'Renaissance street'],
+    architecture: 'Renaissance architecture, classical revival',
+    genreElements: 'art, intrigue, classical revival, humanism',
+    props: 'art materials, period weapons, fine clothing',
+    lightSources: 'natural light through grand windows, candles',
+    lightQuality: 'Renaissance painting light, chiaroscuro',
+    colorTemperature: 'warm and golden',
+    atmosphericEffects: 'artistic atmosphere, dust motes',
+    mood: 'artistic, political intrigue, cultural flowering',
+    dominantColors: 'rich reds, golds, greens, Renaissance palette',
+    accentColors: 'Medici colors, artistic pigments',
+    metalTones: 'Renaissance gold, bronze',
+    overallPalette: 'Renaissance painting palette',
+    style: 'Italian Renaissance, Borgia aesthetic',
+    textureEmphasis: 'velvet, silk, marble, fine materials',
+    eraFeeling: 'Italian Renaissance 1400-1600',
   },
-  atompunk: { 
-    setting: '1950s atomic age future', 
-    atmosphere: 'retro-futuristic optimism', 
-    elements: 'atomic symbols, chrome and fins, Jetsons aesthetic' 
+
+  ancient: {
+    settings: ['Roman forum', 'Greek temple', 'Egyptian palace', 'ancient battlefield'],
+    architecture: 'classical ancient architecture, columns, temples',
+    genreElements: 'ancient warfare, classical culture, mythology',
+    props: 'ancient weapons, classical items, period artifacts',
+    lightSources: 'Mediterranean sun, torches, oil lamps',
+    lightQuality: 'classical drama lighting',
+    colorTemperature: 'warm Mediterranean',
+    atmosphericEffects: 'dust, incense smoke, ancient atmosphere',
+    mood: 'classical, epic, foundational',
+    dominantColors: 'marble white, bronze, terracotta, deep purple',
+    accentColors: 'imperial purple, gold, blood red',
+    metalTones: 'bronze, gold, iron',
+    overallPalette: 'classical ancient palette',
+    style: 'Gladiator, classical epic',
+    textureEmphasis: 'marble, bronze, linen, leather',
+    eraFeeling: 'classical antiquity, Rome and Greece',
   },
-  solarpunk: { 
-    setting: 'eco-futuristic utopia', 
-    atmosphere: 'sustainable green future', 
-    elements: 'vertical gardens, solar panels, nature and technology merged' 
+
+  dieselpunk: {
+    settings: ['1930s-40s retro-futuristic city', 'art deco factory', 'wartime technology'],
+    architecture: 'art deco, industrial might, massive machines',
+    genreElements: 'diesel-powered tech, art deco design, propaganda',
+    props: 'retro-futuristic weapons, period technology',
+    lightSources: 'industrial lighting, dramatic shadows',
+    lightQuality: 'dramatic industrial',
+    colorTemperature: 'warm industrial',
+    atmosphericEffects: 'diesel smoke, industrial atmosphere',
+    mood: 'industrial power, art deco elegance, wartime',
+    dominantColors: 'art deco gold, industrial gray, propaganda red',
+    accentColors: 'chrome silver, brass, military colors',
+    metalTones: 'chrome, brass, industrial steel',
+    overallPalette: 'art deco industrial',
+    style: 'art deco retro-futurism',
+    textureEmphasis: 'chrome, leather, industrial materials',
+    eraFeeling: '1930s-1940s alternate history',
   },
-  
-  // Adventure
-  pirate: { 
-    setting: 'Caribbean pirate ship or port', 
-    atmosphere: 'swashbuckling high seas adventure', 
-    elements: 'ship deck, tropical port, treasure, sails' 
-  },
-  nautical: { 
-    setting: 'maritime setting', 
-    atmosphere: 'ocean adventure, seafaring life', 
-    elements: 'ships, docks, ocean, maritime equipment' 
-  },
-  exploration: { 
-    setting: 'uncharted wilderness', 
-    atmosphere: 'discovery and adventure', 
-    elements: 'jungle, ruins, expedition camp' 
-  },
-  
-  // Thriller/Crime
-  mystery: { 
-    setting: 'atmospheric mystery location', 
-    atmosphere: 'puzzling intrigue, hidden secrets', 
-    elements: 'study, clues, Victorian or noir aesthetics' 
-  },
-  spy: { 
-    setting: 'sophisticated spy location', 
-    atmosphere: 'international intrigue, high stakes', 
-    elements: 'luxury casino, secret base, exotic locale' 
-  },
-  espionage: { 
-    setting: 'Cold War spy setting', 
-    atmosphere: 'covert operations, danger', 
-    elements: 'safe houses, surveillance, hidden weapons' 
-  },
-  crime: { 
-    setting: 'urban crime scene', 
-    atmosphere: 'gritty underworld tension', 
-    elements: 'dark alley, city night, urban environment' 
-  },
-  heist: { 
-    setting: 'high-security target location', 
-    atmosphere: 'precision theft, high stakes', 
-    elements: 'museum, vault, security systems, night operation' 
-  },
-  thriller: { 
-    setting: 'tense thriller environment', 
-    atmosphere: 'suspense and danger', 
-    elements: 'urban setting, shadows, tension' 
-  },
-  
-  // Superhero
-  superhero: { 
-    setting: 'heroic cityscape', 
-    atmosphere: 'larger than life heroism', 
-    elements: 'city rooftop, dramatic sky, urban backdrop' 
-  },
-  supervillain: { 
-    setting: 'villainous lair', 
-    atmosphere: 'menacing power, dark ambition', 
-    elements: 'secret base, technology, destruction' 
-  },
-  comic_book: { 
-    setting: 'dynamic comic scene', 
-    atmosphere: 'bold heroic drama', 
-    elements: 'city, action, dramatic lighting' 
-  },
-  
-  // Slice of life & Drama
-  slice_of_life: { 
-    setting: 'everyday comfortable location', 
-    atmosphere: 'warm familiar comfort', 
-    elements: 'cozy home, neighborhood, everyday spaces' 
-  },
-  romance: { 
-    setting: 'romantic setting', 
-    atmosphere: 'intimate warmth, emotional connection', 
-    elements: 'soft lighting, elegant venue, romantic ambiance' 
-  },
-  comedy: { 
-    setting: 'bright everyday setting', 
-    atmosphere: 'lighthearted fun, vibrant energy', 
-    elements: 'colorful environment, casual spaces' 
-  },
-  drama: { 
-    setting: 'emotionally charged setting', 
-    atmosphere: 'intense personal drama', 
-    elements: 'intimate spaces, meaningful locations' 
-  },
-  
-  // Mythological
-  mythology: { 
-    setting: 'mythological realm', 
-    atmosphere: 'divine legend, ancient power', 
-    elements: 'temples, divine symbols, mythic landscape' 
-  },
-  greek_mythology: { 
-    setting: 'Mount Olympus or ancient Greece', 
-    atmosphere: 'divine Greek mythology', 
-    elements: 'Greek temples, clouds, divine lighting' 
-  },
-  norse_mythology: { 
-    setting: 'Nordic mythological realm', 
-    atmosphere: 'Viking mythology, runic power', 
-    elements: 'Yggdrasil, runes, Norse architecture' 
-  },
-  
-  // Asian-inspired
-  wuxia: { 
-    setting: 'ancient Chinese martial world', 
-    atmosphere: 'martial arts epic, honor and skill', 
-    elements: 'bamboo forests, temples, mountains' 
-  },
-  xianxia: { 
-    setting: 'celestial cultivation realm', 
-    atmosphere: 'immortal cultivation, cosmic power', 
-    elements: 'floating mountains, mystical clouds, cultivation sect' 
-  },
-  samurai: { 
-    setting: 'feudal Japan', 
-    atmosphere: 'bushido honor, Japanese aesthetics', 
-    elements: 'Japanese castle, cherry blossoms, traditional architecture' 
-  },
-  
-  // Misc
-  urban_fantasy: { 
-    setting: 'modern city with hidden magic', 
-    atmosphere: 'magic hidden in modern world', 
-    elements: 'city streets, hidden magical elements, urban night' 
-  },
-  grimdark: { 
-    setting: 'brutal dark fantasy world', 
-    atmosphere: 'grim hopeless darkness, moral gray', 
-    elements: 'mud, blood, dark castles, bleak landscape' 
-  },
-  apocalyptic: { 
-    setting: 'world ending catastrophe', 
-    atmosphere: 'final days, desperate survival', 
-    elements: 'destruction, fire, chaos' 
-  },
-  dystopia: { 
-    setting: 'oppressive dystopian society', 
-    atmosphere: 'totalitarian control, resistance', 
-    elements: 'propaganda, brutalist architecture, surveillance' 
-  },
-  utopia: { 
-    setting: 'perfect society', 
-    atmosphere: 'harmonious idealism', 
-    elements: 'gleaming cities, gardens, peace' 
+
+  exploration: {
+    settings: ['uncharted wilderness', 'ancient ruins discovery', 'expedition camp', 'mysterious island'],
+    architecture: 'natural environments, discovered ruins',
+    genreElements: 'discovery, adventure, unknown territories',
+    props: 'expedition equipment, maps, discovery tools',
+    lightSources: 'natural light, campfires, torches',
+    lightQuality: 'adventure natural lighting',
+    colorTemperature: 'natural environment',
+    atmosphericEffects: 'jungle mist, ancient dust, adventure atmosphere',
+    mood: 'discovery, adventure, wonder, danger',
+    dominantColors: 'jungle greens, ancient stone, adventure khaki',
+    accentColors: 'treasure gold, discovery colors',
+    metalTones: 'expedition brass, ancient bronze',
+    overallPalette: 'adventure exploration palette',
+    style: 'Indiana Jones, adventure discovery',
+    textureEmphasis: 'expedition gear, natural materials, ancient stone',
+    eraFeeling: 'adventure era exploration',
   },
 };
+
+// Function to build genre visual description from lock
+function buildGenreVisualDescription(genreKey: string): string {
+  const lock = GENRE_VISUAL_LOCKS[genreKey] || GENRE_VISUAL_LOCKS['fantasy'];
+  
+  const setting = lock.settings[Math.floor(Math.random() * lock.settings.length)];
+  
+  const parts = [
+    `BACKGROUND ENVIRONMENT: ${setting}`,
+    `Architecture: ${lock.architecture}`,
+    `Genre elements: ${lock.genreElements}`,
+    `LIGHTING: ${lock.lightSources}, ${lock.lightQuality}`,
+    `Color temperature: ${lock.colorTemperature}`,
+    `Atmospheric effects: ${lock.atmosphericEffects}`,
+    `MOOD: ${lock.mood}`,
+    `COLOR PALETTE: Dominant colors ${lock.dominantColors}, accent colors ${lock.accentColors}`,
+    `Metal tones: ${lock.metalTones}`,
+    `Overall palette: ${lock.overallPalette}`,
+    `AESTHETIC: ${lock.style}, texture emphasis ${lock.textureEmphasis}, era feeling ${lock.eraFeeling}`,
+  ];
+
+  if (lock.criticalNotes) {
+    parts.push(lock.criticalNotes);
+  }
+
+  return parts.join('. ');
+}
 
 // ============================================================================
 // ROLE STYLES - Character occupation/class descriptions
