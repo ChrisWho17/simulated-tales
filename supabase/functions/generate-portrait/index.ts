@@ -877,6 +877,7 @@ function buildLockedReferencePrompt(body: any) {
   const finalClothing = clothingOverride || roleStyle;
   
   // Build the realistic portrait prompt with all character creation settings
+  // CRITICAL: Body modifications MUST appear early in the prompt for FLUX to render them
   const promptParts = [
     // Core realistic photo style with knee-to-head framing
     PORTRAIT_STYLE_BASE,
@@ -888,13 +889,49 @@ function buildLockedReferencePrompt(body: any) {
     `skin: ${skinDesc}`,
     `hair: ${hairColorDesc}, ${hairStyleDesc}`,
     `eyes: ${eyeColorDesc}`,
+  ];
+  
+  // BODY MODIFICATIONS - MUST be early in prompt for AI to render them
+  // Split into visible facial/body mods for emphasis
+  if (bodyModParts.length > 0) {
+    // Categorize by visibility
+    const facialMods = bodyModParts.filter(m => 
+      m.toLowerCase().includes('face') || 
+      m.toLowerCase().includes('eyebrow') || 
+      m.toLowerCase().includes('nose') || 
+      m.toLowerCase().includes('lip') || 
+      m.toLowerCase().includes('tongue') || 
+      m.toLowerCase().includes('ear') ||
+      m.toLowerCase().includes('septum') ||
+      m.toLowerCase().includes('monroe') ||
+      m.toLowerCase().includes('labret') ||
+      m.toLowerCase().includes('jaw') ||
+      m.toLowerCase().includes('eye') ||
+      m.toLowerCase().includes('cheek')
+    );
     
-    // BODY MODIFICATIONS - High priority, listed explicitly
-    bodyModParts.length > 0 ? `IMPORTANT body modifications: ${bodyModParts.join(', ')}` : '',
+    const bodyMods = bodyModParts.filter(m => !facialMods.includes(m));
     
-    // Character details (other features)
-    detailParts.length > 0 ? `features: ${detailParts.join(', ')}` : '',
+    // Add facial modifications prominently
+    if (facialMods.length > 0) {
+      promptParts.push(`CLEARLY VISIBLE on face: ${facialMods.join(', ')}`);
+    }
     
+    // Add body modifications
+    if (bodyMods.length > 0) {
+      promptParts.push(`VISIBLE body features: ${bodyMods.join(', ')}`);
+    }
+    
+    console.log("Facial mods emphasized:", facialMods.length, "Body mods:", bodyMods.length);
+  }
+  
+  // Character details (other features)
+  if (detailParts.length > 0) {
+    promptParts.push(`additional features: ${detailParts.join(', ')}`);
+  }
+  
+  // Add remaining prompt parts
+  promptParts.push(
     // Clothing/gear based on class, genre, or custom style
     `clothing and gear: ${finalClothing}`,
     
@@ -910,9 +947,9 @@ function buildLockedReferencePrompt(body: any) {
     // Depth and atmosphere
     'shallow depth of field, background slightly blurred',
     'natural atmospheric lighting',
-  ].filter(Boolean);
+  );
   
-  const finalPrompt = promptParts.join(', ');
+  const finalPrompt = promptParts.filter(Boolean).join(', ');
   console.log("Built prompt length:", finalPrompt.length);
   console.log("Final prompt preview:", finalPrompt.substring(0, 600) + "...");
   
