@@ -847,111 +847,144 @@ function buildLockedReferencePrompt(body: any) {
   
   console.log("Body modifications found:", bodyModParts.length, "items");
   
-  // Handle expression from environment mood
+  // ==========================================================================
+  // BUILD PROMPT - CHARACTER MODIFICATIONS FIRST (highest priority for FLUX)
+  // ==========================================================================
+  
+  // Start with a minimal photo style prefix
+  const stylePrefix = 'ultra realistic photograph, photorealistic portrait, sharp focus';
+  
+  // CHARACTER IDENTITY - core appearance
+  const identity = `portrait of ${ageDesc} ${genderDesc}, ${buildDesc}, ${heightDesc}, ${skinDesc} skin, ${hairColorDesc} ${hairStyleDesc} hair, ${eyeColorDesc} eyes`;
+  
+  // ==========================================================================
+  // BODY MODIFICATIONS - THE PRIORITY (placed FIRST after identity)
+  // ==========================================================================
+  const modificationParts: string[] = [];
+  
+  // PIERCINGS - be very explicit
+  if (piercings && Array.isArray(piercings) && piercings.length > 0) {
+    const piercingDescriptions = piercings.map((p: string) => {
+      const mapped = findKey(PIERCING_PROMPT_MAP, p);
+      return mapped && mapped !== p ? mapped : `${p} piercing`;
+    });
+    modificationParts.push(`VISIBLE PIERCINGS: ${piercingDescriptions.join(', ')}`);
+  }
+  
+  // TATTOOS - explicit
+  if (tattoos && Array.isArray(tattoos) && tattoos.length > 0) {
+    const tattooDescriptions = tattoos.map((t: string) => {
+      const mapped = findKey(TATTOO_PROMPT_MAP, t);
+      return mapped && mapped !== t ? mapped : `${t} tattoo`;
+    });
+    let tattooPrompt = `VISIBLE TATTOOS: ${tattooDescriptions.join(', ')}`;
+    if (tattooStyle) {
+      const styleDesc = findKey(TATTOO_PROMPT_MAP, tattooStyle);
+      if (styleDesc) tattooPrompt += `, ${styleDesc} style`;
+    }
+    modificationParts.push(tattooPrompt);
+  }
+  
+  // SCARS - explicit  
+  if (scars && Array.isArray(scars) && scars.length > 0) {
+    const scarDescriptions = scars.map((s: string) => {
+      const mapped = findKey(SCAR_PROMPT_MAP, s);
+      return mapped && mapped !== s ? mapped : `${s} scar`;
+    });
+    modificationParts.push(`VISIBLE SCARS: ${scarDescriptions.join(', ')}`);
+  }
+  
+  // CYBERNETIC IMPLANTS - very explicit for cyberpunk
+  if (implants && Array.isArray(implants) && implants.length > 0) {
+    const implantDescriptions = implants.map((i: string) => {
+      const mapped = findKey(IMPLANT_PROMPT_MAP, i);
+      return mapped && mapped !== i ? mapped : `${i} cybernetic implant`;
+    });
+    modificationParts.push(`VISIBLE CYBERNETICS: ${implantDescriptions.join(', ')}`);
+  }
+  
+  // PROSTHETICS - very explicit
+  if (prosthetics && Array.isArray(prosthetics) && prosthetics.length > 0) {
+    const prostheticDescriptions = prosthetics.map((p: string) => {
+      const mapped = findKey(PROSTHETIC_PROMPT_MAP, p);
+      return mapped && mapped !== p ? mapped : `${p} prosthetic`;
+    });
+    modificationParts.push(`VISIBLE PROSTHETICS: ${prostheticDescriptions.join(', ')}`);
+  }
+  
+  // MUTATIONS - explicit
+  if (mutations && Array.isArray(mutations) && mutations.length > 0) {
+    const mutationDescriptions = mutations.map((m: string) => {
+      const mapped = findKey(MUTATION_PROMPT_MAP, m);
+      return mapped && mapped !== m ? mapped : `${m} mutation`;
+    });
+    modificationParts.push(`VISIBLE MUTATIONS: ${mutationDescriptions.join(', ')}`);
+  }
+  
+  // Combine all modifications into a priority string
+  const modificationsPrompt = modificationParts.length > 0 
+    ? `IMPORTANT CHARACTER FEATURES - MUST BE VISIBLE: ${modificationParts.join('. ')}`
+    : '';
+  
+  console.log("Body modifications in prompt:", modificationsPrompt.substring(0, 200));
+  
+  // ==========================================================================
+  // SECONDARY ELEMENTS - clothing, expression, background (lower priority)
+  // ==========================================================================
+  
+  // Clothing override or genre default
+  let clothingPrompt = '';
+  if (clothingStyle && clothingStyle !== 'genre_default') {
+    const styleDesc = findKey(CLOTHING_STYLE_PROMPT_MAP, clothingStyle);
+    clothingPrompt = styleDesc || `${clothingStyle} fashion`;
+    if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
+      clothingPrompt += `, ${clothingDetails.join(', ')}`;
+    }
+  } else {
+    clothingPrompt = roleStyle || genreConfig.style;
+  }
+  
+  // Expression from environment mood
   let expression = 'calm neutral expression';
   if (environmentContext?.mood) {
     expression = EMOTION_STYLES[environmentContext.mood] || EMOTION_STYLES.neutral;
   }
-  
-  // Select appropriate background from genre
-  let background = '';
-  if (environmentContext?.location) {
-    background = environmentContext.location;
-    if (environmentContext.weather) {
-      background += `, ${environmentContext.weather} weather`;
-    }
-    if (environmentContext.timeOfDay) {
-      background += `, ${environmentContext.timeOfDay} lighting`;
-    }
-  } else {
-    // Pick random genre-appropriate background
-    background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
-  }
-  
-  // Add combat context if applicable
   if (environmentContext?.isInCombat) {
     expression = 'intense combat-ready expression, focused determined eyes';
   }
   
-  // Determine final clothing - use override if specified, otherwise use role/genre default
-  const finalClothing = clothingOverride || roleStyle;
-  
-  // Build the realistic portrait prompt with all character creation settings
-  // CRITICAL: Body modifications MUST appear early in the prompt for FLUX to render them
-  const promptParts = [
-    // Core realistic photo style with knee-to-head framing
-    PORTRAIT_STYLE_BASE,
-    
-    // Character identity - EXPLICIT for better prompt following
-    `portrait of ${ageDesc} ${genderDesc}`,
-    `body type: ${buildDesc}`,
-    heightDesc,
-    `skin: ${skinDesc}`,
-    `hair: ${hairColorDesc}, ${hairStyleDesc}`,
-    `eyes: ${eyeColorDesc}`,
-  ];
-  
-  // BODY MODIFICATIONS - MUST be early in prompt for AI to render them
-  // Split into visible facial/body mods for emphasis
-  if (bodyModParts.length > 0) {
-    // Categorize by visibility
-    const facialMods = bodyModParts.filter(m => 
-      m.toLowerCase().includes('face') || 
-      m.toLowerCase().includes('eyebrow') || 
-      m.toLowerCase().includes('nose') || 
-      m.toLowerCase().includes('lip') || 
-      m.toLowerCase().includes('tongue') || 
-      m.toLowerCase().includes('ear') ||
-      m.toLowerCase().includes('septum') ||
-      m.toLowerCase().includes('monroe') ||
-      m.toLowerCase().includes('labret') ||
-      m.toLowerCase().includes('jaw') ||
-      m.toLowerCase().includes('eye') ||
-      m.toLowerCase().includes('cheek')
-    );
-    
-    const bodyMods = bodyModParts.filter(m => !facialMods.includes(m));
-    
-    // Add facial modifications prominently
-    if (facialMods.length > 0) {
-      promptParts.push(`CLEARLY VISIBLE on face: ${facialMods.join(', ')}`);
-    }
-    
-    // Add body modifications
-    if (bodyMods.length > 0) {
-      promptParts.push(`VISIBLE body features: ${bodyMods.join(', ')}`);
-    }
-    
-    console.log("Facial mods emphasized:", facialMods.length, "Body mods:", bodyMods.length);
+  // Background based on environment or random genre-appropriate
+  let background = '';
+  if (environmentContext?.location) {
+    background = environmentContext.location;
+    if (environmentContext.weather) background += `, ${environmentContext.weather} weather`;
+    if (environmentContext.timeOfDay) background += `, ${environmentContext.timeOfDay} lighting`;
+  } else {
+    background = genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)];
   }
   
-  // Character details (other features)
-  if (detailParts.length > 0) {
-    promptParts.push(`additional features: ${detailParts.join(', ')}`);
-  }
+  // Other features from character creation
+  const otherFeatures = detailParts.length > 0 ? detailParts.join(', ') : '';
   
-  // Add remaining prompt parts
-  promptParts.push(
-    // Clothing/gear based on class, genre, or custom style
-    `clothing and gear: ${finalClothing}`,
-    
-    // Expression
-    `expression: ${expression}`,
-    
-    // Portrait hints from class selection
-    portraitHints?.join(', ') || '',
-    
-    // Genre-specific environment background
-    `${genre} genre setting, realistic environment background: ${background}`,
-    
-    // Depth and atmosphere
-    'shallow depth of field, background slightly blurred',
-    'natural atmospheric lighting',
-  );
+  // ==========================================================================
+  // FINAL PROMPT ASSEMBLY - Modifications come RIGHT AFTER identity
+  // ==========================================================================
+  const finalPromptParts = [
+    stylePrefix,                                    // Minimal style
+    identity,                                       // Who they are
+    modificationsPrompt,                            // PRIORITY: body mods
+    otherFeatures,                                  // Other features
+    `wearing: ${clothingPrompt}`,                   // Clothing
+    expression,                                     // Expression
+    portraitHints?.join(', ') || '',                // Class hints
+    `${genre} setting, background: ${background}`,  // Setting
+    'three-quarter body shot from knees to head, full torso visible',  // Framing
+    'natural lighting, high detail',                // Quality
+  ].filter(Boolean);
   
-  const finalPrompt = promptParts.filter(Boolean).join(', ');
+  const finalPrompt = finalPromptParts.join(', ');
   console.log("Built prompt length:", finalPrompt.length);
-  console.log("Final prompt preview:", finalPrompt.substring(0, 600) + "...");
+  console.log("Final prompt:", finalPrompt.substring(0, 800) + "...");
   
   return {
     prompt: finalPrompt,
