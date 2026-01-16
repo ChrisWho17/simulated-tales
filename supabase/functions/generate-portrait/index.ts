@@ -10,45 +10,36 @@ const corsHeaders = {
 // Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style - FLUX.1-dev INTENSIFIED for maximum quality
+// LAYER 4: Photography Style - PHOTOREALISTIC FOCUS
 const LAYER_STYLE = {
-  // Intensified medium for FLUX.1-dev's capabilities
-  medium: 'masterpiece ultra-detailed cinematic portrait, award-winning digital illustration, trending on artstation and CGSociety, concept art quality, AAA game character design, rendered in Unreal Engine 5 with ray-traced global illumination',
+  // Photorealistic base - clean and focused
+  medium: 'photorealistic portrait photograph, professional studio photography, DSLR camera with 85mm lens',
   
-  // Enhanced quality descriptors
-  quality: 'photorealistic skin with subsurface scattering, intricate fabric textures with visible weave patterns, hyper-detailed eyes with realistic iris patterns and light reflections, individual hair strands visible, volumetric atmospheric lighting, film grain, chromatic aberration, professional color grading, 8K UHD resolution, HDR, physically based rendering',
+  // Photo quality - realistic rendering
+  quality: 'photorealistic, hyperrealistic skin texture, natural skin pores, realistic eye reflections, sharp focus, natural lighting, 8K resolution',
   
-  // Intensified framing with cinematographic direction
-  framing: 'three-quarter body portrait from knees to head, dynamic slight angle pose, powerful confident stance, direct eye contact with the viewer, cinematic shallow depth of field with bokeh background, rim lighting highlighting silhouette, dramatic chiaroscuro lighting from above-left',
-  
-  // Additional style layers for FLUX.1-dev
-  atmosphere: 'moody atmospheric haze, dust particles catching light, environmental storytelling through background details',
-  
-  // Artistic direction
-  artisticStyle: 'inspired by Craig Mullins, Ruan Jia, Greg Rutkowski, Artgerm, and Alphonse Mucha, blending realism with painterly brush strokes',
+  // Framing - three-quarter body
+  framing: 'three-quarter body portrait from knees to head, facing viewer with slight angle, direct eye contact, natural confident pose',
 };
 
-// Intensified negative prompts with comprehensive exclusions
+// Comprehensive negative prompts
 const NEGATIVE_PROMPT = [
-  // Pose exclusions - prevent looking away
+  // Pose exclusions
   'looking away, looking to the side, turned away, back view, profile view, looking over shoulder',
-  'side profile, rear view, from behind, three-quarter back view',
+  'side profile, rear view, from behind',
   // Body anomalies
-  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers, six fingers',
-  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands, floating hands',
-  'deformed face, ugly face, disfigured, mutation, mutated, deformed body, twisted body',
-  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs, floating limbs',
-  'long neck, extra head, duplicate, clone, twin, conjoined, double image',
+  'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
+  'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
+  'deformed face, ugly face, disfigured, mutation, mutated, deformed body',
+  'bad anatomy, bad proportions, gross proportions, malformed limbs, missing limbs',
+  'long neck, extra head, duplicate, clone, twin',
   // Quality issues
-  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature, logo',
-  'cropped, cut off, poorly framed, partial body, out of frame',
-  // Style exclusions
-  'cartoon, anime, chibi, 3d render, plastic, doll-like, uncanny valley',
-  'overexposed, underexposed, flat lighting, harsh shadows on face',
-  'amateur, beginner, sketch, rough, unfinished, draft',
-  // Composition issues
-  'centered composition, passport photo, mugshot, boring pose, stiff pose, t-pose',
-  'empty background, plain background, gradient background only',
+  'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature',
+  'cropped, cut off, poorly framed',
+  // Style exclusions - avoid artistic interpretations
+  'cartoon, anime, chibi, 3d render, plastic, doll-like',
+  'painting, illustration, drawing, sketch, artwork, digital art, concept art',
+  'overexposed, underexposed, flat lighting',
 ].join(', ');
 
 // ============================================================================
@@ -689,45 +680,68 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
   }
 
   // =========================================================================
-  // LAYER 4: STYLE (How should this be rendered?) - INTENSIFIED FOR FLUX.1-DEV
+  // ASSEMBLE FINAL PROMPT - PHOTOREALISTIC, CHARACTER-FOCUSED
+  // Priority: [Photo Style] [Framing] [Physical Essentials] [CHARACTER ADDITIONALS - PRIMARY] [Genre/Origin Context] [Quality]
   // =========================================================================
-  const layer4 = `${LAYER_STYLE.quality}, ${LAYER_STYLE.atmosphere}, ${LAYER_STYLE.artisticStyle}`;
-  console.log("Layer 4 (Style):", layer4);
-
-  // =========================================================================
-  // ASSEMBLE FINAL PROMPT - INTENSIFIED STRUCTURE FOR FLUX.1-DEV
-  // Structure: [Medium] [Artistic] [Framing/Pose] [Identity] [Origin] [Physical] [DETAILS] [Context] [Expression] [Atmosphere] [Quality]
-  // =========================================================================
+  
+  // Build physical essentials string (hair, eyes, face, skin, body, bust)
+  const physicalEssentials: string[] = [];
+  
+  // Gender/age identity
+  physicalEssentials.push(`${ageStr} ${genderStr}`);
+  
+  // Body essentials
+  physicalEssentials.push(skinStr);
+  physicalEssentials.push(buildStr);
+  if (height) physicalEssentials.push(`${height} height`);
+  
+  // Face essentials
+  if (faceStr) physicalEssentials.push(faceStr);
+  physicalEssentials.push(eyeColorStr);
+  
+  // Hair essentials
+  physicalEssentials.push(`${hairColorStr} ${hairStyleStr}`);
+  
+  const essentialsStr = physicalEssentials.join(', ');
+  console.log("Physical Essentials:", essentialsStr);
+  
+  // Start building prompt - Photo style first
   const promptParts = [
-    LAYER_STYLE.medium,           // "masterpiece ultra-detailed cinematic portrait..."
-    LAYER_STYLE.framing,          // "three-quarter body, dynamic pose, rim lighting..."
-    layer1,                        // WHO: "adult woman solo mercenary"
+    LAYER_STYLE.medium,           // "photorealistic portrait photograph..."
+    LAYER_STYLE.framing,          // "three-quarter body, facing viewer..."
+    essentialsStr,                // Character physical essentials FIRST
   ];
   
-  // Add origin modifier if present
-  if (originModifier) {
-    promptParts.push(originModifier); // ORIGIN: "hardened expression, survival scars"
-  }
-  
-  promptParts.push(layer2);        // LOOKS: "athletic build, olive skin, black hair..."
-  
-  // Add details with emphasis if present
+  // CHARACTER ADDITIONALS - PRIMARY FOCUS (distinguishing features, accessories, details)
   if (layer25) {
-    promptParts.push(layer25);     // DETAILS: "IMPORTANT DETAILS: freckles, scar, necklace..."
+    promptParts.push(layer25);     // "IMPORTANT: facial scar, freckles, necklace, choker..."
+    console.log("Character Additionals (PRIMARY):", layer25);
   }
   
-  promptParts.push(layer3);        // CONTEXT: "wearing futuristic streetwear, neon city"
+  // Role/class identity (what they ARE)
+  if (roleStr) {
+    promptParts.push(roleStr);
+  }
   
-  // Add expression hint if present
+  // Origin modifier (how background affects appearance)
+  if (originModifier) {
+    promptParts.push(originModifier);
+  }
+  
+  // Genre context - outfit and setting (AFTER character definition)
+  promptParts.push(layer3);
+  
+  // Expression if set
   if (expressionHint) {
-    promptParts.push(expressionHint); // EXPRESSION: "confident assertive expression"
+    promptParts.push(expressionHint);
   }
   
-  promptParts.push(layer4);        // QUALITY + ATMOSPHERE + ARTISTIC STYLE
+  // Photo quality at end
+  promptParts.push(LAYER_STYLE.quality);
 
   const finalPrompt = promptParts.join(', ');
 
-  console.log("=== FINAL INTENSIFIED PROMPT ===");
+  console.log("=== FINAL PHOTOREALISTIC PROMPT ===");
   console.log("Length:", finalPrompt.length);
   console.log("Prompt:", finalPrompt);
 
