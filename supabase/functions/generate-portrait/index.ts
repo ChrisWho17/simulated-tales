@@ -576,18 +576,40 @@ function buildLockedReferencePrompt(body: any) {
     distinguishingMarks
   } = body;
   
+  // Log incoming data for debugging
+  console.log("Building prompt with character data:", JSON.stringify({
+    gender, build, skinTone, hairColor, hairStyle, eyeColor, details, characterClass, genre
+  }));
+  
   // Get genre config for style and backgrounds
   const genreConfig = GENRE_STYLES[genre] || GENRE_STYLES.fantasy;
   
   // Build character physical description from creation settings
   const genderDesc = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   const ageDesc = age ? `${age} year old` : 'adult';
-  const buildDesc = BUILD_STYLES[build || 'average'] || 'average build';
+  
+  // Helper function to find key in object (case-insensitive)
+  const findKey = (obj: Record<string, string>, key: string | undefined): string => {
+    if (!key) return '';
+    // Try exact match first
+    if (obj[key]) return obj[key];
+    // Try lowercase match
+    const lowerKey = key.toLowerCase();
+    for (const k of Object.keys(obj)) {
+      if (k.toLowerCase() === lowerKey) return obj[k];
+    }
+    // Return the raw value if no match found
+    return key;
+  };
+  
+  const buildDesc = findKey(BUILD_STYLES, build) || BUILD_STYLES.average;
   const heightDesc = height ? `${height} height` : '';
-  const skinDesc = SKIN_TONES[skinTone?.toLowerCase() || 'medium'] || 'medium skin tone';
-  const hairColorDesc = HAIR_COLORS[hairColor?.toLowerCase() || 'brown'] || 'brown hair';
-  const hairStyleDesc = HAIR_STYLES[hairStyle?.toLowerCase() || 'short'] || 'short hair';
-  const eyeColorDesc = EYE_COLORS[eyeColor?.toLowerCase() || 'brown'] || 'brown eyes';
+  const skinDesc = findKey(SKIN_TONES, skinTone) || SKIN_TONES.medium;
+  const hairColorDesc = findKey(HAIR_COLORS, hairColor) || HAIR_COLORS.brown;
+  const hairStyleDesc = findKey(HAIR_STYLES, hairStyle) || HAIR_STYLES.short;
+  const eyeColorDesc = findKey(EYE_COLORS, eyeColor) || EYE_COLORS.brown;
+  
+  console.log("Resolved descriptions:", { buildDesc, skinDesc, hairColorDesc, hairStyleDesc, eyeColorDesc });
   
   // Map character class to appropriate role style
   const classLower = (characterClass || '').toLowerCase();
@@ -640,41 +662,44 @@ function buildLockedReferencePrompt(body: any) {
     expression = 'intense combat-ready expression, focused determined eyes';
   }
   
-  // Build the realistic portrait prompt
+  // Build the realistic portrait prompt with all character creation settings
   const promptParts = [
-    // Core realistic photo style
+    // Core realistic photo style with knee-to-head framing
     PORTRAIT_STYLE_BASE,
     
-    // Character identity
-    `${ageDesc} ${genderDesc}`,
-    buildDesc,
+    // Character identity - EXPLICIT for better prompt following
+    `portrait of ${ageDesc} ${genderDesc}`,
+    `body type: ${buildDesc}`,
     heightDesc,
-    skinDesc,
-    `${hairColorDesc}, ${hairStyleDesc}`,
-    eyeColorDesc,
+    `skin: ${skinDesc}`,
+    `hair: ${hairColorDesc}, ${hairStyleDesc}`,
+    `eyes: ${eyeColorDesc}`,
     
     // Character details
-    detailParts.length > 0 ? detailParts.join(', ') : '',
+    detailParts.length > 0 ? `features: ${detailParts.join(', ')}` : '',
     
     // Clothing/gear based on class and genre
-    roleStyle,
+    `clothing and gear: ${roleStyle}`,
     
     // Expression
-    expression,
+    `expression: ${expression}`,
     
     // Portrait hints from class selection
     portraitHints?.join(', ') || '',
     
-    // Environment background
-    `realistic environment background: ${background}`,
+    // Genre-specific environment background
+    `${genre} genre setting, realistic environment background: ${background}`,
     
     // Depth and atmosphere
     'shallow depth of field, background slightly blurred',
     'natural atmospheric lighting',
   ].filter(Boolean);
   
+  const finalPrompt = promptParts.join(', ');
+  console.log("Built prompt length:", finalPrompt.length);
+  
   return {
-    prompt: promptParts.join(', '),
+    prompt: finalPrompt,
     negative_prompt: PORTRAIT_NEGATIVE,
   };
 }
