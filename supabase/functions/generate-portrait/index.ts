@@ -9,14 +9,19 @@ const corsHeaders = {
 // CORE STYLE TEMPLATE - Realistic waist-up portraits with detailed environments
 // ============================================================================
 
-// Realistic photo style - knees up to head framing
+// Realistic photo style - knees up to head framing (3/4 body shot)
 const PORTRAIT_STYLE_BASE = [
   'ultra realistic photograph',
-  'professional portrait photography',
+  'professional full body portrait photography',
+  'IMPORTANT: three-quarter length portrait showing full body from knees up to head',
+  'full torso visible',
+  'hips and waist clearly visible',
+  'arms and hands visible',
+  'medium shot framing',
+  'subject standing',
   'sharp focus on face',
   'natural skin texture',
   'photorealistic',
-  'three-quarter body shot from knees up to head',
   'detailed facial features',
   'looking at viewer',
   'studio quality lighting',
@@ -24,9 +29,15 @@ const PORTRAIT_STYLE_BASE = [
   'detailed eyes with natural reflections',
   'natural hair texture',
   'authentic clothing fabric textures',
+  'full outfit visible from knees to head',
 ].join(', ');
 
 const PORTRAIT_NEGATIVE = [
+  'headshot only',
+  'face closeup',
+  'bust shot',
+  'shoulders up only',
+  'cropped body',
   'cartoon',
   'anime',
   'illustration',
@@ -502,9 +513,9 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: prompt,
-      width: 768,
-      height: 1024,
+      prompt: `three-quarter length portrait from knees to head, full torso visible, ${prompt}`,
+      width: 832,
+      height: 1216,
       steps: 4,
       n: 1,
       response_format: 'b64_json',
