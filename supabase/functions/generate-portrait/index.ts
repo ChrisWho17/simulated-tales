@@ -852,23 +852,7 @@ function buildLockedReferencePrompt(body: any) {
     });
   }
   
-  // Process CLOTHING STYLE override
-  let clothingOverride = '';
-  if (clothingStyle && clothingStyle !== 'genre_default') {
-    const styleDesc = findKey(CLOTHING_STYLE_PROMPT_MAP, clothingStyle);
-    if (styleDesc && styleDesc !== clothingStyle) {
-      clothingOverride = styleDesc;
-    } else if (clothingStyle) {
-      clothingOverride = `${clothingStyle} fashion style`;
-    }
-    console.log("Clothing style override:", clothingOverride);
-  }
-  
-  // Process clothing details
-  if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
-    clothingOverride += (clothingOverride ? ', ' : '') + clothingDetails.join(', ');
-  }
-  
+  // Clothing is now determined purely by genre/role - no user overrides to conflict
   console.log("Body modifications found:", bodyModParts.length, "items");
   
   // Handle expression from environment mood
@@ -897,8 +881,8 @@ function buildLockedReferencePrompt(body: any) {
     expression = 'intense combat-ready expression, focused determined eyes';
   }
   
-  // Determine final clothing - use override if specified, otherwise use role/genre default
-  const finalClothing = clothingOverride || roleStyle;
+  // Clothing determined by role/genre only - clean and consistent
+  const finalClothing = roleStyle;
   
   // =========================================================================
   // BUILD PHOTOREALISTIC PROMPT
