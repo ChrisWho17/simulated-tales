@@ -791,74 +791,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     )}
 
-                    {/* Body/Physical Modifications removed for testing - using simpler prompts */}
-
-                    {/* DROPDOWN 3: Clothing Style */}
-                    <Collapsible open={openSections.clothing} onOpenChange={() => toggleSection('clothing')}>
-                      <CollapsibleTrigger className="w-full p-3 bg-background/50 rounded-lg border border-border/50 hover:border-primary/50 transition-all flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Shirt className="w-4 h-4 text-primary" />
-                          <span className="font-medium text-sm">Clothing Style</span>
-                          {appearance.full?.clothingStyle && appearance.full.clothingStyle !== 'genre_default' && (
-                            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
-                              {CLOTHING_STYLE_OPTIONS.find(o => o.value === appearance.full?.clothingStyle)?.label || 'Custom'}
-                            </span>
-                          )}
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.clothing ? 'rotate-180' : ''}`} />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2 p-4 bg-background rounded-lg border border-border/30 space-y-4">
-                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/30 text-xs text-accent mb-3">
-                          <strong>Note:</strong> Clothing that doesn't match your genre may cause NPCs to react differently to you!
-                        </div>
-                        
-                        {/* Style Selection */}
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground block mb-2">Overall Style</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {CLOTHING_STYLE_OPTIONS.map(style => (
-                              <button
-                                key={style.value}
-                                onClick={() => updateAppearance('full', 'clothingStyle', style.value)}
-                                className={`p-2 rounded-lg text-left transition-all ${
-                                  appearance.full?.clothingStyle === style.value
-                                    ? 'bg-primary/20 border border-primary'
-                                    : 'bg-background border border-border/30 hover:border-primary/50'
-                                }`}
-                              >
-                                <div className="text-xs font-medium">{style.label}</div>
-                                <div className="text-[10px] text-muted-foreground">{style.description}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Specific Items */}
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground block mb-2">Specific Items</label>
-                          {['tops', 'bottoms', 'full', 'footwear', 'accessories'].map(category => (
-                            <div key={category} className="mb-2">
-                              <span className="text-xs text-muted-foreground/70 uppercase tracking-wide">{category}</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {CLOTHING_DETAIL_OPTIONS.filter(c => c.category === category).map(item => (
-                                  <button
-                                    key={item.value}
-                                    onClick={() => toggleClothingDetail(item.value)}
-                                    className={`px-2 py-1 rounded text-xs transition-all ${
-                                      appearance.full?.clothingDetails?.includes(item.value)
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-background border border-border/30 hover:border-primary/50'
-                                    }`}
-                                  >
-                                    {item.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
+                    {/* Body/Physical Modifications and Clothing Style removed for testing - using cleaner prompts */}
 
                     {/* Free-form description */}
                     <div>
