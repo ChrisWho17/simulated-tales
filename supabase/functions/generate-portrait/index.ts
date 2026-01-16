@@ -6,15 +6,16 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// CORE STYLE TEMPLATE - Simplified for FLUX Schnell (4-step model)
-// Schnell prioritizes early tokens, so keep base minimal
+// PHOTOREALISTIC PORTRAIT GENERATION - Optimized for FLUX Schnell
 // ============================================================================
 
-// Minimal base - character details will come FIRST in final prompt
-const PORTRAIT_STYLE_BASE = 'realistic photograph, 3/4 body portrait from knees to head, full torso visible, photorealistic, sharp focus';
+// Photography-first prompt structure proven to work with Schnell
+const PHOTO_PREFIX = 'RAW photo, professional portrait photograph, 35mm film grain, natural lighting';
+const PHOTO_QUALITY = 'ultra high resolution, 8k, detailed skin texture, pores visible, natural skin imperfections, realistic eyes with catchlights';
+const PHOTO_FRAMING = 'three-quarter body shot, from knees up, full torso visible, standing pose, looking at camera';
 
-// Simplified negative prompt - only critical exclusions
-const PORTRAIT_NEGATIVE = 'cartoon, anime, illustration, painting, sketch, digital art, blurry, distorted, extra limbs, watermark, text';
+// Negative - keep minimal for Schnell
+const PORTRAIT_NEGATIVE = 'cartoon, anime, 3d render, cgi, illustration, painting, drawing, artificial, plastic skin, oversaturated';
 
 // ============================================================================
 // GENRE STYLES - Detailed environments for waist-up portraits
@@ -495,9 +496,10 @@ function buildPortraitPrompt(
     ? (character.customBackground || genreConfig.backgrounds[Math.floor(Math.random() * genreConfig.backgrounds.length)])
     : '';
   
-  // Assemble the prompt
+  // Assemble the prompt with photorealistic structure
   const promptParts = [
-    PORTRAIT_STYLE_BASE,
+    PHOTO_PREFIX,
+    PHOTO_FRAMING,
     genderStr,
     buildStr,
     skinStr,
@@ -510,6 +512,7 @@ function buildPortraitPrompt(
     character.customDescription || '',
     customAdditions,
     background ? `background: ${background}` : '',
+    PHOTO_QUALITY,
   ].filter(Boolean);
   
   return {
@@ -898,44 +901,52 @@ function buildLockedReferencePrompt(body: any) {
   const finalClothing = clothingOverride || roleStyle;
   
   // =========================================================================
-  // BUILD PROMPT - CRITICAL: Character-specific details FIRST for Schnell
-  // Schnell (4 steps) heavily weights early tokens, so put unique features first
+  // BUILD PHOTOREALISTIC PROMPT
+  // Structure: [Photo Type] [Subject Description] [Outfit] [Setting] [Technical]
   // =========================================================================
   
-  const promptParts: string[] = [];
+  // Subject description - who is this person
+  const subjectParts = [
+    `${ageDesc} ${genderDesc}`,
+    buildDesc,
+    skinDesc,
+    `${hairColorDesc} ${hairStyleDesc}`,
+    eyeColorDesc,
+  ].filter(Boolean);
   
-  // 1. BODY MODIFICATIONS FIRST - Most unique, most likely to be missed
-  if (bodyModParts.length > 0) {
-    // All mods go at the very start for maximum weight
-    promptParts.push(`MUST SHOW: ${bodyModParts.join(', ')}`);
-    console.log("Body mods placed FIRST in prompt:", bodyModParts.length, "items");
-  }
-  
-  // 2. Core physical identity (compact)
-  promptParts.push(`${ageDesc} ${genderDesc}, ${buildDesc}, ${skinDesc}`);
-  promptParts.push(`${hairColorDesc} ${hairStyleDesc}, ${eyeColorDesc}`);
-  if (heightDesc) promptParts.push(heightDesc);
-  
-  // 3. Details and features (compact)
+  // Add any details
   if (detailParts.length > 0) {
-    promptParts.push(detailParts.join(', '));
+    subjectParts.push(...detailParts);
   }
   
-  // 4. Clothing/role
-  promptParts.push(finalClothing);
+  const subjectDesc = subjectParts.join(', ');
   
-  // 5. Expression
-  promptParts.push(expression);
+  // Build the final prompt in optimal order for photorealism
+  const finalPrompt = [
+    // 1. Photography style first - tells model this is a photo
+    PHOTO_PREFIX,
+    
+    // 2. Framing
+    PHOTO_FRAMING,
+    
+    // 3. Subject (the person)
+    subjectDesc,
+    
+    // 4. Clothing/outfit
+    finalClothing,
+    
+    // 5. Expression
+    expression,
+    
+    // 6. Background/setting
+    `background: ${background}`,
+    
+    // 7. Technical quality markers
+    PHOTO_QUALITY,
+  ].filter(Boolean).join(', ');
   
-  // 6. Genre setting and background
-  promptParts.push(`${genre} setting, ${background}`);
-  
-  // 7. Photography style at END (Schnell will still apply it but won't prioritize over character)
-  promptParts.push(PORTRAIT_STYLE_BASE);
-  
-  const finalPrompt = promptParts.filter(Boolean).join(', ');
-  console.log("Simplified prompt length:", finalPrompt.length);
-  console.log("Final prompt:", finalPrompt.substring(0, 800));
+  console.log("Photorealistic prompt length:", finalPrompt.length);
+  console.log("Final prompt:", finalPrompt);
   
   return {
     prompt: finalPrompt,
