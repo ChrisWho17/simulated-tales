@@ -6,14 +6,14 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// STYLE LOCK - Photorealistic cinematic portrait style
+// STYLE LOCK - Hyper-realistic skin with semi-realistic stylization
 // ============================================================================
-const STYLE_LOCK = `ultra photorealistic portrait photograph, professional DSLR camera shot, 85mm lens f/1.4, shallow depth of field, studio lighting with dramatic rim light, cinematic color grading, high-end fashion photography quality, RAW photo aesthetic, sharp focus on face, natural skin texture and pores visible, catchlight in eyes, professional retouching, shot on Sony A7R IV, masterpiece photography, National Geographic portrait quality`;
+const STYLE_LOCK = `portrait artwork blending hyper-realistic and semi-realistic styles, SKIN MUST BE HYPER-REALISTIC with visible pores, subsurface scattering, realistic skin texture, natural imperfections, and lifelike lighting response, EVERYTHING ELSE (hair, clothing, background, accessories) rendered in SEMI-REALISTIC painterly style with artistic interpretation, vibrant colors, stylized gradients, soft painterly edges on non-skin elements, digital art aesthetic for environment and attire, professional portrait composition, 85mm lens perspective, shallow depth of field bokeh effect, dramatic rim lighting on face, cinematic color grading, high contrast skin details, catchlight in eyes, blend of photography realism on skin with concept art stylization elsewhere, genre-adaptive background styling, creative artistic freedom for non-anatomical elements`;
 
 // ============================================================================
-// PROMPT PRIORITY - AI follows user creativity
+// PROMPT PRIORITY - AI follows user creativity with genre-universal styling
 // ============================================================================
-const PROMPT_RULES = `Generate a photorealistic portrait photograph. The subject must look like a real person photographed in a real environment. Follow the character description exactly. Include all specified features, clothing, and accessories. The environment should match the genre specified.`;
+const PROMPT_RULES = `Generate a portrait blending hyper-realistic human skin with semi-realistic artistic styling. The subject's SKIN (face, hands, exposed body) MUST look photographically real with pores, texture, and natural lighting. Hair, clothing, background, and accessories should be rendered in a stylized semi-realistic painterly style allowing artistic interpretation. The character must match their specified genre authentically - fantasy characters look medieval/magical, modern characters look contemporary, sci-fi characters look futuristic, etc. NEVER default to cyberpunk or tech aesthetics unless explicitly specified. Follow the character description exactly. Include all specified features, clothing, and accessories appropriate to their genre.`;
 
 // ============================================================================
 // CREATIVE FREEDOM - Expanded vocabulary for unrealistic features
@@ -136,12 +136,12 @@ function getAnatomyHints(body: any): string[] {
 }
 
 // ============================================================================
-// GENDER CUT OPTIONS - Tailored silhouettes by gender
+// GENDER CUT OPTIONS - Tailored silhouettes by gender (genre-universal)
 // ============================================================================
 const CUT_OPTIONS: Record<string, string> = {
-  female: 'tailored silhouette with fitted waist options, structured shoulders, layered techwear or practical garments, coverage is functional not revealing',
-  male: 'tailored silhouette with structured shoulders, fitted or relaxed utility cuts, layered techwear or practical garments, coverage is functional not revealing',
-  other: 'tailored silhouette with structured shoulders, versatile fitted cuts, layered techwear or practical garments, coverage is functional not revealing',
+  female: 'tailored silhouette with fitted waist options, structured shoulders, layered genre-appropriate garments, coverage is functional not revealing, clothing style matches the specified genre',
+  male: 'tailored silhouette with structured shoulders, fitted or relaxed cuts, layered genre-appropriate garments, coverage is functional not revealing, clothing style matches the specified genre',
+  other: 'tailored silhouette with structured shoulders, versatile fitted cuts, layered genre-appropriate garments, coverage is functional not revealing, clothing style matches the specified genre',
 };
 
 // ============================================================================
