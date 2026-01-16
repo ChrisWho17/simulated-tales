@@ -10,23 +10,27 @@ const corsHeaders = {
 // Priority: Layer 1 (Identity) → Layer 2 (Physical) → Layer 2.5 (Details) → Layer 3 (Context) → Layer 4 (Style)
 // ============================================================================
 
-// LAYER 4: Photography Style - PHOTOREALISTIC FOCUS
+// LAYER 4: Photography Style - PHOTOREALISTIC, CAMERA LOCKED
 const LAYER_STYLE = {
-  // Photorealistic base - clean and focused
+  // Photorealistic base
   medium: 'photorealistic portrait photograph, professional studio photography, DSLR camera with 85mm lens',
   
-  // Photo quality - realistic rendering
+  // Photo quality
   quality: 'photorealistic, hyperrealistic skin texture, natural skin pores, realistic eye reflections, sharp focus, natural lighting, 8K resolution',
   
-  // Framing - three-quarter body
-  framing: 'three-quarter body portrait from knees to head, facing viewer with slight angle, direct eye contact, natural confident pose',
+  // LOCKED FRAMING: Body facing camera, knee to head, no closer
+  framing: 'full three-quarter body shot from knees to head only, body facing directly toward camera, front-facing pose, standing upright, arms visible at sides, direct eye contact with camera, neutral natural stance, full torso and hips visible, both legs visible from knees up',
 };
 
-// Comprehensive negative prompts
+// Comprehensive negative prompts - enforce framing
 const NEGATIVE_PROMPT = [
+  // FRAMING ENFORCEMENT - prevent close-ups
+  'close-up, closeup, headshot, face only, bust shot, chest up, shoulders up, waist up',
+  'cropped at waist, cropped at chest, cropped body, partial body',
+  'zoomed in, too close, tight framing',
   // Pose exclusions
   'looking away, looking to the side, turned away, back view, profile view, looking over shoulder',
-  'side profile, rear view, from behind',
+  'side profile, rear view, from behind, angled body, twisted pose',
   // Body anomalies
   'extra limbs, extra arms, extra legs, extra fingers, missing fingers, fused fingers, too many fingers',
   'deformed hands, malformed hands, bad hands, mutated hands, poorly drawn hands',
@@ -36,11 +40,19 @@ const NEGATIVE_PROMPT = [
   // Quality issues
   'blurry, out of focus, low quality, jpeg artifacts, watermark, text, signature',
   'cropped, cut off, poorly framed',
-  // Style exclusions - avoid artistic interpretations
+  // Style exclusions
   'cartoon, anime, chibi, 3d render, plastic, doll-like',
   'painting, illustration, drawing, sketch, artwork, digital art, concept art',
   'overexposed, underexposed, flat lighting',
 ].join(', ');
+
+// Keywords that indicate outfit/clothing override in character additionals
+const OUTFIT_OVERRIDE_KEYWORDS = [
+  'wearing', 'dressed', 'clothing', 'clothes', 'outfit', 'uniform', 'armor', 'suit',
+  'military', 'ww1', 'ww2', 'world war', 'victorian', 'medieval', 'modern', 'futuristic',
+  'casual', 'formal', 'tactical', 'combat', 'dress', 'gown', 'jacket', 'coat',
+  'jeans', 'pants', 'skirt', 'shirt', 'hoodie', 'sweater', 'leather', 'denim',
+];
 
 // ============================================================================
 // LAYER 3: GENRE CONTEXT - Environment and Setting
@@ -633,23 +645,39 @@ function buildLayeredPrompt(body: any): { prompt: string; negative_prompt: strin
 
   // =========================================================================
   // LAYER 3: CONTEXT (What are they wearing? Where are they?)
+  // Check if character additionals contain outfit overrides
   // =========================================================================
   
-  // Determine outfit - clothing style can override genre default
-  let outfitStr = genreCtx.outfit;
+  // Check if any detail parts contain outfit override keywords
+  const detailsLower = detailParts.join(' ').toLowerCase();
+  const hasOutfitOverride = OUTFIT_OVERRIDE_KEYWORDS.some(keyword => detailsLower.includes(keyword));
   
-  if (clothingStyle && clothingStyle !== 'genre_default' && CLOTHING_STYLE_MODIFIERS[clothingStyle]) {
-    // Override with clothing style
+  // Determine outfit - character additionals override genre if outfit keywords present
+  let outfitStr = '';
+  let settingStr = genreCtx.setting;
+  
+  if (hasOutfitOverride) {
+    // Character additionals contain outfit info - DON'T add genre outfit
+    // The outfit will come from the character additionals (layer25)
+    console.log("OUTFIT OVERRIDE DETECTED - using character additionals for outfit");
+    outfitStr = ''; // Skip genre outfit entirely
+  } else if (clothingStyle && clothingStyle !== 'genre_default' && CLOTHING_STYLE_MODIFIERS[clothingStyle]) {
+    // Use clothing style selector
     outfitStr = CLOTHING_STYLE_MODIFIERS[clothingStyle];
     console.log("Clothing style override:", clothingStyle);
+  } else {
+    // Use genre default
+    outfitStr = genreCtx.outfit;
   }
   
   // Add specific clothing details if provided
   if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
-    outfitStr += `, specifically ${clothingDetails.join(', ')}`;
+    outfitStr += (outfitStr ? ', ' : '') + clothingDetails.join(', ');
   }
   
-  const layer3 = `wearing ${outfitStr}, ${genreCtx.setting} background`;
+  const layer3 = outfitStr 
+    ? `wearing ${outfitStr}, ${settingStr} background`
+    : `${settingStr} background`;
   console.log("Layer 3 (Context):", layer3);
 
   // =========================================================================
