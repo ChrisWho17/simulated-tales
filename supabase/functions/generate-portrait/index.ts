@@ -5,42 +5,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Simple genre backgrounds - let AI decide appropriate clothing
+// Genre backgrounds
 const BACKGROUNDS: Record<string, string> = {
-  fantasy: 'medieval tavern, candlelight',
-  medieval: 'castle interior, torchlight',
-  dark_fantasy: 'gothic cathedral, moonlight',
-  high_fantasy: 'elven palace, magical glow',
-  cyberpunk: 'neon city alley, rain, pink and blue lights',
-  scifi: 'spaceship interior, blue lighting',
-  sci_fi: 'space station corridor',
-  space_opera: 'starship bridge, stars visible',
-  horror: 'shadowy abandoned building',
-  vampire: 'gothic manor, candlelight',
-  zombie: 'barricaded shelter',
-  western: 'old west saloon, warm light',
-  pirate: 'ship deck, ocean backdrop',
-  victorian: 'London street, fog, gas lamps',
-  steampunk: 'brass workshop with gears',
-  noir: 'rain-slicked street, neon signs',
-  mystery: 'detective office, venetian blinds',
+  fantasy: 'medieval tavern interior',
+  medieval: 'castle stone corridor',
+  dark_fantasy: 'gothic cathedral',
+  high_fantasy: 'magical elven palace',
+  cyberpunk: 'neon-lit rainy city alley',
+  scifi: 'spaceship corridor',
+  sci_fi: 'space station',
+  space_opera: 'starship bridge',
+  horror: 'abandoned dark building',
+  vampire: 'gothic manor',
+  zombie: 'barricaded room',
+  western: 'old west saloon',
+  pirate: 'ship deck',
+  victorian: 'foggy London street',
+  steampunk: 'brass gear workshop',
+  noir: 'rain-slicked night street',
+  mystery: 'detective office',
   spy: 'luxury casino',
   crime: 'dark urban alley',
-  postapoc: 'wasteland ruins, harsh sun',
+  postapoc: 'wasteland ruins',
   post_apocalyptic: 'collapsed city',
   war: 'military base',
-  ww2: 'WWII era bunker',
-  superhero: 'city rooftop at night',
-  modern: 'contemporary urban street, natural daylight',
-  modern_life: 'modern city environment, casual setting',
-  contemporary: 'trendy cafe or urban park',
-  slice_of_life: 'cozy modern interior',
-  romance: 'elegant modern venue, soft lighting',
-  urban_fantasy: 'modern city with subtle magic',
+  ww2: 'WWII bunker',
+  superhero: 'city rooftop night',
+  modern: 'modern urban street',
+  modern_life: 'contemporary city sidewalk',
+  contemporary: 'trendy urban cafe',
+  slice_of_life: 'cozy modern apartment',
+  romance: 'elegant venue',
+  urban_fantasy: 'modern city street',
 };
 
-// Build a simple, flexible prompt
-function buildPrompt(body: any): string {
+function buildPrompt(body: any): { prompt: string; negative: string } {
   const {
     name, gender, age, build, height, skinTone, 
     hairColor, hairStyle, eyeColor, faceShape,
@@ -51,66 +50,76 @@ function buildPrompt(body: any): string {
     clothingStyle, clothingDetails,
   } = body;
 
-  const parts: string[] = [];
+  // Build character description
+  const desc: string[] = [];
   
-  // Basic subject
+  // Demographics
   const eth = ethnicity || nationality || origin || 'American Caucasian';
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
-  parts.push(`${age || 'adult'} ${eth} ${genderWord}`);
+  desc.push(`${age || 'adult'} year old ${eth} ${genderWord}`);
   
-  // Physical traits
-  if (build) parts.push(`${build} build`);
-  if (height) parts.push(`${height}`);
-  if (skinTone) parts.push(`${skinTone} skin`);
-  if (faceShape) parts.push(`${faceShape} face`);
-  if (eyeColor) parts.push(`${eyeColor} eyes`);
-  if (hairColor || hairStyle) parts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
+  // Body
+  if (build) desc.push(`${build} body type`);
+  if (height) desc.push(`${height} stature`);
+  if (skinTone) desc.push(`${skinTone} skin`);
   
-  // Features
-  if (details?.length) parts.push(details.join(', '));
-  if (distinguishingFeatures?.length) parts.push(distinguishingFeatures.join(', '));
-  if (accessories?.length) parts.push(accessories.join(', '));
-  
-  // Body mods
-  if (tattoos?.length) parts.push(`tattoos`);
-  if (piercings?.length) parts.push(`piercings`);
-  if (scars?.length) parts.push(`visible scars`);
-  if (implants?.length) parts.push(`cybernetic implants`);
-  if (prosthetics?.length) parts.push(`prosthetics`);
-  
-  // Clothing - keep it simple, let AI interpret
-  const userDesc = additionalDetails || characterAdditionals || customDescription || '';
-  if (clothingDetails?.length) {
-    parts.push(clothingDetails.join(', '));
-  } else if (clothingStyle && clothingStyle !== 'genre_default') {
-    parts.push(`${clothingStyle} clothing`);
+  // Face
+  if (faceShape) desc.push(`${faceShape} face shape`);
+  if (eyeColor) desc.push(`${eyeColor} eyes`);
+  if (hairColor || hairStyle) {
+    desc.push(`${hairColor || ''} ${hairStyle || 'styled'} hair`.trim());
   }
-  // If no clothing specified, AI will choose appropriate for genre/role
   
-  // Role
-  if (characterClass) parts.push(characterClass);
+  // Features and accessories
+  const allFeatures: string[] = [];
+  if (details?.length) allFeatures.push(...details);
+  if (distinguishingFeatures?.length) allFeatures.push(...distinguishingFeatures);
+  if (accessories?.length) allFeatures.push(...accessories);
+  if (allFeatures.length) desc.push(allFeatures.join(', '));
   
-  // User custom details
-  if (userDesc) parts.push(userDesc);
+  // Body modifications
+  if (tattoos?.length) desc.push('visible tattoos');
+  if (piercings?.length) desc.push('visible piercings');
+  if (scars?.length) desc.push('visible scars');
+  if (implants?.length) desc.push('cybernetic implants');
+  if (prosthetics?.length) desc.push('prosthetic limbs');
   
-  // Get background
+  // Clothing
+  if (clothingDetails?.length) {
+    desc.push(`wearing ${clothingDetails.join(' and ')}`);
+  } else if (clothingStyle && clothingStyle !== 'genre_default') {
+    desc.push(`wearing ${clothingStyle} style outfit`);
+  }
+  // Let AI pick clothing based on role/genre if not specified
+  
+  // Role/class
+  if (characterClass) desc.push(`as a ${characterClass}`);
+  
+  // User's custom description
+  const userDesc = additionalDetails || characterAdditionals || customDescription || '';
+  if (userDesc) desc.push(userDesc);
+  
+  // Background
   const genreKey = (genre || 'fantasy').toLowerCase().replace(/[\s-]/g, '_');
   const bg = BACKGROUNDS[genreKey] || BACKGROUNDS.modern;
   
-  // Simple prompt structure - give AI freedom
-  const subject = parts.join(', ');
+  const character = desc.join(', ');
+  
+  // Strong framing instructions at the START of the prompt
+  const prompt = `Three-quarter length portrait photograph showing the subject from knees up to head. Medium wide shot, subject fills 80% of the frame vertically. Full torso, arms, and hands must be visible. The subject is: ${character}. Standing in a ${bg}, soft bokeh background. Professional photography, natural lighting, sharp focus, 8K quality.`;
   
   console.log('Character:', name, '| Genre:', genre, '| Class:', characterClass);
+  console.log('Full prompt:', prompt);
   
-  return `Portrait photo, knee to head framing, ${subject}, ${bg} background, photorealistic`;
+  return {
+    prompt,
+    negative: 'headshot, bust shot, close-up, face only, shoulders up, chest up, cropped at waist, cropped at hips, full body showing feet, anime, cartoon, illustration, painting, 3D render, deformed, bad anatomy, extra limbs, blurry',
+  };
 }
 
-// Generate image
-async function generateImage(prompt: string): Promise<string> {
+async function generateImage(prompt: string, negative: string): Promise<string> {
   const apiKey = Deno.env.get("TOGETHER_API_KEY");
   if (!apiKey) throw new Error("TOGETHER_API_KEY not configured");
-
-  console.log('Prompt:', prompt);
 
   const response = await fetch("https://api.together.xyz/v1/images/generations", {
     method: "POST",
@@ -121,9 +130,10 @@ async function generateImage(prompt: string): Promise<string> {
     body: JSON.stringify({
       model: "black-forest-labs/FLUX.1-dev",
       prompt,
+      negative_prompt: negative,
       width: 768,
       height: 1024,
-      steps: 25,
+      steps: 28,
       n: 1,
       response_format: "b64_json",
     }),
@@ -150,16 +160,15 @@ serve(async (req) => {
   try {
     const body = await req.json();
     
-    // Legacy custom prompt
     if (body.customPrompt && !body.gender) {
-      const imageUrl = await generateImage(body.customPrompt);
+      const imageUrl = await generateImage(body.customPrompt, '');
       return new Response(JSON.stringify({ imageUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const prompt = buildPrompt(body);
-    const imageUrl = await generateImage(prompt);
+    const { prompt, negative } = buildPrompt(body);
+    const imageUrl = await generateImage(prompt, negative);
 
     return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
