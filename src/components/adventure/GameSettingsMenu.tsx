@@ -3,18 +3,25 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
-import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
+import { DEFAULT_DIRECTOR_SETTINGS, DIRECTOR_TYPES, DirectorType } from '@/game/directorModeSystem';
 import { cn } from '@/lib/utils';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { DataWipeModal } from './DataWipeModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
@@ -26,6 +33,19 @@ export interface GameSettingsMenuProps {
   onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
   isLoading?: boolean;
 }
+
+// Get curated list of director types for quick selection
+const QUICK_DIRECTOR_TYPES: DirectorType[] = [
+  'cinematic',
+  'sandbox', 
+  'old_school',
+  'mystery_keeper',
+  'romance_writer',
+  'horror_curator',
+  'yes_and',
+  'revenge_arc',
+  'red_velvet',
+];
 
 export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, isLoading }: GameSettingsMenuProps) {
   const navigate = useNavigate();
@@ -53,6 +73,20 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
       description: 'Every action',
     }
   ];
+
+  const currentDirectorType = settings.directorSettings?.directorType || DEFAULT_DIRECTOR_SETTINGS.directorType;
+  const isDirectorEnabled = settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled;
+
+  const handleDirectorTypeChange = (type: DirectorType) => {
+    updateSettings({
+      directorSettings: {
+        ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+        directorType: type,
+        enabled: true,  // Auto-enable when selecting a type
+        rawGame: false, // Disable raw game when selecting a director
+      }
+    });
+  };
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
@@ -114,7 +148,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={settings.autoSave}
                 onCheckedChange={(checked) => updateSettings({ autoSave: checked })}
-                className="scale-90 flex-shrink-0"
+                className="flex-shrink-0"
               />
             </div>
             
@@ -127,7 +161,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={settings.showRollDetails}
                 onCheckedChange={(checked) => updateSettings({ showRollDetails: checked })}
-                className="scale-90 flex-shrink-0"
+                className="flex-shrink-0"
               />
             </div>
             
@@ -140,7 +174,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={settings.adultContent}
                 onCheckedChange={(checked) => updateSettings({ adultContent: checked })}
-                className="scale-90 flex-shrink-0"
+                className="flex-shrink-0"
               />
             </div>
             
@@ -153,7 +187,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={settings.typewriterEnabled}
                 onCheckedChange={(checked) => updateSettings({ typewriterEnabled: checked })}
-                className="scale-90 flex-shrink-0"
+                className="flex-shrink-0"
               />
             </div>
           </div>
@@ -170,7 +204,6 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <Switch 
               checked={settings.enableSystemHighlight}
               onCheckedChange={(checked) => updateSettings({ enableSystemHighlight: checked })}
-              className="scale-90"
             />
           </div>
           
@@ -183,12 +216,11 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <Switch 
               checked={settings.enableWeatherEffects}
               onCheckedChange={(checked) => updateSettings({ enableWeatherEffects: checked })}
-              className="scale-90"
             />
           </div>
           
           {/* Director Mode Section */}
-          <div className="pt-3 border-t border-border/30 space-y-2">
+          <div className="pt-3 border-t border-border/30 space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <Clapperboard className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium">Director Mode</span>
@@ -201,7 +233,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
                 <span className="text-[10px] text-muted-foreground">DM manipulation features</span>
               </div>
               <Switch 
-                checked={settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled}
+                checked={isDirectorEnabled}
                 onCheckedChange={(checked) => updateSettings({ 
                   directorSettings: { 
                     ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
@@ -209,9 +241,43 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
                     rawGame: !checked ? true : (settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame)
                   }
                 })}
-                className="scale-90"
               />
             </div>
+            
+            {/* Director Type Selector - Quick Pick */}
+            {isDirectorEnabled && (
+              <div className="space-y-2">
+                <span className="text-xs text-muted-foreground">Director Style</span>
+                <Select
+                  value={currentDirectorType}
+                  onValueChange={(value) => handleDirectorTypeChange(value as DirectorType)}
+                >
+                  <SelectTrigger className="w-full h-9 text-xs bg-background/50">
+                    <SelectValue placeholder="Select director style..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-border z-50 max-h-60">
+                    {QUICK_DIRECTOR_TYPES.map((typeId) => {
+                      const type = DIRECTOR_TYPES[typeId];
+                      return (
+                        <SelectItem key={typeId} value={typeId} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <span>{type.name}</span>
+                            {currentDirectorType === typeId && (
+                              <Check className="w-3 h-3 text-primary" />
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {DIRECTOR_TYPES[currentDirectorType] && (
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    {DIRECTOR_TYPES[currentDirectorType].description}
+                  </p>
+                )}
+              </div>
+            )}
             
             {/* Raw Game Toggle */}
             <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
@@ -221,14 +287,13 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               </div>
               <Switch 
                 checked={settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame}
-                disabled={!(settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled)}
+                disabled={!isDirectorEnabled}
                 onCheckedChange={(checked) => updateSettings({ 
                   directorSettings: { 
                     ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
                     rawGame: checked
                   }
                 })}
-                className="scale-90"
               />
             </div>
           </div>

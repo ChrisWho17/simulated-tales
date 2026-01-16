@@ -159,87 +159,221 @@ const GENRE_STYLES: Record<string, { background: string; aesthetic: string; ligh
   },
 };
 
-// Origin/cultural style modifiers that enhance genre costumes
-const ORIGIN_STYLE_MODIFIERS: Record<string, string> = {
+// Origin-based clothing styles - PRIMARY fashion direction
+const ORIGIN_CLOTHING_STYLES: Record<string, { traditional: string; modern: string; fusion: string }> = {
   // Asian origins
-  'japanese': 'with Japanese aesthetic influences, elegant minimalist details',
-  'chinese': 'with Chinese cultural motifs, silk accents, traditional patterns',
-  'korean': 'with Korean fashion influences, clean modern lines',
-  'indian': 'with Indian textile patterns, rich embroidery, vibrant colors',
-  'thai': 'with Thai decorative elements, gold accents',
-  'vietnamese': 'with Vietnamese traditional influences, ao dai inspired elements',
+  'japanese': {
+    traditional: 'kimono-inspired wrap silhouettes, obi belts, hakama pants, samue workwear',
+    modern: 'Tokyo streetwear, minimalist Japanese cuts, layered asymmetric pieces',
+    fusion: 'neo-kimono elements, haori-inspired jackets, Japanese punk fusion'
+  },
+  'chinese': {
+    traditional: 'qipao elements, mandarin collars, changshan inspired, silk brocade patterns, knot buttons',
+    modern: 'Shanghai fashion, Chinese streetwear, modern tangzhuang styling',
+    fusion: 'contemporary hanfu elements, East-meets-West fusion cuts'
+  },
+  'korean': {
+    traditional: 'hanbok-inspired silhouettes, jeogori collar styling, flowing skirt elements',
+    modern: 'K-fashion layering, Seoul streetwear, oversized minimalism',
+    fusion: 'modern hanbok fusion, Korean avant-garde cuts'
+  },
+  'indian': {
+    traditional: 'kurta and churidar elements, sari draping influences, sherwanis, dupattas',
+    modern: 'Mumbai fashion, Indo-Western fusion, contemporary Indian cuts',
+    fusion: 'modern lehenga styling, Indo-punk fusion, festival-ready Indian fashion'
+  },
+  'thai': {
+    traditional: 'sabai draping, Thai silk patterns, chut thai elements',
+    modern: 'Bangkok fashion forward, tropical elegant cuts',
+    fusion: 'modern Thai ceremonial fusion, Southeast Asian contemporary'
+  },
+  'vietnamese': {
+    traditional: 'ao dai inspired long tunics, elegant flowing silhouettes',
+    modern: 'Saigon chic, Vietnamese minimalist modern',
+    fusion: 'contemporary ao dai elements, Viet-Western fusion'
+  },
   // European origins
-  'british': 'with British tailoring, refined classic style',
-  'french': 'with French haute couture influences, elegant sophistication',
-  'italian': 'with Italian fashion flair, stylish and bold',
-  'german': 'with Germanic practical precision, quality craftsmanship',
-  'spanish': 'with Spanish flair, dramatic passionate style',
-  'russian': 'with Russian influences, fur accents, bold patterns',
-  'scandinavian': 'with Scandinavian minimalist design, functional beauty',
-  'irish': 'with Celtic influences, earthy tones, knit patterns',
-  'scottish': 'with Scottish heritage elements, tartan accents',
-  'greek': 'with Grecian draping, classical elegance',
+  'british': {
+    traditional: 'Savile Row tailoring, tweed and wool, proper British cuts, waistcoats',
+    modern: 'London streetwear, British punk influence, mod styling',
+    fusion: 'neo-Victorian elements, British avant-garde'
+  },
+  'french': {
+    traditional: 'Parisian haute couture influences, elegant draped silhouettes, chic tailoring',
+    modern: 'French effortless style, Parisian casual elegance',
+    fusion: 'contemporary French fashion, artsy Parisian cuts'
+  },
+  'italian': {
+    traditional: 'Milanese tailoring, Mediterranean elegance, quality Italian craftsmanship',
+    modern: 'Italian street style, bold Mediterranean fashion',
+    fusion: 'Italian designer fusion, contemporary Roman elegance'
+  },
+  'german': {
+    traditional: 'dirndl or lederhosen elements, Bavarian influences, precision tailoring',
+    modern: 'Berlin industrial fashion, German minimalist design',
+    fusion: 'Germanic futuristic cuts, industrial-meets-elegant'
+  },
+  'spanish': {
+    traditional: 'flamenco-inspired elements, Iberian dramatic flair, matador touches',
+    modern: 'Barcelona fashion forward, Spanish contemporary',
+    fusion: 'modern Spanish passion, flamenco-punk fusion'
+  },
+  'russian': {
+    traditional: 'fur-trimmed elegance, ornate Russian patterns, kosovorotka elements',
+    modern: 'Moscow high fashion, Russian avant-garde',
+    fusion: 'neo-Russian imperial elements, Slavic futurism'
+  },
+  'scandinavian': {
+    traditional: 'Viking-inspired elements, runic patterns, Nordic folk motifs',
+    modern: 'Scandi minimalism, hygge cozy fashion, Nordic functional design',
+    fusion: 'Norse futurism, Scandinavian tech-wear'
+  },
+  'irish': {
+    traditional: 'Celtic knot patterns, Aran knit elements, Irish wool crafts',
+    modern: 'Dublin contemporary, Irish casual elegance',
+    fusion: 'Celtic-punk fusion, modern Gaelic styling'
+  },
+  'scottish': {
+    traditional: 'tartan patterns, kilt-inspired elements, Highland dress touches',
+    modern: 'Edinburgh fashion, Scottish contemporary',
+    fusion: 'modern tartan fusion, Scottish punk heritage'
+  },
+  'greek': {
+    traditional: 'Grecian draping, chiton-inspired silhouettes, classical elegance',
+    modern: 'Athens fashion, Mediterranean island style',
+    fusion: 'neo-Hellenic fashion, modern goddess styling'
+  },
   // American origins
-  'american': 'with American style, practical yet bold',
-  'mexican': 'with Mexican vibrant colors, traditional embroidery',
-  'brazilian': 'with Brazilian flair, colorful and lively',
-  'caribbean': 'with Caribbean tropical influences, bright patterns',
+  'american': {
+    traditional: 'denim heritage, workwear Americana, Western influences',
+    modern: 'NYC streetwear, LA casual, American contemporary',
+    fusion: 'neo-Americana, US avant-garde fusion'
+  },
+  'mexican': {
+    traditional: 'embroidered huipil elements, charro influences, vibrant Oaxacan patterns',
+    modern: 'Mexico City fashion, contemporary Mexican design',
+    fusion: 'modern Mexican folk fusion, Dia de los Muertos inspired'
+  },
+  'brazilian': {
+    traditional: 'carnival-inspired elements, capoeira influences, indigenous patterns',
+    modern: 'Rio fashion, Brazilian beach-to-street style',
+    fusion: 'tropical avant-garde, Brazilian contemporary fusion'
+  },
+  'caribbean': {
+    traditional: 'island patterns, reggae influences, tropical folk elements',
+    modern: 'Caribbean island contemporary, tropical urban',
+    fusion: 'Caribbean diaspora fusion, island-meets-city'
+  },
   // African origins
-  'african': 'with African textile patterns, bold geometric designs',
-  'nigerian': 'with Nigerian fashion, rich fabrics, elaborate designs',
-  'egyptian': 'with Egyptian motifs, gold accents, ancient elegance',
-  'moroccan': 'with Moroccan influences, intricate patterns, jewel tones',
-  'ethiopian': 'with Ethiopian traditional elements, woven patterns',
+  'african': {
+    traditional: 'kente cloth patterns, ankara prints, dashiki styling, African textiles',
+    modern: 'Afropolitan fashion, Lagos streetwear, Johannesburg contemporary',
+    fusion: 'Afrofuturism fashion, pan-African modern fusion'
+  },
+  'nigerian': {
+    traditional: 'agbada robes, iro and buba, gele headwrap influences, Yoruba patterns',
+    modern: 'Nigerian pop culture fashion, Lagos high fashion',
+    fusion: 'modern Nigerian traditional fusion, Naija contemporary'
+  },
+  'egyptian': {
+    traditional: 'ancient Egyptian motifs, pharaonic elegance, lotus and scarab patterns',
+    modern: 'Cairo contemporary, Egyptian modern style',
+    fusion: 'neo-Egyptian fashion, pyramids-meet-future'
+  },
+  'moroccan': {
+    traditional: 'caftan elegance, djellaba influences, Berber patterns, zellige motifs',
+    modern: 'Marrakech fashion, Moroccan bohemian',
+    fusion: 'North African fusion, Moroccan-global hybrid'
+  },
+  'ethiopian': {
+    traditional: 'habesha kemis embroidery, Ethiopian cross patterns, shamma draping',
+    modern: 'Addis Ababa contemporary, Ethiopian modern',
+    fusion: 'Ethiopian diaspora fashion, East African fusion'
+  },
   // Middle Eastern origins
-  'arabian': 'with Arabian elegance, flowing fabrics, ornate details',
-  'persian': 'with Persian artistic influences, intricate patterns',
-  'turkish': 'with Turkish design elements, rich textures',
-  'israeli': 'with Israeli modern style, practical elegance',
+  'arabian': {
+    traditional: 'thobe elegance, abaya styling, keffiyeh elements, intricate gold embroidery',
+    modern: 'Dubai high fashion, Gulf contemporary luxury',
+    fusion: 'modern Arabian nights, Middle Eastern futurism'
+  },
+  'persian': {
+    traditional: 'Persian carpet patterns, Iranian royal motifs, Qajar-inspired elegance',
+    modern: 'Tehran contemporary, Iranian diaspora fashion',
+    fusion: 'neo-Persian luxury, Iranian avant-garde'
+  },
+  'turkish': {
+    traditional: 'Ottoman-inspired elegance, Turkish embroidery, kaftan elements',
+    modern: 'Istanbul fashion, Turkish contemporary',
+    fusion: 'neo-Ottoman fusion, Anatolian modern'
+  },
+  'israeli': {
+    traditional: 'Mediterranean influences, Middle Eastern heritage elements',
+    modern: 'Tel Aviv fashion, Israeli casual chic, desert modern',
+    fusion: 'Israeli-global fusion, Mediterranean contemporary'
+  },
   // Other
-  'australian': 'with Australian outback influences, rugged practicality',
-  'polynesian': 'with Polynesian traditional patterns, tropical elements',
-  'native american': 'with Native American traditional elements, beadwork, natural materials',
+  'australian': {
+    traditional: 'outback rugged wear, bush ranger influences, Aboriginal dot patterns',
+    modern: 'Sydney fashion, Australian surf-meets-city',
+    fusion: 'Australian contemporary fusion, down-under avant-garde'
+  },
+  'polynesian': {
+    traditional: 'tapa cloth patterns, tribal tattoo-inspired prints, island florals',
+    modern: 'Pacific Island contemporary, Hawaiian fashion',
+    fusion: 'Polynesian futurism, island warrior modern'
+  },
+  'native american': {
+    traditional: 'indigenous beadwork, fringe elements, tribal patterns, natural materials',
+    modern: 'Native contemporary, indigenous streetwear',
+    fusion: 'Native futurism, First Nations avant-garde'
+  },
 };
 
-// Get cultural style modifier based on ethnicity/nationality only (origin is background story, not culture)
-function getOriginModifier(nationality?: string, ethnicity?: string): string {
-  // Only use nationality and ethnicity for cultural style - origin is character background story
-  const cultureStr = (nationality || ethnicity || '').toLowerCase();
+// Get origin-based clothing style
+function getOriginClothingStyle(nationality?: string, ethnicity?: string, origin?: string): string {
+  const searchStr = (nationality || ethnicity || origin || '').toLowerCase();
   
-  for (const [key, modifier] of Object.entries(ORIGIN_STYLE_MODIFIERS)) {
-    if (cultureStr.includes(key)) {
-      return modifier;
+  for (const [key, styles] of Object.entries(ORIGIN_CLOTHING_STYLES)) {
+    if (searchStr.includes(key)) {
+      // Randomly pick traditional, modern, or fusion for variety
+      const styleType = ['traditional', 'modern', 'fusion'][Math.floor(Math.random() * 3)] as keyof typeof styles;
+      return styles[styleType];
     }
   }
   return '';
 }
 
-// Build clothing description: let AI be creative within genre + role + origin + user additionals
+// Build clothing description: user additionals SUPERSEDE all else, then origin drives style, genre provides context
 function buildClothingDescription(
   genreAesthetic: string,
   characterClass?: string,
-  originModifier?: string, 
+  originClothingStyle?: string, 
   userAdditionals?: string
 ): string {
+  // User additionals completely override everything else
+  if (userAdditionals && userAdditionals.trim()) {
+    return `EXACTLY AS SPECIFIED: ${userAdditionals} (ignore other clothing suggestions, user has specified the outfit)`;
+  }
+  
   const parts: string[] = [];
   
-  // User additionals come first (highest priority)
-  if (userAdditionals && userAdditionals.trim()) {
-    parts.push(userAdditionals);
+  // Origin-based clothing is PRIMARY style driver for diversity
+  if (originClothingStyle) {
+    parts.push(`unique outfit featuring ${originClothingStyle}`);
+    // Add genre context as secondary influence
+    parts.push(`adapted for ${genreAesthetic.replace(/clothing|attire|fashion/gi, 'setting').trim()}`);
+  } else {
+    // No origin specified - use genre aesthetic directly
+    parts.push(genreAesthetic);
   }
   
-  // Character role/class guides the outfit
+  // Character role adds functional elements
   if (characterClass) {
-    parts.push(`clothing appropriate for a ${characterClass}`);
+    parts.push(`with practical elements for a ${characterClass} role`);
   }
   
-  // Genre aesthetic provides the style direction
-  parts.push(genreAesthetic);
-  
-  // Cultural origin influences the design
-  if (originModifier) {
-    parts.push(originModifier);
-  }
+  // Encourage creativity
+  parts.push('creative unique design, avoid generic outfits');
   
   return parts.join(', ');
 }
@@ -342,12 +476,12 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   console.log('Additional details:', userDesc);
   console.log('Full description:', character);
   
-  // Build clothing: genre aesthetic + character role + origin + user additionals (AI is creative)
-  const originModifier = getOriginModifier(nationality, ethnicity);
-  const clothingDesc = buildClothingDescription(style.aesthetic, characterClass, originModifier, userDesc);
+  // Build clothing: origin drives style, genre provides context, user additionals supersede all
+  const originClothingStyle = getOriginClothingStyle(nationality, ethnicity, origin);
+  const clothingDesc = buildClothingDescription(style.aesthetic, characterClass, originClothingStyle, userDesc);
   
   console.log('Genre aesthetic:', style.aesthetic);
-  console.log('Origin modifier:', originModifier);
+  console.log('Origin clothing style:', originClothingStyle);
   console.log('Final clothing direction:', clothingDesc);
   
   // Professional realistic art style prompt - NO cartoon/stylized elements
