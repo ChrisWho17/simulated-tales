@@ -1117,7 +1117,7 @@ async function generateImage(prompt: string, negative: string): Promise<string> 
         height: 1216,
         num_inference_steps: 30,
         guidance_scale: 5,
-        scheduler: "DPM++ 2M Karras",
+        scheduler: "KarrasDPM",
         num_outputs: 1
       }
     }),
