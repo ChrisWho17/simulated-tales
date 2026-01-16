@@ -181,28 +181,27 @@ function buildPrompt(body: any): { prompt: string; negative: string } {
   const genderWord = gender === 'female' ? 'woman' : gender === 'male' ? 'man' : 'person';
   desc.push(`${charAge} year old ${eth} ${genderWord}`);
   
-  // Body shape for female characters - ALWAYS include bust/hip for females
   // Body shape for female characters - breasts and butt only
   if (gender === 'female' || gender === 'other') {
-    // Bust = breasts only, clear size differences
+    // Bust sizes: small/medium/large/extra
     const bustMap: Record<string, string> = {
       'small': 'small breasts',
       'medium': 'medium breasts',
       'large': 'large breasts',
-      'very large': 'massive breasts',
+      'extra': 'extra large breasts',
     };
     const bust = bustSize || 'medium';
     const bustDesc = bustMap[bust.toLowerCase()] || `${bust} breasts`;
     desc.push(bustDesc);
     
-    // Hips = butt/hips only, clear size differences
+    // Hip sizes: small/medium/large/extra
     const hipMap: Record<string, string> = {
-      'narrow': 'small butt',
-      'average': 'average butt',
-      'wide': 'big butt',
-      'very wide': 'huge butt',
+      'small': 'small butt',
+      'medium': 'medium butt',
+      'large': 'large butt',
+      'extra': 'extra large butt',
     };
-    const hip = hipWidth || 'average';
+    const hip = hipWidth || 'medium';
     const hipDesc = hipMap[hip.toLowerCase()] || `${hip} butt`;
     desc.push(hipDesc);
   }
