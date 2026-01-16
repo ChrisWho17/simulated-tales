@@ -309,6 +309,97 @@ const DETAIL_OPTIONS: Record<string, string> = {
 };
 
 // ============================================================================
+// BODY MODIFICATION MAPPINGS - for detailed character customization
+// ============================================================================
+
+const PIERCING_PROMPT_MAP: Record<string, string> = {
+  'ear_lobe': 'visible ear lobe piercings, multiple earrings',
+  'ear_helix': 'helix ear piercing, cartilage piercings',
+  'ear_industrial': 'industrial ear piercing bar',
+  'nose_stud': 'nose stud piercing',
+  'nose_ring': 'nose ring piercing',
+  'septum': 'septum piercing, visible nose ring',
+  'lip_ring': 'lip ring piercing',
+  'labret': 'labret piercing below lip',
+  'eyebrow': 'eyebrow piercing, barbell through brow',
+  'tongue': 'tongue piercing visible',
+  'navel': 'navel belly button piercing',
+  'nipple': 'nipple piercings visible through clothing',
+  'intimate': 'intimate body piercings',
+};
+
+const TATTOO_PROMPT_MAP: Record<string, string> = {
+  'face': 'facial tattoos, face ink, tribal face markings',
+  'neck': 'neck tattoo, throat ink design',
+  'chest': 'chest tattoo, torso ink art',
+  'back': 'back tattoo, spine ink design',
+  'full_sleeve': 'full sleeve tattoos both arms, heavily inked arms',
+  'half_sleeve': 'half sleeve tattoos on upper arms',
+  'forearm': 'forearm tattoos, lower arm ink',
+  'hand': 'hand tattoos, finger tattoos, knuckle ink',
+  'leg': 'leg tattoos, thigh ink',
+  'tribal': 'tribal pattern tattoos, bold black geometric',
+  'japanese': 'japanese style tattoos, irezumi, koi dragons',
+  'blackwork': 'blackwork tattoos, solid black ink designs',
+  'realism': 'realistic portrait tattoos, photorealistic ink',
+  'watercolor': 'watercolor style tattoos, colorful flowing ink',
+  'traditional': 'traditional old school tattoos, bold colors',
+};
+
+const SCAR_PROMPT_MAP: Record<string, string> = {
+  'facial': 'prominent facial scar, healed wound across face',
+  'eye': 'scar across eye, through eyebrow',
+  'cheek': 'cheek scar, slashing mark on face',
+  'lip': 'scar through lip, healed cut',
+  'body': 'body scars, torso wounds healed',
+  'burn': 'burn scars, healed burn marks on skin',
+  'surgical': 'surgical scars, medical procedure marks',
+};
+
+const IMPLANT_PROMPT_MAP: Record<string, string> = {
+  'neural': 'neural interface implant on temple, glowing circuitry under skin, cybernetic brain jack',
+  'eye': 'cybernetic eye implant, glowing mechanical eye, optical augmentation',
+  'arm': 'cybernetic arm, mechanical prosthetic arm, chrome limb with visible mechanics',
+  'hand': 'cybernetic hand, mechanical fingers, chrome knuckles with tech details',
+  'spine': 'spinal implant visible, vertebrae augmentation, back cybernetics',
+  'subdermal': 'subdermal implants, glowing patterns under skin, tech-enhanced skin',
+  'ports': 'data ports on neck and arms, visible connection jacks, interface sockets',
+};
+
+const PROSTHETIC_PROMPT_MAP: Record<string, string> = {
+  'arm': 'prosthetic arm, artificial limb, mechanical replacement arm',
+  'leg': 'prosthetic leg, artificial limb, mechanical leg',
+  'hand': 'prosthetic hand, mechanical fingers, artificial hand',
+  'eye': 'prosthetic eye, glass eye, artificial eye',
+};
+
+const MUTATION_PROMPT_MAP: Record<string, string> = {
+  'scales': 'mutated scales on skin, reptilian patches',
+  'horns': 'small horns growing from head, mutant protrusions',
+  'claws': 'claw-like fingernails, sharp mutated nails',
+  'fangs': 'visible fangs, sharp mutated teeth',
+  'extra_limbs': 'extra appendages, mutated limbs',
+  'bioluminescent': 'bioluminescent patches on skin, glowing mutation',
+};
+
+const CLOTHING_STYLE_PROMPT_MAP: Record<string, string> = {
+  'genre_default': '', // Use genre default
+  'streetwear': 'urban streetwear fashion, hoodies, sneakers, casual cool',
+  'formal': 'formal attire, suit and tie, elegant business wear',
+  'casual': 'casual everyday clothing, relaxed fit, comfortable',
+  'punk': 'punk fashion, leather jacket, spikes, chains, rebellious style',
+  'goth': 'gothic fashion, black clothing, dark aesthetic, lace and leather',
+  'military': 'military style clothing, tactical gear, combat fatigues',
+  'sporty': 'athletic sportswear, track suit, sporty casual',
+  'vintage': 'vintage retro fashion, classic old-school style',
+  'haute_couture': 'high fashion, designer clothing, avant-garde style',
+  'cyberpunk_street': 'cyberpunk streetwear, neon accents, tech-wear, futuristic urban',
+  'corporate': 'corporate professional attire, business suit, executive style',
+  'nomad': 'nomad wasteland clothing, dusty road-worn, scavenged gear',
+  'rocker': 'rock and roll fashion, band shirts, leather, chains',
+};
+
+// ============================================================================
 // EMOTION MODIFIERS
 // ============================================================================
 
@@ -573,12 +664,23 @@ function buildLockedReferencePrompt(body: any) {
     age,
     height,
     facialFeatures,
-    distinguishingMarks
+    distinguishingMarks,
+    // BODY MODIFICATIONS - extracted separately for emphasis
+    piercings,
+    tattoos,
+    tattooStyle,
+    scars,
+    implants,
+    prosthetics,
+    mutations,
+    clothingStyle,
+    clothingDetails,
   } = body;
   
-  // Log incoming data for debugging
+  // Log incoming data for debugging - including body mods
   console.log("Building prompt with character data:", JSON.stringify({
-    gender, build, skinTone, hairColor, hairStyle, eyeColor, details, characterClass, genre
+    gender, build, skinTone, hairColor, hairStyle, eyeColor, details, characterClass, genre,
+    piercings, tattoos, implants, prosthetics, mutations, clothingStyle
   }));
   
   // Get genre config for style and backgrounds
@@ -636,6 +738,115 @@ function buildLockedReferencePrompt(body: any) {
   if (facialFeatures) detailParts.push(facialFeatures);
   if (distinguishingMarks) detailParts.push(distinguishingMarks);
   
+  // =========================================================================
+  // BODY MODIFICATIONS - Critical for character accuracy
+  // =========================================================================
+  const bodyModParts: string[] = [];
+  
+  // Process PIERCINGS
+  if (piercings && Array.isArray(piercings) && piercings.length > 0) {
+    console.log("Processing piercings:", piercings);
+    piercings.forEach((p: string) => {
+      const mapped = findKey(PIERCING_PROMPT_MAP, p);
+      if (mapped && mapped !== p) {
+        bodyModParts.push(mapped);
+      } else if (p) {
+        bodyModParts.push(`${p} piercing`);
+      }
+    });
+  }
+  
+  // Process TATTOOS with style
+  if (tattoos && Array.isArray(tattoos) && tattoos.length > 0) {
+    console.log("Processing tattoos:", tattoos, "style:", tattooStyle);
+    tattoos.forEach((t: string) => {
+      const mapped = findKey(TATTOO_PROMPT_MAP, t);
+      if (mapped && mapped !== t) {
+        bodyModParts.push(mapped);
+      } else if (t) {
+        bodyModParts.push(`${t} tattoo`);
+      }
+    });
+    // Add tattoo style if specified
+    if (tattooStyle) {
+      const styleDesc = findKey(TATTOO_PROMPT_MAP, tattooStyle);
+      if (styleDesc && styleDesc !== tattooStyle) {
+        bodyModParts.push(styleDesc);
+      }
+    }
+  }
+  
+  // Process SCARS
+  if (scars && Array.isArray(scars) && scars.length > 0) {
+    console.log("Processing scars:", scars);
+    scars.forEach((s: string) => {
+      const mapped = findKey(SCAR_PROMPT_MAP, s);
+      if (mapped && mapped !== s) {
+        bodyModParts.push(mapped);
+      } else if (s) {
+        bodyModParts.push(`${s} scar`);
+      }
+    });
+  }
+  
+  // Process CYBERNETIC IMPLANTS - critical for cyberpunk
+  if (implants && Array.isArray(implants) && implants.length > 0) {
+    console.log("Processing cybernetic implants:", implants);
+    implants.forEach((i: string) => {
+      const mapped = findKey(IMPLANT_PROMPT_MAP, i);
+      if (mapped && mapped !== i) {
+        bodyModParts.push(mapped);
+      } else if (i) {
+        bodyModParts.push(`${i} cybernetic implant, chrome augmentation`);
+      }
+    });
+  }
+  
+  // Process PROSTHETICS
+  if (prosthetics && Array.isArray(prosthetics) && prosthetics.length > 0) {
+    console.log("Processing prosthetics:", prosthetics);
+    prosthetics.forEach((p: string) => {
+      const mapped = findKey(PROSTHETIC_PROMPT_MAP, p);
+      if (mapped && mapped !== p) {
+        bodyModParts.push(mapped);
+      } else if (p) {
+        bodyModParts.push(`${p} prosthetic`);
+      }
+    });
+  }
+  
+  // Process MUTATIONS
+  if (mutations && Array.isArray(mutations) && mutations.length > 0) {
+    console.log("Processing mutations:", mutations);
+    mutations.forEach((m: string) => {
+      const mapped = findKey(MUTATION_PROMPT_MAP, m);
+      if (mapped && mapped !== m) {
+        bodyModParts.push(mapped);
+      } else if (m) {
+        bodyModParts.push(`${m} mutation`);
+      }
+    });
+  }
+  
+  // Process CLOTHING STYLE override
+  let clothingOverride = '';
+  if (clothingStyle && clothingStyle !== 'genre_default') {
+    const styleDesc = findKey(CLOTHING_STYLE_PROMPT_MAP, clothingStyle);
+    if (styleDesc && styleDesc !== clothingStyle) {
+      clothingOverride = styleDesc;
+    } else if (clothingStyle) {
+      clothingOverride = `${clothingStyle} fashion style`;
+    }
+    console.log("Clothing style override:", clothingOverride);
+  }
+  
+  // Process clothing details
+  if (clothingDetails && Array.isArray(clothingDetails) && clothingDetails.length > 0) {
+    clothingOverride += (clothingOverride ? ', ' : '') + clothingDetails.join(', ');
+  }
+  
+  console.log("Body modifications found:", bodyModParts.length, "items");
+  
   // Handle expression from environment mood
   let expression = 'calm neutral expression';
   if (environmentContext?.mood) {
@@ -662,6 +873,9 @@ function buildLockedReferencePrompt(body: any) {
     expression = 'intense combat-ready expression, focused determined eyes';
   }
   
+  // Determine final clothing - use override if specified, otherwise use role/genre default
+  const finalClothing = clothingOverride || roleStyle;
+  
   // Build the realistic portrait prompt with all character creation settings
   const promptParts = [
     // Core realistic photo style with knee-to-head framing
@@ -675,11 +889,14 @@ function buildLockedReferencePrompt(body: any) {
     `hair: ${hairColorDesc}, ${hairStyleDesc}`,
     `eyes: ${eyeColorDesc}`,
     
-    // Character details
+    // BODY MODIFICATIONS - High priority, listed explicitly
+    bodyModParts.length > 0 ? `IMPORTANT body modifications: ${bodyModParts.join(', ')}` : '',
+    
+    // Character details (other features)
     detailParts.length > 0 ? `features: ${detailParts.join(', ')}` : '',
     
-    // Clothing/gear based on class and genre
-    `clothing and gear: ${roleStyle}`,
+    // Clothing/gear based on class, genre, or custom style
+    `clothing and gear: ${finalClothing}`,
     
     // Expression
     `expression: ${expression}`,
@@ -697,6 +914,7 @@ function buildLockedReferencePrompt(body: any) {
   
   const finalPrompt = promptParts.join(', ');
   console.log("Built prompt length:", finalPrompt.length);
+  console.log("Final prompt preview:", finalPrompt.substring(0, 600) + "...");
   
   return {
     prompt: finalPrompt,
