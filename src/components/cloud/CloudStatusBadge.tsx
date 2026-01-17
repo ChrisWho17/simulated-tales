@@ -2,7 +2,7 @@
 // CLOUD STATUS BADGE - Compact sync status indicator with last sync time
 // ============================================================================
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { 
   Cloud, 
@@ -77,6 +77,33 @@ const stateConfig: Record<SyncState, {
   },
 };
 
+// Custom hook to detect sync completion
+function useSyncCompleteAnimation(state: SyncState, isSyncing: boolean) {
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const prevStateRef = useRef<{ state: SyncState; isSyncing: boolean }>({ state, isSyncing });
+  
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    
+    // Detect transition from syncing to synced
+    if ((prev.isSyncing || prev.state === 'pending') && 
+        !isSyncing && state === 'synced') {
+      setShowSuccessAnimation(true);
+      
+      // Clear animation after it completes
+      const timer = setTimeout(() => {
+        setShowSuccessAnimation(false);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    prevStateRef.current = { state, isSyncing };
+  }, [state, isSyncing]);
+  
+  return showSuccessAnimation;
+}
+
 export function CloudStatusBadge({ 
   state, 
   lastSyncedAt, 
@@ -88,6 +115,7 @@ export function CloudStatusBadge({
   // Override state display when actively syncing
   const displayState = isSyncing ? 'pending' : state;
   const config = stateConfig[displayState];
+  const showSuccessAnimation = useSyncCompleteAnimation(state, isSyncing);
   
   const tooltipContent = (
     <div className="space-y-1">
@@ -128,6 +156,7 @@ export function CloudStatusBadge({
               'disabled:cursor-default disabled:hover:bg-black/20 disabled:hover:border-border/30',
               config.colorClass,
               config.pulseClass,
+              showSuccessAnimation && 'sync-success-glow',
               className
             )}
           >
