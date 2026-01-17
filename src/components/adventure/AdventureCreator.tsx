@@ -20,6 +20,10 @@ import { LifetimeStatsModal } from './LifetimeStatsModal';
 import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
+import { useCloudSyncStatus } from '@/hooks/useCloudSyncStatus';
+import { CloudStatusBadge } from '@/components/cloud/CloudStatusBadge';
+import { ConflictResolutionModal } from '@/components/cloud/ConflictResolutionModal';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -199,9 +203,42 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
   const [showColorSplash, setShowColorSplash] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
   
   // Auth state
   const { isAuthenticated, user, signOut, signInWithOAuth, isLoading: authLoading } = useAuth();
+  
+  // Cloud sync state
+  const { 
+    overallState: syncState, 
+    lastSyncedAt, 
+    conflicts, 
+    hasConflicts,
+    isSyncing,
+    forceSync 
+  } = useCloudSyncStatus();
+  
+  // Show conflict modal automatically when conflicts are detected
+  useEffect(() => {
+    if (hasConflicts && isAuthenticated) {
+      setShowConflictModal(true);
+    }
+  }, [hasConflicts, isAuthenticated]);
+  
+  const handleSyncClick = async () => {
+    if (hasConflicts) {
+      setShowConflictModal(true);
+    } else {
+      const result = await forceSync();
+      if (result.synced > 0) {
+        toast.success(`Synced ${result.synced} campaign${result.synced > 1 ? 's' : ''}`);
+      } else if (result.conflicts > 0) {
+        setShowConflictModal(true);
+      } else {
+        toast.info('Everything is up to date');
+      }
+    }
+  };
   
   // Genre Contract state
   const [primaryGenre, setPrimaryGenre] = useState<GameGenre>('fantasy');
@@ -373,6 +410,17 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       {/* Auth Modal */}
       <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
       
+      {/* Conflict Resolution Modal */}
+      <ConflictResolutionModal
+        open={showConflictModal}
+        conflicts={conflicts}
+        onResolved={() => {
+          setShowConflictModal(false);
+          toast.success('All conflicts resolved!');
+        }}
+        onClose={() => setShowConflictModal(false)}
+      />
+      
       {/* Atmospheric Background */}
       <AtmosphericBackground />
       
@@ -422,38 +470,51 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
               </Tooltip>
             </TooltipProvider>
             
-            {/* Sign In / User Button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {isAuthenticated ? (
-                    <button
-                      onClick={() => signOut()}
-                      className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-primary/20 border border-primary/30 hover:bg-primary/30 transition-all duration-300 group animate-electric-flicker"
-                    >
-                      <ThemedGoogleIcon className="w-5 h-5" />
-                      <span className="text-sm text-primary font-medium max-w-[100px] truncate">
-                        {user?.email?.split('@')[0]}
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => signInWithOAuth('google')}
-                      className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
-                      disabled={authLoading}
-                    >
-                      <ThemedGoogleIcon className="w-5 h-5" />
-                      <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                        Sign In
-                      </span>
-                    </button>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isAuthenticated ? 'Sign out' : 'Sign in with Google'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Sign In / User Button with Cloud Sync Status */}
+            <div className="flex items-center gap-1.5">
+              {/* Cloud Sync Status Badge - only show when authenticated */}
+              {isAuthenticated && (
+                <CloudStatusBadge
+                  state={syncState}
+                  lastSyncedAt={lastSyncedAt}
+                  conflictCount={conflicts.length}
+                  isSyncing={isSyncing}
+                  onSyncClick={handleSyncClick}
+                />
+              )}
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {isAuthenticated ? (
+                      <button
+                        onClick={() => signOut()}
+                        className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-primary/20 border border-primary/30 hover:bg-primary/30 transition-all duration-300 group animate-electric-flicker"
+                      >
+                        <ThemedGoogleIcon className="w-5 h-5" />
+                        <span className="text-sm text-primary font-medium max-w-[100px] truncate">
+                          {user?.email?.split('@')[0]}
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => signInWithOAuth('google')}
+                        className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
+                        disabled={authLoading}
+                      >
+                        <ThemedGoogleIcon className="w-5 h-5" />
+                        <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                          Sign In
+                        </span>
+                      </button>
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isAuthenticated ? 'Sign out' : 'Sign in with Google'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
           
           {/* Genre Contract Setup - Glass Panel */}
