@@ -482,8 +482,12 @@ export function evaluateForDebt(
 
 // ============= GRUDGE DECAY =============
 
+// Limits for grudge/debt arrays
+const MAX_GRUDGES_PER_NPC = 15;
+const MAX_DEBTS_PER_NPC = 10;
+
 export function processGrudgeDecay(grudges: Grudge[], hoursElapsed: number = 1): Grudge[] {
-  return grudges.map(grudge => {
+  let processed = grudges.map(grudge => {
     if (grudge.resolved || grudge.decayRate === 0) return grudge;
     
     // Research: Decay follows exponential curve, not linear
@@ -502,27 +506,45 @@ export function processGrudgeDecay(grudges: Grudge[], hoursElapsed: number = 1):
     
     return { ...grudge, intensity: Math.round(newIntensity * 10) / 10 };
   }).filter(g => !(g.resolved && g.intensity <= 0));
+  
+  // Prune to max grudges, keeping most intense
+  if (processed.length > MAX_GRUDGES_PER_NPC) {
+    processed = processed
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, MAX_GRUDGES_PER_NPC);
+  }
+  
+  return processed;
 }
 
 export function processDebtDecay(debts: Debt[], hoursElapsed: number = 1): Debt[] {
-  return debts.map(debt => {
+  let processed = debts.map(debt => {
     if (debt.fulfilled || debt.decayRate === 0) return debt;
     
     const newIntensity = debt.intensity - (debt.decayRate * hoursElapsed);
     
     // Debts fade but don't disappear - minimum gratitude remains
     if (newIntensity < 2) {
-      return { ...debt, intensity: 2, willingness: 'verbal_thanks' };
+      return { ...debt, intensity: 2, willingness: 'verbal_thanks' as const };
     }
     
     // Update willingness as intensity fades
-    let willingness = debt.willingness;
+    let willingness: Debt['willingness'] = debt.willingness;
     if (newIntensity < 3) willingness = 'verbal_thanks';
     else if (newIntensity < 5) willingness = 'small_favor';
     else if (newIntensity < 7) willingness = 'favor';
     
     return { ...debt, intensity: Math.round(newIntensity * 10) / 10, willingness };
   });
+  
+  // Prune to max debts, keeping most intense
+  if (processed.length > MAX_DEBTS_PER_NPC) {
+    processed = processed
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, MAX_DEBTS_PER_NPC);
+  }
+  
+  return processed;
 }
 
 // ============= AI PROMPT CONTEXT =============

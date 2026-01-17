@@ -23,6 +23,10 @@ import { WeatherType } from './weatherSystem';
 
 // ============= WORLD EVENT TYPES =============
 
+// Limits to prevent memory bloat
+const MAX_WORLD_EVENTS = 100;
+const MAX_RUMORS = 30;
+
 export interface WorldEvent {
   id: string;
   tick: number;
@@ -39,6 +43,24 @@ export interface WorldState {
   rumors: Rumor[];
   resourceLevels: Record<string, number>;
   environmentalConditions: EnvironmentalConditions;
+}
+
+// Helper to prune world state arrays
+export function pruneWorldStateArrays(state: WorldState): WorldState {
+  const pruned = { ...state };
+  
+  if (pruned.events.length > MAX_WORLD_EVENTS) {
+    pruned.events = pruned.events.slice(-MAX_WORLD_EVENTS);
+  }
+  
+  if (pruned.rumors.length > MAX_RUMORS) {
+    // Keep most spread rumors
+    pruned.rumors = pruned.rumors
+      .sort((a, b) => b.spreadCount - a.spreadCount)
+      .slice(0, MAX_RUMORS);
+  }
+  
+  return pruned;
 }
 
 export interface Rumor {
@@ -205,10 +227,27 @@ export function createMemory(
   };
 }
 
+// Limit for NPC memory arrays
+const MAX_NPC_MEMORIES = 50;
+
 export function addMemory(npc: NPC, memory: Memory): NPC {
+  let newMemory = [...npc.memory, memory];
+  
+  // Prune if exceeds limit - keep most emotional/recent memories
+  if (newMemory.length > MAX_NPC_MEMORIES) {
+    newMemory = newMemory
+      .sort((a, b) => {
+        // Prioritize by emotional impact first, then recency
+        const impactDiff = Math.abs(b.emotionalImpact) - Math.abs(a.emotionalImpact);
+        if (Math.abs(impactDiff) > 10) return impactDiff;
+        return b.tick - a.tick;
+      })
+      .slice(0, MAX_NPC_MEMORIES);
+  }
+  
   return {
     ...npc,
-    memory: [...npc.memory, memory],
+    memory: newMemory,
   };
 }
 

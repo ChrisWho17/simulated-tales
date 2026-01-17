@@ -1388,10 +1388,14 @@ export function changeMood(
     narrativeContext
   };
 
+  // Limit mood history to prevent memory bloat
+  const MAX_MOOD_HISTORY = 30;
+  const trimmedHistory = state.moodHistory.slice(-(MAX_MOOD_HISTORY - 1));
+
   return {
     currentMood: newMood,
     moodIntensity: Math.max(0.1, Math.min(1, intensity)),
-    moodHistory: [...state.moodHistory.slice(-49), entry], // Keep last 50 entries
+    moodHistory: [...trimmedHistory, entry],
     lastChangeTimestamp: Date.now()
   };
 }

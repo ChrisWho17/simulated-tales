@@ -258,6 +258,10 @@ export function canTriggerBeat(beatType: string, tick: number): boolean {
   return true;
 }
 
+// Limits for director state
+const MAX_RECENT_BEATS = 20;
+const MAX_COOLDOWNS = 50;
+
 export function recordBeat(beatType: string, tick: number): void {
   const cooldown = BEAT_COOLDOWNS[beatType] || 5;
   
@@ -273,8 +277,15 @@ export function recordBeat(beatType: string, tick: number): void {
   });
   
   // Keep only last 20 beats
-  if (directorState.recentBeats.length > 20) {
-    directorState.recentBeats = directorState.recentBeats.slice(-20);
+  if (directorState.recentBeats.length > MAX_RECENT_BEATS) {
+    directorState.recentBeats = directorState.recentBeats.slice(-MAX_RECENT_BEATS);
+  }
+  
+  // Also prune cooldowns to prevent unbounded growth
+  if (directorState.cooldowns.length > MAX_COOLDOWNS) {
+    directorState.cooldowns = directorState.cooldowns
+      .sort((a, b) => b.availableAt - a.availableAt)
+      .slice(0, MAX_COOLDOWNS);
   }
 }
 

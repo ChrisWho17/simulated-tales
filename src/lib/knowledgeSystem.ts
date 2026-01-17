@@ -60,6 +60,13 @@ export interface PlayerKnowledgeStore {
   npcs: Record<string, NPCKnowledgeEntry>;
 }
 
+// Limits
+const MAX_KNOWN_NPCS = 200;
+const MAX_VISIBLE_ITEMS = 20;
+const MAX_KNOWN_ITEMS = 30;
+const MAX_SUSPECTED_ITEMS = 15;
+const MAX_REVEALED_TRAITS = 10;
+
 // Storage key
 const KNOWLEDGE_STORE_KEY = 'living-world-knowledge';
 
@@ -81,13 +88,51 @@ export function loadKnowledgeStore(): PlayerKnowledgeStore {
   return initializeKnowledgeStore();
 }
 
-// Save knowledge to storage
+// Save knowledge to storage with pruning
 export function saveKnowledgeStore(store: PlayerKnowledgeStore): void {
   try {
-    localStorage.setItem(KNOWLEDGE_STORE_KEY, JSON.stringify(store));
+    // Prune before saving
+    const pruned = pruneKnowledgeStore(store);
+    localStorage.setItem(KNOWLEDGE_STORE_KEY, JSON.stringify(pruned));
   } catch (e) {
     console.error('Failed to save knowledge store:', e);
   }
+}
+
+// Prune knowledge store to prevent memory bloat
+export function pruneKnowledgeStore(store: PlayerKnowledgeStore): PlayerKnowledgeStore {
+  const npcIds = Object.keys(store.npcs);
+  
+  if (npcIds.length <= MAX_KNOWN_NPCS) {
+    return store;
+  }
+  
+  // Sort by familiarity and last interaction
+  const sortedIds = npcIds.sort((a, b) => {
+    const aEntry = store.npcs[a];
+    const bEntry = store.npcs[b];
+    // Prioritize known names, high familiarity, and recent interactions
+    const aScore = (aEntry.knowsName ? 100 : 0) + aEntry.familiarity + (aEntry.lastInteraction / 1e10);
+    const bScore = (bEntry.knowsName ? 100 : 0) + bEntry.familiarity + (bEntry.lastInteraction / 1e10);
+    return bScore - aScore;
+  });
+  
+  const prunedNpcs: Record<string, NPCKnowledgeEntry> = {};
+  sortedIds.slice(0, MAX_KNOWN_NPCS).forEach(id => {
+    const entry = store.npcs[id];
+    // Also prune internal arrays
+    prunedNpcs[id] = {
+      ...entry,
+      inventory: {
+        visible: entry.inventory.visible.slice(-MAX_VISIBLE_ITEMS),
+        known: entry.inventory.known.slice(-MAX_KNOWN_ITEMS),
+        suspected: entry.inventory.suspected.slice(-MAX_SUSPECTED_ITEMS),
+      },
+      revealedTraits: entry.revealedTraits.slice(-MAX_REVEALED_TRAITS),
+    };
+  });
+  
+  return { npcs: prunedNpcs };
 }
 
 // Generate a descriptor for an unknown NPC
