@@ -201,7 +201,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   // Auth state
-  const { isAuthenticated, user, signOut, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, user, signOut, signInWithOAuth, isLoading: authLoading } = useAuth();
   
   // Genre Contract state
   const [primaryGenre, setPrimaryGenre] = useState<GameGenre>('fantasy');
@@ -412,7 +412,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                   </button>
                 ) : (
                   <button
-                    onClick={() => setShowAuthModal(true)}
+                    onClick={() => signInWithOAuth('google')}
                     className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
                     disabled={authLoading}
                   >
