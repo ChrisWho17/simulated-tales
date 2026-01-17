@@ -297,11 +297,14 @@ export const QUEST_DEFINITIONS: Record<string, Omit<Quest, 'status' | 'currentOb
 
 // ============= QUEST MANAGEMENT FUNCTIONS =============
 
-// Quest log limits to prevent unbounded growth
+// Quest log limits to prevent unbounded growth - designed for 100k+ turn games
 const QUEST_LOG_LIMITS = {
-  maxCompletedHistory: 50,  // Keep last 50 completed quest IDs
-  maxFailedHistory: 25,     // Keep last 25 failed quest IDs
-  maxActiveQuests: 15,      // Maximum simultaneous active quests
+  maxCompletedHistory: 100,  // Keep last 100 completed quest IDs  
+  maxFailedHistory: 50,      // Keep last 50 failed quest IDs
+  maxActiveQuests: 20,       // Maximum simultaneous active quests
+  maxJournalEntries: 30,     // Max journal entries per quest
+  maxQuestsInLog: 200,       // Max total quests stored (active + completed + failed)
+  questPruneThreshold: 150,  // Start pruning when we hit this many quests
 } as const;
 
 export function initializeQuestLog(): QuestLog {
@@ -450,21 +453,65 @@ export function failQuest(questLog: QuestLog, questId: string, reason: string): 
   const quest = questLog.quests[questId];
   if (!quest) return questLog;
   
+  // Limit journal entries
+  const trimmedJournalEntries = quest.journalEntries.slice(-QUEST_LOG_LIMITS.maxJournalEntries + 1);
+  
   const updatedQuest: Quest = {
     ...quest,
     status: 'failed',
     journalEntries: [
-      ...quest.journalEntries,
+      ...trimmedJournalEntries,
       { tick: Date.now(), text: `Quest failed: ${reason}`, isAuto: true },
     ],
   };
   
-  return {
+  // Cap failed quest history
+  let newFailedIds = [...questLog.failedQuestIds, questId];
+  if (newFailedIds.length > QUEST_LOG_LIMITS.maxFailedHistory) {
+    newFailedIds = newFailedIds.slice(-QUEST_LOG_LIMITS.maxFailedHistory);
+  }
+  
+  return pruneQuestLog({
     ...questLog,
     quests: { ...questLog.quests, [questId]: updatedQuest },
-    failedQuestIds: [...questLog.failedQuestIds, questId],
+    failedQuestIds: newFailedIds,
     totalFailed: questLog.totalFailed + 1,
     currentActiveCount: questLog.currentActiveCount - 1,
+  });
+}
+
+// Prune old quests to prevent unbounded growth in 100k+ turn games
+function pruneQuestLog(questLog: QuestLog): QuestLog {
+  const questCount = Object.keys(questLog.quests).length;
+  
+  if (questCount <= QUEST_LOG_LIMITS.questPruneThreshold) {
+    return questLog;
+  }
+  
+  // Get quests sorted by completion time (oldest first)
+  const questEntries = Object.entries(questLog.quests);
+  const completedQuests = questEntries
+    .filter(([_, q]) => q.status === 'completed' || q.status === 'failed' || q.status === 'abandoned')
+    .sort((a, b) => (a[1].completedAt || 0) - (b[1].completedAt || 0));
+  
+  // Remove oldest completed quests until we're under limit
+  const toRemove = questCount - QUEST_LOG_LIMITS.maxQuestsInLog;
+  const removedIds = new Set(completedQuests.slice(0, Math.max(0, toRemove)).map(([id]) => id));
+  
+  if (removedIds.size === 0) return questLog;
+  
+  const prunedQuests: Record<string, Quest> = {};
+  for (const [id, quest] of questEntries) {
+    if (!removedIds.has(id)) {
+      prunedQuests[id] = quest;
+    }
+  }
+  
+  console.log(`[QuestSystem] Pruned ${removedIds.size} old quests for memory efficiency`);
+  
+  return {
+    ...questLog,
+    quests: prunedQuests,
   };
 }
 

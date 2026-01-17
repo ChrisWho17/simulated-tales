@@ -93,10 +93,14 @@ export function createDefaultLocation(): PlayerLocation {
   };
 }
 
+// Location history limit - designed for 100k+ turn games
+const MAX_LOCATION_HISTORY = 30; // Reduced for memory efficiency
+const MAX_SIGNIFICANT_EVENTS_PER_LOCATION = 5;
+
 export function createLocationHistory(): LocationHistory {
   return {
     entries: [],
-    maxEntries: 50,
+    maxEntries: MAX_LOCATION_HISTORY,
   };
 }
 
@@ -127,14 +131,17 @@ export function addLocationHistoryEntry(
   leftAt: number,
   significantEvents: string[] = []
 ): LocationHistory {
+  // Limit significant events per entry - designed for 100k+ turns
+  const trimmedEvents = significantEvents.slice(0, MAX_SIGNIFICANT_EVENTS_PER_LOCATION);
+  
   const entry: LocationHistoryEntry = {
     location: previousLocation,
     enteredAt: previousLocation.timeEnteredLocation,
     leftAt,
-    significantEvents,
+    significantEvents: trimmedEvents,
   };
 
-  const newEntries = [entry, ...history.entries].slice(0, history.maxEntries);
+  const newEntries = [entry, ...history.entries].slice(0, MAX_LOCATION_HISTORY);
   
   return { ...history, entries: newEntries };
 }

@@ -75,16 +75,26 @@ export interface NPCMemoryStore {
   patterns: PatternMemory[];
 }
 
-// ============= MEMORY CAPACITY LIMITS =============
+// ============= MEMORY CAPACITY LIMITS - Designed for 100k+ turn games =============
 
 const CAPACITY = {
-  short: 15,  // Reduced from 20 to prevent memory bloat
-  medium: 40, // Reduced from 50
-  long: 75,   // Reduced from 100
+  short: 10,  // Reduced for long-term sustainability
+  medium: 25, // Reduced from 40
+  long: 50,   // Reduced from 75 - core memories only
 };
 
 // Maximum total memories across all NPCs to prevent runaway memory usage
-const MAX_TOTAL_NPC_MEMORIES = 500;
+const MAX_TOTAL_NPC_MEMORIES = 300;
+
+// Maximum impressions per NPC (limit character relationships tracked)
+const MAX_IMPRESSIONS_PER_NPC = 30;
+
+// Maximum patterns an NPC can track
+const MAX_PATTERNS_PER_NPC = 15;
+
+// Decay acceleration factor for very old memories (age in ticks)
+const ACCELERATED_DECAY_THRESHOLD = 10000; // ~10k turns
+const ACCELERATED_DECAY_MULTIPLIER = 2.0;
 
 // ============= DECAY RATES =============
 
@@ -348,10 +358,12 @@ function boostAccessedMemories(
 
 /**
  * Decay memories over time - called each game tick
+ * Enhanced for 100k+ turn games with accelerated decay for very old memories
  */
 export function decayMemories(
   memoryStore: NPCMemoryStore,
-  hoursElapsed: number = 1
+  hoursElapsed: number = 1,
+  currentTick: number = Date.now()
 ): NPCMemoryStore {
   const decayAndFilter = (memories: EnhancedMemory[], tier: MemoryTier): EnhancedMemory[] => {
     return memories
@@ -362,7 +374,13 @@ export function decayMemories(
         // Frequently accessed memories decay slower
         const accessModifier = Math.max(0.5, 1 - (m.accessCount * 0.1));
         
-        const decay = DECAY_RATES[tier] * hoursElapsed * accessModifier;
+        // Accelerate decay for very old memories (100k+ turn sustainability)
+        const age = currentTick - m.tick;
+        const ageMultiplier = age > ACCELERATED_DECAY_THRESHOLD 
+          ? ACCELERATED_DECAY_MULTIPLIER 
+          : 1.0;
+        
+        const decay = DECAY_RATES[tier] * hoursElapsed * accessModifier * ageMultiplier;
         const newSalience = Math.max(0, m.salience - decay);
         
         return { ...m, salience: newSalience };
@@ -370,11 +388,36 @@ export function decayMemories(
       .filter(m => m.salience > FORGET_THRESHOLD || m.traumatic);
   };
   
+  // Prune impressions if over limit
+  let prunedImpressions = memoryStore.impressions;
+  const impressionKeys = Object.keys(prunedImpressions);
+  if (impressionKeys.length > MAX_IMPRESSIONS_PER_NPC) {
+    // Keep impressions with highest trust levels or most recent
+    const sorted = impressionKeys
+      .map(k => ({ key: k, imp: prunedImpressions[k] }))
+      .sort((a, b) => Math.abs(b.imp.trustLevel) - Math.abs(a.imp.trustLevel));
+    
+    prunedImpressions = {};
+    for (const { key, imp } of sorted.slice(0, MAX_IMPRESSIONS_PER_NPC)) {
+      prunedImpressions[key] = imp;
+    }
+  }
+  
+  // Prune patterns if over limit
+  let prunedPatterns = memoryStore.patterns;
+  if (prunedPatterns.length > MAX_PATTERNS_PER_NPC) {
+    prunedPatterns = [...prunedPatterns]
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, MAX_PATTERNS_PER_NPC);
+  }
+  
   return {
     ...memoryStore,
     shortTerm: decayAndFilter(memoryStore.shortTerm, 'short'),
     mediumTerm: decayAndFilter(memoryStore.mediumTerm, 'medium'),
     longTerm: decayAndFilter(memoryStore.longTerm, 'long'),
+    impressions: prunedImpressions,
+    patterns: prunedPatterns,
   };
 }
 
