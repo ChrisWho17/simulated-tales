@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { VERSION_STRING } from '@/lib/version';
+import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1570,7 +1570,10 @@ export function AdventureDisplay({
             >
               UNTOLD
             </button>
-            <span className="text-[8px] font-mono text-muted-foreground/50 bg-muted/20 px-1 py-0.5 rounded border border-border/20">
+            <span 
+              className="text-[8px] font-mono text-muted-foreground/50 bg-muted/20 px-1 py-0.5 rounded border border-border/20 cursor-default"
+              title={`Build: ${BUILD_NUMBER}`}
+            >
               {VERSION_STRING}
             </span>
           </div>
