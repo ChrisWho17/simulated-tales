@@ -720,7 +720,7 @@ export const companionSystem = new CompanionSystemManager();
 // EVENT BUS INTEGRATION - Subscribe to game events
 // ============================================================================
 
-// Listen for combat events that should trigger companion reactions
+// Combat events
 eventBus.subscribe(['COMBAT_WON'], (event) => {
   const data = (event as any).data;
   if (data?.flawlessVictory) {
@@ -736,6 +736,7 @@ eventBus.subscribe(['COMBAT_DEESCALATED'], () => {
   companionSystem.processPlayerAction('diplomacy');
 });
 
+// Relationship/Social events - companions react to how player treats others
 eventBus.subscribe(['BETRAYAL'], () => {
   companionSystem.processPlayerAction('betrayal');
 });
@@ -744,4 +745,105 @@ eventBus.subscribe(['FAVOR'], () => {
   companionSystem.processPlayerAction('loyalty');
 });
 
-console.log('[CompanionSystem] Initialized');
+eventBus.subscribe(['INSULT'], (event) => {
+  const data = (event as any).data;
+  // Companions notice when player insults others (30% chance to react)
+  if (data && Math.random() < 0.3) {
+    companionSystem.processPlayerAction('insult', `Insulted ${data.targetEntity || 'someone'}`);
+  }
+});
+
+eventBus.subscribe(['COMPLIMENT'], (event) => {
+  const data = (event as any).data;
+  // Companions notice kindness (25% chance to react)
+  if (data && Math.random() < 0.25) {
+    companionSystem.processPlayerAction('compliment', `Complimented ${data.targetEntity || 'someone'}`);
+  }
+});
+
+eventBus.subscribe(['ROMANCE_PROGRESSED'], (event) => {
+  const data = (event as any).data;
+  // Companions may react to romance with others (jealousy/approval)
+  if (data && Math.random() < 0.4) {
+    companionSystem.processPlayerAction('romance_flirt', `Romanced ${data.targetEntity || 'someone'}`);
+  }
+});
+
+// Item events - companions react to theft, charity
+eventBus.subscribe(['ITEM_STOLEN'], (event) => {
+  const data = (event as any).data;
+  // Companions notice theft (50% chance)
+  if (data?.toEntity === 'player' && Math.random() < 0.5) {
+    companionSystem.processPlayerAction('theft', `Stole from ${data.fromEntity || 'someone'}`);
+  }
+});
+
+eventBus.subscribe(['ITEM_GIFTED'], (event) => {
+  const data = (event as any).data;
+  // Companions notice generosity (40% chance)
+  if (data?.fromEntity === 'player' && Math.random() < 0.4) {
+    companionSystem.processPlayerAction('charity', `Gave gift to ${data.toEntity || 'someone'}`);
+  }
+});
+
+// Location events - companions may comment on new places
+eventBus.subscribe(['LOCATION_ENTERED'], (event) => {
+  const data = (event as any).data;
+  // 20% chance for ambient location commentary
+  if (data && Math.random() < 0.2) {
+    const companions = companionSystem.getActiveCompanions();
+    if (companions.length > 0) {
+      const companion = companions[Math.floor(Math.random() * companions.length)];
+      companion.wantsToSpeak = true;
+      companion.pendingReaction = generateLocationReaction(companion, data.location);
+    }
+  }
+});
+
+// Death/knockout - serious events companions always notice
+eventBus.subscribe(['DEATH'], (event) => {
+  const data = (event as any).data;
+  if (data?.sourceEntity === 'player') {
+    companionSystem.processPlayerAction('combat_kill', `Killed ${data.targetEntity || 'someone'}`);
+  }
+});
+
+// Quest events - companions comment on progress
+eventBus.subscribe(['QUEST_COMPLETED'], (event) => {
+  const data = (event as any).data;
+  if (Math.random() < 0.6) {
+    const companions = companionSystem.getActiveCompanions();
+    if (companions.length > 0) {
+      const companion = companions[Math.floor(Math.random() * companions.length)];
+      companion.wantsToSpeak = true;
+      companion.pendingReaction = generateQuestReaction(companion, 'completed');
+    }
+  }
+});
+
+// Helper functions for autonomous reactions
+function generateLocationReaction(companion: CompanionState, location: string): string {
+  const reactions = [
+    `*looks around ${location || 'this place'}* Hmm, interesting...`,
+    `I've heard stories about places like this.`,
+    `Stay alert. Something feels... different here.`,
+    `*${companion.personality.quirks[0] || 'looks around curiously'}*`,
+    `This reminds me of somewhere from my past.`,
+  ];
+  return reactions[Math.floor(Math.random() * reactions.length)];
+}
+
+function generateQuestReaction(companion: CompanionState, type: 'completed' | 'failed'): string {
+  if (type === 'completed') {
+    const reactions = [
+      `Well done! That's another success for us.`,
+      `I knew we could do it together.`,
+      `*nods approvingly* Good work.`,
+      companion.personality.catchphrases[0] || `Excellent.`,
+    ];
+    return reactions[Math.floor(Math.random() * reactions.length)];
+  }
+  return `We'll do better next time.`;
+}
+
+console.log('[CompanionSystem] Initialized with enhanced event reactions');

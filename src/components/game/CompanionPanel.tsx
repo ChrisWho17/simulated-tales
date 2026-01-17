@@ -11,11 +11,13 @@ import {
   CompanionMood,
   COMPANION_TEMPLATES 
 } from '@/game/companionSystem';
+import { companionCombatManager } from '@/game/companionCombatSystem';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CompanionCharacterSheet } from './CompanionCharacterSheet';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -43,11 +45,36 @@ const moodColors: Record<CompanionMood, string> = {
   betrayed: 'bg-red-700',
 };
 
+// Compact health display component
+function CompanionHealthBadge({ companion, onClick }: { companion: CompanionState; onClick: () => void }) {
+  const combatStats = companionCombatManager.getCombatStats(companion.id);
+  if (!combatStats) return null;
+  
+  const healthPercent = (combatStats.currentHealth / combatStats.maxHealth) * 100;
+  
+  return (
+    <button 
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={cn(
+        "text-xs font-mono px-1.5 py-0.5 rounded cursor-pointer transition-colors",
+        "hover:bg-red-500/30",
+        healthPercent > 60 && "text-red-400",
+        healthPercent <= 60 && healthPercent > 30 && "text-orange-400",
+        healthPercent <= 30 && "text-red-500 animate-pulse"
+      )}
+      title="Click to view character sheet"
+    >
+      {combatStats.currentHealth}/{combatStats.maxHealth}
+    </button>
+  );
+}
+
 export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionPanelProps) {
   const [companions, setCompanions] = useState<CompanionState[]>([]);
   const [activeCompanions, setActiveCompanions] = useState<CompanionState[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRecruitMenu, setShowRecruitMenu] = useState(false);
+  const [selectedCompanion, setSelectedCompanion] = useState<CompanionState | null>(null);
 
   // Refresh companion list
   const refreshCompanions = () => {
@@ -105,7 +132,17 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
   if (!isOpen) return null;
 
   return (
-    <motion.div
+    <>
+      {/* Character Sheet Modal */}
+      {selectedCompanion && (
+        <CompanionCharacterSheet
+          companion={selectedCompanion}
+          isOpen={!!selectedCompanion}
+          onClose={() => setSelectedCompanion(null)}
+        />
+      )}
+      
+      <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -189,15 +226,18 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
           ) : (
             <div className="space-y-3">
               {activeCompanions.map((companion) => (
-                <CompanionCard
-                  key={companion.id}
-                  companion={companion}
-                  isExpanded={expandedId === companion.id}
-                  onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
-                  onDismiss={() => handleDismiss(companion.id)}
-                  onSpeak={onCompanionSpeak}
-                />
-              ))}
+                  <CompanionCard
+                    key={companion.id}
+                    companion={companion}
+                    isExpanded={expandedId === companion.id}
+                    onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
+                    onDismiss={() => handleDismiss(companion.id)}
+                    onSpeak={onCompanionSpeak}
+                    onOpenSheet={() => setSelectedCompanion(companion)}
+                  />
+                ))}
+              </div>
+            )}
             </div>
           )}
 
@@ -240,7 +280,8 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
           )}
         </ScrollArea>
       </motion.div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 
@@ -250,9 +291,13 @@ interface CompanionCardProps {
   onToggle: () => void;
   onDismiss: () => void;
   onSpeak?: (companion: CompanionState, dialogue: string) => void;
+  onOpenSheet: () => void;
+}
+  onDismiss: () => void;
+  onSpeak?: (companion: CompanionState, dialogue: string) => void;
 }
 
-function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak }: CompanionCardProps) {
+function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onOpenSheet }: CompanionCardProps) {
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
 
@@ -326,9 +371,12 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak }: 
             <div className="flex items-center gap-2">
               <span className="font-medium">{companion.name}</span>
               <RoleIcon className="w-3 h-3 text-muted-foreground" />
+              <CompanionHealthBadge companion={companion} onClick={onOpenSheet} />
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="capitalize">{companion.mood}</span>
+              <span>•</span>
+              <span>Affinity: {companion.affinity}</span>
               <span>•</span>
               <span>Affinity: {companion.affinity}</span>
               {companion.romanticInterest > 50 && (
