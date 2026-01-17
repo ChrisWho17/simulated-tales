@@ -1,11 +1,11 @@
 // ============================================================================
 // CAMPAIGN INVENTORY SYNC - Bridges inventory state with campaign system
-// Ensures complete isolation between campaigns AND initializes starting gear
+// Uses UnifiedInventoryBridge as single source of truth (Phase 3)
 // ============================================================================
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
-import { useInventoryOptional, ACTIONS } from '@/game/inventorySystem';
+import { useInventoryOptional, ACTIONS, InventoryState } from '@/game/inventorySystem';
 import { 
   saveInventoryForCampaign, 
   loadInventoryForCampaign 
@@ -14,6 +14,7 @@ import {
   initializeStartingGear,
   needsStartingGear,
 } from '@/game/storyInventoryBridge';
+import { unifiedInventory } from '@/game/unifiedInventoryBridge';
 
 interface CampaignInventorySyncProps {
   children: React.ReactNode;
@@ -50,14 +51,16 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
       // Step 2: ALWAYS clear inventory first to prevent bleed
       isSyncingRef.current = true;
       inventory.dispatch({ type: ACTIONS.CLEAR_INVENTORY });
-      console.log(`[CampaignInventorySync] Cleared inventory`);
+      unifiedInventory.clearInventory({ silent: true }); // Sync unified inventory
+      console.log(`[CampaignInventorySync] Cleared inventory (both systems)`);
       
       // Step 3: Load inventory for new campaign (if any)
       if (activeCampaignId) {
         const savedInventory = loadInventoryForCampaign(activeCampaignId);
         if (savedInventory && (savedInventory as any).items?.length > 0) {
           inventory.dispatch({ type: ACTIONS.LOAD_STATE, payload: savedInventory });
-          console.log(`[CampaignInventorySync] Loaded inventory for new campaign`);
+          unifiedInventory.loadState(savedInventory as InventoryState, { silent: true }); // Sync unified inventory
+          console.log(`[CampaignInventorySync] Loaded inventory for new campaign (both systems)`);
         } else {
           console.log(`[CampaignInventorySync] No saved inventory - will initialize starting gear`);
         }

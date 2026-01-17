@@ -2078,7 +2078,7 @@ export function AdventureGame() {
       }
       
 // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
-      // Build mechanics tags from pending mechanics
+      // Build mechanics tags from pending mechanics (includes new itemsUsed from Phase 2)
       const mechanicsTags: MechanicsTags = {
         loot: pendingMechanics?.lootGained 
           ? (Array.isArray(pendingMechanics.lootGained) ? pendingMechanics.lootGained : [pendingMechanics.lootGained])
@@ -2086,8 +2086,14 @@ export function AdventureGame() {
         drop: pendingMechanics?.itemsDropped
           ? (Array.isArray(pendingMechanics.itemsDropped) ? pendingMechanics.itemsDropped : [pendingMechanics.itemsDropped])
           : [],
-        // itemsUsed not in current GameMechanics type - will be picked up by consumption patterns
-        use: [],
+        // Phase 2: Include consumed items from [USE:] tags
+        use: pendingMechanics?.itemsUsed
+          ? (Array.isArray(pendingMechanics.itemsUsed) ? pendingMechanics.itemsUsed : [pendingMechanics.itemsUsed])
+          : [],
+        // Also pass the edge function format for compatibility
+        lootGained: pendingMechanics?.lootGained as string[] | undefined,
+        itemsDropped: pendingMechanics?.itemsDropped as string[] | undefined,
+        itemsUsed: pendingMechanics?.itemsUsed as string[] | undefined,
       };
       
       // Use the enhanced sync system that actually adds AND removes items
