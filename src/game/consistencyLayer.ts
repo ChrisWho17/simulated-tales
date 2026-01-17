@@ -30,7 +30,16 @@ export type ConsistencyViolationType =
   | 'DEAD_REFERENCE'          // Reference to non-existent entity
   | 'STATE_DESYNC';           // General state inconsistency
 
-// ============= CONSISTENCY STATE =============
+// ============= CONSISTENCY STATE - Designed for 100k+ turn games =============
+
+// Maximum violations to keep in memory
+const MAX_VIOLATIONS = 50;
+
+// Maximum knowledge facts to track
+const MAX_KNOWLEDGE_FACTS = 200;
+
+// Maximum scene presence entries
+const MAX_SCENE_PRESENCE = 30;
 
 interface ConsistencyState {
   violations: ConsistencyViolation[];
@@ -64,6 +73,13 @@ export function setScenePresence(entities: ScenePresence[]): void {
 export function addToScene(entity: ScenePresence): void {
   if (!currentScenePresence.find(e => e.entityId === entity.entityId)) {
     currentScenePresence.push(entity);
+    
+    // Limit scene presence to prevent memory issues in crowded scenes
+    if (currentScenePresence.length > MAX_SCENE_PRESENCE) {
+      // Remove oldest entries (by enteredTick)
+      currentScenePresence.sort((a, b) => b.enteredTick - a.enteredTick);
+      currentScenePresence = currentScenePresence.slice(0, MAX_SCENE_PRESENCE);
+    }
   }
 }
 
@@ -96,15 +112,48 @@ interface KnowledgeFact {
 let knowledgeRegistry: Record<string, KnowledgeFact> = {};
 
 export function registerFact(factId: string, content: string, initialKnower: string, tick: number, source: string = 'witnessed'): void {
+  // Prune knowledge registry if over limit - designed for 100k+ turns
+  const factCount = Object.keys(knowledgeRegistry).length;
+  if (factCount >= MAX_KNOWLEDGE_FACTS) {
+    pruneKnowledgeRegistry(tick);
+  }
+  
   if (!knowledgeRegistry[factId]) {
     knowledgeRegistry[factId] = {
       factId,
-      content,
+      content: content.slice(0, 500), // Limit content length
       knownBy: [initialKnower],
       learnedAt: { [initialKnower]: tick },
       source: { [initialKnower]: source },
     };
   }
+}
+
+// Prune oldest/least-known facts
+function pruneKnowledgeRegistry(currentTick: number): void {
+  const facts = Object.entries(knowledgeRegistry);
+  
+  // Sort by age and number of knowers (keep widely-known recent facts)
+  const scored = facts.map(([id, fact]) => {
+    const age = currentTick - Math.max(...Object.values(fact.learnedAt));
+    const popularity = fact.knownBy.length;
+    const score = popularity * 100 - age * 0.01; // Favor popular, recent facts
+    return { id, score };
+  });
+  
+  scored.sort((a, b) => b.score - a.score);
+  
+  // Keep top 75%
+  const toKeep = Math.floor(MAX_KNOWLEDGE_FACTS * 0.75);
+  const keepSet = new Set(scored.slice(0, toKeep).map(s => s.id));
+  
+  for (const id of Object.keys(knowledgeRegistry)) {
+    if (!keepSet.has(id)) {
+      delete knowledgeRegistry[id];
+    }
+  }
+  
+  console.log(`[ConsistencyLayer] Pruned ${facts.length - toKeep} old knowledge facts`);
 }
 
 export function shareKnowledge(factId: string, fromEntity: string, toEntity: string, tick: number): boolean {
@@ -182,13 +231,15 @@ function logViolation(violation: Omit<ConsistencyViolation, 'id' | 'timestamp'>)
   
   state.violations.push(fullViolation);
   
-  // Keep only last 100 violations
-  if (state.violations.length > 100) {
-    state.violations = state.violations.slice(-100);
+  // Keep only last MAX_VIOLATIONS violations - designed for 100k+ turns
+  if (state.violations.length > MAX_VIOLATIONS) {
+    state.violations = state.violations.slice(-MAX_VIOLATIONS);
   }
   
-  // Log to console for debugging
-  console.warn(`[Consistency] ${violation.severity.toUpperCase()}: ${violation.description}`);
+  // Log to console for debugging (throttled in production)
+  if (state.checksPerformed % 100 === 0 || violation.severity !== 'warning') {
+    console.warn(`[Consistency] ${violation.severity.toUpperCase()}: ${violation.description}`);
+  }
 }
 
 // ============= CONSISTENCY CHECKS =============

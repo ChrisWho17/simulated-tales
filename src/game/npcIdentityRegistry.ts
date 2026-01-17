@@ -120,10 +120,57 @@ let registry: NPCIdentityRegistry = {
 
 const STORAGE_KEY = 'untold-npc-identity-registry';
 
-// ============= PERSISTENCE =============
+// ============= PERSISTENCE - Designed for 100k+ turn games =============
 
 // Maximum NPCs in registry to prevent unbounded growth
-const MAX_REGISTRY_SIZE = 200;
+const MAX_REGISTRY_SIZE = 150; // Reduced for long-term sustainability
+
+// Maximum relationships tracked
+const MAX_RELATIONSHIPS = 300;
+
+// Maximum families tracked
+const MAX_FAMILIES = 50;
+
+// Prune threshold - start pruning when we hit this percentage
+const PRUNE_PERCENTAGE = 0.25; // Remove 25% of oldest unlocked NPCs
+
+// Prune oldest unlocked NPCs - designed for 100k+ turn games
+function pruneNPCRegistry(): void {
+  const unlockedNPCs = Object.entries(registry.npcs)
+    .filter(([id]) => !registry.lockedIds.includes(id))
+    .sort((a, b) => a[1].permanent.createdTurn - b[1].permanent.createdTurn);
+  
+  const toRemove = Math.ceil(unlockedNPCs.length * PRUNE_PERCENTAGE);
+  for (let i = 0; i < Math.min(toRemove, unlockedNPCs.length); i++) {
+    delete registry.npcs[unlockedNPCs[i][0]];
+  }
+  console.log(`[NPCRegistry] Pruned ${toRemove} NPCs to stay under limit`);
+}
+
+// Prune oldest unlocked relationships
+function pruneRelationships(): void {
+  const unlockedRels = Object.entries(registry.relationships)
+    .filter(([_, rel]) => !rel.locked)
+    .sort((a, b) => a[1].established - b[1].established);
+  
+  const toRemove = Math.ceil(unlockedRels.length * PRUNE_PERCENTAGE);
+  for (let i = 0; i < Math.min(toRemove, unlockedRels.length); i++) {
+    delete registry.relationships[unlockedRels[i][0]];
+  }
+  console.log(`[NPCRegistry] Pruned ${toRemove} relationships`);
+}
+
+// Prune oldest/smallest families
+function pruneFamilies(): void {
+  const families = Object.entries(registry.families)
+    .sort((a, b) => a[1].members.length - b[1].members.length);
+  
+  const toRemove = Math.ceil(families.length * PRUNE_PERCENTAGE);
+  for (let i = 0; i < Math.min(toRemove, families.length); i++) {
+    delete registry.families[families[i][0]];
+  }
+  console.log(`[NPCRegistry] Pruned ${toRemove} families`);
+}
 
 export function loadNPCRegistry(): NPCIdentityRegistry {
   try {
@@ -301,20 +348,22 @@ export function generateNPCStats(occupation?: string, personality?: string): NPC
 }
 
 export function createRegisteredNPC(config: CreateNPCConfig): string {
-  // Enforce registry size limit to prevent unbounded growth
+  // Enforce registry size limit to prevent unbounded growth - designed for 100k+ turns
   const npcCount = Object.keys(registry.npcs).length;
   if (npcCount >= MAX_REGISTRY_SIZE) {
-    // Prune oldest unlocked NPCs
-    const unlockedNPCs = Object.entries(registry.npcs)
-      .filter(([id]) => !registry.lockedIds.includes(id))
-      .sort((a, b) => a[1].permanent.createdTurn - b[1].permanent.createdTurn);
-    
-    // Remove oldest 20% of unlocked NPCs
-    const toRemove = Math.ceil(unlockedNPCs.length * 0.2);
-    for (let i = 0; i < Math.min(toRemove, unlockedNPCs.length); i++) {
-      delete registry.npcs[unlockedNPCs[i][0]];
-    }
-    console.log(`[NPCRegistry] Pruned ${toRemove} NPCs to stay under limit`);
+    pruneNPCRegistry();
+  }
+  
+  // Also prune relationships if over limit
+  const relationshipCount = Object.keys(registry.relationships).length;
+  if (relationshipCount >= MAX_RELATIONSHIPS) {
+    pruneRelationships();
+  }
+  
+  // Prune families if over limit
+  const familyCount = Object.keys(registry.families).length;
+  if (familyCount >= MAX_FAMILIES) {
+    pruneFamilies();
   }
 
   const id = config.id || `npc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
