@@ -32,9 +32,23 @@ import {
 // CONSTANTS
 // ============================================================================
 
-const DEFAULT_STM_LIMIT = 60;
-const DEFAULT_MTM_LIMIT = 30;
-const DEFAULT_LTM_LIMIT = 100;
+const DEFAULT_STM_LIMIT = 50;  // Reduced from 60
+const DEFAULT_MTM_LIMIT = 25;  // Reduced from 30
+const DEFAULT_LTM_LIMIT = 75;  // Reduced from 100
+
+// Hard caps to prevent unbounded growth
+const ABSOLUTE_MAX_MEMORIES = {
+  stm: 60,
+  mtm: 35,
+  ltm: 100,
+};
+
+const MAX_IDENTITY_ANCHORS = 20;
+const MAX_OPEN_LOOPS = 15;
+const MAX_LOCATION_STATES = 50;
+const MAX_CONTRADICTIONS = 30;
+const MAX_DELTA_JOURNAL = 200;
+const MAX_SESSION_SUMMARIES = 50;
 
 const PROMOTION_THRESHOLDS = {
   stmToMtm: 40,   // Score needed to promote from STM to MTM
@@ -278,7 +292,7 @@ export function addMemory(
 
 function handleMemoryOverflow(store: CampaignMemoryStore): CampaignMemoryStore {
   let updatedStore = { ...store };
-  const stmLimit = store.campaign.memoryPolicy.stmLimit;
+  const stmLimit = Math.min(store.campaign.memoryPolicy.stmLimit, ABSOLUTE_MAX_MEMORIES.stm);
   
   // STM overflow - promote or forget
   while (updatedStore.stm.length > stmLimit) {
@@ -294,8 +308,9 @@ function handleMemoryOverflow(store: CampaignMemoryStore): CampaignMemoryStore {
     updatedStore.stm = updatedStore.stm.filter(m => m.id !== toProcess.id);
   }
   
-  // MTM overflow
-  while (updatedStore.mtm.length > DEFAULT_MTM_LIMIT) {
+  // MTM overflow - enforce hard cap
+  const mtmLimit = Math.min(DEFAULT_MTM_LIMIT, ABSOLUTE_MAX_MEMORIES.mtm);
+  while (updatedStore.mtm.length > mtmLimit) {
     const sorted = [...updatedStore.mtm].sort((a, b) => a.promotionScore - b.promotionScore);
     const toProcess = sorted[0];
     
@@ -307,9 +322,12 @@ function handleMemoryOverflow(store: CampaignMemoryStore): CampaignMemoryStore {
     updatedStore.mtm = updatedStore.mtm.filter(m => m.id !== toProcess.id);
   }
   
-  // LTM overflow (rare, careful handling)
-  const ltmCap = store.campaign.memoryPolicy.ltmCap;
-  if (ltmCap !== 'unbounded' && updatedStore.ltm.length > ltmCap) {
+  // LTM overflow - enforce hard cap regardless of policy
+  const ltmCap = store.campaign.memoryPolicy.ltmCap === 'unbounded' 
+    ? ABSOLUTE_MAX_MEMORIES.ltm 
+    : Math.min(store.campaign.memoryPolicy.ltmCap as number, ABSOLUTE_MAX_MEMORIES.ltm);
+  
+  if (updatedStore.ltm.length > ltmCap) {
     // Only remove non-essential, low-importance memories
     const removable = updatedStore.ltm
       .filter(m => m.importance < 50 && !m.isCanon)
@@ -319,6 +337,58 @@ function handleMemoryOverflow(store: CampaignMemoryStore): CampaignMemoryStore {
       const toRemove = removable.shift()!;
       updatedStore.ltm = updatedStore.ltm.filter(m => m.id !== toRemove.id);
     }
+    
+    // If still over cap, force remove lowest importance
+    if (updatedStore.ltm.length > ltmCap) {
+      updatedStore.ltm = updatedStore.ltm
+        .sort((a, b) => b.importance - a.importance)
+        .slice(0, ltmCap);
+    }
+  }
+  
+  // Prune other collections with hard caps
+  if (updatedStore.identityAnchors.length > MAX_IDENTITY_ANCHORS) {
+    updatedStore.identityAnchors = updatedStore.identityAnchors
+      .sort((a, b) => b.importance - a.importance)
+      .slice(0, MAX_IDENTITY_ANCHORS);
+  }
+  
+  if (updatedStore.openLoops.length > MAX_OPEN_LOOPS) {
+    // Keep active loops, remove resolved/failed
+    const active = updatedStore.openLoops.filter(l => l.state === 'active' || l.state === 'escalating');
+    const inactive = updatedStore.openLoops.filter(l => l.state !== 'active' && l.state !== 'escalating');
+    updatedStore.openLoops = [...active.slice(0, MAX_OPEN_LOOPS), ...inactive.slice(0, 5)].slice(0, MAX_OPEN_LOOPS);
+  }
+  
+  if (updatedStore.contradictions.length > MAX_CONTRADICTIONS) {
+    // Keep unresolved, prune resolved
+    const unresolved = updatedStore.contradictions.filter(c => !c.resolved);
+    const resolved = updatedStore.contradictions.filter(c => c.resolved);
+    updatedStore.contradictions = [...unresolved, ...resolved.slice(-10)].slice(-MAX_CONTRADICTIONS);
+  }
+  
+  if (updatedStore.deltaJournal.length > MAX_DELTA_JOURNAL) {
+    updatedStore.deltaJournal = updatedStore.deltaJournal.slice(-MAX_DELTA_JOURNAL);
+  }
+  
+  if (updatedStore.sessionSummaries.length > MAX_SESSION_SUMMARIES) {
+    updatedStore.sessionSummaries = updatedStore.sessionSummaries.slice(-MAX_SESSION_SUMMARIES);
+  }
+  
+  // Prune location states if too many
+  const locationKeys = Object.keys(updatedStore.locationStates);
+  if (locationKeys.length > MAX_LOCATION_STATES) {
+    // Sort by lastUpdated time and keep most recent
+    const sorted = locationKeys
+      .map(k => ({ key: k, state: updatedStore.locationStates[k] }))
+      .sort((a, b) => (b.state.lastUpdated || 0) - (a.state.lastUpdated || 0))
+      .slice(0, MAX_LOCATION_STATES);
+    
+    const newLocationStates: typeof updatedStore.locationStates = {};
+    for (const item of sorted) {
+      newLocationStates[item.key] = item.state;
+    }
+    updatedStore.locationStates = newLocationStates;
   }
   
   return updatedStore;

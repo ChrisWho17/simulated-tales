@@ -228,6 +228,10 @@ export interface ModifierInteraction {
   description: string;
 }
 
+// History limits to prevent unbounded growth
+const MODIFIER_HISTORY_LIMIT = 50;
+const PROMOTED_MODIFIERS_LIMIT = 25;
+
 export interface ModifierState {
   activeModifiers: Modifier[];
   modifierHistory: Modifier[];
@@ -1091,7 +1095,9 @@ export function resolveCondition(
 
   const newState = { ...state, activeModifiers: [...state.activeModifiers] };
   newState.activeModifiers.splice(modifierIndex, 1);
-  newState.modifierHistory = [...state.modifierHistory, modifier];
+  
+  // Add to history but enforce limit
+  newState.modifierHistory = [...state.modifierHistory, modifier].slice(-MODIFIER_HISTORY_LIMIT);
 
   return newState;
 }

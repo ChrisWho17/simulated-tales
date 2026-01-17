@@ -122,6 +122,9 @@ export const WEATHER_CONFIGS: Record<WeatherType, WeatherConfig> = {
   },
 };
 
+// History cap to prevent unbounded growth
+const MAX_WEATHER_HISTORY = 20;
+
 export interface WeatherState {
   current: WeatherType;
   ticksRemaining: number;
@@ -217,8 +220,9 @@ export function tickWeather(state: WeatherState, currentTick: number): WeatherSt
     newState.intensity = 0.5 + Math.random() * 1.0;
     newState.transitioningTo = null;
     newState.transitionProgress = 0;
+    // Enforce history limit
     newState.history = [
-      ...state.history.slice(-9),
+      ...state.history.slice(-(MAX_WEATHER_HISTORY - 1)),
       { weather: nextWeather, startedAt: currentTick }
     ];
   }
@@ -259,8 +263,9 @@ export function forceWeather(
     intensity,
     transitioningTo: null,
     transitionProgress: 0,
+    // Enforce history limit
     history: [
-      ...state.history.slice(-9),
+      ...state.history.slice(-(MAX_WEATHER_HISTORY - 1)),
       { weather: validWeather, startedAt: currentTick }
     ],
   };
