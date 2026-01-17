@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { VERSION_STRING } from '@/lib/version';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1561,13 +1562,18 @@ export function AdventureDisplay({
       <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
         <div className="flex items-center justify-between px-2 py-1 gap-1">
           {/* Title - Tappable on mobile */}
-          <button
-            onClick={() => setShowMobileQuickMenu(true)}
-            className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0 md:cursor-default active:scale-95 transition-transform"
-            data-text="UNTOLD"
-          >
-            UNTOLD
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowMobileQuickMenu(true)}
+              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0 md:cursor-default active:scale-95 transition-transform"
+              data-text="UNTOLD"
+            >
+              UNTOLD
+            </button>
+            <span className="text-[8px] font-mono text-muted-foreground/50 bg-muted/20 px-1 py-0.5 rounded border border-border/20">
+              {VERSION_STRING}
+            </span>
+          </div>
           
           {/* Toolbar buttons - grouped together with no-shrink */}
           <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto">

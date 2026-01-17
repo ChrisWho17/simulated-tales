@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { VERSION_STRING } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
@@ -364,9 +365,14 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
         
         {/* Logo/Title */}
         <div className="text-center mb-10 animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary mb-3 tracking-wider">
-            UNTOLD
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
+              UNTOLD
+            </h1>
+            <span className="text-[10px] md:text-xs font-mono text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded border border-border/30 self-end mb-2">
+              {VERSION_STRING}
+            </span>
+          </div>
           <p className="text-muted-foreground uppercase tracking-[0.4em] text-sm">
             Begin Your Unique Adventure
           </p>
