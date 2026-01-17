@@ -276,6 +276,16 @@ export function CompanionCharacterSheet({ companion, isOpen, onClose }: Companio
               </div>
             )}
 
+            {/* Loyalty Quest Progress */}
+            {loyaltyQuests.length > 0 && (
+              <div className="p-3 rounded-lg bg-muted/20 border border-border/50">
+                <LoyaltyQuestProgress
+                  companion={companion}
+                  quests={loyaltyQuests}
+                />
+              </div>
+            )}
+
             {/* Current Thoughts */}
             {companion.trust > 50 && (
               <div className="p-3 rounded-lg bg-muted/20 border border-border/50">

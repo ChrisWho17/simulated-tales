@@ -10,6 +10,11 @@ import {
   DialogueChoice,
   relationshipEventManager 
 } from '@/game/companionRelationshipEvents';
+import {
+  loyaltyQuestManager,
+  LoyaltyQuest,
+  LoyaltyQuestOutcome
+} from '@/game/companionLoyaltyQuestSystem';
 import { toast } from 'sonner';
 
 export interface CompanionComment {
@@ -23,6 +28,11 @@ export interface CompanionComment {
 export interface PendingRelationshipEvent {
   companion: CompanionState;
   event: RelationshipEvent;
+}
+
+export interface PendingLoyaltyQuest {
+  companion: CompanionState;
+  quest: LoyaltyQuest;
 }
 
 interface UseCompanionSystemOptions {
@@ -42,10 +52,13 @@ export function useCompanionSystem(options: UseCompanionSystemOptions = {}) {
   const [pendingComments, setPendingComments] = useState<CompanionComment[]>([]);
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
   const [pendingRelationshipEvent, setPendingRelationshipEvent] = useState<PendingRelationshipEvent | null>(null);
+  const [pendingLoyaltyQuest, setPendingLoyaltyQuest] = useState<PendingLoyaltyQuest | null>(null);
   const lastCommentTime = useRef<number>(0);
   const lastEventCheck = useRef<number>(0);
+  const lastLoyaltyCheck = useRef<number>(0);
   const commentCooldown = 10000; // 10 seconds between ambient comments
   const eventCheckCooldown = 30000; // 30 seconds between relationship event checks
+  const loyaltyCheckCooldown = 60000; // 60 seconds between loyalty quest checks
 
   // Refresh active companions
   const refreshCompanions = useCallback(() => {
@@ -343,17 +356,106 @@ export function useCompanionSystem(options: UseCompanionSystemOptions = {}) {
     refreshCompanions();
   }, [refreshCompanions]);
 
+  // Check for available loyalty quests
+  const checkForLoyaltyQuest = useCallback(() => {
+    const now = Date.now();
+    if (now - lastLoyaltyCheck.current < loyaltyCheckCooldown) return null;
+    lastLoyaltyCheck.current = now;
+
+    const companions = companionSystem.getActiveCompanions();
+    
+    for (const companion of companions) {
+      // Generate quests if not already done
+      loyaltyQuestManager.generateQuestsForCompanion(companion);
+      
+      // Check for available quest
+      const availableQuest = loyaltyQuestManager.getAvailableLoyaltyQuest(companion);
+      if (availableQuest) {
+        setPendingLoyaltyQuest({ companion, quest: availableQuest });
+        return { companion, quest: availableQuest };
+      }
+    }
+    
+    return null;
+  }, []);
+
+  // Accept and start a loyalty quest
+  const acceptLoyaltyQuest = useCallback(() => {
+    if (!pendingLoyaltyQuest) return false;
+    
+    const success = loyaltyQuestManager.startQuest(
+      pendingLoyaltyQuest.companion.id,
+      pendingLoyaltyQuest.quest.id
+    );
+    
+    if (success) {
+      toast.success(`Loyalty Quest Started: ${pendingLoyaltyQuest.quest.title}`, {
+        description: `${pendingLoyaltyQuest.companion.name} has opened up to you.`
+      });
+    }
+    
+    setPendingLoyaltyQuest(null);
+    return success;
+  }, [pendingLoyaltyQuest]);
+
+  // Defer a loyalty quest for later
+  const deferLoyaltyQuest = useCallback(() => {
+    setPendingLoyaltyQuest(null);
+  }, []);
+
+  // Complete a loyalty quest with chosen outcome
+  const completeLoyaltyQuest = useCallback((companionId: string, outcomeId: string) => {
+    const outcome = loyaltyQuestManager.completeQuest(companionId, outcomeId);
+    
+    if (outcome) {
+      // Apply companion effects
+      const effects = outcome.companionEffects;
+      if (effects.trustChange) companionSystem.adjustTrust(companionId, effects.trustChange);
+      if (effects.affinityChange) companionSystem.adjustAffinity(companionId, effects.affinityChange);
+      if (effects.respectChange) companionSystem.adjustRespect(companionId, effects.respectChange);
+      if (effects.romanticChange) companionSystem.adjustRomance(companionId, effects.romanticChange);
+      if (effects.permanentMoodChange) {
+        companionSystem.setMood(companionId, effects.permanentMoodChange as any);
+      }
+      
+      toast.success('Loyalty Quest Completed!', {
+        description: outcome.narrativeConclusion.slice(0, 100) + '...'
+      });
+      
+      refreshCompanions();
+    }
+    
+    return outcome;
+  }, [refreshCompanions]);
+
+  // Get active loyalty quest for a companion
+  const getActiveLoyaltyQuest = useCallback((companionId: string) => {
+    return loyaltyQuestManager.getActiveQuest(companionId);
+  }, []);
+
+  // Progress a loyalty quest objective
+  const progressLoyaltyObjective = useCallback((companionId: string, objectiveId: string) => {
+    return loyaltyQuestManager.progressObjective(companionId, objectiveId);
+  }, []);
+
   return {
     activeCompanions,
     pendingComments,
     isGeneratingDialogue,
     pendingRelationshipEvent,
+    pendingLoyaltyQuest,
     processPlayerAction,
     getAmbientCommentary,
     generateAIDialogue,
     checkForRelationshipEvent,
     clearRelationshipEvent,
     handleRelationshipChoice,
+    checkForLoyaltyQuest,
+    acceptLoyaltyQuest,
+    deferLoyaltyQuest,
+    completeLoyaltyQuest,
+    getActiveLoyaltyQuest,
+    progressLoyaltyObjective,
     dismissComment,
     clearAllComments,
     createAndRecruitCompanion,
