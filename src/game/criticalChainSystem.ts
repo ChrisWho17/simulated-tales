@@ -197,6 +197,9 @@ export const DESPERATION_TIERS: Record<DesperationTier, {
 // CHAIN STATE MANAGEMENT
 // ============================================================================
 
+// LIMITS to prevent unbounded growth
+const MAX_ROLL_HISTORY = 10;
+
 export function initializeCriticalChainState(): CriticalChainState {
   return {
     chainType: 'neutral',
@@ -238,7 +241,8 @@ export function processRollForChain(
     actionType: roll.actionType
   };
   
-  const newHistory = [outcome, ...state.lastFiveRolls].slice(0, 5);
+  // Add to history with limit
+  const newHistory = [outcome, ...state.lastFiveRolls].slice(0, MAX_ROLL_HISTORY);
   
   let newState = { ...state, lastFiveRolls: newHistory };
   let narrative: string | null = null;
@@ -475,9 +479,20 @@ class CriticalChainManager {
     this.state = initializeCriticalChainState();
   }
   
-  // Load from save
+  // Load from save with validation
   loadState(saved: CriticalChainState) {
-    this.state = { ...initializeCriticalChainState(), ...saved };
+    if (!saved || typeof saved !== 'object') {
+      this.state = initializeCriticalChainState();
+      return;
+    }
+    this.state = { 
+      ...initializeCriticalChainState(), 
+      ...saved,
+      // Limit arrays on load
+      lastFiveRolls: Array.isArray(saved.lastFiveRolls) 
+        ? saved.lastFiveRolls.slice(0, MAX_ROLL_HISTORY)
+        : []
+    };
   }
 }
 

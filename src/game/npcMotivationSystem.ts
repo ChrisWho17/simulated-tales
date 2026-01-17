@@ -60,6 +60,9 @@ export interface PlayerInteractionMemory {
   remembers: boolean; // Will they bring this up?
 }
 
+// LIMITS to prevent unbounded memory growth
+const MAX_PLAYER_INTERACTIONS_PER_NPC = 20;
+
 // ============================================================================
 // MOTIVATION TEMPLATES BY ARCHETYPE
 // ============================================================================
@@ -166,14 +169,45 @@ export function generateNPCMotivation(
   return {
     npcId,
     npcName,
-    desire,
-    fear,
-    leverage,
-    line,
+    desire: desire.slice(0, 100), // Limit length
+    fear: fear.slice(0, 100),
+    leverage: leverage.slice(0, 100),
+    line: line.slice(0, 100),
     behaviors,
     currentStance: 'neutral',
     trustLevel: 0,
     playerInteractions: []
+  };
+}
+
+/**
+ * Add a player interaction to NPC memory with pruning
+ */
+export function addPlayerInteraction(
+  motivation: NPCMotivation,
+  interaction: PlayerInteractionMemory
+): NPCMotivation {
+  const interactions = [...motivation.playerInteractions, {
+    ...interaction,
+    action: interaction.action.slice(0, 200) // Limit action length
+  }];
+  
+  // Prune if over limit - keep most impactful and recent
+  if (interactions.length > MAX_PLAYER_INTERACTIONS_PER_NPC) {
+    interactions.sort((a, b) => {
+      // Keep high-impact interactions
+      const impactDiff = Math.abs(b.impact) - Math.abs(a.impact);
+      if (impactDiff !== 0) return impactDiff;
+      // Keep recent
+      return b.timestamp - a.timestamp;
+    });
+    interactions.length = MAX_PLAYER_INTERACTIONS_PER_NPC;
+  }
+  
+  return {
+    ...motivation,
+    playerInteractions: interactions,
+    lastInteraction: Date.now()
   };
 }
 

@@ -495,6 +495,11 @@ export function generateRoutineObservations(
 
 // ============= WORLD STATE TRACKER =============
 
+// Limits to prevent unbounded growth
+const MAX_AMBIENT_EVENTS = 10;
+const MAX_PENDING_CHANGES = 20;
+const MAX_RUMORS = 30;
+
 export interface WorldState {
   weather: WeatherState;
   recentAmbientEvents: AmbientEvent[];
@@ -527,8 +532,14 @@ export function updateWorldState(
   // Update weather
   const newWeather = updateWeather(worldState.weather, gameState.time.season, hoursElapsed);
   
-  // Clean up old ambient events (keep last 10)
-  const recentEvents = worldState.recentAmbientEvents.slice(-10);
+  // Clean up old ambient events with limit
+  const recentEvents = worldState.recentAmbientEvents.slice(-MAX_AMBIENT_EVENTS);
+  
+  // Clean up pending world changes
+  const pendingChanges = worldState.pendingWorldChanges.slice(-MAX_PENDING_CHANGES);
+  
+  // Limit rumors
+  const rumors = worldState.rumors.slice(-MAX_RUMORS);
   
   // Increment days counter
   const daysSince = worldState.daysSinceLastMajorEvent + (hoursElapsed / 24);
@@ -537,6 +548,8 @@ export function updateWorldState(
     ...worldState,
     weather: newWeather,
     recentAmbientEvents: recentEvents,
+    pendingWorldChanges: pendingChanges,
+    rumors,
     daysSinceLastMajorEvent: daysSince,
   };
 }

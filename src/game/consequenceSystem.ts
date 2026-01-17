@@ -169,6 +169,11 @@ export const consequenceTemplates = {
 
 // ============= CONSEQUENCE PROCESSING =============
 
+// Limits to prevent unbounded consequence growth
+const MAX_ACTIVE_CONSEQUENCES = 50;
+const MAX_DELAYED_EFFECTS_PER_CONSEQUENCE = 10;
+const MAX_CONSEQUENCE_AGE_TICKS = 500;
+
 export function processConsequences(state: GameState, consequences: Consequence[]): {
   updatedState: GameState;
   triggeredEffects: ConsequenceEffect[];
@@ -176,12 +181,22 @@ export function processConsequences(state: GameState, consequences: Consequence[
 } {
   let updatedState = { ...state };
   const triggeredEffects: ConsequenceEffect[] = [];
-  const updatedConsequences = consequences.map(csq => {
+  
+  // Filter out old consequences first
+  const currentTick = state.time?.tick || 0;
+  const activeConsequences = consequences.filter(csq => 
+    !csq.resolved && (currentTick - csq.sourceTick < MAX_CONSEQUENCE_AGE_TICKS)
+  );
+  
+  const updatedConsequences = activeConsequences.map(csq => {
     if (csq.resolved) return csq;
     
     const remainingDelayed: DelayedEffect[] = [];
     
-    for (const effect of csq.delayedEffects) {
+    // Limit effects per consequence
+    const effectsToProcess = csq.delayedEffects.slice(0, MAX_DELAYED_EFFECTS_PER_CONSEQUENCE);
+    
+    for (const effect of effectsToProcess) {
       const triggered = checkTriggerCondition(effect.triggerCondition, csq.sourceTick, state);
       
       if (triggered && Math.random() * 100 < effect.probability) {
@@ -197,12 +212,17 @@ export function processConsequences(state: GameState, consequences: Consequence[
     
     return {
       ...csq,
-      delayedEffects: remainingDelayed,
+      delayedEffects: remainingDelayed.slice(0, MAX_DELAYED_EFFECTS_PER_CONSEQUENCE),
       resolved: remainingDelayed.length === 0,
     };
   });
   
-  return { updatedState, triggeredEffects, updatedConsequences };
+  // Limit total consequences
+  const finalConsequences = updatedConsequences.length > MAX_ACTIVE_CONSEQUENCES
+    ? updatedConsequences.slice(-MAX_ACTIVE_CONSEQUENCES)
+    : updatedConsequences;
+  
+  return { updatedState, triggeredEffects, updatedConsequences: finalConsequences };
 }
 
 function checkTriggerCondition(condition: TriggerCondition, sourceTick: number, state: GameState): boolean {

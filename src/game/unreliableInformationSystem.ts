@@ -436,6 +436,11 @@ export function calculateTruthValue(knowledge: KnownFact, npcMemory: number): nu
 // ============= RUMOR SYSTEM =============
 // Based on DiFonzo & Bordia rumor research and Telephone Game studies
 
+// LIMITS to prevent unbounded growth
+const MAX_RUMORS = 50;
+const MAX_RUMOR_SPREAD = 30; // Max NPCs per rumor
+const MAX_RUMOR_AGE = 1000; // Max ticks before expiry
+
 export interface Rumor {
   id: string;
   originalContent: string;    // The original truth
@@ -458,9 +463,9 @@ export function createRumor(
 ): Rumor {
   return {
     id: `rumor_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-    originalContent: content,
-    currentVersion: content,
-    origin,
+    originalContent: content.slice(0, 500), // Limit content length
+    currentVersion: content.slice(0, 500),
+    origin: origin.slice(0, 50),
     truthValue: initialTruth,
     spread: [origin],
     retellings: 0,
@@ -546,10 +551,18 @@ export function processRumorSpread(
   npcProfiles: Record<string, NPCInformationProfile>,
   hoursElapsed: number = 1
 ): Rumor[] {
-  return rumors.map(rumor => {
+  // Limit input rumors
+  const limitedRumors = rumors.slice(-MAX_RUMORS);
+  
+  const processed = limitedRumors.map(rumor => {
     if (rumor.expired) return rumor;
     
     const updated = { ...rumor, age: rumor.age + hoursElapsed };
+    
+    // Force expire old rumors
+    if (updated.age > MAX_RUMOR_AGE) {
+      return { ...updated, expired: true };
+    }
     
     // Rumors die based on age and relevance
     // Local rumors die faster than regional/world rumors
@@ -564,9 +577,15 @@ export function processRumorSpread(
       return { ...updated, expired: true };
     }
     
+    // Limit spread array
+    if (updated.spread.length >= MAX_RUMOR_SPREAD) {
+      return updated; // Don't spread further
+    }
+    
     // Spread to gossipy NPCs
     for (const [npcId, profile] of Object.entries(npcProfiles)) {
       if (updated.spread.includes(npcId)) continue;
+      if (updated.spread.length >= MAX_RUMOR_SPREAD) break;
       
       // Chance to spread based on gossip tendency and rumor's emotional charge
       const spreadChance = (profile.reliability.gossipTendency / 100) * 
@@ -584,16 +603,23 @@ export function processRumorSpread(
           profile.reliability.confabulationTendency
         );
         
-        updated.currentVersion = content;
+        updated.currentVersion = content.slice(0, 500); // Limit length
         updated.truthValue = Math.max(0, updated.truthValue - truthLoss);
       }
     }
     
     return updated;
   }).filter(r => !r.expired);
+  
+  // Final limit on output
+  return processed.slice(-MAX_RUMORS);
 }
 
 // ============= PLAYER KNOWLEDGE TRACKING =============
+
+// LIMITS
+const MAX_PLAYER_KNOWLEDGE = 100;
+const MAX_CONTRADICTIONS = 5;
 
 export interface PlayerKnowledge {
   topic: string;
@@ -618,20 +644,26 @@ export function recordPlayerKnowledge(
   // Check for contradictions with existing knowledge
   const contradictions = existing.filter(k => 
     k.topic === topic && k.info !== info
-  ).map(k => k.source);
+  ).map(k => k.source).slice(0, MAX_CONTRADICTIONS);
   
-  return [
-    ...existing,
-    {
-      topic,
-      info,
-      source,
-      truthValue,
-      turnLearned: currentTurn,
-      verified: false,
-      contradictedBy: contradictions.length > 0 ? contradictions : undefined,
-    },
-  ];
+  const newKnowledge: PlayerKnowledge = {
+    topic: topic.slice(0, 100), // Limit length
+    info: info.slice(0, 500),
+    source: source.slice(0, 50),
+    truthValue,
+    turnLearned: currentTurn,
+    verified: false,
+    contradictedBy: contradictions.length > 0 ? contradictions : undefined,
+  };
+  
+  const result = [...existing, newKnowledge];
+  
+  // Enforce limit - keep most recent
+  if (result.length > MAX_PLAYER_KNOWLEDGE) {
+    return result.slice(-MAX_PLAYER_KNOWLEDGE);
+  }
+  
+  return result;
 }
 
 // ============= AI PROMPT CONTEXT =============
