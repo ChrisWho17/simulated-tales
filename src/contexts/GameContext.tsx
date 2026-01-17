@@ -596,17 +596,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   }, []);
   
   const setMood = useCallback((mood: MoodState, intensity: number = 0.6) => {
-    setEmotionalState(prev => ({
-      ...prev,
-      currentMood: mood,
-      moodIntensity: Math.min(1, Math.max(0, intensity)),
-      moodHistory: [...prev.moodHistory.slice(-9), {
+    setEmotionalState(prev => {
+      // Cap mood history to prevent unbounded growth
+      const MAX_MOOD_HISTORY = 20;
+      const newHistory = [...prev.moodHistory.slice(-(MAX_MOOD_HISTORY - 1)), {
         from: prev.currentMood,
         to: mood,
         trigger: 'manual_set',
         intensity
-      }]
-    }));
+      }];
+      
+      return {
+        ...prev,
+        currentMood: mood,
+        moodIntensity: Math.min(1, Math.max(0, intensity)),
+        moodHistory: newHistory
+      };
+    });
   }, []);
   
   const decayMood = useCallback(() => {

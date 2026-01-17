@@ -435,11 +435,13 @@ export function atomicWrite(key: string, data: unknown): boolean {
   }
 }
 
-// Size cap for narrative history and event ledger
+// Size cap for narrative history and event ledger - reduced to prevent save bloat
 export const SIZE_CAPS = {
-  narrativeHistory: 200,
-  eventHistory: 500,
-  storyEntries: 100,
+  narrativeHistory: 150, // Reduced from 200
+  eventHistory: 300,     // Reduced from 500
+  storyEntries: 75,      // Reduced from 100
+  npcMemories: 100,      // New: cap for NPC memory storage
+  questJournalEntries: 50, // New: cap for quest journal
 } as const;
 
 export function applyDataSizeCaps(gameData: Record<string, unknown>): Record<string, unknown> {
@@ -466,6 +468,36 @@ export function applyDataSizeCaps(gameData: Record<string, unknown>): Record<str
     const stories = capped.storyEntries as unknown[];
     if (stories.length > SIZE_CAPS.storyEntries) {
       capped.storyEntries = stories.slice(-SIZE_CAPS.storyEntries);
+    }
+  }
+  
+  // Cap NPC memories to prevent save bloat
+  if (capped.npcs && typeof capped.npcs === 'object') {
+    const npcs = capped.npcs as Record<string, Record<string, unknown>>;
+    for (const npcId in npcs) {
+      const npc = npcs[npcId];
+      if (npc && Array.isArray(npc.memories)) {
+        const memories = npc.memories as unknown[];
+        if (memories.length > SIZE_CAPS.npcMemories) {
+          npc.memories = memories.slice(-SIZE_CAPS.npcMemories);
+        }
+      }
+    }
+  }
+  
+  // Cap quest journal entries
+  if (capped.questLog && typeof capped.questLog === 'object') {
+    const questLog = capped.questLog as Record<string, Record<string, unknown>>;
+    if (questLog.quests && typeof questLog.quests === 'object') {
+      for (const questId in questLog.quests) {
+        const quest = (questLog.quests as Record<string, Record<string, unknown>>)[questId];
+        if (quest && Array.isArray(quest.journalEntries)) {
+          const entries = quest.journalEntries as unknown[];
+          if (entries.length > SIZE_CAPS.questJournalEntries) {
+            quest.journalEntries = entries.slice(-SIZE_CAPS.questJournalEntries);
+          }
+        }
+      }
     }
   }
   

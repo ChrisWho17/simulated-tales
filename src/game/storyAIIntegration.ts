@@ -195,6 +195,12 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
    */
   parseNarrativeStateChanges(narrative: string): { type: string; value: number; description: string }[] {
     const changes: { type: string; value: number; description: string }[] = [];
+    
+    // Truncate narrative to prevent ReDoS attacks on long malicious inputs
+    const safeNarrative = narrative.slice(0, 5000);
+    
+    // Maximum changes to detect per parse (prevent exploitation)
+    const MAX_CHANGES = 10;
 
     // Detect currency gains (e.g., "received 50 gold", "found $100")
     const currencyGainPatterns = [
@@ -204,11 +210,14 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
     ];
 
     for (const pattern of currencyGainPatterns) {
-      const matches = narrative.matchAll(pattern);
+      if (changes.length >= MAX_CHANGES) break;
+      const matches = safeNarrative.matchAll(pattern);
       for (const match of matches) {
+        if (changes.length >= MAX_CHANGES) break;
         const amount = parseInt(match[1], 10);
-        if (amount > 0 && amount < 10000) { // Sanity check
-          changes.push({ type: 'currency_gain', value: amount, description: match[0] });
+        // Tighter bounds: 1-5000 for currency (prevents exploitation)
+        if (amount > 0 && amount <= 5000) {
+          changes.push({ type: 'currency_gain', value: amount, description: match[0].slice(0, 50) });
         }
       }
     }
@@ -220,11 +229,14 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
     ];
 
     for (const pattern of damagePatterns) {
-      const matches = narrative.matchAll(pattern);
+      if (changes.length >= MAX_CHANGES) break;
+      const matches = safeNarrative.matchAll(pattern);
       for (const match of matches) {
+        if (changes.length >= MAX_CHANGES) break;
         const amount = parseInt(match[1], 10);
-        if (amount > 0 && amount < 1000) {
-          changes.push({ type: 'damage', value: -amount, description: match[0] });
+        // Cap damage at 500 to prevent instant death exploits
+        if (amount > 0 && amount <= 500) {
+          changes.push({ type: 'damage', value: -amount, description: match[0].slice(0, 50) });
         }
       }
     }
@@ -235,11 +247,14 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
     ];
 
     for (const pattern of healPatterns) {
-      const matches = narrative.matchAll(pattern);
+      if (changes.length >= MAX_CHANGES) break;
+      const matches = safeNarrative.matchAll(pattern);
       for (const match of matches) {
+        if (changes.length >= MAX_CHANGES) break;
         const amount = parseInt(match[1], 10);
-        if (amount > 0 && amount < 1000) {
-          changes.push({ type: 'heal', value: amount, description: match[0] });
+        // Cap healing at 500
+        if (amount > 0 && amount <= 500) {
+          changes.push({ type: 'heal', value: amount, description: match[0].slice(0, 50) });
         }
       }
     }
@@ -250,11 +265,14 @@ ${state.cheatMode ? '8. Cheat Mode: Bypass above rules but maintain narrative co
     ];
 
     for (const pattern of xpPatterns) {
-      const matches = narrative.matchAll(pattern);
+      if (changes.length >= MAX_CHANGES) break;
+      const matches = safeNarrative.matchAll(pattern);
       for (const match of matches) {
+        if (changes.length >= MAX_CHANGES) break;
         const amount = parseInt(match[1], 10);
-        if (amount > 0 && amount < 10000) {
-          changes.push({ type: 'xp', value: amount, description: match[0] });
+        // Cap XP at 1000 per gain
+        if (amount > 0 && amount <= 1000) {
+          changes.push({ type: 'xp', value: amount, description: match[0].slice(0, 50) });
         }
       }
     }

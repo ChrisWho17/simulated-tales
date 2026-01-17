@@ -122,14 +122,30 @@ const STORAGE_KEY = 'untold-npc-identity-registry';
 
 // ============= PERSISTENCE =============
 
+// Maximum NPCs in registry to prevent unbounded growth
+const MAX_REGISTRY_SIZE = 200;
+
 export function loadNPCRegistry(): NPCIdentityRegistry {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      registry = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Validate structure before using
+      if (parsed && typeof parsed === 'object' && parsed.npcs && parsed.relationships) {
+        registry = parsed;
+      } else {
+        console.warn('[NPCRegistry] Invalid registry structure, using empty');
+      }
     }
   } catch (e) {
     console.error('[NPCRegistry] Failed to load:', e);
+    // Reset to empty on parse failure
+    registry = {
+      npcs: {},
+      relationships: {},
+      families: {},
+      lockedIds: [],
+    };
   }
   return registry;
 }
@@ -285,6 +301,22 @@ export function generateNPCStats(occupation?: string, personality?: string): NPC
 }
 
 export function createRegisteredNPC(config: CreateNPCConfig): string {
+  // Enforce registry size limit to prevent unbounded growth
+  const npcCount = Object.keys(registry.npcs).length;
+  if (npcCount >= MAX_REGISTRY_SIZE) {
+    // Prune oldest unlocked NPCs
+    const unlockedNPCs = Object.entries(registry.npcs)
+      .filter(([id]) => !registry.lockedIds.includes(id))
+      .sort((a, b) => a[1].permanent.createdTurn - b[1].permanent.createdTurn);
+    
+    // Remove oldest 20% of unlocked NPCs
+    const toRemove = Math.ceil(unlockedNPCs.length * 0.2);
+    for (let i = 0; i < Math.min(toRemove, unlockedNPCs.length); i++) {
+      delete registry.npcs[unlockedNPCs[i][0]];
+    }
+    console.log(`[NPCRegistry] Pruned ${toRemove} NPCs to stay under limit`);
+  }
+
   const id = config.id || `npc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const currentTurn = config.currentTurn || 0;
   

@@ -78,10 +78,13 @@ export interface NPCMemoryStore {
 // ============= MEMORY CAPACITY LIMITS =============
 
 const CAPACITY = {
-  short: 20,
-  medium: 50,
-  long: 100,
+  short: 15,  // Reduced from 20 to prevent memory bloat
+  medium: 40, // Reduced from 50
+  long: 75,   // Reduced from 100
 };
+
+// Maximum total memories across all NPCs to prevent runaway memory usage
+const MAX_TOTAL_NPC_MEMORIES = 500;
 
 // ============= DECAY RATES =============
 
