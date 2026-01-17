@@ -30,6 +30,12 @@ export interface CompanionCombatStats {
   maxHealth: number;
   currentEnergy: number;
   
+  // Morale System (affected by combat outcomes)
+  morale: number;             // 0-100 (affects roll modifier)
+  moraleState: 'demoralized' | 'shaken' | 'steady' | 'confident' | 'inspired';
+  consecutiveFailures: number;
+  consecutiveSuccesses: number;
+  
   // Derived
   weaponDamage: number;
   armorProtection: number;
@@ -140,6 +146,10 @@ export function generateCompanionCombatStats(
     currentHealth: stats.maxHealth || 80,
     maxHealth: stats.maxHealth || 80,
     currentEnergy: 100,
+    morale: 50, // Start steady
+    moraleState: 'steady',
+    consecutiveFailures: 0,
+    consecutiveSuccesses: 0,
     weaponDamage: stats.weaponDamage || 10,
     armorProtection: stats.armorProtection || 5,
   };
@@ -158,6 +168,65 @@ function calculateStatModifier(statValue: number): number {
 
 function getSizeModifier(size: CompanionCombatStats['size'], type: 'damage' | 'accuracy' | 'protection'): number {
   return SIZE_MODIFIERS[size]?.[type] || 0;
+}
+
+// ============================================================================
+// MORALE SYSTEM
+// ============================================================================
+
+function getMoraleModifier(morale: number): number {
+  // Morale affects roll modifier: -4 to +4
+  if (morale <= 15) return -4;  // Demoralized
+  if (morale <= 30) return -2;  // Shaken
+  if (morale <= 70) return 0;   // Steady
+  if (morale <= 85) return +2;  // Confident
+  return +4;                     // Inspired
+}
+
+function getMoraleState(morale: number): CompanionCombatStats['moraleState'] {
+  if (morale <= 15) return 'demoralized';
+  if (morale <= 30) return 'shaken';
+  if (morale <= 70) return 'steady';
+  if (morale <= 85) return 'confident';
+  return 'inspired';
+}
+
+export function updateMoraleAfterAction(
+  stats: CompanionCombatStats,
+  outcome: CompanionCombatOutcome
+): void {
+  const isSuccess = outcome === 'success' || outcome === 'critical_success';
+  const isFailure = outcome === 'failure' || outcome === 'critical_failure';
+  
+  if (isSuccess) {
+    stats.consecutiveSuccesses++;
+    stats.consecutiveFailures = 0;
+    
+    // Morale boost based on consecutive successes
+    const boost = outcome === 'critical_success' ? 12 : 6;
+    const streakBonus = Math.min(stats.consecutiveSuccesses, 3) * 2;
+    stats.morale = Math.min(100, stats.morale + boost + streakBonus);
+    
+  } else if (isFailure) {
+    stats.consecutiveFailures++;
+    stats.consecutiveSuccesses = 0;
+    
+    // Morale penalty based on consecutive failures
+    const penalty = outcome === 'critical_failure' ? 15 : 8;
+    const streakPenalty = Math.min(stats.consecutiveFailures, 3) * 3;
+    stats.morale = Math.max(0, stats.morale - penalty - streakPenalty);
+  }
+  
+  // Neutral doesn't affect streak but slowly regresses morale towards 50
+  if (outcome === 'neutral') {
+    if (stats.morale > 50) {
+      stats.morale = Math.max(50, stats.morale - 2);
+    } else if (stats.morale < 50) {
+      stats.morale = Math.min(50, stats.morale + 2);
+    }
+  }
+  
+  stats.moraleState = getMoraleState(stats.morale);
 }
 
 // ============================================================================
@@ -197,8 +266,9 @@ export function resolveCompanionCombatAction(
   const sizeModifier = getSizeModifier(combatStats.size, 'accuracy');
   const skillModifier = calculateStatModifier(combatStats.baseCombatSkill);
   const difficultyMod = DIFFICULTY_MODIFIERS[difficulty]?.modifier || 0;
+  const moraleModifier = getMoraleModifier(combatStats.morale);
   
-  const totalModifier = statModifier + sizeModifier + skillModifier + difficultyMod;
+  const totalModifier = statModifier + sizeModifier + skillModifier + difficultyMod + moraleModifier;
   const totalRoll = naturalRoll + totalModifier;
   const targetDC = BASE_DC;
   
@@ -219,6 +289,9 @@ export function resolveCompanionCombatAction(
   } else {
     outcome = 'critical_failure';
   }
+  
+  // Update morale based on outcome
+  updateMoraleAfterAction(combatStats, outcome);
   
   // Calculate effects
   let damageDealt = 0;
