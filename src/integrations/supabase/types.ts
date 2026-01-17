@@ -101,6 +101,60 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_sync_logs: {
+        Row: {
+          app_version: string
+          build_number: string
+          campaign_id: string | null
+          confidence: string | null
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          instance_id: string | null
+          item_name: string | null
+          matched_to: string | null
+          pattern_used: string | null
+          session_id: string
+          source: string | null
+          success: boolean
+        }
+        Insert: {
+          app_version: string
+          build_number: string
+          campaign_id?: string | null
+          confidence?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          instance_id?: string | null
+          item_name?: string | null
+          matched_to?: string | null
+          pattern_used?: string | null
+          session_id: string
+          source?: string | null
+          success?: boolean
+        }
+        Update: {
+          app_version?: string
+          build_number?: string
+          campaign_id?: string | null
+          confidence?: string | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          instance_id?: string | null
+          item_name?: string | null
+          matched_to?: string | null
+          pattern_used?: string | null
+          session_id?: string
+          source?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       lifetime_stats: {
         Row: {
           created_at: string
