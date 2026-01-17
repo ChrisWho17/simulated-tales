@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { VERSION_STRING } from '@/lib/version';
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
 import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity, ShoppingBag, Coins } from 'lucide-react';
@@ -101,7 +102,7 @@ export function GameHeader({
             Untold
           </h1>
           <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30">
-            v0.4.2-alpha
+            {VERSION_STRING}
           </span>
         </div>
         <div className="h-6 w-px bg-border" />
