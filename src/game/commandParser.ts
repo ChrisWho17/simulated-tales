@@ -1,5 +1,6 @@
 // Command keyword parser for enhanced text input
 // Supports: talking, actions, replies, inventory, terrain manipulation, developer commands
+// NOTE: All commands are case-insensitive - /IMACHEATER works the same as /imacheater
 
 export interface ParsedCommand {
   type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself' | 'developer';
@@ -9,7 +10,7 @@ export interface ParsedCommand {
   raw: string;
 }
 
-// Developer commands that open special panels
+// Developer commands that open special panels (case-insensitive matching)
 export const DEVELOPER_COMMANDS = ['/imacheater', '/cheat', '/dev', '/integrity', '/events', '/debug'] as const;
 export type DeveloperCommand = typeof DEVELOPER_COMMANDS[number];
 

@@ -14,7 +14,6 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { DataIntegrityService, IntegrityReport } from '@/services/dataIntegrityService';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
@@ -45,6 +44,9 @@ import {
   CompanionStatus,
   COMPANION_TEMPLATES
 } from '@/game/companionSystem';
+import { wardrobeManager, WardrobeState, WardrobeItem } from '@/game/wardrobeSystem';
+import { getStarterClothingForGenre, buildClothingDescriptionForAI } from '@/game/starterClothingSystem';
+import { ClothingSlot } from '@/game/clothingItemSystem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryEditor } from './InventoryEditor';
 
@@ -149,9 +151,9 @@ export function CheatModeSplash({
   const [integrityReport, setIntegrityReport] = useState<IntegrityReport | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   
-  // Equipment override for portraits
-  const [currentGear, setCurrentGear] = useState<string>('');
-  const [hasEquippedGear, setHasEquippedGear] = useState(true);
+  // Wardrobe state - actual equipped items
+  const [wardrobeState, setWardrobeState] = useState<WardrobeState | null>(null);
+  const [clothingDescription, setClothingDescription] = useState<string>('');
   
   // Companion state
   const [companions, setCompanions] = useState<CompanionState[]>([]);
@@ -214,14 +216,6 @@ export function CheatModeSplash({
           const parsed = JSON.parse(savedChar);
           setName(parsed.basicInfo?.name || character?.name || '');
           setAppearance(parsed.appearance || null);
-          
-          const equipped = parsed.equipment?.equipped || [];
-          if (equipped.length > 0) {
-            setCurrentGear(equipped.map((e: any) => e.name || e).join(', '));
-            setHasEquippedGear(true);
-          } else {
-            setHasEquippedGear(false);
-          }
         }
         
         if (character) {
@@ -233,13 +227,29 @@ export function CheatModeSplash({
           setStats(character.stats);
         }
         
+        // Load wardrobe state
+        const currentWardrobe = wardrobeManager.getState();
+        setWardrobeState(currentWardrobe);
+        
+        // Build clothing description from equipped items or use genre defaults
+        const equippedItems = Object.entries(currentWardrobe.equipped)
+          .filter(([_, wi]) => wi !== undefined)
+          .map(([slot, wi]) => ({
+            slot: slot as ClothingSlot,
+            name: wi!.item.name,
+            description: wi!.item.description,
+          }));
+        
+        const description = buildClothingDescriptionForAI(equippedItems, genre);
+        setClothingDescription(description);
+        
         // Load companions
         setCompanions(companionSystem.getActiveCompanions());
       } catch (e) {
         console.error('[CheatMode] Failed to load character:', e);
       }
     }
-  }, [isOpen, character]);
+  }, [isOpen, character, genre]);
   
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -657,34 +667,59 @@ export function CheatModeSplash({
         
         {expandedSections.equipment && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm">Has Equipped Gear</Label>
-                <p className="text-xs text-muted-foreground">
-                  When off, portraits show character in underwear (SFW)
+            {/* Current outfit display */}
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-2">
+                <Shirt className="w-3 h-3" />
+                Current Outfit (for AI portraits)
+              </Label>
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <p className="text-sm text-foreground capitalize">
+                  {clothingDescription || 'No clothing data available'}
                 </p>
               </div>
-              <Switch
-                checked={hasEquippedGear}
-                onCheckedChange={setHasEquippedGear}
-              />
+              <p className="text-xs text-muted-foreground">
+                Characters always wear at least basic clothing based on genre. 
+                Equip items in your inventory to change your outfit.
+              </p>
             </div>
             
-            {hasEquippedGear && (
+            {/* Equipped items breakdown */}
+            {wardrobeState && Object.keys(wardrobeState.equipped).length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Current Gear Description</Label>
-                <Textarea
-                  value={currentGear}
-                  onChange={e => setCurrentGear(e.target.value)}
-                  placeholder="e.g., leather armor, steel sword, traveling cloak..."
-                  className="min-h-[60px] text-sm"
-                />
+                <Label className="text-xs text-muted-foreground uppercase">Equipped Items</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(wardrobeState.equipped)
+                    .filter(([_, wi]) => wi !== undefined)
+                    .map(([slot, wi]) => (
+                      <div 
+                        key={slot}
+                        className="flex items-center gap-2 p-2 bg-background/50 rounded text-xs"
+                      >
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {slot}
+                        </Badge>
+                        <span className="truncate">{wi!.item.name}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+            
+            {/* Genre default fallback info */}
+            {(!wardrobeState || Object.keys(wardrobeState.equipped).length === 0) && (
+              <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                  Using genre-default clothing for {genre || 'modern'} setting
+                </div>
               </div>
             )}
             
             {appearance?.full && (
               <div className="space-y-2">
-                <Label className="text-sm">Clothing Style</Label>
+                <Label className="text-sm">Clothing Style Override</Label>
                 <Select
                   value={appearance.full.clothingStyle || 'genre_default'}
                   onValueChange={v => handleAppearanceFullChange('clothingStyle', v)}

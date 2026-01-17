@@ -9,6 +9,7 @@ import {
   getClothingById,
   calculateTotalStats
 } from './clothingItemSystem';
+import { getStarterClothingForGenre, BASIC_CLOTHING } from './starterClothingSystem';
 
 export interface WardrobeItem {
   item: ClothingItem;
@@ -38,6 +39,7 @@ export interface WardrobeState {
 type WardrobeListener = (state: WardrobeState) => void;
 
 const WARDROBE_STORAGE_KEY = 'wardrobe_state';
+const CURRENT_GENRE_KEY = 'current_campaign_genre';
 
 class WardrobeManager {
   private state: WardrobeState;
@@ -80,35 +82,116 @@ class WardrobeManager {
   }
 
   private getDefaultState(): WardrobeState {
-    // Start with some basic clothing
+    // Get the current genre from storage or default to modern
+    let genre = 'modern';
+    try {
+      const storedGenre = localStorage.getItem(CURRENT_GENRE_KEY);
+      if (storedGenre) {
+        genre = storedGenre;
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
+    
+    // Get genre-appropriate starter clothing
+    const starterSet = getStarterClothingForGenre(genre);
+    
+    // Create wardrobe items from starter set
     const starterItems: WardrobeItem[] = [
       {
-        item: getClothingById('plain_tshirt')!,
+        item: starterSet.items.torso,
         acquiredAt: new Date(),
         acquiredFrom: 'starting',
-        timesWorn: 0,
+        timesWorn: 1,
       },
       {
-        item: getClothingById('worn_jeans')!,
+        item: starterSet.items.legs,
         acquiredAt: new Date(),
         acquiredFrom: 'starting',
-        timesWorn: 0,
+        timesWorn: 1,
       },
       {
-        item: getClothingById('sneakers')!,
+        item: starterSet.items.feet,
         acquiredAt: new Date(),
         acquiredFrom: 'starting',
-        timesWorn: 0,
+        timesWorn: 1,
       },
-    ].filter(wi => wi.item);
+    ];
+
+    // Auto-equip starter items
+    const equipped: EquippedClothing = {
+      torso: starterItems[0],
+      legs: starterItems[1],
+      feet: starterItems[2],
+    };
+
+    console.log(`[Wardrobe] Initialized with ${genre} starter clothing:`, 
+      starterItems.map(i => i.item.name).join(', '));
 
     return {
       ownedItems: starterItems,
-      equipped: {},
+      equipped,
       activeStyle: 'casual',
       totalStats: {},
       activeSets: [],
     };
+  }
+  
+  /**
+   * Initialize wardrobe with genre-specific starter clothing
+   * Called when starting a new campaign
+   */
+  initializeForGenre(genre: string): void {
+    try {
+      localStorage.setItem(CURRENT_GENRE_KEY, genre);
+    } catch (e) {
+      // Ignore
+    }
+    
+    // Get genre-appropriate starter clothing
+    const starterSet = getStarterClothingForGenre(genre);
+    
+    // Create wardrobe items from starter set
+    const starterItems: WardrobeItem[] = [
+      {
+        item: starterSet.items.torso,
+        acquiredAt: new Date(),
+        acquiredFrom: 'starting',
+        timesWorn: 1,
+      },
+      {
+        item: starterSet.items.legs,
+        acquiredAt: new Date(),
+        acquiredFrom: 'starting',
+        timesWorn: 1,
+      },
+      {
+        item: starterSet.items.feet,
+        acquiredAt: new Date(),
+        acquiredFrom: 'starting',
+        timesWorn: 1,
+      },
+    ];
+
+    // Auto-equip starter items
+    this.state = {
+      ownedItems: starterItems,
+      equipped: {
+        torso: starterItems[0],
+        legs: starterItems[1],
+        feet: starterItems[2],
+      },
+      activeStyle: starterSet.items.torso.style,
+      totalStats: {},
+      activeSets: [],
+    };
+    
+    this.recalculateStats();
+    this.saveState();
+    this.notify();
+    
+    console.log(`[Wardrobe] Initialized for ${genre}:`, 
+      starterItems.map(i => i.item.name).join(', '));
   }
 
   private saveState(): void {
@@ -281,11 +364,14 @@ class WardrobeManager {
     return this.state.ownedItems.filter(wi => wi.item.slot === slot);
   }
 
-  // For AI context
-  buildClothingContext(): string {
+  // For AI context - always returns clothing description, never naked
+  buildClothingContext(genre: string = 'modern'): string {
     const equipped = this.getEquippedList();
+    
+    // If no equipped items, use genre defaults
     if (equipped.length === 0) {
-      return 'The player is wearing basic, unremarkable clothing.';
+      const starterSet = getStarterClothingForGenre(genre);
+      return `The player is ${starterSet.description}.`;
     }
 
     const lines: string[] = ['Current outfit:'];
