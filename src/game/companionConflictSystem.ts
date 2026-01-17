@@ -552,9 +552,12 @@ export function resolveDisagreement(
   
   // Emit event
   eventBus.emit({
-    type: 'companion_conflict_resolved',
-    payload: { disagreement: resolvedDisagreement, resolution }
-  });
+    type: 'COMPANION_CONFLICT_RESOLVED',
+    tick: 0,
+    source: 'companionConflictSystem',
+    priority: 'normal',
+    data: { disagreement: resolvedDisagreement, resolution }
+  } as any);
   
   return {
     resolvedDisagreement,

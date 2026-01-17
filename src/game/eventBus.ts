@@ -63,6 +63,7 @@ export type GameEventType =
   | 'QUEST_STARTED'
   | 'QUEST_COMPLETED'
   | 'QUEST_FAILED'
+  | 'QUEST_RIPPLE'
   | 'STORY_BEAT'
   // System events
   | 'GAME_TICK'
@@ -84,7 +85,15 @@ export type GameEventType =
   // Diplomat events
   | 'ALLIANCE_FORMED'
   | 'CONFLICT_RESOLVED'
-  | 'FACTION_REPUTATION_CHANGED';
+  | 'FACTION_REPUTATION_CHANGED'
+  // Critical Chain events
+  | 'CRITICAL_CHAIN_UPDATED'
+  | 'FORTUNE_FAVOR_ACTIVATED'
+  | 'DESPERATION_MODE_ACTIVATED'
+  | 'COMEBACK_TRIGGERED'
+  // Companion events
+  | 'COMPANION_CONFLICT_STARTED'
+  | 'COMPANION_CONFLICT_RESOLVED';
 
 // ============= EVENT PAYLOAD INTERFACES =============
 
