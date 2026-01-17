@@ -88,6 +88,13 @@ export interface HiddenDamageState {
   revealedWounds: Wound[];
 }
 
+// Limits for 100k+ turn games
+const ADRENALINE_LIMITS = {
+  maxHiddenWounds: 10,     // Max hidden wounds at once
+  maxRevealedWounds: 20,   // Max revealed wound history
+  maxTotalWounds: 25,      // Absolute max wounds tracked
+} as const;
+
 export interface AdrenalineSystemState {
   adrenaline: AdrenalineState;
   hiddenDamage: HiddenDamageState;
@@ -547,12 +554,24 @@ export function receiveDamage(
   if (isWoundHidden) {
     const vagueSymptom = getVagueSymptom(wound);
     
+    // Limit wounds to prevent memory issues in long games
+    let newHiddenWounds = [...adrenalineState.hiddenDamage.wounds, wound];
+    if (newHiddenWounds.length > ADRENALINE_LIMITS.maxHiddenWounds) {
+      // Force reveal oldest wounds when over limit
+      const oldest = newHiddenWounds.shift();
+      if (oldest) {
+        oldest.revealed = true;
+        oldest.revealedAt = Date.now();
+        oldest.revealReason = 'wounds_overflow';
+      }
+    }
+    
     return {
       state: {
         ...adrenalineState,
         hiddenDamage: {
           ...adrenalineState.hiddenDamage,
-          wounds: [...adrenalineState.hiddenDamage.wounds, wound],
+          wounds: newHiddenWounds,
           totalHiddenHP: adrenalineState.hiddenDamage.totalHiddenHP + actualDamage,
           bleedingRate: adrenalineState.hiddenDamage.bleedingRate + bleedRate
         }
@@ -566,12 +585,18 @@ export function receiveDamage(
     wound.revealed = true;
     wound.revealedAt = Date.now();
     
+    // Limit revealed wounds history
+    let newRevealedWounds = [...adrenalineState.hiddenDamage.revealedWounds, wound];
+    if (newRevealedWounds.length > ADRENALINE_LIMITS.maxRevealedWounds) {
+      newRevealedWounds = newRevealedWounds.slice(-ADRENALINE_LIMITS.maxRevealedWounds);
+    }
+    
     return {
       state: {
         ...adrenalineState,
         hiddenDamage: {
           ...adrenalineState.hiddenDamage,
-          revealedWounds: [...adrenalineState.hiddenDamage.revealedWounds, wound]
+          revealedWounds: newRevealedWounds
         }
       },
       wound,
@@ -591,7 +616,12 @@ function checkWoundReveal(state: AdrenalineSystemState): {
   const remainingHidden: Wound[] = [];
   let newTotalHiddenHP = state.hiddenDamage.totalHiddenHP;
   let newBleedingRate = state.hiddenDamage.bleedingRate;
-  const newRevealed = [...state.hiddenDamage.revealedWounds];
+  let newRevealed = [...state.hiddenDamage.revealedWounds];
+  
+  // Limit revealed wounds history before adding more
+  if (newRevealed.length > ADRENALINE_LIMITS.maxRevealedWounds) {
+    newRevealed = newRevealed.slice(-ADRENALINE_LIMITS.maxRevealedWounds);
+  }
   
   for (const wound of state.hiddenDamage.wounds) {
     const adrenalineReveals = state.adrenaline.current < wound.hideThreshold;
@@ -612,6 +642,11 @@ function checkWoundReveal(state: AdrenalineSystemState): {
     }
   }
   
+  // Final limit on revealed wounds
+  const finalRevealed = newRevealed.length > ADRENALINE_LIMITS.maxRevealedWounds
+    ? newRevealed.slice(-ADRENALINE_LIMITS.maxRevealedWounds)
+    : newRevealed;
+  
   return {
     state: {
       ...state,
@@ -619,7 +654,7 @@ function checkWoundReveal(state: AdrenalineSystemState): {
         wounds: remainingHidden,
         totalHiddenHP: Math.max(0, newTotalHiddenHP),
         bleedingRate: Math.max(0, newBleedingRate),
-        revealedWounds: newRevealed
+        revealedWounds: finalRevealed
       }
     },
     revealedWounds: revealedNow

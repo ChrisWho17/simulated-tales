@@ -494,21 +494,36 @@ export function checkMemoryTriggers(
 }
 
 // ============================================================================
-// SINGLETON MANAGER
+// SINGLETON MANAGER - Designed for 100k+ turn games
 // ============================================================================
+
+// Memory callback limits
+const CALLBACK_LIMITS = {
+  maxNPCStates: 50,      // Max NPCs with callback states
+  maxReferences: 20,     // Max memory references per NPC
+  maxTriggers: 30,       // Max triggers per NPC
+} as const;
 
 class RelationshipMemoryManager {
   private npcStates: Map<string, NPCMemoryCallbackState> = new Map();
   private triggers: Map<string, ProactiveMemoryTrigger[]> = new Map();
   
   initializeNPC(npcId: string, memoryStore: NPCMemoryStore, npcName: string) {
-    const references = processMemoriesForReferences(memoryStore, npcId, npcName);
+    // Prune old NPC states if over limit
+    if (this.npcStates.size >= CALLBACK_LIMITS.maxNPCStates) {
+      this.pruneOldestStates();
+    }
+    
+    const allReferences = processMemoriesForReferences(memoryStore, npcId, npcName);
+    const references = allReferences.slice(0, CALLBACK_LIMITS.maxReferences);
+    
     const allMemories = [
       ...memoryStore.shortTerm,
       ...memoryStore.mediumTerm,
       ...memoryStore.longTerm
     ];
-    const npcTriggers = buildMemoryTriggers(allMemories);
+    const allTriggers = buildMemoryTriggers(allMemories);
+    const npcTriggers = allTriggers.slice(0, CALLBACK_LIMITS.maxTriggers);
     
     this.npcStates.set(npcId, {
       references,
@@ -517,6 +532,17 @@ class RelationshipMemoryManager {
     });
     
     this.triggers.set(npcId, npcTriggers);
+  }
+  
+  private pruneOldestStates(): void {
+    // Remove oldest 25% of states
+    const toRemove = Math.ceil(this.npcStates.size * 0.25);
+    const keys = Array.from(this.npcStates.keys());
+    for (let i = 0; i < toRemove && i < keys.length; i++) {
+      this.npcStates.delete(keys[i]);
+      this.triggers.delete(keys[i]);
+    }
+    console.log(`[RelationshipMemory] Pruned ${toRemove} old NPC callback states`);
   }
   
   shouldReference(npcId: string, context: DialogueMemoryContext, currentTick: number) {
@@ -540,6 +566,14 @@ class RelationshipMemoryManager {
   reset() {
     this.npcStates.clear();
     this.triggers.clear();
+  }
+  
+  // Get current memory usage stats
+  getStats() {
+    return {
+      npcStatesCount: this.npcStates.size,
+      triggersCount: Array.from(this.triggers.values()).reduce((sum, t) => sum + t.length, 0),
+    };
   }
 }
 
