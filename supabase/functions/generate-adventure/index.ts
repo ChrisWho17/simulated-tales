@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface InventoryItem {
+  name: string;
+  quantity: number;
+  id?: string;
+  category?: string;
+}
+
 interface CharacterData {
   name: string;
   classId: string;
@@ -21,7 +28,7 @@ interface CharacterData {
   maxHealth: number;
   currentHealth: number;
   level: number;
-  inventory: Array<{ name: string; quantity: number }>;
+  inventory: InventoryItem[];
   abilities: string[];
   skills: string[];
   gold: number;
@@ -574,48 +581,54 @@ HEAL EXAMPLES:
 
 WITHOUT THESE TAGS, HEALTH CHANGES DO NOT APPLY! This is MANDATORY.
 
-CRITICAL - ITEM ACQUISITION SYSTEM:
-When the player successfully takes, grabs, picks up, steals, receives, or acquires ANY item, you MUST include:
+CRITICAL - INVENTORY MANAGEMENT SYSTEM (MANDATORY TAGS):
+
+=== ITEM ACQUISITION ===
+When the player successfully takes, grabs, picks up, steals, receives, or acquires ANY item:
 [LOOT:item name]
 
-This is MANDATORY for items to appear in the player's inventory. Without this tag, items are NOT added!
+ACQUISITION EXAMPLES:
+- "I grab the key" → [LOOT:Iron Key]
+- "I take the sword" → [LOOT:Rusty Sword]  
+- "I loot the body" → [LOOT:Dagger][LOOT:Leather Pouch][GOLD:15]
+- "I buy the potion" → [LOOT:Healing Potion][GOLD:-20]
 
-EXAMPLES - When player says:
-- "I grab the key" → Narrate grabbing it AND include [LOOT:Iron Key]
-- "I take the sword" → Narrate taking it AND include [LOOT:Rusty Sword]
-- "I pick up the gold coins" → Include [GOLD:amount] or [LOOT:Gold Pouch]
-- "I steal the amulet" → If successful, include [LOOT:Mysterious Amulet]
-- "I loot the body" → List each item: [LOOT:Dagger][LOOT:Leather Pouch][GOLD:15]
-- "I accept the gift" → Include [LOOT:Gift Name]
-- "I buy the potion" → Include [LOOT:Healing Potion] (and [GOLD:-cost] if tracking spending)
-
-ITEM ACQUISITION RULES:
-- Use [LOOT:ItemName] for EVERY item the player acquires
-- Be descriptive with item names (e.g., "Ornate Silver Key" not just "key")
-- Multiple items = multiple [LOOT:] tags
-- If stealing/taking requires skill, use [ROLL:] first, then [LOOT:] only on success
-- Narrate the acquisition naturally, don't mention the tag
-- For currency, prefer [GOLD:amount] over [LOOT:coins]
-
-CRITICAL - ITEM REMOVAL SYSTEM:
-When the player discards, leaves behind, drops, loses, sells, gives away, or has an item taken from them, you MUST include:
+=== ITEM REMOVAL (DROP/DISCARD/GIVE AWAY) ===
+When the player discards, leaves behind, drops, loses, sells, or gives away items:
 [DROP:item name]
 
-This is MANDATORY for items to be removed from inventory. Without this tag, items are NOT removed!
+REMOVAL EXAMPLES:
+- "I drop my torch" → [DROP:Torch]
+- "I give her the amulet" → [DROP:Mysterious Amulet]
+- "I sell my old sword" → [DROP:Old Sword][GOLD:15]
+- "I leave my pack behind" → [DROP:Backpack]
 
-EXAMPLES:
-- "I leave my guitar behind" → Narrate leaving it AND include [DROP:Guitar]
-- "I drop the torch" → Narrate dropping it AND include [DROP:Torch]
-- "I give the amulet to the merchant" → Include [DROP:Amulet]
-- "I sell my sword" → Include [DROP:Sword] AND [GOLD:amount received]
-- Player disguises themselves and AI decides equipment is too conspicuous → Include [DROP:ItemName] for each stashed item
+=== ITEM CONSUMPTION (USE UP/EXPEND) ===
+When the player USES an item that gets consumed (potions, food, ammunition, etc.):
+[USE:item name]
 
-ITEM REMOVAL RULES:
-- Use [DROP:ItemName] for EVERY item the player loses, discards, or stores elsewhere
-- Match the item name exactly as it appears in the inventory
-- If YOU (the AI) decide the player should leave something behind for story reasons, ALWAYS use [DROP:]
-- When items are stashed or left temporarily, include WHERE in the narrative so player can retrieve later
-- CRITICAL: If you narrate leaving an item behind, YOU MUST include [DROP:] or it will still be in inventory!
+CONSUMPTION EXAMPLES:
+- "I drink the healing potion" → [USE:Healing Potion][HEAL:15]
+- "I eat the rations" → [USE:Trail Rations]
+- "I throw the grenade" → [USE:Frag Grenade]
+- "I apply the bandage" → [USE:Bandage][HEAL:5]
+- "I use the lockpick (and it breaks)" → [USE:Lockpick]
+
+=== CRITICAL INVENTORY RULES ===
+1. EVERY item gained MUST have [LOOT:] tag
+2. EVERY item lost/given away MUST have [DROP:] tag
+3. EVERY consumable used MUST have [USE:] tag
+4. Be DESCRIPTIVE with item names (e.g., "Ornate Silver Key" not just "key")
+5. Match item names as closely as possible to what's in player inventory
+6. If narrating item loss/consumption WITHOUT the tag, it WILL NOT be removed!
+7. Multiple items = multiple tags: [LOOT:Item1][LOOT:Item2]
+8. For currency: [GOLD:+amount] for gains, [GOLD:-amount] for spending
+
+=== ITEM VALIDATION (PREVENT DUPLICATION) ===
+- Before mentioning the player USING an item, check the inventory context below
+- Do NOT let the player use items they don't have
+- Do NOT create duplicate items - if player already has "Rusty Sword", don't give them another unless intended
+- If player tries to drop/use an item they don't have, narrate the confusion: "You reach for your [item] but realize you don't have one."
 
 CHAPTER SYSTEM:
 - Mark chapter endings with [CHAPTER_END] when a major story arc concludes
@@ -1071,6 +1084,39 @@ function formatCharacterContext(character: CharacterData, characterAppearance?: 
   const getModifier = (stat: number) => Math.floor((stat - 10) / 2);
   const formatMod = (mod: number) => mod >= 0 ? `+${mod}` : `${mod}`;
   
+  // Build detailed inventory with categories
+  const inventoryItems = character.inventory || [];
+  const inventoryByCategory: Record<string, InventoryItem[]> = {};
+  
+  for (const item of inventoryItems) {
+    const category = item.category || 'misc';
+    if (!inventoryByCategory[category]) {
+      inventoryByCategory[category] = [];
+    }
+    inventoryByCategory[category].push(item);
+  }
+  
+  // Format inventory with clear structure
+  let inventorySection = '';
+  if (inventoryItems.length === 0) {
+    inventorySection = 'Inventory: EMPTY (no items)';
+  } else {
+    inventorySection = `CURRENT INVENTORY (${inventoryItems.length} item types):`;
+    
+    // List all items clearly
+    for (const item of inventoryItems) {
+      const qty = item.quantity > 1 ? ` x${item.quantity}` : '';
+      const cat = item.category ? ` [${item.category}]` : '';
+      inventorySection += `\n• "${item.name}"${qty}${cat}`;
+    }
+    
+    // Add quick reference for common item names
+    inventorySection += `\n\nQUICK REFERENCE - Item names for [LOOT:], [DROP:], [USE:] tags:`;
+    for (const item of inventoryItems) {
+      inventorySection += `\n  - ${item.name}`;
+    }
+  }
+  
   let context = `
 PLAYER CHARACTER:
 Name: ${character.name}
@@ -1092,7 +1138,16 @@ Gold: ${character.gold}
 Abilities: ${character.abilities.join(', ')}
 Skills: ${character.skills.join(', ')}
 
-Inventory: ${character.inventory.map(i => i.name + (i.quantity > 1 ? ` (x${i.quantity})` : '')).join(', ')}`;
+=== ${inventorySection} ===
+
+INVENTORY ENFORCEMENT RULES (CRITICAL):
+1. The player can ONLY use/drop/consume items listed above
+2. If player tries to use an item NOT in inventory → narrate confusion: "You reach for [item] but find nothing"
+3. When player acquires NEW items → [LOOT:exact item name]
+4. When player drops/gives away items → [DROP:exact item name] (use names from list above)
+5. When player CONSUMES items (potions, food, ammo) → [USE:exact item name]
+6. Do NOT duplicate items already in inventory unless narratively acquiring another copy
+7. Match item names EXACTLY when using [DROP:] or [USE:] tags`;
 
   // Add physical appearance description
   if (characterAppearance) {
@@ -2504,6 +2559,13 @@ Do NOT have the character speak these words - show them DOING the action.`;
       droppedItems.push(match[1]);
     }
     
+    // Parse ALL consumed/used items (NEW - Phase 2 inventory enforcement)
+    const useMatches = [...narrative.matchAll(/\[USE:([^\]]+)\]/g)];
+    const usedItems: string[] = [];
+    for (const match of useMatches) {
+      usedItems.push(match[1]);
+    }
+    
     // Parse ALL skill improvements
     const skillMatches = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)];
     const skillImprovements: Array<{ skill: string; amount: number; reason: string }> = [];
@@ -2558,6 +2620,7 @@ Do NOT have the character speak these words - show them DOING the action.`;
       .replace(/\[GOLD:\d+\]/g, '')
       .replace(/\[LOOT:[^\]]+\]/g, '')
       .replace(/\[DROP:[^\]]+\]/g, '')  // Clean dropped item tags
+      .replace(/\[USE:[^\]]+\]/g, '')   // Clean consumed item tags
       .replace(/\[SKILL:[^\]]+\]/g, '')
       .replace(/\[DAMAGE:\d+\]/g, '')
       .replace(/\[HEAL:\d+\]/g, '')
@@ -2590,6 +2653,9 @@ Do NOT have the character speak these words - show them DOING the action.`;
     }
     if (droppedItems.length > 0) {
       mechanics.itemsDropped = droppedItems;
+    }
+    if (usedItems.length > 0) {
+      mechanics.itemsUsed = usedItems;
     }
     if (skillImprovements.length > 0) {
       mechanics.skillImprovements = skillImprovements;
