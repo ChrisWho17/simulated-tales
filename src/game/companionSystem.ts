@@ -112,6 +112,15 @@ export interface CompanionState {
   skills: string[];
   equipment: string[];
   
+  // PERMANENT Combat Attributes (set once on creation, never change)
+  combatAttributes?: {
+    baseStrength: number;       // 1-100 (permanent)
+    baseAgility: number;        // 1-100 (permanent)
+    baseEndurance: number;      // 1-100 (permanent)
+    baseCombatSkill: number;    // 1-100 (permanent)
+    size: 'small' | 'medium' | 'large' | 'huge';  // permanent
+  };
+  
   // Timers and flags
   joinedAt: number;
   lastSpoke: number;
