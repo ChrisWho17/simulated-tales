@@ -531,28 +531,97 @@ export function processStoryInventoryUpdate(
   
   // Then, if fallback parsing is enabled, scan narrative for untagged items
   if (useFallbackParsing) {
-    // Get items already processed by tags
-    const alreadyAdded = new Set(tagsResult.itemsAdded.map(i => i.name.toLowerCase()));
-    const alreadyRemoved = new Set(tagsResult.itemsRemoved.map(i => i.name.toLowerCase()));
+    // Get items already processed by tags (for deduplication)
+    const alreadyAddedNames = new Set(tagsResult.itemsAdded.map(i => i.name.toLowerCase()));
+    const alreadyRemovedNames = new Set(tagsResult.itemsRemoved.map(i => i.name.toLowerCase()));
     
-    // Run narrative sync, but skip items already handled by tags
+    // IMPORTANT: Also track by type keywords to prevent duplicates like "Shotgun" and "Combat Shotgun"
+    // Extract generic type keywords from added items (e.g., "shotgun", "pistol", "rifle")
+    const GENERIC_WEAPON_TYPES = ['shotgun', 'pistol', 'rifle', 'revolver', 'smg', 'carbine', 'sword', 'knife', 'axe'];
+    const addedTypeKeywords = new Set<string>();
+    for (const added of tagsResult.itemsAdded) {
+      const lower = added.name.toLowerCase();
+      for (const type of GENERIC_WEAPON_TYPES) {
+        if (lower.includes(type)) {
+          addedTypeKeywords.add(type);
+        }
+      }
+    }
+    
+    // Run narrative sync with DRY RUN first to see what it would add
     const narrativeResult = syncStoryWithInventory(narrative, inventory, {
       processPickups: true,
       processDrops: true,
       processConsumptions: true,
       minConfidence,
+      dryRun: true, // Don't actually modify inventory yet
     });
     
-    // Merge results (avoid duplicates)
-    for (const added of narrativeResult.itemsAdded) {
-      if (!alreadyAdded.has(added.name.toLowerCase())) {
-        tagsResult.itemsAdded.push(added);
+    // Filter out items that are duplicates of what tags already added
+    const filteredAdds = narrativeResult.itemsAdded.filter(added => {
+      const lower = added.name.toLowerCase();
+      
+      // Skip if exact name match
+      if (alreadyAddedNames.has(lower)) {
+        console.log(`[STORY-INV SYNC] Skipping duplicate (exact match): ${added.name}`);
+        return false;
       }
+      
+      // Skip if it's the same type of weapon (e.g., tags added "Combat Shotgun", narrative found "Shotgun")
+      for (const type of GENERIC_WEAPON_TYPES) {
+        if (lower.includes(type) && addedTypeKeywords.has(type)) {
+          console.log(`[STORY-INV SYNC] Skipping duplicate (same type "${type}"): ${added.name}`);
+          return false;
+        }
+      }
+      
+      // Also check if the inventory already has this item (could have been added by tags)
+      const currentItems = inventory.state.items;
+      const alreadyInInventory = currentItems.some(item => {
+        const itemLower = item.name.toLowerCase();
+        // Exact match
+        if (itemLower === lower) return true;
+        // Contains match (either direction)
+        if (itemLower.includes(lower) || lower.includes(itemLower)) return true;
+        // Type keyword match for weapons
+        for (const type of GENERIC_WEAPON_TYPES) {
+          if (lower.includes(type) && itemLower.includes(type)) return true;
+        }
+        return false;
+      });
+      
+      if (alreadyInInventory) {
+        console.log(`[STORY-INV SYNC] Skipping duplicate (already in inventory): ${added.name}`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Now actually add the filtered items
+    for (const added of filteredAdds) {
+      const detection = detectItemType(added.name);
+      const newItem = generateFullItem({
+        name: added.name,
+        category: detection.category as 'weapons' | 'apparel' | 'aid' | 'ammo' | 'keyItems' | 'misc',
+        weaponType: detection.weaponType,
+        apparelType: detection.type as ApparelType,
+      });
+      
+      inventory.dispatch({ type: 'ADD_ITEM', payload: { item: newItem, quantity: 1 } });
+      tagsResult.itemsAdded.push(added);
+      logPickup(added.name, added.confidence, 'narrative_parsing_filtered', 'filtered');
     }
     
+    // Handle drops/consumptions (less likely to duplicate)
     for (const removed of narrativeResult.itemsRemoved) {
-      if (!alreadyRemoved.has(removed.name.toLowerCase())) {
-        tagsResult.itemsRemoved.push(removed);
+      if (!alreadyRemovedNames.has(removed.name.toLowerCase())) {
+        // Actually process the removal
+        const inventoryItem = findMatchingInventoryItem(removed.name, inventory.state.items);
+        if (inventoryItem) {
+          inventory.dispatch({ type: 'DROP_ITEM', payload: { instanceId: inventoryItem.instanceId } });
+          tagsResult.itemsRemoved.push(removed);
+        }
       }
     }
     
