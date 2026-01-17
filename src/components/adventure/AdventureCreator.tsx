@@ -363,7 +363,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
         {/* Color Picker - Top Right (lowered to avoid overlap) */}
-        <div className="absolute top-12 right-4 z-20">
+        <div className="absolute top-20 right-4 z-20">
           <ColorPicker />
         </div>
         
