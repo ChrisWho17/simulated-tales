@@ -15,6 +15,7 @@ import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
 import { SessionAchievementBridge } from "@/components/game/SessionAchievementBridge";
 import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
+import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -52,6 +53,7 @@ const App = () => (
                 <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
                   <CampaignInventorySync>
                     <TooltipProvider>
+                      <StartupIntegrityMonitor />
                       <Toaster />
                       <Sonner />
                       <BrowserRouter>

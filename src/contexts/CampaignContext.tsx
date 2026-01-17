@@ -1,5 +1,6 @@
 // ============================================================================
 // CAMPAIGN CONTEXT - Cloud-first with Google auth, GUEST-LOCAL fallback
+// Integrated with UnifiedSaveArchitecture for transactional saves
 // ============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
@@ -12,7 +13,14 @@ import {
   AUTO_SAVE_INTERVAL,
   MAX_CHECKPOINTS,
 } from '@/types/campaign';
-import { UnifiedSaveService, SaveAccount, SyncStatus } from '@/services/unifiedSaveService';
+import { 
+  UnifiedSaveArchitecture, 
+  UnifiedAccount, 
+  SyncState,
+  SaveConflict,
+  CampaignSyncStatus 
+} from '@/services/unifiedSaveArchitecture';
+import { DataIntegrityService } from '@/services/dataIntegrityService';
 import { WorldBible } from '@/game/worldBible/types';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { StoryEntry } from '@/components/adventure/types';
@@ -29,6 +37,15 @@ import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 // EXTENDED CONTEXT TYPE
 // ============================================================================
 
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
+
+export interface SaveAccount {
+  mode: 'cloud' | 'guest-local';
+  userId: string | null;
+  email: string | null;
+  displayName: string | null;
+}
+
 interface ExtendedCampaignContextType extends CampaignContextType {
   // Cloud/Account info
   account: SaveAccount;
@@ -37,6 +54,10 @@ interface ExtendedCampaignContextType extends CampaignContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshCampaigns: () => Promise<void>;
+  // New: Conflict management
+  conflicts: SaveConflict[];
+  resolveConflict: (campaignId: string, resolution: 'local' | 'cloud') => Promise<boolean>;
+  getSyncState: (campaignId: string) => SyncState;
 }
 
 // ============================================================================
@@ -74,6 +95,31 @@ function createCheckpointData(campaign: CampaignData, label: string): CampaignCh
 }
 
 // ============================================================================
+// HELPER: Convert account types
+// ============================================================================
+
+function convertAccount(unified: UnifiedAccount): SaveAccount {
+  return {
+    mode: unified.mode === 'cloud' ? 'cloud' : 'guest-local',
+    userId: unified.userId || null,
+    email: unified.email || null,
+    displayName: unified.displayName || null,
+  };
+}
+
+function convertSyncStatus(state: SyncState): SyncStatus {
+  switch (state) {
+    case 'synced': return 'synced';
+    case 'pending': return 'syncing';
+    case 'conflict':
+    case 'error':
+    case 'offline':
+      return 'error';
+    default: return 'idle';
+  }
+}
+
+// ============================================================================
 // PROVIDER COMPONENT
 // ============================================================================
 
@@ -83,8 +129,12 @@ interface CampaignProviderProps {
 
 export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) => {
   // Account and sync state
-  const [account, setAccount] = useState<SaveAccount>(UnifiedSaveService.getAccount());
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(UnifiedSaveService.getStatus());
+  const [account, setAccount] = useState<SaveAccount>(() => 
+    convertAccount(UnifiedSaveArchitecture.getAccount())
+  );
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [conflicts, setConflicts] = useState<SaveConflict[]>([]);
+  const [syncStates, setSyncStates] = useState<Map<string, SyncState>>(new Map());
   
   // Campaign list
   const [campaigns, setCampaigns] = useState<CampaignMetadata[]>([]);
@@ -106,18 +156,23 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Initialize
   useEffect(() => {
     const init = async () => {
-      await UnifiedSaveService.initialize();
-      setAccount(UnifiedSaveService.getAccount());
+      await UnifiedSaveArchitecture.initialize();
+      setAccount(convertAccount(UnifiedSaveArchitecture.getAccount()));
+      setConflicts(UnifiedSaveArchitecture.getConflicts());
       
       // Load campaigns
-      const list = await UnifiedSaveService.listCampaigns();
+      const list = await UnifiedSaveArchitecture.listCampaigns();
       setCampaigns(list);
       
       // Load active campaign if any
-      const activeId = UnifiedSaveService.getActiveCampaignId();
+      const activeId = UnifiedSaveArchitecture.getActiveCampaignId();
       if (activeId) {
-        const campaign = await UnifiedSaveService.loadCampaign(activeId);
+        // Use integrity-validated load
+        const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(activeId);
         if (campaign) {
+          if (integrityResult.status === 'repaired') {
+            console.log(`[Campaign] Loaded campaign was auto-repaired: ${integrityResult.repairedFrom}`);
+          }
           setupCampaignForLoad(campaign);
           setActiveCampaign(campaign);
         }
@@ -127,12 +182,23 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     init();
     
     // Subscribe to account changes
-    const unsubAccount = UnifiedSaveService.onAccountChange(setAccount);
-    const unsubStatus = UnifiedSaveService.onStatusChange(setSyncStatus);
+    const unsubAccount = UnifiedSaveArchitecture.onAccountChange((unified) => {
+      setAccount(convertAccount(unified));
+    });
+    
+    // Subscribe to conflict changes
+    const unsubConflicts = UnifiedSaveArchitecture.onConflictChange(setConflicts);
+    
+    // Subscribe to sync status changes
+    const unsubSync = UnifiedSaveArchitecture.onSyncStatusChange((status) => {
+      setSyncStates(prev => new Map(prev).set(status.campaignId, status.state));
+      setSyncStatus(convertSyncStatus(status.state));
+    });
     
     return () => {
       unsubAccount();
-      unsubStatus();
+      unsubConflicts();
+      unsubSync();
     };
   }, []);
   
@@ -213,7 +279,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Save function ref
   const saveNowRef = useRef<() => Promise<void>>(async () => {});
   
-  // Save now
+  // Save now - using integrity-validated save
   const saveNow = useCallback(async () => {
     if (!activeCampaign) return;
     
@@ -226,15 +292,28 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       },
     });
     
-    await UnifiedSaveService.saveCampaign(updatedCampaign);
-    setActiveCampaign(updatedCampaign);
-    setIsDirty(false);
-    setLastSaved(Date.now());
-    playTimeRef.current = 0;
+    setSyncStatus('syncing');
     
-    // Refresh list
-    const list = await UnifiedSaveService.listCampaigns();
-    setCampaigns(list);
+    // Use integrity-validated save
+    const result = await DataIntegrityService.saveWithIntegrity(updatedCampaign);
+    
+    if (result.success) {
+      // Also sync to cloud via UnifiedSaveArchitecture
+      await UnifiedSaveArchitecture.saveCampaign(updatedCampaign);
+      
+      setActiveCampaign(updatedCampaign);
+      setIsDirty(false);
+      setLastSaved(Date.now());
+      playTimeRef.current = 0;
+      setSyncStatus('synced');
+      
+      // Refresh list
+      const list = await UnifiedSaveArchitecture.listCampaigns();
+      setCampaigns(list);
+    } else {
+      console.error('[Campaign] Save failed:', result.error);
+      setSyncStatus('error');
+    }
   }, [activeCampaign, prepareCampaignForSave]);
   
   useEffect(() => {
@@ -282,7 +361,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   
   // Refresh campaigns
   const refreshCampaigns = useCallback(async () => {
-    const list = await UnifiedSaveService.listCampaigns();
+    const list = await UnifiedSaveArchitecture.listCampaigns();
     setCampaigns(list);
   }, []);
   
@@ -348,16 +427,17 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       },
     };
     
-    // Save immediately
-    UnifiedSaveService.saveCampaign(campaign);
-    UnifiedSaveService.setActiveCampaignId(campaign.id);
+    // Save immediately using integrity service
+    DataIntegrityService.saveWithIntegrity(campaign);
+    UnifiedSaveArchitecture.saveCampaign(campaign);
+    UnifiedSaveArchitecture.setActiveCampaignId(campaign.id);
     setActiveCampaign(campaign);
     refreshCampaigns();
     
     return campaign;
   }, [refreshCampaigns]);
   
-  // Load campaign
+  // Load campaign - with integrity validation
   const loadCampaignFunc = useCallback(async (campaignId: string): Promise<boolean> => {
     // Save current if dirty
     if (activeCampaign && activeCampaign.id !== campaignId && isDirty) {
@@ -367,13 +447,21 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // Clear state before loading
     if (activeCampaign && activeCampaign.id !== campaignId) {
       setActiveCampaign(null);
-      UnifiedSaveService.setActiveCampaignId(null);
+      UnifiedSaveArchitecture.setActiveCampaignId(null);
     }
     
-    const campaign = await UnifiedSaveService.loadCampaign(campaignId);
+    // Use integrity-validated load
+    const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(campaignId);
+    
     if (campaign) {
+      if (integrityResult.status === 'repaired') {
+        console.log(`[Campaign] Campaign auto-repaired from ${integrityResult.repairedFrom}`);
+      } else if (integrityResult.status === 'corrupted' || integrityResult.status === 'unrecoverable') {
+        console.warn('[Campaign] Campaign has integrity issues:', integrityResult.issues);
+      }
+      
       setupCampaignForLoad(campaign);
-      UnifiedSaveService.setActiveCampaignId(campaignId);
+      UnifiedSaveArchitecture.setActiveCampaignId(campaignId);
       setActiveCampaign(campaign);
       lastTickRef.current = Date.now();
       playTimeRef.current = 0;
@@ -388,7 +476,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     if (activeCampaign && isDirty) {
       await saveNow();
     }
-    UnifiedSaveService.setActiveCampaignId(null);
+    UnifiedSaveArchitecture.setActiveCampaignId(null);
     setActiveCampaign(null);
     setIsDirty(false);
     playTimeRef.current = 0;
@@ -397,18 +485,18 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Delete campaign
   const deleteCampaign = useCallback(async (campaignId: string) => {
     if (activeCampaign?.id === campaignId) {
-      UnifiedSaveService.setActiveCampaignId(null);
+      UnifiedSaveArchitecture.setActiveCampaignId(null);
       setActiveCampaign(null);
       setIsDirty(false);
     }
     
-    await UnifiedSaveService.deleteCampaign(campaignId);
+    await UnifiedSaveArchitecture.deleteCampaign(campaignId);
     await refreshCampaigns();
   }, [activeCampaign, refreshCampaigns]);
   
   // Duplicate campaign
   const duplicateCampaign = useCallback(async (campaignId: string, newName: string): Promise<CampaignData | null> => {
-    const original = await UnifiedSaveService.loadCampaign(campaignId);
+    const { campaign: original } = await DataIntegrityService.loadWithValidation(campaignId);
     if (!original) return null;
     
     const now = Date.now();
@@ -426,7 +514,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       checkpoints: [],
     };
     
-    await UnifiedSaveService.saveCampaign(duplicate);
+    await DataIntegrityService.saveWithIntegrity(duplicate);
+    await UnifiedSaveArchitecture.saveCampaign(duplicate);
     await refreshCampaigns();
     return duplicate;
   }, [refreshCampaigns]);
@@ -569,7 +658,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
         },
       };
       
-      await UnifiedSaveService.saveCampaign(campaign);
+      await DataIntegrityService.saveWithIntegrity(campaign);
+      await UnifiedSaveArchitecture.saveCampaign(campaign);
       await refreshCampaigns();
       return campaign;
     } catch (e) {
@@ -587,13 +677,23 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   
   // Sign in with Google
   const signInWithGoogle = useCallback(async () => {
-    await UnifiedSaveService.signInWithGoogle();
+    await UnifiedSaveArchitecture.signInWithGoogle();
   }, []);
   
   // Sign out
   const signOut = useCallback(async () => {
-    await UnifiedSaveService.signOut();
+    await UnifiedSaveArchitecture.signOut();
   }, []);
+  
+  // Resolve conflict
+  const resolveConflict = useCallback(async (campaignId: string, resolution: 'local' | 'cloud'): Promise<boolean> => {
+    return UnifiedSaveArchitecture.resolveConflict(campaignId, resolution);
+  }, []);
+  
+  // Get sync state for campaign
+  const getSyncState = useCallback((campaignId: string): SyncState => {
+    return syncStates.get(campaignId) || 'synced';
+  }, [syncStates]);
   
   const value: ExtendedCampaignContextType = {
     campaigns,
@@ -631,6 +731,10 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     signInWithGoogle,
     signOut,
     refreshCampaigns,
+    // Conflict management
+    conflicts,
+    resolveConflict,
+    getSyncState,
   };
   
   return (
