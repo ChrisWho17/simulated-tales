@@ -313,9 +313,42 @@ export function resolveCombatRound(
   combatEnded: boolean;
   outcome?: CombatOutcome;
 } {
+  // Validate inputs to prevent crashes
+  if (!encounter || !npc) {
+    console.error('[Combat] Invalid encounter or NPC in resolveCombatRound');
+    return {
+      encounter: encounter || {} as CombatEncounter,
+      narrative: 'Combat error: Invalid state',
+      combatEnded: true,
+      outcome: 'interrupted',
+    };
+  }
+  
   const npcId = npc.id;
   const npcStats = encounter.npcStats[npcId];
+  
+  // Guard against missing NPC stats
+  if (!npcStats) {
+    console.error('[Combat] NPC stats not found for:', npcId);
+    return {
+      encounter,
+      narrative: `${npc.meta?.name || 'Enemy'} has fled the battle!`,
+      combatEnded: true,
+      outcome: 'victory',
+    };
+  }
+  
   const playerStats = encounter.playerStats;
+  
+  if (!playerStats) {
+    console.error('[Combat] Player stats not found');
+    return {
+      encounter,
+      narrative: 'Combat error: Player state missing',
+      combatEnded: true,
+      outcome: 'interrupted',
+    };
+  }
   
   const npcAction = determineNPCAction(npc, npcStats, playerStats, encounter.currentRound);
   

@@ -27,9 +27,24 @@ const SYSTEM_KEYWORDS = ['help', 'save', 'load', 'status', 'wait', 'rest', 'slee
 const END_CONVERSATION_KEYWORDS = ['bye', 'goodbye', 'farewell', 'later', 'cya', 'seeya'];
 const CHECKSELF_KEYWORDS = ['/checkself', '/check', 'checkself', '/assess', '/wounds', '/injuries'];
 
+// Sanitize input to prevent injection attacks
+function sanitizeInput(input: string): string {
+  // Remove control characters
+  let sanitized = input.replace(/[\x00-\x1F\x7F]/g, '');
+  // Limit length to prevent DoS
+  sanitized = sanitized.slice(0, 2000);
+  // Remove potential HTML/script tags
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  // Remove backticks that could break template literals
+  sanitized = sanitized.replace(/`/g, "'");
+  return sanitized;
+}
+
 export function parseEnhancedCommand(input: string): ParsedCommand {
-  const trimmed = input.trim().toLowerCase();
-  const words = trimmed.split(/\s+/);
+  // Sanitize raw input first
+  const sanitizedRaw = sanitizeInput(input);
+  const trimmed = sanitizedRaw.trim().toLowerCase();
+  const words = trimmed.split(/\s+/).filter(w => w.length > 0);
   const firstWord = words[0] || '';
   const rest = words.slice(1);
   
@@ -40,7 +55,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -53,7 +68,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: 'checkself',
       target: thoroughness,
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -64,7 +79,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -75,7 +90,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: undefined, // Say doesn't target, it continues conversation
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -86,7 +101,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: undefined,
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -96,7 +111,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -106,7 +121,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -116,7 +131,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -126,7 +141,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -136,7 +151,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -146,7 +161,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -156,7 +171,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
-      raw: input,
+      raw: sanitizedRaw,
     };
   }
   
@@ -166,7 +181,7 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
     verb: firstWord,
     target: rest[0],
     args: rest,
-    raw: input,
+    raw: sanitizedRaw, // Use sanitized version
   };
 }
 

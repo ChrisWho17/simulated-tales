@@ -439,6 +439,71 @@ case ACTIONS.ADD_ITEM: {
       };
     }
     
+    // REMOVE_ITEM - Remove specific quantity of an item by ID
+    case ACTIONS.REMOVE_ITEM: {
+      const { id, instanceId, quantity = 1 } = action.payload || {};
+      
+      // Find item by instanceId first, then by id
+      const itemIndex = state.items.findIndex(i => 
+        instanceId ? i.instanceId === instanceId : i.id === id
+      );
+      
+      if (itemIndex === -1) {
+        console.warn('[Inventory] REMOVE_ITEM: item not found', { id, instanceId });
+        return state;
+      }
+      
+      const item = state.items[itemIndex];
+      let newItems: InventoryItem[];
+      let removedQuantity = quantity;
+      
+      // Handle stackable items - reduce quantity or remove
+      if (item.stackable && item.quantity > quantity) {
+        newItems = state.items.map((i, idx) =>
+          idx === itemIndex ? { ...i, quantity: i.quantity - quantity } : i
+        );
+      } else {
+        // Remove entirely
+        removedQuantity = item.quantity;
+        newItems = state.items.filter((_, idx) => idx !== itemIndex);
+        
+        // Also unequip if equipped
+        let newEquipped = { ...state.equipped };
+        Object.keys(newEquipped).forEach(slot => {
+          if (newEquipped[slot as keyof EquippedState] === item.instanceId) {
+            (newEquipped as any)[slot] = null;
+          }
+        });
+        
+        return {
+          ...state,
+          items: newItems,
+          equipped: newEquipped,
+          settings: { ...state.settings, currentWeight: calculateWeight(newItems) },
+          lastAction: {
+            type: 'REMOVE',
+            item,
+            quantity: removedQuantity,
+            timestamp,
+            narrativeHook: `lost ${removedQuantity > 1 ? `${removedQuantity}x ` : ''}${item.name}`,
+          },
+        };
+      }
+      
+      return {
+        ...state,
+        items: newItems,
+        settings: { ...state.settings, currentWeight: calculateWeight(newItems) },
+        lastAction: {
+          type: 'REMOVE',
+          item,
+          quantity: removedQuantity,
+          timestamp,
+          narrativeHook: `lost ${removedQuantity > 1 ? `${removedQuantity}x ` : ''}${item.name}`,
+        },
+      };
+    }
+    
     case ACTIONS.DROP_ITEM: {
       const { instanceId } = action.payload;
       const item = state.items.find(i => i.instanceId === instanceId);

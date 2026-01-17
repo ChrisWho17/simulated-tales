@@ -43,9 +43,21 @@ export function PlayerInput({
   const [selectedEmotion, setSelectedEmotion] = useState<CoreMoodType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
+  // Max input length to prevent DoS/memory issues
+  const MAX_INPUT_LENGTH = 2000;
+  
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+  
+  // Controlled input with length limit
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Enforce max length
+    if (value.length <= MAX_INPUT_LENGTH) {
+      setInput(value);
+    }
+  };
   
   // Parse current input for live feedback
   const parsedCommand = useMemo(() => {
@@ -140,10 +152,11 @@ export function PlayerInput({
           <Input
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="say, ask, take, go, look, use..."
             disabled={disabled}
+            maxLength={MAX_INPUT_LENGTH}
             className="pl-8 pr-24 bg-background border-border focus:border-primary focus:ring-primary/20 font-mono text-sm"
           />
           {/* Command type indicator */}

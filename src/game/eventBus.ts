@@ -220,25 +220,39 @@ export interface Subscription {
 class GameEventBus {
   private subscriptions: Subscription[] = [];
   private eventLog: GameBusEvent[] = [];
-  private maxLogSize = 500;
+  private maxLogSize = 200; // Reduced from 500 to prevent memory bloat
   private currentTick = 0;
   private paused = false;
+  private emitCount = 0;
+  private lastCleanup = 0;
   
   // ============= EMIT =============
   
   emit<T extends GameBusEvent>(event: Omit<T, 'id' | 'timestamp'>): void {
     if (this.paused) return;
     
+    // Rate limiting: prevent event floods
+    this.emitCount++;
+    const now = Date.now();
+    if (now - this.lastCleanup > 10000) { // Every 10 seconds
+      if (this.emitCount > 500) {
+        console.warn(`[EventBus] High event rate: ${this.emitCount} events in 10s`);
+      }
+      this.emitCount = 0;
+      this.lastCleanup = now;
+    }
+    
     const fullEvent: GameBusEvent = {
       ...event,
-      id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      timestamp: Date.now(),
+      id: `evt_${now}_${Math.random().toString(36).substr(2, 6)}`,
+      timestamp: now,
     } as GameBusEvent;
     
-    // Add to log
+    // Add to log with aggressive trimming
     this.eventLog.push(fullEvent);
     if (this.eventLog.length > this.maxLogSize) {
-      this.eventLog = this.eventLog.slice(-this.maxLogSize);
+      // Slice more aggressively to prevent repeated allocations
+      this.eventLog = this.eventLog.slice(-Math.floor(this.maxLogSize * 0.75));
     }
     
     // Get matching subscriptions sorted by priority
