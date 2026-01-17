@@ -317,6 +317,36 @@ class IndexedDBCacheClass {
     });
   }
 
+  async getAllBackups(): Promise<CacheBackup[]> {
+    if (!this.isReady()) {
+      await this.initialize();
+      if (!this.isReady()) return [];
+    }
+
+    return new Promise((resolve) => {
+      try {
+        const transaction = this.db!.transaction([BACKUP_STORE], 'readonly');
+        const store = transaction.objectStore(BACKUP_STORE);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          const backups = (request.result as CacheBackup[]) || [];
+          // Sort by createdAt descending
+          backups.sort((a, b) => b.createdAt - a.createdAt);
+          resolve(backups);
+        };
+
+        request.onerror = () => {
+          console.error('[IndexedDBCache] Get all backups error:', request.error);
+          resolve([]);
+        };
+      } catch (e) {
+        console.error('[IndexedDBCache] Get all backups failed:', e);
+        resolve([]);
+      }
+    });
+  }
+
   async restoreFromBackup(backupId?: string): Promise<number> {
     if (!this.isReady()) {
       await this.initialize();

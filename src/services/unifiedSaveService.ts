@@ -1,6 +1,7 @@
 // ============================================================================
 // UNIFIED SAVE SERVICE - Cloud-first with Google auth, GUEST-LOCAL fallback
 // Now with IndexedDB cache for reliable persistence
+// Enhanced with auto-recovery and storage health monitoring
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,7 @@ import { CampaignData, CampaignMetadata } from '@/types/campaign';
 import { GameGenre } from '@/types/genreData';
 import LZString from 'lz-string';
 import { IndexedDBCache } from '@/lib/indexedDBCache';
-
+import { StorageHealthMonitor } from '@/systems/StorageHealthMonitor';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -526,22 +527,64 @@ class UnifiedSaveServiceClass {
     try {
       const key = `${GUEST_PREFIX}${campaignId}`;
       let compressed = localStorage.getItem(key);
+      let recoverySource: string | null = null;
       
-      // If not in localStorage, try IndexedDB cache recovery
+      // Step 1: If not in localStorage, try IndexedDB cache recovery
       if (!compressed) {
-        console.log(`[UnifiedSave] Save not in localStorage, attempting IndexedDB recovery...`);
+        console.log(`[UnifiedSave] Save not in localStorage, attempting recovery...`);
         compressed = await IndexedDBCache.recoverMissingSave(campaignId);
         if (compressed) {
           // Restore to localStorage
           localStorage.setItem(key, compressed);
-          console.log(`[UnifiedSave] Recovered save from IndexedDB cache: ${campaignId}`);
+          recoverySource = 'IndexedDB cache';
+          console.log(`[UnifiedSave] Recovered save from ${recoverySource}: ${campaignId}`);
         }
       }
       
       if (!compressed) return null;
 
-      const campaign = decompressCampaign(compressed);
-      console.log(`[UnifiedSave] Guest loaded: ${campaign?.meta?.name}`);
+      // Step 2: Attempt to decompress
+      let campaign = decompressCampaign(compressed);
+      
+      // Step 3: If decompression failed, try auto-recovery
+      if (!campaign) {
+        console.warn(`[UnifiedSave] Decompression failed, attempting auto-repair...`);
+        
+        // Try to get from IndexedDB cache (might have different version)
+        const cached = await IndexedDBCache.getCachedSave(campaignId);
+        if (cached && cached.data !== compressed) {
+          campaign = decompressCampaign(cached.data);
+          if (campaign) {
+            // Restore good data to localStorage
+            localStorage.setItem(key, cached.data);
+            recoverySource = 'IndexedDB cache (auto-repair)';
+            console.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
+          }
+        }
+        
+        // If still null, try latest backup
+        if (!campaign) {
+          const backup = await IndexedDBCache.getLatestBackup();
+          if (backup) {
+            const backupSave = backup.saves.find(s => s.id === campaignId);
+            if (backupSave) {
+              campaign = decompressCampaign(backupSave.data);
+              if (campaign) {
+                localStorage.setItem(key, backupSave.data);
+                recoverySource = 'backup snapshot (auto-repair)';
+                console.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
+              }
+            }
+          }
+        }
+      }
+      
+      if (campaign && recoverySource) {
+        console.log(`[UnifiedSave] Successfully recovered ${campaign.meta.name} from ${recoverySource}`);
+      } else if (campaign) {
+        console.log(`[UnifiedSave] Guest loaded: ${campaign.meta.name}`);
+      }
+      
       return campaign;
     } catch (e) {
       console.error('[UnifiedSave] Guest load failed:', e);
