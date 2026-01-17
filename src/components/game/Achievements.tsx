@@ -154,6 +154,9 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
 
   const [pendingNotification, setPendingNotification] = useState<Achievement | null>(null);
   const [showLegendaryCelebration, setShowLegendaryCelebration] = useState(false);
+  
+  // Track notifications shown this session to prevent duplicates
+  const notifiedThisSession = useRef<Set<string>>(new Set());
 
   const unlockedAchievements = new Set(
     achievements.filter(a => a.unlockedAt).map(a => a.id)
@@ -165,9 +168,15 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   }, [achievements]);
 
   const unlockAchievement = useCallback((id: string) => {
+    // Prevent duplicate notifications in same session
+    if (notifiedThisSession.current.has(id)) return;
+    
     setAchievements(prev => {
       const achievement = prev.find(a => a.id === id);
       if (!achievement || achievement.unlockedAt) return prev;
+
+      // Mark as notified this session BEFORE showing notification
+      notifiedThisSession.current.add(id);
 
       const updated = prev.map(a =>
         a.id === id ? { ...a, unlockedAt: Date.now() } : a
@@ -190,6 +199,9 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProgress = useCallback((id: string, progress: number) => {
+    // Prevent duplicate notifications in same session
+    if (notifiedThisSession.current.has(id)) return;
+    
     setAchievements(prev => {
       const achievement = prev.find(a => a.id === id);
       if (!achievement || achievement.unlockedAt) return prev;
@@ -198,6 +210,9 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
       const shouldUnlock = achievement.maxProgress && newProgress >= achievement.maxProgress;
 
       if (shouldUnlock) {
+        // Mark as notified this session BEFORE showing notification
+        notifiedThisSession.current.add(id);
+        
         const updated = prev.map(a =>
           a.id === id ? { ...a, progress: newProgress, unlockedAt: Date.now() } : a
         );
