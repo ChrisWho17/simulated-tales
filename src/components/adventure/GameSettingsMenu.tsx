@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -25,9 +25,9 @@ import {
 import { DataWipeModal } from './DataWipeModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
 import { PreMigrationBackupModal } from './PreMigrationBackupModal';
+import { DataIntegrityPanel } from './DataIntegrityPanel';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
 import { GameGenre } from '@/types/genreData';
-import { Shield } from 'lucide-react';
 
 export interface GameSettingsMenuProps {
   className?: string;
@@ -55,6 +55,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
   const [isOpen, setIsOpen] = useState(false);
   const [showWipeModal, setShowWipeModal] = useState(false);
   const [showPreMigrationBackup, setShowPreMigrationBackup] = useState(false);
+  const [showIntegrityPanel, setShowIntegrityPanel] = useState(false);
 
   const DICE_MODE_OPTIONS = [
     { 
@@ -337,6 +338,17 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <span className="text-sm">Complete Backup (Pre-Update)</span>
           </Button>
           
+          {/* Data Integrity Check */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowIntegrityPanel(true)}
+            className="w-full flex items-center justify-center gap-2 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50 transition-all duration-300"
+          >
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            <span className="text-sm">Data Integrity Check</span>
+          </Button>
+          
           {/* Data Wipe Button */}
           <Button
             variant="outline"
@@ -358,6 +370,11 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
       <PreMigrationBackupModal
         open={showPreMigrationBackup}
         onOpenChange={setShowPreMigrationBackup}
+      />
+      
+      <DataIntegrityPanel
+        open={showIntegrityPanel}
+        onClose={() => setShowIntegrityPanel(false)}
       />
     </Collapsible>
   );
