@@ -6,6 +6,7 @@ import {
   Shirt, Sparkles, Activity, Database, ShieldCheck, CheckCircle2, XCircle,
   ChevronLeft, ChevronRight, Users, Plus, Trash2, Edit3, Package
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAchievementsOptional } from '@/components/game/Achievements';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,6 +164,7 @@ export function CheatModeSplash({
   const [newCompanionName, setNewCompanionName] = useState('');
   
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Handle initialMode changes when panel opens
   useEffect(() => {
@@ -210,44 +212,58 @@ export function CheatModeSplash({
   // Load character data when opened
   useEffect(() => {
     if (isOpen) {
-      try {
-        const savedChar = localStorage.getItem(CHARACTER_KEY);
-        if (savedChar) {
-          const parsed = JSON.parse(savedChar);
-          setName(parsed.basicInfo?.name || character?.name || '');
-          setAppearance(parsed.appearance || null);
+      setIsLoading(true);
+      
+      // Small delay to show loading state for smooth transition
+      const loadData = async () => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        try {
+          const savedChar = localStorage.getItem(CHARACTER_KEY);
+          if (savedChar) {
+            const parsed = JSON.parse(savedChar);
+            setName(parsed.basicInfo?.name || character?.name || '');
+            setAppearance(parsed.appearance || null);
+          }
+          
+          if (character) {
+            setLevel(character.level);
+            setGold(character.gold);
+            setCurrentHealth(character.currentHealth);
+            setMaxHealth(character.maxHealth);
+            setExperience(character.experience);
+            setStats(character.stats);
+          }
+          
+          // Load wardrobe state
+          const currentWardrobe = wardrobeManager.getState();
+          setWardrobeState(currentWardrobe);
+          
+          // Build clothing description from equipped items or use genre defaults
+          const equippedItems = Object.entries(currentWardrobe.equipped)
+            .filter(([_, wi]) => wi !== undefined)
+            .map(([slot, wi]) => ({
+              slot: slot as ClothingSlot,
+              name: wi!.item.name,
+              description: wi!.item.description,
+            }));
+          
+          const description = buildClothingDescriptionForAI(equippedItems, genre);
+          setClothingDescription(description);
+          
+          // Load companions
+          setCompanions(companionSystem.getActiveCompanions());
+        } catch (e) {
+          console.error('[CheatMode] Failed to load character:', e);
+        } finally {
+          setIsLoading(false);
         }
-        
-        if (character) {
-          setLevel(character.level);
-          setGold(character.gold);
-          setCurrentHealth(character.currentHealth);
-          setMaxHealth(character.maxHealth);
-          setExperience(character.experience);
-          setStats(character.stats);
-        }
-        
-        // Load wardrobe state
-        const currentWardrobe = wardrobeManager.getState();
-        setWardrobeState(currentWardrobe);
-        
-        // Build clothing description from equipped items or use genre defaults
-        const equippedItems = Object.entries(currentWardrobe.equipped)
-          .filter(([_, wi]) => wi !== undefined)
-          .map(([slot, wi]) => ({
-            slot: slot as ClothingSlot,
-            name: wi!.item.name,
-            description: wi!.item.description,
-          }));
-        
-        const description = buildClothingDescriptionForAI(equippedItems, genre);
-        setClothingDescription(description);
-        
-        // Load companions
-        setCompanions(companionSystem.getActiveCompanions());
-      } catch (e) {
-        console.error('[CheatMode] Failed to load character:', e);
-      }
+      };
+      
+      loadData();
+    } else {
+      // Reset loading state when closed
+      setIsLoading(true);
     }
   }, [isOpen, character, genre]);
   
@@ -410,9 +426,88 @@ export function CheatModeSplash({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, editingCompanion, showAddCompanion, goLeft, goRight]);
 
+  // Loading skeleton for character screen
+  const renderCharacterSkeleton = () => (
+    <motion.div 
+      className="space-y-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Name skeleton */}
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+      
+      {/* Stats section skeleton */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between p-3 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-4 w-4" />
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <motion.div 
+                key={i} 
+                className="space-y-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.2 }}
+              >
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-4 w-full" />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Appearance section skeleton */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between p-3 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-4 w-4" />
+        </div>
+      </div>
+      
+      {/* Equipment section skeleton */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between p-3 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <Skeleton className="h-4 w-4" />
+        </div>
+      </div>
+    </motion.div>
+  );
+
   // Render screen content
   const renderCharacterScreen = () => (
-    <div className="space-y-4">
+    <motion.div 
+      className="space-y-4"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
       {/* Name */}
       <div className="space-y-2">
         <Label className="text-sm font-medium">Character Name</Label>
@@ -827,7 +922,7 @@ export function CheatModeSplash({
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 
   const renderInventoryScreen = () => (
@@ -1091,6 +1186,11 @@ export function CheatModeSplash({
   );
 
   const renderCurrentScreen = () => {
+    // Show skeleton while loading character data
+    if (isLoading && currentScreen === 'character') {
+      return renderCharacterSkeleton();
+    }
+    
     switch (currentScreen) {
       case 'character':
         return renderCharacterScreen();
