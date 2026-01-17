@@ -82,6 +82,14 @@ export interface CombatEncounter {
   maxFleeAttempts: number;
 }
 
+// Combat system limits - designed for 100k+ turn games
+const COMBAT_LIMITS = {
+  maxRoundsPerEncounter: 50, // Prevent infinite combat loops
+  maxWitnessesPerCombat: 10, // Limit witness tracking
+  maxEnvironmentModifiers: 10, // Limit stacked modifiers
+  maxConcurrentCombats: 3, // Shouldn't have multiple combats anyway
+} as const;
+
 // ============= CLOTHING INTEGRATION =============
 
 /**
@@ -242,6 +250,9 @@ export function initializeCombat(
     stressLevel: clampStat(npc.stressLevel ?? 0),
   };
   
+  // Limit environment modifiers
+  const limitedEnvMods = (environmentMods || []).slice(0, COMBAT_LIMITS.maxEnvironmentModifiers);
+  
   return {
     id: `combat_${Date.now()}`,
     location: location || 'unknown',
@@ -251,7 +262,7 @@ export function initializeCombat(
     isActive: true,
     playerStats,
     npcStats: { [npc.id]: npcStats },
-    environmentModifiers: environmentMods || [],
+    environmentModifiers: limitedEnvMods,
     witnesses: [],
     canFlee: true,
     fleeAttempts: 0,
@@ -593,10 +604,21 @@ export function resolveCombatRound(
     stateChanges,
   };
   
+  // Keep only recent rounds to prevent memory bloat in long combats
+  const maxRoundsToKeep = 20;
+  const newRounds = [...encounter.rounds, round].slice(-maxRoundsToKeep);
+  
+  // Force end combat if we hit max rounds (prevents infinite loops)
+  if (encounter.currentRound + 1 >= COMBAT_LIMITS.maxRoundsPerEncounter && !combatEnded) {
+    combatEnded = true;
+    outcome = 'standoff';
+    console.warn('[Combat] Max rounds reached, forcing standoff');
+  }
+  
   return {
     encounter: {
       ...encounter,
-      rounds: [...encounter.rounds, round],
+      rounds: newRounds,
       currentRound: encounter.currentRound + 1,
       isActive: !combatEnded,
       outcome,

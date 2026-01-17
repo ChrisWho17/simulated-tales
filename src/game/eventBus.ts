@@ -220,11 +220,12 @@ export interface Subscription {
 class GameEventBus {
   private subscriptions: Subscription[] = [];
   private eventLog: GameBusEvent[] = [];
-  private maxLogSize = 200; // Reduced from 500 to prevent memory bloat
+  private maxLogSize = 100; // Reduced from 200 for 100k+ turn sustainability
   private currentTick = 0;
   private paused = false;
   private emitCount = 0;
   private lastCleanup = 0;
+  private maxSubscriptions = 50; // Prevent subscription leaks
   
   // ============= EMIT =============
   
@@ -277,6 +278,14 @@ class GameEventBus {
     handler: EventHandler,
     priority: number = 0
   ): () => void {
+    // Prevent subscription leaks - designed for 100k+ turns
+    if (this.subscriptions.length >= this.maxSubscriptions) {
+      console.warn(`[EventBus] Max subscriptions (${this.maxSubscriptions}) reached, pruning old ones`);
+      // Remove lowest priority subscriptions
+      this.subscriptions.sort((a, b) => b.priority - a.priority);
+      this.subscriptions = this.subscriptions.slice(0, Math.floor(this.maxSubscriptions * 0.75));
+    }
+    
     const subscription: Subscription = {
       id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       eventTypes,
