@@ -377,6 +377,10 @@ export interface MechanicsTags {
   loot?: string[];
   drop?: string[];
   use?: string[];
+  // Aliases to match edge function response format
+  lootGained?: string[];
+  itemsDropped?: string[];
+  itemsUsed?: string[];
 }
 
 export function processAIMechanicsTags(
@@ -389,9 +393,14 @@ export function processAIMechanicsTags(
     warnings: [],
   };
   
+  // Normalize tag names (support both formats)
+  const lootItems = tags.loot || tags.lootGained || [];
+  const dropItems = tags.drop || tags.itemsDropped || [];
+  const useItems = tags.use || tags.itemsUsed || [];
+  
   // Process [LOOT:] tags
-  if (tags.loot && tags.loot.length > 0) {
-    for (const itemName of tags.loot) {
+  if (lootItems.length > 0) {
+    for (const itemName of lootItems) {
       const detection = detectItemType(itemName);
       const newItem = generateFullItem({
         name: itemName,
@@ -414,8 +423,8 @@ export function processAIMechanicsTags(
   }
   
   // Process [DROP:] tags
-  if (tags.drop && tags.drop.length > 0) {
-    for (const itemName of tags.drop) {
+  if (dropItems.length > 0) {
+    for (const itemName of dropItems) {
       const inventoryItem = findMatchingInventoryItem(itemName, inventory.state.items);
       
       if (inventoryItem) {
@@ -436,8 +445,8 @@ export function processAIMechanicsTags(
   }
   
   // Process [USE:] tags (consume)
-  if (tags.use && tags.use.length > 0) {
-    for (const itemName of tags.use) {
+  if (useItems.length > 0) {
+    for (const itemName of useItems) {
       const inventoryItem = findMatchingInventoryItem(itemName, inventory.state.items);
       
       if (inventoryItem) {
