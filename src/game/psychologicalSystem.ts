@@ -13,6 +13,10 @@ export interface StressState {
   recentSources: StressSource[];
 }
 
+// LIMITS to prevent unbounded growth
+const MAX_RECENT_SOURCES = 20;
+const MAX_TRAUMA_SEEDS = 15;
+
 export interface StressSource {
   type: StressSourceType;
   amount: number;
@@ -444,7 +448,7 @@ export function createDefaultPsychState(
       decayRate: 5,
       recentSources: [],
     },
-    traumaSeeds,
+    traumaSeeds: traumaSeeds.slice(0, MAX_TRAUMA_SEEDS), // Limit on creation
     activeEpisode: null,
     copingStyles: { primary: copingPrimary, secondary: copingSecondary },
     willpower: 50,
@@ -477,10 +481,25 @@ export function processPsychologicalTick(state: PsychologicalState, tick: number
     };
   }
   
-  // Clean old stress sources (older than 50 ticks)
-  newState.stress.recentSources = newState.stress.recentSources.filter(
+  // Clean old stress sources with limit
+  let recentSources = newState.stress.recentSources.filter(
     s => tick - s.tick < 50
   );
+  
+  // Enforce limit
+  if (recentSources.length > MAX_RECENT_SOURCES) {
+    recentSources = recentSources.slice(-MAX_RECENT_SOURCES);
+  }
+  
+  newState.stress.recentSources = recentSources;
+  
+  // Limit trauma seeds
+  if (newState.traumaSeeds.length > MAX_TRAUMA_SEEDS) {
+    // Keep highest severity trauma seeds
+    newState.traumaSeeds = [...newState.traumaSeeds]
+      .sort((a, b) => b.severity - a.severity)
+      .slice(0, MAX_TRAUMA_SEEDS);
+  }
   
   return newState;
 }

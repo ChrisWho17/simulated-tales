@@ -173,9 +173,15 @@ export function advanceClock(
     lastAdvanceTick: Date.now()
   };
   
-  const newActiveEffects = triggeredConsequence
+  // Limit active effects to prevent unbounded growth
+  const MAX_ACTIVE_EFFECTS = 20;
+  let newActiveEffects = triggeredConsequence
     ? [...state.activeEffects, triggeredConsequence.effect]
     : state.activeEffects;
+  
+  if (newActiveEffects.length > MAX_ACTIVE_EFFECTS) {
+    newActiveEffects = newActiveEffects.slice(-MAX_ACTIVE_EFFECTS);
+  }
   
   const newState: PressureState = {
     ...state,

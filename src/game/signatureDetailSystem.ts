@@ -109,10 +109,40 @@ const DETAIL_TEMPLATES: Record<string, { senses: string[]; adjectives: string[] 
   }
 };
 
+// Limits to prevent unbounded registry growth
+const MAX_SIGNATURE_DETAILS = 100;
+
 // Create empty registry
 export function createSignatureDetailRegistry(): SignatureDetailRegistry {
   return {
     details: {},
+    lastUpdated: Date.now()
+  };
+}
+
+/**
+ * Prune signature details registry to stay within limits
+ */
+function pruneSignatureDetails(registry: SignatureDetailRegistry): SignatureDetailRegistry {
+  const entries = Object.entries(registry.details);
+  if (entries.length <= MAX_SIGNATURE_DETAILS) return registry;
+  
+  // Sort by usage count (ascending) then creation time (ascending) - remove least used, oldest first
+  entries.sort(([, a], [, b]) => {
+    const usageDiff = a.usageCount - b.usageCount;
+    if (usageDiff !== 0) return usageDiff;
+    return a.createdAt - b.createdAt;
+  });
+  
+  // Keep the most used/recent ones
+  const toKeep = entries.slice(-(MAX_SIGNATURE_DETAILS));
+  const newDetails: Record<string, SignatureDetail> = {};
+  for (const [key, value] of toKeep) {
+    newDetails[key] = value;
+  }
+  
+  return {
+    details: newDetails,
     lastUpdated: Date.now()
   };
 }
@@ -180,12 +210,17 @@ export function getSignatureDetail(
   
   // Generate new detail
   const detail = generateSignatureDetail(locationId, locationType, locationName);
+  let newRegistry: SignatureDetailRegistry = {
+    ...registry,
+    details: { ...registry.details, [locationId]: detail },
+    lastUpdated: Date.now()
+  };
+  
+  // Prune if over limit
+  newRegistry = pruneSignatureDetails(newRegistry);
+  
   return {
-    registry: {
-      ...registry,
-      details: { ...registry.details, [locationId]: detail },
-      lastUpdated: Date.now()
-    },
+    registry: newRegistry,
     detail
   };
 }

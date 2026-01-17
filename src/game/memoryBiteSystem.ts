@@ -310,10 +310,56 @@ const SURFACE_TEMPLATES: Record<MemoryBiteType, string[]> = {
 // MEMORY BITE MANAGEMENT
 // ============================================================================
 
+// LIMITS to prevent unbounded growth
+const MAX_TOTAL_BITES = 150;
+const MAX_BITES_PER_NPC = 20;
+const MAX_SURFACE_COUNT = 5; // After this, bite is considered "played out"
+
 const store: MemoryBiteStore = {
   bites: [],
   lastUpdate: Date.now()
 };
+
+/**
+ * Prune memory bites to stay within limits
+ */
+function pruneBites(): void {
+  // Remove over-surfaced bites first
+  store.bites = store.bites.filter(b => b.surfaceCount < MAX_SURFACE_COUNT);
+  
+  // If still over limit, remove oldest low-weight bites
+  if (store.bites.length > MAX_TOTAL_BITES) {
+    store.bites.sort((a, b) => {
+      // Keep high emotional weight
+      const weightDiff = b.emotionalWeight - a.emotionalWeight;
+      if (Math.abs(weightDiff) > 2) return weightDiff;
+      // Keep recent
+      return b.timestamp - a.timestamp;
+    });
+    store.bites = store.bites.slice(0, MAX_TOTAL_BITES);
+  }
+  
+  // Also enforce per-NPC limits
+  const npcCounts: Record<string, MemoryBite[]> = {};
+  for (const bite of store.bites) {
+    if (!npcCounts[bite.npcId]) npcCounts[bite.npcId] = [];
+    npcCounts[bite.npcId].push(bite);
+  }
+  
+  const prunedIds = new Set<string>();
+  for (const [npcId, bites] of Object.entries(npcCounts)) {
+    if (bites.length > MAX_BITES_PER_NPC) {
+      // Sort by weight desc, keep top ones
+      bites.sort((a, b) => b.emotionalWeight - a.emotionalWeight);
+      const toRemove = bites.slice(MAX_BITES_PER_NPC);
+      toRemove.forEach(b => prunedIds.add(b.id));
+    }
+  }
+  
+  if (prunedIds.size > 0) {
+    store.bites = store.bites.filter(b => !prunedIds.has(b.id));
+  }
+}
 
 /**
  * Create a new memory bite
@@ -345,6 +391,9 @@ export function createMemoryBite(
   
   store.bites.push(bite);
   store.lastUpdate = Date.now();
+  
+  // Prune if needed
+  pruneBites();
   
   console.log(`[MemoryBite] Created: ${type} with ${npcName} - "${context}"`);
   
@@ -555,8 +604,16 @@ export function getAllBites(): MemoryBite[] {
  * Load memory bites from saved data
  */
 export function loadBites(bites: MemoryBite[]): void {
-  store.bites = bites;
+  // Validate and limit on load
+  if (!Array.isArray(bites)) {
+    store.bites = [];
+  } else {
+    store.bites = bites.slice(0, MAX_TOTAL_BITES).filter(b => 
+      b && typeof b.id === 'string' && typeof b.npcId === 'string'
+    );
+  }
   store.lastUpdate = Date.now();
+  pruneBites();
 }
 
 /**

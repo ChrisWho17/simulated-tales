@@ -46,6 +46,9 @@ export interface EmotionalState {
   emotionalResilience: number; // 0-1, how quickly they return to neutral
 }
 
+// LIMIT for mood history
+const MAX_MOOD_HISTORY = 15;
+
 // ============================================================================
 // MOOD MODIFIERS BY EVENT TYPE
 // ============================================================================
@@ -409,7 +412,7 @@ export function processEventForMood(
     ...state,
     currentMood: bestEffect.mood,
     moodIntensity: Math.min(1, highestIntensity),
-    moodHistory: [...state.moodHistory.slice(-9), transition] // Keep last 10 transitions
+    moodHistory: [...state.moodHistory.slice(-(MAX_MOOD_HISTORY - 1)), transition] // Keep limited transitions
   };
 }
 
@@ -462,7 +465,7 @@ export function decayMoodTowardsNeutral(state: EmotionalState): EmotionalState {
       ...state,
       currentMood: 'neutral',
       moodIntensity: 0.5,
-      moodHistory: [...state.moodHistory.slice(-9), {
+      moodHistory: [...state.moodHistory.slice(-(MAX_MOOD_HISTORY - 1)), {
         from: state.currentMood,
         to: 'neutral',
         trigger: 'natural_decay',
