@@ -96,9 +96,14 @@ export function GameHeader({
     <header className="min-h-16 py-3 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center gap-2">
         {character && <CharacterPortrait character={character} />}
-        <h1 className="text-base font-narrative text-gradient-gold glow-text tracking-wide">
-          Untold
-        </h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-base font-narrative text-gradient-gold glow-text tracking-wide">
+            Untold
+          </h1>
+          <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30">
+            v0.4.2-alpha
+          </span>
+        </div>
         <div className="h-6 w-px bg-border" />
         <div className="flex items-center gap-2">
           <TimeIcon hour={time.hour} />
