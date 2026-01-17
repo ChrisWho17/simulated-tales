@@ -67,7 +67,8 @@ import {
 } from '@/game/pressureClockSystem';
 // Inventory system integration
 import { useInventory } from '@/game/inventorySystem';
-import { buildInventoryContextForAI, processStoryInventorySync, getGenreClasses } from '@/game/storyInventoryBridge';
+import { buildInventoryContextForAI, getGenreClasses } from '@/game/storyInventoryBridge';
+import { processStoryInventoryUpdate, MechanicsTags } from '@/game/storyInventorySync';
 import { 
   UNIVERSAL_NARRATIVE_RULES, 
   GENRE_BIBLE, 
@@ -2077,13 +2078,31 @@ export function AdventureGame() {
       }
       
 // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
-      const inventoryResult = processStoryInventorySync(narrative, inventory);
-      if (inventoryResult.added.length > 0) {
-        console.log(`[StoryInv] Items added: ${inventoryResult.added.length}, noted drops: ${inventoryResult.dropped.length}`);
+      // Build mechanics tags from pending mechanics
+      const mechanicsTags: MechanicsTags = {
+        loot: pendingMechanics?.lootGained 
+          ? (Array.isArray(pendingMechanics.lootGained) ? pendingMechanics.lootGained : [pendingMechanics.lootGained])
+          : [],
+        drop: pendingMechanics?.itemsDropped
+          ? (Array.isArray(pendingMechanics.itemsDropped) ? pendingMechanics.itemsDropped : [pendingMechanics.itemsDropped])
+          : [],
+        // itemsUsed not in current GameMechanics type - will be picked up by consumption patterns
+        use: [],
+      };
+      
+      // Use the enhanced sync system that actually adds AND removes items
+      const inventoryResult = processStoryInventoryUpdate(narrative, mechanicsTags, inventory, {
+        useFallbackParsing: true,
+        minConfidence: 'high', // Only high confidence to avoid false positives
+      });
+      
+      // Show toasts for added items
+      if (inventoryResult.itemsAdded.length > 0) {
+        console.log(`[StoryInv] Items added: ${inventoryResult.itemsAdded.length}`);
         
         // Group items by category for category-specific toasts
         const byCategory: Record<string, string[]> = {};
-        inventoryResult.added.forEach(item => {
+        inventoryResult.itemsAdded.forEach(item => {
           const cat = item.category || 'misc';
           if (!byCategory[cat]) byCategory[cat] = [];
           byCategory[cat].push(item.name);
@@ -2121,6 +2140,32 @@ export function AdventureGame() {
             });
           }
         });
+      }
+      
+      // Show toasts for removed items
+      if (inventoryResult.itemsRemoved.length > 0) {
+        console.log(`[StoryInv] Items removed: ${inventoryResult.itemsRemoved.length}`);
+        
+        inventoryResult.itemsRemoved.forEach(item => {
+          const reasonConfig: Record<string, { icon: string; label: string }> = {
+            drop: { icon: '📤', label: 'Dropped' },
+            consume: { icon: '✓', label: 'Used' },
+            give: { icon: '🤝', label: 'Given away' },
+            destroy: { icon: '💥', label: 'Destroyed' },
+            lose: { icon: '❌', label: 'Lost' },
+          };
+          
+          const config = reasonConfig[item.reason] || reasonConfig.drop;
+          toast.info(`${config.icon} ${item.name}`, {
+            duration: 2500,
+            description: config.label,
+          });
+        });
+      }
+      
+      // Log warnings
+      if (inventoryResult.warnings.length > 0) {
+        console.log('[StoryInv] Warnings:', inventoryResult.warnings);
       }
       
       // Process action for identity anchors and advance time
