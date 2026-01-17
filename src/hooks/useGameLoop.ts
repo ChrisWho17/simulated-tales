@@ -215,18 +215,22 @@ export function useGameLoop(options: GameLoopOptions = {}): [GameLoopState, Game
     currentTurn
   );
   
+  // Track adrenaline state for event bus registration using ref to avoid stale closures
+  const adrenalineStateRef = useRef(adrenalineState);
+  adrenalineStateRef.current = adrenalineState;
+  
   // Register adrenaline system with event bus for combat damage events
   useEffect(() => {
-    const unsubscribe = registerAdrenalineForEventBus(adrenalineState, (newState) => {
+    const unsubscribe = registerAdrenalineForEventBus(adrenalineStateRef.current, (newState) => {
       setAdrenalineState(newState);
-      console.log('[GameLoop] Adrenaline state updated via event bus');
     });
     
     return unsubscribe;
   }, []); // Only register once on mount
   
-  // Keep event bus registration updated with latest state
+  // Keep event bus registration updated with latest state via ref
   useEffect(() => {
+    adrenalineStateRef.current = adrenalineState;
     updateRegisteredAdrenalineState(adrenalineState);
   }, [adrenalineState]);
   
