@@ -1117,26 +1117,35 @@ function formatCharacterContext(character: CharacterData, characterAppearance?: 
     }
   }
   
+  // Safe accessors with defaults
+  const traits = character.traits || [];
+  const abilities = character.abilities || [];
+  const skills = character.skills || [];
+  const stats = character.stats || { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 };
+  
+  // Cast to any to allow flexible field names from clients
+  const charAny = character as any;
+  
   let context = `
 PLAYER CHARACTER:
-Name: ${character.name}
-Class: ${character.classId} (Level ${character.level})
-Background: ${character.backgroundId}
-Traits: ${character.traits.join(', ')}
+Name: ${character.name || 'Unknown'}
+Class: ${character.classId || charAny.class || 'Adventurer'} (Level ${character.level || 1})
+Background: ${character.backgroundId || charAny.background || 'Unknown'}
+Traits: ${traits.length > 0 ? traits.join(', ') : 'None specified'}
 
 STATS:
-- STR: ${character.stats.strength} (${formatMod(getModifier(character.stats.strength))})
-- DEX: ${character.stats.dexterity} (${formatMod(getModifier(character.stats.dexterity))})
-- CON: ${character.stats.constitution} (${formatMod(getModifier(character.stats.constitution))})
-- INT: ${character.stats.intelligence} (${formatMod(getModifier(character.stats.intelligence))})
-- WIS: ${character.stats.wisdom} (${formatMod(getModifier(character.stats.wisdom))})
-- CHA: ${character.stats.charisma} (${formatMod(getModifier(character.stats.charisma))})
+- STR: ${stats.strength || 10} (${formatMod(getModifier(stats.strength || 10))})
+- DEX: ${stats.dexterity || 10} (${formatMod(getModifier(stats.dexterity || 10))})
+- CON: ${stats.constitution || 10} (${formatMod(getModifier(stats.constitution || 10))})
+- INT: ${stats.intelligence || 10} (${formatMod(getModifier(stats.intelligence || 10))})
+- WIS: ${stats.wisdom || 10} (${formatMod(getModifier(stats.wisdom || 10))})
+- CHA: ${stats.charisma || 10} (${formatMod(getModifier(stats.charisma || 10))})
 
-Health: ${character.currentHealth}/${character.maxHealth}
-Gold: ${character.gold}
+Health: ${character.currentHealth || character.maxHealth || 20}/${character.maxHealth || 20}
+Gold: ${character.gold || 0}
 
-Abilities: ${character.abilities.join(', ')}
-Skills: ${character.skills.join(', ')}
+Abilities: ${abilities.length > 0 ? abilities.join(', ') : 'None'}
+Skills: ${skills.length > 0 ? skills.join(', ') : 'None'}
 
 === ${inventorySection} ===
 
@@ -1181,7 +1190,10 @@ serve(async (req) => {
   }
 
   try {
-    const { scenario, playerAction, conversationHistory, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext } = await req.json() as AdventureRequest;
+    const requestData = await req.json() as AdventureRequest;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext } = requestData;
+    // Ensure conversationHistory is always an array (handle both old and new field names)
+    const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
