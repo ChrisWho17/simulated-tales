@@ -135,6 +135,13 @@ const ALL_ATTACHMENTS: Record<AttachmentSlot, { id: string; slot: AttachmentSlot
     { id: 'foregrip_angled', slot: 'tactical_rail_bottom' },
     { id: 'bipod', slot: 'tactical_rail_bottom' },
   ],
+  bayonet: [
+    { id: 'knife_bayonet', slot: 'bayonet' },
+    { id: 'spike_bayonet', slot: 'bayonet' },
+    { id: 'sword_bayonet', slot: 'bayonet' },
+    { id: 'modern_bayonet', slot: 'bayonet' },
+    { id: 'serrated_bayonet', slot: 'bayonet' },
+  ],
 };
 
 const SLOT_LABELS: Record<AttachmentSlot, string> = {
@@ -149,6 +156,7 @@ const SLOT_LABELS: Record<AttachmentSlot, string> = {
   tactical_rail_top: 'Top Rail',
   tactical_rail_side: 'Side Rail',
   tactical_rail_bottom: 'Bottom Rail',
+  bayonet: 'Bayonet',
 };
 
 const RARITY_COLORS = {
