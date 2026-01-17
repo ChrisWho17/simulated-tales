@@ -196,7 +196,7 @@ export function SavesDropdown() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="gap-1 px-2 h-7 frosted-button text-muted-foreground/70 hover:text-foreground"
+            className="hidden md:flex gap-1 px-2 h-7 frosted-button text-muted-foreground/70 hover:text-foreground"
           >
             <span className={status.color}>{status.icon}</span>
             <ChevronDown className="h-3 w-3 opacity-50" />

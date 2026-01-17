@@ -1661,10 +1661,8 @@ export function AdventureDisplay({
               <Bookmark className="w-4 h-4" />
             </Button>
             
-            {/* Saves Dropdown - Hidden on mobile, accessible via quick menu */}
-            <div className="hidden md:block flex-shrink-0">
-              <SavesDropdown />
-            </div>
+            {/* Saves Dropdown - Trigger hidden on mobile, but dialog works via quick menu event */}
+            <SavesDropdown />
             
             
             
