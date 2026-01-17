@@ -7,10 +7,12 @@ import {
 import { CompanionState } from '@/game/companionSystem';
 import { CompanionCombatStats, companionCombatManager } from '@/game/companionCombatSystem';
 import { companionEquipmentManager, RARITY_COLORS } from '@/game/companionEquipmentSystem';
+import { loyaltyQuestManager } from '@/game/companionLoyaltyQuestSystem';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { CompanionEquipmentPanel } from './CompanionEquipmentPanel';
+import { LoyaltyQuestProgress } from './LoyaltyQuestProgress';
 
 interface CompanionCharacterSheetProps {
   companion: CompanionState;
@@ -45,6 +47,7 @@ export function CompanionCharacterSheet({ companion, isOpen, onClose }: Companio
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false);
   const combatStats = companionCombatManager.getCombatStats(companion.id);
   const loadout = companionEquipmentManager.getLoadout(companion.id);
+  const loyaltyQuests = loyaltyQuestManager.getAllQuestsForCompanion(companion.id);
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
 
   if (!isOpen) return null;
