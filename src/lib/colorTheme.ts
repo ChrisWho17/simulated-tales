@@ -156,6 +156,79 @@ export const COLOR_PRESETS: ColorPreset[] = [
     border: 'rgba(132, 204, 22, 0.2)',
     bg: 'rgba(132, 204, 22, 0.1)',
     particles: ['#84cc16', '#a3e635', '#bef264']
+  },
+  // New additional colors
+  { 
+    id: 'purple', 
+    name: 'Royal Purple', 
+    primary: '#9333ea', 
+    secondary: '#a855f7', 
+    tertiary: '#c084fc',
+    glow: 'rgba(147, 51, 234, 0.4)',
+    glowIntense: 'rgba(147, 51, 234, 0.6)',
+    border: 'rgba(147, 51, 234, 0.2)',
+    bg: 'rgba(147, 51, 234, 0.1)',
+    particles: ['#9333ea', '#a855f7', '#c084fc']
+  },
+  { 
+    id: 'fuchsia', 
+    name: 'Electric Fuchsia', 
+    primary: '#d946ef', 
+    secondary: '#e879f9', 
+    tertiary: '#f0abfc',
+    glow: 'rgba(217, 70, 239, 0.4)',
+    glowIntense: 'rgba(217, 70, 239, 0.6)',
+    border: 'rgba(217, 70, 239, 0.2)',
+    bg: 'rgba(217, 70, 239, 0.1)',
+    particles: ['#d946ef', '#e879f9', '#f0abfc']
+  },
+  { 
+    id: 'sky', 
+    name: 'Clear Sky', 
+    primary: '#0ea5e9', 
+    secondary: '#38bdf8', 
+    tertiary: '#7dd3fc',
+    glow: 'rgba(14, 165, 233, 0.4)',
+    glowIntense: 'rgba(14, 165, 233, 0.6)',
+    border: 'rgba(14, 165, 233, 0.2)',
+    bg: 'rgba(14, 165, 233, 0.1)',
+    particles: ['#0ea5e9', '#38bdf8', '#7dd3fc']
+  },
+  { 
+    id: 'slate', 
+    name: 'Steel Slate', 
+    primary: '#64748b', 
+    secondary: '#94a3b8', 
+    tertiary: '#cbd5e1',
+    glow: 'rgba(100, 116, 139, 0.4)',
+    glowIntense: 'rgba(100, 116, 139, 0.6)',
+    border: 'rgba(100, 116, 139, 0.2)',
+    bg: 'rgba(100, 116, 139, 0.1)',
+    particles: ['#64748b', '#94a3b8', '#cbd5e1']
+  },
+  { 
+    id: 'gold', 
+    name: 'Mythic Gold', 
+    primary: '#eab308', 
+    secondary: '#facc15', 
+    tertiary: '#fde047',
+    glow: 'rgba(234, 179, 8, 0.4)',
+    glowIntense: 'rgba(234, 179, 8, 0.6)',
+    border: 'rgba(234, 179, 8, 0.2)',
+    bg: 'rgba(234, 179, 8, 0.1)',
+    particles: ['#eab308', '#facc15', '#fde047']
+  },
+  { 
+    id: 'crimson', 
+    name: 'Crimson Fury', 
+    primary: '#dc2626', 
+    secondary: '#ef4444', 
+    tertiary: '#f87171',
+    glow: 'rgba(220, 38, 38, 0.4)',
+    glowIntense: 'rgba(220, 38, 38, 0.6)',
+    border: 'rgba(220, 38, 38, 0.2)',
+    bg: 'rgba(220, 38, 38, 0.1)',
+    particles: ['#dc2626', '#ef4444', '#f87171']
   }
 ];
 

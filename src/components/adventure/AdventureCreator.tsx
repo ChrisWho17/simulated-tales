@@ -3,11 +3,12 @@ import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2 } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn } from 'lucide-react';
 import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
 import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
-import { ColorPicker } from '@/components/ui/color-picker';
+import { ColorSplashScreen } from '@/components/ui/ColorSplashScreen';
+import { ThemedGoogleIcon } from '@/components/ui/ThemedGoogleIcon';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
 import { detectGenreFromText, getAllGenres, getGenreTitle, GENRE_ICONS, parseGenreTagsFromText, stripGenreTagsFromText } from '@/lib/genreDetection';
 import { DiceMode, saveDiceMode } from '@/game/diceSystem';
@@ -17,6 +18,8 @@ import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
 import { WhatsNewModal } from './WhatsNewModal';
+import { AuthModal } from '@/components/cloud/AuthModal';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Genre Contract state shape
 // Primary genre is always 50% minimum (100% when hard locked)
@@ -193,6 +197,11 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
   const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
+  const [showColorSplash, setShowColorSplash] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // Auth state
+  const { isAuthenticated, user, signOut, isLoading: authLoading } = useAuth();
   
   // Genre Contract state
   const [primaryGenre, setPrimaryGenre] = useState<GameGenre>('fantasy');
@@ -358,13 +367,67 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       {/* What's New Modal - shows on version update */}
       <WhatsNewModal />
       
+      {/* Color Splash Screen */}
+      <ColorSplashScreen open={showColorSplash} onClose={() => setShowColorSplash(false)} />
+      
+      {/* Auth Modal */}
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+      
       {/* Atmospheric Background */}
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-        {/* Color Picker - Top Right (lowered to avoid overlap) */}
-        <div className="absolute top-[100px] right-4 z-20">
-          <ColorPicker />
+        {/* Top Right Controls - Color & Sign In */}
+        <div className="absolute top-[100px] right-4 z-20 flex items-center gap-2">
+          {/* Color Picker Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setShowColorSplash(true)}
+                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
+                >
+                  <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Change theme color</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          {/* Sign In / User Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-primary/20 border border-primary/30 hover:bg-primary/30 transition-all duration-300 group"
+                  >
+                    <ThemedGoogleIcon className="w-5 h-5" />
+                    <span className="text-sm text-primary font-medium max-w-[100px] truncate">
+                      {user?.email?.split('@')[0]}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
+                    disabled={authLoading}
+                  >
+                    <ThemedGoogleIcon className="w-5 h-5" />
+                    <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                      Sign In
+                    </span>
+                  </button>
+                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isAuthenticated ? 'Sign out' : 'Sign in with Google'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         {/* Logo/Title */}
