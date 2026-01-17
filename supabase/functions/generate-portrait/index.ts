@@ -1769,10 +1769,13 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     }
   }
   
-  // Detect color keywords
+  // Detect color keywords - using word boundary matching to avoid false positives
+  // (e.g., "tan" should not match in "important" or "distant")
   let colorMods: string[] = [];
   for (const [keyword, desc] of Object.entries(COLOR_KEYWORDS)) {
-    if (lowerUserDesc.includes(keyword)) {
+    // Create regex with word boundaries to match whole words only
+    const wordBoundaryRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+    if (wordBoundaryRegex.test(lowerUserDesc)) {
       colorMods.push(desc);
       matchedKeywords.push({ category: 'color', keyword, effect: desc });
     }
