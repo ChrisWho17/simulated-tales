@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CombatEncounter, CombatAction, resolveCombatRound, CombatOutcome } from '@/game/combatSystem';
 import { NPC } from '@/types/game';
 import { LifeSimPlayerState } from '@/types/lifeSim';
@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Shield, Wind, MessageCircle, Flag, Skull, Heart, Zap } from 'lucide-react';
+import { Swords, Shield, Wind, MessageCircle, Flag, Skull, Heart, Zap, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDiceRoll, combatActionToDiceAction, toDicePlayer } from '@/hooks/useDiceRoll';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult } from '@/game/diceSystem';
+import { companionSystem } from '@/game/companionSystem';
+import { companionCombatManager, resolveCompanionCombatRound, CompanionCombatRound } from '@/game/companionCombatSystem';
 
 interface CombatUIProps {
   encounter: CombatEncounter;
@@ -42,10 +44,14 @@ export function CombatUI({ encounter, npc, playerState, onCombatEnd, onEncounter
     combatEnded: boolean;
     outcome?: CombatOutcome;
   } | null>(null);
+  const [companionRound, setCompanionRound] = useState<CompanionCombatRound | null>(null);
   
   const { performRoll, shouldShowRoll, clearRoll } = useDiceRoll();
   const gameContext = useGameOptional();
   const diceMode = gameContext?.diceMode ?? 'story';
+  
+  // Get active companions for combat
+  const activeCompanions = companionSystem.getActiveCompanions();
 
   const playerHealth = encounter.playerStats.health;
   const playerMaxHealth = encounter.playerStats.maxHealth;
@@ -114,6 +120,47 @@ export function CombatUI({ encounter, npc, playerState, onCombatEnd, onEncounter
       playerState.skills,
       npc
     );
+    
+    // Resolve companion combat actions if dice mode is not 'story' and companions exist
+    let companionResult: CompanionCombatRound | null = null;
+    if (diceMode !== 'story' && activeCompanions.length > 0) {
+      const companionsWithStats = activeCompanions.map(c => ({
+        state: c,
+        combatStats: companionCombatManager.getOrCreateCombatStats(c),
+      }));
+      
+      companionResult = resolveCompanionCombatRound(
+        companionsWithStats,
+        encounter.npcStats[npc.id]?.armorProtection || 0,
+        encounter.currentRound + 1
+      );
+      
+      setCompanionRound(companionResult);
+      
+      // Apply companion damage to enemy
+      if (companionResult.totalDamageDealt > 0 && result.encounter.npcStats[npc.id]) {
+        result.encounter.npcStats[npc.id].health = Math.max(
+          0, 
+          result.encounter.npcStats[npc.id].health - companionResult.totalDamageDealt
+        );
+      }
+      
+      // Apply companion damage to player (friendly fire)
+      if (companionResult.totalDamageToPlayer > 0) {
+        result.encounter.playerStats.health = Math.max(
+          0,
+          result.encounter.playerStats.health - companionResult.totalDamageToPlayer
+        );
+      }
+      
+      // Apply companion healing to player
+      if (companionResult.totalHealToPlayer > 0) {
+        result.encounter.playerStats.health = Math.min(
+          result.encounter.playerStats.maxHealth,
+          result.encounter.playerStats.health + companionResult.totalHealToPlayer
+        );
+      }
+    }
     
     applyResult(result);
   };
@@ -258,6 +305,49 @@ export function CombatUI({ encounter, npc, playerState, onCombatEnd, onEncounter
                 <p className="text-sm leading-relaxed whitespace-pre-line">
                   {roundNarrative}
                 </p>
+              </div>
+            )}
+            
+            {/* Companion Combat Actions */}
+            {companionRound && companionRound.actions.length > 0 && (
+              <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+                <h4 className="font-semibold flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4" />
+                  Companion Actions
+                </h4>
+                <div className="space-y-2">
+                  {companionRound.actions.map((action, i) => (
+                    <div key={i} className={cn(
+                      "text-sm p-2 rounded",
+                      action.outcome === 'critical_success' && "bg-green-500/20 border border-green-500/50",
+                      action.outcome === 'success' && "bg-green-500/10",
+                      action.outcome === 'neutral' && "bg-muted/50",
+                      action.outcome === 'failure' && "bg-yellow-500/20 border border-yellow-500/50",
+                      action.outcome === 'critical_failure' && "bg-red-500/20 border border-red-500/50"
+                    )}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium">{action.companionName}</span>
+                        <Badge variant="outline" className="text-xs">
+                          🎲 {action.naturalRoll} + {action.totalRoll - action.naturalRoll} = {action.totalRoll}
+                        </Badge>
+                      </div>
+                      <p className="text-xs">{action.narrative}</p>
+                    </div>
+                  ))}
+                </div>
+                {(companionRound.totalDamageToPlayer > 0 || companionRound.totalHealToPlayer > 0) && (
+                  <div className="mt-2 pt-2 border-t border-primary/20 text-xs text-muted-foreground">
+                    {companionRound.totalDamageDealt > 0 && (
+                      <span className="text-green-500 mr-3">+{companionRound.totalDamageDealt} dmg to enemy</span>
+                    )}
+                    {companionRound.totalDamageToPlayer > 0 && (
+                      <span className="text-red-500 mr-3">-{companionRound.totalDamageToPlayer} friendly fire</span>
+                    )}
+                    {companionRound.totalHealToPlayer > 0 && (
+                      <span className="text-blue-500">+{companionRound.totalHealToPlayer} healed</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             
