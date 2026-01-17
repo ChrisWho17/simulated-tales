@@ -86,6 +86,7 @@ import { ClothingShop } from './ClothingShop';
 import { ClothingItem } from '@/game/clothingItemSystem';
 import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/components/debug/StorageDiagnosticsSplash';
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
+import { DevOptionsPanel, useDevOptionsCommand } from '@/components/debug/DevOptionsPanel';
 import { CompanionPanel } from './CompanionPanel';
 import { CompanionCommentsBlock } from './CompanionCommentary';
 import { useCompanionSystem, CompanionComment, PendingRelationshipEvent, PendingLoyaltyQuest } from '@/hooks/useCompanionSystem';
@@ -339,10 +340,13 @@ export function GameUI() {
   const [showClothingShop, setShowClothingShop] = useState(false);
   const [activeCombat, setActiveCombat] = useState<CombatEncounter | null>(null);
   
-  // Storage diagnostics (secret command: /StorageDiag)
+  // Developer Options (command: /DevOptions) - unified debug panel
+  const devOptions = useDevOptionsCommand();
+  
+  // Storage diagnostics (accessible from DevOptions)
   const storageDiagnostics = useStorageDiagnosticsCommand();
   
-  // Cheat mode (secret command: /ImACheater)
+  // Cheat mode (accessible from DevOptions)
   const cheatMode = useCheatModeCommand();
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
   const [showCompanionPanel, setShowCompanionPanel] = useState(false);
@@ -587,12 +591,16 @@ export function GameUI() {
     // Handle RPG system commands before normal processing
     const lowerInput = input.toLowerCase().trim();
     
-    // Storage diagnostics command (secret debug feature)
+    // Developer Options command (unified debug panel: /DevOptions)
+    if (devOptions.checkCommand(input)) {
+      return;
+    }
+    
+    // Legacy commands still work but redirect through DevOptions
     if (storageDiagnostics.checkCommand(input)) {
       return;
     }
     
-    // Cheat mode command (secret debug feature)
     if (cheatMode.checkCommand(input)) {
       return;
     }
@@ -1678,13 +1686,21 @@ export function GameUI() {
         />
       )}
       
-      {/* Storage Diagnostics (secret: /StorageDiag) */}
+      {/* Developer Options Panel (/DevOptions) - unified debug hub */}
+      <DevOptionsPanel
+        isOpen={devOptions.isOpen}
+        onClose={() => devOptions.setIsOpen(false)}
+        onOpenStorageDiag={() => storageDiagnostics.setIsOpen(true)}
+        onOpenCheatMode={() => cheatMode.setIsOpen(true)}
+      />
+      
+      {/* Storage Diagnostics (accessible from DevOptions or /StorageDiag) */}
       <StorageDiagnosticsSplash
         isOpen={storageDiagnostics.isOpen}
         onClose={() => storageDiagnostics.setIsOpen(false)}
       />
       
-      {/* Cheat Mode (secret: /ImACheater) */}
+      {/* Cheat Mode (accessible from DevOptions or /ImACheater) */}
       <CheatModeSplash
         isOpen={cheatMode.isOpen}
         onClose={() => cheatMode.setIsOpen(false)}
