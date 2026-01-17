@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Database,
   Shield,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import {
   Popover,
@@ -22,12 +23,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { StorageHealthMonitor, StorageHealth } from '@/systems/StorageHealthMonitor';
+import { StorageCleanupWizard } from './StorageCleanupWizard';
 import { cn } from '@/lib/utils';
 
 export const StorageHealthIndicator: React.FC = () => {
   const [health, setHealth] = useState<StorageHealth | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [showCleanupWizard, setShowCleanupWizard] = useState(false);
 
   useEffect(() => {
     // Subscribe to health changes
@@ -203,28 +206,48 @@ export const StorageHealthIndicator: React.FC = () => {
             </div>
           )}
 
-          {/* Manual Backup Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={handleManualBackup}
-            disabled={isBackingUp}
-          >
-            {isBackingUp ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Backing up...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Backup Now
-              </>
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={handleManualBackup}
+              disabled={isBackingUp}
+            >
+              {isBackingUp ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Backing up...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Backup
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                setIsOpen(false);
+                setShowCleanupWizard(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Cleanup
+            </Button>
+          </div>
         </div>
       </PopoverContent>
+      
+      {/* Cleanup Wizard */}
+      <StorageCleanupWizard
+        isOpen={showCleanupWizard}
+        onClose={() => setShowCleanupWizard(false)}
+      />
     </Popover>
   );
 };

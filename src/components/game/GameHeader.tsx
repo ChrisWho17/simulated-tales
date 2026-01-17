@@ -15,6 +15,7 @@ import { AdrenalineSystemState } from '@/game/adrenalineSystem';
 import { CloudSyncIndicator } from '@/components/cloud/CloudSyncIndicator';
 import { BadgeShowcase, MenuBadgeIndicator } from './AchievementBadges';
 import { StorageHealthIndicator } from './StorageHealthIndicator';
+import { CrossTabIndicator } from './CrossTabWarning';
 
 interface ExtendedCharacter extends RPGCharacter {
   id?: string;
@@ -141,6 +142,7 @@ export function GameHeader({
       </div>
       
       <div className="flex items-center gap-2">
+        <CrossTabIndicator />
         <StorageHealthIndicator />
         <CloudSyncIndicator />
         {onOpenCharacterSheet && (
