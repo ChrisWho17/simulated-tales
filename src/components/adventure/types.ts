@@ -14,6 +14,7 @@ export interface GameMechanics {
   goldGained?: number;
   lootGained?: string | string[];
   itemsDropped?: string[];  // Items removed from inventory (left behind, sold, given away, etc.)
+  itemsUsed?: string[];     // Items consumed via [USE:] tag (Phase 2)
   damage?: number;
   heal?: number;
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;

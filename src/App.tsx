@@ -14,6 +14,7 @@ import { AchievementsProvider } from "@/components/game/Achievements";
 import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
 import { SessionAchievementBridge } from "@/components/game/SessionAchievementBridge";
 import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
+import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -24,6 +25,9 @@ import AchievementGallery from "./pages/AchievementGallery";
 import "@/styles/untold-story-engine.css";
 
 const queryClient = new QueryClient();
+
+// Initialize the unified inventory bridge (Phase 3)
+bridgePlayerStateToUnifiedInventory();
 
 // Narrative action handler for inventory changes
 const handleInventoryNarrativeAction = (action: InventoryAction) => {
