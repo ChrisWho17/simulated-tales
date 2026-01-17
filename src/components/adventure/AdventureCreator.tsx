@@ -16,6 +16,7 @@ import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyIn
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
+import { WhatsNewModal } from './WhatsNewModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -354,12 +355,15 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* What's New Modal - shows on version update */}
+      <WhatsNewModal />
+      
       {/* Atmospheric Background */}
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-        {/* Color Picker - Top Right */}
-        <div className="absolute top-4 right-4 z-20">
+        {/* Color Picker - Top Right (lowered to avoid overlap) */}
+        <div className="absolute top-12 right-4 z-20">
           <ColorPicker />
         </div>
         
