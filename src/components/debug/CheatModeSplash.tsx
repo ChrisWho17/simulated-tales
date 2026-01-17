@@ -426,96 +426,57 @@ export function CheatModeSplash({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, editingCompanion, showAddCompanion, goLeft, goRight]);
 
-  // Loading skeleton for character screen
+  // Loading skeleton for character screen - simplified
   const renderCharacterSkeleton = () => (
-    <motion.div 
-      className="space-y-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Name skeleton */}
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-10 w-full" />
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-8 w-full" />
       </div>
-      
-      {/* Stats section skeleton */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between p-3 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-          <Skeleton className="h-4 w-4" />
+      <div className="border border-border/50 rounded overflow-hidden">
+        <div className="flex items-center justify-between p-2 bg-muted/30">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-3 w-3" />
         </div>
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-3 space-y-3">
+          <div className="grid grid-cols-4 gap-2">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="space-y-1">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-2 w-10" />
+                <Skeleton className="h-7 w-full" />
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {[...Array(6)].map((_, i) => (
-              <motion.div 
-                key={i} 
-                className="space-y-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05, duration: 0.2 }}
-              >
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-4 w-full" />
-              </motion.div>
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-2 w-12" />
+                <Skeleton className="h-3 w-full" />
+              </div>
             ))}
           </div>
         </div>
       </div>
-      
-      {/* Appearance section skeleton */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between p-3 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <Skeleton className="h-4 w-4" />
+      <div className="border border-border/50 rounded overflow-hidden">
+        <div className="flex items-center justify-between p-2 bg-muted/30">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-3 w-3" />
         </div>
       </div>
-      
-      {/* Equipment section skeleton */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between p-3 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-4 w-36" />
-          </div>
-          <Skeleton className="h-4 w-4" />
-        </div>
-      </div>
-    </motion.div>
+    </div>
   );
 
-  // Render screen content
+  // Render screen content - no heavy animations
   const renderCharacterScreen = () => (
-    <motion.div 
-      className="space-y-4"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-    >
+    <div className="space-y-3">
       {/* Name */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Character Name</Label>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Character Name</Label>
         <Input
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Enter name..."
-          className="bg-background/50"
+          className="bg-background/50 h-8 text-sm"
         />
       </div>
       
@@ -922,7 +883,7 @@ export function CheatModeSplash({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 
   const renderInventoryScreen = () => (
@@ -1210,89 +1171,64 @@ export function CheatModeSplash({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95"
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 30 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 350, 
-              damping: 30,
-              mass: 0.8
-            }}
-            className="relative z-20 w-full max-w-2xl max-h-[85vh] bg-card border border-amber-500/50 rounded-lg shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="relative z-20 w-full max-w-lg max-h-[80vh] bg-card border border-amber-500/50 rounded-lg shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
-              <div className="flex items-center gap-3">
-                <motion.div 
-                  className="p-2 rounded-lg bg-amber-500/20"
-                  initial={{ rotate: -10, scale: 0.9 }}
-                  animate={{ rotate: 0, scale: 1 }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 400, damping: 15 }}
-                >
-                  <Wand2 className="w-5 h-5 text-amber-400" />
-                </motion.div>
+            {/* Header - Compact */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-amber-500/20">
+                  <Wand2 className="w-4 h-4 text-amber-400" />
+                </div>
                 <div>
-                  <h1 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
+                  <h1 className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
                     Cheat Mode
-                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
-                      Developer
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-400">
+                      Dev
                     </Badge>
                   </h1>
-                  <p className="text-xs text-muted-foreground">
-                    Edit character, inventory & companions
-                  </p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+                <X className="w-3.5 h-3.5" />
               </Button>
             </div>
             
-            {/* Screen Navigation */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
+            {/* Screen Navigation - Compact */}
+            <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/50 bg-muted/30">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={goLeft}
                 disabled={!canGoLeft}
-                className="gap-1 transition-opacity"
+                className="h-7 px-2 gap-0.5 text-xs"
               >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Prev</span>
+                <ChevronLeft className="w-3.5 h-3.5" />
               </Button>
               
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 {SCREENS.map((screen) => (
-                  <motion.button
+                  <button
                     key={screen.id}
                     onClick={() => goToScreen(screen.id)}
-                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                    className={`relative flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
                       currentScreen === screen.id
-                        ? 'text-primary-foreground'
-                        : 'hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted text-muted-foreground'
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
                   >
-                    {currentScreen === screen.id && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 bg-primary rounded-md"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      {screen.icon}
-                      <span className="hidden sm:inline">{screen.label}</span>
-                    </span>
-                  </motion.button>
+                    {screen.icon}
+                    <span className="hidden sm:inline">{screen.label}</span>
+                  </button>
                 ))}
               </div>
               
@@ -1301,76 +1237,51 @@ export function CheatModeSplash({
                 size="sm"
                 onClick={goRight}
                 disabled={!canGoRight}
-                className="gap-1 transition-opacity"
+                className="h-7 px-2 gap-0.5 text-xs"
               >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </Button>
             </div>
             
-            {/* Warning banner */}
-            <motion.div 
-              className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.2 }}
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="text-xs text-amber-400">
-                Changes affect gameplay. Use arrow keys to navigate screens.
+            {/* Warning banner - Compact */}
+            <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-1.5">
+              <AlertTriangle className="w-3 h-3 text-amber-500" />
+              <span className="text-[10px] text-amber-400">
+                Changes affect gameplay. Arrow keys to navigate.
               </span>
-            </motion.div>
+            </div>
 
-            {/* Content */}
-            <ScrollArea className="h-[calc(85vh-240px)]">
-              <div className="p-4">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentScreen}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -40 }}
-                    transition={{ 
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 30,
-                      mass: 0.5
-                    }}
-                  >
-                    {renderCurrentScreen()}
-                  </motion.div>
-                </AnimatePresence>
+            {/* Content - More compact */}
+            <ScrollArea className="h-[calc(80vh-160px)]">
+              <div className="p-3">
+                {renderCurrentScreen()}
               </div>
             </ScrollArea>
 
-            {/* Footer */}
-            <motion.div 
-              className="flex items-center justify-between p-4 border-t border-amber-500/30 bg-muted/30"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-            >
-              <p className="text-xs text-muted-foreground">
-                Press ESC to close • Arrow keys to navigate
+            {/* Footer - Compact */}
+            <div className="flex items-center justify-between px-3 py-2 border-t border-amber-500/30 bg-muted/30">
+              <p className="text-[10px] text-muted-foreground hidden sm:block">
+                ESC to close • Arrows to navigate
               </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={onClose}>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onClose}>
                   Cancel
                 </Button>
                 <Button 
+                  size="sm"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="gap-2 bg-amber-500 hover:bg-amber-600 text-black"
+                  className="h-7 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-black"
                 >
                   {isSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    <Save className="w-4 h-4" />
+                    <Save className="w-3 h-3" />
                   )}
-                  Save Changes
+                  Save
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
         </motion.div>
       )}
