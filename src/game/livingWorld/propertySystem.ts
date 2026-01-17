@@ -858,6 +858,13 @@ class PropertySystemClass {
 
   // ========== SIMULATION ==========
 
+  // Limits to prevent unbounded growth
+  private static readonly MAX_TENANT_ISSUES = 10;
+  private static readonly MAX_THREATS = 15;
+  private static readonly MAX_VIOLATIONS = 10;
+  private static readonly MAX_VALUE_MODIFIERS = 10;
+  private static readonly MAX_PREVIOUS_OWNERS = 20;
+
   processTick(deltaTime: number = 1): void {
     for (const property of this.properties.values()) {
       // Degrade condition slowly
@@ -877,9 +884,15 @@ class PropertySystemClass {
           tenant.issues.push({ type: event, date: Date.now() });
           this.notify({ type: 'tenant_issue', propertyId: property.id, tenant, issue: event });
         }
+        
+        // Prune tenant issues
+        if (tenant.issues.length > PropertySystemClass.MAX_TENANT_ISSUES) {
+          tenant.issues = tenant.issues.slice(-PropertySystemClass.MAX_TENANT_ISSUES);
+        }
       }
 
-      // Process threats
+      // Process threats and prune
+      const activeThreats: PropertyThreat[] = [];
       for (const threat of property.threats) {
         if (threat.deadline && Date.now() > threat.deadline && !threat.resolved) {
           this.notify({
@@ -888,6 +901,31 @@ class PropertySystemClass {
             threat
           });
         }
+        // Keep unresolved threats, limit resolved ones
+        if (!threat.resolved) {
+          activeThreats.push(threat);
+        }
+      }
+      // Cap threats
+      if (property.threats.length > PropertySystemClass.MAX_THREATS) {
+        const resolved = property.threats.filter(t => t.resolved).slice(-5);
+        property.threats = [...activeThreats.slice(0, PropertySystemClass.MAX_THREATS - 5), ...resolved];
+      }
+      
+      // Prune violations
+      if (property.violations.length > PropertySystemClass.MAX_VIOLATIONS) {
+        property.violations = property.violations.slice(-PropertySystemClass.MAX_VIOLATIONS);
+      }
+      
+      // Prune value modifiers (remove expired ones first)
+      const now = Date.now();
+      property.valueModifiers = property.valueModifiers
+        .filter(m => !m.expiry || m.expiry > now)
+        .slice(-PropertySystemClass.MAX_VALUE_MODIFIERS);
+      
+      // Prune previous owners
+      if (property.previousOwners.length > PropertySystemClass.MAX_PREVIOUS_OWNERS) {
+        property.previousOwners = property.previousOwners.slice(-PropertySystemClass.MAX_PREVIOUS_OWNERS);
       }
 
       // Mortgage payments

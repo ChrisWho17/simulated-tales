@@ -613,11 +613,32 @@ class RivalSystemClass {
 
   // ========== SIMULATION ==========
 
+  // Limits to prevent unbounded growth
+  private static readonly MAX_HISTORY_ENTRIES = 50;
+  private static readonly MAX_TRUCES = 10;
+  private static readonly MAX_CONFLICTS = 5;
+  private static readonly MAX_DESIRES = 10;
+  private static readonly MAX_VULNERABILITIES = 10;
+
   processTick(deltaTime: number = 1): void {
     for (const rival of this.rivals.values()) {
       if (!rival.isActive) continue;
 
       const rivalry = this.getRivalry(rival.id);
+      
+      // Prune history to prevent unbounded growth
+      if (rivalry.history.length > RivalSystemClass.MAX_HISTORY_ENTRIES) {
+        rivalry.history = rivalry.history.slice(-RivalSystemClass.MAX_HISTORY_ENTRIES);
+      }
+      
+      // Prune old expired truces
+      if (rivalry.truces.length > RivalSystemClass.MAX_TRUCES) {
+        // Keep active truces, remove oldest expired
+        const now = Date.now();
+        const active = rivalry.truces.filter(t => !t.duration || now < t.startDate + t.duration);
+        const expired = rivalry.truces.filter(t => t.duration && now >= t.startDate + t.duration);
+        rivalry.truces = [...active, ...expired.slice(-3)];
+      }
 
       // Skip if truce is active
       if (rivalry.truces.some(t => !t.duration || Date.now() < t.startDate + t.duration)) {
@@ -644,6 +665,14 @@ class RivalSystemClass {
 
       // Passive resource growth
       rival.resources.money += Math.floor(rival.domain.influence * 10 * deltaTime);
+      
+      // Cap rival desires and vulnerabilities
+      if (rival.desires.length > RivalSystemClass.MAX_DESIRES) {
+        rival.desires = rival.desires.slice(0, RivalSystemClass.MAX_DESIRES);
+      }
+      if (rival.vulnerabilities.length > RivalSystemClass.MAX_VULNERABILITIES) {
+        rival.vulnerabilities = rival.vulnerabilities.slice(0, RivalSystemClass.MAX_VULNERABILITIES);
+      }
     }
   }
 

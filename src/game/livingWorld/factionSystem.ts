@@ -504,6 +504,11 @@ class FactionSystemClass {
 
   // ========== SIMULATION ==========
 
+  // Memory limits to prevent unbounded growth
+  private static readonly MAX_MEMORY_PER_CATEGORY = 30;
+  private static readonly MAX_RELATION_HISTORY = 20;
+  private static readonly MAX_CONTRIBUTIONS = 50;
+
   processTick(deltaTime: number = 1): void {
     for (const faction of this.factions.values()) {
       if (!faction.isActive) continue;
@@ -520,15 +525,52 @@ class FactionSystemClass {
             this.simulateConflict(faction.id, otherId, deltaTime);
           }
         }
+        // Prune relation history
+        if (relation.history.length > FactionSystemClass.MAX_RELATION_HISTORY) {
+          relation.history = relation.history.slice(-FactionSystemClass.MAX_RELATION_HISTORY);
+        }
       }
 
-      // Grudge decay (very slow)
+      // Grudge decay (very slow) and memory pruning
       for (const grudge of faction.memory.grudges) {
         if (!grudge.resolved && Math.random() < 0.001 * deltaTime) {
           grudge.severity = Math.max(0, (grudge.severity || 50) - 1);
           if ((grudge.severity || 0) <= 0) grudge.resolved = true;
         }
       }
+      
+      // Prune all memory categories
+      this.pruneMemory(faction);
+    }
+  }
+  
+  private pruneMemory(faction: WorldFaction): void {
+    const limit = FactionSystemClass.MAX_MEMORY_PER_CATEGORY;
+    
+    // Keep most recent entries
+    if (faction.memory.allies.length > limit) {
+      faction.memory.allies = faction.memory.allies.slice(-limit);
+    }
+    if (faction.memory.enemies.length > limit) {
+      faction.memory.enemies = faction.memory.enemies.slice(-limit);
+    }
+    if (faction.memory.debts.length > limit) {
+      // Keep unpaid debts, prune oldest paid
+      const unpaid = faction.memory.debts.filter(d => !d.paid);
+      const paid = faction.memory.debts.filter(d => d.paid).slice(-limit / 2);
+      faction.memory.debts = [...unpaid.slice(-limit / 2), ...paid];
+    }
+    if (faction.memory.grudges.length > limit) {
+      // Keep unresolved grudges, prune oldest resolved
+      const unresolved = faction.memory.grudges.filter(g => !g.resolved);
+      const resolved = faction.memory.grudges.filter(g => g.resolved).slice(-limit / 2);
+      faction.memory.grudges = [...unresolved.slice(-limit / 2), ...resolved];
+    }
+    if (faction.memory.favors.length > limit) {
+      // Keep uncalled favors, prune oldest called
+      const uncalled = faction.memory.favors.filter(f => !f.called);
+      const called = faction.memory.favors.filter(f => f.called).slice(-limit / 2);
+      faction.memory.favors = [...uncalled.slice(-limit / 2), ...called];
     }
   }
 
