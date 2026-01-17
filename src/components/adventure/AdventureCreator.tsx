@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { VERSION_STRING } from '@/lib/version';
+import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
@@ -369,7 +369,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
             <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
               UNTOLD
             </h1>
-            <span className="text-[10px] md:text-xs font-mono text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded border border-border/30 self-end mb-2">
+            <span 
+              className="text-[10px] md:text-xs font-mono text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded border border-border/30 self-end mb-2 cursor-default"
+              title={`Build: ${BUILD_NUMBER}`}
+            >
               {VERSION_STRING}
             </span>
           </div>

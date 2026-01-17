@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { VERSION_STRING } from '@/lib/version';
+import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { formatTime, getTimePeriod } from '@/game/gameEngine';
 import { GameTime } from '@/types/game';
 import { Sun, Moon, Sunrise, Sunset, Save, RotateCcw, Plus, User, ScrollText, Backpack, Trophy, Activity, ShoppingBag, Coins } from 'lucide-react';
@@ -101,7 +101,10 @@ export function GameHeader({
           <h1 className="text-base font-narrative text-gradient-gold glow-text tracking-wide">
             Untold
           </h1>
-          <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30">
+          <span 
+            className="text-[10px] font-mono text-muted-foreground/60 bg-muted/30 px-1.5 py-0.5 rounded border border-border/30 cursor-default"
+            title={`Build: ${BUILD_NUMBER}`}
+          >
             {VERSION_STRING}
           </span>
         </div>
