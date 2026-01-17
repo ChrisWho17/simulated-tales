@@ -11,16 +11,23 @@ import { eventBus, GameBusEvent, GameEventType } from '@/game/eventBus';
  */
 export function SessionStatsBridge() {
   const sessionStats = useSessionStatsOptional();
-  const initialized = useRef(false);
+  // Use stable ref to track subscription - don't reset on cleanup
+  const subscriptionRef = useRef<(() => void) | null>(null);
+  const hasInitializedRef = useRef(false);
   
   useEffect(() => {
-    if (!sessionStats || initialized.current) return;
-    initialized.current = true;
+    // Skip if no context or already subscribed
+    if (!sessionStats) return;
+    if (subscriptionRef.current) return;
     
-    console.log('[SessionStatsBridge] Initializing event subscriptions');
+    // Only log on first initialization, not re-mounts
+    if (!hasInitializedRef.current) {
+      console.log('[SessionStatsBridge] Initializing event subscriptions');
+      hasInitializedRef.current = true;
+    }
     
     // Subscribe to all relevant events
-    const unsubscribe = eventBus.subscribe(
+    subscriptionRef.current = eventBus.subscribe(
       '*', // Subscribe to all events
       (event: GameBusEvent) => {
         handleGameEvent(event, sessionStats);
@@ -29,8 +36,11 @@ export function SessionStatsBridge() {
     );
     
     return () => {
-      unsubscribe();
-      initialized.current = false;
+      // Only unsubscribe when truly unmounting, not on re-renders
+      if (subscriptionRef.current) {
+        subscriptionRef.current();
+        subscriptionRef.current = null;
+      }
     };
   }, [sessionStats]);
   
