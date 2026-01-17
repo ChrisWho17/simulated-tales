@@ -226,18 +226,16 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
           ) : (
             <div className="space-y-3">
               {activeCompanions.map((companion) => (
-                  <CompanionCard
-                    key={companion.id}
-                    companion={companion}
-                    isExpanded={expandedId === companion.id}
-                    onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
-                    onDismiss={() => handleDismiss(companion.id)}
-                    onSpeak={onCompanionSpeak}
-                    onOpenSheet={() => setSelectedCompanion(companion)}
-                  />
-                ))}
-              </div>
-            )}
+                <CompanionCard
+                  key={companion.id}
+                  companion={companion}
+                  isExpanded={expandedId === companion.id}
+                  onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
+                  onDismiss={() => handleDismiss(companion.id)}
+                  onSpeak={onCompanionSpeak}
+                  onOpenSheet={() => setSelectedCompanion(companion)}
+                />
+              ))}
             </div>
           )}
 
@@ -280,7 +278,7 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
           )}
         </ScrollArea>
       </motion.div>
-      </motion.div>
+    </motion.div>
     </>
   );
 }
@@ -292,9 +290,6 @@ interface CompanionCardProps {
   onDismiss: () => void;
   onSpeak?: (companion: CompanionState, dialogue: string) => void;
   onOpenSheet: () => void;
-}
-  onDismiss: () => void;
-  onSpeak?: (companion: CompanionState, dialogue: string) => void;
 }
 
 function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onOpenSheet }: CompanionCardProps) {
@@ -375,8 +370,6 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="capitalize">{companion.mood}</span>
-              <span>•</span>
-              <span>Affinity: {companion.affinity}</span>
               <span>•</span>
               <span>Affinity: {companion.affinity}</span>
               {companion.romanticInterest > 50 && (
