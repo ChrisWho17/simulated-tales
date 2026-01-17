@@ -24,6 +24,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
@@ -42,6 +48,7 @@ import {
   Copy,
   Clock,
   RotateCcw,
+  X,
 } from 'lucide-react';
 
 export function SavesDropdown() {
@@ -54,21 +61,40 @@ export function SavesDropdown() {
   const [checkpointLabel, setCheckpointLabel] = useState('');
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   
   const importInputRef = useRef<HTMLInputElement>(null);
   
-  // Listen for mobile quick menu trigger
+  // Listen for mobile quick menu trigger - this listener MUST stay active
+  // even when there's no campaign to show an appropriate message
   useEffect(() => {
     const handleOpenSaves = () => {
-      setIsOpen(true);
+      // On mobile, open the sheet instead of dropdown
+      setIsMobileSheetOpen(true);
     };
     
     window.addEventListener('open-saves-dropdown', handleOpenSaves);
     return () => window.removeEventListener('open-saves-dropdown', handleOpenSaves);
   }, []);
   
-  if (!campaignContext) {
-    return null;
+  // If no campaign context, show message when mobile sheet is opened
+  if (!campaignContext || !campaignContext.activeCampaign) {
+    return (
+      <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+        <SheetContent side="bottom" className="h-auto max-h-[50vh] rounded-t-xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-cyan-400" />
+              Saves
+            </SheetTitle>
+          </SheetHeader>
+          <div className="py-6 text-center text-muted-foreground">
+            <p>No active campaign</p>
+            <p className="text-sm mt-2">Start a story first to access saves.</p>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
   }
   
   const { 
@@ -84,10 +110,6 @@ export function SavesDropdown() {
     importCampaign,
     unloadCampaign,
   } = campaignContext;
-  
-  if (!activeCampaign) {
-    return null;
-  }
   
   const checkpoints = activeCampaign.checkpoints || [];
   
@@ -271,6 +293,104 @@ export function SavesDropdown() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      
+      {/* Mobile Sheet - Opens from radial menu on mobile */}
+      <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+        <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-xl pb-8">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-cyan-400" />
+              {activeCampaign.meta.name}
+            </SheetTitle>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>{formatPlayTime(activeCampaign.meta.playTime)}</span>
+              <span>•</span>
+              <span className={status.color}>{status.text}</span>
+            </div>
+          </SheetHeader>
+          
+          <div className="space-y-2">
+            {/* Quick Actions */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => { handleSaveNow(); setIsMobileSheetOpen(false); }}
+            >
+              <Save className="h-5 w-5 text-primary" />
+              Save Now
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => { setShowCheckpointCreate(true); setIsMobileSheetOpen(false); }}
+            >
+              <BookmarkPlus className="h-5 w-5 text-amber-400" />
+              Create Checkpoint
+            </Button>
+            
+            {checkpoints.length > 0 && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 h-12"
+                onClick={() => { setShowCheckpointRestore(true); setIsMobileSheetOpen(false); }}
+              >
+                <RotateCcw className="h-5 w-5 text-purple-400" />
+                Restore Checkpoint
+                <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  {checkpoints.length}
+                </span>
+              </Button>
+            )}
+            
+            <div className="h-px bg-border my-2" />
+            
+            {/* Import/Export */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => { handleExport(); setIsMobileSheetOpen(false); }}
+            >
+              <Download className="h-5 w-5 text-green-400" />
+              Export Campaign
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => { handleImportClick(); setIsMobileSheetOpen(false); }}
+            >
+              <Upload className="h-5 w-5 text-blue-400" />
+              Import Campaign
+            </Button>
+            
+            <div className="h-px bg-border my-2" />
+            
+            {/* Navigation */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12"
+              onClick={() => { handleGoToCampaigns(); setIsMobileSheetOpen(false); }}
+            >
+              <FolderOpen className="h-5 w-5 text-muted-foreground" />
+              All Campaigns
+            </Button>
+            
+            <div className="h-px bg-border my-2" />
+            
+            {/* Danger Zone */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => { setShowDeleteConfirm(true); setIsMobileSheetOpen(false); }}
+            >
+              <Trash2 className="h-5 w-5" />
+              Delete Campaign
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
       
       {/* Hidden file input for import */}
       <input
