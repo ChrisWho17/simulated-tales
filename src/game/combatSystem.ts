@@ -111,6 +111,70 @@ function getClothingCombatStats(): {
   }
 }
 
+// ============= WEAPON INTEGRATION =============
+
+/**
+ * Get equipped weapon stats from inventory (lazy loaded to avoid circular deps)
+ */
+function getEquippedWeaponStats(): {
+  weaponDamage: number;
+  weaponAccuracy: number;
+  weaponRange: number;
+  weaponName: string | null;
+} {
+  try {
+    // Try to get inventory state from localStorage (where it's persisted)
+    const inventoryJson = localStorage.getItem('living-world-inventory');
+    if (!inventoryJson) {
+      return { weaponDamage: 10, weaponAccuracy: 60, weaponRange: 10, weaponName: null };
+    }
+    
+    const inventoryState = JSON.parse(inventoryJson);
+    const equippedWeaponId = inventoryState.equipped?.primaryWeapon || inventoryState.equipped?.sidearm;
+    
+    if (!equippedWeaponId) {
+      return { weaponDamage: 10, weaponAccuracy: 60, weaponRange: 10, weaponName: null };
+    }
+    
+    const weapon = inventoryState.items?.find((item: any) => item.instanceId === equippedWeaponId);
+    
+    if (!weapon || weapon.category !== 'weapons') {
+      return { weaponDamage: 10, weaponAccuracy: 60, weaponRange: 10, weaponName: null };
+    }
+    
+    // Get base stats
+    let damage = weapon.stats?.damage || 20;
+    let accuracy = weapon.stats?.accuracy || 60;
+    let range = weapon.stats?.range || 30;
+    
+    // Apply condition penalty if weapon has condition tracking
+    if (weapon.condition) {
+      const conditionPercent = (
+        (100 - (weapon.condition.barrelWear || 0)) * 0.3 +
+        (100 - (weapon.condition.riflingWear || 0)) * 0.3 +
+        (100 - (weapon.condition.carbonBuildup || 0)) * 0.2 +
+        (100 - (weapon.condition.springFatigue || 0)) * 0.2
+      ) / 100;
+      
+      // Reduce damage/accuracy based on condition
+      damage = Math.round(damage * conditionPercent);
+      accuracy = Math.round(accuracy * conditionPercent);
+    }
+    
+    console.log(`[Combat] Using equipped weapon: ${weapon.name} (DMG: ${damage}, ACC: ${accuracy})`);
+    
+    return { 
+      weaponDamage: damage, 
+      weaponAccuracy: accuracy, 
+      weaponRange: range,
+      weaponName: weapon.name 
+    };
+  } catch (e) {
+    console.warn('[Combat] Failed to get weapon stats:', e);
+    return { weaponDamage: 10, weaponAccuracy: 60, weaponRange: 10, weaponName: null };
+  }
+}
+
 // ============= COMBAT INITIALIZATION =============
 
 // Helper to clamp stat values to valid ranges
@@ -132,6 +196,9 @@ export function initializeCombat(
   // Get clothing bonuses (safely)
   const clothingBonuses = getClothingCombatStats();
   
+  // Get weapon stats from inventory
+  const weaponStats = getEquippedWeaponStats();
+  
   // Safely extract player stats with fallbacks
   const playerHealth = clampStat(playerState.needs?.physical?.health ?? 100);
   const playerEnergy = clampStat(playerState.needs?.physical?.energy ?? 100);
@@ -141,15 +208,18 @@ export function initializeCombat(
   const playerPersuasion = clampStat(playerState.skills?.social?.persuasion ?? 10);
   const playerStress = clampStat(playerState.needs?.psychological?.stress ?? 0);
   
+  // Calculate combat skill with weapon accuracy bonus
+  const weaponAccuracyBonus = Math.floor((weaponStats.weaponAccuracy - 50) / 5); // +/-10 based on accuracy
+  
   const playerStats: CombatantStats = {
     health: playerHealth,
     maxHealth: 100,
     energy: playerEnergy,
-    combatSkill: playerCombat,
+    combatSkill: clampStat(playerCombat + weaponAccuracyBonus), // Apply weapon accuracy
     dodgeSkill: clampStat(playerAthletics + clothingBonuses.dodgeBonus),
     intimidationSkill: clampStat(playerIntimidation + clothingBonuses.intimidationBonus),
     persuasionSkill: clampStat(playerPersuasion + clothingBonuses.persuasionBonus),
-    weaponDamage: 10, // Base unarmed
+    weaponDamage: weaponStats.weaponDamage, // Use actual weapon damage
     armorProtection: clampStat(clothingBonuses.armorBonus, 0, 50), // Cap armor at 50%
     stressLevel: playerStress,
   };
