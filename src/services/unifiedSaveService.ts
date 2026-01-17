@@ -1,7 +1,7 @@
 // ============================================================================
 // UNIFIED SAVE SERVICE - Cloud-first with Google auth, GUEST-LOCAL fallback
 // Now with IndexedDB cache for reliable persistence
-// Enhanced with auto-recovery and storage health monitoring
+// Enhanced with auto-recovery, storage health monitoring, and cross-tab sync
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,7 @@ import { GameGenre } from '@/types/genreData';
 import LZString from 'lz-string';
 import { IndexedDBCache } from '@/lib/indexedDBCache';
 import { StorageHealthMonitor } from '@/systems/StorageHealthMonitor';
+import { CrossTabSync } from '@/systems/CrossTabSync';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -246,21 +247,49 @@ class UnifiedSaveServiceClass {
   }
 
   async saveCampaign(campaign: CampaignData): Promise<SaveResult> {
+    // Check cross-tab sync before saving
+    const canSave = CrossTabSync.canSaveCampaign(campaign.id);
+    if (!canSave.allowed) {
+      return { success: false, error: canSave.reason };
+    }
+
+    // Notify other tabs that we're saving
+    CrossTabSync.notifySaveStarted(campaign.id, campaign.meta.name);
+
     // Always update campaign metadata
     campaign.meta.updatedAt = Date.now();
     
+    let result: SaveResult;
     if (this.account.mode === 'cloud') {
-      return this.saveToCloud(campaign);
+      result = await this.saveToCloud(campaign);
+    } else {
+      result = await this.saveToGuest(campaign);
     }
-    return this.saveToGuest(campaign);
+
+    // Notify other tabs that save completed
+    if (result.success) {
+      CrossTabSync.notifySaveCompleted(campaign.id, campaign.meta.name);
+    }
+
+    return result;
   }
 
   async loadCampaign(campaignId: string): Promise<CampaignData | null> {
+    let campaign: CampaignData | null;
+    
     if (this.account.mode === 'cloud') {
-      return this.loadFromCloud(campaignId);
+      campaign = await this.loadFromCloud(campaignId);
+    } else {
+      // Use recovery-enabled loader for guest mode
+      campaign = await this.loadFromGuestWithRecovery(campaignId);
     }
-    // Use recovery-enabled loader for guest mode
-    return this.loadFromGuestWithRecovery(campaignId);
+
+    // Notify other tabs about campaign being loaded
+    if (campaign) {
+      CrossTabSync.notifyCampaignLoaded(campaign.id, campaign.meta.name);
+    }
+
+    return campaign;
   }
 
   async deleteCampaign(campaignId: string): Promise<SaveResult> {
