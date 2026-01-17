@@ -88,7 +88,8 @@ import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/compon
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
 import { CompanionPanel } from './CompanionPanel';
 import { CompanionCommentsBlock } from './CompanionCommentary';
-import { useCompanionSystem, CompanionComment } from '@/hooks/useCompanionSystem';
+import { useCompanionSystem, CompanionComment, PendingRelationshipEvent } from '@/hooks/useCompanionSystem';
+import { RelationshipEventModal } from './RelationshipEventModal';
 import { Users } from 'lucide-react';
 
 const STORAGE_KEY = 'living-world-save';
@@ -1276,10 +1277,18 @@ export function GameUI() {
       })
     );
     
+    // Check for companion relationship events after player actions
+    if (companionHook.activeCompanions.length > 0 && !companionHook.pendingRelationshipEvent) {
+      // Small delay to not trigger immediately
+      setTimeout(() => {
+        companionHook.checkForRelationshipEvent();
+      }, 500);
+    }
+    
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
-  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog]);
+  }, [gameState, generateNPCPortrait, npcMemories, conversationSession, weather, questLog, companionHook]);
   
   // Combat handlers
   const handleCombatEnd = useCallback((outcome: CombatOutcome, updatedEncounter: CombatEncounter) => {
@@ -1622,6 +1631,25 @@ export function GameUI() {
           }]);
         }}
       />
+      
+      {/* Relationship Event Modal */}
+      {companionHook.pendingRelationshipEvent && (
+        <RelationshipEventModal
+          companion={companionHook.pendingRelationshipEvent.companion}
+          event={companionHook.pendingRelationshipEvent.event}
+          isOpen={!!companionHook.pendingRelationshipEvent}
+          onClose={() => companionHook.clearRelationshipEvent()}
+          onChoiceMade={(choice, response) => {
+            // Add the companion's response to the narrative
+            setDisplayEvents(prev => [...prev, {
+              id: `relationship_event_${Date.now()}`,
+              type: 'dialogue' as const,
+              content: `**${companionHook.pendingRelationshipEvent?.companion.name}**: ${response}`,
+              timestamp: gameState.time.tick,
+            }]);
+          }}
+        />
+      )}
       
       {/* Storage Diagnostics (secret: /StorageDiag) */}
       <StorageDiagnosticsSplash

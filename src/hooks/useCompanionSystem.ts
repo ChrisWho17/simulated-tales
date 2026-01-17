@@ -5,6 +5,11 @@ import {
   PlayerActionType,
   COMPANION_TEMPLATES 
 } from '@/game/companionSystem';
+import { 
+  RelationshipEvent, 
+  DialogueChoice,
+  relationshipEventManager 
+} from '@/game/companionRelationshipEvents';
 import { toast } from 'sonner';
 
 export interface CompanionComment {
@@ -13,6 +18,11 @@ export interface CompanionComment {
   comment: string;
   timestamp: number;
   dialogueType: 'reaction' | 'ambient' | 'event' | 'romance' | 'betrayal' | 'farewell';
+}
+
+export interface PendingRelationshipEvent {
+  companion: CompanionState;
+  event: RelationshipEvent;
 }
 
 interface UseCompanionSystemOptions {
@@ -31,8 +41,11 @@ export function useCompanionSystem(options: UseCompanionSystemOptions = {}) {
   const [activeCompanions, setActiveCompanions] = useState<CompanionState[]>([]);
   const [pendingComments, setPendingComments] = useState<CompanionComment[]>([]);
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
+  const [pendingRelationshipEvent, setPendingRelationshipEvent] = useState<PendingRelationshipEvent | null>(null);
   const lastCommentTime = useRef<number>(0);
+  const lastEventCheck = useRef<number>(0);
   const commentCooldown = 10000; // 10 seconds between ambient comments
+  const eventCheckCooldown = 30000; // 30 seconds between relationship event checks
 
   // Refresh active companions
   const refreshCompanions = useCallback(() => {
@@ -214,6 +227,83 @@ export function useCompanionSystem(options: UseCompanionSystemOptions = {}) {
     return comment;
   }, [autoCommentChance, enableAIDialogue, generateAIDialogue]);
 
+  // Check for relationship events
+  const checkForRelationshipEvent = useCallback((): PendingRelationshipEvent | null => {
+    const now = Date.now();
+    if (now - lastEventCheck.current < eventCheckCooldown) {
+      return null; // Still in cooldown
+    }
+
+    const companions = companionSystem.getActiveCompanions();
+    if (companions.length === 0) return null;
+
+    // Shuffle companions to not always check the same one first
+    const shuffled = [...companions].sort(() => Math.random() - 0.5);
+
+    for (const companion of shuffled) {
+      const event = relationshipEventManager.tryGetRandomEvent(companion);
+      if (event) {
+        lastEventCheck.current = now;
+        const pendingEvent = { companion, event };
+        setPendingRelationshipEvent(pendingEvent);
+        return pendingEvent;
+      }
+    }
+
+    return null;
+  }, []);
+
+  // Clear the pending relationship event
+  const clearRelationshipEvent = useCallback(() => {
+    setPendingRelationshipEvent(null);
+  }, []);
+
+  // Handle relationship event choice
+  const handleRelationshipChoice = useCallback((
+    companion: CompanionState,
+    event: RelationshipEvent,
+    choice: DialogueChoice
+  ) => {
+    // Apply all effects
+    if (choice.effects.affinity) {
+      companionSystem.adjustAffinity(companion.id, choice.effects.affinity);
+    }
+    if (choice.effects.trust) {
+      companionSystem.adjustTrust(companion.id, choice.effects.trust);
+    }
+    if (choice.effects.respect) {
+      companionSystem.adjustRespect(companion.id, choice.effects.respect);
+    }
+    if (choice.effects.fear) {
+      companionSystem.adjustFear(companion.id, choice.effects.fear);
+    }
+    if (choice.effects.romanticInterest) {
+      companionSystem.adjustRomance(companion.id, choice.effects.romanticInterest);
+    }
+    if (choice.effects.moodChange) {
+      companionSystem.setMood(companion.id, choice.effects.moodChange);
+    }
+
+    // Register with event manager
+    relationshipEventManager.applyChoice(companion.id, event.id, choice);
+    
+    // Clear and refresh
+    clearRelationshipEvent();
+    refreshCompanions();
+
+    // Add as a comment for narrative display
+    const comment: CompanionComment = {
+      id: `event_${companion.id}_${Date.now()}`,
+      companion: { ...companion },
+      comment: choice.companionResponse,
+      timestamp: Date.now(),
+      dialogueType: 'event',
+    };
+    setPendingComments(prev => [...prev, comment]);
+
+    return comment;
+  }, [clearRelationshipEvent, refreshCompanions]);
+
   // Clear a specific comment
   const dismissComment = useCallback((commentId: string) => {
     setPendingComments(prev => prev.filter(c => c.id !== commentId));
@@ -257,9 +347,13 @@ export function useCompanionSystem(options: UseCompanionSystemOptions = {}) {
     activeCompanions,
     pendingComments,
     isGeneratingDialogue,
+    pendingRelationshipEvent,
     processPlayerAction,
     getAmbientCommentary,
     generateAIDialogue,
+    checkForRelationshipEvent,
+    clearRelationshipEvent,
+    handleRelationshipChoice,
     dismissComment,
     clearAllComments,
     createAndRecruitCompanion,
