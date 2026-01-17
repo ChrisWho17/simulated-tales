@@ -297,6 +297,13 @@ export const QUEST_DEFINITIONS: Record<string, Omit<Quest, 'status' | 'currentOb
 
 // ============= QUEST MANAGEMENT FUNCTIONS =============
 
+// Quest log limits to prevent unbounded growth
+const QUEST_LOG_LIMITS = {
+  maxCompletedHistory: 50,  // Keep last 50 completed quest IDs
+  maxFailedHistory: 25,     // Keep last 25 failed quest IDs
+  maxActiveQuests: 15,      // Maximum simultaneous active quests
+} as const;
+
 export function initializeQuestLog(): QuestLog {
   return {
     quests: {},
@@ -319,6 +326,12 @@ export function startQuest(questLog: QuestLog, questId: string): QuestLog {
   // Prevent starting duplicate quests
   if (questLog.quests[questId]?.status === 'active') {
     console.warn(`[QuestSystem] Quest "${questId}" is already active`);
+    return questLog;
+  }
+  
+  // Enforce active quest limit
+  if (questLog.currentActiveCount >= QUEST_LOG_LIMITS.maxActiveQuests) {
+    console.warn(`[QuestSystem] Cannot start quest: Max active quests (${QUEST_LOG_LIMITS.maxActiveQuests}) reached`);
     return questLog;
   }
   
@@ -411,13 +424,19 @@ export function updateObjectiveProgress(
     message = `**Quest Completed: ${quest.title}!**\\n${quest.rewards.map(r => r.description).join(', ')}`;
   }
   
+  // Cap completed quest history to prevent unbounded growth
+  let newCompletedIds = questCompleted 
+    ? [...questLog.completedQuestIds, questId]
+    : questLog.completedQuestIds;
+  if (newCompletedIds.length > QUEST_LOG_LIMITS.maxCompletedHistory) {
+    newCompletedIds = newCompletedIds.slice(-QUEST_LOG_LIMITS.maxCompletedHistory);
+  }
+
   return {
     questLog: {
       ...questLog,
       quests: { ...questLog.quests, [questId]: updatedQuest },
-      completedQuestIds: questCompleted 
-        ? [...questLog.completedQuestIds, questId]
-        : questLog.completedQuestIds,
+      completedQuestIds: newCompletedIds,
       totalCompleted: questCompleted ? questLog.totalCompleted + 1 : questLog.totalCompleted,
       currentActiveCount: questCompleted ? questLog.currentActiveCount - 1 : questLog.currentActiveCount,
     },

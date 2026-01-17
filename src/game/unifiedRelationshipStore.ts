@@ -66,6 +66,10 @@ export interface RelationshipEvent {
 
 // ============= STORE STATE =============
 
+// Limits to prevent unbounded growth
+const MAX_RELATIONSHIP_EDGES = 300;
+const MAX_SIGNIFICANT_EVENTS_PER_EDGE = 15;
+
 interface RelationshipStore {
   edges: Record<string, RelationshipEdge>; // Key: "sourceId->targetId"
   playerRelationships: Record<string, RelationshipEdge>; // Quick access: NPC ID -> edge to player
@@ -162,6 +166,21 @@ export function getOrCreateRelationship(
   const key = makeEdgeKey(sourceId, targetId);
   
   if (!store.edges[key]) {
+    // Check edge limit before creating new edge
+    const edgeCount = Object.keys(store.edges).length;
+    if (edgeCount >= MAX_RELATIONSHIP_EDGES) {
+      // Prune oldest non-player edges with lowest interaction count
+      const pruneableEdges = Object.entries(store.edges)
+        .filter(([k]) => !k.includes('player'))
+        .sort((a, b) => a[1].interactionCount - b[1].interactionCount);
+      
+      const toRemove = Math.ceil(pruneableEdges.length * 0.1); // Remove 10%
+      for (let i = 0; i < Math.min(toRemove, pruneableEdges.length); i++) {
+        delete store.edges[pruneableEdges[i][0]];
+      }
+      console.log(`[RelationshipStore] Pruned ${toRemove} edges to stay under limit`);
+    }
+
     const metrics = createDefaultMetrics();
     const edge: RelationshipEdge = {
       sourceId,
@@ -230,18 +249,18 @@ export function modifyRelationship(
   edge.lastInteraction = currentTick;
   edge.interactionCount++;
   
-  // Record significant event
+  // Record significant event (with tighter threshold)
   if (Object.values(changes).some(v => Math.abs(v as number) >= 10)) {
     edge.significantEvents.push({
       tick: currentTick,
-      type: reason,
-      description: reason,
+      type: reason.slice(0, 50), // Limit reason length
+      description: reason.slice(0, 100),
       impact: changes,
     });
     
-    // Keep only last 20 events
-    if (edge.significantEvents.length > 20) {
-      edge.significantEvents = edge.significantEvents.slice(-20);
+    // Keep only last N events - reduced from 20
+    if (edge.significantEvents.length > MAX_SIGNIFICANT_EVENTS_PER_EDGE) {
+      edge.significantEvents = edge.significantEvents.slice(-MAX_SIGNIFICANT_EVENTS_PER_EDGE);
     }
   }
   
@@ -379,15 +398,38 @@ export function loadRelationshipStore(): void {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      store = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Validate structure before using
+      if (parsed && typeof parsed === 'object' && parsed.edges && parsed.playerRelationships) {
+        store = parsed;
+      } else {
+        console.warn('[RelationshipStore] Invalid store structure, using empty');
+      }
     }
   } catch (e) {
     console.error('[RelationshipStore] Failed to load:', e);
+    // Reset to empty on parse failure
+    store = { edges: {}, playerRelationships: {} };
   }
 }
 
 export function saveRelationshipStore(): void {
   try {
+    // Validate store size before saving
+    const edgeCount = Object.keys(store.edges).length;
+    if (edgeCount > MAX_RELATIONSHIP_EDGES * 1.5) {
+      console.warn(`[RelationshipStore] Store exceeds safe limit (${edgeCount} edges), pruning...`);
+      // Force prune
+      const pruneableEdges = Object.entries(store.edges)
+        .filter(([k]) => !k.includes('player'))
+        .sort((a, b) => a[1].interactionCount - b[1].interactionCount);
+      
+      const toRemove = edgeCount - MAX_RELATIONSHIP_EDGES;
+      for (let i = 0; i < Math.min(toRemove, pruneableEdges.length); i++) {
+        delete store.edges[pruneableEdges[i][0]];
+      }
+    }
+    
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   } catch (e) {
     console.error('[RelationshipStore] Failed to save:', e);

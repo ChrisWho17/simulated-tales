@@ -212,6 +212,8 @@ class CompanionSystemManager {
   private companions: Map<string, CompanionState> = new Map();
   private activeCompanions: string[] = []; // IDs of companions in party (max 3)
   private maxPartySize = 3;
+  private maxTotalCompanions = 20; // Limit total companions to prevent memory bloat
+  private maxMemoriesPerCompanion = 50; // Cap memories per companion
   
   // ========== COMPANION MANAGEMENT ==========
   
@@ -221,6 +223,19 @@ class CompanionSystemManager {
     template: keyof typeof COMPANION_TEMPLATES,
     customizations?: Partial<CompanionState>
   ): CompanionState {
+    // Enforce companion limit
+    if (this.companions.size >= this.maxTotalCompanions) {
+      // Remove oldest inactive companions
+      const inactiveCompanions = Array.from(this.companions.entries())
+        .filter(([cid]) => !this.activeCompanions.includes(cid))
+        .sort((a, b) => a[1].joinedAt - b[1].joinedAt);
+      
+      if (inactiveCompanions.length > 0) {
+        this.companions.delete(inactiveCompanions[0][0]);
+        console.log(`[Companion] Removed oldest inactive companion to make room`);
+      }
+    }
+
     const templateData = COMPANION_TEMPLATES[template] || {};
     
     const companion: CompanionState = {
@@ -364,8 +379,18 @@ class CompanionSystemManager {
         companion.romanticInterest = Math.max(0, companion.romanticInterest - 30);
       }
       
-      // Store memory
+      // Store memory with limit enforcement
       this.addMemory(companionId, 'action', reaction.description, reaction.affinityChange, actionType);
+      
+      // Enforce memory limit
+      if (companion.memories.length > this.maxMemoriesPerCompanion) {
+        // Remove oldest non-significant memories
+        const toRemove = companion.memories.length - this.maxMemoriesPerCompanion;
+        companion.memories = companion.memories
+          .sort((a, b) => Math.abs(b.affinityChange) - Math.abs(a.affinityChange)) // Keep significant
+          .slice(0, this.maxMemoriesPerCompanion);
+        console.log(`[Companion] Trimmed ${toRemove} memories from ${companion.name}`);
+      }
       
       // Update mood based on reaction
       this.updateMood(companion, reaction.affinityChange);
