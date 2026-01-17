@@ -338,28 +338,32 @@ export function SessionStatsProvider({ children, onPlayTimeReached, onLifetimeAc
     console.log('[SessionStats] Merged to lifetime stats');
   }, [stats, onLifetimeAchievementUnlock]);
 
-  // Merge stats periodically and on visibility change
+  // Merge stats on visibility change only - not periodically (to avoid loops)
+  // We use a ref to avoid dependency issues with useCallback
+  const mergeStatsRef = useRef(mergeToLifetimeStats);
+  mergeStatsRef.current = mergeToLifetimeStats;
+  
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        mergeToLifetimeStats();
+        mergeStatsRef.current();
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Also merge every 5 minutes
+    // Merge every 5 minutes using the ref to avoid dependency issues
     const mergeInterval = setInterval(() => {
-      mergeToLifetimeStats();
+      mergeStatsRef.current();
     }, 300000);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(mergeInterval);
       // Final merge on unmount
-      mergeToLifetimeStats();
+      mergeStatsRef.current();
     };
-  }, [mergeToLifetimeStats]);
+  }, []); // Empty deps - use ref for stable callback
 
   return (
     <SessionStatsContext.Provider value={{ 

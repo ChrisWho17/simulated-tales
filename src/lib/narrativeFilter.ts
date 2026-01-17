@@ -33,6 +33,8 @@ const OOC_PATTERNS = [
   /As an AI[,\s].+?(?:\.|$)/gi,
   /I cannot[^.]*as an AI[^.]*\./gi,
   /I'm an AI[^.]*\./gi,
+  /I am an AI[^.]*\./gi,
+  /As a language model[^.]*\./gi,
   
   // Meta instructions to player about format
   /\(Please respond with[^)]+\)/gi,
@@ -49,6 +51,26 @@ const OOC_PATTERNS = [
   /---STATE_DELTA---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   /---NEXT_HOOKS---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   /---NEXT_CHOICES---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
+  
+  // Prompt injection attempts (author playstyle attacks)
+  /\[SYSTEM[:\s].+?\]/gi,
+  /\(SYSTEM[:\s].+?\)/gi,
+  /IGNORE PREVIOUS INSTRUCTIONS[^.]*\./gi,
+  /DISREGARD ALL PRIOR[^.]*\./gi,
+  /YOU ARE NOW[^.]*\./gi,
+  /ACT AS IF[^.]*\./gi,
+  /PRETEND YOU ARE[^.]*\./gi,
+  /NEW INSTRUCTIONS?:/gi,
+  /OVERRIDE:/gi,
+  /ADMIN MODE/gi,
+  /DEV MODE/gi,
+  /JAILBREAK/gi,
+  /\[\[.+?\]\]/gi, // Double bracket injections
+  /\{\{.+?\}\}/gi, // Double brace injections
+  
+  // Code/technical leakage
+  /```[\s\S]*?```/g, // Code blocks
+  /<[a-z]+[^>]*>/gi, // HTML tags (but be careful not to strip markdown)
 ];
 
 // Patterns for lines that should be completely removed
