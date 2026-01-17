@@ -469,6 +469,7 @@ const SLOT_CONFIG: Record<AttachmentSlot, { label: string; icon: typeof Crosshai
   tactical_rail_top: { label: 'Top Rail', icon: Settings2 },
   tactical_rail_side: { label: 'Side Rail', icon: Settings2 },
   tactical_rail_bottom: { label: 'Bottom Rail', icon: Settings2 },
+  bayonet: { label: 'Bayonet', icon: Crosshair },
 };
 
 const PART_CONFIG = {

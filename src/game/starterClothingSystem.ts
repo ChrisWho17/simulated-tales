@@ -437,14 +437,11 @@ export function buildClothingDescriptionForAI(
 }
 
 /**
- * Get fallback underwear description (SFW) for when character is truly unclothed
- * This should only happen in very specific story contexts
+ * Build a naked description for AI - only used when character is truly unclothed
+ * No fallback to underwear - if naked, they're naked
  */
-export function getUnderwearDescription(gender: string = 'male'): string {
-  if (gender === 'female') {
-    return 'wearing basic undergarments';
-  }
-  return 'wearing basic undergarments';
+export function getNakedDescription(gender: string = 'male'): string {
+  return 'naked, unclothed';
 }
 
 /**

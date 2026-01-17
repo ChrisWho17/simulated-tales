@@ -18,7 +18,8 @@ export type AttachmentSlot =
   | 'optic'
   | 'tactical_rail_top'
   | 'tactical_rail_side'
-  | 'tactical_rail_bottom';
+  | 'tactical_rail_bottom'
+  | 'bayonet';  // Added bayonet slot
 
 export type TacticalAttachmentType =
   | 'flashlight'
@@ -28,7 +29,10 @@ export type TacticalAttachmentType =
   | 'foregrip_vertical'
   | 'foregrip_angled'
   | 'bipod'
-  | 'grenade_launcher';
+  | 'grenade_launcher'
+  | 'bayonet_knife'      // Standard knife bayonet
+  | 'bayonet_spike'      // Spike bayonet
+  | 'bayonet_sword';     // Sword bayonet for ceremonial/older rifles
 
 export type OpticType =
   | 'iron_sights'
@@ -435,6 +439,56 @@ const MAGAZINE_ATTACHMENTS: Record<string, Partial<WeaponAttachment>> = {
   },
 };
 
+// ============= BAYONET ATTACHMENTS =============
+
+const BAYONET_ATTACHMENTS: Record<string, Partial<WeaponAttachment>> = {
+  knife_bayonet: {
+    name: 'Knife Bayonet',
+    subType: 'bayonet_knife',
+    durability: 0.3,
+    weight: 350,
+    modifiers: { ergonomics: -3 },
+    rarity: 'common',
+    description: 'Standard military knife bayonet. Turns your rifle into a spear.',
+  },
+  spike_bayonet: {
+    name: 'Spike Bayonet',
+    subType: 'bayonet_spike',
+    durability: 0.2,
+    weight: 200,
+    modifiers: { ergonomics: -1 },
+    rarity: 'uncommon',
+    description: 'Triangular spike bayonet. Lightweight but causes severe wounds.',
+  },
+  sword_bayonet: {
+    name: 'Sword Bayonet',
+    subType: 'bayonet_sword',
+    durability: 0.4,
+    weight: 550,
+    modifiers: { ergonomics: -8 },
+    rarity: 'rare',
+    description: 'Long blade bayonet for ceremonial or older rifles. Excellent reach.',
+  },
+  modern_bayonet: {
+    name: 'Modern Combat Bayonet',
+    subType: 'bayonet_knife',
+    durability: 0.25,
+    weight: 280,
+    modifiers: { ergonomics: -2 },
+    rarity: 'uncommon',
+    description: 'Multi-purpose bayonet with wire cutter and saw back.',
+  },
+  serrated_bayonet: {
+    name: 'Serrated Bayonet',
+    subType: 'bayonet_knife',
+    durability: 0.35,
+    weight: 320,
+    modifiers: { ergonomics: -4 },
+    rarity: 'rare',
+    description: 'Vicious serrated blade. Intimidating appearance.',
+  },
+};
+
 // ============= ATTACHMENT SYSTEM =============
 
 export const WeaponAttachmentSystem = {
@@ -463,6 +517,7 @@ export const WeaponAttachmentSystem = {
       stock: STOCK_ATTACHMENTS,
       magazine: MAGAZINE_ATTACHMENTS,
       handguard: GRIP_ATTACHMENTS, // Reuse grip for simplicity
+      bayonet: BAYONET_ATTACHMENTS,
     };
     
     const slotTemplates = templates[slot];
@@ -721,6 +776,7 @@ export const WeaponAttachmentSystem = {
       stock: STOCK_ATTACHMENTS,
       magazine: MAGAZINE_ATTACHMENTS,
       handguard: GRIP_ATTACHMENTS,
+      bayonet: BAYONET_ATTACHMENTS,
     };
     
     return Object.keys(templates[slot] || {});
