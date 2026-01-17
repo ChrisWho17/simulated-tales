@@ -377,61 +377,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-        {/* Top Right Controls - Color & Sign In */}
-        <div className="absolute top-[100px] right-4 z-20 flex items-center gap-2">
-          {/* Color Picker Button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setShowColorSplash(true)}
-                  className="flex items-center justify-center w-10 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
-                >
-                  <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Change theme color</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          {/* Sign In / User Button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {isAuthenticated ? (
-                  <button
-                    onClick={() => signOut()}
-                    className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-primary/20 border border-primary/30 hover:bg-primary/30 transition-all duration-300 group"
-                  >
-                    <ThemedGoogleIcon className="w-5 h-5" />
-                    <span className="text-sm text-primary font-medium max-w-[100px] truncate">
-                      {user?.email?.split('@')[0]}
-                    </span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => signInWithOAuth('google')}
-                    className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
-                    disabled={authLoading}
-                  >
-                    <ThemedGoogleIcon className="w-5 h-5" />
-                    <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                      Sign In
-                    </span>
-                  </button>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isAuthenticated ? 'Sign out' : 'Sign in with Google'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        
         {/* Logo/Title */}
-        <div className="text-center mb-10 animate-fade-in">
+        <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-3">
             <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
               UNTOLD
@@ -450,10 +397,63 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
         {/* Main Content */}
         <div className="w-full max-w-3xl space-y-8">
-          {/* Game Settings Menu & Lifetime Stats - Side by Side */}
-          <div className="flex justify-center items-center gap-3 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+          {/* Unified Controls Row - Game Settings, Achievements, Color, Sign In */}
+          <div className="flex justify-center items-center gap-2 flex-wrap animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+            {/* Game Settings */}
             <GameSettingsMenu />
+            
+            {/* Lifetime Stats / Achievements */}
             <LifetimeStatsModal />
+            
+            {/* Color Picker Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setShowColorSplash(true)}
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
+                  >
+                    <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Change theme color</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {/* Sign In / User Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {isAuthenticated ? (
+                    <button
+                      onClick={() => signOut()}
+                      className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-primary/20 border border-primary/30 hover:bg-primary/30 transition-all duration-300 group animate-electric-flicker"
+                    >
+                      <ThemedGoogleIcon className="w-5 h-5" />
+                      <span className="text-sm text-primary font-medium max-w-[100px] truncate">
+                        {user?.email?.split('@')[0]}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => signInWithOAuth('google')}
+                      className="flex items-center justify-center gap-2 px-3 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
+                      disabled={authLoading}
+                    >
+                      <ThemedGoogleIcon className="w-5 h-5" />
+                      <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                        Sign In
+                      </span>
+                    </button>
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isAuthenticated ? 'Sign out' : 'Sign in with Google'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           {/* Genre Contract Setup - Glass Panel */}

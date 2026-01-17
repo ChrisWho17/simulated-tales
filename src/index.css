@@ -687,6 +687,61 @@
     50% { transform: translateY(-10px); }
   }
 
+  /* Electric Flicker Animation - for signed-in state */
+  @keyframes electric-flicker {
+    0%, 100% { 
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.3), 
+                  0 0 10px hsl(var(--primary) / 0.2);
+      border-color: hsl(var(--primary) / 0.3);
+    }
+    10% { 
+      box-shadow: 0 0 15px hsl(var(--primary) / 0.6), 
+                  0 0 25px hsl(var(--primary) / 0.4);
+      border-color: hsl(var(--primary) / 0.6);
+    }
+    15% { 
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.2), 
+                  0 0 8px hsl(var(--primary) / 0.1);
+      border-color: hsl(var(--primary) / 0.25);
+    }
+    25% { 
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.7), 
+                  0 0 35px hsl(var(--primary) / 0.5),
+                  inset 0 0 5px hsl(var(--primary) / 0.1);
+      border-color: hsl(var(--primary) / 0.7);
+    }
+    35% { 
+      box-shadow: 0 0 8px hsl(var(--primary) / 0.35), 
+                  0 0 15px hsl(var(--primary) / 0.25);
+      border-color: hsl(var(--primary) / 0.35);
+    }
+    50% { 
+      box-shadow: 0 0 12px hsl(var(--primary) / 0.5), 
+                  0 0 20px hsl(var(--primary) / 0.35);
+      border-color: hsl(var(--primary) / 0.5);
+    }
+    65% { 
+      box-shadow: 0 0 25px hsl(var(--primary) / 0.8), 
+                  0 0 40px hsl(var(--primary) / 0.6),
+                  inset 0 0 8px hsl(var(--primary) / 0.15);
+      border-color: hsl(var(--primary) / 0.8);
+    }
+    75% { 
+      box-shadow: 0 0 6px hsl(var(--primary) / 0.25), 
+                  0 0 10px hsl(var(--primary) / 0.15);
+      border-color: hsl(var(--primary) / 0.28);
+    }
+    85% { 
+      box-shadow: 0 0 18px hsl(var(--primary) / 0.65), 
+                  0 0 30px hsl(var(--primary) / 0.45);
+      border-color: hsl(var(--primary) / 0.65);
+    }
+  }
+
+  .animate-electric-flicker {
+    animation: electric-flicker 3s ease-in-out infinite;
+  }
+
   /* Stagger Animation Delays */
   .stagger-1 { animation-delay: 0.05s; }
   .stagger-2 { animation-delay: 0.1s; }
