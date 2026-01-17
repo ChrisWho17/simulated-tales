@@ -86,6 +86,10 @@ import { ClothingShop } from './ClothingShop';
 import { ClothingItem } from '@/game/clothingItemSystem';
 import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/components/debug/StorageDiagnosticsSplash';
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
+import { CompanionPanel } from './CompanionPanel';
+import { CompanionCommentsBlock } from './CompanionCommentary';
+import { useCompanionSystem, CompanionComment } from '@/hooks/useCompanionSystem';
+import { Users } from 'lucide-react';
 
 const STORAGE_KEY = 'living-world-save';
 const CHARACTER_KEY = 'living-world-character';
@@ -339,9 +343,11 @@ export function GameUI() {
   // Cheat mode (secret command: /ImACheater)
   const cheatMode = useCheatModeCommand();
   const [combatNPC, setCombatNPC] = useState<NPC | null>(null);
+  const [showCompanionPanel, setShowCompanionPanel] = useState(false);
   
-  // Game polish systems (optional - gracefully degrade if not available)
-  const screenEffects = useScreenEffectsOptional();
+  // Companion System
+  const companionHook = useCompanionSystem({ enableAIDialogue: true, genre: 'fantasy' });
+  const [companionComments, setCompanionComments] = useState<CompanionComment[]>([]);
   const sessionStats = useSessionStatsOptional();
   const achievementsContext = useAchievementsOptional();
   const { changes: statChanges, addChange: addStatChange, removeChange: removeStatChange } = useStatChanges();
@@ -1457,8 +1463,22 @@ export function GameUI() {
         <WeatherDisplay weather={weather} timeOfDay={getTimePeriod(gameState.time.hour)} compact />
       </div>
       
-      {/* Quest Journal & Story Recap Buttons */}
+      {/* Quest Journal & Story Recap & Companions Buttons */}
       <div className="absolute top-16 right-4 z-20 flex gap-2">
+        <button
+          onClick={() => setShowCompanionPanel(true)}
+          className="p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
+          title="Companions"
+        >
+          <span className="text-sm font-medium flex items-center gap-1">
+            <Users className="w-4 h-4" /> Party
+            {companionHook.activeCompanions.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground text-xs rounded-full">
+                {companionHook.activeCompanions.length}
+              </span>
+            )}
+          </span>
+        </button>
         <button
           onClick={() => setShowStoryRecap(true)}
           className="p-2 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 transition-colors"
@@ -1587,6 +1607,20 @@ export function GameUI() {
         onSell={handleClothingSell}
         isOpen={showClothingShop}
         onOpenChange={setShowClothingShop}
+      />
+      
+      {/* Companion Panel */}
+      <CompanionPanel
+        isOpen={showCompanionPanel}
+        onClose={() => setShowCompanionPanel(false)}
+        onCompanionSpeak={(companion, dialogue) => {
+          setDisplayEvents(prev => [...prev, {
+            id: `companion_${Date.now()}`,
+            type: 'dialogue' as const,
+            content: `**${companion.name}**: "${dialogue}"`,
+            timestamp: gameState.time.tick,
+          }]);
+        }}
       />
       
       {/* Storage Diagnostics (secret: /StorageDiag) */}
