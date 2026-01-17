@@ -24,8 +24,10 @@ import {
 } from '@/components/ui/select';
 import { DataWipeModal } from './DataWipeModal';
 import { BackupRestoreModal } from './BackupRestoreModal';
+import { PreMigrationBackupModal } from './PreMigrationBackupModal';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
 import { GameGenre } from '@/types/genreData';
+import { Shield } from 'lucide-react';
 
 export interface GameSettingsMenuProps {
   className?: string;
@@ -52,6 +54,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
   const { settings, updateSettings, diceMode, setDiceMode } = useGame();
   const [isOpen, setIsOpen] = useState(false);
   const [showWipeModal, setShowWipeModal] = useState(false);
+  const [showPreMigrationBackup, setShowPreMigrationBackup] = useState(false);
 
   const DICE_MODE_OPTIONS = [
     { 
@@ -323,6 +326,17 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <BackupRestoreModal />
           </div>
           
+          {/* Pre-Migration Backup - For major updates */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreMigrationBackup(true)}
+            className="w-full flex items-center justify-center gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
+          >
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-sm">Complete Backup (Pre-Update)</span>
+          </Button>
+          
           {/* Data Wipe Button */}
           <Button
             variant="outline"
@@ -339,6 +353,11 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
       <DataWipeModal 
         open={showWipeModal} 
         onOpenChange={setShowWipeModal}
+      />
+      
+      <PreMigrationBackupModal
+        open={showPreMigrationBackup}
+        onOpenChange={setShowPreMigrationBackup}
       />
     </Collapsible>
   );
