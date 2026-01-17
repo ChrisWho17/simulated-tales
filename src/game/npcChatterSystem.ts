@@ -643,6 +643,9 @@ function isNPCAvailable(npcId: string): boolean {
   return Date.now() >= cooldownEnd;
 }
 
+// Limit for NPC cooldowns map to prevent memory bloat
+const MAX_NPC_COOLDOWNS = 100;
+
 /**
  * Set NPC cooldown after chattering
  */
@@ -652,6 +655,26 @@ function setNPCCooldown(npcId: string): void {
     chatterState.config.npcCooldownSecondsMax * 1000
   );
   chatterState.npcCooldowns.set(npcId, Date.now() + cooldownMs);
+  
+  // Prune old cooldowns if exceeding limit
+  if (chatterState.npcCooldowns.size > MAX_NPC_COOLDOWNS) {
+    const now = Date.now();
+    // First remove expired cooldowns
+    for (const [id, endTime] of chatterState.npcCooldowns) {
+      if (endTime < now) {
+        chatterState.npcCooldowns.delete(id);
+      }
+    }
+    // If still over limit, remove oldest
+    if (chatterState.npcCooldowns.size > MAX_NPC_COOLDOWNS) {
+      const entries = Array.from(chatterState.npcCooldowns.entries());
+      entries.sort((a, b) => a[1] - b[1]); // Sort by end time
+      const toRemove = entries.slice(0, entries.length - MAX_NPC_COOLDOWNS);
+      for (const [id] of toRemove) {
+        chatterState.npcCooldowns.delete(id);
+      }
+    }
+  }
 }
 
 /**

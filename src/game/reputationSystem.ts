@@ -231,18 +231,37 @@ export function modifyLocationReputation(
     newInfamy = Math.min(100, newInfamy + Math.floor(Math.abs(clampedAmount) / 3));
   }
   
+  // Limit significant events to prevent bloat
+  const MAX_SIGNIFICANT_EVENTS = 10;
+  const MAX_LOCATIONS = 100;
+  
+  let updatedLocations = {
+    ...world.locations,
+    [locationId]: {
+      ...existing,
+      reputation: newReputation,
+      traits: newTraits,
+      lastVisit: currentTick,
+      significantEvents: [...existing.significantEvents.slice(-(MAX_SIGNIFICANT_EVENTS - 1)), event]
+    }
+  };
+  
+  // Prune locations if exceeding limit
+  const locationKeys = Object.keys(updatedLocations);
+  if (locationKeys.length > MAX_LOCATIONS) {
+    const sortedKeys = locationKeys.sort((a, b) => 
+      (updatedLocations[b].lastVisit || 0) - (updatedLocations[a].lastVisit || 0)
+    );
+    const prunedLocations: Record<string, LocationReputation> = {};
+    sortedKeys.slice(0, MAX_LOCATIONS).forEach(key => {
+      prunedLocations[key] = updatedLocations[key];
+    });
+    updatedLocations = prunedLocations;
+  }
+  
   const updatedWorld = {
     ...world,
-    locations: {
-      ...world.locations,
-      [locationId]: {
-        ...existing,
-        reputation: newReputation,
-        traits: newTraits,
-        lastVisit: currentTick,
-        significantEvents: [...existing.significantEvents.slice(-9), event]
-      }
-    },
+    locations: updatedLocations,
     globalFame: newFame,
     globalInfamy: newInfamy
   };

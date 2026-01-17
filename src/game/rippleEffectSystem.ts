@@ -393,6 +393,12 @@ export function detectActionCategory(action: string, context: { isPublic?: boole
 
 // ============= RIPPLE PROCESSING =============
 
+// Limits to prevent memory bloat
+const MAX_ACTIVE_RIPPLES = 50;
+const MAX_TRIGGERED_EFFECTS_PER_TURN = 10;
+const MAX_NARRATIVE_QUEUE = 5;
+const MAX_RIPPLE_AGE_TURNS = 500; // Expire ripples older than this
+
 export interface RippleProcessResult {
   updatedRipples: ActiveRipple[];
   triggeredEffects: RipplePhase[];
@@ -406,16 +412,31 @@ export function processRipples(
   const triggeredEffects: RipplePhase[] = [];
   const narrativeQueue: string[] = [];
   
-  const updatedRipples = ripples.map(ripple => {
+  // Filter out old ripples first to prevent unbounded growth
+  const activeRipples = ripples.filter(r => {
+    if (r.expired) return false;
+    // Auto-expire very old ripples
+    if (currentTurn - r.triggerTurn > MAX_RIPPLE_AGE_TURNS) return false;
+    return true;
+  });
+  
+  const updatedRipples = activeRipples.map(ripple => {
     if (ripple.expired) return ripple;
     
     const updatedEffects = ripple.effects.map(effect => {
       if (effect.triggered) return effect;
       if ((effect.scheduledTurn ?? 0) > currentTurn) return effect;
       
+      // Rate limit triggered effects per turn
+      if (triggeredEffects.length >= MAX_TRIGGERED_EFFECTS_PER_TURN) {
+        return effect; // Don't trigger yet, leave for next turn
+      }
+      
       // Trigger this effect
       triggeredEffects.push(effect);
-      narrativeQueue.push(effect.description);
+      if (narrativeQueue.length < MAX_NARRATIVE_QUEUE) {
+        narrativeQueue.push(effect.description);
+      }
       
       return { ...effect, triggered: true };
     });
@@ -430,14 +451,28 @@ export function processRipples(
     };
   });
   
+  // Prune to max ripples, keeping most recent
+  let prunedRipples = updatedRipples.filter(r => !r.expired);
+  if (prunedRipples.length > MAX_ACTIVE_RIPPLES) {
+    prunedRipples = prunedRipples
+      .sort((a, b) => b.triggerTurn - a.triggerTurn)
+      .slice(0, MAX_ACTIVE_RIPPLES);
+  }
+  
   return {
-    updatedRipples: updatedRipples.filter(r => !r.expired),
+    updatedRipples: prunedRipples,
     triggeredEffects,
     narrativeQueue,
   };
 }
 
 // ============= WORLD STATE CHANGES =============
+
+// Limits for world state arrays
+const MAX_REPUTATION_CHANGES = 20;
+const MAX_INVESTIGATIONS = 10;
+const MAX_MANHUNTS = 5;
+const MAX_PRICE_MODIFIERS = 30;
 
 export interface WorldStateChanges {
   guardAlertLevel: number;
@@ -459,6 +494,42 @@ export function createDefaultWorldState(): WorldStateChanges {
     publicMood: 'peaceful',
     securityLevel: 'normal',
   };
+}
+
+// Prune world state to prevent memory bloat
+export function pruneWorldState(state: WorldStateChanges): WorldStateChanges {
+  const pruned = { ...state };
+  
+  // Limit reputation changes
+  if (pruned.reputationChanges.length > MAX_REPUTATION_CHANGES) {
+    pruned.reputationChanges = pruned.reputationChanges.slice(-MAX_REPUTATION_CHANGES);
+  }
+  
+  // Limit investigations
+  if (pruned.activeInvestigations.length > MAX_INVESTIGATIONS) {
+    pruned.activeInvestigations = pruned.activeInvestigations
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, MAX_INVESTIGATIONS);
+  }
+  
+  // Limit manhunts
+  if (pruned.activeManhunts.length > MAX_MANHUNTS) {
+    pruned.activeManhunts = pruned.activeManhunts
+      .sort((a, b) => b.intensity - a.intensity)
+      .slice(0, MAX_MANHUNTS);
+  }
+  
+  // Limit price modifiers
+  const priceKeys = Object.keys(pruned.priceModifiers);
+  if (priceKeys.length > MAX_PRICE_MODIFIERS) {
+    const newPriceModifiers: Record<string, number> = {};
+    priceKeys.slice(-MAX_PRICE_MODIFIERS).forEach(key => {
+      newPriceModifiers[key] = pruned.priceModifiers[key];
+    });
+    pruned.priceModifiers = newPriceModifiers;
+  }
+  
+  return pruned;
 }
 
 export function applyRippleEffect(

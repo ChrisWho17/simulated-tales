@@ -322,14 +322,40 @@ export function selectMicroEvent(
 }
 
 // Should a micro-event trigger this turn?
+// Added rate limiting to prevent spam
+const MICRO_EVENT_COOLDOWN = 3; // Minimum turns between micro-events
+const MAX_MICRO_EVENTS_PER_SESSION = 100; // Limit total per session
+let microEventCount = 0;
+
 export function shouldTriggerMicroEvent(
   turnsSinceLastMicroEvent: number,
   worldPressureLevel: number = 50
 ): boolean {
+  // Enforce cooldown
+  if (turnsSinceLastMicroEvent < MICRO_EVENT_COOLDOWN) {
+    return false;
+  }
+  
+  // Limit total per session to prevent memory issues
+  if (microEventCount >= MAX_MICRO_EVENTS_PER_SESSION) {
+    return false;
+  }
+  
   // Base chance increases over time, modified by world pressure
   const baseChance = Math.min(0.15, turnsSinceLastMicroEvent * 0.02);
   const pressureModifier = worldPressureLevel > 70 ? 1.5 : worldPressureLevel < 30 ? 0.7 : 1.0;
-  return Math.random() < baseChance * pressureModifier;
+  const shouldTrigger = Math.random() < baseChance * pressureModifier;
+  
+  if (shouldTrigger) {
+    microEventCount++;
+  }
+  
+  return shouldTrigger;
+}
+
+// Reset micro-event count (call on new game/session)
+export function resetMicroEventCount(): void {
+  microEventCount = 0;
 }
 
 // Build micro-event context for AI
