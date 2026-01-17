@@ -68,7 +68,6 @@ import {
 import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
-import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
 import { useGameLoop } from '@/hooks/useGameLoop';
@@ -2145,8 +2144,7 @@ export function AdventureDisplay({
       
       {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       
-      {/* Event Bus Debug Panel - show if enabled in settings or cheat mode */}
-      {(cheatMode || (gameContext?.settings?.showEventBusDebug ?? false)) && <EventBusDebugPanel />}
+      {/* Event Bus Debug Panel moved to CheatModeSplash - use /events command */}
       
       {/* Consequence Feed - show if enabled in settings */}
       {(gameContext?.settings?.showConsequenceFeed ?? true) && <ConsequenceFeed compact={false} />}

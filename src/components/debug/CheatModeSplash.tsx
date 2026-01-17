@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wand2, X, Save, RefreshCw, Loader2, User, Heart, Shield, Sword, 
   Brain, Zap, Star, Coins, ChevronDown, ChevronUp, AlertTriangle,
-  Shirt, Sparkles
+  Shirt, Sparkles, Activity, Database, ShieldCheck, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useAchievementsOptional } from '@/components/game/Achievements';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { DataIntegrityService, IntegrityReport } from '@/services/dataIntegrityService';
+import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
 import { RPGCharacter, CharacterStats } from '@/types/rpgCharacter';
 import { 
   TieredAppearance, 
@@ -45,6 +47,7 @@ interface CheatModeSplashProps {
   character?: RPGCharacter & { portraitUrl?: string };
   onUpdateCharacter?: (character: RPGCharacter & { portraitUrl?: string }) => void;
   genre?: string;
+  initialMode?: DevPanelMode;
 }
 
 // Save character appearance to campaign for consistent image generation
@@ -94,7 +97,8 @@ export function CheatModeSplash({
   onClose, 
   character, 
   onUpdateCharacter,
-  genre = 'fantasy'
+  genre = 'fantasy',
+  initialMode = 'cheat'
 }: CheatModeSplashProps) {
   const achievements = useAchievementsOptional();
   const hasUnlockedCheaterAchievement = useRef(false);
@@ -115,16 +119,52 @@ export function CheatModeSplash({
   // Appearance
   const [appearance, setAppearance] = useState<TieredAppearance | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    stats: true,
+    stats: initialMode === 'cheat',
     appearance: false,
     equipment: false,
+    developer: initialMode === 'events' || initialMode === 'integrity',
   });
+  
+  // Developer tools state
+  const [showEventBus, setShowEventBus] = useState(initialMode === 'events');
+  const [integrityReport, setIntegrityReport] = useState<IntegrityReport | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   
   // Equipment override for portraits
   const [currentGear, setCurrentGear] = useState<string>('');
   const [hasEquippedGear, setHasEquippedGear] = useState(true);
   
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Handle initialMode changes when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setExpandedSections({
+        stats: initialMode === 'cheat',
+        appearance: false,
+        equipment: false,
+        developer: initialMode === 'events' || initialMode === 'integrity',
+      });
+      setShowEventBus(initialMode === 'events');
+      
+      // Auto-run integrity scan when opened via /integrity command
+      if (initialMode === 'integrity') {
+        setIsScanning(true);
+        DataIntegrityService.runFullScan().then(report => {
+          setIntegrityReport(report);
+          if (report.corrupted === 0 && report.unrecoverable === 0) {
+            toast.success('All campaigns healthy!');
+          } else {
+            toast.warning(`Found ${report.corrupted + report.unrecoverable} issues`);
+          }
+        }).catch(() => {
+          toast.error('Scan failed');
+        }).finally(() => {
+          setIsScanning(false);
+        });
+      }
+    }
+  }, [isOpen, initialMode]);
   
   // Unlock cheater achievement when cheat mode is first opened
   useEffect(() => {
@@ -631,8 +671,129 @@ export function CheatModeSplash({
                     </div>
                   )}
                 </div>
+                
+                {/* Developer Tools Section */}
+                <div className="border border-border/50 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('developer')}
+                    className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-cyan-400" />
+                      <span className="font-medium text-sm">Developer Tools</span>
+                    </div>
+                    {expandedSections.developer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  
+                  {expandedSections.developer && (
+                    <div className="p-4 space-y-4">
+                      {/* Event Bus Debug */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-blue-400" />
+                            Event Bus Monitor
+                          </Label>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setShowEventBus(!showEventBus)}
+                            className="text-xs"
+                          >
+                            {showEventBus ? 'Hide' : 'Show'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Monitor game events in real-time for debugging
+                        </p>
+                      </div>
+                      
+                      {/* Data Integrity Check */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm flex items-center gap-2">
+                            <Database className="w-4 h-4 text-emerald-400" />
+                            Data Integrity
+                          </Label>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={async () => {
+                              setIsScanning(true);
+                              try {
+                                const report = await DataIntegrityService.runFullScan();
+                                setIntegrityReport(report);
+                                if (report.corrupted === 0 && report.unrecoverable === 0) {
+                                  toast.success('All campaigns healthy!');
+                                } else {
+                                  toast.warning(`Found ${report.corrupted + report.unrecoverable} issues`);
+                                }
+                              } catch (e) {
+                                toast.error('Scan failed');
+                              } finally {
+                                setIsScanning(false);
+                              }
+                            }}
+                            disabled={isScanning}
+                            className="text-xs gap-1"
+                          >
+                            {isScanning ? (
+                              <><Loader2 className="w-3 h-3 animate-spin" /> Scanning...</>
+                            ) : (
+                              <><ShieldCheck className="w-3 h-3" /> Run Scan</>
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Check save data integrity and auto-repair corrupted campaigns
+                        </p>
+                        
+                        {/* Integrity Report Display */}
+                        {integrityReport && (
+                          <div className="bg-background/50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">Last Scan Results</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(integrityReport.checkedAt).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                              <div className="bg-emerald-500/10 rounded p-2">
+                                <CheckCircle2 className="w-4 h-4 mx-auto text-emerald-400 mb-1" />
+                                <div className="text-lg font-bold text-emerald-400">{integrityReport.valid}</div>
+                                <div className="text-[10px] text-muted-foreground">Valid</div>
+                              </div>
+                              <div className="bg-yellow-500/10 rounded p-2">
+                                <RefreshCw className="w-4 h-4 mx-auto text-yellow-400 mb-1" />
+                                <div className="text-lg font-bold text-yellow-400">{integrityReport.repaired}</div>
+                                <div className="text-[10px] text-muted-foreground">Repaired</div>
+                              </div>
+                              <div className="bg-orange-500/10 rounded p-2">
+                                <AlertTriangle className="w-4 h-4 mx-auto text-orange-400 mb-1" />
+                                <div className="text-lg font-bold text-orange-400">{integrityReport.corrupted}</div>
+                                <div className="text-[10px] text-muted-foreground">Corrupted</div>
+                              </div>
+                              <div className="bg-red-500/10 rounded p-2">
+                                <XCircle className="w-4 h-4 mx-auto text-red-400 mb-1" />
+                                <div className="text-lg font-bold text-red-400">{integrityReport.unrecoverable}</div>
+                                <div className="text-[10px] text-muted-foreground">Lost</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </ScrollArea>
+            
+            {/* Event Bus Panel - positioned outside scroll area */}
+            {showEventBus && (
+              <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm">
+                <EventBusDebugPanel isOpen={true} onClose={() => setShowEventBus(false)} />
+              </div>
+            )}
 
             {/* Footer */}
             <div className="p-4 border-t border-border bg-muted/30 flex items-center justify-between">
@@ -664,15 +825,37 @@ export function CheatModeSplash({
   );
 }
 
-// Hook for command detection
+// Hook for command detection - supports multiple developer commands
+export type DevPanelMode = 'cheat' | 'events' | 'integrity';
+
 export function useCheatModeCommand() {
   const [isOpen, setIsOpen] = useState(false);
+  const [initialMode, setInitialMode] = useState<DevPanelMode>('cheat');
 
   const checkCommand = useCallback((input: string): boolean => {
-    if (input.trim().toLowerCase() === '/imacheater') {
+    const cmd = input.trim().toLowerCase();
+    
+    // Cheat mode commands
+    if (cmd === '/imacheater' || cmd === '/cheat' || cmd === '/dev') {
+      setInitialMode('cheat');
       setIsOpen(true);
       return true;
     }
+    
+    // Events command - opens cheat panel with developer section expanded
+    if (cmd === '/events' || cmd === '/debug') {
+      setInitialMode('events');
+      setIsOpen(true);
+      return true;
+    }
+    
+    // Integrity command - opens cheat panel with developer section and runs scan
+    if (cmd === '/integrity') {
+      setInitialMode('integrity');
+      setIsOpen(true);
+      return true;
+    }
+    
     return false;
   }, []);
 
@@ -680,5 +863,6 @@ export function useCheatModeCommand() {
     isOpen,
     setIsOpen,
     checkCommand,
+    initialMode,
   };
 }

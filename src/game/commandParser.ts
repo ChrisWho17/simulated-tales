@@ -1,13 +1,17 @@
 // Command keyword parser for enhanced text input
-// Supports: talking, actions, replies, inventory, terrain manipulation
+// Supports: talking, actions, replies, inventory, terrain manipulation, developer commands
 
 export interface ParsedCommand {
-  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself';
+  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself' | 'developer';
   verb: string;
   target?: string;
   args: string[];
   raw: string;
 }
+
+// Developer commands that open special panels
+export const DEVELOPER_COMMANDS = ['/imacheater', '/cheat', '/dev', '/integrity', '/events', '/debug'] as const;
+export type DeveloperCommand = typeof DEVELOPER_COMMANDS[number];
 
 // Keyword mappings for different command types
 const TALK_KEYWORDS = ['tell', 'greet', 'chat', 'talk'];
@@ -27,6 +31,17 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
   const words = trimmed.split(/\s+/);
   const firstWord = words[0] || '';
   const rest = words.slice(1);
+  
+  // Check for developer commands first
+  if (DEVELOPER_COMMANDS.includes(firstWord as DeveloperCommand)) {
+    return {
+      type: 'developer',
+      verb: firstWord,
+      target: rest[0],
+      args: rest,
+      raw: input,
+    };
+  }
   
   // Check for checkself command first (slash commands)
   if (CHECKSELF_KEYWORDS.includes(firstWord)) {
@@ -177,6 +192,8 @@ export function getCommandTypeInfo(type: ParsedCommand['type']): { icon: string;
       return { icon: '🚶', label: 'Move', color: 'text-orange-400' };
     case 'system':
       return { icon: '⚙️', label: 'System', color: 'text-muted-foreground' };
+    case 'developer':
+      return { icon: '🔧', label: 'Developer', color: 'text-amber-400' };
     default:
       return { icon: '❓', label: 'Unknown', color: 'text-muted-foreground' };
   }
