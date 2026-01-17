@@ -1700,10 +1700,11 @@ export function GameUI() {
         onClose={() => storageDiagnostics.setIsOpen(false)}
       />
       
-      {/* Cheat Mode (accessible from DevOptions or /ImACheater) */}
+      {/* Cheat Mode (accessible from DevOptions or /ImACheater, /integrity, /events) */}
       <CheatModeSplash
         isOpen={cheatMode.isOpen}
         onClose={() => cheatMode.setIsOpen(false)}
+        initialMode={cheatMode.initialMode}
         character={gameState.lifeSim ? {
           name: gameState.player.name,
           level: 1,
