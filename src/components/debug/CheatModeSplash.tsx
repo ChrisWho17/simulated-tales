@@ -46,6 +46,7 @@ import {
   COMPANION_TEMPLATES
 } from '@/game/companionSystem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InventoryEditor } from './InventoryEditor';
 
 const CHARACTER_KEY = 'living-world-character';
 
@@ -795,13 +796,7 @@ export function CheatModeSplash({
   );
 
   const renderInventoryScreen = () => (
-    <div className="space-y-4">
-      <div className="text-center py-12 text-muted-foreground">
-        <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <h3 className="text-lg font-medium mb-2">Inventory Editor</h3>
-        <p className="text-sm">Coming soon - modify items, add gear, and manage equipment directly.</p>
-      </div>
-    </div>
+    <InventoryEditor gunNutEnabled={true} />
   );
 
   const renderCompanionCard = (companion: CompanionState) => (
