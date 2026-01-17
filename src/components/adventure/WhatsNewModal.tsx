@@ -73,26 +73,33 @@ const CHANGELOG: ChangelogEntry[] = [
 
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasNewVersion, setHasNewVersion] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
+    // Only check once per component mount
+    if (hasChecked) return;
+    
     const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
     
+    // Immediately mark as checked to prevent double-firing
+    setHasChecked(true);
+    
     if (lastSeenVersion !== APP_VERSION) {
+      // Immediately save the version to prevent showing again on re-render
+      localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
+      
       // New version detected - show modal after a short delay
       const timer = setTimeout(() => {
-        setHasNewVersion(true);
         setIsOpen(true);
       }, 1000);
       
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [hasChecked]);
 
   const handleClose = () => {
     setIsOpen(false);
-    localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
-    setHasNewVersion(false);
+    // Version is already saved when modal opens, so just close
   };
 
   const currentChangelog = CHANGELOG[0]; // Most recent version
