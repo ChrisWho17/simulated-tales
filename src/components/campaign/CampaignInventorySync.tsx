@@ -15,6 +15,7 @@ import {
   needsStartingGear,
 } from '@/game/storyInventoryBridge';
 import { unifiedInventory } from '@/game/unifiedInventoryBridge';
+import { setLogCampaignId, forceFlush } from '@/services/inventorySyncLogger';
 
 interface CampaignInventorySyncProps {
   children: React.ReactNode;
@@ -41,6 +42,9 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
     // Campaign changed - handle transition
     if (previousCampaignId !== activeCampaignId) {
       console.log(`[CampaignInventorySync] Campaign changed: ${previousCampaignId} → ${activeCampaignId}`);
+      
+      // Update logger campaign context
+      setLogCampaignId(activeCampaignId);
       
       // Step 1: Save inventory for previous campaign (if any)
       if (previousCampaignId && inventory.state.items.length > 0) {
@@ -138,6 +142,7 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
     const handleBeforeUnload = () => {
       if (activeCampaignId) {
         saveInventoryForCampaign(activeCampaignId, inventory.state);
+        forceFlush(); // Flush any pending inventory sync logs
         console.log('[CampaignInventorySync] Saved before unload');
       }
     };

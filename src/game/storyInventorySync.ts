@@ -1,6 +1,7 @@
 // ============================================================================
 // ENHANCED STORY-INVENTORY SYNC SYSTEM
 // Phase 1: Improved item detection + actual removal of dropped/consumed items
+// With comprehensive debug logging for troubleshooting
 // ============================================================================
 
 import { InventoryItem, InventoryState } from './inventorySystem';
@@ -12,6 +13,17 @@ import {
   ParsedDrop,
 } from '@/lib/narrativeLootParser';
 import { generateFullItem } from './storyInventoryBridge';
+import {
+  logPickup,
+  logDrop,
+  logConsume,
+  logLootTag,
+  logDropTag,
+  logUseTag,
+  logMatchAttempt,
+  logWarning,
+  logError,
+} from '@/services/inventorySyncLogger';
 
 // ============================================================================
 // ENHANCED PATTERNS - More robust detection
@@ -94,17 +106,24 @@ function findMatchingInventoryItem(
   inventory: InventoryItem[]
 ): InventoryItem | null {
   const lowerName = itemName.toLowerCase().trim();
+  const inventoryNames = inventory.map(i => i.name);
   
   // 1. Exact match
   const exactMatch = inventory.find(i => i.name.toLowerCase() === lowerName);
-  if (exactMatch) return exactMatch;
+  if (exactMatch) {
+    logMatchAttempt(itemName, inventoryNames, exactMatch.name, 'exact');
+    return exactMatch;
+  }
   
   // 2. Contains match (either direction)
   const containsMatch = inventory.find(i => {
     const invLower = i.name.toLowerCase();
     return invLower.includes(lowerName) || lowerName.includes(invLower);
   });
-  if (containsMatch) return containsMatch;
+  if (containsMatch) {
+    logMatchAttempt(itemName, inventoryNames, containsMatch.name, 'contains');
+    return containsMatch;
+  }
   
   // 3. Word-based matching - check if significant words match
   const parsedWords = lowerName.split(/\s+/).filter(w => w.length >= 3);
@@ -117,6 +136,7 @@ function findMatchingInventoryItem(
     
     // If at least half the parsed words match, it's probably the same item
     if (matchingWords.length >= Math.ceil(parsedWords.length / 2)) {
+      logMatchAttempt(itemName, inventoryNames, item.name, 'word');
       return item;
     }
   }
@@ -131,9 +151,14 @@ function findMatchingInventoryItem(
       i.type?.toLowerCase() === matchedType ||
       i.weaponType?.toLowerCase() === matchedType
     );
-    if (typeMatch) return typeMatch;
+    if (typeMatch) {
+      logMatchAttempt(itemName, inventoryNames, typeMatch.name, 'type');
+      return typeMatch;
+    }
   }
   
+  // No match found
+  logMatchAttempt(itemName, inventoryNames, null, 'none');
   return null;
 }
 
@@ -268,7 +293,8 @@ export function syncStoryWithInventory(
         source: 'pickup',
       });
       
-      console.log(`[SYNC] Added item: ${loot.itemName} (${loot.confidence} confidence)`);
+      // Log to backend
+      logPickup(loot.itemName, loot.confidence, 'narrative_parsing', loot.matchedPattern);
     }
   }
   
@@ -282,12 +308,14 @@ export function syncStoryWithInventory(
       // Find the actual inventory item
       const inventoryItem = findMatchingInventoryItem(drop.itemName, currentItems);
       if (!inventoryItem) {
+        logWarning(`Drop detected but not in inventory`, { itemName: drop.itemName });
         result.warnings.push(`Drop detected but not in inventory: ${drop.itemName}`);
         continue;
       }
       
       // Don't drop protected items
       if (PROTECTED_ITEMS.has(inventoryItem.name.toLowerCase())) {
+        logWarning(`Protected item cannot be dropped`, { itemName: inventoryItem.name });
         result.warnings.push(`Protected item cannot be dropped: ${inventoryItem.name}`);
         continue;
       }
@@ -304,7 +332,8 @@ export function syncStoryWithInventory(
         confidence: drop.confidence,
       });
       
-      console.log(`[SYNC] Removed (dropped): ${inventoryItem.name} (${drop.confidence} confidence)`);
+      // Log to backend
+      logDrop(inventoryItem.name, inventoryItem.instanceId, drop.confidence, drop.matchedPattern);
     }
   }
   
@@ -362,7 +391,8 @@ export function syncStoryWithInventory(
         confidence: consumption.confidence,
       });
       
-      console.log(`[SYNC] Removed (consumed): ${inventoryItem.name} (${consumption.confidence} confidence)`);
+      // Log to backend
+      logConsume(inventoryItem.name, inventoryItem.instanceId, consumption.confidence, consumption.matchedPattern);
     }
   }
   
@@ -418,7 +448,8 @@ export function processAIMechanicsTags(
         source: 'loot',
       });
       
-      console.log(`[MECHANICS] Added from [LOOT:]: ${itemName}`);
+      // Log to backend
+      logLootTag(itemName, detection.category);
     }
   }
   
@@ -437,8 +468,10 @@ export function processAIMechanicsTags(
           confidence: 'high',
         });
         
-        console.log(`[MECHANICS] Removed from [DROP:]: ${inventoryItem.name}`);
+        // Log to backend
+        logDropTag(itemName, inventoryItem.name, inventoryItem.instanceId);
       } else {
+        logDropTag(itemName, null, null);
         result.warnings.push(`[DROP:] tag for item not in inventory: ${itemName}`);
       }
     }
@@ -466,8 +499,10 @@ export function processAIMechanicsTags(
           confidence: 'high',
         });
         
-        console.log(`[MECHANICS] Consumed from [USE:]: ${inventoryItem.name}`);
+        // Log to backend
+        logUseTag(itemName, inventoryItem.name, inventoryItem.instanceId);
       } else {
+        logUseTag(itemName, null, null);
         result.warnings.push(`[USE:] tag for item not in inventory: ${itemName}`);
       }
     }
