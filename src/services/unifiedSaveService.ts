@@ -1,11 +1,13 @@
 // ============================================================================
 // UNIFIED SAVE SERVICE - Cloud-first with Google auth, GUEST-LOCAL fallback
+// Now with IndexedDB cache for reliable persistence
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
 import { CampaignData, CampaignMetadata } from '@/types/campaign';
 import { GameGenre } from '@/types/genreData';
 import LZString from 'lz-string';
+import { IndexedDBCache } from '@/lib/indexedDBCache';
 
 // ============================================================================
 // TYPES
@@ -256,7 +258,8 @@ class UnifiedSaveServiceClass {
     if (this.account.mode === 'cloud') {
       return this.loadFromCloud(campaignId);
     }
-    return this.loadFromGuest(campaignId);
+    // Use recovery-enabled loader for guest mode
+    return this.loadFromGuestWithRecovery(campaignId);
   }
 
   async deleteCampaign(campaignId: string): Promise<SaveResult> {
@@ -480,6 +483,12 @@ class UnifiedSaveServiceClass {
       const compressed = compressCampaign(campaign);
       localStorage.setItem(key, compressed);
 
+      // Also cache to IndexedDB for redundancy
+      const checksum = generateChecksum(campaign);
+      IndexedDBCache.cacheSave(campaign.id, compressed, checksum, 'local').catch(e => {
+        console.warn('[UnifiedSave] IndexedDB cache failed (non-critical):', e);
+      });
+
       // Update index
       const index = this.listGuestCampaigns();
       const existing = index.findIndex(c => c.id === campaign.id);
@@ -510,6 +519,33 @@ class UnifiedSaveServiceClass {
     } catch (e) {
       console.error('[UnifiedSave] Guest save failed:', e);
       return { success: false, error: 'Local save failed' };
+    }
+  }
+
+  private async loadFromGuestWithRecovery(campaignId: string): Promise<CampaignData | null> {
+    try {
+      const key = `${GUEST_PREFIX}${campaignId}`;
+      let compressed = localStorage.getItem(key);
+      
+      // If not in localStorage, try IndexedDB cache recovery
+      if (!compressed) {
+        console.log(`[UnifiedSave] Save not in localStorage, attempting IndexedDB recovery...`);
+        compressed = await IndexedDBCache.recoverMissingSave(campaignId);
+        if (compressed) {
+          // Restore to localStorage
+          localStorage.setItem(key, compressed);
+          console.log(`[UnifiedSave] Recovered save from IndexedDB cache: ${campaignId}`);
+        }
+      }
+      
+      if (!compressed) return null;
+
+      const campaign = decompressCampaign(compressed);
+      console.log(`[UnifiedSave] Guest loaded: ${campaign?.meta?.name}`);
+      return campaign;
+    } catch (e) {
+      console.error('[UnifiedSave] Guest load failed:', e);
+      return null;
     }
   }
 
