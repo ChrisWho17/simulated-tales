@@ -88,8 +88,9 @@ import { StorageDiagnosticsSplash, useStorageDiagnosticsCommand } from '@/compon
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
 import { CompanionPanel } from './CompanionPanel';
 import { CompanionCommentsBlock } from './CompanionCommentary';
-import { useCompanionSystem, CompanionComment, PendingRelationshipEvent } from '@/hooks/useCompanionSystem';
+import { useCompanionSystem, CompanionComment, PendingRelationshipEvent, PendingLoyaltyQuest } from '@/hooks/useCompanionSystem';
 import { RelationshipEventModal } from './RelationshipEventModal';
+import { LoyaltyQuestNotification } from './LoyaltyQuestNotification';
 import { Users } from 'lucide-react';
 
 const STORAGE_KEY = 'living-world-save';
@@ -1285,6 +1286,13 @@ export function GameUI() {
       }, 500);
     }
     
+    // Check for loyalty quests after player actions (late game)
+    if (companionHook.activeCompanions.length > 0 && !companionHook.pendingLoyaltyQuest) {
+      setTimeout(() => {
+        companionHook.checkForLoyaltyQuest();
+      }, 1000);
+    }
+    
     setGameState(newState);
     setDisplayEvents(prev => [...prev, ...eventsWithPortraits]);
     setIsProcessing(false);
@@ -1648,6 +1656,25 @@ export function GameUI() {
               timestamp: gameState.time.tick,
             }]);
           }}
+        />
+      )}
+      
+      {/* Loyalty Quest Notification */}
+      {companionHook.pendingLoyaltyQuest && (
+        <LoyaltyQuestNotification
+          quest={companionHook.pendingLoyaltyQuest.quest}
+          companion={companionHook.pendingLoyaltyQuest.companion}
+          onAccept={() => {
+            companionHook.acceptLoyaltyQuest();
+            // Add narrative entry for quest start
+            setDisplayEvents(prev => [...prev, {
+              id: `loyalty_quest_${Date.now()}`,
+              type: 'system' as const,
+              content: `**Loyalty Quest Started**: ${companionHook.pendingLoyaltyQuest?.quest.title} - ${companionHook.pendingLoyaltyQuest?.companion.name} has something important to share with you.`,
+              timestamp: gameState.time.tick,
+            }]);
+          }}
+          onDefer={() => companionHook.deferLoyaltyQuest()}
         />
       )}
       
