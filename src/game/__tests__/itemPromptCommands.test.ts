@@ -1,5 +1,5 @@
 /**
- * Tests for Item Prompt Commands
+ * Tests for Item Prompt Commands and Item Reaction System
  */
 
 import { describe, it, expect } from 'vitest';
@@ -15,6 +15,11 @@ import {
   ARMOR_PROMPTS,
   CLOTHING_PROMPTS,
 } from '../itemPromptCommands';
+import {
+  generateItemReaction,
+  inferNPCContextFromRole,
+  buildItemReactionContext,
+} from '../itemReactionSystem';
 
 describe('Item Prompt Commands', () => {
   describe('parseItemPromptCommand', () => {
@@ -115,6 +120,120 @@ describe('Item Prompt Commands', () => {
       
       // Verify bayonet is in melee
       expect(MELEE_PROMPTS.some(p => p.command === '/bayonet')).toBe(true);
+    });
+  });
+});
+
+describe('Item Reaction System', () => {
+  describe('inferNPCContextFromRole', () => {
+    it('should identify military NPCs', () => {
+      const ctx = inferNPCContextFromRole('Palace Guard');
+      expect(ctx.isMilitary).toBe(true);
+      expect(ctx.isCivilian).toBe(false);
+    });
+    
+    it('should identify civilian NPCs', () => {
+      const ctx = inferNPCContextFromRole('Local Farmer');
+      expect(ctx.isCivilian).toBe(true);
+      expect(ctx.isMilitary).toBe(false);
+    });
+    
+    it('should identify criminal NPCs', () => {
+      const ctx = inferNPCContextFromRole('Street Thief');
+      expect(ctx.isCriminal).toBe(true);
+    });
+    
+    it('should identify noble NPCs', () => {
+      const ctx = inferNPCContextFromRole('Duke of the Realm');
+      expect(ctx.isNoble).toBe(true);
+    });
+    
+    it('should identify merchant NPCs', () => {
+      const ctx = inferNPCContextFromRole('Traveling Merchant');
+      expect(ctx.isMerchant).toBe(true);
+    });
+  });
+  
+  describe('generateItemReaction', () => {
+    it('should generate intimidated reaction for civilians seeing firearms', () => {
+      const riflePrompt = parseItemPromptCommand('/rifle')!;
+      const npcCtx = { isCivilian: true };
+      
+      const reaction = generateItemReaction(riflePrompt, npcCtx, 'modern', true);
+      
+      expect(reaction.type).toBe('intimidated');
+      expect(reaction.severity).toBe('moderate');
+      expect(reaction.trustModifier).toBeLessThan(0);
+      expect(reaction.respectModifier).toBeGreaterThan(0);
+    });
+    
+    it('should generate professional reaction for military NPCs', () => {
+      const riflePrompt = parseItemPromptCommand('/rifle')!;
+      const npcCtx = { isMilitary: true };
+      
+      const reaction = generateItemReaction(riflePrompt, npcCtx, 'war', true);
+      
+      expect(reaction.type).toBe('professional');
+      expect(reaction.respectModifier).toBeGreaterThan(0);
+    });
+    
+    it('should return neutral for non-visible items', () => {
+      const riflePrompt = parseItemPromptCommand('/rifle')!;
+      const npcCtx = { isCivilian: true };
+      
+      const reaction = generateItemReaction(riflePrompt, npcCtx, 'modern', false);
+      
+      expect(reaction.type).toBe('neutral');
+      expect(reaction.severity).toBe('none');
+    });
+    
+    it('should handle melee weapons in fantasy genre', () => {
+      const swordPrompt = parseItemPromptCommand('/sword')!;
+      const npcCtx = { isMilitary: true };
+      
+      const reaction = generateItemReaction(swordPrompt, npcCtx, 'fantasy', true);
+      
+      expect(reaction.type).toBe('professional');
+      expect(reaction.severity).toBe('none');
+    });
+    
+    it('should generate intimidated reaction for heavy armor', () => {
+      const armorPrompt = parseItemPromptCommand('/platecarrier')!;
+      const npcCtx = { isCivilian: true };
+      
+      const reaction = generateItemReaction(armorPrompt, npcCtx, 'modern', true);
+      
+      expect(reaction.type).toBe('intimidated');
+      expect(reaction.severity).toBe('moderate');
+    });
+  });
+  
+  describe('buildItemReactionContext', () => {
+    it('should build context for weapons', () => {
+      const items = [
+        { name: 'Combat Rifle', category: 'weapons', description: 'A military-grade rifle' }
+      ];
+      
+      const context = buildItemReactionContext(items, 'modern');
+      
+      expect(context).toContain('PLAYER ARMAMENT');
+      expect(context).toContain('Combat Rifle');
+    });
+    
+    it('should build context for armor', () => {
+      const items = [
+        { name: 'Tactical Vest', category: 'armor', description: 'Ballistic protection' }
+      ];
+      
+      const context = buildItemReactionContext(items, 'modern');
+      
+      expect(context).toContain('PLAYER PROTECTION');
+      expect(context).toContain('Tactical Vest');
+    });
+    
+    it('should return empty string for no items', () => {
+      const context = buildItemReactionContext([], 'modern');
+      expect(context).toBe('');
     });
   });
 });

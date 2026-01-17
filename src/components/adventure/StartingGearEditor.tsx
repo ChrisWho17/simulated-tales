@@ -1,11 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Package, Plus, X, Sword, Shield, Heart, Key, 
-  Sparkles, AlertCircle, Check, ChevronDown, ChevronUp
+  Sparkles, AlertCircle, Check, ChevronDown, ChevronUp,
+  Wand2, HelpCircle
 } from 'lucide-react';
 import { GameGenre } from '@/types/genreData';
 import { 
@@ -20,6 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  parseItemPromptCommand,
+  getCommandsGrouped,
+  buildItemDescriptionFromPrompt,
+  ItemPrompt,
+} from '@/game/itemPromptCommands';
 
 interface StartingGearEditorProps {
   genre: GameGenre;
@@ -71,6 +84,8 @@ export function StartingGearEditor({ genre, characterClass, onGearChange, initia
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<StartingGearItem['category']>('misc');
   const [newItemDescription, setNewItemDescription] = useState('');
+  const [showCommandHelp, setShowCommandHelp] = useState(false);
+  const [appliedCommand, setAppliedCommand] = useState<string | null>(null);
   
   // Get the base gear for this genre/class
   const baseGear = useMemo(() => {
@@ -81,6 +96,38 @@ export function StartingGearEditor({ genre, characterClass, onGearChange, initia
   
   // Track gear modifications
   const [gear, setGear] = useState<StartingGearItem[]>(initialGear || baseGear);
+  
+  // Get grouped commands for help display
+  const commandGroups = useMemo(() => getCommandsGrouped(), []);
+  
+  // Handle item prompt commands in description field
+  const handleDescriptionChange = useCallback((value: string) => {
+    setNewItemDescription(value);
+    
+    // Check if input starts with a command
+    const trimmed = value.trim();
+    if (trimmed.startsWith('/')) {
+      const prompt = parseItemPromptCommand(trimmed);
+      if (prompt) {
+        // Auto-populate fields from command
+        setNewItemName(prompt.name);
+        setNewItemDescription(buildItemDescriptionFromPrompt(prompt));
+        
+        // Map category
+        const categoryMap: Record<string, StartingGearItem['category']> = {
+          'firearm': 'weapons',
+          'melee': 'weapons',
+          'armor': 'apparel',
+          'clothing': 'apparel',
+        };
+        setNewItemCategory(categoryMap[prompt.category] || 'misc');
+        setAppliedCommand(prompt.command);
+        
+        // Clear the applied indicator after a moment
+        setTimeout(() => setAppliedCommand(null), 2000);
+      }
+    }
+  }, []);
   
   // Reset gear when class changes
   useEffect(() => {
@@ -115,6 +162,23 @@ export function StartingGearEditor({ genre, characterClass, onGearChange, initia
   
   const resetToDefault = () => {
     setGear(baseGear);
+  };
+  
+  // Apply a command directly from the help menu
+  const applyCommand = (prompt: ItemPrompt) => {
+    setNewItemName(prompt.name);
+    setNewItemDescription(buildItemDescriptionFromPrompt(prompt));
+    
+    const categoryMap: Record<string, StartingGearItem['category']> = {
+      'firearm': 'weapons',
+      'melee': 'weapons',
+      'armor': 'apparel',
+      'clothing': 'apparel',
+    };
+    setNewItemCategory(categoryMap[prompt.category] || 'misc');
+    setAppliedCommand(prompt.command);
+    setShowCommandHelp(false);
+    setTimeout(() => setAppliedCommand(null), 2000);
   };
   
   // Group gear by category
@@ -239,17 +303,27 @@ export function StartingGearEditor({ genre, characterClass, onGearChange, initia
           {showAddItem ? (
             <div className="p-3 bg-background/50 rounded-lg border border-border/30 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">Add Custom Item</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">Add Custom Item</span>
+                  {appliedCommand && (
+                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400 animate-pulse">
+                      <Wand2 className="w-3 h-3 mr-1" />
+                      {appliedCommand} applied!
+                    </Badge>
+                  )}
+                </div>
                 <button onClick={() => setShowAddItem(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
+              
               <Input
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
                 placeholder="Item name..."
                 className="bg-background border-border/50"
               />
+              
               <div className="flex gap-2">
                 <Select value={newItemCategory} onValueChange={(v) => setNewItemCategory(v as StartingGearItem['category'])}>
                   <SelectTrigger className="flex-1 bg-background border-border/50">
@@ -270,12 +344,60 @@ export function StartingGearEditor({ genre, characterClass, onGearChange, initia
                   <Check className="w-4 h-4" />
                 </Button>
               </div>
-              <Input
-                value={newItemDescription}
-                onChange={(e) => setNewItemDescription(e.target.value)}
-                placeholder="Description (optional)..."
-                className="bg-background border-border/50 text-sm"
-              />
+              
+              {/* Description with command support */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-muted-foreground">
+                    Description (type /rifle, /sword, /vest etc. for templates)
+                  </label>
+                  <Popover open={showCommandHelp} onOpenChange={setShowCommandHelp}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+                        <HelpCircle className="w-3 h-3" />
+                        Commands
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 max-h-96 overflow-auto" align="end">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                          <h4 className="font-medium text-sm">Item Templates</h4>
+                          <span className="text-xs text-muted-foreground">Case-insensitive</span>
+                        </div>
+                        {Object.entries(commandGroups).map(([group, prompts]) => (
+                          <div key={group} className="space-y-1">
+                            <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              {group}
+                            </h5>
+                            <div className="grid grid-cols-2 gap-1">
+                              {prompts.slice(0, 8).map((prompt) => (
+                                <button
+                                  key={prompt.command}
+                                  onClick={() => applyCommand(prompt)}
+                                  className="text-xs p-1.5 rounded bg-muted/50 hover:bg-primary/20 text-left truncate transition-colors"
+                                >
+                                  <span className="text-primary font-mono">{prompt.command}</span>
+                                </button>
+                              ))}
+                            </div>
+                            {prompts.length > 8 && (
+                              <p className="text-xs text-muted-foreground">
+                                +{prompts.length - 8} more...
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Textarea
+                  value={newItemDescription}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
+                  placeholder="Type /rifle or /sword to auto-fill, or write custom description..."
+                  className="bg-background border-border/50 text-sm min-h-[80px]"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex gap-2">
