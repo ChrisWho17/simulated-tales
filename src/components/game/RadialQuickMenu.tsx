@@ -191,15 +191,31 @@ export function RadialQuickMenu({
   // Memoize particles so they don't regenerate on every render
   const particles = useMemo(() => generateParticles(), []);
 
+  // Trigger haptic feedback on mobile
+  const triggerHapticLight = useCallback(() => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(5); // Very light 5ms vibration for menu toggle
+    }
+  }, []);
+
   const toggleMenu = useCallback(() => {
+    triggerHapticLight();
     setIsOpen(prev => !prev);
     setHoveredIndex(null);
+  }, [triggerHapticLight]);
+
+  // Trigger haptic feedback on mobile
+  const triggerHaptic = useCallback(() => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10); // Short 10ms vibration
+    }
   }, []);
 
   const handleItemClick = useCallback((onClick: () => void) => {
+    triggerHaptic();
     onClick();
     setIsOpen(false);
-  }, []);
+  }, [triggerHaptic]);
 
   // Listen for external trigger
   React.useEffect(() => {
