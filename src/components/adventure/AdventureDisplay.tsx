@@ -95,6 +95,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useScreenEffectsIntegration } from '@/hooks/useScreenEffectsIntegration';
 import { useAchievementTriggers } from '@/hooks/useAchievementTriggers';
 
+// Cheat mode integration
+import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
+
 // Inventory system integration
 import { 
   useInventory, 
@@ -299,6 +302,9 @@ export function AdventureDisplay({
   const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
   const [showMobileQuickMenu, setShowMobileQuickMenu] = useState(false);
+  
+  // Cheat mode / Developer tools
+  const cheatModePanel = useCheatModeCommand();
   
   // Time progression system - use external if provided, otherwise manage locally
   const [localTimeState, setLocalTimeState] = useState<GameTimeState>(() => createInitialTimeState());
@@ -1192,6 +1198,12 @@ export function AdventureDisplay({
           setShowQuestQuickView(true);
           setInput('');
           return;
+      }
+      
+      // Check for developer/cheat commands
+      if (cheatModePanel.checkCommand(trimmedInput)) {
+        setInput('');
+        return;
       }
       
       // Check for /checkself command (with optional parameters)
@@ -2144,7 +2156,15 @@ export function AdventureDisplay({
       
       {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       
-      {/* Event Bus Debug Panel moved to CheatModeSplash - use /events command */}
+      {/* Cheat Mode / Developer Panel - use /imacheater, /cheat, /dev, /events, /integrity commands */}
+      <CheatModeSplash
+        isOpen={cheatModePanel.isOpen}
+        onClose={() => cheatModePanel.setIsOpen(false)}
+        character={character}
+        onUpdateCharacter={onUpdateCharacter}
+        genre={genre}
+        initialMode={cheatModePanel.initialMode}
+      />
       
       {/* Consequence Feed - show if enabled in settings */}
       {(gameContext?.settings?.showConsequenceFeed ?? true) && <ConsequenceFeed compact={false} />}
