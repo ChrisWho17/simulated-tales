@@ -695,6 +695,48 @@ class CompanionSystemManager {
     return { current: this.activeCompanions.length, max: this.maxPartySize };
   }
   
+  // ========== DIRECT STAT ADJUSTMENTS ==========
+  
+  adjustAffinity(companionId: string, amount: number): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.affinity = Math.max(-100, Math.min(100, companion.affinity + amount));
+    this.updateMood(companion, amount);
+    this.checkThresholds(companion);
+  }
+  
+  adjustTrust(companionId: string, amount: number): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.trust = Math.max(0, Math.min(100, companion.trust + amount));
+  }
+  
+  adjustRespect(companionId: string, amount: number): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.respect = Math.max(0, Math.min(100, companion.respect + amount));
+  }
+  
+  adjustFear(companionId: string, amount: number): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.fear = Math.max(0, Math.min(100, companion.fear + amount));
+  }
+  
+  adjustRomance(companionId: string, amount: number): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.romanticInterest = Math.max(0, Math.min(100, companion.romanticInterest + amount));
+    this.checkThresholds(companion);
+  }
+  
+  setMood(companionId: string, mood: CompanionMood): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    companion.mood = mood;
+    companion.moodIntensity = 50;
+  }
+  
   // ========== SERIALIZATION ==========
   
   serialize(): { companions: CompanionState[]; activeIds: string[] } {

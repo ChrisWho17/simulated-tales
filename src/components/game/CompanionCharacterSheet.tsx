@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Heart, Shield, Sword, Zap, Brain, Users,
-  Star, TrendingUp, TrendingDown, Minus, Activity
+  Star, TrendingUp, TrendingDown, Minus, Activity, Backpack
 } from 'lucide-react';
 import { CompanionState } from '@/game/companionSystem';
 import { CompanionCombatStats, companionCombatManager } from '@/game/companionCombatSystem';
+import { companionEquipmentManager, RARITY_COLORS } from '@/game/companionEquipmentSystem';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { CompanionEquipmentPanel } from './CompanionEquipmentPanel';
 
 interface CompanionCharacterSheetProps {
   companion: CompanionState;
@@ -40,7 +42,9 @@ const moraleIcons: Record<string, React.ReactNode> = {
 };
 
 export function CompanionCharacterSheet({ companion, isOpen, onClose }: CompanionCharacterSheetProps) {
+  const [showEquipmentPanel, setShowEquipmentPanel] = useState(false);
   const combatStats = companionCombatManager.getCombatStats(companion.id);
+  const loadout = companionEquipmentManager.getLoadout(companion.id);
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
 
   if (!isOpen) return null;
@@ -169,6 +173,44 @@ export function CompanionCharacterSheet({ companion, isOpen, onClose }: Companio
               )}
             </div>
 
+            {/* Equipment */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Backpack className="w-4 h-4 text-amber-400" />
+                  Equipment
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEquipmentPanel(true)}
+                  className="text-xs h-6"
+                >
+                  Manage
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(['weapon', 'armor', 'accessory'] as const).map((slot) => {
+                  const item = loadout[slot];
+                  return (
+                    <div
+                      key={slot}
+                      className="p-2 rounded bg-muted/30 border border-border/50 text-center"
+                    >
+                      <div className="text-xs text-muted-foreground capitalize mb-1">{slot}</div>
+                      {item ? (
+                        <div className={cn("text-xs font-medium truncate", RARITY_COLORS[item.rarity])}>
+                          {item.name}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground italic">Empty</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Relationship Stats */}
             <div>
               <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -244,6 +286,13 @@ export function CompanionCharacterSheet({ companion, isOpen, onClose }: Companio
           </div>
         </motion.div>
       </motion.div>
+      
+      {/* Equipment Panel */}
+      <CompanionEquipmentPanel
+        companion={companion}
+        isOpen={showEquipmentPanel}
+        onClose={() => setShowEquipmentPanel(false)}
+      />
     </AnimatePresence>
   );
 }
