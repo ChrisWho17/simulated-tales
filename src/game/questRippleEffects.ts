@@ -356,9 +356,9 @@ export function processQuestRipple(
         worldStateFlags: Object.fromEntries(
           Object.entries((rippleData as any).worldFlags || {}).map(([k, v]) => [
             replaceVariables(k, variables || {}),
-            v
+            Boolean(v)
           ])
-        ),
+        ) as Record<string, boolean>,
         changeDescription: processedDescription
       };
       
@@ -414,9 +414,13 @@ export function processQuestRipple(
   
   // Emit event
   eventBus.emit({
-    type: 'quest_ripple',
-    payload: { questId: quest.id, outcome, changes }
-  });
+    type: 'QUEST_RIPPLE',
+    tick: 0,
+    source: 'questRippleSystem',
+    priority: 'normal',
+    data: { questId: quest.id, outcome, changes }
+  } as any);
+  
   
   return { newState, changes, narrative };
 }

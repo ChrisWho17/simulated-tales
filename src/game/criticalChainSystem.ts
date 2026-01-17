@@ -268,7 +268,7 @@ export function processRollForChain(
         narrativeEffect: 'Comeback! Your fortune has turned!'
       };
       
-      eventBus.emit({ type: 'comeback_triggered', payload: { tier: state.desperationTier, wasCrit } });
+      eventBus.emit({ type: 'COMEBACK_TRIGGERED', tick: 0, source: 'criticalChainSystem', priority: 'high', data: { tier: state.desperationTier, wasCrit } } as any);
     } else {
       // Building fortune chain
       const newChainLength = state.chainType === 'fortune' ? state.chainLength + 1 : 1;
