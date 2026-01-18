@@ -241,6 +241,7 @@ interface DirectorContext {
   mode: 'fun' | 'easy' | 'medium' | 'hard';
   directorType: string;
   tightness: number;
+  descriptionLevel: 'vague' | 'minimal' | 'balanced' | 'detailed' | 'vivid'; // Narrator verbosity
   cruelty: 'soft' | 'honest' | 'brutal';
   weirdness: 'grounded' | 'spicy' | 'unhinged';
   guidance: 'none' | 'light' | 'coach';
@@ -1018,11 +1019,13 @@ No narrative steering beyond core rules.
     'CLINICAL': 'Efficient. Precise. No wasted words. The facts speak; emotion is for the reader to supply.',
   };
   
-  const detailInstructions: Record<string, string> = {
-    'SPARSE': 'Minimal description. Let gaps speak. Each word earns its place.',
-    'MODERATE': 'Balance description with forward momentum. Paint enough to see, not so much to slow.',
-    'RICH': 'Layer sensory details to build atmosphere. Immerse the reader in every scene.',
-    'DENSE': 'Miss nothing. Every surface tells a story. The world is thick with meaning.',
+  // Description level instructions - from player settings, overrides director type default
+  const descriptionLevelInstructions: Record<string, string> = {
+    'vague': 'EXTREMELY BRIEF. 1-2 sentences maximum per beat. Leave almost everything to imagination. Skip sensory details entirely. Focus only on what changes or matters for action.',
+    'minimal': 'SPARSE. Essential facts only. Avoid adjectives and metaphors. Be direct and economical. Let gaps speak.',
+    'balanced': 'MODERATE. Balance description with forward momentum. Include key sensory details but don\'t linger. Paint enough to see, not so much to slow.',
+    'detailed': 'RICH. Layer sensory details to build atmosphere. Describe environments, characters, and moods with care. Immerse the reader in every scene.',
+    'vivid': 'DENSE AND ELABORATE. Miss nothing. Every surface tells a story. Use rich metaphors, elaborate prose, and immersive sensory descriptions. Paint full scenes with texture, sound, smell, and emotional resonance. The world is thick with meaning.',
   };
   
   return `\n\n=== DIRECTOR MODE: ${typeProfile.name.toUpperCase()} ===
@@ -1037,8 +1040,8 @@ Tags: ${typeProfile.tags.join(', ')}
 === NARRATOR PERSONALITY: ${narratorProfile.voice} ===
 ${voiceInstructions[narratorProfile.voice] || 'Write with evocative, immersive prose.'}
 
-DETAIL LEVEL: ${narratorProfile.detailLevel}
-${detailInstructions[narratorProfile.detailLevel] || 'Balance description with momentum.'}
+=== DESCRIPTION LEVEL: ${(director.descriptionLevel || 'balanced').toUpperCase()} ===
+${descriptionLevelInstructions[director.descriptionLevel || 'balanced']}
 
 ${narratorProfile.emotionalLeakage ? 'EMOTIONAL BLEED: ENABLED - Allow the player character\'s emotional state to color perception.' : 'EMOTIONAL BLEED: DISABLED - Maintain narrative distance from character emotions.'}
 

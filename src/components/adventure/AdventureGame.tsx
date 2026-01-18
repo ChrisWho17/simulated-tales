@@ -1188,12 +1188,13 @@ export function AdventureGame() {
         // Director context - use local directorSettings (set during narrator phase) or fall back to settings
         const activeDirectorSettings = directorSettings || settings.directorSettings;
         if (activeDirectorSettings) {
-          requestBody.directorContext = {
+        requestBody.directorContext = {
             enabled: activeDirectorSettings.enabled,
             rawGame: activeDirectorSettings.rawGame,
             mode: activeDirectorSettings.mode,
             directorType: activeDirectorSettings.directorType,
             tightness: activeDirectorSettings.tightness,
+            descriptionLevel: activeDirectorSettings.descriptionLevel,
             cruelty: activeDirectorSettings.cruelty,
             weirdness: activeDirectorSettings.weirdness,
             guidance: activeDirectorSettings.guidance,
@@ -1548,6 +1549,7 @@ export function AdventureGame() {
               mode: settings.directorSettings.mode,
               directorType: settings.directorSettings.directorType,
               tightness: settings.directorSettings.tightness,
+              descriptionLevel: settings.directorSettings.descriptionLevel,
               cruelty: settings.directorSettings.cruelty,
               weirdness: settings.directorSettings.weirdness,
               guidance: settings.directorSettings.guidance,
@@ -1677,6 +1679,7 @@ export function AdventureGame() {
                 mode: settings.directorSettings.mode,
                 directorType: settings.directorSettings.directorType,
                 tightness: settings.directorSettings.tightness,
+                descriptionLevel: settings.directorSettings.descriptionLevel,
                 cruelty: settings.directorSettings.cruelty,
                 weirdness: settings.directorSettings.weirdness,
                 guidance: settings.directorSettings.guidance,
