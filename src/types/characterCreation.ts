@@ -21,7 +21,8 @@ export interface DetailedAppearance {
 }
 
 export interface FullAppearance {
-  bustSize?: 'small' | 'medium' | 'large' | 'very large';
+  // Cup sizes for realistic body proportions (AA through K+)
+  bustSize?: 'AA' | 'A' | 'B' | 'C' | 'D' | 'DD' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K';
   hipWidth?: 'narrow' | 'average' | 'wide' | 'very wide';
   muscleDefinition?: 'none' | 'toned' | 'defined' | 'very muscular';
   bodyHair?: 'none' | 'light' | 'moderate' | 'heavy';
@@ -180,7 +181,25 @@ export const TATTOO_OPTIONS = [
   { value: 'buttocks', label: 'Buttocks', category: 'intimate' },
 ];
 
-export const BUST_OPTIONS = [{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'very large', label: 'Very Large' }];
+// Cup size options - realistic bra sizes from AA to K
+export const CUP_SIZE_OPTIONS = [
+  { value: 'AA', label: 'AA', description: 'Very petite' },
+  { value: 'A', label: 'A', description: 'Petite' },
+  { value: 'B', label: 'B', description: 'Small' },
+  { value: 'C', label: 'C', description: 'Average' },
+  { value: 'D', label: 'D', description: 'Full' },
+  { value: 'DD', label: 'DD/E', description: 'Large' },
+  { value: 'E', label: 'E', description: 'Very full' },
+  { value: 'F', label: 'F', description: 'Very large' },
+  { value: 'G', label: 'G', description: 'Extra large' },
+  { value: 'H', label: 'H', description: 'Huge' },
+  { value: 'I', label: 'I', description: 'Massive' },
+  { value: 'J', label: 'J', description: 'Enormous' },
+  { value: 'K', label: 'K+', description: 'Extremely large' },
+];
+
+// Legacy bust options (mapped internally to cup sizes) - kept for backwards compatibility
+export const BUST_OPTIONS = [{ value: 'B', label: 'Small' }, { value: 'C', label: 'Medium' }, { value: 'DD', label: 'Large' }, { value: 'G', label: 'Very Large' }];
 export const HIP_OPTIONS = [{ value: 'narrow', label: 'Narrow' }, { value: 'average', label: 'Average' }, { value: 'wide', label: 'Wide' }, { value: 'very wide', label: 'Very Wide' }];
 export const MUSCLE_OPTIONS = [{ value: 'none', label: 'Soft' }, { value: 'toned', label: 'Toned' }, { value: 'defined', label: 'Defined' }, { value: 'very muscular', label: 'Very Muscular' }];
 export const BODY_HAIR_OPTIONS = [{ value: 'none', label: 'None' }, { value: 'light', label: 'Light' }, { value: 'moderate', label: 'Moderate' }, { value: 'heavy', label: 'Heavy' }];
