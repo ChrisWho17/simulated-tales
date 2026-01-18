@@ -1,6 +1,14 @@
 // FLUX.1 Portrait Generation - Secure server-side implementation via edge function
 import { supabase } from '@/integrations/supabase/client';
 
+// Detected clothing item from portrait analysis
+export interface DetectedClothingItem {
+  item: string;
+  slot: 'torso' | 'legs' | 'feet' | 'head' | 'hands' | 'accessory' | 'outfit';
+  genre?: string[];
+  tags: string[];
+}
+
 // Detected keywords response from portrait generation
 export interface DetectedKeywords {
   personalityScore: number;
@@ -9,6 +17,8 @@ export interface DetectedKeywords {
   patternMods: string[];
   physiqueMods: string[];
   clothFitMods: string[];
+  clothingItems?: DetectedClothingItem[];
+  genre?: string;
 }
 
 // Portrait generation result

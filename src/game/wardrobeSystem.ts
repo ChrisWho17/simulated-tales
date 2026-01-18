@@ -10,6 +10,7 @@ import {
   calculateTotalStats
 } from './clothingItemSystem';
 import { getStarterClothingForGenre, BASIC_CLOTHING } from './starterClothingSystem';
+import { MappedClothingSet } from './portraitClothingMapper';
 
 export interface WardrobeItem {
   item: ClothingItem;
@@ -191,6 +192,63 @@ class WardrobeManager {
     this.notify();
     
     console.log(`[Wardrobe] Initialized for ${genre}:`, 
+      starterItems.map(i => i.item.name).join(', '));
+  }
+  
+  /**
+   * Initialize wardrobe from AI-detected clothing in portrait
+   * Uses detected clothing items instead of hardcoded genre defaults
+   */
+  initializeFromPortraitClothing(mappedClothing: MappedClothingSet, genre: string): void {
+    try {
+      localStorage.setItem(CURRENT_GENRE_KEY, genre);
+    } catch (e) {
+      // Ignore
+    }
+    
+    const starterItems: WardrobeItem[] = [];
+    const equipped: EquippedClothing = {};
+    
+    // Add all detected clothing items
+    for (const [slot, item] of Object.entries(mappedClothing.items)) {
+      if (item) {
+        const wardrobeItem: WardrobeItem = {
+          item: item as ClothingItem,
+          acquiredAt: new Date(),
+          acquiredFrom: 'portrait_detected',
+          timesWorn: 1,
+        };
+        starterItems.push(wardrobeItem);
+        equipped[slot as keyof EquippedClothing] = wardrobeItem;
+      }
+    }
+    
+    // Fallback: ensure minimum coverage if somehow missing
+    if (!equipped.torso && !equipped.outfit) {
+      const fallback = getStarterClothingForGenre(genre);
+      const torsoItem: WardrobeItem = {
+        item: fallback.items.torso,
+        acquiredAt: new Date(),
+        acquiredFrom: 'fallback',
+        timesWorn: 1,
+      };
+      starterItems.push(torsoItem);
+      equipped.torso = torsoItem;
+    }
+    
+    this.state = {
+      ownedItems: starterItems,
+      equipped,
+      activeStyle: starterItems[0]?.item.style || 'casual',
+      totalStats: {},
+      activeSets: [],
+    };
+    
+    this.recalculateStats();
+    this.saveState();
+    this.notify();
+    
+    console.log(`[Wardrobe] Initialized from portrait for ${genre} (${mappedClothing.source}):`, 
       starterItems.map(i => i.item.name).join(', '));
   }
 

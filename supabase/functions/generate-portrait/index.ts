@@ -1863,6 +1863,179 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     console.log('Keywords detected:', JSON.stringify(matchedKeywords), '| Personality Score:', personalityScore);
   }
   
+  // ========== CLOTHING ITEM DETECTION ==========
+  // Detect specific clothing items from the prompt/description for inventory mapping
+  const CLOTHING_ITEM_KEYWORDS: Record<string, { slot: string; genre?: string[]; tags: string[] }> = {
+    // Torso items
+    'shirt': { slot: 'torso', tags: ['casual', 'basic'] },
+    't-shirt': { slot: 'torso', tags: ['casual', 'modern'] },
+    'tshirt': { slot: 'torso', tags: ['casual', 'modern'] },
+    'blouse': { slot: 'torso', tags: ['formal', 'elegant'] },
+    'tunic': { slot: 'torso', genre: ['fantasy', 'medieval'], tags: ['fantasy', 'medieval'] },
+    'jacket': { slot: 'torso', tags: ['outerwear', 'casual'] },
+    'coat': { slot: 'torso', tags: ['outerwear', 'formal'] },
+    'hoodie': { slot: 'torso', tags: ['casual', 'streetwear'] },
+    'sweater': { slot: 'torso', tags: ['casual', 'warm'] },
+    'vest': { slot: 'torso', tags: ['casual', 'layered'] },
+    'tank top': { slot: 'torso', tags: ['casual', 'athletic'] },
+    'crop top': { slot: 'torso', tags: ['casual', 'revealing'] },
+    'dress': { slot: 'outfit', tags: ['formal', 'elegant'] },
+    'gown': { slot: 'outfit', tags: ['formal', 'elegant'] },
+    'suit': { slot: 'outfit', tags: ['formal', 'professional'] },
+    'jumpsuit': { slot: 'outfit', genre: ['scifi', 'cyberpunk'], tags: ['scifi', 'utility'] },
+    'robe': { slot: 'outfit', genre: ['fantasy', 'medieval'], tags: ['fantasy', 'wizard'] },
+    'cloak': { slot: 'torso', genre: ['fantasy', 'dark_fantasy'], tags: ['fantasy', 'outerwear'] },
+    'armor': { slot: 'torso', genre: ['fantasy', 'medieval', 'war'], tags: ['combat', 'protection'] },
+    'plate armor': { slot: 'outfit', genre: ['fantasy', 'medieval'], tags: ['heavy', 'combat'] },
+    'leather armor': { slot: 'torso', genre: ['fantasy'], tags: ['light', 'stealth'] },
+    'chainmail': { slot: 'torso', genre: ['fantasy', 'medieval'], tags: ['medium', 'combat'] },
+    'corset': { slot: 'torso', genre: ['victorian', 'steampunk'], tags: ['formal', 'fitted'] },
+    'waistcoat': { slot: 'torso', genre: ['victorian', 'steampunk', 'noir'], tags: ['formal', 'elegant'] },
+    'duster': { slot: 'torso', genre: ['western', 'postapoc'], tags: ['outerwear', 'rugged'] },
+    'poncho': { slot: 'torso', genre: ['western'], tags: ['outerwear', 'travel'] },
+    // Leg items
+    'pants': { slot: 'legs', tags: ['basic', 'casual'] },
+    'trousers': { slot: 'legs', tags: ['formal', 'basic'] },
+    'jeans': { slot: 'legs', tags: ['casual', 'modern', 'denim'] },
+    'shorts': { slot: 'legs', tags: ['casual', 'athletic'] },
+    'skirt': { slot: 'legs', tags: ['formal', 'casual'] },
+    'leggings': { slot: 'legs', tags: ['athletic', 'fitted'] },
+    'breeches': { slot: 'legs', genre: ['fantasy', 'medieval', 'pirate'], tags: ['fantasy', 'historical'] },
+    'cargo pants': { slot: 'legs', tags: ['tactical', 'utility'] },
+    'joggers': { slot: 'legs', tags: ['streetwear', 'casual'] },
+    'chaps': { slot: 'legs', genre: ['western'], tags: ['western', 'leather'] },
+    // Feet items
+    'boots': { slot: 'feet', tags: ['durable', 'rugged'] },
+    'combat boots': { slot: 'feet', tags: ['military', 'tactical'] },
+    'cowboy boots': { slot: 'feet', genre: ['western'], tags: ['western', 'leather'] },
+    'leather boots': { slot: 'feet', tags: ['durable', 'classic'] },
+    'sneakers': { slot: 'feet', tags: ['casual', 'athletic', 'modern'] },
+    'shoes': { slot: 'feet', tags: ['basic', 'casual'] },
+    'heels': { slot: 'feet', tags: ['formal', 'elegant'] },
+    'high heels': { slot: 'feet', tags: ['formal', 'elegant'] },
+    'sandals': { slot: 'feet', tags: ['casual', 'summer'] },
+    'loafers': { slot: 'feet', tags: ['casual', 'formal'] },
+    'oxfords': { slot: 'feet', tags: ['formal', 'professional'] },
+    'mag-boots': { slot: 'feet', genre: ['scifi', 'space_opera'], tags: ['scifi', 'utility'] },
+    // Head items
+    'hat': { slot: 'head', tags: ['casual', 'accessory'] },
+    'cap': { slot: 'head', tags: ['casual', 'modern'] },
+    'fedora': { slot: 'head', genre: ['noir', 'victorian'], tags: ['formal', 'vintage'] },
+    'cowboy hat': { slot: 'head', genre: ['western'], tags: ['western', 'iconic'] },
+    'helmet': { slot: 'head', tags: ['protection', 'combat'] },
+    'hood': { slot: 'head', tags: ['outerwear', 'stealth'] },
+    'beanie': { slot: 'head', tags: ['casual', 'warm'] },
+    'bandana': { slot: 'head', tags: ['casual', 'rugged'] },
+    'crown': { slot: 'head', genre: ['fantasy', 'medieval'], tags: ['royal', 'legendary'] },
+    'circlet': { slot: 'head', genre: ['fantasy'], tags: ['elegant', 'magical'] },
+    'goggles': { slot: 'head', genre: ['steampunk', 'postapoc', 'scifi'], tags: ['utility', 'protection'] },
+    // Hand items
+    'gloves': { slot: 'hands', tags: ['accessory', 'protection'] },
+    'gauntlets': { slot: 'hands', genre: ['fantasy', 'medieval'], tags: ['combat', 'armored'] },
+    'bracers': { slot: 'hands', genre: ['fantasy'], tags: ['protection', 'archery'] },
+    'fingerless gloves': { slot: 'hands', tags: ['punk', 'tactical'] },
+    // Accessories
+    'belt': { slot: 'accessory', tags: ['basic', 'utility'] },
+    'scarf': { slot: 'accessory', tags: ['casual', 'warm'] },
+    'necklace': { slot: 'accessory', tags: ['jewelry', 'decorative'] },
+    'pendant': { slot: 'accessory', tags: ['jewelry', 'magical'] },
+    'rings': { slot: 'accessory', tags: ['jewelry', 'decorative'] },
+    'watch': { slot: 'accessory', tags: ['modern', 'professional'] },
+    'holster': { slot: 'accessory', genre: ['western', 'noir', 'war'], tags: ['weapon', 'utility'] },
+    'bandolier': { slot: 'accessory', genre: ['western', 'war', 'postapoc'], tags: ['ammunition', 'tactical'] },
+    'cape': { slot: 'accessory', genre: ['fantasy', 'superhero'], tags: ['dramatic', 'outerwear'] },
+    'satchel': { slot: 'accessory', tags: ['utility', 'travel'] },
+    'backpack': { slot: 'accessory', tags: ['utility', 'travel'] },
+  };
+  
+  // Detect clothing items from the user description AND the generated clothing description
+  const combinedClothingText = `${lowerUserDesc} ${clothingDesc.toLowerCase()} ${(clothingDetails || []).join(' ').toLowerCase()}`;
+  const detectedClothingItems: { item: string; slot: string; genre?: string[]; tags: string[] }[] = [];
+  
+  for (const [keyword, data] of Object.entries(CLOTHING_ITEM_KEYWORDS)) {
+    const wordBoundaryRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i');
+    if (wordBoundaryRegex.test(combinedClothingText)) {
+      detectedClothingItems.push({
+        item: keyword,
+        slot: data.slot,
+        genre: data.genre,
+        tags: data.tags,
+      });
+    }
+  }
+  
+  // If no items detected, infer from genre defaults
+  if (detectedClothingItems.length === 0) {
+    const genreDefaultClothing: Record<string, { item: string; slot: string; tags: string[] }[]> = {
+      fantasy: [
+        { item: 'tunic', slot: 'torso', tags: ['fantasy', 'medieval'] },
+        { item: 'breeches', slot: 'legs', tags: ['fantasy', 'travel'] },
+        { item: 'leather boots', slot: 'feet', tags: ['durable', 'travel'] },
+      ],
+      medieval: [
+        { item: 'tunic', slot: 'torso', tags: ['medieval', 'basic'] },
+        { item: 'trousers', slot: 'legs', tags: ['basic', 'wool'] },
+        { item: 'leather boots', slot: 'feet', tags: ['medieval', 'basic'] },
+      ],
+      cyberpunk: [
+        { item: 'jacket', slot: 'torso', tags: ['synth', 'streetwear'] },
+        { item: 'cargo pants', slot: 'legs', tags: ['tactical', 'urban'] },
+        { item: 'boots', slot: 'feet', tags: ['combat', 'urban'] },
+      ],
+      scifi: [
+        { item: 'jumpsuit', slot: 'outfit', tags: ['utility', 'space'] },
+        { item: 'mag-boots', slot: 'feet', tags: ['utility', 'space'] },
+      ],
+      western: [
+        { item: 'shirt', slot: 'torso', tags: ['cotton', 'work'] },
+        { item: 'jeans', slot: 'legs', tags: ['denim', 'rugged'] },
+        { item: 'cowboy boots', slot: 'feet', tags: ['leather', 'western'] },
+        { item: 'cowboy hat', slot: 'head', tags: ['iconic', 'western'] },
+      ],
+      modern: [
+        { item: 't-shirt', slot: 'torso', tags: ['casual', 'modern'] },
+        { item: 'jeans', slot: 'legs', tags: ['casual', 'denim'] },
+        { item: 'sneakers', slot: 'feet', tags: ['casual', 'athletic'] },
+      ],
+      horror: [
+        { item: 'shirt', slot: 'torso', tags: ['casual', 'everyday'] },
+        { item: 'jeans', slot: 'legs', tags: ['casual', 'denim'] },
+        { item: 'sneakers', slot: 'feet', tags: ['casual', 'athletic'] },
+      ],
+      noir: [
+        { item: 'suit', slot: 'outfit', tags: ['formal', 'detective'] },
+        { item: 'oxfords', slot: 'feet', tags: ['formal', 'professional'] },
+        { item: 'fedora', slot: 'head', tags: ['iconic', 'noir'] },
+      ],
+      war: [
+        { item: 'shirt', slot: 'torso', tags: ['military', 'uniform'] },
+        { item: 'cargo pants', slot: 'legs', tags: ['tactical', 'military'] },
+        { item: 'combat boots', slot: 'feet', tags: ['military', 'durable'] },
+      ],
+      postapoc: [
+        { item: 'jacket', slot: 'torso', tags: ['patched', 'scavenged'] },
+        { item: 'pants', slot: 'legs', tags: ['reinforced', 'worn'] },
+        { item: 'boots', slot: 'feet', tags: ['wasteland', 'durable'] },
+      ],
+      steampunk: [
+        { item: 'waistcoat', slot: 'torso', tags: ['victorian', 'brass'] },
+        { item: 'trousers', slot: 'legs', tags: ['formal', 'steampunk'] },
+        { item: 'leather boots', slot: 'feet', tags: ['victorian', 'brass'] },
+        { item: 'goggles', slot: 'head', tags: ['iconic', 'steampunk'] },
+      ],
+      pirate: [
+        { item: 'shirt', slot: 'torso', tags: ['billowy', 'sailor'] },
+        { item: 'breeches', slot: 'legs', tags: ['canvas', 'sea'] },
+        { item: 'boots', slot: 'feet', tags: ['leather', 'deck'] },
+      ],
+    };
+    
+    const defaults = genreDefaultClothing[genreKey] || genreDefaultClothing['modern'];
+    defaults.forEach(item => detectedClothingItems.push(item));
+  }
+  
+  console.log('Detected clothing items:', detectedClothingItems);
+
   // Store detected keywords for response
   const detectedKeywords = {
     personalityScore,
@@ -1872,6 +2045,8 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     physiqueMods,
     clothFitMods,
     usedRandomColors: colorMods.length === 0,
+    clothingItems: detectedClothingItems,
+    genre: genreKey,
   };
 
   // ========== GENRE ISOLATION RULES ==========

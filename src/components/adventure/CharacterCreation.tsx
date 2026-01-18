@@ -138,6 +138,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     patternMods: string[];
     physiqueMods: string[];
     clothFitMods: string[];
+    clothingItems?: { item: string; slot: string; genre?: string[]; tags: string[] }[];
+    genre?: string;
+  } | null>(null);
+  
+  // Detected clothing from portrait
+  const [detectedClothing, setDetectedClothing] = useState<{
+    items: Record<string, any>;
+    description: string;
+    source: 'portrait_detected' | 'genre_fallback';
   } | null>(null);
   
   // Custom class state
@@ -337,6 +346,18 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       const result = await generatePortraitWithCharacterData(characterData, genre);
       setPortraitUrl(result.imageUrl);
       setDetectedKeywords(result.detectedKeywords || null);
+      
+      // Map detected clothing items from portrait to inventory
+      if (result.detectedKeywords?.clothingItems && result.detectedKeywords.clothingItems.length > 0) {
+        const { mapPortraitClothingToInventory } = await import('@/game/portraitClothingMapper');
+        const mappedClothing = mapPortraitClothingToInventory(
+          result.detectedKeywords.clothingItems as any,
+          genre
+        );
+        setDetectedClothing(mappedClothing);
+        console.log('[CharacterCreation] Mapped clothing from portrait:', mappedClothing);
+      }
+      
       toast.success('Portrait generated!');
     } catch (error) {
       console.error('Error generating portrait:', error);
@@ -434,6 +455,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     // Save the portrait URL if generated
     if (portraitUrl) {
       savePlayerPortraitUrl(portraitUrl);
+    }
+    
+    // Add detected clothing from portrait for inventory initialization
+    if (detectedClothing) {
+      (character as any).detectedClothing = detectedClothing;
+      console.log('[CharacterCreation] Adding detected clothing to character:', detectedClothing);
     }
     
     console.log('[CharacterCreation] Saved portrait reference for consistent regeneration');
