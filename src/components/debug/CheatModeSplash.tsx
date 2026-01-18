@@ -942,8 +942,10 @@ export function CheatModeSplash({
       
       const data = await response.json();
       
-      if (data.url) {
-        setCompanionCreator(prev => ({ ...prev, portraitUrl: data.url, isGeneratingPortrait: false }));
+      // Check both possible response formats
+      const portraitUrl = data.url || data.imageUrl;
+      if (portraitUrl) {
+        setCompanionCreator(prev => ({ ...prev, portraitUrl, isGeneratingPortrait: false }));
         toast.success('Portrait generated!');
       } else {
         throw new Error('No portrait URL returned');
