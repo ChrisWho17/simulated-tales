@@ -638,11 +638,12 @@ CHAPTER SYSTEM:
 - Never use [CHAPTER_END] for minor scene transitions
 
 RESPONSE FORMAT:
-- Open with narrative description of what happens
+- Open with narrative description of what happens (NEVER with the same words as previous turns)
 - Include dialogue when NPCs are present (format: **Character Name:** "Their words")
 - Reference character abilities and inventory naturally when relevant
-- End with a situation that prompts player choice/action
-- Keep responses focused but rich (150-300 words typically)
+- End with a situation that prompts player choice/action (VARY your hooks)
+- Keep responses focused but rich (200-350 words typically - NEVER under 150 words)
+- Each response must contain AT LEAST 3 substantive paragraphs
 
 DICE ROLL INTEGRATION:
 When the player's message includes a dice roll result:
@@ -672,6 +673,39 @@ IMPORTANT RULES:
 - NEVER include formatting instructions or technical guidance in the narrative
 - If you need to request a dice roll, use ONLY the [ROLL:stat:difficulty:reason] format, nothing else
 
+CRITICAL - ANTI-REPETITION SYSTEM (MANDATORY):
+You have ADVANCED repetition detection and must ACTIVELY AVOID repeating content.
+
+===== STAGE 1: CONTENT DIVERSITY =====
+NEVER repeat these patterns from the last 3 turns:
+- Same opening words or phrases
+- Same scene descriptions or environmental details  
+- Same NPC dialogue patterns or speech mannerisms
+- Same action outcomes or consequences
+- Same emotional beats or tension levels
+
+VARIETY REQUIREMENTS (per response):
+- Use DIFFERENT sentence structures than previous turns
+- Introduce AT LEAST ONE new sensory detail not mentioned before
+- Vary paragraph lengths (short tension, long atmosphere)
+- Rotate vocabulary - if you said "shadows" last turn, use "darkness" or "gloom"
+
+===== STAGE 2: NARRATIVE PROGRESSION =====
+Every response MUST advance the story in at least ONE way:
+- New information revealed
+- Situation changed (location, time, threat level)
+- Relationship dynamic shifted
+- Resource gained/lost
+- Obstacle introduced/resolved
+- NPC state changed
+
+FORBIDDEN PATTERNS:
+- "The scene continues..." or "Time passes..." without specifics
+- Restating what just happened without adding new elements
+- Circular dialogue that returns to the same point
+- Static descriptions that don't lead anywhere
+
+===== STAGE 3: ECHO PREVENTION =====
 CRITICAL - INTERPRETING PLAYER ACTIONS:
 You are the NARRATOR, not a parrot. The player's input is raw intent; your job is to transform it into polished narrative prose.
 
@@ -680,6 +714,7 @@ CORE RULES:
 - ALWAYS rephrase player actions into evocative second-person narrative
 - ADD sensory details, environmental reactions, and logical consequences
 - CONVERT first-person to second-person and EXPAND narratively
+- If player input seems familiar, create a DIFFERENT outcome or approach
 
 CRITICAL - TACTICAL/DECLARATIVE STATEMENTS:
 When players type tactical statements like "direct approach, neutralizing any threats" or "stealth mode, avoid detection" - these are ACTION DIRECTIVES, NOT spoken dialogue. The player is telling you what they WANT TO DO, not what they want their character to SAY.
@@ -826,7 +861,24 @@ DIALOGUE RULE: When players describe what they want to SAY or ASK, you must INVE
 - Advances the scene naturally
 - USES THEIR CURRENT EMOTIONAL STATE to flavor the delivery (see EMOTIONAL CONTEXT below)
 
-For the FIRST message of a new adventure, set the scene vividly and introduce an immediate hook or situation.`;
+For the FIRST message of a new adventure, set the scene vividly and introduce an immediate hook or situation.
+
+===== CONTENT SUFFICIENCY REQUIREMENTS =====
+MINIMUM RESPONSE STANDARDS (MANDATORY):
+- Every response MUST be at least 200 words of narrative (excluding tags)
+- Every response MUST contain at least 3 paragraphs
+- Every response MUST include at least 2 sensory details
+- Every response MUST advance the story in some measurable way
+- Every response MUST end with a clear hook for player action
+
+QUALITY FLOOR (responses below this are FAILURES):
+- Responses under 150 words → EXPAND with sensory detail and world motion
+- Single-paragraph responses → BREAK INTO MULTIPLE beats with varied pacing
+- Static descriptions → ADD motion, change, or consequence
+- Echo responses → COMPLETELY REPHRASE from scratch
+
+When in doubt: MORE is better than less. Rich > sparse. Motion > stasis.`;
+
 
 const CHEAT_MODE_ADDITION = `
 
@@ -2216,6 +2268,41 @@ ${livingWorldContext?.fullContext ? `✓ LIVING WORLD ACTIVE - Properties/Rivals
 4. NPCs notice and react to player's visible state (outfit, wounds, mood expressions)
 5. The world is ALIVE - things happen whether player watches or not`;
 
+    // ============= FINAL ANTI-REPETITION ENFORCEMENT =============
+    systemContent += `\n\n===== FINAL QUALITY GATES (SELF-CHECK BEFORE OUTPUT) =====
+
+🔴 **REPETITION GATE** - Before outputting, verify:
+□ First 10 words are DIFFERENT from your last 3 responses
+□ No paragraph starts the same way as a recent paragraph
+□ NPC dialogue uses DIFFERENT phrasing than recent turns
+□ Scene description highlights DIFFERENT sensory details
+□ Emotional tone or tension level has SHIFTED from last response
+
+🟡 **SUFFICIENCY GATE** - Verify your response includes:
+□ MINIMUM 150 words of narrative content (not including tags)
+□ At least 3 paragraphs of substantive content
+□ At least 2 different sensory details (sight, sound, smell, touch, taste)
+□ At least 1 element of world motion (something happens beyond player action)
+□ A clear situation that invites player response
+
+🟢 **PROGRESSION GATE** - Verify story moved forward:
+□ Something NEW was revealed (information, threat, opportunity)
+□ Situation is DIFFERENT than before player action
+□ At least one story element CHANGED (relationship, resource, location, time)
+□ Response ends with a DIFFERENT prompt/hook than recent turns
+
+⚠️ **IF ANY GATE FAILS**: Rewrite the failing section before outputting.
+
+ANTI-STALL DIRECTIVES:
+- If the story feels stuck, introduce a COMPLICATION
+- If dialogue is circular, have NPC reveal NEW INFORMATION or CHANGE STANCE
+- If action feels repetitive, ESCALATE or PIVOT to a different challenge
+- If environment is stale, describe a CHANGE (weather shift, crowd change, new arrival)
+
+VARIANCE SEEDS (rotate through these for freshness):
+Turn ${Date.now() % 7}: Focus on ${['sound details', 'visual contrasts', 'physical sensations', 'emotional undercurrents', 'NPC micro-expressions', 'environmental changes', 'foreshadowing elements'][Date.now() % 7]}`;
+
+
     // Add content rating instructions based on adult content setting
     if (adultContent) {
       systemContent += `
@@ -2470,8 +2557,11 @@ Do NOT have the character speak these words - show them DOING the action.`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages,
-        temperature: 0.85,
-        max_tokens: 1200,
+        temperature: 0.88, // Slightly higher temperature for more variety
+        max_tokens: 1500,  // Increased for richer responses
+        top_p: 0.92,       // Nucleus sampling for diversity
+        frequency_penalty: 0.3, // Penalize repetition
+        presence_penalty: 0.2,  // Encourage new topics
       }),
     });
 
@@ -2509,6 +2599,84 @@ Do NOT have the character speak these words - show them DOING the action.`;
       throw new Error('No narrative generated');
     }
 
+    // ============= POST-GENERATION QUALITY VALIDATION =============
+    
+    // Stage 1: Content sufficiency check
+    const narrativeWords = narrative.replace(/\[.*?\]/g, '').split(/\s+/).filter((w: string) => w.length > 0);
+    const wordCount = narrativeWords.length;
+    const paragraphCount = narrative.split(/\n\n+/).filter((p: string) => p.trim().length > 0).length;
+    
+    // Log quality metrics
+    console.log(`Quality metrics - Words: ${wordCount}, Paragraphs: ${paragraphCount}`);
+    
+    // Stage 2: Repetition detection with conversation history
+    let repetitionWarning = false;
+    if (conversationHistory.length >= 2) {
+      const lastNarratorResponses = conversationHistory
+        .filter((msg: { role: string; content: string }) => msg.role === 'narrator')
+        .slice(-3)
+        .map((msg: { role: string; content: string }) => msg.content.toLowerCase().slice(0, 100));
+      
+      const newNarrativeStart = narrative.toLowerCase().slice(0, 100);
+      
+      for (const prev of lastNarratorResponses) {
+        // Check for very similar openings (first 50 chars matching > 70%)
+        const similarity = calculateSimilarity(prev.slice(0, 50), newNarrativeStart.slice(0, 50));
+        if (similarity > 0.7) {
+          repetitionWarning = true;
+          console.log(`Repetition detected: ${Math.round(similarity * 100)}% similar to previous response`);
+          break;
+        }
+      }
+    }
+    
+    // Stage 3: Echo detection - check if narrative echoes player input
+    let echoWarning = false;
+    if (playerAction) {
+      const cleanPlayerAction = playerAction.toLowerCase().replace(/[^a-z\s]/g, '').trim();
+      const narrativeLower = narrative.toLowerCase();
+      
+      // Check for direct inclusion of player action text
+      if (cleanPlayerAction.length > 10 && narrativeLower.includes(cleanPlayerAction)) {
+        echoWarning = true;
+        console.log('Echo detected: narrative contains player action verbatim');
+      }
+      
+      // Check for "You say: [exact player input]" patterns
+      const echoPatterns = [
+        new RegExp(`you say[:\\s]*["']?${cleanPlayerAction.slice(0, 30)}`, 'i'),
+        new RegExp(`you speak[:\\s]*["']?${cleanPlayerAction.slice(0, 30)}`, 'i'),
+        new RegExp(`"${cleanPlayerAction.slice(0, 30)}`, 'i'),
+      ];
+      
+      for (const pattern of echoPatterns) {
+        if (pattern.test(narrative)) {
+          echoWarning = true;
+          break;
+        }
+      }
+    }
+    
+    // Log any quality warnings
+    if (wordCount < 100) {
+      console.log('WARNING: Response may be too short');
+    }
+    if (repetitionWarning) {
+      console.log('WARNING: Potential repetition detected');
+    }
+    if (echoWarning) {
+      console.log('WARNING: Potential echo of player input detected');
+    }
+    
+    // Helper function for similarity calculation
+    function calculateSimilarity(str1: string, str2: string): number {
+      if (!str1 || !str2) return 0;
+      const words1 = new Set(str1.split(/\s+/));
+      const words2 = new Set(str2.split(/\s+/));
+      const intersection = new Set([...words1].filter(x => words2.has(x)));
+      const union = new Set([...words1, ...words2]);
+      return union.size > 0 ? intersection.size / union.size : 0;
+    }
     // Parse out any game mechanics from the narrative
     const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
     
