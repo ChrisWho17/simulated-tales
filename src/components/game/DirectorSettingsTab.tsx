@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Clapperboard, AlertTriangle, Sparkles, Gauge, Users, 
   Skull, Laugh, Compass, Info, ChevronDown, ChevronRight,
-  Zap
+  Zap, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -25,14 +25,27 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
+// Description level steps with labels
+const DESCRIPTION_LEVELS = [
+  { value: 0, label: 'Vague', description: 'Minimal details, room for imagination' },
+  { value: 1, label: 'Light', description: 'Key details only' },
+  { value: 2, label: 'Balanced', description: 'Standard descriptions' },
+  { value: 3, label: 'Rich', description: 'Detailed world painting' },
+  { value: 4, label: 'Vivid', description: 'Maximum sensory detail' },
+];
+
 interface DirectorSettingsTabProps {
   directorSettings: DirectorSettings;
   onUpdate: (settings: DirectorSettings) => void;
+  descriptionLevel?: number;
+  onDescriptionLevelChange?: (level: number) => void;
 }
 
 export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
   directorSettings,
   onUpdate,
+  descriptionLevel = 2,
+  onDescriptionLevelChange,
 }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   
@@ -115,6 +128,56 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
             <p className="text-xs text-amber-200/80">
               Director features disabled. Core sim still runs.
             </p>
+          </div>
+        )}
+        
+        {/* Narrator Description Level - visible when Director is enabled */}
+        {directorSettings.enabled && onDescriptionLevelChange && (
+          <div className="space-y-3 pt-3 border-t border-border/20">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[var(--accent-secondary)]" />
+              <h3 className="text-sm font-medium">Narrator Description</h3>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Vague</span>
+                <span className="text-foreground font-medium">
+                  {DESCRIPTION_LEVELS[descriptionLevel]?.label || 'Balanced'}
+                </span>
+                <span>Vivid</span>
+              </div>
+              
+              {/* Slider with tick marks */}
+              <div className="relative">
+                <Slider
+                  value={[descriptionLevel]}
+                  onValueChange={(value) => onDescriptionLevelChange(value[0])}
+                  min={0}
+                  max={4}
+                  step={1}
+                  className="w-full"
+                />
+                {/* Tick marks */}
+                <div className="absolute top-4 left-0 right-0 flex justify-between px-1 pointer-events-none">
+                  {DESCRIPTION_LEVELS.map((level, idx) => (
+                    <div 
+                      key={idx}
+                      className={cn(
+                        "w-0.5 h-2 rounded-full transition-colors",
+                        idx <= descriptionLevel 
+                          ? "bg-[var(--accent-primary)]" 
+                          : "bg-border/50"
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <p className="text-[10px] text-muted-foreground text-center mt-3">
+                {DESCRIPTION_LEVELS[descriptionLevel]?.description || 'Standard descriptions'}
+              </p>
+            </div>
           </div>
         )}
       </div>
