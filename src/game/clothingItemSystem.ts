@@ -1,4 +1,5 @@
-// Clothing Item System - Defines all clothing items, stats, and acquisition logic
+// Clothing Item System - Core clothing items with variants
+// Use /command system from itemPromptCommands.ts for custom clothing creation
 
 export type ClothingSlot = 'head' | 'torso' | 'legs' | 'feet' | 'hands' | 'accessory' | 'outfit';
 export type ClothingRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
@@ -36,6 +37,9 @@ export interface ClothingItem {
     condition?: string;
   };
   setId?: string;
+  // Variant system - base item ID this is derived from
+  variantOf?: string;
+  variantType?: string; // e.g., 'worn', 'pristine', 'military', 'fancy'
 }
 
 export interface ClothingSet {
@@ -50,10 +54,10 @@ export interface ClothingSet {
 }
 
 // ============================================================================
-// EXPANDED CLOTHING DATABASE - Genre-Diverse Items
+// CORE CLOTHING DATABASE - Base items with variants
 // ============================================================================
 export const CLOTHING_DATABASE: ClothingItem[] = [
-  // ============== HEAD ==============
+  // ============== HEAD - Core Items ==============
   {
     id: 'worn_cap',
     name: 'Worn Baseball Cap',
@@ -88,31 +92,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['loot', 'quest'],
   },
   {
-    id: 'heavy_combat_helmet',
-    name: 'Heavy Combat Helmet',
-    description: 'Reinforced ballistic helmet with full face guard.',
-    slot: 'head',
-    style: 'military',
-    rarity: 'epic',
-    stats: { defense: 5, intimidation: 3, stealth: -3, perception: -2 },
-    value: 500,
-    sources: ['loot', 'quest'],
-    requirements: { level: 6 },
-  },
-  {
-    id: 'crown_shadows',
-    name: 'Crown of Shadows',
-    description: 'A mysterious circlet that seems to absorb light.',
-    slot: 'head',
-    style: 'elegant',
-    rarity: 'legendary',
-    stats: { charisma: 4, stealth: 3, intimidation: 2 },
-    value: 2500,
-    sources: ['quest'],
-    requirements: { level: 10 },
-  },
-  // Fantasy head items
-  {
     id: 'leather_hood',
     name: 'Leather Hood',
     description: 'A soft leather hood that shadows your features.',
@@ -122,50 +101,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     stats: { stealth: 1 },
     value: 20,
     sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'ranger_hood',
-    name: 'Ranger Hood',
-    description: 'A weathered hood favored by forest scouts and hunters.',
-    slot: 'head',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { stealth: 2, perception: 1 },
-    value: 45,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'wizard_hat',
-    name: 'Pointed Wizard Hat',
-    description: 'A tall pointed hat adorned with arcane symbols.',
-    slot: 'head',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { perception: 2 },
-    value: 60,
-    sources: ['shop', 'quest'],
-  },
-  {
-    id: 'iron_helm',
-    name: 'Iron Helm',
-    description: 'A sturdy iron helmet with nose guard.',
-    slot: 'head',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2, perception: -1 },
-    value: 80,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'elven_circlet',
-    name: 'Elven Circlet',
-    description: 'A delicate silver circlet with leaf motifs.',
-    slot: 'head',
-    style: 'elegant',
-    rarity: 'rare',
-    stats: { charisma: 2, perception: 2 },
-    value: 200,
-    sources: ['quest', 'loot'],
   },
   {
     id: 'cowboy_hat',
@@ -190,28 +125,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['shop', 'loot', 'starting'],
   },
   {
-    id: 'steel_helm',
-    name: 'Steel Knight Helm',
-    description: 'A polished steel helmet with visor.',
-    slot: 'head',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 4, perception: -2 },
-    value: 180,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'cyber_visor',
-    name: 'Cyber-Optic Visor',
-    description: 'AR-enabled visor with threat detection.',
-    slot: 'head',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { perception: 2 },
-    value: 100,
-    sources: ['shop', 'loot'],
-  },
-  {
     id: 'bandana',
     name: 'Worn Bandana',
     description: 'A faded cloth bandana.',
@@ -223,29 +136,58 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['shop', 'loot', 'starting'],
   },
   {
-    id: 'flower_crown',
-    name: 'Flower Crown',
-    description: 'A delicate crown woven from fresh wildflowers.',
+    id: 'goggles',
+    name: 'Tactical Goggles',
+    description: 'Protective eyewear for harsh conditions.',
+    slot: 'head',
+    style: 'military',
+    rarity: 'uncommon',
+    stats: { perception: 1 },
+    value: 45,
+    sources: ['shop', 'loot'],
+  },
+  // Head variants
+  {
+    id: 'wizard_hat',
+    name: 'Pointed Wizard Hat',
+    description: 'A tall pointed hat adorned with arcane symbols.',
     slot: 'head',
     style: 'elegant',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 15,
-    sources: ['craft', 'gift'],
+    rarity: 'uncommon',
+    stats: { perception: 2 },
+    value: 60,
+    sources: ['shop', 'quest'],
+    variantOf: 'leather_hood',
+    variantType: 'magical',
   },
   {
-    id: 'beret',
-    name: 'Woolen Beret',
-    description: 'A stylish woolen cap tilted to one side.',
+    id: 'iron_helm',
+    name: 'Iron Helm',
+    description: 'A sturdy iron helmet with nose guard.',
     slot: 'head',
-    style: 'casual',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 25,
-    sources: ['shop'],
+    style: 'military',
+    rarity: 'uncommon',
+    stats: { defense: 2, perception: -1 },
+    value: 80,
+    sources: ['shop', 'loot'],
+    variantOf: 'tactical_helmet',
+    variantType: 'medieval',
   },
-
-  // ============== TORSO ==============
+  {
+    id: 'steel_helm',
+    name: 'Steel Knight Helm',
+    description: 'A polished steel helmet with visor.',
+    slot: 'head',
+    style: 'military',
+    rarity: 'rare',
+    stats: { defense: 4, perception: -2 },
+    value: 180,
+    sources: ['shop', 'loot'],
+    variantOf: 'tactical_helmet',
+    variantType: 'knight',
+  },
+  
+  // ============== TORSO - Core Items ==============
   {
     id: 'plain_tshirt',
     name: 'Plain T-Shirt',
@@ -280,30 +222,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['loot', 'quest'],
   },
   {
-    id: 'heavy_plate_carrier',
-    name: 'Heavy Plate Carrier',
-    description: 'Military-grade ballistic armor with ceramic plates.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'epic',
-    stats: { defense: 8, intimidation: 3, stealth: -4 },
-    value: 800,
-    sources: ['loot', 'quest'],
-    requirements: { level: 5 },
-  },
-  {
-    id: 'riot_armor',
-    name: 'Riot Control Armor',
-    description: 'Full tactical armor designed for crowd control.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'legendary',
-    stats: { defense: 12, intimidation: 5, stealth: -6, perception: -1 },
-    value: 2000,
-    sources: ['quest'],
-    requirements: { level: 8 },
-  },
-  {
     id: 'silk_suit',
     name: 'Italian Silk Suit',
     description: 'Impeccably tailored suit that commands attention.',
@@ -315,7 +233,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['shop'],
     requirements: { reputation: 50 },
   },
-  // Fantasy torso items
   {
     id: 'leather_armor',
     name: 'Leather Armor',
@@ -326,28 +243,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     stats: { defense: 2, stealth: 1 },
     value: 50,
     sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'ranger_leather',
-    name: 'Ranger Leather Armor',
-    description: 'Well-worn leather armor with forest camouflage patterns.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { defense: 2, stealth: 2, perception: 1 },
-    value: 95,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'studded_leather',
-    name: 'Studded Leather Armor',
-    description: 'Leather armor reinforced with metal studs.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { defense: 3, intimidation: 1 },
-    value: 85,
-    sources: ['shop', 'loot'],
   },
   {
     id: 'chainmail_shirt',
@@ -361,39 +256,6 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['shop', 'loot'],
   },
   {
-    id: 'scale_mail',
-    name: 'Scale Mail Armor',
-    description: 'Overlapping metal scales provide excellent protection.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 5, stealth: -2 },
-    value: 220,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'plate_armor',
-    name: 'Plate Armor',
-    description: 'Full plate armor forged from tempered steel.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 7, intimidation: 2, stealth: -3 },
-    value: 400,
-    sources: ['shop', 'loot', 'quest'],
-  },
-  {
-    id: 'mage_robes',
-    name: 'Mage Robes',
-    description: 'Flowing robes embroidered with arcane symbols.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { perception: 2 },
-    value: 75,
-    sources: ['shop', 'quest'],
-  },
-  {
     id: 'travel_cloak',
     name: 'Travel Cloak',
     description: 'A hooded cloak for long journeys in all weather.',
@@ -405,1350 +267,289 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
     sources: ['shop', 'starting'],
   },
   {
-    id: 'hunters_vest',
-    name: "Hunter's Vest",
-    description: 'A practical leather vest with many pockets.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { perception: 1 },
-    value: 40,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'gambeson',
-    name: 'Quilted Gambeson',
-    description: 'Padded armor worn under heavier protection.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'common',
-    stats: { defense: 2 },
-    value: 60,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'brigandine',
-    name: 'Brigandine Armor',
-    description: 'Leather armor with riveted steel plates inside.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 5, stealth: -1 },
-    value: 280,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'leather_corset',
-    name: 'Leather Corset',
-    description: 'A fitted leather corset providing light protection.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { defense: 1, charisma: 2 },
-    value: 70,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'bikini_armor',
-    name: 'Ornate Battle Attire',
-    description: 'Decorative armor that prioritizes mobility over coverage.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 3, defense: 1 },
-    value: 100,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'jerkin',
-    name: 'Leather Jerkin',
-    description: 'A sleeveless leather vest worn over a tunic.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 30,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'fur_vest',
-    name: 'Fur-Lined Vest',
-    description: 'A warm vest lined with animal fur.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 35,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'druid_robes',
-    name: 'Druid Robes',
-    description: 'Natural-toned robes adorned with leaves and vines.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { stealth: 2, perception: 1 },
-    value: 80,
-    sources: ['quest'],
-  },
-  {
-    id: 'assassin_garb',
-    name: 'Assassin Garb',
-    description: 'Dark, close-fitting clothes designed for silent movement.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'rare',
-    stats: { stealth: 4, defense: 1 },
-    value: 200,
-    sources: ['quest', 'loot'],
-  },
-  {
-    id: 'noble_doublet',
-    name: 'Noble Doublet',
-    description: 'An elegant embroidered doublet of fine silk.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 3 },
-    value: 120,
-    sources: ['shop'],
-  },
-  {
-    id: 'pirate_coat',
-    name: 'Pirate Captain Coat',
-    description: 'A dramatic long coat with gold trim.',
-    slot: 'torso',
-    style: 'vintage',
-    rarity: 'uncommon',
-    stats: { charisma: 2, intimidation: 1 },
-    value: 100,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'linen_shirt',
-    name: 'Linen Shirt',
-    description: 'A simple linen shirt with loose sleeves.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 15,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'cloth_wrap_top',
-    name: 'Cloth Wrap',
-    description: 'Simple cloth wrappings bound around the torso.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 8,
-    sources: ['starting'],
-  },
-  {
-    id: 'cyber_jacket',
-    name: 'Neon-Trim Jacket',
-    description: 'A sleek jacket with LED piping along the seams.',
-    slot: 'torso',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 90,
-    sources: ['shop', 'loot'],
-  },
-  {
     id: 'hoodie',
-    name: 'Dark Hoodie',
-    description: 'A comfortable hooded sweatshirt.',
+    name: 'Hooded Sweatshirt',
+    description: 'A comfortable hoodie for warmth and anonymity.',
     slot: 'torso',
     style: 'casual',
     rarity: 'common',
     stats: { stealth: 1 },
-    value: 35,
+    value: 40,
     sources: ['shop', 'starting'],
   },
+  // Torso variants
   {
-    id: 'duster_coat',
-    name: 'Long Duster Coat',
-    description: 'A long weathered coat that sweeps to the ankles.',
+    id: 'mage_robes',
+    name: 'Mage Robes',
+    description: 'Flowing robes embroidered with arcane symbols.',
     slot: 'torso',
-    style: 'vintage',
+    style: 'elegant',
     rarity: 'uncommon',
-    stats: { charisma: 1, defense: 1 },
-    value: 85,
-    sources: ['shop', 'loot'],
+    stats: { perception: 2 },
+    value: 75,
+    sources: ['shop', 'quest'],
+    variantOf: 'travel_cloak',
+    variantType: 'magical',
   },
   {
-    id: 'crop_top',
-    name: 'Crop Top',
-    description: 'A short top that shows the midriff.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 20,
-    sources: ['shop'],
-  },
-  {
-    id: 'tank_top',
-    name: 'Tank Top',
-    description: 'A sleeveless athletic top.',
-    slot: 'torso',
-    style: 'athletic',
-    rarity: 'common',
-    stats: {},
-    value: 15,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'breastplate',
-    name: 'Steel Breastplate',
-    description: 'A polished steel breastplate with shoulder guards.',
+    id: 'plate_armor',
+    name: 'Plate Armor',
+    description: 'Full plate armor forged from tempered steel.',
     slot: 'torso',
     style: 'military',
     rarity: 'rare',
-    stats: { defense: 6, stealth: -2 },
-    value: 350,
-    sources: ['shop', 'loot'],
+    stats: { defense: 7, intimidation: 2, stealth: -3 },
+    value: 400,
+    sources: ['shop', 'loot', 'quest'],
+    variantOf: 'tactical_vest',
+    variantType: 'medieval',
   },
-
-  // ============== LEGS ==============
+  {
+    id: 'flight_suit',
+    name: 'Flight Suit',
+    description: 'A practical jumpsuit for pilots and spacers.',
+    slot: 'torso',
+    style: 'military',
+    rarity: 'uncommon',
+    stats: { defense: 1 },
+    value: 85,
+    sources: ['shop', 'loot'],
+    variantOf: 'tactical_vest',
+    variantType: 'scifi',
+  },
+  
+  // ============== LEGS - Core Items ==============
   {
     id: 'worn_jeans',
     name: 'Worn Jeans',
-    description: 'Comfortable jeans with a few holes.',
+    description: 'Faded blue jeans with character.',
     slot: 'legs',
     style: 'casual',
     rarity: 'common',
     stats: {},
-    value: 20,
-    sources: ['shop', 'starting'],
+    value: 25,
+    sources: ['shop', 'loot', 'starting'],
   },
   {
     id: 'cargo_pants',
-    name: 'Tactical Cargo Pants',
-    description: 'Durable pants with lots of pockets.',
+    name: 'Cargo Pants',
+    description: 'Durable pants with many pockets.',
     slot: 'legs',
     style: 'military',
+    rarity: 'common',
+    stats: { defense: 1 },
+    value: 45,
+    sources: ['shop', 'loot'],
+  },
+  {
+    id: 'wool_pants',
+    name: 'Wool Breeches',
+    description: 'Warm woolen pants suitable for travel.',
+    slot: 'legs',
+    style: 'casual',
+    rarity: 'common',
+    stats: {},
+    value: 30,
+    sources: ['shop', 'starting'],
+  },
+  {
+    id: 'leather_pants',
+    name: 'Leather Pants',
+    description: 'Tough leather pants offering protection.',
+    slot: 'legs',
+    style: 'streetwear',
     rarity: 'uncommon',
-    stats: { stealth: 1, defense: 1 },
-    value: 85,
+    stats: { defense: 1, stealth: 1 },
+    value: 65,
     sources: ['shop', 'loot'],
   },
   {
     id: 'dress_pants',
-    name: 'Tailored Dress Pants',
-    description: 'Sharp, professional trousers.',
+    name: 'Dress Pants',
+    description: 'Formal trousers for professional occasions.',
     slot: 'legs',
     style: 'formal',
     rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 95,
+    stats: { charisma: 1 },
+    value: 55,
     sources: ['shop'],
   },
-  // Fantasy leg items
   {
-    id: 'leather_pants',
-    name: 'Leather Pants',
-    description: 'Fitted leather pants providing some protection.',
+    id: 'cloth_pants',
+    name: 'Cloth Pants',
+    description: 'Simple cloth pants for everyday wear.',
     slot: 'legs',
     style: 'casual',
     rarity: 'common',
-    stats: { defense: 1, stealth: 1 },
-    value: 40,
-    sources: ['shop', 'loot', 'starting'],
+    stats: {},
+    value: 15,
+    sources: ['shop', 'starting'],
   },
+  // Legs variants
   {
     id: 'chainmail_leggings',
     name: 'Chainmail Leggings',
-    description: 'Protective leg armor made of interlocking rings.',
+    description: 'Metal ring leggings for armored protection.',
     slot: 'legs',
     style: 'military',
     rarity: 'uncommon',
     stats: { defense: 3, stealth: -1 },
     value: 120,
     sources: ['shop', 'loot'],
+    variantOf: 'cargo_pants',
+    variantType: 'medieval',
   },
-  {
-    id: 'plate_greaves',
-    name: 'Plate Leg Armor',
-    description: 'Full plate protection for the legs.',
-    slot: 'legs',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 5, stealth: -2 },
-    value: 250,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'cloth_pants',
-    name: 'Simple Cloth Pants',
-    description: 'Basic cloth trousers.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 12,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'wool_breeches',
-    name: 'Wool Breeches',
-    description: 'Warm woolen breeches for cold climates.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 25,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'ranger_leggings',
-    name: 'Ranger Leggings',
-    description: 'Reinforced leather leggings with knee guards.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { defense: 2, stealth: 1 },
-    value: 75,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'skirt',
-    name: 'Simple Skirt',
-    description: 'A practical knee-length skirt.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 20,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'battle_skirt',
-    name: 'Armored Battle Skirt',
-    description: 'A reinforced skirt with metal plates.',
-    slot: 'legs',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2 },
-    value: 80,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'loincloth',
-    name: 'Simple Loincloth',
-    description: 'Basic cloth covering.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 5,
-    sources: ['starting'],
-  },
-  {
-    id: 'shorts',
-    name: 'Casual Shorts',
-    description: 'Comfortable short pants.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 18,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'leather_tassets',
-    name: 'Leather Tassets',
-    description: 'Armored leather skirt-like protection for the thighs.',
-    slot: 'legs',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2 },
-    value: 65,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'cyber_pants',
-    name: 'Tech-Weave Pants',
-    description: 'Pants with integrated data ports and hidden pockets.',
-    slot: 'legs',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { stealth: 1 },
-    value: 70,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'leggings',
-    name: 'Fitted Leggings',
-    description: 'Stretchy fitted leggings.',
-    slot: 'legs',
-    style: 'athletic',
-    rarity: 'common',
-    stats: {},
-    value: 25,
-    sources: ['shop'],
-  },
-  {
-    id: 'flowing_skirt',
-    name: 'Flowing Long Skirt',
-    description: 'An elegant floor-length skirt.',
-    slot: 'legs',
-    style: 'elegant',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 35,
-    sources: ['shop'],
-  },
-
-  // ============== FEET ==============
+  
+  // ============== FEET - Core Items ==============
   {
     id: 'sneakers',
-    name: 'Running Sneakers',
-    description: 'Comfortable athletic shoes.',
+    name: 'Sneakers',
+    description: 'Comfortable athletic shoes for running.',
     slot: 'feet',
     style: 'athletic',
     rarity: 'common',
     stats: { stealth: 1 },
-    value: 45,
+    value: 40,
     sources: ['shop', 'starting'],
   },
-  {
-    id: 'combat_boots',
-    name: 'Steel-Toe Combat Boots',
-    description: 'Heavy-duty boots built for action.',
-    slot: 'feet',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2, intimidation: 1, stealth: -1 },
-    value: 110,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'heavy_armored_boots',
-    name: 'Heavy Armored Boots',
-    description: 'Reinforced tactical boots with ankle protection.',
-    slot: 'feet',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 4, intimidation: 2, stealth: -3 },
-    value: 280,
-    sources: ['loot', 'quest'],
-    requirements: { level: 4 },
-  },
-  {
-    id: 'dress_shoes',
-    name: 'Italian Leather Oxfords',
-    description: 'Polished shoes that complete any formal look.',
-    slot: 'feet',
-    style: 'formal',
-    rarity: 'rare',
-    stats: { charisma: 3 },
-    value: 200,
-    sources: ['shop'],
-  },
-  // Fantasy foot items
   {
     id: 'leather_boots',
     name: 'Leather Boots',
-    description: 'Sturdy leather boots for long journeys.',
-    slot: 'feet',
-    style: 'casual',
-    rarity: 'common',
-    stats: { stealth: 1 },
-    value: 35,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'high_boots',
-    name: 'Knee-High Boots',
-    description: 'Tall leather boots reaching to the knee.',
+    description: 'Sturdy leather boots for travel.',
     slot: 'feet',
     style: 'casual',
     rarity: 'common',
     stats: { defense: 1 },
-    value: 45,
+    value: 50,
+    sources: ['shop', 'loot', 'starting'],
+  },
+  {
+    id: 'combat_boots',
+    name: 'Combat Boots',
+    description: 'Heavy-duty military boots with steel toes.',
+    slot: 'feet',
+    style: 'military',
+    rarity: 'uncommon',
+    stats: { defense: 2, intimidation: 1 },
+    value: 85,
     sources: ['shop', 'loot'],
   },
   {
-    id: 'plate_boots',
-    name: 'Plate Sabatons',
-    description: 'Heavy plate armor for the feet.',
+    id: 'dress_shoes',
+    name: 'Dress Shoes',
+    description: 'Polished leather shoes for formal occasions.',
     slot: 'feet',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 4, stealth: -2 },
-    value: 180,
-    sources: ['shop', 'loot'],
+    style: 'formal',
+    rarity: 'uncommon',
+    stats: { charisma: 1 },
+    value: 70,
+    sources: ['shop'],
   },
   {
     id: 'soft_boots',
-    name: 'Soft Leather Boots',
-    description: 'Quiet boots for stealthy movement.',
+    name: 'Soft Boots',
+    description: 'Quiet leather boots for stealthy movement.',
     slot: 'feet',
     style: 'casual',
     rarity: 'uncommon',
     stats: { stealth: 2 },
-    value: 55,
+    value: 60,
     sources: ['shop', 'loot'],
   },
+  // Feet variants
   {
-    id: 'sandals',
-    name: 'Simple Sandals',
-    description: 'Basic leather sandals.',
+    id: 'plate_boots',
+    name: 'Plate Boots',
+    description: 'Armored boots of tempered steel.',
     slot: 'feet',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 10,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'elven_boots',
-    name: 'Elven Boots',
-    description: 'Beautifully crafted boots that make no sound.',
-    slot: 'feet',
-    style: 'elegant',
-    rarity: 'rare',
-    stats: { stealth: 3 },
-    value: 250,
-    sources: ['quest', 'loot'],
-  },
-  {
-    id: 'thigh_high_boots',
-    name: 'Thigh-High Boots',
-    description: 'Tall fitted boots reaching to mid-thigh.',
-    slot: 'feet',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 85,
-    sources: ['shop'],
-  },
-  {
-    id: 'fur_boots',
-    name: 'Fur-Lined Boots',
-    description: 'Warm boots lined with animal fur.',
-    slot: 'feet',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 40,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'barefoot',
-    name: 'Barefoot',
-    description: 'No footwear equipped.',
-    slot: 'feet',
-    style: 'casual',
-    rarity: 'common',
-    stats: { stealth: 1 },
-    value: 0,
-    sources: ['starting'],
-  },
-  {
-    id: 'heeled_boots',
-    name: 'Heeled Boots',
-    description: 'Stylish boots with a raised heel.',
-    slot: 'feet',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 75,
-    sources: ['shop'],
-  },
-
-  // ============== HANDS ==============
-  {
-    id: 'fingerless_gloves',
-    name: 'Fingerless Gloves',
-    description: 'Practical gloves that leave fingers free.',
-    slot: 'hands',
-    style: 'punk',
-    rarity: 'common',
-    stats: { intimidation: 1 },
-    value: 25,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'tactical_gloves',
-    name: 'Tactical Combat Gloves',
-    description: 'Reinforced gloves with armored knuckles.',
-    slot: 'hands',
     style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 1, intimidation: 1 },
-    value: 75,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'silk_gloves',
-    name: 'White Silk Gloves',
-    description: 'Elegant gloves for formal occasions.',
-    slot: 'hands',
-    style: 'elegant',
     rarity: 'rare',
-    stats: { charisma: 2, luck: 1 },
+    stats: { defense: 3, stealth: -2 },
     value: 150,
-    sources: ['shop', 'gift'],
+    sources: ['shop', 'loot'],
+    variantOf: 'combat_boots',
+    variantType: 'medieval',
   },
-  // Fantasy hand items
+  
+  // ============== HANDS - Core Items ==============
   {
     id: 'leather_gloves',
     name: 'Leather Gloves',
-    description: 'Simple leather work gloves.',
-    slot: 'hands',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 15,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'leather_bracers',
-    name: 'Leather Bracers',
-    description: 'Forearm guards made of hardened leather.',
+    description: 'Sturdy leather gloves for protection and grip.',
     slot: 'hands',
     style: 'casual',
     rarity: 'common',
     stats: { defense: 1 },
-    value: 30,
+    value: 25,
     sources: ['shop', 'loot', 'starting'],
   },
   {
-    id: 'metal_bracers',
-    name: 'Metal Bracers',
-    description: 'Sturdy metal forearm guards.',
+    id: 'tactical_gloves',
+    name: 'Tactical Gloves',
+    description: 'Reinforced gloves with knuckle protection.',
     slot: 'hands',
     style: 'military',
     rarity: 'uncommon',
-    stats: { defense: 2 },
-    value: 60,
+    stats: { defense: 2, intimidation: 1 },
+    value: 65,
     sources: ['shop', 'loot'],
   },
   {
-    id: 'plate_gauntlets',
-    name: 'Plate Gauntlets',
-    description: 'Full plate armor for the hands and forearms.',
+    id: 'fingerless_gloves',
+    name: 'Fingerless Gloves',
+    description: 'Gloves with exposed fingers for dexterity.',
     slot: 'hands',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 3, intimidation: 1 },
-    value: 150,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'archer_gloves',
-    name: 'Archer Gloves',
-    description: 'Fitted gloves designed for drawing bowstrings.',
-    slot: 'hands',
-    style: 'casual',
+    style: 'streetwear',
     rarity: 'common',
     stats: { perception: 1 },
-    value: 25,
+    value: 20,
     sources: ['shop', 'loot'],
   },
-  {
-    id: 'cloth_wraps',
-    name: 'Hand Wraps',
-    description: 'Simple cloth wrapped around the hands.',
-    slot: 'hands',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 5,
-    sources: ['starting'],
-  },
-  {
-    id: 'ornate_bracers',
-    name: 'Ornate Bracers',
-    description: 'Decorative bracers with intricate engravings.',
-    slot: 'hands',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 1, defense: 1 },
-    value: 80,
-    sources: ['shop', 'loot'],
-  },
-
-// ============== ACCESSORIES ==============
-  {
-    id: 'dog_tags',
-    name: 'Military Dog Tags',
-    description: 'Metal identification tags on a chain.',
-    slot: 'accessory',
-    style: 'military',
-    rarity: 'common',
-    stats: { intimidation: 1 },
-    value: 30,
-    sources: ['loot', 'starting'],
-  },
-  {
-    id: 'gold_watch',
-    name: 'Gold Chronograph Watch',
-    description: 'An expensive timepiece that shows your status.',
-    slot: 'accessory',
-    style: 'formal',
-    rarity: 'epic',
-    stats: { charisma: 4, luck: 2 },
-    value: 1200,
-    sources: ['shop', 'loot'],
-    requirements: { reputation: 30 },
-  },
-  {
-    id: 'lucky_coin',
-    name: 'Lucky Silver Coin',
-    description: 'A worn coin that seems to bring good fortune.',
-    slot: 'accessory',
-    style: 'vintage',
-    rarity: 'legendary',
-    stats: { luck: 5, perception: 2 },
-    value: 5000,
-    sources: ['quest'],
-  },
+  
+  // ============== ACCESSORY - Core Items ==============
   {
     id: 'leather_belt',
     name: 'Leather Belt',
-    description: 'A sturdy belt with brass buckle.',
-    slot: 'accessory',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 15,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'adventurer_belt',
-    name: "Adventurer's Belt",
-    description: 'A belt with multiple pouches and loops.',
-    slot: 'accessory',
-    style: 'casual',
-    rarity: 'common',
-    stats: { perception: 1 },
-    value: 35,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'quiver',
-    name: 'Leather Quiver',
-    description: 'A back-worn quiver for holding arrows.',
-    slot: 'accessory',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 30,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'shoulder_cape',
-    name: 'Shoulder Cape',
-    description: 'A short cape draped over one shoulder.',
-    slot: 'accessory',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 1 },
-    value: 50,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'pendant',
-    name: 'Simple Pendant',
-    description: 'A small pendant on a leather cord.',
+    description: 'A sturdy belt for holding gear.',
     slot: 'accessory',
     style: 'casual',
     rarity: 'common',
     stats: {},
     value: 20,
-    sources: ['shop', 'gift'],
+    sources: ['shop', 'starting'],
   },
   {
-    id: 'amulet',
-    name: 'Protective Amulet',
-    description: 'An amulet said to ward off evil.',
+    id: 'satchel',
+    name: 'Leather Satchel',
+    description: 'A practical bag for carrying essentials.',
     slot: 'accessory',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { luck: 1 },
-    value: 75,
-    sources: ['shop', 'quest'],
-  },
-  {
-    id: 'shoulder_armor',
-    name: 'Shoulder Pauldrons',
-    description: 'Protective armor plates for the shoulders.',
-    slot: 'accessory',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2, intimidation: 1 },
-    value: 90,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'sash',
-    name: 'Decorative Sash',
-    description: 'A colored sash worn across the chest.',
-    slot: 'accessory',
-    style: 'elegant',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 25,
-    sources: ['shop'],
-  },
-  {
-    id: 'bandolier',
-    name: 'Leather Bandolier',
-    description: 'A strap with loops for carrying ammunition or potions.',
-    slot: 'accessory',
-    style: 'military',
+    style: 'casual',
     rarity: 'common',
     stats: {},
     value: 35,
-    sources: ['shop', 'loot'],
+    sources: ['shop', 'starting'],
   },
   {
-    id: 'scarf',
-    name: 'Wool Scarf',
-    description: 'A warm woolen scarf.',
+    id: 'silver_pendant',
+    name: 'Silver Pendant',
+    description: 'An ornate silver necklace.',
     slot: 'accessory',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 15,
-    sources: ['shop'],
-  },
-  {
-    id: 'choker',
-    name: 'Leather Choker',
-    description: 'A fitted leather band worn around the neck.',
-    slot: 'accessory',
-    style: 'punk',
-    rarity: 'common',
-    stats: {},
-    value: 20,
-    sources: ['shop'],
-  },
-
-  // ============== GENRE-SPECIFIC: PIRATE ==============
-  {
-    id: 'pirate_vest',
-    name: 'Pirate Vest',
-    description: 'A sleeveless leather vest with brass buttons.',
-    slot: 'torso',
-    style: 'vintage',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 40,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'pirate_sash',
-    name: 'Pirate Sash',
-    description: 'A colorful sash worn around the waist.',
-    slot: 'accessory',
-    style: 'vintage',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 20,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'sea_boots',
-    name: 'Sea Boots',
-    description: 'Tall leather boots for life at sea.',
-    slot: 'feet',
-    style: 'vintage',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 45,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'naval_coat',
-    name: 'Naval Captain Coat',
-    description: 'A formal naval coat with gold embroidery.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'rare',
-    stats: { charisma: 3, intimidation: 2 },
-    value: 250,
-    sources: ['quest', 'loot'],
-  },
-
-  // ============== GENRE-SPECIFIC: HORROR ==============
-  {
-    id: 'torn_jacket',
-    name: 'Torn Jacket',
-    description: 'A jacket with tears and blood stains.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { stealth: 1 },
-    value: 20,
-    sources: ['loot', 'starting'],
-  },
-  {
-    id: 'survivor_vest',
-    name: 'Survivor Vest',
-    description: 'A practical vest with many pockets for survival gear.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { perception: 1, defense: 1 },
-    value: 60,
-    sources: ['loot'],
-  },
-  {
-    id: 'bloody_shirt',
-    name: 'Blood-Stained Shirt',
-    description: 'A once-white shirt now stained with dark marks.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { intimidation: 1 },
-    value: 10,
-    sources: ['loot', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: NOIR/MYSTERY ==============
-  {
-    id: 'trench_coat',
-    name: 'Detective Trench Coat',
-    description: 'A classic tan trench coat with upturned collar.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 2, perception: 1 },
-    value: 120,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'noir_suit',
-    name: 'Noir Pinstripe Suit',
-    description: 'A dark pinstripe suit from another era.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 3 },
-    value: 150,
-    sources: ['shop'],
-  },
-  {
-    id: 'suspenders',
-    name: 'Classic Suspenders',
-    description: 'Vintage suspenders holding up high-waisted pants.',
-    slot: 'accessory',
-    style: 'vintage',
-    rarity: 'common',
-    stats: {},
-    value: 25,
-    sources: ['shop', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: CYBERPUNK ==============
-  {
-    id: 'neon_harness',
-    name: 'Neon Harness',
-    description: 'A body harness with integrated LED strips.',
-    slot: 'torso',
-    style: 'punk',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 80,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'synth_leather_jacket',
-    name: 'Synth-Leather Jacket',
-    description: 'A sleek jacket made from synthetic materials.',
-    slot: 'torso',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { charisma: 2, defense: 1 },
-    value: 95,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'tech_goggles',
-    name: 'AR Tech Goggles',
-    description: 'Augmented reality goggles with data overlay.',
-    slot: 'head',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { perception: 2 },
-    value: 120,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'platform_boots',
-    name: 'Platform Combat Boots',
-    description: 'Heavy platform boots with shock absorption.',
-    slot: 'feet',
-    style: 'punk',
-    rarity: 'uncommon',
-    stats: { intimidation: 1, defense: 1 },
-    value: 90,
-    sources: ['shop', 'loot'],
-  },
-  {
-    id: 'data_gloves',
-    name: 'Data-Link Gloves',
-    description: 'Gloves with haptic feedback and data ports.',
-    slot: 'hands',
-    style: 'streetwear',
-    rarity: 'uncommon',
-    stats: { perception: 1 },
-    value: 70,
-    sources: ['shop', 'loot'],
-  },
-
-  // ============== GENRE-SPECIFIC: SCI-FI ==============
-  {
-    id: 'flight_suit',
-    name: 'Pilot Flight Suit',
-    description: 'A form-fitting suit designed for spacecraft operation.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 2 },
-    value: 150,
-    sources: ['shop', 'quest', 'starting'],
-  },
-  {
-    id: 'enviro_suit',
-    name: 'Environmental Suit',
-    description: 'A sealed suit for hostile environments.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'rare',
-    stats: { defense: 3 },
-    value: 300,
-    sources: ['shop', 'quest'],
-  },
-  {
-    id: 'mag_boots',
-    name: 'Magnetic Boots',
-    description: 'Boots with magnetic soles for zero-G environments.',
-    slot: 'feet',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 1 },
-    value: 130,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'utility_jumpsuit',
-    name: 'Utility Jumpsuit',
-    description: 'A practical one-piece suit for ship operations.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: {},
-    value: 50,
-    sources: ['shop', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: POST-APOCALYPTIC ==============
-  {
-    id: 'scrap_armor',
-    name: 'Scrap Metal Armor',
-    description: 'Improvised armor made from salvaged metal.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 3, stealth: -1 },
-    value: 45,
-    sources: ['loot', 'craft', 'starting'],
-  },
-  {
-    id: 'wasteland_coat',
-    name: 'Wasteland Duster',
-    description: 'A patched and worn duster coat for the wastes.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 40,
-    sources: ['loot', 'starting'],
-  },
-  {
-    id: 'gas_mask',
-    name: 'Salvaged Gas Mask',
-    description: 'A worn but functional gas mask.',
-    slot: 'head',
-    style: 'military',
-    rarity: 'uncommon',
-    stats: { defense: 1, perception: -1 },
-    value: 60,
-    sources: ['loot'],
-  },
-  {
-    id: 'raider_boots',
-    name: 'Raider Boots',
-    description: 'Heavy boots reinforced with scrap metal.',
-    slot: 'feet',
-    style: 'punk',
-    rarity: 'uncommon',
-    stats: { defense: 2, intimidation: 1 },
-    value: 55,
-    sources: ['loot'],
-  },
-  {
-    id: 'makeshift_gloves',
-    name: 'Makeshift Gloves',
-    description: 'Gloves wrapped with cloth and leather scraps.',
-    slot: 'hands',
-    style: 'casual',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 15,
-    sources: ['craft', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: WAR/MILITARY ==============
-  {
-    id: 'combat_fatigues',
-    name: 'Combat Fatigues',
-    description: 'Standard military combat uniform.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'common',
-    stats: { defense: 2, stealth: 1 },
-    value: 80,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'military_jacket',
-    name: 'Military Field Jacket',
-    description: 'A rugged field jacket with multiple pockets.',
-    slot: 'torso',
-    style: 'military',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 65,
-    sources: ['shop', 'loot', 'starting'],
-  },
-  {
-    id: 'combat_pants',
-    name: 'Combat Pants',
-    description: 'Reinforced military trousers.',
-    slot: 'legs',
-    style: 'military',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 55,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'army_boots',
-    name: 'Army Combat Boots',
-    description: 'Standard issue military footwear.',
-    slot: 'feet',
-    style: 'military',
-    rarity: 'common',
-    stats: { defense: 1 },
-    value: 70,
-    sources: ['shop', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: STEAMPUNK ==============
-  {
-    id: 'clockwork_vest',
-    name: 'Clockwork Vest',
-    description: 'An ornate vest with exposed gear mechanisms.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 110,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'aviator_goggles',
-    name: 'Brass Aviator Goggles',
-    description: 'Leather and brass goggles for airship travel.',
-    slot: 'head',
-    style: 'vintage',
-    rarity: 'common',
-    stats: { perception: 1 },
-    value: 45,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'victorian_boots',
-    name: 'Victorian Lace-Up Boots',
-    description: 'Elegant leather boots with many buttons.',
-    slot: 'feet',
     style: 'elegant',
     rarity: 'uncommon',
     stats: { charisma: 1 },
-    value: 80,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'brass_gauntlet',
-    name: 'Brass Mechanical Gauntlet',
-    description: 'A gauntlet with clockwork mechanisms.',
-    slot: 'hands',
-    style: 'elegant',
-    rarity: 'rare',
-    stats: { defense: 2, charisma: 1 },
-    value: 180,
-    sources: ['quest', 'loot'],
-  },
-
-  // ============== GENRE-SPECIFIC: VICTORIAN ==============
-  {
-    id: 'victorian_dress',
-    name: 'Victorian Day Dress',
-    description: 'An elegant dress with corset and bustle.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 3 },
-    value: 150,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'frock_coat',
-    name: 'Gentleman\'s Frock Coat',
-    description: 'A formal coat with tails.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 130,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'top_hat',
-    name: 'Top Hat',
-    description: 'A distinguished tall silk hat.',
-    slot: 'head',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 90,
-    sources: ['shop'],
-  },
-
-  // ============== GENRE-SPECIFIC: SPACE OPERA ==============
-  {
-    id: 'ceremonial_cape',
-    name: 'Ceremonial Cape',
-    description: 'A flowing cape with gold trim for formal occasions.',
-    slot: 'accessory',
-    style: 'elegant',
-    rarity: 'rare',
-    stats: { charisma: 3 },
-    value: 250,
-    sources: ['quest'],
-  },
-  {
-    id: 'commander_uniform',
-    name: 'Commander Uniform',
-    description: 'A crisp military-style uniform with rank insignia.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'uncommon',
-    stats: { charisma: 2, intimidation: 1 },
-    value: 180,
-    sources: ['shop', 'starting'],
-  },
-
-  // ============== GENRE-SPECIFIC: DARK FANTASY ==============
-  {
-    id: 'dark_robes',
-    name: 'Dark Cultist Robes',
-    description: 'Black robes with occult symbols stitched in silver.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { intimidation: 2, stealth: 1 },
     value: 100,
-    sources: ['quest', 'loot', 'starting'],
+    sources: ['shop', 'quest', 'gift'],
   },
   {
-    id: 'spiked_pauldrons',
-    name: 'Spiked Shoulder Armor',
-    description: 'Intimidating shoulder armor with sharp spikes.',
+    id: 'dog_tags',
+    name: 'Dog Tags',
+    description: 'Military identification tags on a chain.',
     slot: 'accessory',
     style: 'military',
-    rarity: 'uncommon',
-    stats: { intimidation: 2, defense: 1 },
-    value: 85,
-    sources: ['loot'],
-  },
-  {
-    id: 'shadow_cloak',
-    name: 'Shadow Cloak',
-    description: 'A cloak that seems to absorb light around it.',
-    slot: 'torso',
-    style: 'elegant',
-    rarity: 'rare',
-    stats: { stealth: 3, intimidation: 1 },
-    value: 220,
-    sources: ['quest'],
-  },
-
-  // ============== GENRE-SPECIFIC: ROMANCE/CONTEMPORARY ==============
-  {
-    id: 'sundress',
-    name: 'Floral Sundress',
-    description: 'A light, flowing dress with floral patterns.',
-    slot: 'torso',
-    style: 'casual',
     rarity: 'common',
-    stats: { charisma: 2 },
-    value: 45,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'blazer',
-    name: 'Tailored Blazer',
-    description: 'A well-fitted blazer for smart casual wear.',
-    slot: 'torso',
-    style: 'formal',
-    rarity: 'common',
-    stats: { charisma: 2 },
-    value: 80,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'casual_dress',
-    name: 'Casual Dress',
-    description: 'A comfortable everyday dress.',
-    slot: 'torso',
-    style: 'casual',
-    rarity: 'common',
-    stats: { charisma: 1 },
-    value: 35,
-    sources: ['shop', 'starting'],
-  },
-  {
-    id: 'designer_jeans',
-    name: 'Designer Jeans',
-    description: 'Premium denim with perfect fit.',
-    slot: 'legs',
-    style: 'casual',
-    rarity: 'uncommon',
-    stats: { charisma: 1 },
-    value: 75,
-    sources: ['shop'],
-  },
-  {
-    id: 'heels',
-    name: 'Stiletto Heels',
-    description: 'Elegant high-heeled shoes.',
-    slot: 'feet',
-    style: 'elegant',
-    rarity: 'uncommon',
-    stats: { charisma: 2 },
-    value: 95,
-    sources: ['shop'],
+    stats: {},
+    value: 15,
+    sources: ['loot', 'starting'],
   },
 ];
 
@@ -1757,135 +558,219 @@ export const CLOTHING_DATABASE: ClothingItem[] = [
 // ============================================================================
 export const CLOTHING_SETS: ClothingSet[] = [
   {
-    id: 'tactical_operator',
-    name: 'Tactical Operator',
-    description: 'Full military combat gear.',
-    pieces: ['tactical_helmet', 'tactical_vest', 'cargo_pants', 'combat_boots', 'tactical_gloves'],
+    id: 'street_survivor',
+    name: 'Street Survivor',
+    description: 'Urban tactical gear for modern operators.',
+    pieces: ['leather_jacket', 'cargo_pants', 'combat_boots', 'tactical_gloves'],
     bonuses: [
-      { piecesRequired: 2, stats: { defense: 2 } },
-      { piecesRequired: 4, stats: { defense: 3, intimidation: 2 } },
-      { piecesRequired: 5, stats: { defense: 5, intimidation: 4, perception: 2 } },
+      { piecesRequired: 2, stats: { defense: 1, stealth: 1 } },
+      { piecesRequired: 4, stats: { defense: 3, stealth: 2, intimidation: 2 } },
     ],
   },
   {
-    id: 'sharp_dressed',
-    name: 'Sharp Dressed',
-    description: 'Complete formal attire.',
-    pieces: ['silk_suit', 'dress_pants', 'dress_shoes', 'gold_watch', 'silk_gloves'],
+    id: 'adventurer_basic',
+    name: 'Adventurer\'s Kit',
+    description: 'Basic traveling gear for any journey.',
+    pieces: ['leather_armor', 'leather_boots', 'leather_gloves', 'travel_cloak'],
+    bonuses: [
+      { piecesRequired: 2, stats: { defense: 1, perception: 1 } },
+      { piecesRequired: 4, stats: { defense: 3, perception: 2, stealth: 1 } },
+    ],
+  },
+  {
+    id: 'formal_attire',
+    name: 'Formal Attire',
+    description: 'Elegant clothing for high society.',
+    pieces: ['silk_suit', 'dress_pants', 'dress_shoes'],
     bonuses: [
       { piecesRequired: 2, stats: { charisma: 2 } },
-      { piecesRequired: 3, stats: { charisma: 4, luck: 1 } },
-      { piecesRequired: 5, stats: { charisma: 8, luck: 3 } },
+      { piecesRequired: 3, stats: { charisma: 5, luck: 2 } },
+    ],
+  },
+  {
+    id: 'combat_ready',
+    name: 'Combat Ready',
+    description: 'Full tactical combat loadout.',
+    pieces: ['tactical_vest', 'cargo_pants', 'combat_boots', 'tactical_helmet', 'tactical_gloves'],
+    bonuses: [
+      { piecesRequired: 3, stats: { defense: 3, intimidation: 2 } },
+      { piecesRequired: 5, stats: { defense: 6, intimidation: 4 } },
     ],
   },
 ];
 
-// Helper functions
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 export function getClothingById(id: string): ClothingItem | undefined {
   return CLOTHING_DATABASE.find(item => item.id === id);
-}
-
-export function getClothingByStyle(style: ClothingStyle): ClothingItem[] {
-  return CLOTHING_DATABASE.filter(item => item.style === style);
 }
 
 export function getClothingBySlot(slot: ClothingSlot): ClothingItem[] {
   return CLOTHING_DATABASE.filter(item => item.slot === slot);
 }
 
+export function getClothingByStyle(style: ClothingStyle): ClothingItem[] {
+  return CLOTHING_DATABASE.filter(item => item.style === style);
+}
+
 export function getClothingByRarity(rarity: ClothingRarity): ClothingItem[] {
   return CLOTHING_DATABASE.filter(item => item.rarity === rarity);
 }
 
-export function getShopInventory(playerLevel: number = 1, playerRep: number = 0): ClothingItem[] {
+export function getStarterClothing(): ClothingItem[] {
+  return CLOTHING_DATABASE.filter(item => item.sources.includes('starting'));
+}
+
+export function getSetById(id: string): ClothingSet | undefined {
+  return CLOTHING_SETS.find(set => set.id === id);
+}
+
+export function calculateSetBonus(equippedIds: string[], set: ClothingSet): ClothingStats {
+  const matchingPieces = equippedIds.filter(id => set.pieces.includes(id)).length;
+  
+  let totalBonus: ClothingStats = {};
+  
+  for (const bonus of set.bonuses) {
+    if (matchingPieces >= bonus.piecesRequired) {
+      totalBonus = { ...totalBonus, ...bonus.stats };
+    }
+  }
+  
+  return totalBonus;
+}
+
+export function getActiveSetBonuses(equippedIds: string[]): { set: ClothingSet; bonus: ClothingStats }[] {
+  const activeBonuses: { set: ClothingSet; bonus: ClothingStats }[] = [];
+  
+  for (const set of CLOTHING_SETS) {
+    const bonus = calculateSetBonus(equippedIds, set);
+    if (Object.keys(bonus).length > 0) {
+      activeBonuses.push({ set, bonus });
+    }
+  }
+  
+  return activeBonuses;
+}
+
+/**
+ * Get variants of a base clothing item
+ */
+export function getVariants(baseItemId: string): ClothingItem[] {
+  return CLOTHING_DATABASE.filter(item => item.variantOf === baseItemId);
+}
+
+/**
+ * Get all base items (items that are not variants)
+ */
+export function getBaseItems(): ClothingItem[] {
+  return CLOTHING_DATABASE.filter(item => !item.variantOf);
+}
+
+/**
+ * Get all items including variants for a specific base item
+ */
+export function getItemWithVariants(baseItemId: string): ClothingItem[] {
+  const baseItem = getClothingById(baseItemId);
+  if (!baseItem) return [];
+  
+  return [baseItem, ...getVariants(baseItemId)];
+}
+
+// ============================================================================
+// UI HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get color class for rarity
+ */
+export function getRarityColor(rarity: ClothingRarity): string {
+  switch (rarity) {
+    case 'common': return 'text-gray-400';
+    case 'uncommon': return 'text-green-400';
+    case 'rare': return 'text-blue-400';
+    case 'epic': return 'text-purple-400';
+    case 'legendary': return 'text-amber-400';
+    default: return 'text-gray-400';
+  }
+}
+
+/**
+ * Get background color class for rarity
+ */
+export function getRarityBgColor(rarity: ClothingRarity): string {
+  switch (rarity) {
+    case 'common': return 'bg-gray-500/20 border-gray-500/30';
+    case 'uncommon': return 'bg-green-500/20 border-green-500/30';
+    case 'rare': return 'bg-blue-500/20 border-blue-500/30';
+    case 'epic': return 'bg-purple-500/20 border-purple-500/30';
+    case 'legendary': return 'bg-amber-500/20 border-amber-500/30';
+    default: return 'bg-gray-500/20 border-gray-500/30';
+  }
+}
+
+/**
+ * Get stat description for display
+ */
+export function getStatDescription(stat: string, value?: number): string {
+  const statNames: Record<string, string> = {
+    charisma: 'Charisma - Affects social interactions and persuasion',
+    intimidation: 'Intimidation - Makes NPCs more likely to back down',
+    defense: 'Defense - Reduces damage taken in combat',
+    stealth: 'Stealth - Makes you harder to detect',
+    perception: 'Perception - Helps notice hidden details',
+    luck: 'Luck - Affects random outcomes and loot',
+  };
+  
+  if (value !== undefined) {
+    const prefix = value >= 0 ? '+' : '';
+    const shortNames: Record<string, string> = {
+      charisma: 'Charisma',
+      intimidation: 'Intimidation',
+      defense: 'Defense',
+      stealth: 'Stealth',
+      perception: 'Perception',
+      luck: 'Luck',
+    };
+    return `${prefix}${value} ${shortNames[stat] || stat}`;
+  }
+  
+  return statNames[stat] || stat;
+}
+
+/**
+ * Get shop inventory - items available for purchase
+ */
+export function getShopInventory(playerLevel: number = 1, fashionScore: number = 0): ClothingItem[] {
   return CLOTHING_DATABASE.filter(item => {
+    // Must be available in shops
     if (!item.sources.includes('shop')) return false;
+    
+    // Check level requirements
     if (item.requirements?.level && item.requirements.level > playerLevel) return false;
-    if (item.requirements?.reputation && item.requirements.reputation > playerRep) return false;
+    
+    // Check reputation requirements (use fashionScore as reputation proxy)
+    if (item.requirements?.reputation && item.requirements.reputation > fashionScore) return false;
+    
     return true;
   });
 }
 
-export function rollLootDrop(context: { location?: string; enemy?: string; difficulty?: number }): ClothingItem | null {
-  const lootableItems = CLOTHING_DATABASE.filter(item => item.sources.includes('loot'));
-  if (lootableItems.length === 0) return null;
-
-  const difficulty = context.difficulty || 1;
-  
-  // Weight by rarity - higher difficulty = better chance at rare items
-  const weights: Record<ClothingRarity, number> = {
-    common: 50 - difficulty * 5,
-    uncommon: 30,
-    rare: 15 + difficulty * 2,
-    epic: 4 + difficulty,
-    legendary: 1 + Math.floor(difficulty / 3),
-  };
-
-  const roll = Math.random() * 100;
-  let cumulative = 0;
-  let targetRarity: ClothingRarity = 'common';
-
-  for (const [rarity, weight] of Object.entries(weights)) {
-    cumulative += weight;
-    if (roll <= cumulative) {
-      targetRarity = rarity as ClothingRarity;
-      break;
-    }
-  }
-
-  const rarityItems = lootableItems.filter(item => item.rarity === targetRarity);
-  if (rarityItems.length === 0) {
-    // Fallback to any lootable item
-    return lootableItems[Math.floor(Math.random() * lootableItems.length)];
-  }
-
-  return rarityItems[Math.floor(Math.random() * rarityItems.length)];
-}
-
+/**
+ * Calculate total stats from multiple clothing items
+ */
 export function calculateTotalStats(items: ClothingItem[]): ClothingStats {
-  const total: ClothingStats = {};
-
+  const total: Record<string, number> = {};
+  
   for (const item of items) {
-    for (const [key, value] of Object.entries(item.stats)) {
-      if (key === 'genreBonus') continue;
-      const statKey = key as keyof Omit<ClothingStats, 'genreBonus'>;
-      total[statKey] = (total[statKey] || 0) + (value as number);
+    for (const [stat, value] of Object.entries(item.stats)) {
+      if (stat === 'genreBonus') continue;
+      if (typeof value === 'number') {
+        total[stat] = (total[stat] || 0) + value;
+      }
     }
   }
-
-  return total;
-}
-
-export function getStatDescription(stat: keyof Omit<ClothingStats, 'genreBonus'>): string {
-  const descriptions: Record<string, string> = {
-    charisma: 'Improves social interactions and persuasion',
-    intimidation: 'Makes NPCs more likely to back down or comply',
-    defense: 'Reduces damage from physical attacks',
-    stealth: 'Makes it easier to sneak and avoid detection',
-    perception: 'Improves awareness and chance to notice details',
-    luck: 'Affects random outcomes and loot quality',
-  };
-  return descriptions[stat] || 'Unknown stat';
-}
-
-export function getRarityColor(rarity: ClothingRarity): string {
-  const colors: Record<ClothingRarity, string> = {
-    common: 'text-muted-foreground',
-    uncommon: 'text-green-500',
-    rare: 'text-blue-500',
-    epic: 'text-purple-500',
-    legendary: 'text-amber-500',
-  };
-  return colors[rarity];
-}
-
-export function getRarityBgColor(rarity: ClothingRarity): string {
-  const colors: Record<ClothingRarity, string> = {
-    common: 'bg-muted/30 border-border',
-    uncommon: 'bg-green-500/10 border-green-500/30',
-    rare: 'bg-blue-500/10 border-blue-500/30',
-    epic: 'bg-purple-500/10 border-purple-500/30',
-    legendary: 'bg-amber-500/10 border-amber-500/30',
-  };
-  return colors[rarity];
+  
+  return total as ClothingStats;
 }
