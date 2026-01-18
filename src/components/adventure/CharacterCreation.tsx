@@ -767,13 +767,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm text-muted-foreground">Bust Size</label>
+                          <label className="text-sm text-muted-foreground">Cup Size</label>
                           <select
                             value={appearance.full?.bustSize || 'C'}
                             onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
                             className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
                           >
-                            {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label} - {opt.description}</option>)}
+                            {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                         </div>
                         <div>
@@ -785,6 +785,72 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           >
                             {HIP_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Body Shape Presets */}
+                    {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAppearance('full', 'bustSize', 'D');
+                              updateAppearance('full', 'hipWidth', 'wide');
+                            }}
+                            className={`p-2 text-xs rounded-lg border transition-all ${
+                              appearance.full?.bustSize === 'D' && appearance.full?.hipWidth === 'wide'
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                            }`}
+                          >
+                            Hourglass
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAppearance('full', 'bustSize', 'B');
+                              updateAppearance('full', 'hipWidth', 'wide');
+                            }}
+                            className={`p-2 text-xs rounded-lg border transition-all ${
+                              appearance.full?.bustSize === 'B' && appearance.full?.hipWidth === 'wide'
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                            }`}
+                          >
+                            Pear
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAppearance('full', 'bustSize', 'DD');
+                              updateAppearance('full', 'hipWidth', 'narrow');
+                            }}
+                            className={`p-2 text-xs rounded-lg border transition-all ${
+                              appearance.full?.bustSize === 'DD' && appearance.full?.hipWidth === 'narrow'
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                            }`}
+                          >
+                            Apple
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAppearance('full', 'bustSize', 'B');
+                              updateAppearance('full', 'hipWidth', 'narrow');
+                              updateAppearance('full', 'muscleDefinition', 'toned');
+                            }}
+                            className={`p-2 text-xs rounded-lg border transition-all ${
+                              appearance.full?.bustSize === 'B' && appearance.full?.hipWidth === 'narrow' && appearance.full?.muscleDefinition === 'toned'
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                            }`}
+                          >
+                            Athletic
+                          </button>
                         </div>
                       </div>
                     )}
