@@ -132,6 +132,73 @@ const ORIGIN_STORIES = [
   { id: 'debt', label: 'Owes a Debt', description: "They owe you or someone you know" },
 ] as const;
 
+// Experience levels with stat ranges
+const EXPERIENCE_LEVELS = [
+  { id: 'green', label: 'Green', description: 'Inexperienced, learning the ropes', minStat: 1, maxStat: 4, color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  { id: 'novice', label: 'Novice', description: 'Some training, still rough around the edges', minStat: 3, maxStat: 6, color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+  { id: 'competent', label: 'Competent', description: 'Capable in their role, reliable', minStat: 5, maxStat: 8, color: 'text-amber-400', bgColor: 'bg-amber-500/20' },
+  { id: 'skilled', label: 'Skilled', description: 'Above average, proven in combat', minStat: 7, maxStat: 10, color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+  { id: 'veteran', label: 'Veteran', description: 'Battle-hardened, elite warrior', minStat: 10, maxStat: 15, color: 'text-red-400', bgColor: 'bg-red-500/20' },
+] as const;
+
+// Companion fears based on traits
+const COMPANION_FEARS: Record<PersonalityTrait, string> = {
+  'honorable': 'Being forced to break a sworn oath',
+  'ruthless': 'Showing weakness to enemies',
+  'kind': 'Failing to protect the innocent',
+  'cruel': 'Being shown mercy when they dont deserve it',
+  'brave': 'Dying without purpose',
+  'cowardly': 'Any direct confrontation',
+  'greedy': 'Poverty and losing wealth',
+  'generous': 'Being unable to help those in need',
+  'loyal': 'Betraying a trusted ally',
+  'treacherous': 'Being discovered and exposed',
+  'romantic': 'Rejection and loneliness',
+  'pragmatic': 'Emotional decisions overriding logic',
+  'spiritual': 'Losing faith or divine favor',
+  'skeptical': 'Being fooled or manipulated',
+  'vengeful': 'Enemies escaping justice',
+  'forgiving': 'Holding onto bitterness',
+  'ambitious': 'Remaining ordinary and forgotten',
+  'humble': 'Undeserved praise and attention',
+};
+
+// Personality archetypes derived from trait combinations
+const derivePersonalityType = (traits: PersonalityTrait[]): { type: string; icon: string; description: string } => {
+  if (traits.includes('honorable') && traits.includes('brave')) {
+    return { type: 'Paladin', icon: '⚔️', description: 'Noble warrior bound by code' };
+  }
+  if (traits.includes('ruthless') && traits.includes('ambitious')) {
+    return { type: 'Tyrant', icon: '👑', description: 'Power-hungry and merciless' };
+  }
+  if (traits.includes('kind') && traits.includes('generous')) {
+    return { type: 'Healer', icon: '💚', description: 'Selfless caretaker of others' };
+  }
+  if (traits.includes('greedy') && traits.includes('pragmatic')) {
+    return { type: 'Merchant', icon: '💰', description: 'Profit-driven opportunist' };
+  }
+  if (traits.includes('romantic') && traits.includes('loyal')) {
+    return { type: 'Devoted', icon: '❤️', description: 'Deeply loyal companion' };
+  }
+  if (traits.includes('skeptical') && traits.includes('pragmatic')) {
+    return { type: 'Analyst', icon: '🔍', description: 'Questions everything' };
+  }
+  if (traits.includes('spiritual') && traits.includes('forgiving')) {
+    return { type: 'Mystic', icon: '✨', description: 'Guided by higher purpose' };
+  }
+  if (traits.includes('vengeful') && traits.includes('brave')) {
+    return { type: 'Avenger', icon: '⚡', description: 'Driven by past wrongs' };
+  }
+  if (traits.includes('cowardly') && traits.includes('greedy')) {
+    return { type: 'Scoundrel', icon: '🎭', description: 'Self-serving survivor' };
+  }
+  if (traits.includes('cruel') && traits.includes('treacherous')) {
+    return { type: 'Villain', icon: '💀', description: 'Malicious schemer' };
+  }
+  // Default based on first trait
+  return { type: 'Wanderer', icon: '🌙', description: 'Complex, hard to define' };
+};
+
 // Names by gender for randomization
 const RANDOM_NAMES = {
   male: ['Marcus', 'Erik', 'Darius', 'Finn', 'Gareth', 'Kael', 'Roland', 'Theron', 'Vance', 'Aldric', 'Brennan', 'Cedric', 'Drake', 'Edmund', 'Felix', 'Gideon', 'Hadrian', 'Jasper', 'Kieran', 'Leander'],
@@ -226,6 +293,7 @@ interface CompanionCreatorState {
   combatRole: typeof COMBAT_ROLES[number];
   armorLevel: typeof ARMOR_LEVELS[number]['id'];
   originStory: typeof ORIGIN_STORIES[number]['id'];
+  experienceLevel: typeof EXPERIENCE_LEVELS[number]['id'];
   backstory: string;
   skills: string[];
   speechPattern: string;
@@ -249,6 +317,7 @@ const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   combatRole: 'damage',
   armorLevel: 'light',
   originStory: 'stranger',
+  experienceLevel: 'competent',
   backstory: '',
   skills: [],
   speechPattern: 'casual, friendly',
@@ -2034,6 +2103,80 @@ export function CheatModeSplash({
         
         {/* Combat Tab */}
         <TabsContent value="combat" className="space-y-4 mt-4">
+          {/* Experience Level Selection */}
+          <div className="space-y-2">
+            <Label>Experience Level</Label>
+            <p className="text-xs text-muted-foreground">Determines combat stat ranges</p>
+            <div className="space-y-2">
+              {EXPERIENCE_LEVELS.map((level, idx) => {
+                const isSelected = companionCreator.experienceLevel === level.id;
+                const prevLevel = EXPERIENCE_LEVELS[idx - 1];
+                const nextLevel = EXPERIENCE_LEVELS[idx + 1];
+                
+                return (
+                  <button
+                    key={level.id}
+                    onClick={() => setCompanionCreator(prev => ({ ...prev, experienceLevel: level.id }))}
+                    className={`w-full p-3 rounded-lg border text-left transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border/50 hover:border-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${level.bgColor}`} />
+                        <span className={`font-medium ${level.color}`}>{level.label}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{level.description}</span>
+                    </div>
+                    
+                    {/* Stat Range Visual */}
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 text-xs mb-1">
+                        <span className="text-muted-foreground">Stat Range:</span>
+                        <span className={`font-mono ${level.color}`}>{level.minStat} - {level.maxStat}</span>
+                      </div>
+                      <div className="relative h-3 bg-muted/20 rounded-full overflow-hidden">
+                        {/* Full scale markers */}
+                        <div className="absolute inset-0 flex">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(n => (
+                            <div 
+                              key={n} 
+                              className="flex-1 border-r border-border/30 last:border-r-0"
+                              style={{ opacity: n >= level.minStat && n <= level.maxStat ? 1 : 0.3 }}
+                            />
+                          ))}
+                        </div>
+                        {/* Highlighted range */}
+                        <div 
+                          className={`absolute h-full ${isSelected ? 'bg-primary/50' : level.bgColor} rounded`}
+                          style={{ 
+                            left: `${((level.minStat - 1) / 14) * 100}%`,
+                            width: `${((level.maxStat - level.minStat + 1) / 15) * 100}%`
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                        <span>1</span>
+                        <span>5</span>
+                        <span>10</span>
+                        <span>15</span>
+                      </div>
+                    </div>
+                    
+                    {/* Gap indicator between levels */}
+                    {isSelected && nextLevel && (
+                      <div className="mt-2 pt-2 border-t border-border/30 text-[10px] text-muted-foreground">
+                        Gap to next: <span className="font-mono text-amber-400">{nextLevel.minStat - level.maxStat}</span> stat points
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
           <div className="space-y-2">
             <Label>Combat Role</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -2062,6 +2205,42 @@ export function CheatModeSplash({
                 </button>
               ))}
             </div>
+          </div>
+          
+          {/* Generated Stats Preview */}
+          <div className="p-3 bg-muted/20 rounded-lg border border-border/50">
+            <Label className="text-xs text-muted-foreground uppercase mb-2 block">Generated Combat Stats</Label>
+            {(() => {
+              const level = EXPERIENCE_LEVELS.find(l => l.id === companionCreator.experienceLevel) || EXPERIENCE_LEVELS[2];
+              const range = level.maxStat - level.minStat;
+              // Generate pseudo-random stats based on name for consistency
+              const seed = companionCreator.name.length || 1;
+              const strength = level.minStat + Math.floor((seed * 7) % (range + 1));
+              const agility = level.minStat + Math.floor((seed * 13) % (range + 1));
+              const endurance = level.minStat + Math.floor((seed * 11) % (range + 1));
+              const combatSkill = level.minStat + Math.floor((seed * 5) % (range + 1));
+              
+              return (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">Strength</span>
+                    <span className={`font-mono ${level.color}`}>{strength}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">Agility</span>
+                    <span className={`font-mono ${level.color}`}>{agility}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">Endurance</span>
+                    <span className={`font-mono ${level.color}`}>{endurance}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">Combat Skill</span>
+                    <span className={`font-mono ${level.color}`}>{combatSkill}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           
           <div className="p-3 bg-muted/20 rounded-lg">
@@ -2127,103 +2306,395 @@ export function CheatModeSplash({
     }
   }, []);
 
-  const renderCompanionCard = (companion: CompanionState) => (
-    <div key={companion.id} className={`border rounded-lg p-4 space-y-3 ${
-      companion.status === 'dead' 
-        ? 'border-red-500/50 bg-red-500/5' 
-        : 'border-border/50'
-    }`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="font-medium flex items-center gap-2">
-            {companion.name}
-            {companion.status === 'dead' && (
-              <Skull className="w-4 h-4 text-red-400" />
+  const renderCompanionCard = (companion: CompanionState) => {
+    const personalityType = derivePersonalityType(companion.personality.traits);
+    const primaryFear = companion.personality.traits[0] ? COMPANION_FEARS[companion.personality.traits[0]] : 'Unknown';
+    
+    // Calculate percentage for mini progress bars
+    const affinityPct = ((companion.affinity + 100) / 200) * 100;
+    const trustPct = companion.trust;
+    const respectPct = companion.respect;
+    
+    return (
+      <div key={companion.id} className={`border rounded-lg p-4 space-y-3 ${
+        companion.status === 'dead' 
+          ? 'border-red-500/50 bg-red-500/5' 
+          : companion.status === 'romance'
+          ? 'border-pink-500/50 bg-pink-500/5'
+          : companion.status === 'hostile'
+          ? 'border-orange-500/50 bg-orange-500/5'
+          : 'border-border/50'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${
+              companion.status === 'romance' ? 'bg-pink-500/20' :
+              companion.status === 'hostile' ? 'bg-red-500/20' :
+              companion.status === 'dead' ? 'bg-gray-500/20' :
+              'bg-muted'
+            }`}>
+              <span className="text-xl">{personalityType.icon}</span>
+            </div>
+            <div>
+              <h4 className="font-medium flex items-center gap-2">
+                {companion.name}
+                {companion.status === 'dead' && <Skull className="w-4 h-4 text-red-400" />}
+                {companion.status === 'romance' && <Heart className="w-4 h-4 text-pink-400" />}
+                {companion.status === 'hostile' && <AlertTriangle className="w-4 h-4 text-orange-400" />}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {personalityType.type} • <span className="capitalize">{companion.combatRole || 'Unknown'}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={
+              companion.status === 'active' ? 'default' : 
+              companion.status === 'dead' ? 'destructive' : 
+              companion.status === 'romance' ? 'default' :
+              companion.status === 'hostile' ? 'destructive' :
+              'secondary'
+            } className={
+              companion.status === 'romance' ? 'bg-pink-500' : ''
+            }>
+              {companion.status}
+            </Badge>
+            {companion.status === 'dead' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleResuscitateCompanion(companion.id)}
+                className="text-green-400 border-green-500/50 hover:bg-green-500/10 hover:text-green-300"
+              >
+                <HeartPulse className="w-4 h-4 mr-1" />
+                Revive
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditingCompanion(companion)}
+                >
+                  <Edit3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveCompanion(companion.id)}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </>
             )}
-          </h4>
-          <p className="text-xs text-muted-foreground capitalize">
-            {companion.personality.traits.slice(0, 3).join(', ')}
-          </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={
-            companion.status === 'active' ? 'default' : 
-            companion.status === 'dead' ? 'destructive' : 
-            'secondary'
-          }>
-            {companion.status}
-          </Badge>
-          {companion.status === 'dead' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleResuscitateCompanion(companion.id)}
-              className="text-green-400 border-green-500/50 hover:bg-green-500/10 hover:text-green-300"
-            >
-              <HeartPulse className="w-4 h-4 mr-1" />
-              Revive
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setEditingCompanion(companion)}
-              >
-                <Edit3 className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveCompanion(companion.id)}
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </>
+        
+        {/* Personality traits & fear */}
+        <div className="flex flex-wrap gap-1">
+          {companion.personality.traits.slice(0, 4).map(t => (
+            <Badge key={t} variant="outline" className="text-[10px] capitalize">{t}</Badge>
+          ))}
+        </div>
+        
+        {companion.status === 'dead' && (
+          <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+            <p className="text-xs text-red-300 italic">
+              This companion has fallen. Use the Revive button to bring them back with a story event.
+            </p>
+          </div>
+        )}
+        
+        {/* Relationship bars with percentage indicators */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-14 text-muted-foreground">Affinity</span>
+            <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden relative">
+              {/* Center marker */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-border z-10" />
+              <div 
+                className={`h-full rounded-full transition-all ${
+                  companion.affinity > 0 ? 'bg-green-500' : 
+                  companion.affinity < 0 ? 'bg-red-500' : 'bg-muted-foreground'
+                }`}
+                style={{ 
+                  width: `${affinityPct}%`,
+                  marginLeft: companion.affinity < 0 ? `${affinityPct}%` : '50%',
+                  maxWidth: '50%'
+                }}
+              />
+            </div>
+            <span className={`w-10 text-right font-mono ${
+              companion.affinity > 0 ? 'text-green-400' : 
+              companion.affinity < 0 ? 'text-red-400' : ''
+            }`}>{companion.affinity > 0 ? '+' : ''}{companion.affinity}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-14 text-muted-foreground">Trust</span>
+            <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 rounded-full transition-all"
+                style={{ width: `${trustPct}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-mono">{companion.trust}%</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-14 text-muted-foreground">Respect</span>
+            <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-amber-500 rounded-full transition-all"
+                style={{ width: `${respectPct}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-mono">{companion.respect}%</span>
+          </div>
+          
+          {companion.romanticInterest > 20 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="w-14 text-pink-400">Romance</span>
+              <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-pink-500 rounded-full transition-all"
+                  style={{ width: `${companion.romanticInterest}%` }}
+                />
+              </div>
+              <span className="w-10 text-right font-mono text-pink-400">{companion.romanticInterest}%</span>
+            </div>
           )}
         </div>
+        
+        {/* Mood indicator */}
+        {companion.status !== 'dead' && (
+          <div className="flex items-center gap-2 text-xs pt-1 border-t border-border/30">
+            <span className="text-muted-foreground">Current Mood:</span>
+            <Badge variant="outline" className="capitalize text-[10px]">
+              {companion.mood}
+            </Badge>
+          </div>
+        )}
       </div>
-      
-      {companion.status === 'dead' && (
-        <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/30">
-          <p className="text-xs text-red-300 italic">
-            This companion has fallen. Use the Revive button to bring them back with a story event.
-          </p>
-        </div>
-      )}
-      
-      <div className="grid grid-cols-4 gap-2 text-xs">
-        <div>
-          <span className="text-muted-foreground">Affinity</span>
-          <div className="font-mono">{companion.affinity}</div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Trust</span>
-          <div className="font-mono">{companion.trust}</div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Respect</span>
-          <div className="font-mono">{companion.respect}</div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Mood</span>
-          <div className="capitalize">{companion.status === 'dead' ? '-' : companion.mood}</div>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderCompanionEditor = () => {
     if (!editingCompanion) return null;
     
     const comp = editingCompanion;
+    const personalityType = derivePersonalityType(comp.personality.traits);
+    const primaryFear = comp.personality.traits[0] ? COMPANION_FEARS[comp.personality.traits[0]] : 'Unknown';
+    
+    // Quick action handlers
+    const forceRomance = () => {
+      setEditingCompanion({
+        ...comp,
+        status: 'romance',
+        mood: 'romantic',
+        affinity: 90,
+        trust: 85,
+        respect: 80,
+        romanticInterest: 100,
+        fear: 0,
+      });
+      toast.success(`Forced romance with ${comp.name}!`);
+    };
+    
+    const makeHostile = () => {
+      setEditingCompanion({
+        ...comp,
+        status: 'hostile',
+        mood: 'betrayed',
+        affinity: -80,
+        trust: 5,
+        respect: 10,
+        fear: 70,
+        romanticInterest: 0,
+      });
+      toast.warning(`${comp.name} is now hostile!`);
+    };
+    
+    const makeNeutral = () => {
+      setEditingCompanion({
+        ...comp,
+        status: 'waiting',
+        mood: 'neutral',
+        affinity: 0,
+        trust: 50,
+        respect: 50,
+        fear: 0,
+        romanticInterest: 0,
+      });
+      toast.info(`${comp.name} reset to neutral!`);
+    };
+    
+    const makeLoyal = () => {
+      setEditingCompanion({
+        ...comp,
+        status: 'active',
+        mood: 'content',
+        affinity: 75,
+        trust: 90,
+        respect: 85,
+        fear: 0,
+        romanticInterest: comp.romanticInterest,
+      });
+      toast.success(`${comp.name} is now deeply loyal!`);
+    };
+    
+    // Percentage renderer for sliders
+    const renderRelationshipSlider = (
+      label: string,
+      value: number,
+      onChange: (v: number) => void,
+      min: number,
+      max: number,
+      centerLabel: string,
+      leftLabel: string,
+      rightLabel: string,
+      colorGradient: string
+    ) => {
+      const percentage = Math.round(((value - min) / (max - min)) * 100);
+      const checkpoints = [0, 25, 50, 75, 100];
+      
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">{label}</Label>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                value > (max + min) / 2 ? 'bg-green-500/20 text-green-400' :
+                value < (max + min) / 2 ? 'bg-red-500/20 text-red-400' :
+                'bg-muted text-muted-foreground'
+              }`}>
+                {value > 0 && value !== min ? '+' : ''}{value}
+              </span>
+              <span className="text-xs text-muted-foreground">({percentage}%)</span>
+            </div>
+          </div>
+          
+          {/* Slider with checkpoint markers */}
+          <div className="relative pt-2 pb-6">
+            <Slider
+              value={[value]}
+              onValueChange={([v]) => onChange(v)}
+              min={min}
+              max={max}
+              step={1}
+              className="flex-1"
+            />
+            
+            {/* Checkpoint markers */}
+            <div className="absolute top-full left-0 right-0 flex justify-between mt-1">
+              {checkpoints.map((cp) => {
+                const actualValue = min + (cp / 100) * (max - min);
+                const isNearCurrent = Math.abs(percentage - cp) < 5;
+                return (
+                  <div key={cp} className="flex flex-col items-center">
+                    <div className={`w-0.5 h-2 ${
+                      isNearCurrent ? 'bg-primary' : 'bg-border/50'
+                    }`} />
+                    <span className={`text-[9px] ${
+                      isNearCurrent ? 'text-primary font-bold' : 'text-muted-foreground/60'
+                    }`}>
+                      {cp === 0 ? leftLabel.slice(0, 4) : 
+                       cp === 50 ? centerLabel.slice(0, 4) : 
+                       cp === 100 ? rightLabel.slice(0, 4) : 
+                       `${cp}%`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    };
     
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium">Editing: {comp.name}</h3>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${
+              comp.status === 'romance' ? 'bg-pink-500/20' :
+              comp.status === 'hostile' ? 'bg-red-500/20' :
+              comp.status === 'active' ? 'bg-green-500/20' :
+              'bg-muted'
+            }`}>
+              <span className="text-2xl">{personalityType.icon}</span>
+            </div>
+            <div>
+              <h3 className="font-medium">{comp.name}</h3>
+              <p className="text-xs text-muted-foreground">{personalityType.type} - {personalityType.description}</p>
+            </div>
+          </div>
           <Button variant="ghost" size="sm" onClick={() => setEditingCompanion(null)}>
             <X className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        {/* Personality Profile Card */}
+        <div className="p-3 rounded-lg bg-muted/20 border border-border/50 space-y-2">
+          <Label className="text-xs text-muted-foreground uppercase">Personality Profile</Label>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2 bg-background/50 rounded">
+              <span className="text-muted-foreground block">Archetype</span>
+              <span className="font-medium">{personalityType.icon} {personalityType.type}</span>
+            </div>
+            <div className="p-2 bg-background/50 rounded">
+              <span className="text-muted-foreground block">Combat Role</span>
+              <span className="font-medium capitalize">{comp.combatRole || 'Unknown'}</span>
+            </div>
+            <div className="p-2 bg-background/50 rounded col-span-2">
+              <span className="text-muted-foreground block">Primary Fear</span>
+              <span className="font-medium italic">"{primaryFear}"</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1 pt-2">
+            {comp.personality.traits.map(t => (
+              <Badge key={t} variant="outline" className="text-[10px] capitalize">{t}</Badge>
+            ))}
+          </div>
+        </div>
+        
+        {/* Quick Action Buttons */}
+        <div className="grid grid-cols-4 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={forceRomance}
+            className="flex flex-col h-auto py-2 text-pink-400 border-pink-500/30 hover:bg-pink-500/10"
+          >
+            <Heart className="w-4 h-4 mb-1" />
+            <span className="text-[10px]">Romance</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={makeLoyal}
+            className="flex flex-col h-auto py-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+          >
+            <Shield className="w-4 h-4 mb-1" />
+            <span className="text-[10px]">Loyal</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={makeNeutral}
+            className="flex flex-col h-auto py-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+          >
+            <RotateCcw className="w-4 h-4 mb-1" />
+            <span className="text-[10px]">Neutral</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={makeHostile}
+            className="flex flex-col h-auto py-2 text-red-400 border-red-500/30 hover:bg-red-500/10"
+          >
+            <Skull className="w-4 h-4 mb-1" />
+            <span className="text-[10px]">Hostile</span>
           </Button>
         </div>
         
@@ -2270,64 +2741,67 @@ export function CheatModeSplash({
           </div>
         </div>
         
-        <div className="space-y-3">
-          <Label>Affinity (-100 to 100)</Label>
-          <div className="flex items-center gap-3">
-            <Slider
-              value={[comp.affinity]}
-              onValueChange={([v]) => setEditingCompanion({ ...comp, affinity: v })}
-              min={-100}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <span className="font-mono w-10 text-right">{comp.affinity}</span>
-          </div>
+        {/* Relationship Meters with Percentage Checkpoints */}
+        <div className="p-3 rounded-lg bg-muted/10 border border-border/30 space-y-4">
+          <Label className="text-xs text-muted-foreground uppercase">Relationship Meters</Label>
+          <p className="text-[10px] text-muted-foreground italic">
+            Center (50%) = Neutral. Left = Negative. Right = Positive.
+          </p>
+          
+          {renderRelationshipSlider(
+            'Affinity (Liking)',
+            comp.affinity,
+            (v) => setEditingCompanion({ ...comp, affinity: v }),
+            -100, 100,
+            'Neutral', 'Hate', 'Love',
+            'from-red-500 via-gray-500 to-green-500'
+          )}
+          
+          {renderRelationshipSlider(
+            'Trust',
+            comp.trust,
+            (v) => setEditingCompanion({ ...comp, trust: v }),
+            0, 100,
+            'Cautious', 'Distrust', 'Complete',
+            'from-red-500 to-green-500'
+          )}
+          
+          {renderRelationshipSlider(
+            'Respect',
+            comp.respect,
+            (v) => setEditingCompanion({ ...comp, respect: v }),
+            0, 100,
+            'Neutral', 'Disdain', 'Admire',
+            'from-red-500 to-green-500'
+          )}
+          
+          {renderRelationshipSlider(
+            'Fear',
+            comp.fear,
+            (v) => setEditingCompanion({ ...comp, fear: v }),
+            0, 100,
+            'Cautious', 'Calm', 'Terrified',
+            'from-green-500 to-red-500'
+          )}
+          
+          {renderRelationshipSlider(
+            'Romantic Interest',
+            comp.romanticInterest,
+            (v) => setEditingCompanion({ ...comp, romanticInterest: v }),
+            0, 100,
+            'Curious', 'None', 'In Love',
+            'from-gray-500 to-pink-500'
+          )}
         </div>
         
-        <div className="space-y-3">
-          <Label>Trust (0 to 100)</Label>
-          <div className="flex items-center gap-3">
-            <Slider
-              value={[comp.trust]}
-              onValueChange={([v]) => setEditingCompanion({ ...comp, trust: v })}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <span className="font-mono w-10 text-right">{comp.trust}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <Label>Respect (0 to 100)</Label>
-          <div className="flex items-center gap-3">
-            <Slider
-              value={[comp.respect]}
-              onValueChange={([v]) => setEditingCompanion({ ...comp, respect: v })}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <span className="font-mono w-10 text-right">{comp.respect}</span>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          <Label>Romantic Interest (0 to 100)</Label>
-          <div className="flex items-center gap-3">
-            <Slider
-              value={[comp.romanticInterest]}
-              onValueChange={([v]) => setEditingCompanion({ ...comp, romanticInterest: v })}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <span className="font-mono w-10 text-right">{comp.romanticInterest}</span>
-          </div>
+        {/* Warning box about stat-based system */}
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <p className="text-xs text-amber-300 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Note:</strong> These stats affect AI behavior. The companion's reactions, dialogue, and decisions are based on their personality and these relationship values. You cannot control the graph during gameplay - it evolves based on your actions and their personality.
+            </span>
+          </p>
         </div>
         
         <div className="flex gap-2 pt-4">
