@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -274,6 +274,17 @@ export function AdventureDisplay({
   const inputRef = useRef<HTMLInputElement>(null);
   const previousStoryLength = useRef(story.length);
   
+  // Story virtualization - only show last N messages to reduce render load
+  const VISIBLE_MESSAGE_COUNT = 8;
+  const [showAllMessages, setShowAllMessages] = useState(false);
+  const hiddenMessageCount = Math.max(0, story.length - VISIBLE_MESSAGE_COUNT);
+  const visibleStory = useMemo(() => {
+    if (showAllMessages || story.length <= VISIBLE_MESSAGE_COUNT) {
+      return story;
+    }
+    return story.slice(-VISIBLE_MESSAGE_COUNT);
+  }, [story, showAllMessages]);
+  
   // Triple-tap detection refs and visual state
   const tapCountRef = useRef<number>(0);
   const lastTapTimeRef = useRef<number>(0);
@@ -536,7 +547,12 @@ export function AdventureDisplay({
     if (newModifiers.length > 0) {
       setRecentModifiers(prev => [...prev.slice(-5), ...newModifiers]);
     }
-  }, [story]);
+    
+    // When new content arrives, collapse the view again if we had expanded it
+    if (newEntries.length > 0 && showAllMessages) {
+      setShowAllMessages(false);
+    }
+  }, [story, showAllMessages]);
 
   // Get current modifier state for character sheet
   const getModifierState = useCallback((): ModifierState | undefined => {
@@ -1753,21 +1769,45 @@ export function AdventureDisplay({
             </div>
           )}
 
-          {story.map((entry, index) => (
+          {/* Load Previous Messages Button - shown when messages are hidden */}
+          {!showAllMessages && hiddenMessageCount > 0 && (
+            <div className="mb-6 text-center animate-fade-in">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllMessages(true)}
+                className="border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50"
+              >
+                <ChevronDown className="w-4 h-4 mr-2 rotate-180" />
+                Load {hiddenMessageCount} Previous Message{hiddenMessageCount !== 1 ? 's' : ''}
+              </Button>
+              <p className="text-xs text-muted-foreground/50 mt-2">
+                Older messages are hidden to improve performance
+              </p>
+            </div>
+          )}
+
+          {visibleStory.map((entry, visibleIndex) => {
+            // Calculate actual story index for rollback
+            const actualIndex = showAllMessages || story.length <= VISIBLE_MESSAGE_COUNT
+              ? visibleIndex 
+              : visibleIndex + hiddenMessageCount;
+            
+            return (
             <div
               key={entry.id}
               className={`
                 animate-fade-in-up mb-8 relative
                 ${entry.role === 'user' ? 'text-right' : ''} 
-                ${index > 0 ? 'cursor-pointer select-none' : ''}
+                ${actualIndex > 0 ? 'cursor-pointer select-none' : ''}
                 transition-all duration-150
               `}
-              style={{ animationDelay: `${index * 0.05}s` }}
-              onClick={() => handleTripleTap(index, entry.content)}
-              title={index > 0 ? "Triple-tap to return here" : undefined}
+              style={{ animationDelay: `${visibleIndex * 0.05}s` }}
+              onClick={() => handleTripleTap(actualIndex, entry.content)}
+              title={actualIndex > 0 ? "Triple-tap to return here" : undefined}
             >
               {/* Triple-tap feedback dots */}
-              {tapFeedback?.index === index && tapFeedback.count > 0 && (
+              {tapFeedback?.index === actualIndex && tapFeedback.count > 0 && (
                 <div className="absolute -left-8 top-1/2 -translate-y-1/2 flex gap-1.5 animate-fade-in z-20">
                   {[1, 2, 3].map((dot) => (
                     <div
@@ -1783,7 +1823,7 @@ export function AdventureDisplay({
               )}
               
               {/* Rollback splash overlay */}
-              {rollbackSplash?.index === index && (
+              {rollbackSplash?.index === actualIndex && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                   <div className="glass-panel border-warning/60 px-6 py-3 rounded-full animate-pulse shadow-[0_0_30px_rgba(234,179,8,0.4)]">
                     <span className="text-warning font-medium flex items-center gap-2">
@@ -1817,19 +1857,19 @@ export function AdventureDisplay({
                   
                   <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
                     {/* System badges summary when highlighting is enabled - shown on latest entry */}
-                    {enableSystemHighlight && index === story.length - 1 && (
+                    {enableSystemHighlight && actualIndex === story.length - 1 && (
                       <SystemBadgesSummary text={entry.content} className="mb-3" />
                     )}
                     
                     {/* Use typewriter effect for latest narrator entry when enabled */}
-                    {typewriterEnabled && index === story.length - 1 && textSpeed !== 'instant' ? (
+                    {typewriterEnabled && actualIndex === story.length - 1 && textSpeed !== 'instant' ? (
                       <TypewriterNarrative
                         content={cleanNarrativeForDisplay(entry.content)}
                         speed={textSpeed}
                         onComplete={() => {}}
                       />
                     ) : (
-                      formatNarrativeContent(entry.content, index)
+                      formatNarrativeContent(entry.content, actualIndex)
                     )}
                   </div>
                   
@@ -1839,7 +1879,7 @@ export function AdventureDisplay({
                     <div className="hidden md:block">
                       <BookmarkButton
                         entryId={entry.id}
-                        entryIndex={index}
+                        entryIndex={actualIndex}
                         entryContent={entry.content.slice(0, 200)}
                         campaignId={campaignId}
                         characterName={character.name}
@@ -1849,7 +1889,7 @@ export function AdventureDisplay({
                     </div>
                     
                     {/* Right side - Action buttons only on latest entry */}
-                    {index === story.length - 1 && (
+                    {actualIndex === story.length - 1 && (
                       <div className="flex gap-2 flex-wrap">
                         {/* Regenerate World Button - Only on first narrator entry before any player action */}
                         {canRegenerateWorld && story.length === 1 && onRegenerateWorld && (
@@ -1908,7 +1948,9 @@ export function AdventureDisplay({
                 </Card>
               )}
             </div>
-          ))}
+          );
+          })}
+
 
           {/* Loading indicator for ongoing narrative generation (only when story has content) */}
           {isLoading && story.length > 0 && (
