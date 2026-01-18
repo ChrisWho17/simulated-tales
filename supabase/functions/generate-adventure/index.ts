@@ -2431,7 +2431,7 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         // These are movement, physical, tactical, and exploration verbs
         const actionVerbPatterns = [
           // Movement & Navigation
-          /^(go|going|went|move|moving|walk|walking|run|running|head|heading|travel|traveling|proceed|proceeding|advance|advancing|continue|continuing|press|pressing)\b/i,
+          /^(go|going|went|move|moving|walk|walking|run|running|head|heading|travel|traveling|proceed|proceeding|advance|advancing|press|pressing)\b/i,
           /^(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|through|past|around|toward|towards)\b/i,
           /^(enter|entering|exit|exiting|leave|leaving|return|returning|approach|approaching|retreat|retreating|flee|fleeing)\b/i,
           
@@ -2462,6 +2462,9 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
           // Common short imperatives/directions
           /^(spread|steady|careful|slowly|quickly|quietly|silently|carefully|stealthily)\b/i,
           /^(more|less|faster|slower|higher|lower|closer|farther)\b/i,
+          
+          // CONTINUATION keywords - player wants story to progress
+          /^(continue|continuing|keep\s*going|carry\s*on|move\s*on|go\s*on|next|then|and\s*then|what\s*happens)\b/i,
         ];
         
         // Check if the action matches any action verb pattern
@@ -2481,6 +2484,10 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         
         // NEW: Detect movement phrases like "go deeper", "move forward", "head inside"
         const isMovementPhrase = /^(go|move|head|walk|run|proceed|continue|travel|venture|press)\s+(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|in|out|through|past|around|toward|towards|into|onto)/i.test(cleanedAction);
+        
+        // NEW: Detect "Continue Story" or similar continuation requests
+        // This is when the player wants the story to progress naturally without specific action
+        const isContinuationRequest = /^(continue|continue\s*story|continue\s*the\s*story|keep\s*going|carry\s*on|go\s*on|move\s*on|what\s*happens\s*next|next|and\s*then|then\s*what|proceed|what\s*now)$/i.test(cleanedAction);
         
         // Combine all action detection
         const isClearlyPhysicalAction = isShortImperativeCommand || isStageDirection || isMovementPhrase || matchesActionPattern;
@@ -2503,6 +2510,57 @@ CRITICAL: The player's character just said this. You must show:
 3. The scene's development as a RESULT of this dialogue
 
 DO NOT just describe the act of speaking. Show the REACTION and RESPONSE.`;
+
+        } else if (isContinuationRequest) {
+          // SPECIAL HANDLING: "Continue Story" - player wants natural story progression
+          actionContent = `CONTINUE STORY (player requests story continuation - NO repetition, ONLY new content):
+
+===== CRITICAL CONTINUATION RULES =====
+
+The player clicked "Continue Story" or typed a continuation command. This means:
+
+ABSOLUTE REQUIREMENTS:
+1. Read the LAST narrator response carefully
+2. Continue DIRECTLY from where that response ended
+3. Add ONLY NEW story content - minimum 200 words
+4. Advance the plot, introduce new elements, or develop the current scene
+5. Do NOT summarize, recap, or repeat ANYTHING from previous responses
+
+FORBIDDEN:
+❌ Do NOT repeat or paraphrase any sentence from the previous response
+❌ Do NOT re-describe the current location if already described
+❌ Do NOT re-state what NPCs said or did in the last turn
+❌ Do NOT use transition phrases that recap ("As you continue...", "Still in the...")
+❌ Do NOT echo the player's "continue" command as dialogue
+
+REQUIRED:
+✅ Start with NEW action, dialogue, discovery, or event
+✅ Pick up exactly where the story left off
+✅ Show time passing naturally (seconds, minutes, or more)
+✅ Introduce a NEW element: complication, NPC action, discovery, environmental change
+✅ Give the player something NEW to react to
+
+CONTINUATION STRATEGIES (choose one or more):
+- An NPC does or says something unexpected
+- The player notices something they didn't see before
+- A sound, smell, or event draws attention
+- Time passes and circumstances change
+- A new character enters the scene
+- The environment shifts (weather, lighting, crowd)
+- A consequence of earlier actions manifests
+- Information is revealed through discovery
+
+EXAMPLE OF CORRECT CONTINUATION:
+[Previous response ended with player entering a tavern]
+WRONG: "The tavern is warm and smoky. You stand at the entrance looking around..."
+RIGHT: "A grizzled barkeep slaps a rag across the counter and fixes you with a knowing look. 'You're the one they're all whispering about,' he says, nodding toward a shadowy booth where three figures watch you with undisguised interest."
+
+Write the NEXT part of the story. Begin immediately with new narrative.`;
+
+          // Add emotional context if present
+          if (emotionalContext) {
+            actionContent += `\n\nCURRENT MOOD: The character is ${emotionalContext.currentMood}. Their internal state: ${emotionalContext.internalDescription}. Let this color the continuation subtly.`;
+          }
 
         } else if (isClearlyPhysicalAction) {
           // PHYSICAL ACTIONS - PURE PHYSICAL ACTIONS - never speech
