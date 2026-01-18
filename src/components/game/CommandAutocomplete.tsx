@@ -117,8 +117,8 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'secret',
   },
   {
-    command: '/ImACheater',
-    aliases: [],
+    command: '/IAmACheater',
+    aliases: ['/cheat', '/imacheater'],
     description: 'Enable cheat mode',
     icon: <Wand2 className="w-4 h-4" />,
     category: 'secret',

@@ -69,7 +69,8 @@ export function useCheatModeCommand() {
   const checkCommand = useCallback((input: string): boolean => {
     const trimmed = input.trim().toLowerCase();
     
-    if (trimmed === '/iamacheater' || trimmed === '/cheat') {
+    // Handle all cheat command variants
+    if (trimmed === '/iamacheater' || trimmed === '/imacheater' || trimmed === '/cheat') {
       setInitialMode('cheat');
       setIsOpen(true);
       return true;
