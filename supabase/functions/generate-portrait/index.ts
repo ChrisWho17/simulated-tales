@@ -1424,6 +1424,28 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     'heavyset': 'heavyset, larger frame with substantial build',
     'curvy': 'curvy, shapely figure with pronounced curves',
   };
+  
+  // Extended muscle definition descriptors - from soft (no muscle) to big (extreme bodybuilder)
+  const MUSCLE_MODIFIER: Record<string, string> = {
+    'soft': 'soft physique with no visible muscle definition',
+    'toned': 'lightly toned muscles, hint of fitness',
+    'fit': 'fit and athletic, visible but not prominent muscles',
+    'defined': 'clearly defined muscles, athletic physique with visible separation',
+    'muscular': 'muscular build, prominent muscles with good definition',
+    'very_muscular': 'very muscular, bodybuilder physique with significant mass',
+    'big': 'extremely muscular, massive bodybuilder build with bulging muscles',
+    // Legacy mappings
+    'none': 'soft physique with no visible muscle definition',
+    'very muscular': 'very muscular, bodybuilder physique with significant mass',
+  };
+  
+  // Shoulder width descriptors for males
+  const SHOULDER_MODIFIER: Record<string, string> = {
+    'narrow': 'narrow shoulders, slim upper body',
+    'average': 'average shoulder width, balanced proportions',
+    'broad': 'broad shoulders, strong upper body frame',
+    'very_broad': 'very broad shoulders, powerful V-taper physique',
+  };
 
   // ========== CHARACTER IDENTITY ==========
   const charAge = age || 25;
@@ -1447,7 +1469,7 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     identityParts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // Body proportions - CRITICAL: Actually use bust and hip modifiers for female/other characters
+  // Body proportions - female/other characters
   if (gender === 'female' || gender === 'other') {
     // Add bust size description if specified
     if (bustSize && BUST_MODIFIER[bustSize]) {
@@ -1459,9 +1481,18 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     }
   }
   
-  // Muscle definition for all genders
-  if (muscleDefinition && muscleDefinition !== 'none' && muscleDefinition !== 'toned') {
-    identityParts.push(`${muscleDefinition} muscle definition`);
+  // Shoulder width for males
+  const shoulderWidth = body.shoulderWidth;
+  if (gender === 'male' && shoulderWidth && SHOULDER_MODIFIER[shoulderWidth]) {
+    identityParts.push(SHOULDER_MODIFIER[shoulderWidth]);
+  }
+  
+  // Muscle definition for all genders - using expanded descriptors
+  if (muscleDefinition && MUSCLE_MODIFIER[muscleDefinition]) {
+    // Always add muscle description except for default 'toned' for females (to avoid clutter)
+    if (muscleDefinition !== 'toned' || gender === 'male') {
+      identityParts.push(MUSCLE_MODIFIER[muscleDefinition]);
+    }
   }
   
   // Distinguishing features

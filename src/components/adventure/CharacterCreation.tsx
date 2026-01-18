@@ -14,6 +14,7 @@ import {
   SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, FACE_SHAPES,
   DISTINGUISHING_FEATURES, ACCESSORIES,
   BUST_OPTIONS, HIP_OPTIONS, MUSCLE_OPTIONS, BODY_HAIR_OPTIONS, CUP_SIZE_OPTIONS,
+  FEMALE_BODY_SHAPE_PRESETS, MALE_BODY_SHAPE_PRESETS, SHOULDER_WIDTH_OPTIONS,
   PIERCING_OPTIONS, TATTOO_OPTIONS, TATTOO_STYLE_OPTIONS,
   SCAR_OPTIONS, PROSTHETIC_OPTIONS, IMPLANT_OPTIONS, MUTATION_OPTIONS,
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
@@ -114,7 +115,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     detailLevel: 'simple',
     simple: { gender: 'male', height: 'average', build: 'average' },
     detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
-    full: { bustSize: 'C', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
+    full: { bustSize: 'C', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', shoulderWidth: 'average', physique: '', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
   });
   
   // Collapsible section states
@@ -305,11 +306,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
-        // Body shape details (bust, hips, muscle)
+        // Body shape details (bust, hips, muscle, shoulders)
         bustSize: appearance.full?.bustSize,
         hipWidth: appearance.full?.hipWidth,
         muscleDefinition: appearance.full?.muscleDefinition,
         bodyHair: appearance.full?.bodyHair,
+        shoulderWidth: appearance.full?.shoulderWidth,
+        physique: appearance.full?.physique,
         // CRITICAL: Body modifications - passed directly to edge function
         piercings: appearance.full?.piercings || [],
         piercingStyle: appearance.full?.piercingStyle || '',
@@ -763,121 +766,133 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       Adult Content
                     </h3>
                     
-                    {/* Body Shape Options */}
+                    {/* Female/Other Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
-                      <div className="grid grid-cols-2 gap-4">
+                      <>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm text-muted-foreground">Cup Size</label>
+                            <select
+                              value={appearance.full?.bustSize || 'C'}
+                              onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Hip Width</label>
+                            <select
+                              value={appearance.full?.hipWidth || 'average'}
+                              onChange={(e) => updateAppearance('full', 'hipWidth', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {HIP_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Muscle</label>
+                            <select
+                              value={appearance.full?.muscleDefinition || 'toned'}
+                              onChange={(e) => updateAppearance('full', 'muscleDefinition', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {MUSCLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        
+                        {/* Female Body Shape Presets - Expanded */}
                         <div>
-                          <label className="text-sm text-muted-foreground">Cup Size</label>
-                          <select
-                            value={appearance.full?.bustSize || 'C'}
-                            onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
-                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                          >
-                            {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
+                          <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {FEMALE_BODY_SHAPE_PRESETS.map(preset => (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => {
+                                  updateAppearance('full', 'bustSize', preset.bustSize);
+                                  updateAppearance('full', 'hipWidth', preset.hipWidth);
+                                  updateAppearance('full', 'muscleDefinition', preset.muscle);
+                                }}
+                                className={`p-2 text-xs rounded-lg border transition-all ${
+                                  appearance.full?.bustSize === preset.bustSize && 
+                                  appearance.full?.hipWidth === preset.hipWidth &&
+                                  appearance.full?.muscleDefinition === preset.muscle
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Hip Width</label>
-                          <select
-                            value={appearance.full?.hipWidth || 'average'}
-                            onChange={(e) => updateAppearance('full', 'hipWidth', e.target.value)}
-                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                          >
-                            {HIP_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Body Shape Presets */}
-                    {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
-                        <div className="grid grid-cols-4 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateAppearance('full', 'bustSize', 'D');
-                              updateAppearance('full', 'hipWidth', 'wide');
-                            }}
-                            className={`p-2 text-xs rounded-lg border transition-all ${
-                              appearance.full?.bustSize === 'D' && appearance.full?.hipWidth === 'wide'
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                            }`}
-                          >
-                            Hourglass
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateAppearance('full', 'bustSize', 'B');
-                              updateAppearance('full', 'hipWidth', 'wide');
-                            }}
-                            className={`p-2 text-xs rounded-lg border transition-all ${
-                              appearance.full?.bustSize === 'B' && appearance.full?.hipWidth === 'wide'
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                            }`}
-                          >
-                            Pear
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateAppearance('full', 'bustSize', 'DD');
-                              updateAppearance('full', 'hipWidth', 'narrow');
-                            }}
-                            className={`p-2 text-xs rounded-lg border transition-all ${
-                              appearance.full?.bustSize === 'DD' && appearance.full?.hipWidth === 'narrow'
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                            }`}
-                          >
-                            Apple
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateAppearance('full', 'bustSize', 'B');
-                              updateAppearance('full', 'hipWidth', 'narrow');
-                              updateAppearance('full', 'muscleDefinition', 'toned');
-                            }}
-                            className={`p-2 text-xs rounded-lg border transition-all ${
-                              appearance.full?.bustSize === 'B' && appearance.full?.hipWidth === 'narrow' && appearance.full?.muscleDefinition === 'toned'
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                            }`}
-                          >
-                            Athletic
-                          </button>
-                        </div>
-                      </div>
+                      </>
                     )}
 
-                    {(appearance.simple.gender === 'male' || appearance.simple.gender === 'other') && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Muscle Definition</label>
-                          <select
-                            value={appearance.full?.muscleDefinition || 'toned'}
-                            onChange={(e) => updateAppearance('full', 'muscleDefinition', e.target.value)}
-                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                          >
-                            {MUSCLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
+                    {/* Male Body Shape Options */}
+                    {(appearance.simple.gender === 'male') && (
+                      <>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm text-muted-foreground">Shoulder Width</label>
+                            <select
+                              value={appearance.full?.shoulderWidth || 'average'}
+                              onChange={(e) => updateAppearance('full', 'shoulderWidth', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {SHOULDER_WIDTH_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Muscle</label>
+                            <select
+                              value={appearance.full?.muscleDefinition || 'toned'}
+                              onChange={(e) => updateAppearance('full', 'muscleDefinition', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {MUSCLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Body Hair</label>
+                            <select
+                              value={appearance.full?.bodyHair || 'light'}
+                              onChange={(e) => updateAppearance('full', 'bodyHair', e.target.value)}
+                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                            >
+                              {BODY_HAIR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
                         </div>
+                        
+                        {/* Male Body Shape Presets */}
                         <div>
-                          <label className="text-sm text-muted-foreground">Body Hair</label>
-                          <select
-                            value={appearance.full?.bodyHair || 'light'}
-                            onChange={(e) => updateAppearance('full', 'bodyHair', e.target.value)}
-                            className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                          >
-                            {BODY_HAIR_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
+                          <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {MALE_BODY_SHAPE_PRESETS.map(preset => (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => {
+                                  updateAppearance('full', 'shoulderWidth', preset.shoulderWidth);
+                                  updateAppearance('full', 'muscleDefinition', preset.muscle);
+                                  updateAppearance('full', 'bodyHair', preset.bodyHair);
+                                  updateAppearance('full', 'physique', preset.id);
+                                }}
+                                className={`p-2 text-xs rounded-lg border transition-all ${
+                                  appearance.full?.physique === preset.id
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-muted/30 border-border/50 hover:border-primary/50'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
 
                     {/* Appearance Accordions - Clothing, Piercings, Tattoos, Mods */}
