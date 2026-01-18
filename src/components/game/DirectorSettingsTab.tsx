@@ -12,6 +12,7 @@ import {
   DirectorSettings,
   DirectiveMode,
   DirectorType,
+  DescriptionLevel,
   DIRECTIVE_MODES,
   DIRECTOR_TYPES,
   DIRECTOR_TYPE_CATEGORIES,
@@ -25,29 +26,39 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
-// Description level steps with labels
-const DESCRIPTION_LEVELS = [
-  { value: 0, label: 'Vague', description: 'Minimal details, room for imagination' },
-  { value: 1, label: 'Light', description: 'Key details only' },
-  { value: 2, label: 'Balanced', description: 'Standard descriptions' },
-  { value: 3, label: 'Rich', description: 'Detailed world painting' },
-  { value: 4, label: 'Vivid', description: 'Maximum sensory detail' },
+// Description level steps with labels - maps to DescriptionLevel type
+const DESCRIPTION_LEVEL_CONFIG: { value: number; id: DescriptionLevel; label: string; description: string }[] = [
+  { value: 0, id: 'vague', label: 'Vague', description: 'Minimal details, room for imagination' },
+  { value: 1, id: 'minimal', label: 'Light', description: 'Key details only' },
+  { value: 2, id: 'balanced', label: 'Balanced', description: 'Standard descriptions' },
+  { value: 3, id: 'detailed', label: 'Rich', description: 'Detailed world painting' },
+  { value: 4, id: 'vivid', label: 'Vivid', description: 'Maximum sensory detail' },
 ];
+
+// Map DescriptionLevel to numeric index
+const descriptionLevelToIndex = (level: DescriptionLevel): number => {
+  const idx = DESCRIPTION_LEVEL_CONFIG.findIndex(c => c.id === level);
+  return idx >= 0 ? idx : 2; // Default to balanced (index 2)
+};
+
+// Map numeric index to DescriptionLevel
+const indexToDescriptionLevel = (index: number): DescriptionLevel => {
+  return DESCRIPTION_LEVEL_CONFIG[index]?.id || 'balanced';
+};
 
 interface DirectorSettingsTabProps {
   directorSettings: DirectorSettings;
   onUpdate: (settings: DirectorSettings) => void;
-  descriptionLevel?: number;
-  onDescriptionLevelChange?: (level: number) => void;
 }
 
 export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
   directorSettings,
   onUpdate,
-  descriptionLevel = 2,
-  onDescriptionLevelChange,
 }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  
+  // Get current description level as index
+  const currentDescriptionIndex = descriptionLevelToIndex(directorSettings.descriptionLevel || 'balanced');
   
   // Director Mode OFF = everything disabled
   // Director Mode ON + Raw Game ON = only difficulty modes enabled
@@ -78,6 +89,10 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
 
   const handleTightnessChange = (value: number[]) => {
     onUpdate({ ...directorSettings, tightness: value[0] / 100 });
+  };
+
+  const handleDescriptionLevelChange = (value: number[]) => {
+    onUpdate({ ...directorSettings, descriptionLevel: indexToDescriptionLevel(value[0]) });
   };
 
   return (
@@ -132,7 +147,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
         )}
         
         {/* Narrator Description Level - visible when Director is enabled */}
-        {directorSettings.enabled && onDescriptionLevelChange && (
+        {directorSettings.enabled && (
           <div className="space-y-3 pt-3 border-t border-border/20">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[var(--accent-secondary)]" />
@@ -143,7 +158,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Vague</span>
                 <span className="text-foreground font-medium">
-                  {DESCRIPTION_LEVELS[descriptionLevel]?.label || 'Balanced'}
+                  {DESCRIPTION_LEVEL_CONFIG[currentDescriptionIndex]?.label || 'Balanced'}
                 </span>
                 <span>Vivid</span>
               </div>
@@ -151,8 +166,8 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
               {/* Slider with tick marks */}
               <div className="relative">
                 <Slider
-                  value={[descriptionLevel]}
-                  onValueChange={(value) => onDescriptionLevelChange(value[0])}
+                  value={[currentDescriptionIndex]}
+                  onValueChange={handleDescriptionLevelChange}
                   min={0}
                   max={4}
                   step={1}
@@ -160,12 +175,12 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
                 />
                 {/* Tick marks */}
                 <div className="absolute top-4 left-0 right-0 flex justify-between px-1 pointer-events-none">
-                  {DESCRIPTION_LEVELS.map((level, idx) => (
+                  {DESCRIPTION_LEVEL_CONFIG.map((level, idx) => (
                     <div 
                       key={idx}
                       className={cn(
                         "w-0.5 h-2 rounded-full transition-colors",
-                        idx <= descriptionLevel 
+                        idx <= currentDescriptionIndex 
                           ? "bg-[var(--accent-primary)]" 
                           : "bg-border/50"
                       )}
@@ -175,7 +190,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
               </div>
               
               <p className="text-[10px] text-muted-foreground text-center mt-3">
-                {DESCRIPTION_LEVELS[descriptionLevel]?.description || 'Standard descriptions'}
+                {DESCRIPTION_LEVEL_CONFIG[currentDescriptionIndex]?.description || 'Standard descriptions'}
               </p>
             </div>
           </div>
