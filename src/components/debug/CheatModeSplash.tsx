@@ -384,9 +384,20 @@ interface CompanionCreatorState {
   age: string;
   distinguishingFeatures: string[];
   quirks: string[];
+  // Body shape - gender specific
+  bustSize?: string; // Female
+  hipWidth?: string; // Female
+  shoulderWidth?: string; // Male
+  physique?: string; // Male
   portraitUrl: string | null;
   isGeneratingPortrait: boolean;
 }
+
+// Body options for randomization
+const BUST_SIZE_OPTIONS = ['A', 'B', 'C', 'D', 'DD', 'E', 'F'];
+const HIP_WIDTH_OPTIONS = ['narrow', 'average', 'wide', 'very wide'];
+const SHOULDER_WIDTH_OPTIONS = ['narrow', 'average', 'broad', 'very broad'];
+const MALE_PHYSIQUE_OPTIONS = ['slim', 'average', 'athletic', 'muscular', 'stocky', 'dad bod'];
 
 const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   name: '',
@@ -409,6 +420,10 @@ const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   age: 'adult',
   distinguishingFeatures: [],
   quirks: [],
+  bustSize: undefined,
+  hipWidth: undefined,
+  shoulderWidth: undefined,
+  physique: undefined,
   portraitUrl: null,
   isGeneratingPortrait: false,
 };
@@ -1035,6 +1050,15 @@ export function CheatModeSplash({
     const NATURAL_EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray'];
     const randomEyeColor = NATURAL_EYE_COLORS[Math.floor(Math.random() * NATURAL_EYE_COLORS.length)];
     
+    // Gender-specific body shape randomization
+    const isFemale = companionCreator.gender === 'female';
+    const isMale = companionCreator.gender === 'male';
+    
+    const randomBustSize = isFemale ? BUST_SIZE_OPTIONS[Math.floor(Math.random() * BUST_SIZE_OPTIONS.length)] : undefined;
+    const randomHipWidth = isFemale ? HIP_WIDTH_OPTIONS[Math.floor(Math.random() * HIP_WIDTH_OPTIONS.length)] : undefined;
+    const randomShoulderWidth = isMale ? SHOULDER_WIDTH_OPTIONS[Math.floor(Math.random() * SHOULDER_WIDTH_OPTIONS.length)] : undefined;
+    const randomPhysique = isMale ? MALE_PHYSIQUE_OPTIONS[Math.floor(Math.random() * MALE_PHYSIQUE_OPTIONS.length)] : undefined;
+    
     setCompanionCreator(prev => ({
       ...prev,
       name: randomName,
@@ -1053,6 +1077,10 @@ export function CheatModeSplash({
       age: ADULT_AGE_CATEGORIES[Math.floor(Math.random() * ADULT_AGE_CATEGORIES.length)],
       distinguishingFeatures: allDistinguishing,
       quirks: randomQuirks,
+      bustSize: randomBustSize,
+      hipWidth: randomHipWidth,
+      shoulderWidth: randomShoulderWidth,
+      physique: randomPhysique,
       portraitUrl: null,
     }));
     
@@ -2094,6 +2122,32 @@ export function CheatModeSplash({
               <span className="text-muted-foreground">Armor:</span>
               <span className="ml-1 capitalize">{companionCreator.armorLevel}</span>
             </div>
+            {/* Female body shape */}
+            {companionCreator.gender === 'female' && companionCreator.bustSize && (
+              <div className="p-2 bg-muted/20 rounded">
+                <span className="text-muted-foreground">Bust:</span>
+                <span className="ml-1">{companionCreator.bustSize}</span>
+              </div>
+            )}
+            {companionCreator.gender === 'female' && companionCreator.hipWidth && (
+              <div className="p-2 bg-muted/20 rounded">
+                <span className="text-muted-foreground">Hips:</span>
+                <span className="ml-1 capitalize">{companionCreator.hipWidth}</span>
+              </div>
+            )}
+            {/* Male body shape */}
+            {companionCreator.gender === 'male' && companionCreator.shoulderWidth && (
+              <div className="p-2 bg-muted/20 rounded">
+                <span className="text-muted-foreground">Shoulders:</span>
+                <span className="ml-1 capitalize">{companionCreator.shoulderWidth}</span>
+              </div>
+            )}
+            {companionCreator.gender === 'male' && companionCreator.physique && (
+              <div className="p-2 bg-muted/20 rounded">
+                <span className="text-muted-foreground">Physique:</span>
+                <span className="ml-1 capitalize">{companionCreator.physique}</span>
+              </div>
+            )}
           </div>
           
           {/* Traits Preview */}
