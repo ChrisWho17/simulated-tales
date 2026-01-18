@@ -3000,9 +3000,11 @@ export function CheatModeSplash({
               </Button>
             </div>
             
-            {/* Content */}
-            <ScrollArea className="flex-1 p-4">
-              {renderCurrentScreen()}
+            {/* Content with visible vertical scrollbar */}
+            <ScrollArea className="flex-1" type="always">
+              <div className="p-4 pr-6">
+                {renderCurrentScreen()}
+              </div>
             </ScrollArea>
             
             {/* Footer */}
