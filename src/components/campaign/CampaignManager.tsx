@@ -117,6 +117,10 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const [showAskAIModal, setShowAskAIModal] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
   
+  // Campaign loading state - shows loading overlay when switching campaigns
+  const [isLoadingCampaign, setIsLoadingCampaign] = useState(false);
+  const [loadingCampaignName, setLoadingCampaignName] = useState<string | null>(null);
+  
   // Nuclear wipe state
   const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
   const [nuclearStep, setNuclearStep] = useState(0); // 0: initial, 1: confirm, 2: final
@@ -143,41 +147,58 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   
   // Handle continue/load campaign with recovery
   const handleContinue = useCallback(async (campaign: CampaignMetadata) => {
-    // First, try to load and validate the campaign
-    const rawData = loadCampaignData(campaign.id);
+    // Show loading overlay
+    setIsLoadingCampaign(true);
+    setLoadingCampaignName(campaign.name);
     
-    if (!rawData) {
-      toast.error('Failed to load campaign data');
-      return;
-    }
-    
-    // Run invariants to check for issues
-    const invariantResult = runInvariants(rawData);
-    
-    if (!invariantResult.valid) {
-      // Campaign has issues - trigger recovery mode
-      console.log('[CampaignManager] Campaign has issues, triggering recovery:', invariantResult.violations);
+    try {
+      // First, try to load and validate the campaign
+      const rawData = loadCampaignData(campaign.id);
       
-      const snapshot = createFailureSnapshot(
-        campaign.id,
-        rawData,
-        'INVARIANT_FAILURE',
-        `${invariantResult.violations.length} validation issue(s) detected`,
-        invariantResult
-      );
+      if (!rawData) {
+        toast.error('Failed to load campaign data');
+        setIsLoadingCampaign(false);
+        setLoadingCampaignName(null);
+        return;
+      }
       
-      setRecoverySnapshot(snapshot);
-      setPendingCampaignId(campaign.id);
-      setShowRecoveryModal(true);
-      return;
-    }
-    
-    // Campaign is valid, load normally - AWAIT the async function
-    const success = await loadCampaign(campaign.id);
-    if (success) {
-      onSelectCampaign();
-    } else {
+      // Run invariants to check for issues
+      const invariantResult = runInvariants(rawData);
+      
+      if (!invariantResult.valid) {
+        // Campaign has issues - trigger recovery mode
+        console.log('[CampaignManager] Campaign has issues, triggering recovery:', invariantResult.violations);
+        
+        const snapshot = createFailureSnapshot(
+          campaign.id,
+          rawData,
+          'INVARIANT_FAILURE',
+          `${invariantResult.violations.length} validation issue(s) detected`,
+          invariantResult
+        );
+        
+        setRecoverySnapshot(snapshot);
+        setPendingCampaignId(campaign.id);
+        setShowRecoveryModal(true);
+        setIsLoadingCampaign(false);
+        setLoadingCampaignName(null);
+        return;
+      }
+      
+      // Campaign is valid, load normally - AWAIT the async function
+      const success = await loadCampaign(campaign.id);
+      if (success) {
+        onSelectCampaign();
+      } else {
+        toast.error('Failed to load campaign');
+        setIsLoadingCampaign(false);
+        setLoadingCampaignName(null);
+      }
+    } catch (err) {
+      console.error('[CampaignManager] Error loading campaign:', err);
       toast.error('Failed to load campaign');
+      setIsLoadingCampaign(false);
+      setLoadingCampaignName(null);
     }
   }, [loadCampaign, onSelectCampaign]);
   
@@ -651,7 +672,25 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
   
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8 relative">
+      {/* Loading overlay when switching campaigns */}
+      {isLoadingCampaign && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-xl bg-card border border-border shadow-2xl animate-scale-in">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-primary/20 rounded-full"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-foreground mb-1">Loading Campaign</h3>
+              {loadingCampaignName && (
+                <p className="text-sm text-muted-foreground">{loadingCampaignName}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
