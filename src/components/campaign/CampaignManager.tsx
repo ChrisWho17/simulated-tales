@@ -117,9 +117,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   const [showAskAIModal, setShowAskAIModal] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
   
-  // Campaign loading state - shows loading overlay when switching campaigns
-  const [isLoadingCampaign, setIsLoadingCampaign] = useState(false);
-  const [loadingCampaignName, setLoadingCampaignName] = useState<string | null>(null);
   
   // Nuclear wipe state
   const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
@@ -147,18 +144,12 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   
   // Handle continue/load campaign with recovery
   const handleContinue = useCallback(async (campaign: CampaignMetadata) => {
-    // Show loading overlay
-    setIsLoadingCampaign(true);
-    setLoadingCampaignName(campaign.name);
-    
     try {
       // First, try to load and validate the campaign
       const rawData = loadCampaignData(campaign.id);
       
       if (!rawData) {
         toast.error('Failed to load campaign data');
-        setIsLoadingCampaign(false);
-        setLoadingCampaignName(null);
         return;
       }
       
@@ -180,8 +171,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
         setRecoverySnapshot(snapshot);
         setPendingCampaignId(campaign.id);
         setShowRecoveryModal(true);
-        setIsLoadingCampaign(false);
-        setLoadingCampaignName(null);
         return;
       }
       
@@ -191,14 +180,10 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
         onSelectCampaign();
       } else {
         toast.error('Failed to load campaign');
-        setIsLoadingCampaign(false);
-        setLoadingCampaignName(null);
       }
     } catch (err) {
       console.error('[CampaignManager] Error loading campaign:', err);
       toast.error('Failed to load campaign');
-      setIsLoadingCampaign(false);
-      setLoadingCampaignName(null);
     }
   }, [loadCampaign, onSelectCampaign]);
   
@@ -431,9 +416,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     results: { name: string; success: boolean; skipped?: boolean }[];
   } | null>(null);
   
-  // Single download state
-  const [isSingleDownloading, setIsSingleDownloading] = useState(false);
-  const [singleDownloadName, setSingleDownloadName] = useState<string | null>(null);
   
   // Fetch cloud campaigns
   const handleOpenDownloadDialog = useCallback(async () => {
@@ -588,16 +570,10 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       return;
     }
     
-    // Show loading state
-    setIsSingleDownloading(true);
-    setSingleDownloadName(cloud.campaign_name);
-    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Not authenticated');
-        setIsSingleDownloading(false);
-        setSingleDownloadName(null);
         return;
       }
       
@@ -610,8 +586,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       
       if (error || !fullSave) {
         toast.error('Failed to download campaign');
-        setIsSingleDownloading(false);
-        setSingleDownloadName(null);
         return;
       }
       
@@ -639,8 +613,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     } catch (err) {
       console.error('[DownloadCloud] Single download error:', err);
       toast.error('Failed to download campaign');
-      setIsSingleDownloading(false);
-      setSingleDownloadName(null);
     }
   }, [campaigns]);
   
@@ -687,46 +659,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 relative">
-      {/* Loading overlay when switching campaigns or downloading */}
-      {(isLoadingCampaign || isSingleDownloading || isDownloading) && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-xl bg-card border border-border shadow-2xl animate-scale-in">
-            {/* Spinner with pulsing glow */}
-            <div className="relative">
-              {/* Pulsing glow effect */}
-              <div className="absolute inset-0 w-16 h-16 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '1.5s' }}></div>
-              <div className="absolute inset-[-4px] w-[72px] h-[72px] rounded-full bg-primary/10 blur-md animate-pulse"></div>
-              {/* Static ring */}
-              <div className="relative w-16 h-16 border-4 border-primary/20 rounded-full"></div>
-              {/* Spinning ring */}
-              <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                {isDownloading ? 'Downloading Campaigns' : isSingleDownloading ? 'Downloading from Cloud' : 'Loading Campaign'}
-              </h3>
-              {/* Show campaign name or download progress */}
-              {loadingCampaignName && !isSingleDownloading && !isDownloading && (
-                <p className="text-sm text-muted-foreground">{loadingCampaignName}</p>
-              )}
-              {isSingleDownloading && singleDownloadName && (
-                <p className="text-sm text-muted-foreground">{singleDownloadName}</p>
-              )}
-              {isDownloading && downloadProgress && (
-                <div className="mt-2 space-y-2">
-                  <p className="text-sm text-muted-foreground">{downloadProgress.currentName}</p>
-                  <div className="flex items-center gap-2">
-                    <Progress value={(downloadProgress.current / downloadProgress.total) * 100} className="w-48 h-2" />
-                    <span className="text-xs text-muted-foreground">
-                      {downloadProgress.current}/{downloadProgress.total}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       
       <div className="max-w-6xl mx-auto">
         {/* Header */}
