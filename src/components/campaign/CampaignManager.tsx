@@ -44,7 +44,9 @@ import {
   HardDrive,
   Cloud,
   UserCircle,
+  RefreshCw,
 } from 'lucide-react';
+import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
@@ -301,6 +303,46 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     }
   }, [nuclearStep]);
   
+  // Sync all state
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  
+  // Handle sync all campaigns
+  const handleSyncAll = useCallback(async () => {
+    if (!isAuthenticated) {
+      toast.error('Sign in to sync campaigns to cloud');
+      return;
+    }
+    
+    setIsSyncingAll(true);
+    let syncedCount = 0;
+    let errorCount = 0;
+    
+    try {
+      for (const campaign of campaigns) {
+        try {
+          const rawData = loadCampaignData(campaign.id);
+          if (rawData) {
+            await UnifiedSaveArchitecture.saveCampaign(rawData);
+            syncedCount++;
+          }
+        } catch (err) {
+          console.error(`[SyncAll] Failed to sync ${campaign.name}:`, err);
+          errorCount++;
+        }
+      }
+      
+      if (errorCount > 0) {
+        toast.warning(`Synced ${syncedCount} campaigns, ${errorCount} failed`);
+      } else if (syncedCount > 0) {
+        toast.success(`Synced ${syncedCount} campaign${syncedCount > 1 ? 's' : ''} to cloud`);
+      } else {
+        toast.info('No campaigns to sync');
+      }
+    } finally {
+      setIsSyncingAll(false);
+    }
+  }, [isAuthenticated, campaigns]);
+  
   // Sort campaigns by last updated
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
   
@@ -339,6 +381,19 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
             </Button>
             
             <CloudSyncIndicator variant="badge" />
+            
+            {isAuthenticated && campaigns.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncAll}
+                disabled={isSyncingAll}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+                {isSyncingAll ? 'Syncing...' : 'Sync All'}
+              </Button>
+            )}
             
             <Button
               variant="outline"
