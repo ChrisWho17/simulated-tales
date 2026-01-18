@@ -349,6 +349,83 @@ class CompanionSystemManager {
     );
   }
   
+  /**
+   * Revive a dead companion - cheat mode feature
+   * Returns story introduction text for the resurrection event
+   */
+  reviveCompanion(companionId: string): { success: boolean; message: string; storyIntro?: string } {
+    const companion = this.companions.get(companionId);
+    if (!companion) {
+      return { success: false, message: 'Companion not found.' };
+    }
+    
+    if (companion.status !== 'dead') {
+      return { success: false, message: `${companion.name} is not dead.` };
+    }
+    
+    // Resurrection story variations
+    const resurrectionStories = [
+      {
+        intro: `A blinding light erupts from ${companion.name}'s fallen form. Divine energy courses through their body as an ethereal voice whispers, "Your journey is not yet complete." Their eyes flutter open, gasping for breath.`,
+        reaction: `I... I saw the other side. It was peaceful, but something pulled me back. I'm not ready to leave you yet.`
+      },
+      {
+        intro: `The air shimmers with arcane power as an ancient spell takes hold. ${companion.name}'s wounds begin to close, color returning to their pallid skin. With a shuddering breath, life returns to their body.`,
+        reaction: `*gasps* What... what happened? I remember darkness, then... warmth. I'm alive?`
+      },
+      {
+        intro: `A mysterious figure cloaked in shadows appears beside ${companion.name}'s body. With a whispered incantation, they press a glowing hand to their chest. The figure vanishes as ${companion.name} stirs, their eyes slowly opening.`,
+        reaction: `I dreamed of someone... calling me back. The voice said I had unfinished business. With you.`
+      },
+      {
+        intro: `${companion.name}'s spirit, visible as a faint shimmer, is pulled back into their body by an invisible force. Their chest heaves as they draw their first breath in what feels like an eternity. Tears stream down their face.`,
+        reaction: `*reaches out with trembling hands* You brought me back. I don't know how, but... thank you. I won't waste this second chance.`
+      },
+      {
+        intro: `The ground beneath ${companion.name} pulses with primal energy. Roots and vines cradle their body as nature itself intervenes, refusing to let their story end here. With a gasp, they return to the world of the living.`,
+        reaction: `The earth... it held me. It said my roots were still here, still connected to you. I couldn't leave.`
+      }
+    ];
+    
+    const story = resurrectionStories[Math.floor(Math.random() * resurrectionStories.length)];
+    
+    // Revive the companion
+    companion.status = 'waiting';
+    companion.mood = 'content';
+    companion.moodIntensity = 70;
+    
+    // Massive affinity boost from being resurrected
+    companion.affinity = Math.min(100, companion.affinity + 40);
+    companion.trust = Math.min(100, companion.trust + 30);
+    companion.romanticInterest = Math.min(100, companion.romanticInterest + 15);
+    
+    // Add resurrection memory
+    this.addMemory(companionId, 'event', 'Was brought back from death', 50);
+    
+    // Set their reaction dialogue
+    companion.wantsToSpeak = true;
+    companion.pendingReaction = story.reaction;
+    
+    // Emit resurrection event
+    eventBus.emitRelationshipChanged(
+      companion.name,
+      'player',
+      'affection',
+      0,
+      40,
+      'resurrection',
+      0
+    );
+    
+    console.log(`[Companion] ${companion.name} has been revived!`);
+    
+    return { 
+      success: true, 
+      message: `${companion.name} has been brought back from death!`,
+      storyIntro: story.intro
+    };
+  }
+  
   // ========== PLAYER ACTION REACTIONS ==========
   
   processPlayerAction(actionType: PlayerActionType, context?: string): void {
