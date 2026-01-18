@@ -45,6 +45,8 @@ import {
   Cloud,
   UserCircle,
   RefreshCw,
+  Check,
+  X,
 } from 'lucide-react';
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
@@ -305,43 +307,81 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   
   // Sync all state
   const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [showSyncAllDialog, setShowSyncAllDialog] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    current: number;
+    total: number;
+    currentName: string;
+    results: { name: string; success: boolean }[];
+  } | null>(null);
   
   // Handle sync all campaigns
-  const handleSyncAll = useCallback(async () => {
+  const handleSyncAllClick = useCallback(() => {
     if (!isAuthenticated) {
       toast.error('Sign in to sync campaigns to cloud');
       return;
     }
-    
+    setShowSyncAllDialog(true);
+    setSyncProgress(null);
+  }, [isAuthenticated]);
+  
+  const handleSyncAllConfirm = useCallback(async () => {
     setIsSyncingAll(true);
-    let syncedCount = 0;
-    let errorCount = 0;
+    setSyncProgress({
+      current: 0,
+      total: campaigns.length,
+      currentName: campaigns[0]?.name || '',
+      results: []
+    });
     
-    try {
-      for (const campaign of campaigns) {
-        try {
-          const rawData = loadCampaignData(campaign.id);
-          if (rawData) {
-            await UnifiedSaveArchitecture.saveCampaign(rawData);
-            syncedCount++;
-          }
-        } catch (err) {
-          console.error(`[SyncAll] Failed to sync ${campaign.name}:`, err);
-          errorCount++;
+    const results: { name: string; success: boolean }[] = [];
+    
+    for (let i = 0; i < campaigns.length; i++) {
+      const campaign = campaigns[i];
+      setSyncProgress(prev => prev ? {
+        ...prev,
+        current: i,
+        currentName: campaign.name
+      } : null);
+      
+      try {
+        const rawData = loadCampaignData(campaign.id);
+        if (rawData) {
+          await UnifiedSaveArchitecture.saveCampaign(rawData);
+          results.push({ name: campaign.name, success: true });
+        } else {
+          results.push({ name: campaign.name, success: false });
         }
+      } catch (err) {
+        console.error(`[SyncAll] Failed to sync ${campaign.name}:`, err);
+        results.push({ name: campaign.name, success: false });
       }
       
-      if (errorCount > 0) {
-        toast.warning(`Synced ${syncedCount} campaigns, ${errorCount} failed`);
-      } else if (syncedCount > 0) {
-        toast.success(`Synced ${syncedCount} campaign${syncedCount > 1 ? 's' : ''} to cloud`);
-      } else {
-        toast.info('No campaigns to sync');
-      }
-    } finally {
-      setIsSyncingAll(false);
+      setSyncProgress(prev => prev ? {
+        ...prev,
+        current: i + 1,
+        results: [...results]
+      } : null);
     }
-  }, [isAuthenticated, campaigns]);
+    
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+    
+    if (errorCount > 0) {
+      toast.warning(`Synced ${successCount} campaigns, ${errorCount} failed`);
+    } else if (successCount > 0) {
+      toast.success(`Synced ${successCount} campaign${successCount > 1 ? 's' : ''} to cloud`);
+    } else {
+      toast.info('No campaigns to sync');
+    }
+    
+    setIsSyncingAll(false);
+    // Keep dialog open briefly to show final results
+    setTimeout(() => {
+      setShowSyncAllDialog(false);
+      setSyncProgress(null);
+    }, 1500);
+  }, [campaigns]);
   
   // Sort campaigns by last updated
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -386,7 +426,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleSyncAll}
+                onClick={handleSyncAllClick}
                 disabled={isSyncingAll}
                 className="gap-2"
               >
@@ -667,6 +707,105 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               {nuclearStep === 1 && 'I Understand, Continue'}
               {nuclearStep === 2 && '🔥 WIPE ALL DATA 🔥'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Sync All Confirmation Dialog */}
+      <Dialog open={showSyncAllDialog} onOpenChange={(open) => {
+        if (!open && !isSyncingAll) {
+          setShowSyncAllDialog(false);
+          setSyncProgress(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Cloud className="h-5 w-5 text-primary" />
+              Sync All Campaigns to Cloud
+            </DialogTitle>
+            <DialogDescription>
+              {!syncProgress ? (
+                <span>
+                  This will upload all {campaigns.length} local campaign{campaigns.length !== 1 ? 's' : ''} to the cloud. 
+                  Existing cloud saves will be updated if the local version is newer.
+                </span>
+              ) : (
+                <span>
+                  Syncing campaigns to cloud...
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Progress Section */}
+          {syncProgress && (
+            <div className="py-4 space-y-4">
+              {/* Overall Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Progress</span>
+                  <span>{syncProgress.current} / {syncProgress.total}</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300 ease-out"
+                    style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                  />
+                </div>
+                {syncProgress.current < syncProgress.total && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Syncing: {syncProgress.currentName}
+                  </p>
+                )}
+              </div>
+              
+              {/* Individual Results */}
+              {syncProgress.results.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {syncProgress.results.map((result, i) => (
+                    <div 
+                      key={i}
+                      className={`flex items-center gap-2 text-sm p-2 rounded ${
+                        result.success 
+                          ? 'bg-green-500/10 text-green-400' 
+                          : 'bg-destructive/10 text-destructive'
+                      }`}
+                    >
+                      {result.success ? (
+                        <Check className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <X className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="truncate">{result.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            {!isSyncingAll && !syncProgress && (
+              <>
+                <Button variant="outline" onClick={() => setShowSyncAllDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSyncAllConfirm} className="gap-2">
+                  <Cloud className="h-4 w-4" />
+                  Sync {campaigns.length} Campaign{campaigns.length !== 1 ? 's' : ''}
+                </Button>
+              </>
+            )}
+            {syncProgress && syncProgress.current === syncProgress.total && (
+              <Button onClick={() => {
+                setShowSyncAllDialog(false);
+                setSyncProgress(null);
+              }}>
+                Done
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
