@@ -2427,18 +2427,63 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         // Detect if this is dialogue/speech (wrapped in say: "..." or ask: "...")
         const isDialogueAction = /^(say|ask|tell|speak|shout|whisper):\s*["']/.test(cleanedAction);
         
+        // CRITICAL: Detect ACTION WORDS that should NEVER be interpreted as dialogue
+        // These are movement, physical, tactical, and exploration verbs
+        const actionVerbPatterns = [
+          // Movement & Navigation
+          /^(go|going|went|move|moving|walk|walking|run|running|head|heading|travel|traveling|proceed|proceeding|advance|advancing|continue|continuing|press|pressing)\b/i,
+          /^(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|through|past|around|toward|towards)\b/i,
+          /^(enter|entering|exit|exiting|leave|leaving|return|returning|approach|approaching|retreat|retreating|flee|fleeing)\b/i,
+          
+          // Physical Actions
+          /^(take|taking|grab|grabbing|pick|picking|drop|dropping|throw|throwing|catch|catching|push|pushing|pull|pulling)\b/i,
+          /^(open|opening|close|closing|lock|locking|unlock|unlocking|break|breaking|smash|smashing|kick|kicking)\b/i,
+          /^(climb|climbing|jump|jumping|crouch|crouching|crawl|crawling|swim|swimming|dive|diving|duck|ducking)\b/i,
+          /^(stand|standing|sit|sitting|lie|lying|kneel|kneeling|lean|leaning|rest|resting|wait|waiting|pause|pausing)\b/i,
+          
+          // Combat & Tactical
+          /^(attack|attacking|defend|defending|block|blocking|dodge|dodging|parry|parrying|strike|striking|slash|slashing)\b/i,
+          /^(shoot|shooting|fire|firing|aim|aiming|reload|reloading|draw|drawing|holster|holstering|equip|equipping)\b/i,
+          /^(hide|hiding|sneak|sneaking|stealth|stealthing|ambush|ambushing|flank|flanking|cover|covering)\b/i,
+          
+          // Observation & Investigation  
+          /^(look|looking|watch|watching|observe|observing|examine|examining|inspect|inspecting|search|searching)\b/i,
+          /^(check|checking|scan|scanning|study|studying|investigate|investigating|explore|exploring|scout|scouting)\b/i,
+          /^(listen|listening|smell|smelling|taste|tasting|touch|touching|feel|feeling|sense|sensing)\b/i,
+          
+          // Interaction with objects
+          /^(use|using|activate|activating|turn|turning|flip|flipping|switch|switching|toggle|toggling)\b/i,
+          /^(read|reading|write|writing|type|typing|press|pressing|click|clicking|tap|tapping)\b/i,
+          
+          // State changes
+          /^(focus|focusing|concentrate|concentrating|prepare|preparing|ready|readying|brace|bracing)\b/i,
+          /^(follow|following|chase|chasing|track|tracking|trail|trailing|pursue|pursuing)\b/i,
+          
+          // Common short imperatives/directions
+          /^(spread|steady|careful|slowly|quickly|quietly|silently|carefully|stealthily)\b/i,
+          /^(more|less|faster|slower|higher|lower|closer|farther)\b/i,
+        ];
+        
+        // Check if the action matches any action verb pattern
+        const matchesActionPattern = actionVerbPatterns.some(pattern => pattern.test(cleanedAction));
+        
         // CRITICAL: Detect SHORT IMPERATIVE COMMANDS that are ACTIONS, not speech
         // These are tactical/directive phrases that the AI should NOT interpret as dialogue
-        // Examples: "spread more", "take cover", "advance", "hold position", "reload", "aim", etc.
         const isShortImperativeCommand = (
-          cleanedAction.split(/\s+/).length <= 4 && // Short phrase
+          cleanedAction.split(/\s+/).length <= 5 && // Short phrase (increased from 4)
           !cleanedAction.includes('"') && !cleanedAction.includes("'") && // No quotes
-          /^(spread|take|hold|advance|retreat|reload|aim|fire|shoot|move|run|walk|jump|climb|crouch|stand|sit|lie|duck|dodge|roll|throw|grab|drop|push|pull|kick|punch|slash|stab|block|parry|wait|pause|stop|go|hide|sneak|crawl|look|watch|observe|scan|search|check|examine|inspect|listen|smell|taste|touch|feel|open|close|lock|unlock|enter|exit|leave|follow|chase|flee|attack|defend|guard|protect|surrender|submit|continue|proceed|approach|back|step|turn|spin|flip|dive|lean|press|squeeze|lift|carry|drag|toss|catch|swing|strike|cut|slice|tear|rip|break|smash|crush|bend|twist|stretch|reach|point|wave|signal|gesture|nod|shake|shrug|bow|kneel|salute|charge|rush|sprint|dash|slow|speed|fast|quick|careful|quiet|loud|hard|soft|gentle|rough|tight|loose|deep|shallow|high|low|left|right|forward|backward|up|down|in|out|on|off|over|under|through|around|across|along|toward|away|back|steady|ready|steady|brace|tense|relax|focus|concentrate|gather|collect|assemble|disperse|split|merge|combine|separate|join|connect|disconnect|attach|detach|equip|unequip|draw|sheathe|load|unload|cock|release|trigger|engage|disengage|flank|surround|encircle|ambush|trap|lure|distract|divert|feint|fake|bluff|intimidate|taunt|provoke|challenge|dare|threaten|menace|scare|startle|surprise|shock|stun|paralyze|freeze|melt|burn|ignite|extinguish|light|darken|brighten|dim|silence|muffle|amplify|boost|weaken|strengthen|heal|cure|poison|infect|cleanse|purify|corrupt|taint|bless|curse|enchant|dispel|summon|banish|create|destroy|build|demolish|construct|deconstruct|repair|damage|fix|break|mend|patch|seal|unseal|lock|unlock|encrypt|decrypt|activate|deactivate|enable|disable|power|unpower|charge|discharge|refuel|empty|fill|drain|pour|spill|splash|spray|mist|fog|smoke|steam|evaporate|condense|freeze|thaw|heat|cool|warm|chill|dry|wet|soak|drench|drown|suffocate|choke|strangle|crush|squeeze|compress|expand|inflate|deflate|stretch|contract|extend|retract|protrude|recede|emerge|submerge|surface|sink|float|hover|glide|soar|plummet|ascend|descend|rise|fall|drop|catch|release|grip|grasp|clutch|clench|unclench|relax|tighten|loosen)\b/i.test(cleanedAction)
+          (matchesActionPattern || /^[a-z]+\s+(more|less|faster|slower|deeper|further|ahead|forward|back|again)$/i.test(cleanedAction))
         );
         
         // Detect parenthetical/stage direction style input (even without actual parentheses)
         // These are descriptive actions, not dialogue
         const isStageDirection = parentheticalMatch || bracketMatch;
+        
+        // NEW: Detect movement phrases like "go deeper", "move forward", "head inside"
+        const isMovementPhrase = /^(go|move|head|walk|run|proceed|continue|travel|venture|press)\s+(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|in|out|through|past|around|toward|towards|into|onto)/i.test(cleanedAction);
+        
+        // Combine all action detection
+        const isClearlyPhysicalAction = isShortImperativeCommand || isStageDirection || isMovementPhrase || matchesActionPattern;
         
         // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
         let actionContent: string;
@@ -2459,34 +2504,47 @@ CRITICAL: The player's character just said this. You must show:
 
 DO NOT just describe the act of speaking. Show the REACTION and RESPONSE.`;
 
-        } else if (isShortImperativeCommand || isStageDirection) {
-          // SHORT COMMANDS and STAGE DIRECTIONS are PURE PHYSICAL ACTIONS - never speech
-          actionContent = `PLAYER PHYSICAL ACTION ONLY (this is a tactical/physical command - the character DOES this, they do NOT say it):
+        } else if (isClearlyPhysicalAction) {
+          // PHYSICAL ACTIONS - PURE PHYSICAL ACTIONS - never speech
+          actionContent = `PLAYER PHYSICAL ACTION ONLY (this is a movement/physical/tactical command - the character DOES this, they do NOT say it):
 "${cleanedAction}"
 
 CRITICAL - THIS IS NOT DIALOGUE:
-The player typed a short command or stage direction. This means the character PHYSICALLY PERFORMS this action.
+The player typed an action command. This means the character PHYSICALLY PERFORMS this action IN SILENCE.
 
-FORBIDDEN:
+FORBIDDEN (NEVER DO THESE):
 - Do NOT have the character speak these words aloud
 - Do NOT write: "${character?.name || 'You'} says '${cleanedAction}'"
 - Do NOT write: "The words escape your lips: '${cleanedAction}'"
-- Do NOT interpret this as the character announcing their action
-- Do NOT use any variation of the character speaking these exact words
+- Do NOT write: "'${cleanedAction},' you murmur/say/speak/declare"
+- Do NOT write: "You voice the command: '${cleanedAction}'"
+- Do NOT interpret this as the character announcing their action verbally
+- Do NOT use quotation marks around any version of the player's input
+- Do NOT narrate the character making any vocalization of these words
 
 REQUIRED:
-- Show the character DOING the action silently
+- Show the character DOING the action SILENTLY
 - Describe the physical motion, body language, environmental response
 - Transform "${cleanedAction}" into evocative narrative prose describing the ACTION
 - Show consequences and reactions from the environment/NPCs
 
-Example - If player typed "spread more":
-WRONG: You call out, "Spread more!" / You speak the words: "Spread more."
-RIGHT: You widen your stance, arms extending as you distribute your weight across a broader base. The movement is deliberate, tactical.
+EXAMPLES OF CORRECT TRANSFORMATION:
 
-Example - If player typed "drop my gun":
-WRONG: "Drop my gun," you declare, letting the weapon fall.
-RIGHT: Your fingers uncurl. The pistol clatters against the concrete, the sound sharp in the sudden silence. Every eye in the room tracks its fall.`;
+Player typed: "go deeper"
+WRONG: You speak aloud, "I go deeper." / "Go deeper," you mutter. / The words 'go deeper' leave your lips.
+RIGHT: You press onward into the shadows, each step taking you further from the light behind. The passage narrows, walls close enough to touch, and the air grows thick with the smell of damp earth.
+
+Player typed: "move forward"  
+WRONG: "Move forward," you say. / You announce, "I'm moving forward."
+RIGHT: One foot in front of the other. You advance, eyes scanning the path ahead, muscles tense and ready for whatever waits around the bend.
+
+Player typed: "look around"
+WRONG: "Look around," you whisper to yourself.
+RIGHT: Your gaze sweeps the chamber methodically—ceiling, corners, shadows. Taking stock of every exit, every potential threat, every glint of reflected light.
+
+Player typed: "wait"
+WRONG: "Wait," you say.
+RIGHT: You hold position, breath shallow, listening. Seconds stretch into small eternities as you let the silence tell you what your eyes cannot.`;
 
           // Add emotional context for physical actions
           if (emotionalContext) {
@@ -2495,7 +2553,9 @@ RIGHT: Your fingers uncurl. The pistol clatters against the concrete, the sound 
 
         } else {
           // Check if this is a dialogue INTENT (I ask..., I tell..., I say to..., etc.)
-          const isDialogueIntent = /^(ask|tell|say|speak|confess|express|admit|reveal|declare|apologize|thank|greet|insult|threaten|beg|plead|explain|describe|mention|whisper|shout|yell|murmur|demand|request|suggest|propose|promise|warn|comfort|console|reassure|encourage|praise|criticize|mock|tease|flirt)/i.test(cleanedAction);
+          // But EXCLUDE action verbs that might start with similar words
+          const dialogueVerbs = /^(ask|tell|say|speak|confess|express|admit|reveal|declare|apologize|thank|greet|insult|threaten|beg|plead|explain|mention|whisper|shout|yell|murmur|demand|request|suggest|propose|promise|warn|comfort|console|reassure|encourage|praise|criticize|mock|tease|flirt)\s+(about|him|her|them|that|what|why|how|if|whether|for|to)/i;
+          const isDialogueIntent = dialogueVerbs.test(cleanedAction);
           
           if (isDialogueIntent) {
             actionContent = `PLAYER DIALOGUE INTENT (transform this into actual spoken words, DO NOT echo this description):
