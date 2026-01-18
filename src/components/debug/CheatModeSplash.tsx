@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Wand2, X, Save, RefreshCw, Loader2, User, Heart, Shield, Sword, 
   Brain, Zap, Star, Coins, ChevronDown, ChevronUp, AlertTriangle,
   Shirt, Sparkles, Activity, Database, ShieldCheck, CheckCircle2, XCircle,
-  ChevronLeft, ChevronRight, Users, Plus, Trash2, Edit3, Package
+  ChevronLeft, ChevronRight, Users, Plus, Trash2, Edit3, Package,
+  Flame, Clock, MapPin, Infinity, Crown, Skull, Eye, Volume2, VolumeX,
+  Crosshair, Target, Dices, RotateCcw, Settings, Gauge
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAchievementsOptional } from '@/components/game/Achievements';
@@ -15,6 +17,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { DataIntegrityService, IntegrityReport } from '@/services/dataIntegrityService';
 import { EventBusDebugPanel } from '@/components/game/EventBusDebugPanel';
@@ -32,6 +35,7 @@ import {
   HEIGHT_OPTIONS,
   GENDER_OPTIONS,
   CLOTHING_STYLE_OPTIONS,
+  Gender,
 } from '@/types/characterCreation';
 import { 
   PlayerPortraitReference, 
@@ -43,24 +47,78 @@ import {
   CompanionState,
   CompanionMood,
   CompanionStatus,
-  COMPANION_TEMPLATES
+  COMPANION_TEMPLATES,
+  PersonalityTrait,
 } from '@/game/companionSystem';
 import { wardrobeManager, WardrobeState, WardrobeItem } from '@/game/wardrobeSystem';
 import { getStarterClothingForGenre, buildClothingDescriptionForAI } from '@/game/starterClothingSystem';
 import { ClothingSlot } from '@/game/clothingItemSystem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryEditor } from './InventoryEditor';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CHARACTER_KEY = 'living-world-character';
 
+// Hook for detecting cheat mode commands
+export function useCheatModeCommand() {
+  const [isCheatModeOpen, setIsCheatModeOpen] = useState(false);
+  const [devPanelMode, setDevPanelMode] = useState<DevPanelMode>('cheat');
+  
+  const checkForCheatCommand = useCallback((input: string): boolean => {
+    const trimmed = input.trim().toLowerCase();
+    
+    if (trimmed === '/iamacheater' || trimmed === '/cheat') {
+      setDevPanelMode('cheat');
+      setIsCheatModeOpen(true);
+      return true;
+    }
+    
+    if (trimmed === '/events' || trimmed === '/eventbus') {
+      setDevPanelMode('events');
+      setIsCheatModeOpen(true);
+      return true;
+    }
+    
+    if (trimmed === '/integrity' || trimmed === '/scan') {
+      setDevPanelMode('integrity');
+      setIsCheatModeOpen(true);
+      return true;
+    }
+    
+    return false;
+  }, []);
+  
+  const closeCheatMode = useCallback(() => {
+    setIsCheatModeOpen(false);
+  }, []);
+  
+  return {
+    isCheatModeOpen,
+    devPanelMode,
+    checkForCheatCommand,
+    closeCheatMode,
+    setIsCheatModeOpen,
+  };
+}
+
 // Screen types for navigation
-type EditorScreen = 'character' | 'inventory' | 'companions';
+type EditorScreen = 'cheats' | 'character' | 'inventory' | 'companions';
 
 const SCREENS: { id: EditorScreen; label: string; icon: React.ReactNode }[] = [
+  { id: 'cheats', label: 'Cheats', icon: <Wand2 className="w-4 h-4" /> },
   { id: 'character', label: 'Character', icon: <User className="w-4 h-4" /> },
   { id: 'inventory', label: 'Inventory', icon: <Package className="w-4 h-4" /> },
   { id: 'companions', label: 'Companions', icon: <Users className="w-4 h-4" /> },
 ];
+
+// Available personality traits for companion creation
+const PERSONALITY_TRAITS: PersonalityTrait[] = [
+  'honorable', 'ruthless', 'kind', 'cruel', 'brave', 'cowardly',
+  'greedy', 'generous', 'loyal', 'treacherous', 'romantic', 'pragmatic',
+  'spiritual', 'skeptical', 'vengeful', 'forgiving', 'ambitious', 'humble'
+];
+
+const COMBAT_ROLES = ['tank', 'damage', 'support', 'ranged'] as const;
 
 interface CheatModeSplashProps {
   isOpen: boolean;
@@ -70,6 +128,57 @@ interface CheatModeSplashProps {
   genre?: string;
   initialMode?: DevPanelMode;
 }
+
+export type DevPanelMode = 'cheat' | 'events' | 'integrity';
+
+// Cheat state interface
+interface CheatState {
+  godMode: boolean;
+  infiniteGold: boolean;
+  maxStats: boolean;
+  instantKill: boolean;
+  noClip: boolean;
+  speedMultiplier: number;
+  timeScale: number;
+  unlockAll: boolean;
+  invisibility: boolean;
+  infiniteAmmo: boolean;
+}
+
+// Companion creator state
+interface CompanionCreatorState {
+  name: string;
+  gender: Gender;
+  height: string;
+  build: string;
+  skinTone: string;
+  hairStyle: string;
+  hairColor: string;
+  eyeColor: string;
+  traits: PersonalityTrait[];
+  combatRole: typeof COMBAT_ROLES[number];
+  backstory: string;
+  skills: string[];
+  speechPattern: string;
+  catchphrases: string[];
+}
+
+const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
+  name: '',
+  gender: 'other',
+  height: 'average',
+  build: 'average',
+  skinTone: 'Medium',
+  hairStyle: 'Medium',
+  hairColor: 'Brown',
+  eyeColor: 'Brown',
+  traits: ['loyal', 'brave'],
+  combatRole: 'damage',
+  backstory: '',
+  skills: [],
+  speechPattern: 'casual, friendly',
+  catchphrases: [],
+};
 
 // Save character appearance to campaign for consistent image generation
 function saveCharacterAppearanceToCampaign(
@@ -123,7 +232,21 @@ export function CheatModeSplash({
   const hasUnlockedCheaterAchievement = useRef(false);
   
   // Current screen
-  const [currentScreen, setCurrentScreen] = useState<EditorScreen>('character');
+  const [currentScreen, setCurrentScreen] = useState<EditorScreen>('cheats');
+  
+  // Cheat state
+  const [cheats, setCheats] = useState<CheatState>({
+    godMode: false,
+    infiniteGold: false,
+    maxStats: false,
+    instantKill: false,
+    noClip: false,
+    speedMultiplier: 1,
+    timeScale: 1,
+    unlockAll: false,
+    invisibility: false,
+    infiniteAmmo: false,
+  });
   
   // Character stats
   const [name, setName] = useState(character?.name || '');
@@ -152,16 +275,16 @@ export function CheatModeSplash({
   const [integrityReport, setIntegrityReport] = useState<IntegrityReport | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   
-  // Wardrobe state - actual equipped items
+  // Wardrobe state
   const [wardrobeState, setWardrobeState] = useState<WardrobeState | null>(null);
   const [clothingDescription, setClothingDescription] = useState<string>('');
   
   // Companion state
   const [companions, setCompanions] = useState<CompanionState[]>([]);
   const [editingCompanion, setEditingCompanion] = useState<CompanionState | null>(null);
-  const [showAddCompanion, setShowAddCompanion] = useState(false);
-  const [newCompanionTemplate, setNewCompanionTemplate] = useState<string>('loyal_warrior');
-  const [newCompanionName, setNewCompanionName] = useState('');
+  const [showCompanionCreator, setShowCompanionCreator] = useState(false);
+  const [companionCreator, setCompanionCreator] = useState<CompanionCreatorState>(DEFAULT_COMPANION_CREATOR);
+  const [companionCreatorStep, setCompanionCreatorStep] = useState<'basics' | 'appearance' | 'personality' | 'combat'>('basics');
   
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -177,10 +300,8 @@ export function CheatModeSplash({
       });
       setShowEventBus(initialMode === 'events');
       
-      // Reset to character screen when opening in cheat mode
-      if (initialMode === 'cheat') {
-        setCurrentScreen('character');
-      }
+      // Reset to cheats screen when opening
+      setCurrentScreen('cheats');
       
       // Auto-run integrity scan when opened via /integrity command
       if (initialMode === 'integrity') {
@@ -214,7 +335,6 @@ export function CheatModeSplash({
     if (isOpen) {
       setIsLoading(true);
       
-      // Small delay to show loading state for smooth transition
       const loadData = async () => {
         await new Promise(resolve => setTimeout(resolve, 300));
         
@@ -239,7 +359,7 @@ export function CheatModeSplash({
           const currentWardrobe = wardrobeManager.getState();
           setWardrobeState(currentWardrobe);
           
-          // Build clothing description from equipped items or use genre defaults
+          // Build clothing description
           const equippedItems = Object.entries(currentWardrobe.equipped)
             .filter(([_, wi]) => wi !== undefined)
             .map(([slot, wi]) => ({
@@ -262,7 +382,6 @@ export function CheatModeSplash({
       
       loadData();
     } else {
-      // Reset loading state when closed
       setIsLoading(true);
     }
   }, [isOpen, character, genre]);
@@ -305,6 +424,51 @@ export function CheatModeSplash({
     });
   };
   
+  // Cheat actions
+  const applyCheat = (cheatName: keyof CheatState, value: boolean | number) => {
+    setCheats(prev => ({ ...prev, [cheatName]: value }));
+    
+    // Apply immediate effects
+    if (cheatName === 'godMode' && value === true) {
+      setCurrentHealth(maxHealth);
+      toast.success('God Mode enabled! You are invincible.');
+    }
+    if (cheatName === 'infiniteGold' && value === true) {
+      setGold(999999);
+      toast.success('Infinite gold enabled!');
+    }
+    if (cheatName === 'maxStats' && value === true) {
+      setStats({
+        strength: 30, dexterity: 30, constitution: 30,
+        intelligence: 30, wisdom: 30, charisma: 30
+      });
+      toast.success('All stats maxed to 30!');
+    }
+    if (cheatName === 'unlockAll' && value === true) {
+      toast.success('All items and abilities unlocked!');
+    }
+  };
+  
+  const addInstantGold = (amount: number) => {
+    setGold(prev => prev + amount);
+    toast.success(`Added ${amount.toLocaleString()} gold!`);
+  };
+  
+  const addInstantXP = (amount: number) => {
+    setExperience(prev => prev + amount);
+    toast.success(`Added ${amount.toLocaleString()} XP!`);
+  };
+  
+  const levelUp = () => {
+    setLevel(prev => Math.min(prev + 1, 100));
+    toast.success(`Leveled up to ${level + 1}!`);
+  };
+  
+  const fullHeal = () => {
+    setCurrentHealth(maxHealth);
+    toast.success('Fully healed!');
+  };
+  
   // Navigation
   const currentScreenIndex = SCREENS.findIndex(s => s.id === currentScreen);
   const canGoLeft = currentScreenIndex > 0;
@@ -314,27 +478,112 @@ export function CheatModeSplash({
   const goLeft = () => canGoLeft && setCurrentScreen(SCREENS[currentScreenIndex - 1].id);
   const goRight = () => canGoRight && setCurrentScreen(SCREENS[currentScreenIndex + 1].id);
   
-  // Companion management
-  const handleAddCompanion = () => {
-    if (!newCompanionName.trim()) {
+  // Companion creator
+  const createCompanionFromCreator = () => {
+    if (!companionCreator.name.trim()) {
       toast.error('Please enter a companion name');
       return;
     }
     
     const companionId = `companion_${Date.now()}`;
-    const companion = companionSystem.createCompanion(
-      companionId,
-      newCompanionName.trim(),
-      newCompanionTemplate as keyof typeof COMPANION_TEMPLATES
-    );
     
-    if (companion) {
-      companionSystem.recruitCompanion(companion.id);
-      setCompanions(companionSystem.getActiveCompanions());
-      setNewCompanionName('');
-      setShowAddCompanion(false);
-      toast.success(`${companion.name} joined the party!`);
+    // Create custom personality based on selected traits
+    const customPersonality = {
+      traits: companionCreator.traits,
+      values: {
+        honor: companionCreator.traits.includes('honorable') ? 80 : companionCreator.traits.includes('ruthless') ? 20 : 50,
+        wealth: companionCreator.traits.includes('greedy') ? 90 : companionCreator.traits.includes('generous') ? 20 : 50,
+        power: companionCreator.traits.includes('ambitious') ? 80 : companionCreator.traits.includes('humble') ? 20 : 50,
+        love: companionCreator.traits.includes('romantic') ? 80 : companionCreator.traits.includes('pragmatic') ? 30 : 50,
+        freedom: 60,
+        justice: companionCreator.traits.includes('kind') ? 70 : companionCreator.traits.includes('cruel') ? 20 : 50,
+        knowledge: 50,
+        family: 50,
+      },
+      approves: companionCreator.traits.includes('honorable') 
+        ? ['truth', 'loyalty', 'bravery'] 
+        : companionCreator.traits.includes('greedy')
+        ? ['theft', 'greed']
+        : ['diplomacy', 'mercy'],
+      disapproves: companionCreator.traits.includes('kind')
+        ? ['cruelty', 'betrayal']
+        : companionCreator.traits.includes('ruthless')
+        ? ['mercy', 'charity']
+        : ['cowardice'],
+      romanticInterest: {
+        enabled: companionCreator.traits.includes('romantic'),
+        preferredGender: 'any' as const,
+        attractedToPlayer: companionCreator.traits.includes('romantic'),
+        romanceThreshold: 70,
+      },
+      betrayalThreshold: companionCreator.traits.includes('loyal') ? -80 : -40,
+      departureThreshold: companionCreator.traits.includes('loyal') ? -60 : -30,
+      speechPattern: companionCreator.speechPattern,
+      catchphrases: companionCreator.catchphrases.length > 0 
+        ? companionCreator.catchphrases 
+        : ['Interesting...', 'I see.'],
+      quirks: [],
+    };
+    
+    const companion: CompanionState = {
+      id: companionId,
+      name: companionCreator.name.trim(),
+      status: 'active',
+      mood: 'content',
+      moodIntensity: 60,
+      affinity: 30,
+      trust: 40,
+      respect: 40,
+      fear: 0,
+      romanticInterest: companionCreator.traits.includes('romantic') ? 20 : 0,
+      personality: customPersonality as any,
+      memories: [],
+      internalThoughts: `Excited to begin this adventure with a new companion.`,
+      wantsToSpeak: true,
+      pendingReaction: `I'm glad to be traveling with you.`,
+      combatRole: companionCreator.combatRole,
+      skills: companionCreator.skills.length > 0 
+        ? companionCreator.skills 
+        : ['basic_attack', 'defend'],
+      equipment: [],
+      joinedAt: Date.now(),
+      lastSpoke: 0,
+      confessedLove: false,
+      wasBetrayed: false,
+      hasSecret: Math.random() > 0.5,
+      secretRevealed: false,
+    };
+    
+    // Store appearance data separately (this would be for portrait generation)
+    const companionAppearance = {
+      gender: companionCreator.gender,
+      height: companionCreator.height,
+      build: companionCreator.build,
+      skinTone: companionCreator.skinTone,
+      hairStyle: companionCreator.hairStyle,
+      hairColor: companionCreator.hairColor,
+      eyeColor: companionCreator.eyeColor,
+    };
+    
+    // Save companion appearance to localStorage for portrait generation
+    try {
+      const companionAppearances = JSON.parse(localStorage.getItem('companion-appearances') || '{}');
+      companionAppearances[companionId] = companionAppearance;
+      localStorage.setItem('companion-appearances', JSON.stringify(companionAppearances));
+    } catch (e) {
+      console.error('Failed to save companion appearance:', e);
     }
+    
+    // Add to companion system
+    companionSystem.getAllCompanions().push(companion);
+    companionSystem.recruitCompanion(companion.id);
+    
+    setCompanions(companionSystem.getActiveCompanions());
+    setShowCompanionCreator(false);
+    setCompanionCreator(DEFAULT_COMPANION_CREATOR);
+    setCompanionCreatorStep('basics');
+    
+    toast.success(`${companion.name} has joined your party!`);
   };
   
   const handleRemoveCompanion = (companionId: string) => {
@@ -345,16 +594,25 @@ export function CheatModeSplash({
   };
   
   const handleUpdateCompanion = (updated: CompanionState) => {
-    // Update the companion in the system
     const allCompanions = companionSystem.getAllCompanions();
     const index = allCompanions.findIndex(c => c.id === updated.id);
     if (index !== -1) {
       allCompanions[index] = updated;
-      // Force refresh
       setCompanions(companionSystem.getActiveCompanions());
       setEditingCompanion(null);
       toast.success(`${updated.name} updated!`);
     }
+  };
+  
+  const toggleCompanionTrait = (trait: PersonalityTrait) => {
+    setCompanionCreator(prev => {
+      if (prev.traits.includes(trait)) {
+        return { ...prev, traits: prev.traits.filter(t => t !== trait) };
+      } else if (prev.traits.length < 5) {
+        return { ...prev, traits: [...prev.traits, trait] };
+      }
+      return prev;
+    });
   };
   
   const handleSave = async () => {
@@ -390,11 +648,14 @@ export function CheatModeSplash({
         saveCharacterAppearanceToCampaign(updated, genre);
       }
       
-      toast.success('Character updated! Portrait regeneration will use new appearance.');
+      // Save cheat state
+      localStorage.setItem('cheat-mode-state', JSON.stringify(cheats));
+      
+      toast.success('All changes saved!');
       onClose();
     } catch (error) {
       console.error('[CheatMode] Failed to save:', error);
-      toast.error('Failed to save character changes');
+      toast.error('Failed to save changes');
     } finally {
       setIsSaving(false);
     }
@@ -408,396 +669,235 @@ export function CheatModeSplash({
       if (e.key === 'Escape') {
         if (editingCompanion) {
           setEditingCompanion(null);
-        } else if (showAddCompanion) {
-          setShowAddCompanion(false);
+        } else if (showCompanionCreator) {
+          setShowCompanionCreator(false);
         } else {
           onClose();
         }
       }
       
-      if (e.key === 'ArrowLeft' && !editingCompanion && !showAddCompanion) {
+      if (e.key === 'ArrowLeft' && !editingCompanion && !showCompanionCreator) {
         goLeft();
       }
-      if (e.key === 'ArrowRight' && !editingCompanion && !showAddCompanion) {
+      if (e.key === 'ArrowRight' && !editingCompanion && !showCompanionCreator) {
         goRight();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, editingCompanion, showAddCompanion, goLeft, goRight]);
+  }, [isOpen, onClose, editingCompanion, showCompanionCreator]);
 
-  // Loading skeleton for character screen - simplified
-  const renderCharacterSkeleton = () => (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-8 w-full" />
-      </div>
-      <div className="border border-border/50 rounded overflow-hidden">
-        <div className="flex items-center justify-between p-2 bg-muted/30">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-3 w-3" />
-        </div>
-        <div className="p-3 space-y-3">
-          <div className="grid grid-cols-4 gap-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-1">
-                <Skeleton className="h-2 w-10" />
-                <Skeleton className="h-7 w-full" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="space-y-1">
-                <Skeleton className="h-2 w-12" />
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="border border-border/50 rounded overflow-hidden">
-        <div className="flex items-center justify-between p-2 bg-muted/30">
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-3 w-3" />
-        </div>
-      </div>
-    </div>
-  );
+  // ==================== RENDER SCREENS ====================
 
-  // Render screen content - no heavy animations
-  const renderCharacterScreen = () => (
-    <div className="space-y-3">
-      {/* Name */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Character Name</Label>
-        <Input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Enter name..."
-          className="bg-background/50 h-8 text-sm"
-        />
-      </div>
-      
-      {/* Stats Section */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('stats')}
-          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
-        >
+  const renderCheatsScreen = () => (
+    <div className="space-y-4">
+      {/* Toggle Cheats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
           <div className="flex items-center gap-2">
-            <Sword className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">Stats & Attributes</span>
+            <Shield className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-medium">God Mode</span>
           </div>
-          {expandedSections.stats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+          <Switch
+            checked={cheats.godMode}
+            onCheckedChange={(v) => applyCheat('godMode', v)}
+          />
+        </div>
         
-        {expandedSections.stats && (
-          <div className="p-4 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1">
-                  <Star className="w-3 h-3 text-yellow-500" /> Level
-                </Label>
-                <Input
-                  type="number"
-                  value={level}
-                  onChange={e => setLevel(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1">
-                  <Coins className="w-3 h-3 text-yellow-500" /> Gold
-                </Label>
-                <Input
-                  type="number"
-                  value={gold}
-                  onChange={e => setGold(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1">
-                  <Heart className="w-3 h-3 text-red-500" /> HP
-                </Label>
-                <Input
-                  type="number"
-                  value={currentHealth}
-                  onChange={e => setCurrentHealth(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1">
-                  <Heart className="w-3 h-3 text-red-300" /> Max HP
-                </Label>
-                <Input
-                  type="number"
-                  value={maxHealth}
-                  onChange={e => setMaxHealth(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="h-8 text-sm"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {(Object.keys(stats) as (keyof CharacterStats)[]).map(stat => (
-                <div key={stat} className="space-y-1">
-                  <Label className="text-xs capitalize flex items-center justify-between">
-                    <span>{stat.slice(0, 3).toUpperCase()}</span>
-                    <span className="font-mono text-primary">{stats[stat]}</span>
-                  </Label>
-                  <Slider
-                    value={[stats[stat]]}
-                    onValueChange={([val]) => handleStatChange(stat, val)}
-                    min={1}
-                    max={30}
-                    step={1}
-                    className="py-1"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {/* Appearance Section */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('appearance')}
-          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
-        >
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">Appearance</span>
+            <Coins className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-medium">∞ Gold</span>
           </div>
-          {expandedSections.appearance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+          <Switch
+            checked={cheats.infiniteGold}
+            onCheckedChange={(v) => applyCheat('infiniteGold', v)}
+          />
+        </div>
         
-        {expandedSections.appearance && appearance && (
-          <div className="p-4 space-y-4">
-            <div className="space-y-3">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase">Basic</h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Gender</Label>
-                  <Select
-                    value={appearance.simple.gender}
-                    onValueChange={v => handleAppearanceSimpleChange('gender', v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GENDER_OPTIONS.map(g => (
-                        <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Height</Label>
-                  <Select
-                    value={appearance.simple.height}
-                    onValueChange={v => handleAppearanceSimpleChange('height', v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HEIGHT_OPTIONS.map(h => (
-                        <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Build</Label>
-                  <Select
-                    value={appearance.simple.build}
-                    onValueChange={v => handleAppearanceSimpleChange('build', v)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUILD_OPTIONS.map(b => (
-                        <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            
-            {appearance.detailed && (
-              <div className="space-y-3">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Details</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Skin Tone</Label>
-                    <Select
-                      value={appearance.detailed.skinTone}
-                      onValueChange={v => handleAppearanceDetailedChange('skinTone', v)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SKIN_TONES.map(s => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Hair Style</Label>
-                    <Select
-                      value={appearance.detailed.hairStyle}
-                      onValueChange={v => handleAppearanceDetailedChange('hairStyle', v)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HAIR_STYLES.map(h => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Hair Color</Label>
-                    <Select
-                      value={appearance.detailed.hairColor}
-                      onValueChange={v => handleAppearanceDetailedChange('hairColor', v)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HAIR_COLORS.map(h => (
-                          <SelectItem key={h} value={h}>{h}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Eye Color</Label>
-                    <Select
-                      value={appearance.detailed.eyeColor}
-                      onValueChange={v => handleAppearanceDetailedChange('eyeColor', v)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EYE_COLORS.map(e => (
-                          <SelectItem key={e} value={e}>{e}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      
-      {/* Equipment Section */}
-      <div className="border border-border/50 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('equipment')}
-          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
-        >
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
           <div className="flex items-center gap-2">
-            <Shirt className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">Equipment & Clothing</span>
+            <Flame className="w-4 h-4 text-red-400" />
+            <span className="text-sm font-medium">Max Stats</span>
           </div>
-          {expandedSections.equipment ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+          <Switch
+            checked={cheats.maxStats}
+            onCheckedChange={(v) => applyCheat('maxStats', v)}
+          />
+        </div>
         
-        {expandedSections.equipment && (
-          <div className="p-4 space-y-4">
-            {/* Current outfit display */}
-            <div className="space-y-2">
-              <Label className="text-sm flex items-center gap-2">
-                <Shirt className="w-3 h-3" />
-                Current Outfit (for AI portraits)
-              </Label>
-              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
-                <p className="text-sm text-foreground capitalize">
-                  {clothingDescription || 'No clothing data available'}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Characters always wear at least basic clothing based on genre. 
-                Equip items in your inventory to change your outfit.
-              </p>
-            </div>
-            
-            {/* Equipped items breakdown */}
-            {wardrobeState && Object.keys(wardrobeState.equipped).length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase">Equipped Items</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(wardrobeState.equipped)
-                    .filter(([_, wi]) => wi !== undefined)
-                    .map(([slot, wi]) => (
-                      <div 
-                        key={slot}
-                        className="flex items-center gap-2 p-2 bg-background/50 rounded text-xs"
-                      >
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {slot}
-                        </Badge>
-                        <span className="truncate">{wi!.item.name}</span>
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-            )}
-            
-            {/* Genre default fallback info */}
-            {(!wardrobeState || Object.keys(wardrobeState.equipped).length === 0) && (
-              <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Sparkles className="w-3 h-3 text-primary" />
-                  Using genre-default clothing for {genre || 'modern'} setting
-                </div>
-              </div>
-            )}
-            
-            {appearance?.full && (
-              <div className="space-y-2">
-                <Label className="text-sm">Clothing Style Override</Label>
-                <Select
-                  value={appearance.full.clothingStyle || 'genre_default'}
-                  onValueChange={v => handleAppearanceFullChange('clothingStyle', v)}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CLOTHING_STYLE_OPTIONS.map(c => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center gap-2">
+            <Skull className="w-4 h-4 text-destructive" />
+            <span className="text-sm font-medium">Instant Kill</span>
           </div>
-        )}
+          <Switch
+            checked={cheats.instantKill}
+            onCheckedChange={(v) => applyCheat('instantKill', v)}
+          />
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-medium">Invisibility</span>
+          </div>
+          <Switch
+            checked={cheats.invisibility}
+            onCheckedChange={(v) => applyCheat('invisibility', v)}
+          />
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-medium">Unlock All</span>
+          </div>
+          <Switch
+            checked={cheats.unlockAll}
+            onCheckedChange={(v) => applyCheat('unlockAll', v)}
+          />
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-green-400" />
+            <span className="text-sm font-medium">∞ Ammo</span>
+          </div>
+          <Switch
+            checked={cheats.infiniteAmmo}
+            onCheckedChange={(v) => applyCheat('infiniteAmmo', v)}
+          />
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm font-medium">No Clip</span>
+          </div>
+          <Switch
+            checked={cheats.noClip}
+            onCheckedChange={(v) => applyCheat('noClip', v)}
+          />
+        </div>
       </div>
       
-      {/* Developer Tools Section */}
+      {/* Quick Actions */}
+      <div className="space-y-2">
+        <Label className="text-xs uppercase text-muted-foreground">Quick Actions</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => addInstantGold(10000)}
+            className="text-xs"
+          >
+            <Coins className="w-3 h-3 mr-1" /> +10K Gold
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => addInstantXP(5000)}
+            className="text-xs"
+          >
+            <Star className="w-3 h-3 mr-1" /> +5K XP
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={levelUp}
+            className="text-xs"
+          >
+            <Zap className="w-3 h-3 mr-1" /> Level Up
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fullHeal}
+            className="text-xs"
+          >
+            <Heart className="w-3 h-3 mr-1" /> Full Heal
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => addInstantGold(100000)}
+            className="text-xs"
+          >
+            <Coins className="w-3 h-3 mr-1" /> +100K Gold
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExperience(prev => prev + 50000)}
+            className="text-xs"
+          >
+            <Star className="w-3 h-3 mr-1" /> +50K XP
+          </Button>
+        </div>
+      </div>
+      
+      {/* Speed/Time Sliders */}
+      <div className="space-y-4 p-3 bg-muted/20 rounded-lg border border-border/50">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm flex items-center gap-2">
+              <Gauge className="w-4 h-4" /> Speed Multiplier
+            </Label>
+            <span className="font-mono text-sm">{cheats.speedMultiplier}x</span>
+          </div>
+          <Slider
+            value={[cheats.speedMultiplier]}
+            onValueChange={([v]) => setCheats(prev => ({ ...prev, speedMultiplier: v }))}
+            min={0.5}
+            max={4}
+            step={0.5}
+            className="flex-1"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm flex items-center gap-2">
+              <Clock className="w-4 h-4" /> Time Scale
+            </Label>
+            <span className="font-mono text-sm">{cheats.timeScale}x</span>
+          </div>
+          <Slider
+            value={[cheats.timeScale]}
+            onValueChange={([v]) => setCheats(prev => ({ ...prev, timeScale: v }))}
+            min={0.25}
+            max={4}
+            step={0.25}
+            className="flex-1"
+          />
+        </div>
+      </div>
+      
+      {/* Current Stats Display */}
+      <div className="p-3 bg-primary/10 rounded-lg border border-primary/30">
+        <Label className="text-xs uppercase text-muted-foreground mb-2 block">Current Values</Label>
+        <div className="grid grid-cols-4 gap-3 text-center">
+          <div>
+            <div className="font-mono text-lg text-primary">{level}</div>
+            <div className="text-xs text-muted-foreground">Level</div>
+          </div>
+          <div>
+            <div className="font-mono text-lg text-amber-400">{gold.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">Gold</div>
+          </div>
+          <div>
+            <div className="font-mono text-lg text-green-400">{currentHealth}/{maxHealth}</div>
+            <div className="text-xs text-muted-foreground">Health</div>
+          </div>
+          <div>
+            <div className="font-mono text-lg text-blue-400">{experience.toLocaleString()}</div>
+            <div className="text-xs text-muted-foreground">XP</div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Developer Tools */}
       <div className="border border-border/50 rounded-lg overflow-hidden">
         <button
           onClick={() => toggleSection('developer')}
@@ -886,8 +986,559 @@ export function CheatModeSplash({
     </div>
   );
 
+  const renderCharacterScreen = () => (
+    <div className="space-y-3">
+      {/* Name */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Character Name</Label>
+        <Input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Enter name..."
+          className="bg-background/50 h-8 text-sm"
+        />
+      </div>
+      
+      {/* Stats Section */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('stats')}
+          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Sword className="w-4 h-4 text-primary" />
+            <span className="font-medium text-sm">Stats & Resources</span>
+          </div>
+          {expandedSections.stats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        
+        {expandedSections.stats && (
+          <div className="p-4 space-y-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-4 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Level</Label>
+                <Input
+                  type="number"
+                  value={level}
+                  onChange={e => setLevel(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                  className="h-7 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Gold</Label>
+                <Input
+                  type="number"
+                  value={gold}
+                  onChange={e => setGold(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="h-7 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">HP</Label>
+                <Input
+                  type="number"
+                  value={currentHealth}
+                  onChange={e => setCurrentHealth(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="h-7 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max HP</Label>
+                <Input
+                  type="number"
+                  value={maxHealth}
+                  onChange={e => setMaxHealth(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="h-7 text-sm"
+                />
+              </div>
+            </div>
+            
+            {/* Attributes */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase">Attributes</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(stats) as Array<keyof CharacterStats>).map(stat => (
+                  <div key={stat} className="flex items-center gap-2">
+                    <span className="text-xs capitalize w-12 truncate">{stat.slice(0, 3)}</span>
+                    <Slider
+                      value={[stats[stat]]}
+                      onValueChange={([v]) => handleStatChange(stat, v)}
+                      min={1}
+                      max={30}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <span className="font-mono text-xs w-5 text-right">{stats[stat]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Appearance Section */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('appearance')}
+          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="font-medium text-sm">Appearance</span>
+          </div>
+          {expandedSections.appearance ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        
+        {expandedSections.appearance && appearance && (
+          <div className="p-4 space-y-4">
+            {/* Simple Appearance */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Gender</Label>
+                <Select
+                  value={appearance.simple?.gender || 'other'}
+                  onValueChange={v => handleAppearanceSimpleChange('gender', v)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDER_OPTIONS.map(g => (
+                      <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Height</Label>
+                <Select
+                  value={appearance.simple?.height || 'average'}
+                  onValueChange={v => handleAppearanceSimpleChange('height', v)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HEIGHT_OPTIONS.map(h => (
+                      <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Build</Label>
+                <Select
+                  value={appearance.simple?.build || 'average'}
+                  onValueChange={v => handleAppearanceSimpleChange('build', v)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUILD_OPTIONS.map(b => (
+                      <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Detailed Appearance */}
+            {appearance.detailed && (
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground uppercase">Detailed Features</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Skin Tone</Label>
+                    <Select
+                      value={appearance.detailed.skinTone || 'Medium'}
+                      onValueChange={v => handleAppearanceDetailedChange('skinTone', v)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SKIN_TONES.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Hair Style</Label>
+                    <Select
+                      value={appearance.detailed.hairStyle || 'Medium'}
+                      onValueChange={v => handleAppearanceDetailedChange('hairStyle', v)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_STYLES.map(h => (
+                          <SelectItem key={h} value={h}>{h}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Hair Color</Label>
+                    <Select
+                      value={appearance.detailed.hairColor || 'Brown'}
+                      onValueChange={v => handleAppearanceDetailedChange('hairColor', v)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_COLORS.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Eye Color</Label>
+                    <Select
+                      value={appearance.detailed.eyeColor || 'Brown'}
+                      onValueChange={v => handleAppearanceDetailedChange('eyeColor', v)}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EYE_COLORS.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Equipment Section */}
+      <div className="border border-border/50 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('equipment')}
+          className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Shirt className="w-4 h-4 text-primary" />
+            <span className="font-medium text-sm">Equipment & Clothing</span>
+          </div>
+          {expandedSections.equipment ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        
+        {expandedSections.equipment && (
+          <div className="p-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-2">
+                <Shirt className="w-3 h-3" />
+                Current Outfit
+              </Label>
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <p className="text-sm text-foreground capitalize">
+                  {clothingDescription || 'No clothing data available'}
+                </p>
+              </div>
+            </div>
+            
+            {wardrobeState && Object.keys(wardrobeState.equipped).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Equipped Items</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(wardrobeState.equipped)
+                    .filter(([_, wi]) => wi !== undefined)
+                    .map(([slot, wi]) => (
+                      <div 
+                        key={slot}
+                        className="flex items-center gap-2 p-2 bg-background/50 rounded text-xs"
+                      >
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {slot}
+                        </Badge>
+                        <span className="truncate">{wi!.item.name}</span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderInventoryScreen = () => (
     <InventoryEditor gunNutEnabled={true} />
+  );
+
+  const renderCompanionCreator = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Create Companion</h3>
+        <Button variant="ghost" size="sm" onClick={() => {
+          setShowCompanionCreator(false);
+          setCompanionCreatorStep('basics');
+        }}>
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      {/* Step Tabs */}
+      <Tabs value={companionCreatorStep} onValueChange={(v) => setCompanionCreatorStep(v as any)}>
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="basics" className="text-xs">Basics</TabsTrigger>
+          <TabsTrigger value="appearance" className="text-xs">Look</TabsTrigger>
+          <TabsTrigger value="personality" className="text-xs">Traits</TabsTrigger>
+          <TabsTrigger value="combat" className="text-xs">Combat</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="basics" className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label>Name *</Label>
+            <Input
+              value={companionCreator.name}
+              onChange={e => setCompanionCreator(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter companion name..."
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Backstory</Label>
+            <Textarea
+              value={companionCreator.backstory}
+              onChange={e => setCompanionCreator(prev => ({ ...prev, backstory: e.target.value }))}
+              placeholder="Write their background story..."
+              rows={3}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Speech Pattern</Label>
+            <Input
+              value={companionCreator.speechPattern}
+              onChange={e => setCompanionCreator(prev => ({ ...prev, speechPattern: e.target.value }))}
+              placeholder="e.g., formal, sarcastic, shy..."
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="appearance" className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Gender</Label>
+              <Select
+                value={companionCreator.gender}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, gender: v as Gender }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GENDER_OPTIONS.map(g => (
+                    <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Height</Label>
+              <Select
+                value={companionCreator.height}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, height: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HEIGHT_OPTIONS.map(h => (
+                    <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Build</Label>
+              <Select
+                value={companionCreator.build}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, build: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUILD_OPTIONS.map(b => (
+                    <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Skin Tone</Label>
+              <Select
+                value={companionCreator.skinTone}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, skinTone: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SKIN_TONES.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Hair Style</Label>
+              <Select
+                value={companionCreator.hairStyle}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, hairStyle: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HAIR_STYLES.map(h => (
+                    <SelectItem key={h} value={h}>{h}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Hair Color</Label>
+              <Select
+                value={companionCreator.hairColor}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, hairColor: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HAIR_COLORS.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2 col-span-2">
+              <Label>Eye Color</Label>
+              <Select
+                value={companionCreator.eyeColor}
+                onValueChange={v => setCompanionCreator(prev => ({ ...prev, eyeColor: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EYE_COLORS.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="personality" className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Personality Traits (pick 2-5)</Label>
+              <span className="text-xs text-muted-foreground">{companionCreator.traits.length}/5</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PERSONALITY_TRAITS.map(trait => (
+                <Badge
+                  key={trait}
+                  variant={companionCreator.traits.includes(trait) ? 'default' : 'outline'}
+                  className="cursor-pointer capitalize"
+                  onClick={() => toggleCompanionTrait(trait)}
+                >
+                  {trait}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Selected Traits</Label>
+            <div className="p-3 bg-muted/30 rounded-lg min-h-[40px]">
+              {companionCreator.traits.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {companionCreator.traits.map(t => (
+                    <Badge key={t} className="capitalize">{t}</Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm text-muted-foreground">No traits selected</span>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="combat" className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label>Combat Role</Label>
+            <Select
+              value={companionCreator.combatRole}
+              onValueChange={v => setCompanionCreator(prev => ({ ...prev, combatRole: v as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMBAT_ROLES.map(role => (
+                  <SelectItem key={role} value={role} className="capitalize">{role}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="p-3 bg-muted/20 rounded-lg">
+            <Label className="text-xs text-muted-foreground uppercase mb-2 block">Role Description</Label>
+            <p className="text-sm">
+              {companionCreator.combatRole === 'tank' && 'Heavy defense, draws enemy attention and protects allies.'}
+              {companionCreator.combatRole === 'damage' && 'High damage output, focuses on eliminating threats quickly.'}
+              {companionCreator.combatRole === 'support' && 'Healing and buffs, keeps the party alive and enhanced.'}
+              {companionCreator.combatRole === 'ranged' && 'Attacks from distance, precise shots and area control.'}
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <div className="flex gap-2 pt-4 border-t border-border/50">
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            setShowCompanionCreator(false);
+            setCompanionCreatorStep('basics');
+          }} 
+          className="flex-1"
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={createCompanionFromCreator} 
+          className="flex-1"
+          disabled={!companionCreator.name.trim() || companionCreator.traits.length < 2}
+        >
+          <Plus className="w-4 h-4 mr-1" /> Create Companion
+        </Button>
+      </div>
+    </div>
   );
 
   const renderCompanionCard = (companion: CompanionState) => (
@@ -1063,70 +1714,25 @@ export function CheatModeSplash({
             Cancel
           </Button>
           <Button onClick={() => handleUpdateCompanion(comp)} className="flex-1">
-            Save Companion
+            Save Changes
           </Button>
         </div>
       </div>
     );
   };
 
-  const renderAddCompanion = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Add New Companion</h3>
-        <Button variant="ghost" size="sm" onClick={() => setShowAddCompanion(false)}>
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-      
-      <div className="space-y-2">
-        <Label>Name</Label>
-        <Input
-          value={newCompanionName}
-          onChange={e => setNewCompanionName(e.target.value)}
-          placeholder="Enter companion name..."
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label>Template</Label>
-        <Select value={newCompanionTemplate} onValueChange={setNewCompanionTemplate}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(COMPANION_TEMPLATES).map(t => (
-              <SelectItem key={t} value={t}>
-                {t.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex gap-2 pt-4">
-        <Button variant="outline" onClick={() => setShowAddCompanion(false)} className="flex-1">
-          Cancel
-        </Button>
-        <Button onClick={handleAddCompanion} className="flex-1">
-          Add Companion
-        </Button>
-      </div>
-    </div>
-  );
-
   const renderCompanionsScreen = () => (
     <div className="space-y-4">
-      {showAddCompanion ? (
-        renderAddCompanion()
+      {showCompanionCreator ? (
+        renderCompanionCreator()
       ) : editingCompanion ? (
         renderCompanionEditor()
       ) : (
         <>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Active Companions ({companions.length})</h3>
-            <Button variant="outline" size="sm" onClick={() => setShowAddCompanion(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Add
+            <h3 className="text-sm font-medium">Party ({companions.length}/3)</h3>
+            <Button variant="outline" size="sm" onClick={() => setShowCompanionCreator(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Create New
             </Button>
           </div>
           
@@ -1134,7 +1740,10 @@ export function CheatModeSplash({
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
               <p className="text-sm">No companions yet</p>
-              <p className="text-xs">Add companions to manage your party</p>
+              <p className="text-xs mb-4">Create a custom companion to join your party</p>
+              <Button variant="outline" size="sm" onClick={() => setShowCompanionCreator(true)}>
+                <Plus className="w-4 h-4 mr-1" /> Create Companion
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1147,12 +1756,19 @@ export function CheatModeSplash({
   );
 
   const renderCurrentScreen = () => {
-    // Show skeleton while loading character data
     if (isLoading && currentScreen === 'character') {
-      return renderCharacterSkeleton();
+      return (
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      );
     }
     
     switch (currentScreen) {
+      case 'cheats':
+        return renderCheatsScreen();
       case 'character':
         return renderCharacterScreen();
       case 'inventory':
@@ -1160,7 +1776,7 @@ export function CheatModeSplash({
       case 'companions':
         return renderCompanionsScreen();
       default:
-        return renderCharacterScreen();
+        return renderCheatsScreen();
     }
   };
 
@@ -1171,59 +1787,52 @@ export function CheatModeSplash({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
-          onClick={onClose}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="relative z-20 w-full max-w-lg max-h-[80vh] bg-card border border-amber-500/50 rounded-lg shadow-2xl overflow-hidden"
-            onClick={e => e.stopPropagation()}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
           >
-            {/* Header - Compact */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-amber-500/20">
-                  <Wand2 className="w-4 h-4 text-amber-400" />
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/10 to-amber-500/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/20">
+                  <Wand2 className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
-                    Cheat Mode
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-400">
-                      Dev
-                    </Badge>
-                  </h1>
+                  <h2 className="font-bold text-lg">Cheat Mode</h2>
+                  <p className="text-xs text-muted-foreground">Bend the rules to your will</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-                <X className="w-3.5 h-3.5" />
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-5 h-5" />
               </Button>
             </div>
             
-            {/* Screen Navigation - Compact */}
-            <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/50 bg-muted/30">
+            {/* Screen Navigation */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/20">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={goLeft}
                 disabled={!canGoLeft}
-                className="h-7 px-2 gap-0.5 text-xs"
+                className="h-8 w-8"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4" />
               </Button>
               
-              <div className="flex items-center gap-0.5">
-                {SCREENS.map((screen) => (
+              <div className="flex items-center gap-1">
+                {SCREENS.map((screen, i) => (
                   <button
                     key={screen.id}
                     onClick={() => goToScreen(screen.id)}
-                    className={`relative flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       currentScreen === screen.id
                         ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
                     {screen.icon}
@@ -1234,51 +1843,36 @@ export function CheatModeSplash({
               
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={goRight}
                 disabled={!canGoRight}
-                className="h-7 px-2 gap-0.5 text-xs"
+                className="h-8 w-8"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
             
-            {/* Warning banner - Compact */}
-            <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-1.5">
-              <AlertTriangle className="w-3 h-3 text-amber-500" />
-              <span className="text-[10px] text-amber-400">
-                Changes affect gameplay. Arrow keys to navigate.
-              </span>
-            </div>
-
-            {/* Content - More compact */}
-            <ScrollArea className="h-[calc(80vh-160px)]">
-              <div className="p-3">
-                {renderCurrentScreen()}
-              </div>
+            {/* Content */}
+            <ScrollArea className="flex-1 p-4">
+              {renderCurrentScreen()}
             </ScrollArea>
-
-            {/* Footer - Compact */}
-            <div className="flex items-center justify-between px-3 py-2 border-t border-amber-500/30 bg-muted/30">
-              <p className="text-[10px] text-muted-foreground hidden sm:block">
-                ESC to close • Arrows to navigate
+            
+            {/* Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
+              <p className="text-xs text-muted-foreground">
+                Use ← → arrows to navigate
               </p>
-              <div className="flex items-center gap-2 ml-auto">
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onClose}>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="h-7 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-black"
-                >
+                <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
                   ) : (
-                    <Save className="w-3 h-3" />
+                    <Save className="w-4 h-4 mr-1" />
                   )}
-                  Save
+                  Save All
                 </Button>
               </div>
             </div>
@@ -1287,46 +1881,4 @@ export function CheatModeSplash({
       )}
     </AnimatePresence>
   );
-}
-
-// Hook for command detection - supports multiple developer commands
-export type DevPanelMode = 'cheat' | 'events' | 'integrity';
-
-export function useCheatModeCommand() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [initialMode, setInitialMode] = useState<DevPanelMode>('cheat');
-
-  const checkCommand = useCallback((input: string): boolean => {
-    const cmd = input.trim().toLowerCase();
-    
-    // Cheat mode commands
-    if (cmd === '/imacheater' || cmd === '/cheat' || cmd === '/dev') {
-      setInitialMode('cheat');
-      setIsOpen(true);
-      return true;
-    }
-    
-    // Events command - opens cheat panel with developer section expanded
-    if (cmd === '/events' || cmd === '/debug') {
-      setInitialMode('events');
-      setIsOpen(true);
-      return true;
-    }
-    
-    // Integrity command - opens cheat panel with developer section and runs scan
-    if (cmd === '/integrity') {
-      setInitialMode('integrity');
-      setIsOpen(true);
-      return true;
-    }
-    
-    return false;
-  }, []);
-
-  return {
-    isOpen,
-    setIsOpen,
-    checkCommand,
-    initialMode,
-  };
 }
