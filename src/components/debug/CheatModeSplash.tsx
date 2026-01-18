@@ -885,7 +885,21 @@ export function CheatModeSplash({
   // 18+ adult age categories only
   const ADULT_AGE_CATEGORIES = ['young adult (20s)', 'adult (30s)', 'mature adult (40s)', 'middle-aged (50s)', 'senior (60+)'];
   
-  // Simple, clean distinguishing features (light on accessories)
+  // Genre-based accessories (0-3 items)
+  const GENRE_ACCESSORIES: Record<string, string[]> = {
+    fantasy: ['amulet', 'ring', 'cloak clasp', 'leather pouch', 'bone necklace', 'rune pendant'],
+    modern: ['watch', 'simple earrings', 'thin necklace', 'leather bracelet', 'sunglasses'],
+    scifi: ['data chip earpiece', 'holo-band', 'neural link visible', 'tech goggles'],
+    western: ['bandana', 'pocket watch', 'sheriff badge', 'leather cord necklace'],
+    horror: ['cross pendant', 'protective charm', 'worn locket', 'silver ring'],
+    cyberpunk: ['LED earrings', 'data jack', 'mirror shades', 'subdermal glow'],
+    steampunk: ['brass goggles', 'pocket watch', 'gear pendant', 'clockwork earring'],
+    noir: ['fedora', 'thin tie clip', 'cigarette case', 'simple cufflinks'],
+    post_apocalyptic: ['dog tags', 'bottle cap necklace', 'worn goggles', 'crude bracelet'],
+    default: ['simple earring', 'thin chain', 'leather bracelet', 'ring'],
+  };
+  
+  // Simple, clean distinguishing features
   const SIMPLE_FEATURES = ['subtle scar', 'dimples', 'freckles', 'beauty mark', 'strong jawline', 'high cheekbones', 'defined brow'];
   
   // Randomize all companion attributes except gender
@@ -900,11 +914,20 @@ export function CheatModeSplash({
     const shuffledTraits = [...PERSONALITY_TRAITS].sort(() => Math.random() - 0.5);
     const randomTraits = shuffledTraits.slice(0, traitCount);
     
-    // Light on accessories - 0-1 max to avoid chaos
-    const hasFeature = Math.random() > 0.5;
-    const randomFeatures = hasFeature 
-      ? [SIMPLE_FEATURES[Math.floor(Math.random() * SIMPLE_FEATURES.length)]]
-      : [];
+    // 0-3 accessories based on genre
+    const normalizedGenre = (genre || 'fantasy').toLowerCase().replace(/[_\s-]/g, '_');
+    const genreAccessories = GENRE_ACCESSORIES[normalizedGenre] || GENRE_ACCESSORIES.default;
+    const accessoryCount = Math.floor(Math.random() * 4); // 0-3
+    const shuffledAccessories = [...genreAccessories].sort(() => Math.random() - 0.5);
+    const randomAccessories = shuffledAccessories.slice(0, accessoryCount);
+    
+    // 0-2 distinguishing features
+    const featureCount = Math.floor(Math.random() * 3); // 0-2
+    const shuffledFeatures = [...SIMPLE_FEATURES].sort(() => Math.random() - 0.5);
+    const randomFeatures = shuffledFeatures.slice(0, featureCount);
+    
+    // Combine features and accessories
+    const allDistinguishing = [...randomFeatures, ...randomAccessories];
     
     // Simple hair styles only (avoid the more exotic ones)
     const SIMPLE_HAIR_STYLES = ['Short', 'Medium', 'Long', 'Ponytail', 'Braided', 'Curly', 'Wavy', 'Bun'];
@@ -938,7 +961,7 @@ export function CheatModeSplash({
       backstory: randomBackstory,
       speechPattern: ['formal and eloquent', 'casual, friendly', 'gruff, few words', 'mysterious, cryptic', 'jovial, always joking'][Math.floor(Math.random() * 5)],
       age: ADULT_AGE_CATEGORIES[Math.floor(Math.random() * ADULT_AGE_CATEGORIES.length)],
-      distinguishingFeatures: randomFeatures,
+      distinguishingFeatures: allDistinguishing,
       portraitUrl: null,
     }));
     
