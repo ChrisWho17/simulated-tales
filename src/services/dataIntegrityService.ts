@@ -405,13 +405,60 @@ async function checkCampaignIntegrity(campaignId: string): Promise<IntegrityChec
 }
 
 // ============================================================================
-// VALIDATED LOAD
+// VALIDATED LOAD - Now with cloud-first support
 // ============================================================================
 
 export async function loadCampaignWithValidation(campaignId: string): Promise<{
   campaign: CampaignData | null;
   integrityResult: IntegrityCheckResult;
 }> {
+  // First, try to load from UnifiedSaveArchitecture which handles cloud
+  try {
+    const { UnifiedSaveArchitecture } = await import('./unifiedSaveArchitecture');
+    const cloudCampaign = await UnifiedSaveArchitecture.loadCampaign(campaignId);
+    
+    if (cloudCampaign) {
+      // Validate the loaded campaign
+      const validation = validateCampaignStructure(cloudCampaign);
+      
+      if (validation.valid) {
+        // Make sure it's also saved locally for integrity
+        const key = `lwe_campaign_${campaignId}`;
+        const dataString = JSON.stringify(cloudCampaign);
+        localStorage.setItem(key, dataString);
+        
+        // Update integrity index
+        const checksum = await sha256(dataString);
+        const integrityIndex = loadIntegrityIndex();
+        const existingMeta = integrityIndex.get(campaignId);
+        integrityIndex.set(campaignId, {
+          campaignId,
+          checksum,
+          savedAt: Date.now(),
+          version: (existingMeta?.version || 0) + 1,
+          size: dataString.length,
+        });
+        saveIntegrityIndex(integrityIndex);
+        
+        // Add to backup cache
+        addToBackupCache(cloudCampaign, checksum);
+        
+        return {
+          campaign: cloudCampaign,
+          integrityResult: {
+            status: 'valid',
+            campaignId,
+            campaignName: cloudCampaign.meta?.name,
+            issues: validation.issues,
+          },
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('[Integrity] Cloud load failed, falling back to local:', error);
+  }
+  
+  // Fall back to local integrity check
   const result = await checkCampaignIntegrity(campaignId);
   
   if (result.status === 'unrecoverable') {

@@ -361,30 +361,49 @@ class UnifiedSaveArchitectureClass {
   }
   
   async loadCampaign(campaignId: string): Promise<CampaignData | null> {
+    console.log(`[UnifiedSave] Loading campaign: ${campaignId}, mode: ${this.account.mode}`);
+    
     // Try local first (faster)
     const localData = this.loadLocalCampaign(campaignId);
     
     if (this.account.mode === 'cloud') {
-      // Check if cloud has newer version
-      const cloudData = await this.loadFromCloud(campaignId);
-      
-      if (cloudData && localData) {
-        const localTime = localData.meta.updatedAt;
-        const cloudTime = cloudData.meta.updatedAt;
+      // ALWAYS check cloud when signed in - this ensures cloud saves are visible
+      try {
+        const cloudData = await this.loadFromCloud(campaignId);
         
-        if (cloudTime > localTime) {
-          // Cloud is newer - use cloud and update local cache
+        if (cloudData && localData) {
+          const localTime = localData.meta.updatedAt || 0;
+          const cloudTime = cloudData.meta.updatedAt || 0;
+          
+          console.log(`[UnifiedSave] Comparing versions - local: ${localTime}, cloud: ${cloudTime}`);
+          
+          if (cloudTime > localTime) {
+            // Cloud is newer - use cloud and update local cache
+            console.log('[UnifiedSave] Cloud version is newer, using cloud data');
+            await this.saveLocal(cloudData);
+            return cloudData;
+          } else if (localTime > cloudTime) {
+            // Local is newer - sync to cloud
+            console.log('[UnifiedSave] Local version is newer, syncing to cloud');
+            this.updateSyncStatus(campaignId, { state: 'pending' });
+            // Also trigger background sync
+            this.saveToCloud(localData).catch(console.error);
+          }
+          // Local is same or newer, return local
+          return localData;
+        } else if (cloudData && !localData) {
+          // Only in cloud - cache locally and return
+          console.log('[UnifiedSave] Campaign only exists in cloud, caching locally');
           await this.saveLocal(cloudData);
           return cloudData;
-        } else if (localTime > cloudTime) {
-          // Local is newer - this shouldn't happen normally, mark as conflict
-          console.warn('[UnifiedSave] Local data newer than cloud');
+        } else if (localData && !cloudData) {
+          // Only local - sync to cloud
+          console.log('[UnifiedSave] Campaign only exists locally, syncing to cloud');
           this.updateSyncStatus(campaignId, { state: 'pending' });
+          this.saveToCloud(localData).catch(console.error);
         }
-      } else if (cloudData && !localData) {
-        // Only in cloud - cache locally
-        await this.saveLocal(cloudData);
-        return cloudData;
+      } catch (error) {
+        console.error('[UnifiedSave] Cloud load failed, using local:', error);
       }
     }
     
@@ -436,29 +455,36 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async listCampaigns(): Promise<CampaignMetadata[]> {
+    console.log('[UnifiedSave] Listing campaigns, mode:', this.account.mode);
     const localIndex = this.loadCampaignIndex();
     
     if (this.account.mode === 'cloud' && this.account.userId) {
       // Merge with cloud campaigns
       try {
-        const { data: cloudSaves } = await supabase
+        const { data: cloudSaves, error } = await supabase
           .from('cloud_saves')
-          .select('campaign_id, campaign_name, primary_genre, character_name, character_level, chapter_count, play_time, updated_at')
+          .select('campaign_id, campaign_name, primary_genre, character_name, character_level, chapter_count, play_time, updated_at, created_at')
           .eq('user_id', this.account.userId);
         
-        if (cloudSaves) {
+        if (error) {
+          console.error('[UnifiedSave] Cloud list error:', error);
+        }
+        
+        if (cloudSaves && cloudSaves.length > 0) {
+          console.log(`[UnifiedSave] Found ${cloudSaves.length} cloud campaigns`);
           const cloudIds = new Set(cloudSaves.map(s => s.campaign_id));
           const localIds = new Set(localIndex.map(c => c.id));
           
           // Add cloud-only campaigns to index
           for (const cloud of cloudSaves) {
             if (!localIds.has(cloud.campaign_id)) {
+              console.log(`[UnifiedSave] Adding cloud-only campaign: ${cloud.campaign_name}`);
               localIndex.push({
                 id: cloud.campaign_id,
                 name: cloud.campaign_name,
                 primaryGenre: cloud.primary_genre as CampaignMetadata['primaryGenre'],
                 secondaryGenres: [],
-                createdAt: new Date(cloud.updated_at).getTime(),
+                createdAt: new Date(cloud.created_at || cloud.updated_at).getTime(),
                 updatedAt: new Date(cloud.updated_at).getTime(),
                 playTime: cloud.play_time,
                 chapterCount: cloud.chapter_count,
@@ -466,15 +492,31 @@ class UnifiedSaveArchitectureClass {
                 characterLevel: cloud.character_level,
                 isActive: false,
               });
+            } else {
+              // Update existing local entry with cloud info if cloud is newer
+              const localEntry = localIndex.find(c => c.id === cloud.campaign_id);
+              const cloudTime = new Date(cloud.updated_at).getTime();
+              if (localEntry && cloudTime > (localEntry.updatedAt || 0)) {
+                localEntry.name = cloud.campaign_name;
+                localEntry.updatedAt = cloudTime;
+                localEntry.playTime = cloud.play_time;
+                localEntry.chapterCount = cloud.chapter_count;
+                localEntry.characterLevel = cloud.character_level;
+              }
             }
           }
           
-          // Mark local-only campaigns
+          // Mark local-only campaigns for sync
           for (const local of localIndex) {
             if (!cloudIds.has(local.id)) {
               this.updateSyncStatus(local.id, { state: 'pending' });
+            } else {
+              this.updateSyncStatus(local.id, { state: 'synced' });
             }
           }
+          
+          // Save updated index
+          localStorage.setItem(CAMPAIGN_INDEX_KEY, JSON.stringify(localIndex));
         }
       } catch (error) {
         console.error('[UnifiedSave] Failed to fetch cloud campaigns:', error);
@@ -483,7 +525,6 @@ class UnifiedSaveArchitectureClass {
     
     return localIndex.sort((a, b) => b.updatedAt - a.updatedAt);
   }
-  
   private loadCampaignIndex(): CampaignMetadata[] {
     try {
       const raw = localStorage.getItem(CAMPAIGN_INDEX_KEY);

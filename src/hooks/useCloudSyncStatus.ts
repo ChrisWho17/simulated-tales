@@ -26,13 +26,21 @@ export function useCloudSyncStatus() {
     UnifiedSaveArchitecture.getConflicts()
   );
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(
+    UnifiedSaveArchitecture.getAccount().lastSyncedAt || null
+  );
   
   useEffect(() => {
     // Initialize the architecture
     UnifiedSaveArchitecture.initialize();
     
     // Subscribe to account changes
-    const unsubAccount = UnifiedSaveArchitecture.onAccountChange(setAccount);
+    const unsubAccount = UnifiedSaveArchitecture.onAccountChange((newAccount) => {
+      setAccount(newAccount);
+      if (newAccount.lastSyncedAt) {
+        setLastSyncedAt(newAccount.lastSyncedAt);
+      }
+    });
     
     // Subscribe to conflict changes
     const unsubConflicts = UnifiedSaveArchitecture.onConflictChange(setConflicts);
@@ -49,6 +57,7 @@ export function useCloudSyncStatus() {
     setIsSyncing(true);
     try {
       const result = await UnifiedSaveArchitecture.syncWithCloud();
+      setLastSyncedAt(Date.now());
       return result;
     } finally {
       setIsSyncing(false);
@@ -57,6 +66,14 @@ export function useCloudSyncStatus() {
   
   const resolveConflict = useCallback(async (campaignId: string, resolution: 'local' | 'cloud') => {
     return UnifiedSaveArchitecture.resolveConflict(campaignId, resolution);
+  }, []);
+  
+  const signInWithGoogle = useCallback(async () => {
+    return UnifiedSaveArchitecture.signInWithGoogle();
+  }, []);
+  
+  const signOut = useCallback(async () => {
+    return UnifiedSaveArchitecture.signOut();
   }, []);
   
   // Calculate overall sync state
@@ -70,13 +87,15 @@ export function useCloudSyncStatus() {
   return {
     account,
     isCloudMode: account.mode === 'cloud',
-    lastSyncedAt: account.lastSyncedAt || null,
+    lastSyncedAt,
     conflicts,
     hasConflicts: conflicts.length > 0,
     overallState: getOverallState(),
     isSyncing,
     forceSync,
     resolveConflict,
+    signInWithGoogle,
+    signOut,
   };
 }
 

@@ -1,23 +1,41 @@
 // ============================================================================
 // CLOUD SYNC INDICATOR - Small indicator showing sync status in game UI
+// Now unified with UnifiedSaveArchitecture
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/hooks/useAuth';
-import { CloudSyncService, SyncStatus } from '@/services/cloudSyncService';
+import { 
+  UnifiedSaveArchitecture, 
+  UnifiedAccount,
+} from '@/services/unifiedSaveArchitecture';
 import { AuthModal } from './AuthModal';
 import { 
   Cloud, 
   CloudOff, 
-  RefreshCw, 
   Check, 
   AlertTriangle,
   Loader2 
 } from 'lucide-react';
-import { formatLastPlayed } from '@/lib/campaignStorage';
 import { toast } from 'sonner';
+
+// Format relative time
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (seconds < 10) return 'Just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
 
 interface CloudSyncIndicatorProps {
   variant?: 'icon' | 'badge';
@@ -25,66 +43,82 @@ interface CloudSyncIndicatorProps {
 }
 
 export function CloudSyncIndicator({ variant = 'icon', className }: CloudSyncIndicatorProps) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [account, setAccount] = useState<UnifiedAccount>(
+    UnifiedSaveArchitecture.getAccount()
+  );
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const [lastSync, setLastSync] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<number | null>(account.lastSyncedAt || null);
 
   useEffect(() => {
-    return CloudSyncService.onStatusChange((status) => {
-      setSyncStatus(status);
-      if (status !== 'syncing') {
-        setLastSync(CloudSyncService.getLastSyncTime());
+    // Initialize the architecture
+    UnifiedSaveArchitecture.initialize();
+    
+    const unsubAccount = UnifiedSaveArchitecture.onAccountChange((newAccount) => {
+      setAccount(newAccount);
+      if (newAccount.lastSyncedAt) {
+        setLastSync(newAccount.lastSyncedAt);
       }
     });
+    
+    return () => {
+      unsubAccount();
+    };
   }, []);
 
-  const handleSync = async () => {
-    if (!isAuthenticated) {
+  const handleSync = useCallback(async () => {
+    if (account.mode !== 'cloud') {
       setShowAuthModal(true);
       return;
     }
 
     setIsSyncing(true);
-    const result = await CloudSyncService.fullSync();
-    
-    if (result.success && result.errors.length === 0) {
-      toast.success('Sync complete');
-    } else if (result.errors.length > 0) {
-      toast.error(result.errors[0]);
+    try {
+      const result = await UnifiedSaveArchitecture.syncWithCloud();
+      
+      if (result.conflicts > 0) {
+        toast.warning(`Sync complete with ${result.conflicts} conflict(s)`);
+      } else if (result.synced > 0) {
+        toast.success(`Synced ${result.synced} campaign(s)`);
+      } else {
+        toast.success('Everything up to date');
+      }
+      
+      setLastSync(Date.now());
+    } catch (error) {
+      toast.error('Sync failed');
+    } finally {
+      setIsSyncing(false);
     }
-    
-    setIsSyncing(false);
-  };
+  }, [account.mode]);
+
+  const isCloud = account.mode === 'cloud';
+  const hasConflicts = UnifiedSaveArchitecture.getConflicts().length > 0;
+  const isSynced = lastSync && Date.now() - lastSync < 60000;
 
   const getIcon = () => {
-    if (authLoading || isSyncing || syncStatus === 'syncing') {
+    if (isSyncing) {
       return <Loader2 className="h-4 w-4 animate-spin" />;
     }
-    if (!isAuthenticated) {
+    if (!isCloud) {
       return <CloudOff className="h-4 w-4" />;
     }
-    switch (syncStatus) {
-      case 'synced':
-        return <Check className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <AlertTriangle className="h-4 w-4 text-destructive" />;
-      case 'conflict':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <Cloud className="h-4 w-4" />;
+    if (hasConflicts) {
+      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
     }
+    if (isSynced) {
+      return <Check className="h-4 w-4 text-green-500" />;
+    }
+    return <Cloud className="h-4 w-4" />;
   };
 
   const getTooltipText = () => {
-    if (!isAuthenticated) return 'Click to enable cloud sync';
-    if (syncStatus === 'syncing' || isSyncing) return 'Syncing...';
-    if (syncStatus === 'synced' && lastSync) {
-      return `Last synced ${formatLastPlayed(lastSync)}`;
+    if (!isCloud) return 'Click to enable cloud sync';
+    if (isSyncing) return 'Syncing...';
+    if (hasConflicts) return 'Conflicts detected';
+    if (isSynced && lastSync) {
+      return `Last synced ${formatRelativeTime(lastSync)}`;
     }
-    if (syncStatus === 'error') return 'Sync error - click to retry';
-    if (syncStatus === 'conflict') return 'Conflicts detected';
     return 'Click to sync';
   };
 
@@ -98,12 +132,12 @@ export function CloudSyncIndicator({ variant = 'icon', className }: CloudSyncInd
               size={variant === 'icon' ? 'icon' : 'sm'}
               className={className}
               onClick={handleSync}
-              disabled={isSyncing || syncStatus === 'syncing'}
+              disabled={isSyncing}
             >
               {getIcon()}
               {variant === 'badge' && (
                 <span className="ml-1 text-xs">
-                  {!isAuthenticated ? 'Sync' : syncStatus === 'synced' ? 'Synced' : 'Sync'}
+                  {!isCloud ? 'Sync' : isSynced ? 'Synced' : 'Sync'}
                 </span>
               )}
             </Button>
