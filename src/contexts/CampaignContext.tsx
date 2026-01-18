@@ -366,11 +366,11 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   }, []);
   
   // Create campaign
-  const createCampaign = useCallback((
+  const createCampaign = useCallback(async (
     worldBible: WorldBible,
     player: RPGCharacter,
     scenario: string
-  ): CampaignData => {
+  ): Promise<CampaignData> => {
     const now = Date.now();
     const campaignId = `campaign_${now}_${Math.random().toString(36).substr(2, 9)}`;
     const genre = worldBible.primaryGenre as GameGenre;
@@ -429,10 +429,18 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     
     // Save immediately using integrity service
     DataIntegrityService.saveWithIntegrity(campaign);
-    UnifiedSaveArchitecture.saveCampaign(campaign);
+    
+    // Sync to cloud - await this to ensure it completes
+    const saveResult = await UnifiedSaveArchitecture.saveCampaign(campaign);
+    if (!saveResult.success) {
+      console.warn('[Campaign] Cloud save failed on create:', saveResult.error);
+    } else {
+      console.log('[Campaign] Created and synced to cloud:', campaign.meta.name);
+    }
+    
     UnifiedSaveArchitecture.setActiveCampaignId(campaign.id);
     setActiveCampaign(campaign);
-    refreshCampaigns();
+    await refreshCampaigns();
     
     return campaign;
   }, [refreshCampaigns]);
@@ -700,13 +708,10 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     activeCampaign,
     activeCampaignId: activeCampaign?.id ?? null,
     createCampaign,
-    loadCampaign: (id) => { loadCampaignFunc(id); return true; },
-    unloadCampaign: () => { unloadCampaign(); },
-    deleteCampaign: (id) => { deleteCampaign(id); },
-    duplicateCampaign: (id, name) => { 
-      const result = duplicateCampaign(id, name);
-      return null; // Sync return for interface compat
-    },
+    loadCampaign: loadCampaignFunc,
+    unloadCampaign,
+    deleteCampaign,
+    duplicateCampaign,
     updateCampaign,
     updatePlayer,
     addNarrativeEntry,
@@ -716,13 +721,13 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     restoreCheckpoint,
     deleteCheckpoint,
     exportCampaign,
-    importCampaign: (json) => {
-      importCampaign(json);
-      return null; // Sync return for interface compat
+    importCampaign: async (json) => {
+      await importCampaign(json);
+      return null;
     },
     isDirty,
     lastSaved,
-    saveNow: () => { saveNow(); },
+    saveNow: async () => { await saveNow(); },
     verifyAccess,
     // Cloud/Account
     account,

@@ -261,9 +261,9 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const json = event.target?.result as string;
-      const result = importCampaign(json);
+      const result = await importCampaign(json);
       if (result) {
         setStorageStats(getStorageStats()); // Refresh stats
         toast.success(`Imported "${result.meta.name}"`);
