@@ -2107,6 +2107,20 @@ export function CheatModeSplash({
               )}
             </div>
           )}
+          
+          {/* Quirks Preview */}
+          {companionCreator.quirks.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground">Quirks:</span>
+              <div className="flex flex-wrap gap-1">
+                {companionCreator.quirks.map((q, i) => (
+                  <Badge key={i} variant="outline" className="text-[10px] bg-primary/5 border-primary/20">
+                    {q}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
