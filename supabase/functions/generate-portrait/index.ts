@@ -1383,20 +1383,37 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   console.log(`Genre matching: "${rawGenre}" -> "${genreKey}"`);
 
   // ========== BODY PROPORTION MODIFIERS ==========
-  // Tasteful descriptors that won't trigger content moderation
+  // Cup sizes mapped to realistic body descriptors for AI generation
   const BUST_MODIFIER: Record<string, string> = {
-    'small': 'petite frame',
-    'medium': 'average proportions',
-    'large': 'fuller figure',
-    'very large': 'statuesque build',
+    // Cup sizes - realistic proportions
+    'AA': 'very petite chest, minimal bust, slender upper body',
+    'A': 'petite chest, small bust, slender frame',
+    'B': 'small bust, modest chest, slim torso',
+    'C': 'average bust, balanced proportions',
+    'D': 'full bust, noticeable curves, feminine figure',
+    'DD': 'large bust, prominent curves, full-figured',
+    'E': 'very full bust, prominent curves, voluptuous upper body',
+    'F': 'very large bust, heavy curves, voluptuous figure',
+    'G': 'extra large bust, very prominent curves, statuesque',
+    'H': 'huge bust, extremely prominent, very curvy figure',
+    'I': 'massive bust, extremely full, voluptuous silhouette',
+    'J': 'enormous bust, very heavy, extremely curvy',
+    'K': 'extremely large bust, massive curves, very voluptuous',
+    // Legacy mappings
+    'small': 'small bust, petite chest',
+    'medium': 'average bust, balanced proportions',
+    'large': 'full bust, prominent curves',
+    'very large': 'very large bust, heavy curves, voluptuous',
+    'very_large': 'very large bust, heavy curves, voluptuous',
   };
   
-  // Body shape descriptors - neutral and professional
+  // Body shape descriptors for hips
   const HIP_MODIFIER: Record<string, string> = {
-    'narrow': 'lean frame',
-    'average': 'balanced proportions',
-    'wide': 'athletic build',
-    'very wide': 'strong frame',
+    'narrow': 'narrow hips, lean lower body, straight silhouette',
+    'average': 'average hips, balanced proportions',
+    'wide': 'wide hips, curvy lower body, hourglass tendency',
+    'very wide': 'very wide hips, prominent curves, hourglass figure',
+    'very_wide': 'very wide hips, prominent curves, hourglass figure',
   };
 
   const BUILD_AMPLIFIER: Record<string, string> = {
@@ -1430,9 +1447,20 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     identityParts.push(`${hairColor || ''} ${hairStyle || ''} hair`.trim());
   }
   
-  // Body proportions with tasteful descriptors - only include if will enhance portrait
-  // Skip these entirely to avoid content moderation issues
-  if (muscleDefinition && muscleDefinition !== 'none') {
+  // Body proportions - CRITICAL: Actually use bust and hip modifiers for female/other characters
+  if (gender === 'female' || gender === 'other') {
+    // Add bust size description if specified
+    if (bustSize && BUST_MODIFIER[bustSize]) {
+      identityParts.push(BUST_MODIFIER[bustSize]);
+    }
+    // Add hip width description if specified
+    if (hipWidth && HIP_MODIFIER[hipWidth]) {
+      identityParts.push(HIP_MODIFIER[hipWidth]);
+    }
+  }
+  
+  // Muscle definition for all genders
+  if (muscleDefinition && muscleDefinition !== 'none' && muscleDefinition !== 'toned') {
     identityParts.push(`${muscleDefinition} muscle definition`);
   }
   
