@@ -2301,7 +2301,15 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       messages.push({ role: 'user', content: startMessage });
     } else {
       // Add conversation history
-      for (const msg of conversationHistory) {
+      // CRITICAL FIX: If we have a playerAction, skip the last entry if it's a user message
+      // (because playerAction is already included in conversationHistory and we'll add it below with enhanced context)
+      const historyToAdd = playerAction && 
+        conversationHistory.length > 0 && 
+        conversationHistory[conversationHistory.length - 1].role === 'user'
+          ? conversationHistory.slice(0, -1)  // Exclude last user entry to prevent duplication
+          : conversationHistory;
+      
+      for (const msg of historyToAdd) {
         messages.push({
           role: msg.role === 'narrator' ? 'assistant' : 'user',
           content: msg.content
