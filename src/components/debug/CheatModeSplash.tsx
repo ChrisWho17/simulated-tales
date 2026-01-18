@@ -200,11 +200,64 @@ const derivePersonalityType = (traits: PersonalityTrait[]): { type: string; icon
   return { type: 'Wanderer', icon: '🌙', description: 'Complex, hard to define' };
 };
 
-// Names by gender for randomization
-const RANDOM_NAMES = {
-  male: ['Marcus', 'Erik', 'Darius', 'Finn', 'Gareth', 'Kael', 'Roland', 'Theron', 'Vance', 'Aldric', 'Brennan', 'Cedric', 'Drake', 'Edmund', 'Felix', 'Gideon', 'Hadrian', 'Jasper', 'Kieran', 'Leander'],
-  female: ['Elena', 'Lyra', 'Seraphina', 'Thea', 'Vera', 'Aria', 'Brynn', 'Celeste', 'Diana', 'Evelyn', 'Freya', 'Helena', 'Iris', 'Jade', 'Kira', 'Luna', 'Mira', 'Nadia', 'Ophelia', 'Petra'],
-  other: ['Rowan', 'Sage', 'River', 'Ash', 'Phoenix', 'Quinn', 'Morgan', 'Raven', 'Storm', 'Wren', 'Alexis', 'Avery', 'Blake', 'Casey', 'Drew', 'Emery', 'Hayden', 'Jordan', 'Parker', 'Taylor'],
+// Genre-specific name pools by gender
+const GENRE_NAMES: Record<string, { male: string[]; female: string[]; other: string[] }> = {
+  fantasy: {
+    male: ['Marcus', 'Aldric', 'Gareth', 'Theron', 'Roland', 'Cedric', 'Edmund', 'Gideon', 'Hadrian', 'Leander'],
+    female: ['Elena', 'Lyra', 'Seraphina', 'Celeste', 'Diana', 'Freya', 'Helena', 'Iris', 'Luna', 'Ophelia'],
+    other: ['Rowan', 'Sage', 'Ash', 'Morgan', 'Raven', 'Quinn', 'Wren', 'Phoenix', 'River', 'Storm'],
+  },
+  modern: {
+    male: ['James', 'Michael', 'David', 'Ryan', 'Alex', 'Chris', 'Daniel', 'Marcus', 'Jason', 'Kevin'],
+    female: ['Sarah', 'Emily', 'Jessica', 'Amanda', 'Nicole', 'Rachel', 'Megan', 'Lauren', 'Natalie', 'Samantha'],
+    other: ['Jordan', 'Alex', 'Taylor', 'Casey', 'Riley', 'Morgan', 'Avery', 'Quinn', 'Jamie', 'Drew'],
+  },
+  scifi: {
+    male: ['Zane', 'Marcus', 'Rex', 'Cole', 'Jax', 'Kane', 'Dex', 'Orion', 'Atlas', 'Cyrus'],
+    female: ['Nova', 'Stella', 'Vera', 'Lyra', 'Zara', 'Kira', 'Mira', 'Astra', 'Cora', 'Vega'],
+    other: ['Seren', 'Kai', 'Sol', 'Phoenix', 'Onyx', 'Rune', 'Cipher', 'Nova', 'Echo', 'Argo'],
+  },
+  cyberpunk: {
+    male: ['Dex', 'Kane', 'Raze', 'Jax', 'Cole', 'Viktor', 'Rex', 'Nero', 'Zeke', 'Mack'],
+    female: ['Vera', 'Kira', 'Roxy', 'Jade', 'Sasha', 'Nova', 'Mira', 'Zara', 'Nyx', 'Vex'],
+    other: ['Zero', 'Rune', 'Cipher', 'Neon', 'Glitch', 'Flux', 'Chrome', 'Pixel', 'Hex', 'Byte'],
+  },
+  western: {
+    male: ['Jack', 'William', 'Samuel', 'Thomas', 'Henry', 'James', 'Wyatt', 'Cole', 'Jesse', 'Eli'],
+    female: ['Mary', 'Sarah', 'Emma', 'Grace', 'Rose', 'Clara', 'Annie', 'Lily', 'Ruth', 'Pearl'],
+    other: ['Dakota', 'Carson', 'Morgan', 'Riley', 'Jesse', 'Quinn', 'Sage', 'Reese', 'Lane', 'Arden'],
+  },
+  horror: {
+    male: ['Thomas', 'Edward', 'Victor', 'Charles', 'Henry', 'William', 'James', 'Robert', 'Arthur', 'George'],
+    female: ['Elizabeth', 'Mary', 'Victoria', 'Catherine', 'Rose', 'Clara', 'Evelyn', 'Margaret', 'Ruth', 'Helen'],
+    other: ['Morgan', 'Raven', 'Quinn', 'Ash', 'Blair', 'Salem', 'Shadow', 'Vesper', 'Crow', 'Winter'],
+  },
+  noir: {
+    male: ['Jack', 'Vincent', 'Frank', 'Sam', 'Tony', 'Mickey', 'Lou', 'Eddie', 'Charlie', 'Max'],
+    female: ['Vivian', 'Carmen', 'Stella', 'Rose', 'Gloria', 'Vera', 'Dolores', 'Rita', 'Lana', 'Ruby'],
+    other: ['Morgan', 'Jackie', 'Lou', 'Sal', 'Bernie', 'Pat', 'Alex', 'Riley', 'Casey', 'Terry'],
+  },
+  post_apocalyptic: {
+    male: ['Max', 'Rex', 'Cole', 'Kane', 'Jax', 'Zeke', 'Ash', 'Stone', 'Flint', 'Hawk'],
+    female: ['Max', 'Ripley', 'Sage', 'Raven', 'Storm', 'Wren', 'Ember', 'Rust', 'Vera', 'Thorne'],
+    other: ['Ash', 'Raven', 'Storm', 'Rust', 'Bone', 'Slate', 'Flint', 'Ember', 'Echo', 'Ghost'],
+  },
+  steampunk: {
+    male: ['Theodore', 'Archibald', 'Edmund', 'Jasper', 'Oliver', 'Arthur', 'Percival', 'Cornelius', 'Reginald', 'Barnaby'],
+    female: ['Adelaide', 'Beatrice', 'Cordelia', 'Eugenia', 'Florence', 'Harriet', 'Imogen', 'Josephine', 'Lavinia', 'Millicent'],
+    other: ['Sterling', 'Ashby', 'Emery', 'Morgan', 'Finley', 'Aubrey', 'Bellamy', 'Everett', 'Harper', 'Kendall'],
+  },
+  default: {
+    male: ['Marcus', 'Erik', 'Darius', 'Finn', 'Gareth', 'Roland', 'Theron', 'Vance', 'Aldric', 'Drake'],
+    female: ['Elena', 'Lyra', 'Thea', 'Vera', 'Aria', 'Brynn', 'Diana', 'Evelyn', 'Helena', 'Kira'],
+    other: ['Rowan', 'Sage', 'River', 'Ash', 'Phoenix', 'Quinn', 'Morgan', 'Raven', 'Storm', 'Wren'],
+  },
+};
+
+// Helper to get names for current genre
+const getGenreNames = (genreStr: string): { male: string[]; female: string[]; other: string[] } => {
+  const normalized = (genreStr || 'fantasy').toLowerCase().replace(/[_\s-]/g, '_');
+  return GENRE_NAMES[normalized] || GENRE_NAMES.default;
 };
 
 const BACKSTORY_TEMPLATES = [
@@ -906,7 +959,8 @@ export function CheatModeSplash({
   const randomizeCompanion = () => {
     const genderKey = companionCreator.gender === 'male' ? 'male' : 
                       companionCreator.gender === 'female' ? 'female' : 'other';
-    const randomName = RANDOM_NAMES[genderKey][Math.floor(Math.random() * RANDOM_NAMES[genderKey].length)];
+    const genreNamePool = getGenreNames(genre || 'fantasy');
+    const randomName = genreNamePool[genderKey][Math.floor(Math.random() * genreNamePool[genderKey].length)];
     const randomBackstory = BACKSTORY_TEMPLATES[Math.floor(Math.random() * BACKSTORY_TEMPLATES.length)];
     
     // Randomly pick 2-3 traits (not too many)
