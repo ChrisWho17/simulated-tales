@@ -174,7 +174,7 @@ export function RadialMenuTrigger({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function RadialQuickMenu({
+export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuProps>(({
   onOpenSettings,
   onOpenCharacterSheet,
   onOpenInventory,
@@ -184,7 +184,7 @@ export function RadialQuickMenu({
   onOpenRecap,
   onOpenSaves,
   onRestart,
-}: RadialQuickMenuProps) {
+}, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   
@@ -300,6 +300,7 @@ export function RadialQuickMenu({
     <AnimatePresence>
       {isOpen && (
         <motion.div 
+          ref={ref}
           className="md:hidden fixed inset-0 z-[100] flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -443,6 +444,8 @@ export function RadialQuickMenu({
       )}
     </AnimatePresence>
   );
-}
+});
+
+RadialQuickMenu.displayName = 'RadialQuickMenu';
 
 export default RadialQuickMenu;

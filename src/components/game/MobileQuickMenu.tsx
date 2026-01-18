@@ -34,7 +34,7 @@ interface QuickMenuItem {
   description?: string;
 }
 
-export function MobileQuickMenu({
+export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuProps>(({
   isOpen,
   onClose,
   onOpenSettings,
@@ -49,7 +49,7 @@ export function MobileQuickMenu({
   characterName,
   currentTime,
   currentWeather,
-}: MobileQuickMenuProps) {
+}, ref) => {
   if (!isOpen) return null;
 
   const menuItems: QuickMenuItem[] = [
@@ -120,6 +120,7 @@ export function MobileQuickMenu({
 
   return (
     <div
+      ref={ref}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
@@ -171,6 +172,8 @@ export function MobileQuickMenu({
       </div>
     </div>
   );
-}
+});
+
+MobileQuickMenu.displayName = 'MobileQuickMenu';
 
 export default MobileQuickMenu;
