@@ -42,8 +42,9 @@ interface CompanionDialogueRequest {
   recentEvents?: string[];
   location?: string;
   timeOfDay?: string;
-  dialogueType: 'reaction' | 'ambient' | 'event' | 'romance' | 'betrayal' | 'farewell';
+  dialogueType: 'reaction' | 'ambient' | 'event' | 'romance' | 'betrayal' | 'farewell' | 'quirk';
   genre?: string;
+  triggerQuirk?: string; // Specific quirk to reference in dialogue
 }
 
 serve(async (req) => {
@@ -53,7 +54,7 @@ serve(async (req) => {
 
   try {
     const request: CompanionDialogueRequest = await req.json();
-    const { companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType, genre } = request;
+    const { companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType, genre, triggerQuirk } = request;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -69,7 +70,7 @@ serve(async (req) => {
     }
 
     const systemPrompt = buildCompanionSystemPrompt(companion, genre);
-    const userPrompt = buildDialoguePrompt(companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType);
+    const userPrompt = buildDialoguePrompt(companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType, triggerQuirk);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -246,7 +247,8 @@ function buildDialoguePrompt(
   recentEvents?: string[],
   location?: string,
   timeOfDay?: string,
-  dialogueType?: string
+  dialogueType?: string,
+  triggerQuirk?: string
 ): string {
   let prompt = `SITUATION: ${situation}\n`;
   
@@ -276,6 +278,19 @@ function buildDialoguePrompt(
     case 'farewell':
       prompt += `\nGenerate ${companion.name}'s farewell as they leave the party.`;
       break;
+    case 'quirk':
+      const quirkToUse = triggerQuirk || companion.personality.quirks[Math.floor(Math.random() * companion.personality.quirks.length)];
+      prompt += `\nGenerate ${companion.name}'s dialogue that naturally incorporates their personality quirk: "${quirkToUse}".
+The dialogue should:
+- Show the quirk in action (e.g., if they "count coins when idle", have them doing it while talking)
+- Feel natural and character-appropriate, not forced
+- Include a brief physical action describing the quirk (in *asterisks*)
+- Optionally reference or explain the quirk if it fits the moment
+- Keep it short (1-2 sentences max)
+Example formats:
+- "*quirk action* Dialogue about something relevant."
+- "Dialogue... *quirk action* More dialogue."`;
+      break;
     default:
       prompt += `\nGenerate appropriate dialogue for ${companion.name}.`;
   }
@@ -302,6 +317,16 @@ function generateFallbackDialogue(companion: CompanionState, dialogueType: strin
     
     case 'ambient':
       return `*${quirk || 'looks around thoughtfully'}*`;
+    
+    case 'quirk':
+      // Quirk-specific fallback dialogue
+      const quirkFallbacks = [
+        `*${quirk}* Sorry, it's just something I do.`,
+        `*${quirk}* Don't mind me.`,
+        `*${quirk}* Old habit. Can't help it.`,
+        `*${quirk}* ...What? Everyone has their quirks.`,
+      ];
+      return quirkFallbacks[Math.floor(Math.random() * quirkFallbacks.length)];
     
     case 'romance':
       return `*glances at you with a hint of warmth* There's... something I've been meaning to say.`;
