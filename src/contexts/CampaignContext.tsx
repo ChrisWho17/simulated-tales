@@ -452,11 +452,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       await saveNow();
     }
     
-    // Clear state before loading
-    if (activeCampaign && activeCampaign.id !== campaignId) {
-      setActiveCampaign(null);
-      UnifiedSaveArchitecture.setActiveCampaignId(null);
-    }
+    // IMPORTANT: Don't clear activeCampaign to null before loading!
+    // This causes race conditions with UI components that depend on activeCampaign.
+    // Instead, directly replace with the new campaign when it's ready.
     
     // Use integrity-validated load
     const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(campaignId);
