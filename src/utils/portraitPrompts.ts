@@ -476,17 +476,39 @@ export function buildPortraitPrompt(
     details.push('well-groomed tactical beard, facial hair with detail');
   }
   
-  // Full appearance (18+) customizations - bust, hips, muscle, intimate details
-  if (character.bustSize && character.bustSize !== 'medium') {
-    const bustDescriptions: Record<string, string> = {
-      'flat': 'flat chest, small bust',
+  // Full appearance (18+) customizations - cup sizes, hips, muscle, intimate details
+  // Cup size to realistic portrait description mapping
+  if (character.bustSize) {
+    const cupSizeDescriptions: Record<string, string> = {
+      // Very small to small
+      'AA': 'very petite flat chest, minimal bust',
+      'A': 'petite small bust, modest chest',
+      'B': 'small bust, subtle feminine curves',
+      // Average
+      'C': 'average bust, natural feminine curves',
+      // Full to large
+      'D': 'full bust, noticeable cleavage, feminine curves',
+      'DD': 'large full bust, prominent cleavage, voluptuous',
+      'E': 'very full large bust, prominent cleavage, curvy',
+      // Very large
+      'F': 'very large bust, heavy breasts, prominent cleavage, voluptuous figure',
+      'G': 'extra large bust, huge breasts, very prominent cleavage, voluptuous',
+      // Huge+
+      'H': 'huge bust, massive breasts, extremely prominent, very voluptuous',
+      'I': 'massive bust, enormous breasts, extremely heavy, voluptuous figure',
+      'J': 'enormous bust, gigantic breasts, extremely prominent, very curvy',
+      'K': 'extremely large bust, gigantic heavy breasts, massively prominent',
+      // Legacy mappings for backwards compatibility
+      'flat': 'flat chest, minimal bust',
       'small': 'small bust, petite chest',
+      'medium': 'average bust, natural feminine curves',
       'large': 'large bust, full chest, prominent cleavage',
       'very large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
       'very_large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
     };
-    if (bustDescriptions[character.bustSize]) {
-      details.push(bustDescriptions[character.bustSize]);
+    const bustDesc = cupSizeDescriptions[character.bustSize];
+    if (bustDesc) {
+      details.push(bustDesc);
     }
   }
   

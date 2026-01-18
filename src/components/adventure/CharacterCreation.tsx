@@ -13,7 +13,7 @@ import {
   GENDER_OPTIONS, HEIGHT_OPTIONS, BUILD_OPTIONS,
   SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, FACE_SHAPES,
   DISTINGUISHING_FEATURES, ACCESSORIES,
-  BUST_OPTIONS, HIP_OPTIONS, MUSCLE_OPTIONS, BODY_HAIR_OPTIONS,
+  BUST_OPTIONS, HIP_OPTIONS, MUSCLE_OPTIONS, BODY_HAIR_OPTIONS, CUP_SIZE_OPTIONS,
   PIERCING_OPTIONS, TATTOO_OPTIONS, TATTOO_STYLE_OPTIONS,
   SCAR_OPTIONS, PROSTHETIC_OPTIONS, IMPLANT_OPTIONS, MUTATION_OPTIONS,
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
@@ -114,7 +114,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     detailLevel: 'simple',
     simple: { gender: 'male', height: 'average', build: 'average' },
     detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
-    full: { bustSize: 'medium', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
+    full: { bustSize: 'C', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
   });
   
   // Collapsible section states
@@ -769,11 +769,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         <div>
                           <label className="text-sm text-muted-foreground">Bust Size</label>
                           <select
-                            value={appearance.full?.bustSize || 'medium'}
+                            value={appearance.full?.bustSize || 'C'}
                             onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
                             className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
                           >
-                            {BUST_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label} - {opt.description}</option>)}
                           </select>
                         </div>
                         <div>
