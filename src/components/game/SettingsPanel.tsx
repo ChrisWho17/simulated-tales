@@ -952,27 +952,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <DirectorSettingsTab
               directorSettings={currentDirectorSettings}
               onUpdate={handleDirectorSettingsUpdate}
-              descriptionLevel={
-                settings.narratorConfig?.detailLevel === 'SPARSE' ? 0 :
-                settings.narratorConfig?.detailLevel === 'MODERATE' ? 2 :
-                settings.narratorConfig?.detailLevel === 'RICH' ? 3 :
-                settings.narratorConfig?.detailLevel === 'DENSE' ? 4 : 2
-              }
-              onDescriptionLevelChange={(level) => {
-                const detailLevelMap: Record<number, 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE'> = {
-                  0: 'SPARSE',
-                  1: 'SPARSE',
-                  2: 'MODERATE',
-                  3: 'RICH',
-                  4: 'DENSE',
-                };
-                updateSettings({
-                  narratorConfig: {
-                    ...settings.narratorConfig,
-                    detailLevel: detailLevelMap[level] || 'MODERATE',
-                  },
-                });
-              }}
             />
           )}
           
