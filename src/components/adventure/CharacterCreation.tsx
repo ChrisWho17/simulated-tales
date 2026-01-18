@@ -142,12 +142,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     genre?: string;
   } | null>(null);
   
-  // Detected clothing from portrait
-  const [detectedClothing, setDetectedClothing] = useState<{
-    items: Record<string, any>;
-    description: string;
-    source: 'portrait_detected' | 'genre_fallback';
-  } | null>(null);
   
   // Custom class state
   const [showCustomClassBuilder, setShowCustomClassBuilder] = useState(false);
@@ -347,17 +341,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       setPortraitUrl(result.imageUrl);
       setDetectedKeywords(result.detectedKeywords || null);
       
-      // Map detected clothing items from portrait to inventory
-      if (result.detectedKeywords?.clothingItems && result.detectedKeywords.clothingItems.length > 0) {
-        const { mapPortraitClothingToInventory } = await import('@/game/portraitClothingMapper');
-        const mappedClothing = mapPortraitClothingToInventory(
-          result.detectedKeywords.clothingItems as any,
-          genre
-        );
-        setDetectedClothing(mappedClothing);
-        console.log('[CharacterCreation] Mapped clothing from portrait:', mappedClothing);
-      }
-      
       toast.success('Portrait generated!');
     } catch (error) {
       console.error('Error generating portrait:', error);
@@ -457,11 +440,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       savePlayerPortraitUrl(portraitUrl);
     }
     
-    // Add detected clothing from portrait for inventory initialization
-    if (detectedClothing) {
-      (character as any).detectedClothing = detectedClothing;
-      console.log('[CharacterCreation] Adding detected clothing to character:', detectedClothing);
-    }
     
     console.log('[CharacterCreation] Saved portrait reference for consistent regeneration');
     
@@ -1343,47 +1321,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     </div>
                   )}
                   
-                  {/* Detected Clothing Items from Portrait */}
-                  {detectedClothing && (
-                    <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20 space-y-2">
-                      <h4 className="text-sm font-medium text-emerald-400 flex items-center gap-2">
-                        <Shirt className="w-4 h-4" />
-                        Starting Clothing (from Portrait)
-                        <span className="text-[10px] font-normal text-muted-foreground bg-background/50 px-1.5 py-0.5 rounded">
-                          {detectedClothing.source === 'portrait_detected' ? 'AI Detected' : 'Genre Default'}
-                        </span>
-                      </h4>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(detectedClothing.items).map(([slot, item]) => (
-                          item && (
-                            <div 
-                              key={slot}
-                              className="flex items-center gap-2 p-2 bg-background/30 rounded border border-border/20"
-                            >
-                              <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
-                                {slot === 'head' && <span className="text-xs">🎩</span>}
-                                {slot === 'torso' && <span className="text-xs">👕</span>}
-                                {slot === 'legs' && <span className="text-xs">👖</span>}
-                                {slot === 'feet' && <span className="text-xs">👟</span>}
-                                {slot === 'hands' && <span className="text-xs">🧤</span>}
-                                {slot === 'accessory' && <span className="text-xs">💍</span>}
-                                {slot === 'outfit' && <span className="text-xs">👔</span>}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium truncate">{(item as any).name}</div>
-                                <div className="text-[10px] text-muted-foreground capitalize">{slot}</div>
-                              </div>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                      
-                      <p className="text-[10px] text-muted-foreground italic">
-                        These items will be added to your inventory when you start the adventure.
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
