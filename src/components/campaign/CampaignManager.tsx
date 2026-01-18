@@ -609,6 +609,44 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     }
   }, [campaigns]);
   
+  // Delete from cloud state
+  const [cloudDeleteTarget, setCloudDeleteTarget] = useState<CloudCampaignInfo | null>(null);
+  const [isDeletingCloud, setIsDeletingCloud] = useState(false);
+  
+  const handleDeleteFromCloud = useCallback(async () => {
+    if (!cloudDeleteTarget) return;
+    
+    setIsDeletingCloud(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('cloud_saves')
+        .delete()
+        .eq('campaign_id', cloudDeleteTarget.campaign_id)
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('[DeleteCloud] Error:', error);
+        toast.error('Failed to delete from cloud');
+      } else {
+        toast.success(`Deleted "${cloudDeleteTarget.campaign_name}" from cloud`);
+        // Remove from local list
+        setCloudCampaigns(prev => prev.filter(c => c.campaign_id !== cloudDeleteTarget.campaign_id));
+      }
+    } catch (err) {
+      console.error('[DeleteCloud] Error:', err);
+      toast.error('Failed to delete from cloud');
+    } finally {
+      setIsDeletingCloud(false);
+      setCloudDeleteTarget(null);
+    }
+  }, [cloudDeleteTarget]);
+  
   // Sort campaigns by last updated
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
   
@@ -1126,19 +1164,30 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
                             </span>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadSingle(cloud)}
-                          disabled={existsLocally}
-                          className="ml-2"
-                        >
-                          {existsLocally ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Download className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadSingle(cloud)}
+                            disabled={existsLocally}
+                            title={existsLocally ? 'Already downloaded' : 'Download to local'}
+                          >
+                            {existsLocally ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCloudDeleteTarget(cloud)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Delete from cloud"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -1220,6 +1269,64 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
                 Done
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete from Cloud Confirmation */}
+      <Dialog open={!!cloudDeleteTarget} onOpenChange={(open) => {
+        if (!open && !isDeletingCloud) {
+          setCloudDeleteTarget(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete from Cloud?
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>
+                This will permanently delete <strong>"{cloudDeleteTarget?.campaign_name}"</strong> from the cloud.
+              </p>
+              {campaigns.some(c => c.id === cloudDeleteTarget?.campaign_id) ? (
+                <p className="text-sm text-muted-foreground">
+                  Your local copy will be preserved.
+                </p>
+              ) : (
+                <p className="text-sm text-amber-500 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  No local copy exists. This data will be lost permanently.
+                </p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCloudDeleteTarget(null)}
+              disabled={isDeletingCloud}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteFromCloud}
+              disabled={isDeletingCloud}
+              className="gap-2"
+            >
+              {isDeletingCloud ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Delete from Cloud
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
