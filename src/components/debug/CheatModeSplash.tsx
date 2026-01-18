@@ -3000,13 +3000,15 @@ export function CheatModeSplash({
               </Button>
             </div>
             
-            {/* Content with visible vertical scrollbar */}
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <ScrollArea className="h-full" type="always">
-                <div className="p-4 pr-6">
-                  {renderCurrentScreen()}
-                </div>
-              </ScrollArea>
+            {/* Content - Native scrolling for mobile compatibility */}
+            <div 
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4"
+              style={{ 
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain'
+              }}
+            >
+              {renderCurrentScreen()}
             </div>
             
             {/* Footer */}
