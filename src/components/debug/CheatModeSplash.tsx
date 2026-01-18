@@ -882,6 +882,12 @@ export function CheatModeSplash({
     });
   };
   
+  // 18+ adult age categories only
+  const ADULT_AGE_CATEGORIES = ['young adult (20s)', 'adult (30s)', 'mature adult (40s)', 'middle-aged (50s)', 'senior (60+)'];
+  
+  // Simple, clean distinguishing features (light on accessories)
+  const SIMPLE_FEATURES = ['subtle scar', 'dimples', 'freckles', 'beauty mark', 'strong jawline', 'high cheekbones', 'defined brow'];
+  
   // Randomize all companion attributes except gender
   const randomizeCompanion = () => {
     const genderKey = companionCreator.gender === 'male' ? 'male' : 
@@ -889,27 +895,50 @@ export function CheatModeSplash({
     const randomName = RANDOM_NAMES[genderKey][Math.floor(Math.random() * RANDOM_NAMES[genderKey].length)];
     const randomBackstory = BACKSTORY_TEMPLATES[Math.floor(Math.random() * BACKSTORY_TEMPLATES.length)];
     
-    // Randomly pick 2-4 traits
-    const traitCount = 2 + Math.floor(Math.random() * 3);
+    // Randomly pick 2-3 traits (not too many)
+    const traitCount = 2 + Math.floor(Math.random() * 2);
     const shuffledTraits = [...PERSONALITY_TRAITS].sort(() => Math.random() - 0.5);
     const randomTraits = shuffledTraits.slice(0, traitCount);
+    
+    // Light on accessories - 0-1 max to avoid chaos
+    const hasFeature = Math.random() > 0.5;
+    const randomFeatures = hasFeature 
+      ? [SIMPLE_FEATURES[Math.floor(Math.random() * SIMPLE_FEATURES.length)]]
+      : [];
+    
+    // Simple hair styles only (avoid the more exotic ones)
+    const SIMPLE_HAIR_STYLES = ['Short', 'Medium', 'Long', 'Ponytail', 'Braided', 'Curly', 'Wavy', 'Bun'];
+    const randomHairStyle = SIMPLE_HAIR_STYLES[Math.floor(Math.random() * SIMPLE_HAIR_STYLES.length)];
+    
+    // Natural hair colors only (avoid fantasy colors for cleaner look)
+    const NATURAL_HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Auburn', 'Red', 'Blonde', 'Platinum Blonde', 'Gray', 'White'];
+    const randomHairColor = NATURAL_HAIR_COLORS[Math.floor(Math.random() * NATURAL_HAIR_COLORS.length)];
+    
+    // Natural skin tones only
+    const NATURAL_SKIN_TONES = ['Porcelain', 'Ivory', 'Fair', 'Light', 'Medium', 'Olive', 'Tan', 'Caramel', 'Brown', 'Dark Brown', 'Ebony'];
+    const randomSkinTone = NATURAL_SKIN_TONES[Math.floor(Math.random() * NATURAL_SKIN_TONES.length)];
+    
+    // Natural eye colors
+    const NATURAL_EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray'];
+    const randomEyeColor = NATURAL_EYE_COLORS[Math.floor(Math.random() * NATURAL_EYE_COLORS.length)];
     
     setCompanionCreator(prev => ({
       ...prev,
       name: randomName,
       height: HEIGHT_OPTIONS[Math.floor(Math.random() * HEIGHT_OPTIONS.length)].value,
       build: BUILD_OPTIONS[Math.floor(Math.random() * BUILD_OPTIONS.length)].value,
-      skinTone: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
-      hairStyle: HAIR_STYLES[Math.floor(Math.random() * HAIR_STYLES.length)],
-      hairColor: HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)],
-      eyeColor: EYE_COLORS[Math.floor(Math.random() * EYE_COLORS.length)],
+      skinTone: randomSkinTone,
+      hairStyle: randomHairStyle,
+      hairColor: randomHairColor,
+      eyeColor: randomEyeColor,
       traits: randomTraits,
       combatRole: COMBAT_ROLES[Math.floor(Math.random() * COMBAT_ROLES.length)],
       armorLevel: ARMOR_LEVELS[Math.floor(Math.random() * ARMOR_LEVELS.length)].id,
       originStory: ORIGIN_STORIES[Math.floor(Math.random() * ORIGIN_STORIES.length)].id,
       backstory: randomBackstory,
       speechPattern: ['formal and eloquent', 'casual, friendly', 'gruff, few words', 'mysterious, cryptic', 'jovial, always joking'][Math.floor(Math.random() * 5)],
-      age: ['young adult', 'adult', 'middle-aged', 'elder'][Math.floor(Math.random() * 4)],
+      age: ADULT_AGE_CATEGORIES[Math.floor(Math.random() * ADULT_AGE_CATEGORIES.length)],
+      distinguishingFeatures: randomFeatures,
       portraitUrl: null,
     }));
     
