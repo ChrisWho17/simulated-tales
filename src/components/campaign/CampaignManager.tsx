@@ -47,11 +47,14 @@ import {
   RefreshCw,
   Check,
   X,
+  CloudDownload,
 } from 'lucide-react';
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
+import { supabase } from '@/integrations/supabase/client';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
+import { Progress } from '@/components/ui/progress';
 import { FailureSnapshot } from '@/lib/saveRecovery/types';
 
 // Genre badge colors
@@ -383,6 +386,229 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
     }, 1500);
   }, [campaigns]);
   
+  // Download from cloud state
+  interface CloudCampaignInfo {
+    id: string;
+    campaign_id: string;
+    campaign_name: string;
+    character_name: string;
+    character_level: number;
+    primary_genre: string;
+    play_time: number;
+    chapter_count: number;
+    updated_at: string;
+  }
+  
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+  const [cloudCampaigns, setCloudCampaigns] = useState<CloudCampaignInfo[]>([]);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    current: number;
+    total: number;
+    currentName: string;
+    results: { name: string; success: boolean; skipped?: boolean }[];
+  } | null>(null);
+  
+  // Fetch cloud campaigns
+  const handleOpenDownloadDialog = useCallback(async () => {
+    if (!isAuthenticated) {
+      toast.error('Sign in to download campaigns from cloud');
+      return;
+    }
+    
+    setShowDownloadDialog(true);
+    setIsLoadingCloud(true);
+    setDownloadProgress(null);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        setIsLoadingCloud(false);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('cloud_saves')
+        .select('id, campaign_id, campaign_name, character_name, character_level, primary_genre, play_time, chapter_count, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+      
+      if (error) {
+        console.error('[DownloadCloud] Error fetching:', error);
+        toast.error('Failed to fetch cloud campaigns');
+      } else {
+        setCloudCampaigns(data || []);
+      }
+    } catch (err) {
+      console.error('[DownloadCloud] Error:', err);
+      toast.error('Failed to connect to cloud');
+    } finally {
+      setIsLoadingCloud(false);
+    }
+  }, [isAuthenticated]);
+  
+  // Download all cloud campaigns
+  const handleDownloadAll = useCallback(async () => {
+    if (cloudCampaigns.length === 0) return;
+    
+    setIsDownloading(true);
+    setDownloadProgress({
+      current: 0,
+      total: cloudCampaigns.length,
+      currentName: cloudCampaigns[0]?.campaign_name || '',
+      results: []
+    });
+    
+    const results: { name: string; success: boolean; skipped?: boolean }[] = [];
+    const localCampaignIds = new Set(campaigns.map(c => c.id));
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        setIsDownloading(false);
+        return;
+      }
+      
+      for (let i = 0; i < cloudCampaigns.length; i++) {
+        const cloud = cloudCampaigns[i];
+        setDownloadProgress(prev => prev ? {
+          ...prev,
+          current: i,
+          currentName: cloud.campaign_name
+        } : null);
+        
+        // Check if already exists locally
+        if (localCampaignIds.has(cloud.campaign_id)) {
+          results.push({ name: cloud.campaign_name, success: true, skipped: true });
+          setDownloadProgress(prev => prev ? { ...prev, current: i + 1, results: [...results] } : null);
+          continue;
+        }
+        
+        try {
+          // Fetch full save data
+          const { data: fullSave, error } = await supabase
+            .from('cloud_saves')
+            .select('save_data')
+            .eq('campaign_id', cloud.campaign_id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (error || !fullSave) {
+            console.error(`[DownloadCloud] Failed to fetch ${cloud.campaign_name}:`, error);
+            results.push({ name: cloud.campaign_name, success: false });
+          } else {
+            // Save to local storage
+            const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
+            localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+            
+            // Update local index
+            const indexRaw = localStorage.getItem('lwe_campaign_index');
+            const index = indexRaw ? JSON.parse(indexRaw) : [];
+            const exists = index.some((c: { id: string }) => c.id === cloud.campaign_id);
+            if (!exists) {
+              index.push({
+                id: cloud.campaign_id,
+                name: cloud.campaign_name,
+                primaryGenre: cloud.primary_genre,
+                secondaryGenres: [],
+                createdAt: new Date(cloud.updated_at).getTime(),
+                updatedAt: new Date(cloud.updated_at).getTime(),
+                playTime: cloud.play_time,
+                chapterCount: cloud.chapter_count,
+                characterName: cloud.character_name,
+                characterLevel: cloud.character_level,
+              });
+              localStorage.setItem('lwe_campaign_index', JSON.stringify(index));
+            }
+            
+            results.push({ name: cloud.campaign_name, success: true });
+          }
+        } catch (err) {
+          console.error(`[DownloadCloud] Error downloading ${cloud.campaign_name}:`, err);
+          results.push({ name: cloud.campaign_name, success: false });
+        }
+        
+        setDownloadProgress(prev => prev ? { ...prev, current: i + 1, results: [...results] } : null);
+      }
+      
+      const downloaded = results.filter(r => r.success && !r.skipped).length;
+      const skipped = results.filter(r => r.skipped).length;
+      const failed = results.filter(r => !r.success).length;
+      
+      if (failed > 0) {
+        toast.warning(`Downloaded ${downloaded}, skipped ${skipped}, failed ${failed}`);
+      } else if (downloaded > 0) {
+        toast.success(`Downloaded ${downloaded} campaign${downloaded > 1 ? 's' : ''}${skipped > 0 ? `, ${skipped} already local` : ''}`);
+      } else if (skipped > 0) {
+        toast.info('All cloud campaigns already exist locally');
+      }
+      
+      // Reload page to refresh campaign list
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [cloudCampaigns, campaigns]);
+  
+  // Download single campaign
+  const handleDownloadSingle = useCallback(async (cloud: CloudCampaignInfo) => {
+    const localExists = campaigns.some(c => c.id === cloud.campaign_id);
+    if (localExists) {
+      toast.info('Campaign already exists locally');
+      return;
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Not authenticated');
+        return;
+      }
+      
+      const { data: fullSave, error } = await supabase
+        .from('cloud_saves')
+        .select('save_data')
+        .eq('campaign_id', cloud.campaign_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (error || !fullSave) {
+        toast.error('Failed to download campaign');
+        return;
+      }
+      
+      const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
+      localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+      
+      const indexRaw = localStorage.getItem('lwe_campaign_index');
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      index.push({
+        id: cloud.campaign_id,
+        name: cloud.campaign_name,
+        primaryGenre: cloud.primary_genre,
+        secondaryGenres: [],
+        createdAt: new Date(cloud.updated_at).getTime(),
+        updatedAt: new Date(cloud.updated_at).getTime(),
+        playTime: cloud.play_time,
+        chapterCount: cloud.chapter_count,
+        characterName: cloud.character_name,
+        characterLevel: cloud.character_level,
+      });
+      localStorage.setItem('lwe_campaign_index', JSON.stringify(index));
+      
+      toast.success(`Downloaded "${cloud.campaign_name}"`);
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      console.error('[DownloadCloud] Single download error:', err);
+      toast.error('Failed to download campaign');
+    }
+  }, [campaigns]);
+  
   // Sort campaigns by last updated
   const sortedCampaigns = [...campaigns].sort((a, b) => b.updatedAt - a.updatedAt);
   
@@ -435,6 +661,17 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               </Button>
             )}
             
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenDownloadDialog}
+                className="gap-2"
+              >
+                <CloudDownload className="h-4 w-4" />
+                Download
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -802,6 +1039,183 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               <Button onClick={() => {
                 setShowSyncAllDialog(false);
                 setSyncProgress(null);
+              }}>
+                Done
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Download from Cloud Dialog */}
+      <Dialog open={showDownloadDialog} onOpenChange={(open) => {
+        if (!open && !isDownloading) {
+          setShowDownloadDialog(false);
+          setDownloadProgress(null);
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CloudDownload className="h-5 w-5 text-primary" />
+              Download from Cloud
+            </DialogTitle>
+            <DialogDescription>
+              {!downloadProgress ? (
+                <span>
+                  Restore campaigns saved in the cloud to this device.
+                </span>
+              ) : (
+                <span>
+                  Downloading campaigns...
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Loading State */}
+          {isLoadingCloud && (
+            <div className="py-8 flex flex-col items-center gap-3">
+              <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading cloud campaigns...</p>
+            </div>
+          )}
+          
+          {/* Cloud Campaigns List */}
+          {!isLoadingCloud && !downloadProgress && (
+            <div className="py-4">
+              {cloudCampaigns.length === 0 ? (
+                <div className="text-center py-6">
+                  <Cloud className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No campaigns found in cloud</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Use "Sync All" to upload your local campaigns
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                  {cloudCampaigns.map((cloud) => {
+                    const existsLocally = campaigns.some(c => c.id === cloud.campaign_id);
+                    return (
+                      <div
+                        key={cloud.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-card transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground truncate">
+                              {cloud.campaign_name}
+                            </span>
+                            <Badge variant="outline" className={GENRE_COLORS[cloud.primary_genre] || 'bg-muted'}>
+                              {cloud.primary_genre}
+                            </Badge>
+                            {existsLocally && (
+                              <Badge variant="secondary" className="text-xs">
+                                Local
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {cloud.character_name} Lv.{cloud.character_level}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatPlayTime(cloud.play_time)}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadSingle(cloud)}
+                          disabled={existsLocally}
+                          className="ml-2"
+                        >
+                          {existsLocally ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Download Progress */}
+          {downloadProgress && (
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Progress</span>
+                  <span>{downloadProgress.current} / {downloadProgress.total}</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300 ease-out"
+                    style={{ width: `${(downloadProgress.current / downloadProgress.total) * 100}%` }}
+                  />
+                </div>
+                {downloadProgress.current < downloadProgress.total && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Downloading: {downloadProgress.currentName}
+                  </p>
+                )}
+              </div>
+              
+              {downloadProgress.results.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {downloadProgress.results.map((result, i) => (
+                    <div 
+                      key={i}
+                      className={`flex items-center gap-2 text-sm p-2 rounded ${
+                        result.success 
+                          ? result.skipped
+                            ? 'bg-muted/50 text-muted-foreground'
+                            : 'bg-green-500/10 text-green-400'
+                          : 'bg-destructive/10 text-destructive'
+                      }`}
+                    >
+                      {result.success ? (
+                        <Check className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <X className="h-4 w-4 shrink-0" />
+                      )}
+                      <span className="truncate">{result.name}</span>
+                      {result.skipped && (
+                        <span className="text-xs text-muted-foreground ml-auto">(already local)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            {!isDownloading && !downloadProgress && (
+              <>
+                <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
+                  Cancel
+                </Button>
+                {cloudCampaigns.length > 0 && (
+                  <Button onClick={handleDownloadAll} className="gap-2">
+                    <CloudDownload className="h-4 w-4" />
+                    Download All ({cloudCampaigns.length})
+                  </Button>
+                )}
+              </>
+            )}
+            {downloadProgress && downloadProgress.current === downloadProgress.total && (
+              <Button onClick={() => {
+                setShowDownloadDialog(false);
+                setDownloadProgress(null);
               }}>
                 Done
               </Button>
