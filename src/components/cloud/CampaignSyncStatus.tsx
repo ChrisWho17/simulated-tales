@@ -1,21 +1,64 @@
 // ============================================================================
-// CAMPAIGN SYNC STATUS - Shows sync status badge for individual campaigns
+// CAMPAIGN SYNC STATUS - Real-time sync status badge for individual campaigns
+// Uses UnifiedSaveArchitecture for consistent state
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/hooks/useAuth';
-import { CloudSyncService } from '@/services/cloudSyncService';
-import { Cloud, CloudOff, Upload, Check, Loader2 } from 'lucide-react';
+import { 
+  UnifiedSaveArchitecture, 
+  SyncState,
+  CampaignSyncStatus as SyncStatusType 
+} from '@/services/unifiedSaveArchitecture';
+import { Cloud, CloudOff, Upload, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CampaignSyncStatusProps {
   campaignId: string;
-  variant?: 'badge' | 'icon' | 'button';
+  variant?: 'badge' | 'icon' | 'compact';
   showUpload?: boolean;
   className?: string;
 }
+
+const STATE_CONFIG: Record<SyncState, {
+  icon: React.ReactNode;
+  color: string;
+  label: string;
+  tooltip: string;
+}> = {
+  synced: {
+    icon: <Cloud className="h-3 w-3" />,
+    color: 'text-green-500',
+    label: 'Synced',
+    tooltip: 'Saved to cloud',
+  },
+  pending: {
+    icon: <RefreshCw className="h-3 w-3 animate-spin" />,
+    color: 'text-yellow-500',
+    label: 'Syncing...',
+    tooltip: 'Syncing to cloud...',
+  },
+  conflict: {
+    icon: <AlertCircle className="h-3 w-3" />,
+    color: 'text-orange-500',
+    label: 'Conflict',
+    tooltip: 'Sync conflict detected - resolve in settings',
+  },
+  error: {
+    icon: <AlertCircle className="h-3 w-3" />,
+    color: 'text-red-500',
+    label: 'Error',
+    tooltip: 'Sync failed - will retry',
+  },
+  offline: {
+    icon: <CloudOff className="h-3 w-3" />,
+    color: 'text-muted-foreground',
+    label: 'Local',
+    tooltip: 'Sign in to enable cloud sync',
+  },
+};
 
 export function CampaignSyncStatus({ 
   campaignId, 
@@ -23,45 +66,102 @@ export function CampaignSyncStatus({
   showUpload = true,
   className 
 }: CampaignSyncStatusProps) {
-  const { isAuthenticated } = useAuth();
-  const [isSynced, setIsSynced] = useState(false);
+  const [syncState, setSyncState] = useState<SyncState>('offline');
   const [isUploading, setIsUploading] = useState(false);
+  const [isCloudMode, setIsCloudMode] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Check if this campaign is synced
-      setIsSynced(CloudSyncService.isCampaignSynced(campaignId));
-      
-      // Refresh synced status when service updates
-      const refresh = async () => {
-        await CloudSyncService.refreshSyncedCampaigns();
-        setIsSynced(CloudSyncService.isCampaignSynced(campaignId));
-      };
-      
-      // Initial refresh
-      refresh();
+    // Check initial state
+    const account = UnifiedSaveArchitecture.getAccount();
+    setIsCloudMode(account.mode === 'cloud');
+    
+    // Get initial sync status
+    const status = UnifiedSaveArchitecture.getSyncStatus(campaignId);
+    if (status) {
+      setSyncState(status.state);
+    } else if (account.mode === 'cloud') {
+      setSyncState('synced'); // Assume synced if no specific status
+    } else {
+      setSyncState('offline');
     }
-  }, [isAuthenticated, campaignId]);
+    
+    // Subscribe to account changes
+    const unsubAccount = UnifiedSaveArchitecture.onAccountChange((newAccount) => {
+      setIsCloudMode(newAccount.mode === 'cloud');
+      if (newAccount.mode !== 'cloud') {
+        setSyncState('offline');
+      }
+    });
+    
+    // Subscribe to sync status changes for this campaign
+    const unsubSync = UnifiedSaveArchitecture.onSyncStatusChange((status) => {
+      if (status.campaignId === campaignId) {
+        setSyncState(status.state);
+      }
+    });
+    
+    return () => {
+      unsubAccount();
+      unsubSync();
+    };
+  }, [campaignId]);
 
-  const handleUpload = async (e: React.MouseEvent) => {
+  const handleForceSync = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) return;
+    if (!isCloudMode) return;
     
     setIsUploading(true);
-    const result = await CloudSyncService.uploadCampaign(campaignId);
-    if (result.success) {
-      setIsSynced(true);
+    setSyncState('pending');
+    
+    try {
+      const campaign = await UnifiedSaveArchitecture.loadCampaign(campaignId);
+      if (campaign) {
+        const result = await UnifiedSaveArchitecture.saveCampaign(campaign);
+        if (result.syncedToCloud) {
+          setSyncState('synced');
+        } else if (result.error) {
+          setSyncState('error');
+        }
+      }
+    } catch {
+      setSyncState('error');
+    } finally {
+      setIsUploading(false);
     }
-    setIsUploading(false);
-  };
+  }, [campaignId, isCloudMode]);
 
-  if (!isAuthenticated) {
-    if (variant === 'icon') {
+  const config = STATE_CONFIG[syncState];
+
+  // Compact variant - just a small icon
+  if (variant === 'compact') {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn('inline-flex', config.color, className)}>
+              {isUploading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                config.icon
+              )}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="text-xs">{config.tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // Icon variant with optional upload button
+  if (variant === 'icon') {
+    if (!isCloudMode) {
       return (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <CloudOff className={`h-4 w-4 text-muted-foreground ${className}`} />
+              <CloudOff className={cn('h-4 w-4 text-muted-foreground', className)} />
             </TooltipTrigger>
             <TooltipContent>
               <p>Sign in to enable cloud sync</p>
@@ -70,100 +170,102 @@ export function CampaignSyncStatus({
         </TooltipProvider>
       );
     }
-    return null;
-  }
 
-  if (variant === 'icon') {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            {isUploading ? (
-              <Loader2 className={`h-4 w-4 animate-spin text-primary ${className}`} />
-            ) : isSynced ? (
-              <Cloud className={`h-4 w-4 text-green-500 ${className}`} />
-            ) : showUpload ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-6 w-6 ${className}`}
-                onClick={handleUpload}
-              >
-                <Upload className="h-3 w-3" />
-              </Button>
-            ) : (
-              <CloudOff className={`h-4 w-4 text-muted-foreground ${className}`} />
-            )}
+            <span className={cn('inline-flex', className)}>
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : syncState === 'pending' ? (
+                <RefreshCw className="h-4 w-4 animate-spin text-yellow-500" />
+              ) : syncState === 'synced' ? (
+                <Cloud className="h-4 w-4 text-green-500" />
+              ) : syncState === 'conflict' || syncState === 'error' ? (
+                showUpload ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleForceSync}
+                  >
+                    <Upload className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <AlertCircle className={cn('h-4 w-4', config.color)} />
+                )
+              ) : (
+                <CloudOff className="h-4 w-4 text-muted-foreground" />
+              )}
+            </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{isSynced ? 'Synced to cloud' : 'Not synced'}</p>
+            <p>{config.tooltip}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
   }
 
-  if (variant === 'button') {
-    if (isSynced) {
-      return (
-        <Badge variant="secondary" className={`text-xs ${className}`}>
-          <Check className="h-3 w-3 mr-1" />
-          Synced
-        </Badge>
-      );
-    }
-    
-    if (!showUpload) return null;
-    
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleUpload}
-        disabled={isUploading}
-        className={className}
-      >
-        {isUploading ? (
-          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-        ) : (
-          <Upload className="h-3 w-3 mr-1" />
-        )}
-        Backup
-      </Button>
-    );
-  }
-
   // Default badge variant
-  if (isSynced) {
+  if (!isCloudMode) {
     return (
-      <Badge variant="secondary" className={`text-xs ${className}`}>
-        <Cloud className="h-3 w-3 mr-1 text-green-500" />
-        Cloud
-      </Badge>
-    );
-  }
-
-  if (!showUpload) {
-    return (
-      <Badge variant="outline" className={`text-xs text-muted-foreground ${className}`}>
-        <CloudOff className="h-3 w-3 mr-1" />
+      <Badge variant="outline" className={cn('text-xs text-muted-foreground gap-1', className)}>
+        <CloudOff className="h-3 w-3" />
         Local
       </Badge>
     );
   }
 
+  if (syncState === 'synced') {
+    return (
+      <Badge variant="secondary" className={cn('text-xs gap-1', className)}>
+        <Cloud className="h-3 w-3 text-green-500" />
+        Cloud
+      </Badge>
+    );
+  }
+
+  if (syncState === 'pending') {
+    return (
+      <Badge variant="secondary" className={cn('text-xs gap-1', className)}>
+        <RefreshCw className="h-3 w-3 animate-spin text-yellow-500" />
+        Syncing
+      </Badge>
+    );
+  }
+
+  if (syncState === 'conflict') {
+    return (
+      <Badge variant="outline" className={cn('text-xs gap-1 border-orange-500/50 text-orange-400', className)}>
+        <AlertCircle className="h-3 w-3" />
+        Conflict
+      </Badge>
+    );
+  }
+
+  if (syncState === 'error' && showUpload) {
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn('text-xs gap-1 cursor-pointer hover:bg-muted', className)}
+        onClick={handleForceSync}
+      >
+        {isUploading ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Upload className="h-3 w-3" />
+        )}
+        Retry
+      </Badge>
+    );
+  }
+
   return (
-    <Badge 
-      variant="outline" 
-      className={`text-xs cursor-pointer hover:bg-muted ${className}`}
-      onClick={handleUpload}
-    >
-      {isUploading ? (
-        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-      ) : (
-        <Upload className="h-3 w-3 mr-1" />
-      )}
-      Backup
+    <Badge variant="outline" className={cn('text-xs gap-1 text-muted-foreground', className)}>
+      <CloudOff className="h-3 w-3" />
+      Local
     </Badge>
   );
 }
