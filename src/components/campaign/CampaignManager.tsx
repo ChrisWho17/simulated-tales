@@ -142,7 +142,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   }
   
   // Handle continue/load campaign with recovery
-  const handleContinue = useCallback((campaign: CampaignMetadata) => {
+  const handleContinue = useCallback(async (campaign: CampaignMetadata) => {
     // First, try to load and validate the campaign
     const rawData = loadCampaignData(campaign.id);
     
@@ -172,8 +172,8 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       return;
     }
     
-    // Campaign is valid, load normally
-    const success = loadCampaign(campaign.id);
+    // Campaign is valid, load normally - AWAIT the async function
+    const success = await loadCampaign(campaign.id);
     if (success) {
       onSelectCampaign();
     } else {
@@ -182,10 +182,10 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
   }, [loadCampaign, onSelectCampaign]);
   
   // Handle recovery success
-  const handleRecovered = useCallback((save: unknown) => {
+  const handleRecovered = useCallback(async (save: unknown) => {
     if (pendingCampaignId) {
-      // Re-save the recovered data and load
-      const success = loadCampaign(pendingCampaignId);
+      // Re-save the recovered data and load - AWAIT the async function
+      const success = await loadCampaign(pendingCampaignId);
       if (success) {
         toast.success('Campaign recovered and loaded');
         setShowRecoveryModal(false);
