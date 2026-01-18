@@ -2951,53 +2951,21 @@ export function CheatModeSplash({
               </Button>
             </div>
             
-            {/* Screen Navigation - Horizontal Slider */}
-            <div className="flex items-center gap-2 px-2 py-2 border-b border-border/50 bg-muted/20">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goLeft}
-                disabled={!canGoLeft}
-                className="h-8 w-8 flex-shrink-0"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              
-              <div 
-                className="flex-1 overflow-x-auto scrollbar-hide"
-                style={{ 
-                  scrollbarWidth: 'none', 
-                  msOverflowStyle: 'none',
-                  WebkitOverflowScrolling: 'touch'
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-max px-1">
-                  {SCREENS.map((screen) => (
-                    <button
-                      key={screen.id}
-                      onClick={() => goToScreen(screen.id)}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                        currentScreen === screen.id
-                          ? 'bg-primary text-primary-foreground shadow-md'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      }`}
-                    >
-                      {screen.icon}
-                      <span>{screen.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goRight}
-                disabled={!canGoRight}
-                className="h-8 w-8 flex-shrink-0"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            {/* Screen Navigation - Simple Tabs */}
+            <div className="flex items-center justify-center gap-1 px-3 py-2 border-b border-border/50 bg-muted/20">
+              {SCREENS.map((screen) => (
+                <button
+                  key={screen.id}
+                  onClick={() => goToScreen(screen.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    currentScreen === screen.id
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  {screen.icon}
+                </button>
+              ))}
             </div>
             
             {/* Content - Native scrolling for mobile compatibility */}
