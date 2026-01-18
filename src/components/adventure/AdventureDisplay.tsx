@@ -98,6 +98,9 @@ import { useAchievementTriggers } from '@/hooks/useAchievementTriggers';
 // Cheat mode integration
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
 
+// Companion story events integration
+import { CompanionStoryEventsContainer } from '@/components/game/CompanionStoryEvents';
+
 // Inventory system integration
 import { 
   useInventory, 
@@ -2556,6 +2559,14 @@ export function AdventureDisplay({
           window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
         }}
         onRestart={onRestart}
+      />
+      
+      {/* Companion Story Events - introductions and resurrections */}
+      <CompanionStoryEventsContainer
+        onInjectToStory={(text) => {
+          // Trigger the companion story as a narrator entry via the player action handler
+          onPlayerAction(`[COMPANION EVENT] ${text}`);
+        }}
       />
     </div>
   );
