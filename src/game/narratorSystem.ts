@@ -14,9 +14,12 @@ export type NarratorVoice =
   | 'OMNISCIENT'    // Knows all, reveals selectively
   | 'NOIR';         // Hard-boiled detective style
 
+// Description levels align with director settings
+export type DescriptionDetail = 'VAGUE' | 'MINIMAL' | 'MODERATE' | 'DETAILED' | 'VIVID';
+
 export interface NarratorContract {
   voice: NarratorVoice;
-  maxDetail: 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
+  maxDetail: DescriptionDetail;
   emotionalLeakage: boolean; // Does player mental state affect prose?
   timeCompression: boolean; // Compress mundane events?
   unreliabilityLevel: number; // 0-100, higher = more distortion
@@ -217,17 +220,26 @@ function getProseGuidelines(contract: NarratorContract): string[] {
   }
   
   switch (contract.maxDetail) {
-    case 'SPARSE':
-      guidelines.push('Use minimal description. Let gaps speak.');
+    case 'VAGUE':
+      guidelines.push('Be extremely brief. One or two sentences max. Leave almost everything to imagination.');
+      guidelines.push('Skip sensory details entirely. Focus only on what changes.');
+      break;
+    case 'MINIMAL':
+      guidelines.push('Use minimal description. Essential facts only.');
+      guidelines.push('Avoid adjectives and metaphors. Be direct and sparse.');
       break;
     case 'MODERATE':
       guidelines.push('Balance description with forward momentum.');
+      guidelines.push('Include key sensory details but don\'t linger.');
       break;
-    case 'RICH':
+    case 'DETAILED':
       guidelines.push('Layer sensory details to build atmosphere.');
+      guidelines.push('Describe environments, characters, and moods with care.');
       break;
-    case 'DENSE':
+    case 'VIVID':
       guidelines.push('Miss nothing. Every surface tells a story.');
+      guidelines.push('Use rich metaphors, elaborate prose, and immersive sensory descriptions.');
+      guidelines.push('Paint full scenes with texture, sound, smell, and emotional resonance.');
       break;
   }
   

@@ -26,10 +26,22 @@ export type DirectorNarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNR
 
 export interface DirectorNarratorProfile {
   voice: DirectorNarratorVoice;
-  detailLevel: 'SPARSE' | 'MODERATE' | 'RICH' | 'DENSE';
+  detailLevel: 'VAGUE' | 'MINIMAL' | 'MODERATE' | 'DETAILED' | 'VIVID';
   emotionalLeakage: boolean;
   narrativeHooks: string[];
   openingStyle: string;
+}
+
+// Convert DescriptionLevel setting to narrator detail type
+export function getDescriptionDetailFromLevel(level: DescriptionLevel): 'VAGUE' | 'MINIMAL' | 'MODERATE' | 'DETAILED' | 'VIVID' {
+  const mapping: Record<DescriptionLevel, 'VAGUE' | 'MINIMAL' | 'MODERATE' | 'DETAILED' | 'VIVID'> = {
+    'vague': 'VAGUE',
+    'minimal': 'MINIMAL',
+    'balanced': 'MODERATE',
+    'detailed': 'DETAILED',
+    'vivid': 'VIVID',
+  };
+  return mapping[level] || 'MODERATE';
 }
 
 export type PersonalityLevel = 'soft' | 'honest' | 'brutal';
@@ -634,21 +646,21 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   // Story & Pacing
   cinematic: {
     voice: 'THEATRICAL',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Cliffhangers at scene breaks', 'Dramatic reveals timed perfectly', 'Scene transitions feel like film cuts'],
     openingStyle: 'The camera finds you in medias res, already in motion, already in peril. The world unfolds like a blockbuster—every moment matters, every choice echoes.',
   },
   tight_editor: {
     voice: 'CLINICAL',
-    detailLevel: 'SPARSE',
+    detailLevel: 'MINIMAL',
     emotionalLeakage: false,
     narrativeHooks: ['Brevity is power', 'No wasted words', 'Action over description'],
     openingStyle: 'You arrive. The situation is clear. Time to move.',
   },
   slow_burn: {
     voice: 'LITERARY',
-    detailLevel: 'DENSE',
+    detailLevel: 'VIVID',
     emotionalLeakage: true,
     narrativeHooks: ['Tension builds imperceptibly', 'Small details foreshadow', 'Patience rewards the attentive'],
     openingStyle: 'Something is wrong. You can taste it in the air—a wrongness beneath the ordinary. The world holds its breath, and so do you.',
@@ -662,7 +674,7 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   revenge_arc: {
     voice: 'VENGEFUL',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Every enemy is named and remembered', 'Setbacks fuel determination', 'The reckoning is inevitable'],
     openingStyle: 'They took everything from you. Your peace. Your purpose. Your people. But they left you alive—their first mistake, and their last. This is where the debt begins to be paid.',
@@ -678,7 +690,7 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   yes_and: {
     voice: 'THEATRICAL',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Every idea finds a home', 'Chaos is opportunity', 'Reality bends to creativity'],
     openingStyle: 'Reality is more flexible than most believe. You\'ve always known this. Today, you prove it.',
@@ -692,14 +704,14 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   hands_off: {
     voice: 'OBJECTIVE',
-    detailLevel: 'SPARSE',
+    detailLevel: 'MINIMAL',
     emotionalLeakage: false,
     narrativeHooks: ['The world moves without you', 'Minimal narration, maximum immersion', 'You are a visitor here'],
     openingStyle: 'You are here. The world continues its business. What you do next is your concern.',
   },
   red_velvet: {
     voice: 'INTIMATE',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Desire guides the narrative', 'Emotional connection deepens', 'Sensuality is an art form'],
     openingStyle: 'The room is warm. The atmosphere electric. Eyes meet across the space, and something unspoken passes between you.',
@@ -715,7 +727,7 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   survival_warden: {
     voice: 'CLINICAL',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Every resource matters', 'Injuries accumulate', 'Survival is the goal'],
     openingStyle: 'Hunger gnaws. Cold bites. Your supplies won\'t last. In this place, staying alive is victory enough.',
@@ -738,28 +750,28 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   // Mystery & Mindgame
   mystery_keeper: {
     voice: 'UNRELIABLE',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: false,
     narrativeHooks: ['Information is currency', 'Clues hide in plain sight', 'Nothing is coincidence'],
     openingStyle: 'Something doesn\'t add up. The details that should fit... don\'t. And you\'re the only one who seems to notice.',
   },
   conspiracy_weaver: {
     voice: 'UNRELIABLE',
-    detailLevel: 'DENSE',
+    detailLevel: 'VIVID',
     emotionalLeakage: true,
     narrativeHooks: ['Everything connects', 'Paranoia is wisdom', 'Trust is dangerous'],
     openingStyle: 'They\'re watching. They\'ve always been watching. The question isn\'t whether the conspiracy exists—it\'s how deep it goes.',
   },
   puzzle_master: {
     voice: 'OMNISCIENT',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: false,
     narrativeHooks: ['Locks have keys', 'Patterns reveal answers', 'Progress is always possible'],
     openingStyle: 'The mechanism waits. Complex, ancient, beautiful. Somewhere in its design lies the answer. Find it.',
   },
   truth_serum: {
     voice: 'OBJECTIVE',
-    detailLevel: 'SPARSE',
+    detailLevel: 'MINIMAL',
     emotionalLeakage: false,
     narrativeHooks: ['Facts are labeled clearly', 'Assumptions are challenged', 'Clarity above all'],
     openingStyle: 'Here is what you know. Here is what you assume. Here is where they diverge.',
@@ -768,14 +780,14 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   // Social & Relationship
   romance_writer: {
     voice: 'INTIMATE',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['NPCs feel human', 'Subtext matters', 'Hearts are complicated'],
     openingStyle: 'Their eyes meet yours across the room. Something passes between you—unspoken, unnamed, undeniable.',
   },
   drama_producer: {
     voice: 'THEATRICAL',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Social friction creates heat', 'Alliances shift', 'Reputation is everything'],
     openingStyle: 'The whispers stop when you enter. Everyone has an opinion about you here. Not all of them are kind.',
@@ -789,7 +801,7 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   community_sim: {
     voice: 'LITERARY',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['NPCs have lives', 'Gossip flows naturally', 'The community breathes'],
     openingStyle: 'Morning light filters through familiar streets. Neighbors wave. The baker\'s already at work. Another day in a place that knows your name.',
@@ -798,7 +810,7 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   // Vibe & Tone
   horror_curator: {
     voice: 'UNRELIABLE',
-    detailLevel: 'DENSE',
+    detailLevel: 'VIVID',
     emotionalLeakage: true,
     narrativeHooks: ['Dread builds slowly', 'Senses become weapons', 'Fear is the point'],
     openingStyle: 'Something is wrong with the silence. Too empty. Too complete. As if the world itself is holding its breath—waiting for you to look behind you.',
@@ -812,14 +824,14 @@ export const DIRECTOR_NARRATOR_PROFILES: Record<DirectorType, DirectorNarratorPr
   },
   poet_narrator: {
     voice: 'LITERARY',
-    detailLevel: 'DENSE',
+    detailLevel: 'VIVID',
     emotionalLeakage: true,
     narrativeHooks: ['Beauty in everything', 'Prose breathes', 'Language is music'],
     openingStyle: 'There is a moment—between heartbeats, between breaths—where the world hangs suspended in amber light. This is such a moment. This is your beginning.',
   },
   noir_narrator: {
     voice: 'NOIR',
-    detailLevel: 'RICH',
+    detailLevel: 'DETAILED',
     emotionalLeakage: true,
     narrativeHooks: ['Shadows have secrets', 'Everyone lies', 'The city is cruel'],
     openingStyle: 'The rain hasn\'t stopped in three days. Neither have the lies. This city chews up the honest and spits out the survivors. You\'re still here. Make of that what you will.',
