@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle } from 'lucide-react';
+import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle, Play } from 'lucide-react';
 import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
 import { InputFormatGuide, InputHint } from './InputFormatGuide';
 import { EmotionPicker } from './EmotionPicker';
@@ -21,6 +21,7 @@ interface PlayerInputProps {
 }
 
 const quickActions = [
+  { label: 'Continue', command: 'continue', icon: Play },
   { label: 'Look', command: 'look', icon: Eye },
   { label: 'Status', command: 'status', icon: MessageSquare },
   { label: 'Inventory', command: 'inventory', icon: Backpack },
