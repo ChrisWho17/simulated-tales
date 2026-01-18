@@ -3001,11 +3001,13 @@ export function CheatModeSplash({
             </div>
             
             {/* Content with visible vertical scrollbar */}
-            <ScrollArea className="flex-1" type="always">
-              <div className="p-4 pr-6">
-                {renderCurrentScreen()}
-              </div>
-            </ScrollArea>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="h-full" type="always">
+                <div className="p-4 pr-6">
+                  {renderCurrentScreen()}
+                </div>
+              </ScrollArea>
+            </div>
             
             {/* Footer */}
             <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
