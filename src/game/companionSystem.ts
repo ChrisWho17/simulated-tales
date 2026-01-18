@@ -759,6 +759,11 @@ class CompanionSystemManager {
   }
   
   private generateAmbientComment(companion: CompanionState, situation: string): string {
+    // 40% chance to trigger quirk-based dialogue
+    if (Math.random() < 0.4 && companion.personality.quirks.length > 0) {
+      return this.generateQuirkDialogue(companion);
+    }
+    
     // Use personality quirks and catchphrases
     const quirk = companion.personality.quirks[Math.floor(Math.random() * companion.personality.quirks.length)];
     const catchphrase = companion.personality.catchphrases[
@@ -775,6 +780,128 @@ class CompanionSystemManager {
     ];
     
     return comments[Math.floor(Math.random() * comments.length)];
+  }
+  
+  /**
+   * Generate dialogue that naturally incorporates a companion's personality quirk
+   */
+  private generateQuirkDialogue(companion: CompanionState): string {
+    const quirk = companion.personality.quirks[Math.floor(Math.random() * companion.personality.quirks.length)];
+    
+    // Quirk-specific dialogue templates that make quirks feel natural
+    const quirkDialogueTemplates: Record<string, string[]> = {
+      // Nervous habits
+      'polishes weapon when nervous': [
+        `*absently polishes weapon* Something feels off about this place...`,
+        `*running cloth over blade edge* Sorry, it helps me think.`,
+        `*inspecting weapon for the third time* Old habit. Can't help it.`,
+      ],
+      'counts coins when idle': [
+        `*jingling coins in pouch* Just making sure we're still solvent.`,
+        `*stacking coins quietly* Fifty-two... fifty-three... ah, sorry, were you saying something?`,
+        `*thumbing through currency* A little inventory never hurt anyone.`,
+      ],
+      'talks to animals': [
+        `*whispering to a nearby bird* Don't mind me, just asking about the local gossip.`,
+        `That stray dog says there's trouble ahead. Animals always know.`,
+        `*cooing at an insect* Even the smallest creatures have stories to tell.`,
+      ],
+      'sleeps outside': [
+        `I'll take first watch. Besides, I prefer sleeping under the stars anyway.`,
+        `*looking at the sky* Nothing like open air. Walls make me feel trapped.`,
+        `Don't worry about finding me a bed - I'll be out here where I belong.`,
+      ],
+      'stares into middle distance': [
+        `*gazing at nothing in particular* ...Hmm? Oh, just thinking.`,
+        `*distant look in eyes* The patterns of fate are... intricate.`,
+        `*lost in thought* ...What? I was contemplating possibilities.`,
+      ],
+      'mutters incantations': [
+        `*whispering arcane words* Just keeping the magic warm.`,
+        `*lips moving silently* Old protective ward. Force of habit.`,
+        `*mumbling something mystical* ...What? The words must be spoken daily or they lose power.`,
+      ],
+      'winks too much': [
+        `*winks* Trust me on this one.`,
+        `*conspiratorial wink* You know what I mean.`,
+        `*double wink* I've got a plan. Don't worry about the details.`,
+      ],
+      'always has an exit planned': [
+        `*glancing at doorways* Just noting our options. Never hurts to be prepared.`,
+        `If things go south, there's a window on the east wall. Just saying.`,
+        `*studying the room layout* Three exits. Two accessible. We're fine.`,
+      ],
+      'uncomfortable in cities': [
+        `*shifting uneasily* Too many people. Too much stone. Can't breathe.`,
+        `*flinching at noise* How does anyone live like this?`,
+        `Let's finish our business here quickly. Cities aren't good for the soul.`,
+      ],
+      'never explains fully': [
+        `There are... reasons. Best left unsaid.`,
+        `You'll understand. Eventually. Or you won't. Either way.`,
+        `*cryptic smile* Some knowledge must be earned, not given.`,
+      ],
+      'always faces the door': [
+        `*positioning self by exit* Old training. Never let them surprise you.`,
+        `*taking seat facing entrance* Habit. Can't shake it.`,
+        `I'll stand here if you don't mind. Better sightlines.`,
+      ],
+      'never sits with back to entrance': [
+        `*moving to different seat* That spot's exposed. This is safer.`,
+        `No offense, but I'll take this chair. Call it paranoia.`,
+        `*adjusting position* Old soldier's reflex. Saved my life more than once.`,
+      ],
+    };
+    
+    // Check if we have specific dialogue for this quirk
+    for (const [quirkKey, dialogues] of Object.entries(quirkDialogueTemplates)) {
+      if (quirk.toLowerCase().includes(quirkKey.toLowerCase().split(' ')[0])) {
+        return dialogues[Math.floor(Math.random() * dialogues.length)];
+      }
+    }
+    
+    // Generic quirk-based dialogue for quirks without specific templates
+    const genericQuirkDialogues = [
+      `*${quirk}* Sorry, it's just something I do.`,
+      `*${quirk}* Don't mind me.`,
+      `*${quirk}* Old habit. Can't seem to shake it.`,
+      `*${quirk}* It's... a thing. From before.`,
+      `*${quirk}* Helps me focus, honestly.`,
+    ];
+    
+    return genericQuirkDialogues[Math.floor(Math.random() * genericQuirkDialogues.length)];
+  }
+  
+  /**
+   * Force trigger a quirk-based comment for a specific companion
+   * Can be called externally when you want to ensure quirk dialogue happens
+   */
+  triggerQuirkDialogue(companionId: string): { companion: CompanionState; comment: string } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion || companion.personality.quirks.length === 0) return null;
+    
+    const comment = this.generateQuirkDialogue(companion);
+    companion.lastSpoke = Date.now();
+    return { companion, comment };
+  }
+  
+  /**
+   * Get quirk-triggered commentary from a random active companion
+   * Higher chance to trigger than regular ambient comments
+   */
+  getQuirkCommentary(): { companion: CompanionState; comment: string } | null {
+    const activeWithQuirks = this.activeCompanions
+      .map(id => this.companions.get(id))
+      .filter((c): c is CompanionState => 
+        c !== undefined && 
+        c.status === 'active' && 
+        c.personality.quirks.length > 0
+      );
+    
+    if (activeWithQuirks.length === 0) return null;
+    
+    const companion = activeWithQuirks[Math.floor(Math.random() * activeWithQuirks.length)];
+    return this.triggerQuirkDialogue(companion.id);
   }
   
   // ========== PUBLIC GETTERS ==========
