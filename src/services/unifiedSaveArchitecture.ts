@@ -131,7 +131,7 @@ class UnifiedSaveArchitectureClass {
     }
     
     // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         this.account = {
           mode: 'cloud',
@@ -142,8 +142,16 @@ class UnifiedSaveArchitectureClass {
         };
         this.notifyAccountChange();
         
-        // Migrate local saves to cloud
-        await this.migrateLocalToCloud();
+        // Use setTimeout to defer async operations (prevents Supabase deadlock)
+        setTimeout(async () => {
+          // Migrate local saves to cloud
+          const migrated = await this.migrateLocalToCloud();
+          if (migrated > 0) {
+            console.log(`[UnifiedSave] Auto-migrated ${migrated} local campaigns to cloud`);
+          }
+          // Also sync cloud saves down to local
+          await this.syncCloudToLocal();
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         this.account = { mode: 'local-only' };
         this.notifyAccountChange();
@@ -594,23 +602,100 @@ class UnifiedSaveArchitectureClass {
   }
   
   async migrateLocalToCloud(): Promise<number> {
-    if (this.account.mode !== 'cloud') return 0;
+    if (this.account.mode !== 'cloud' || !this.account.userId) return 0;
     
     let migrated = 0;
     const localIndex = this.loadCampaignIndex();
     
+    console.log(`[UnifiedSave] Checking ${localIndex.length} local campaigns for migration...`);
+    
+    // First, get all cloud campaigns for this user
+    const { data: cloudSaves } = await supabase
+      .from('cloud_saves')
+      .select('campaign_id, updated_at')
+      .eq('user_id', this.account.userId);
+    
+    const cloudCampaignMap = new Map(
+      (cloudSaves || []).map(s => [s.campaign_id, new Date(s.updated_at).getTime()])
+    );
+    
     for (const local of localIndex) {
       const localData = this.loadLocalCampaign(local.id);
-      if (localData) {
+      if (!localData) continue;
+      
+      const cloudUpdatedAt = cloudCampaignMap.get(local.id);
+      const localUpdatedAt = localData.meta.updatedAt || 0;
+      
+      // Only migrate if:
+      // 1. Campaign doesn't exist in cloud, OR
+      // 2. Local version is newer than cloud version
+      if (!cloudUpdatedAt || localUpdatedAt > cloudUpdatedAt) {
+        console.log(`[UnifiedSave] Migrating campaign "${local.name}" to cloud (local: ${localUpdatedAt}, cloud: ${cloudUpdatedAt || 'none'})`);
         const result = await this.saveToCloud(localData);
         if (result.success) {
           migrated++;
+          this.updateSyncStatus(local.id, { state: 'synced' });
+        } else {
+          console.warn(`[UnifiedSave] Failed to migrate "${local.name}":`, result.error);
         }
+      } else {
+        // Cloud is same or newer, mark as synced
+        this.updateSyncStatus(local.id, { state: 'synced' });
       }
     }
     
     console.log(`[UnifiedSave] Migrated ${migrated} campaigns to cloud`);
     return migrated;
+  }
+  
+  async syncCloudToLocal(): Promise<number> {
+    if (this.account.mode !== 'cloud' || !this.account.userId) return 0;
+    
+    let synced = 0;
+    
+    try {
+      const { data: cloudSaves, error } = await supabase
+        .from('cloud_saves')
+        .select('campaign_id, campaign_name, save_data, updated_at, checksum')
+        .eq('user_id', this.account.userId);
+      
+      if (error) {
+        console.error('[UnifiedSave] Failed to fetch cloud saves:', error);
+        return 0;
+      }
+      
+      const localIndex = this.loadCampaignIndex();
+      const localMap = new Map(localIndex.map(c => [c.id, c]));
+      
+      for (const cloud of cloudSaves || []) {
+        const localMeta = localMap.get(cloud.campaign_id);
+        const cloudUpdatedAt = new Date(cloud.updated_at).getTime();
+        
+        // Only download if cloud is newer or doesn't exist locally
+        if (!localMeta || cloudUpdatedAt > (localMeta.updatedAt || 0)) {
+          const saveData = cloud.save_data as { compressed?: string };
+          if (saveData?.compressed) {
+            const campaign = decompressCampaign(saveData.compressed);
+            if (campaign) {
+              console.log(`[UnifiedSave] Syncing cloud campaign "${cloud.campaign_name}" to local`);
+              await this.saveLocal(campaign);
+              synced++;
+              this.updateSyncStatus(cloud.campaign_id, { 
+                state: 'synced',
+                cloudChecksum: cloud.checksum,
+                cloudUpdatedAt: cloudUpdatedAt,
+              });
+            }
+          }
+        }
+      }
+      
+      console.log(`[UnifiedSave] Synced ${synced} cloud campaigns to local`);
+    } catch (error) {
+      console.error('[UnifiedSave] Cloud-to-local sync failed:', error);
+    }
+    
+    return synced;
   }
   
   // ============================================================================

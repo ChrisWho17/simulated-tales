@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { 
   UnifiedSaveArchitecture, 
   UnifiedAccount, 
@@ -29,16 +30,31 @@ export function useCloudSyncStatus() {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(
     UnifiedSaveArchitecture.getAccount().lastSyncedAt || null
   );
+  const [migrationCount, setMigrationCount] = useState(0);
   
   useEffect(() => {
     // Initialize the architecture
     UnifiedSaveArchitecture.initialize();
     
+    // Track previous mode to detect sign-in
+    let previousMode = UnifiedSaveArchitecture.getAccount().mode;
+    
     // Subscribe to account changes
     const unsubAccount = UnifiedSaveArchitecture.onAccountChange((newAccount) => {
+      // Detect transition from local-only to cloud (sign-in)
+      const justSignedIn = previousMode === 'local-only' && newAccount.mode === 'cloud';
+      previousMode = newAccount.mode;
+      
       setAccount(newAccount);
       if (newAccount.lastSyncedAt) {
         setLastSyncedAt(newAccount.lastSyncedAt);
+      }
+      
+      // Show welcome toast on sign-in
+      if (justSignedIn && newAccount.displayName) {
+        toast.success(`Welcome, ${newAccount.displayName}!`, {
+          description: 'Your campaigns will sync to the cloud automatically.',
+        });
       }
     });
     
@@ -58,6 +74,14 @@ export function useCloudSyncStatus() {
     try {
       const result = await UnifiedSaveArchitecture.syncWithCloud();
       setLastSyncedAt(Date.now());
+      
+      if (result.synced > 0) {
+        toast.success(`Synced ${result.synced} campaign${result.synced > 1 ? 's' : ''}`);
+      }
+      if (result.conflicts > 0) {
+        toast.warning(`${result.conflicts} conflict${result.conflicts > 1 ? 's' : ''} detected`);
+      }
+      
       return result;
     } finally {
       setIsSyncing(false);
@@ -65,7 +89,11 @@ export function useCloudSyncStatus() {
   }, [account.mode]);
   
   const resolveConflict = useCallback(async (campaignId: string, resolution: 'local' | 'cloud') => {
-    return UnifiedSaveArchitecture.resolveConflict(campaignId, resolution);
+    const success = await UnifiedSaveArchitecture.resolveConflict(campaignId, resolution);
+    if (success) {
+      toast.success(`Conflict resolved (kept ${resolution} version)`);
+    }
+    return success;
   }, []);
   
   const signInWithGoogle = useCallback(async () => {
@@ -73,7 +101,8 @@ export function useCloudSyncStatus() {
   }, []);
   
   const signOut = useCallback(async () => {
-    return UnifiedSaveArchitecture.signOut();
+    await UnifiedSaveArchitecture.signOut();
+    toast.info('Signed out - your saves are stored locally');
   }, []);
   
   // Calculate overall sync state
@@ -92,6 +121,7 @@ export function useCloudSyncStatus() {
     hasConflicts: conflicts.length > 0,
     overallState: getOverallState(),
     isSyncing,
+    migrationCount,
     forceSync,
     resolveConflict,
     signInWithGoogle,
