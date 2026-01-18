@@ -1093,7 +1093,21 @@ export function CheatModeSplash({
     
     try {
       const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.description || '';
-      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} ${companionCreator.build} ${companionCreator.height} character with ${companionCreator.skinTone.toLowerCase()} skin, ${companionCreator.hairStyle.toLowerCase()} ${companionCreator.hairColor.toLowerCase()} hair, ${companionCreator.eyeColor.toLowerCase()} eyes. Wearing ${armorDesc.toLowerCase()}. ${companionCreator.traits.slice(0, 2).join(' and ')} personality showing in expression. High quality digital art, game character portrait, neutral expression, soft lighting, detailed face.`;
+      
+      // Build body shape description based on gender
+      let bodyShapeDesc = '';
+      if (companionCreator.gender === 'female') {
+        const bustDesc = companionCreator.bustSize ? `${companionCreator.bustSize} cup bust` : '';
+        const hipDesc = companionCreator.hipWidth ? `${companionCreator.hipWidth} hips` : '';
+        bodyShapeDesc = [bustDesc, hipDesc].filter(Boolean).join(', ');
+      } else if (companionCreator.gender === 'male') {
+        const shoulderDesc = companionCreator.shoulderWidth ? `${companionCreator.shoulderWidth} shoulders` : '';
+        const physiqueDesc = companionCreator.physique ? `${companionCreator.physique} physique` : '';
+        bodyShapeDesc = [shoulderDesc, physiqueDesc].filter(Boolean).join(', ');
+      }
+      
+      const bodyDesc = bodyShapeDesc ? ` with ${bodyShapeDesc},` : '';
+      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} ${companionCreator.build} ${companionCreator.height} character${bodyDesc} with ${companionCreator.skinTone.toLowerCase()} skin, ${companionCreator.hairStyle.toLowerCase()} ${companionCreator.hairColor.toLowerCase()} hair, ${companionCreator.eyeColor.toLowerCase()} eyes. Wearing ${armorDesc.toLowerCase()}. ${companionCreator.traits.slice(0, 2).join(' and ')} personality showing in expression. High quality digital art, game character portrait, neutral expression, soft lighting, detailed face.`;
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
