@@ -61,43 +61,38 @@ const CHARACTER_KEY = 'living-world-character';
 
 // Hook for detecting cheat mode commands
 export function useCheatModeCommand() {
-  const [isCheatModeOpen, setIsCheatModeOpen] = useState(false);
-  const [devPanelMode, setDevPanelMode] = useState<DevPanelMode>('cheat');
+  const [isOpen, setIsOpen] = useState(false);
+  const [initialMode, setInitialMode] = useState<DevPanelMode>('cheat');
   
-  const checkForCheatCommand = useCallback((input: string): boolean => {
+  const checkCommand = useCallback((input: string): boolean => {
     const trimmed = input.trim().toLowerCase();
     
     if (trimmed === '/iamacheater' || trimmed === '/cheat') {
-      setDevPanelMode('cheat');
-      setIsCheatModeOpen(true);
+      setInitialMode('cheat');
+      setIsOpen(true);
       return true;
     }
     
     if (trimmed === '/events' || trimmed === '/eventbus') {
-      setDevPanelMode('events');
-      setIsCheatModeOpen(true);
+      setInitialMode('events');
+      setIsOpen(true);
       return true;
     }
     
     if (trimmed === '/integrity' || trimmed === '/scan') {
-      setDevPanelMode('integrity');
-      setIsCheatModeOpen(true);
+      setInitialMode('integrity');
+      setIsOpen(true);
       return true;
     }
     
     return false;
   }, []);
   
-  const closeCheatMode = useCallback(() => {
-    setIsCheatModeOpen(false);
-  }, []);
-  
   return {
-    isCheatModeOpen,
-    devPanelMode,
-    checkForCheatCommand,
-    closeCheatMode,
-    setIsCheatModeOpen,
+    isOpen,
+    setIsOpen,
+    initialMode,
+    checkCommand,
   };
 }
 
@@ -119,6 +114,39 @@ const PERSONALITY_TRAITS: PersonalityTrait[] = [
 ];
 
 const COMBAT_ROLES = ['tank', 'damage', 'support', 'ranged'] as const;
+const ARMOR_LEVELS = [
+  { id: 'none', label: 'No Armor', description: 'Unarmored, light clothing only' },
+  { id: 'light', label: 'Light Armor', description: 'Leather, padded, or cloth protection' },
+  { id: 'medium', label: 'Medium Armor', description: 'Chain mail, scale mail, or brigandine' },
+  { id: 'heavy', label: 'Heavy Armor', description: 'Plate armor, full mail, heavy protection' },
+] as const;
+
+const ORIGIN_STORIES = [
+  { id: 'mentor', label: 'Sent by Mentor', description: 'A trusted mentor sent them to aid you' },
+  { id: 'divine', label: 'Divine Intervention', description: 'A higher power guided them to your path' },
+  { id: 'old_friend', label: 'Old Friend', description: "A friend from your past has arrived to help" },
+  { id: 'stranger', label: 'Mysterious Stranger', description: 'They appeared when you needed them most' },
+  { id: 'mutual_enemy', label: 'Mutual Enemy', description: 'United against a common foe' },
+  { id: 'debt', label: 'Owes a Debt', description: "They owe you or someone you know" },
+] as const;
+
+// Names by gender for randomization
+const RANDOM_NAMES = {
+  male: ['Marcus', 'Erik', 'Darius', 'Finn', 'Gareth', 'Kael', 'Roland', 'Theron', 'Vance', 'Aldric', 'Brennan', 'Cedric', 'Drake', 'Edmund', 'Felix', 'Gideon', 'Hadrian', 'Jasper', 'Kieran', 'Leander'],
+  female: ['Elena', 'Lyra', 'Seraphina', 'Thea', 'Vera', 'Aria', 'Brynn', 'Celeste', 'Diana', 'Evelyn', 'Freya', 'Helena', 'Iris', 'Jade', 'Kira', 'Luna', 'Mira', 'Nadia', 'Ophelia', 'Petra'],
+  other: ['Rowan', 'Sage', 'River', 'Ash', 'Phoenix', 'Quinn', 'Morgan', 'Raven', 'Storm', 'Wren', 'Alexis', 'Avery', 'Blake', 'Casey', 'Drew', 'Emery', 'Hayden', 'Jordan', 'Parker', 'Taylor'],
+};
+
+const BACKSTORY_TEMPLATES = [
+  'A former soldier who left the battlefield seeking redemption.',
+  'An exile from a distant land, carrying secrets of their homeland.',
+  'A scholar who abandoned their studies for the call of adventure.',
+  'Once a thief, now seeking to make amends for past crimes.',
+  'A hunter from the wild frontiers, more comfortable with beasts than people.',
+  'Survivor of a great tragedy, searching for meaning.',
+  'Noble blood runs in their veins, though they hide their heritage.',
+  'A wanderer with no memory of their past, piecing together their identity.',
+];
 
 interface CheatModeSplashProps {
   isOpen: boolean;
@@ -145,7 +173,7 @@ interface CheatState {
   infiniteAmmo: boolean;
 }
 
-// Companion creator state
+// Enhanced Companion creator state with armor and origin
 interface CompanionCreatorState {
   name: string;
   gender: Gender;
@@ -157,10 +185,16 @@ interface CompanionCreatorState {
   eyeColor: string;
   traits: PersonalityTrait[];
   combatRole: typeof COMBAT_ROLES[number];
+  armorLevel: typeof ARMOR_LEVELS[number]['id'];
+  originStory: typeof ORIGIN_STORIES[number]['id'];
   backstory: string;
   skills: string[];
   speechPattern: string;
   catchphrases: string[];
+  age: string;
+  distinguishingFeatures: string[];
+  portraitUrl: string | null;
+  isGeneratingPortrait: boolean;
 }
 
 const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
@@ -174,10 +208,16 @@ const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   eyeColor: 'Brown',
   traits: ['loyal', 'brave'],
   combatRole: 'damage',
+  armorLevel: 'light',
+  originStory: 'stranger',
   backstory: '',
   skills: [],
   speechPattern: 'casual, friendly',
   catchphrases: [],
+  age: 'adult',
+  distinguishingFeatures: [],
+  portraitUrl: null,
+  isGeneratingPortrait: false,
 };
 
 // Save character appearance to campaign for consistent image generation
@@ -525,6 +565,9 @@ export function CheatModeSplash({
       quirks: [],
     };
     
+    // Build the story introduction
+    const storyIntroduction = buildCompanionIntroduction();
+    
     const companion: CompanionState = {
       id: companionId,
       name: companionCreator.name.trim(),
@@ -537,10 +580,16 @@ export function CheatModeSplash({
       fear: 0,
       romanticInterest: companionCreator.traits.includes('romantic') ? 20 : 0,
       personality: customPersonality as any,
-      memories: [],
-      internalThoughts: `Excited to begin this adventure with a new companion.`,
+      memories: [{
+        timestamp: Date.now(),
+        type: 'event' as const,
+        description: `Joined the party: ${ORIGIN_STORIES.find(o => o.id === companionCreator.originStory)?.label || 'Mysterious arrival'}`,
+        affinityChange: 20,
+        forgotten: false,
+      }],
+      internalThoughts: `Ready to prove myself to this new companion.`,
       wantsToSpeak: true,
-      pendingReaction: `I'm glad to be traveling with you.`,
+      pendingReaction: storyIntroduction,
       combatRole: companionCreator.combatRole,
       skills: companionCreator.skills.length > 0 
         ? companionCreator.skills 
@@ -554,7 +603,7 @@ export function CheatModeSplash({
       secretRevealed: false,
     };
     
-    // Store appearance data separately (this would be for portrait generation)
+    // Store appearance data with enhanced info
     const companionAppearance = {
       gender: companionCreator.gender,
       height: companionCreator.height,
@@ -563,6 +612,10 @@ export function CheatModeSplash({
       hairStyle: companionCreator.hairStyle,
       hairColor: companionCreator.hairColor,
       eyeColor: companionCreator.eyeColor,
+      armorLevel: companionCreator.armorLevel,
+      age: companionCreator.age,
+      portraitUrl: companionCreator.portraitUrl,
+      distinguishingFeatures: companionCreator.distinguishingFeatures,
     };
     
     // Save companion appearance to localStorage for portrait generation
@@ -570,8 +623,13 @@ export function CheatModeSplash({
       const companionAppearances = JSON.parse(localStorage.getItem('companion-appearances') || '{}');
       companionAppearances[companionId] = companionAppearance;
       localStorage.setItem('companion-appearances', JSON.stringify(companionAppearances));
+      
+      // Also save the story introduction to be displayed in game
+      const companionIntros = JSON.parse(localStorage.getItem('companion-introductions') || '{}');
+      companionIntros[companionId] = storyIntroduction;
+      localStorage.setItem('companion-introductions', JSON.stringify(companionIntros));
     } catch (e) {
-      console.error('Failed to save companion appearance:', e);
+      console.error('Failed to save companion data:', e);
     }
     
     // Add to companion system
@@ -583,7 +641,10 @@ export function CheatModeSplash({
     setCompanionCreator(DEFAULT_COMPANION_CREATOR);
     setCompanionCreatorStep('basics');
     
-    toast.success(`${companion.name} has joined your party!`);
+    toast.success(`${companion.name} has joined your party!`, {
+      description: storyIntroduction.slice(0, 100) + '...',
+      duration: 5000,
+    });
   };
   
   const handleRemoveCompanion = (companionId: string) => {
@@ -613,6 +674,116 @@ export function CheatModeSplash({
       }
       return prev;
     });
+  };
+  
+  // Randomize all companion attributes except gender
+  const randomizeCompanion = () => {
+    const genderKey = companionCreator.gender === 'male' ? 'male' : 
+                      companionCreator.gender === 'female' ? 'female' : 'other';
+    const randomName = RANDOM_NAMES[genderKey][Math.floor(Math.random() * RANDOM_NAMES[genderKey].length)];
+    const randomBackstory = BACKSTORY_TEMPLATES[Math.floor(Math.random() * BACKSTORY_TEMPLATES.length)];
+    
+    // Randomly pick 2-4 traits
+    const traitCount = 2 + Math.floor(Math.random() * 3);
+    const shuffledTraits = [...PERSONALITY_TRAITS].sort(() => Math.random() - 0.5);
+    const randomTraits = shuffledTraits.slice(0, traitCount);
+    
+    setCompanionCreator(prev => ({
+      ...prev,
+      name: randomName,
+      height: HEIGHT_OPTIONS[Math.floor(Math.random() * HEIGHT_OPTIONS.length)].value,
+      build: BUILD_OPTIONS[Math.floor(Math.random() * BUILD_OPTIONS.length)].value,
+      skinTone: SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
+      hairStyle: HAIR_STYLES[Math.floor(Math.random() * HAIR_STYLES.length)],
+      hairColor: HAIR_COLORS[Math.floor(Math.random() * HAIR_COLORS.length)],
+      eyeColor: EYE_COLORS[Math.floor(Math.random() * EYE_COLORS.length)],
+      traits: randomTraits,
+      combatRole: COMBAT_ROLES[Math.floor(Math.random() * COMBAT_ROLES.length)],
+      armorLevel: ARMOR_LEVELS[Math.floor(Math.random() * ARMOR_LEVELS.length)].id,
+      originStory: ORIGIN_STORIES[Math.floor(Math.random() * ORIGIN_STORIES.length)].id,
+      backstory: randomBackstory,
+      speechPattern: ['formal and eloquent', 'casual, friendly', 'gruff, few words', 'mysterious, cryptic', 'jovial, always joking'][Math.floor(Math.random() * 5)],
+      age: ['young adult', 'adult', 'middle-aged', 'elder'][Math.floor(Math.random() * 4)],
+      portraitUrl: null,
+    }));
+    
+    toast.success('Companion randomized! Only gender was preserved.');
+  };
+  
+  // Generate AI portrait for companion
+  const generateCompanionPortrait = async () => {
+    setCompanionCreator(prev => ({ ...prev, isGeneratingPortrait: true }));
+    
+    try {
+      const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.description || '';
+      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} ${companionCreator.build} ${companionCreator.height} character with ${companionCreator.skinTone.toLowerCase()} skin, ${companionCreator.hairStyle.toLowerCase()} ${companionCreator.hairColor.toLowerCase()} hair, ${companionCreator.eyeColor.toLowerCase()} eyes. Wearing ${armorDesc.toLowerCase()}. ${companionCreator.traits.slice(0, 2).join(' and ')} personality showing in expression. High quality digital art, game character portrait, neutral expression, soft lighting, detailed face.`;
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-portrait`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ prompt, genre: genre || 'fantasy' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate portrait');
+      }
+      
+      const data = await response.json();
+      
+      if (data.url) {
+        setCompanionCreator(prev => ({ ...prev, portraitUrl: data.url, isGeneratingPortrait: false }));
+        toast.success('Portrait generated!');
+      } else {
+        throw new Error('No portrait URL returned');
+      }
+    } catch (error) {
+      console.error('Portrait generation failed:', error);
+      setCompanionCreator(prev => ({ ...prev, isGeneratingPortrait: false }));
+      toast.error('Failed to generate portrait. Creating companion without one.');
+    }
+  };
+  
+  // Build story introduction for companion entry
+  const buildCompanionIntroduction = (): string => {
+    const origin = ORIGIN_STORIES.find(o => o.id === companionCreator.originStory);
+    const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.label || 'Light Armor';
+    const name = companionCreator.name.trim();
+    
+    const introTemplates: Record<string, string[]> = {
+      mentor: [
+        `A figure approaches - ${name}, sent by your mentor to aid you on this journey. Clad in ${armorDesc.toLowerCase()}, they carry themselves with the confidence of one who has been prepared for this moment.`,
+        `"Your mentor sent me," says ${name}, stepping forward. Their ${armorDesc.toLowerCase()} gleams as they offer a respectful nod. "I am to assist you."`,
+      ],
+      divine: [
+        `A strange light fades, revealing ${name} standing before you. "The fates have guided me to you," they say, ${armorDesc.toLowerCase()} marking them as a warrior blessed by higher powers.`,
+        `${name} appears as if from nowhere, ${armorDesc.toLowerCase()} reflecting an otherworldly shimmer. "I was shown a vision. You need me."`,
+      ],
+      old_friend: [
+        `"It's been too long!" ${name}'s familiar voice calls out. Your old friend approaches, ${armorDesc.toLowerCase()} worn from their own travels. "I heard you might need help."`,
+        `${name} emerges from the crowd - a face from your past. In ${armorDesc.toLowerCase()}, they've clearly seen adventures of their own. "Thought I'd find you here."`,
+      ],
+      stranger: [
+        `A stranger steps from the shadows - ${name}, studying you with keen eyes. Their ${armorDesc.toLowerCase()} suggests they're no mere traveler. "You seem like someone who could use capable help."`,
+        `${name} blocks your path, ${armorDesc.toLowerCase()} marking them as someone who knows how to handle themselves. "I've been looking for someone like you."`,
+      ],
+      mutual_enemy: [
+        `${name} fights their way to your side, ${armorDesc.toLowerCase()} splattered with evidence of battle. "We share an enemy. Together, we stand a better chance."`,
+        `"The enemy of my enemy..." ${name} says, lowering their weapon. Their ${armorDesc.toLowerCase()} shows signs of recent combat. "I propose an alliance."`,
+      ],
+      debt: [
+        `${name} approaches with purpose, ${armorDesc.toLowerCase()} immaculate. "I owe a debt to someone you know. Consider me at your service until it's repaid."`,
+        `"You saved someone important to me once," ${name} explains, adjusting their ${armorDesc.toLowerCase()}. "Now I repay that debt. Command me."`,
+      ],
+    };
+    
+    const templates = introTemplates[companionCreator.originStory] || introTemplates.stranger;
+    return templates[Math.floor(Math.random() * templates.length)];
   };
   
   const handleSave = async () => {
@@ -1281,182 +1452,228 @@ export function CheatModeSplash({
 
   const renderCompanionCreator = () => (
     <div className="space-y-4">
+      {/* Header with Randomize and Close */}
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Create Companion</h3>
-        <Button variant="ghost" size="sm" onClick={() => {
-          setShowCompanionCreator(false);
-          setCompanionCreatorStep('basics');
-        }}>
-          <X className="w-4 h-4" />
-        </Button>
+        <h3 className="font-medium flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          Initiate Companion
+        </h3>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" onClick={randomizeCompanion}>
+            <Dices className="w-4 h-4 mr-1" /> Randomize
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            setShowCompanionCreator(false);
+            setCompanionCreatorStep('basics');
+            setCompanionCreator(DEFAULT_COMPANION_CREATOR);
+          }}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
       
-      {/* Step Tabs */}
+      {/* Portrait Preview Section */}
+      <div className="flex gap-4">
+        {/* Portrait */}
+        <div className="w-28 flex-shrink-0">
+          <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted/30 border border-border/50 relative">
+            {companionCreator.portraitUrl ? (
+              <img 
+                src={companionCreator.portraitUrl} 
+                alt="Companion portrait" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+                <User className="w-10 h-10 mb-2 opacity-40" />
+                <span className="text-[10px] text-center px-2">No portrait</span>
+              </div>
+            )}
+            {companionCreator.isGeneratingPortrait && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={generateCompanionPortrait}
+            disabled={companionCreator.isGeneratingPortrait || !companionCreator.name.trim()}
+            className="w-full mt-2 text-xs"
+          >
+            {companionCreator.isGeneratingPortrait ? (
+              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating...</>
+            ) : (
+              <><Sparkles className="w-3 h-3 mr-1" /> Generate Portrait</>
+            )}
+          </Button>
+        </div>
+        
+        {/* Quick Info */}
+        <div className="flex-1 space-y-2">
+          {/* Gender - User Can Pick */}
+          <div className="space-y-1">
+            <Label className="text-xs">Gender *</Label>
+            <Select
+              value={companionCreator.gender}
+              onValueChange={v => setCompanionCreator(prev => ({ ...prev, gender: v as Gender, portraitUrl: null }))}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GENDER_OPTIONS.map(g => (
+                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Quick Stats Preview */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2 bg-muted/20 rounded">
+              <span className="text-muted-foreground">Build:</span>
+              <span className="ml-1 capitalize">{companionCreator.build}</span>
+            </div>
+            <div className="p-2 bg-muted/20 rounded">
+              <span className="text-muted-foreground">Hair:</span>
+              <span className="ml-1">{companionCreator.hairColor}</span>
+            </div>
+            <div className="p-2 bg-muted/20 rounded">
+              <span className="text-muted-foreground">Role:</span>
+              <span className="ml-1 capitalize">{companionCreator.combatRole}</span>
+            </div>
+            <div className="p-2 bg-muted/20 rounded">
+              <span className="text-muted-foreground">Armor:</span>
+              <span className="ml-1 capitalize">{companionCreator.armorLevel}</span>
+            </div>
+          </div>
+          
+          {/* Traits Preview */}
+          {companionCreator.traits.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {companionCreator.traits.slice(0, 3).map(t => (
+                <Badge key={t} variant="secondary" className="text-[10px] capitalize">{t}</Badge>
+              ))}
+              {companionCreator.traits.length > 3 && (
+                <Badge variant="outline" className="text-[10px]">+{companionCreator.traits.length - 3}</Badge>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Tabs for Settings */}
       <Tabs value={companionCreatorStep} onValueChange={(v) => setCompanionCreatorStep(v as any)}>
         <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="basics" className="text-xs">Basics</TabsTrigger>
-          <TabsTrigger value="appearance" className="text-xs">Look</TabsTrigger>
+          <TabsTrigger value="basics" className="text-xs">Origin</TabsTrigger>
+          <TabsTrigger value="appearance" className="text-xs">Armor</TabsTrigger>
           <TabsTrigger value="personality" className="text-xs">Traits</TabsTrigger>
           <TabsTrigger value="combat" className="text-xs">Combat</TabsTrigger>
         </TabsList>
         
+        {/* Origin Tab - How they enter the story */}
         <TabsContent value="basics" className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label>Name *</Label>
+            <Label>Name (auto-generated, editable)</Label>
             <Input
               value={companionCreator.name}
               onChange={e => setCompanionCreator(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter companion name..."
+              placeholder="Companion name..."
             />
           </div>
           
           <div className="space-y-2">
-            <Label>Backstory</Label>
-            <Textarea
-              value={companionCreator.backstory}
-              onChange={e => setCompanionCreator(prev => ({ ...prev, backstory: e.target.value }))}
-              placeholder="Write their background story..."
-              rows={3}
-            />
+            <Label>How They Find You</Label>
+            <div className="grid grid-cols-1 gap-2">
+              {ORIGIN_STORIES.map(origin => (
+                <button
+                  key={origin.id}
+                  onClick={() => setCompanionCreator(prev => ({ ...prev, originStory: origin.id }))}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    companionCreator.originStory === origin.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border/50 hover:border-border'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{origin.label}</div>
+                  <div className="text-xs text-muted-foreground">{origin.description}</div>
+                </button>
+              ))}
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <Label>Speech Pattern</Label>
-            <Input
-              value={companionCreator.speechPattern}
-              onChange={e => setCompanionCreator(prev => ({ ...prev, speechPattern: e.target.value }))}
-              placeholder="e.g., formal, sarcastic, shy..."
-            />
+          <div className="p-3 bg-muted/20 rounded-lg border border-dashed border-border/50">
+            <Label className="text-xs text-muted-foreground uppercase mb-2 block">Story Preview</Label>
+            <p className="text-xs italic text-foreground/80">
+              {buildCompanionIntroduction().slice(0, 150)}...
+            </p>
           </div>
         </TabsContent>
         
+        {/* Armor Tab */}
         <TabsContent value="appearance" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Gender</Label>
-              <Select
-                value={companionCreator.gender}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, gender: v as Gender }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GENDER_OPTIONS.map(g => (
-                    <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <Label>Armor Level</Label>
+            <div className="grid grid-cols-1 gap-2">
+              {ARMOR_LEVELS.map(armor => (
+                <button
+                  key={armor.id}
+                  onClick={() => setCompanionCreator(prev => ({ ...prev, armorLevel: armor.id }))}
+                  className={`p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${
+                    companionCreator.armorLevel === armor.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border/50 hover:border-border'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg ${
+                    armor.id === 'none' ? 'bg-blue-500/20' :
+                    armor.id === 'light' ? 'bg-green-500/20' :
+                    armor.id === 'medium' ? 'bg-amber-500/20' :
+                    'bg-red-500/20'
+                  }`}>
+                    <Shield className={`w-4 h-4 ${
+                      armor.id === 'none' ? 'text-blue-400' :
+                      armor.id === 'light' ? 'text-green-400' :
+                      armor.id === 'medium' ? 'text-amber-400' :
+                      'text-red-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">{armor.label}</div>
+                    <div className="text-xs text-muted-foreground">{armor.description}</div>
+                  </div>
+                </button>
+              ))}
             </div>
-            
-            <div className="space-y-2">
-              <Label>Height</Label>
-              <Select
-                value={companionCreator.height}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, height: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HEIGHT_OPTIONS.map(h => (
-                    <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Build</Label>
-              <Select
-                value={companionCreator.build}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, build: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUILD_OPTIONS.map(b => (
-                    <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Skin Tone</Label>
-              <Select
-                value={companionCreator.skinTone}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, skinTone: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SKIN_TONES.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Hair Style</Label>
-              <Select
-                value={companionCreator.hairStyle}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, hairStyle: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HAIR_STYLES.map(h => (
-                    <SelectItem key={h} value={h}>{h}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Hair Color</Label>
-              <Select
-                value={companionCreator.hairColor}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, hairColor: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HAIR_COLORS.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2 col-span-2">
-              <Label>Eye Color</Label>
-              <Select
-                value={companionCreator.eyeColor}
-                onValueChange={v => setCompanionCreator(prev => ({ ...prev, eyeColor: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EYE_COLORS.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </div>
+          
+          {/* Additional appearance preview (read-only, randomized) */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Appearance (randomized)</Label>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="p-2 bg-muted/20 rounded text-center">
+                <span className="text-muted-foreground block">Height</span>
+                <span className="capitalize">{companionCreator.height}</span>
+              </div>
+              <div className="p-2 bg-muted/20 rounded text-center">
+                <span className="text-muted-foreground block">Skin</span>
+                <span>{companionCreator.skinTone}</span>
+              </div>
+              <div className="p-2 bg-muted/20 rounded text-center">
+                <span className="text-muted-foreground block">Eyes</span>
+                <span>{companionCreator.eyeColor}</span>
+              </div>
             </div>
           </div>
         </TabsContent>
         
+        {/* Personality Tab */}
         <TabsContent value="personality" className="space-y-4 mt-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Personality Traits (pick 2-5)</Label>
+              <Label>Personality Traits (randomized, adjustable)</Label>
               <span className="text-xs text-muted-foreground">{companionCreator.traits.length}/5</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1464,7 +1681,7 @@ export function CheatModeSplash({
                 <Badge
                   key={trait}
                   variant={companionCreator.traits.includes(trait) ? 'default' : 'outline'}
-                  className="cursor-pointer capitalize"
+                  className="cursor-pointer capitalize text-xs"
                   onClick={() => toggleCompanionTrait(trait)}
                 >
                   {trait}
@@ -1474,37 +1691,46 @@ export function CheatModeSplash({
           </div>
           
           <div className="space-y-2">
-            <Label>Selected Traits</Label>
-            <div className="p-3 bg-muted/30 rounded-lg min-h-[40px]">
-              {companionCreator.traits.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {companionCreator.traits.map(t => (
-                    <Badge key={t} className="capitalize">{t}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm text-muted-foreground">No traits selected</span>
-              )}
-            </div>
+            <Label>Speech Pattern</Label>
+            <Input
+              value={companionCreator.speechPattern}
+              onChange={e => setCompanionCreator(prev => ({ ...prev, speechPattern: e.target.value }))}
+              placeholder="e.g., formal, sarcastic, shy..."
+              className="text-sm"
+            />
           </div>
         </TabsContent>
         
+        {/* Combat Tab */}
         <TabsContent value="combat" className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label>Combat Role</Label>
-            <Select
-              value={companionCreator.combatRole}
-              onValueChange={v => setCompanionCreator(prev => ({ ...prev, combatRole: v as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COMBAT_ROLES.map(role => (
-                  <SelectItem key={role} value={role} className="capitalize">{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              {COMBAT_ROLES.map(role => (
+                <button
+                  key={role}
+                  onClick={() => setCompanionCreator(prev => ({ ...prev, combatRole: role }))}
+                  className={`p-3 rounded-lg border text-center transition-all ${
+                    companionCreator.combatRole === role
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border/50 hover:border-border'
+                  }`}
+                >
+                  <div className={`mx-auto w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+                    role === 'tank' ? 'bg-blue-500/20' :
+                    role === 'damage' ? 'bg-red-500/20' :
+                    role === 'support' ? 'bg-green-500/20' :
+                    'bg-amber-500/20'
+                  }`}>
+                    {role === 'tank' && <Shield className="w-4 h-4 text-blue-400" />}
+                    {role === 'damage' && <Sword className="w-4 h-4 text-red-400" />}
+                    {role === 'support' && <Heart className="w-4 h-4 text-green-400" />}
+                    {role === 'ranged' && <Target className="w-4 h-4 text-amber-400" />}
+                  </div>
+                  <div className="font-medium text-sm capitalize">{role}</div>
+                </button>
+              ))}
+            </div>
           </div>
           
           <div className="p-3 bg-muted/20 rounded-lg">
@@ -1519,12 +1745,14 @@ export function CheatModeSplash({
         </TabsContent>
       </Tabs>
       
+      {/* Action Buttons */}
       <div className="flex gap-2 pt-4 border-t border-border/50">
         <Button 
           variant="outline" 
           onClick={() => {
             setShowCompanionCreator(false);
             setCompanionCreatorStep('basics');
+            setCompanionCreator(DEFAULT_COMPANION_CREATOR);
           }} 
           className="flex-1"
         >
@@ -1532,10 +1760,10 @@ export function CheatModeSplash({
         </Button>
         <Button 
           onClick={createCompanionFromCreator} 
-          className="flex-1"
+          className="flex-1 bg-gradient-to-r from-primary to-primary/80"
           disabled={!companionCreator.name.trim() || companionCreator.traits.length < 2}
         >
-          <Plus className="w-4 h-4 mr-1" /> Create Companion
+          <Sparkles className="w-4 h-4 mr-1" /> Initiate Companion
         </Button>
       </div>
     </div>
