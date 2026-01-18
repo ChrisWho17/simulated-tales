@@ -182,11 +182,11 @@ export interface CampaignContextType {
   activeCampaignId: string | null;
   
   // Campaign management
-  createCampaign: (worldBible: WorldBible, player: RPGCharacter, scenario: string) => CampaignData;
-  loadCampaign: (campaignId: string) => boolean;
-  unloadCampaign: () => void;
-  deleteCampaign: (campaignId: string) => void;
-  duplicateCampaign: (campaignId: string, newName: string) => CampaignData | null;
+  createCampaign: (worldBible: WorldBible, player: RPGCharacter, scenario: string) => Promise<CampaignData>;
+  loadCampaign: (campaignId: string) => Promise<boolean>;
+  unloadCampaign: () => Promise<void>;
+  deleteCampaign: (campaignId: string) => Promise<void>;
+  duplicateCampaign: (campaignId: string, newName: string) => Promise<CampaignData | null>;
   
   // Campaign updates
   updateCampaign: (updates: Partial<CampaignData>) => void;
@@ -202,12 +202,12 @@ export interface CampaignContextType {
   
   // Import/Export
   exportCampaign: (campaignId: string) => string | null;
-  importCampaign: (jsonData: string) => CampaignData | null;
+  importCampaign: (jsonData: string) => Promise<CampaignData | null>;
   
   // Auto-save
   isDirty: boolean;
   lastSaved: number | null;
-  saveNow: () => void;
+  saveNow: () => Promise<void>;
   
   // Isolation guard
   verifyAccess: (campaignId: string) => void;

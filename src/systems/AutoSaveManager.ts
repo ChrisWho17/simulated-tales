@@ -1,9 +1,11 @@
 // ============================================================================
 // AUTO-SAVE MANAGER - Automatic saving with triggers and rotation
+// Integrated with UnifiedSaveArchitecture for cloud sync
 // ============================================================================
 
 import { SaveSystem } from './SaveSystem';
 import { CampaignData } from '@/types/campaign';
+import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 
 const AUTO_SAVE_PREFIX = 'lwe_autosave_';
 const AUTO_SAVE_SLOTS = 3;
@@ -177,25 +179,39 @@ class AutoSaveManagerClass {
       // Get auto-save key for current slot
       const saveKey = this.getAutoSaveKey(this.currentSlot);
       
-      // Wrap with metadata
+      // Update campaign metadata
+      const updatedState: CampaignData = {
+        ...state,
+        meta: {
+          ...state.meta,
+          updatedAt: Date.now(),
+        },
+      };
+      
+      // Wrap with metadata for slot-based auto-save
       const autoSaveData = {
         campaignId: this.campaignId,
         slot: this.currentSlot,
         reason,
         savedAt: new Date().toISOString(),
-        campaign: state,
+        campaign: updatedState,
       };
       
-      const success = await SaveSystem.saveImmediate(saveKey, autoSaveData);
+      // Save to local slot
+      const localSuccess = await SaveSystem.saveImmediate(saveKey, autoSaveData);
       
-      if (success) {
+      // Also save to UnifiedSaveArchitecture (handles both local main save AND cloud sync)
+      const unifiedResult = await UnifiedSaveArchitecture.saveCampaign(updatedState);
+      
+      if (localSuccess || unifiedResult.success) {
         this.lastSaveTime = Date.now();
         this.hasUnsavedChanges = false;
         
         // Rotate to next slot
         this.currentSlot = (this.currentSlot + 1) % AUTO_SAVE_SLOTS;
         
-        console.log(`[AutoSave] Saved to slot ${this.currentSlot} (reason: ${reason})`);
+        const cloudStatus = unifiedResult.syncedToCloud ? ' (synced to cloud)' : '';
+        console.log(`[AutoSave] Saved to slot ${this.currentSlot} (reason: ${reason})${cloudStatus}`);
         this.notifyCallbacks('saved');
       } else {
         console.error('[AutoSave] Save failed');

@@ -1873,7 +1873,7 @@ export function AdventureGame() {
       
       // Create campaign in new campaign system if available
       if (campaignContext && worldBible) {
-        const newCampaign = campaignContext.createCampaign(worldBible, char, scenarioSelection.scenario);
+        const newCampaign = await campaignContext.createCampaign(worldBible, char, scenarioSelection.scenario);
         console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
         
         // Save director settings to the campaign
