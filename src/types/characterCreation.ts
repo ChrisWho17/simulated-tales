@@ -24,8 +24,12 @@ export interface FullAppearance {
   // Cup sizes for realistic body proportions (AA through K+)
   bustSize?: 'AA' | 'A' | 'B' | 'C' | 'D' | 'DD' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K';
   hipWidth?: 'narrow' | 'average' | 'wide' | 'very wide';
-  muscleDefinition?: 'none' | 'toned' | 'defined' | 'very muscular';
+  // Muscle definition - from soft (none) to big (bodybuilder)
+  muscleDefinition?: 'soft' | 'toned' | 'fit' | 'defined' | 'muscular' | 'very_muscular' | 'big';
   bodyHair?: 'none' | 'light' | 'moderate' | 'heavy';
+  // Male-specific options
+  shoulderWidth?: 'narrow' | 'average' | 'broad' | 'very_broad';
+  physique?: string; // For male body shape preset tracking
   intimateDetails?: string;
   isHermaphrodite?: boolean;
   // Extended body modifications
@@ -201,8 +205,67 @@ export const CUP_SIZE_OPTIONS = [
 // Legacy bust options (mapped internally to cup sizes) - kept for backwards compatibility
 export const BUST_OPTIONS = [{ value: 'B', label: 'Small' }, { value: 'C', label: 'Medium' }, { value: 'DD', label: 'Large' }, { value: 'G', label: 'Very Large' }];
 export const HIP_OPTIONS = [{ value: 'narrow', label: 'Narrow' }, { value: 'average', label: 'Average' }, { value: 'wide', label: 'Wide' }, { value: 'very wide', label: 'Very Wide' }];
-export const MUSCLE_OPTIONS = [{ value: 'none', label: 'Soft' }, { value: 'toned', label: 'Toned' }, { value: 'defined', label: 'Defined' }, { value: 'very muscular', label: 'Very Muscular' }];
+
+// Extended muscle options - from soft (no muscle) to big (bodybuilder)
+export const MUSCLE_OPTIONS = [
+  { value: 'soft', label: 'Soft', description: 'No visible muscle definition' },
+  { value: 'toned', label: 'Toned', description: 'Light muscle definition' },
+  { value: 'fit', label: 'Fit', description: 'Athletic with visible muscles' },
+  { value: 'defined', label: 'Defined', description: 'Clear muscle separation' },
+  { value: 'muscular', label: 'Muscular', description: 'Significant muscle mass' },
+  { value: 'very_muscular', label: 'Very Muscular', description: 'Bodybuilder physique' },
+  { value: 'big', label: 'Big', description: 'Extremely muscular, massive build' },
+];
+
 export const BODY_HAIR_OPTIONS = [{ value: 'none', label: 'None' }, { value: 'light', label: 'Light' }, { value: 'moderate', label: 'Moderate' }, { value: 'heavy', label: 'Heavy' }];
+
+// Male physique presets
+export const MALE_PHYSIQUE_OPTIONS = [
+  { value: 'slim', label: 'Slim', description: 'Lean and slender' },
+  { value: 'average', label: 'Average', description: 'Normal healthy build' },
+  { value: 'athletic', label: 'Athletic', description: 'Fit with toned muscles' },
+  { value: 'muscular', label: 'Muscular', description: 'Strong with defined muscles' },
+  { value: 'bodybuilder', label: 'Bodybuilder', description: 'Very muscular, competition ready' },
+  { value: 'stocky', label: 'Stocky', description: 'Broad and solid' },
+  { value: 'dad_bod', label: 'Dad Bod', description: 'Soft with some muscle underneath' },
+  { value: 'bear', label: 'Bear', description: 'Large, broad, and hairy' },
+];
+
+// Female body shape presets (expanded)
+export const FEMALE_BODY_SHAPE_PRESETS = [
+  { id: 'hourglass', label: 'Hourglass', bustSize: 'D', hipWidth: 'wide', muscle: 'toned' },
+  { id: 'pear', label: 'Pear', bustSize: 'B', hipWidth: 'wide', muscle: 'soft' },
+  { id: 'apple', label: 'Apple', bustSize: 'DD', hipWidth: 'narrow', muscle: 'soft' },
+  { id: 'athletic', label: 'Athletic', bustSize: 'B', hipWidth: 'narrow', muscle: 'defined' },
+  { id: 'rectangle', label: 'Rectangle', bustSize: 'B', hipWidth: 'average', muscle: 'toned' },
+  { id: 'inverted_triangle', label: 'Inverted Triangle', bustSize: 'D', hipWidth: 'narrow', muscle: 'defined' },
+  { id: 'petite', label: 'Petite', bustSize: 'A', hipWidth: 'narrow', muscle: 'soft' },
+  { id: 'curvy', label: 'Curvy', bustSize: 'F', hipWidth: 'very wide', muscle: 'soft' },
+  { id: 'fitness_model', label: 'Fitness Model', bustSize: 'C', hipWidth: 'average', muscle: 'muscular' },
+  { id: 'amazonian', label: 'Amazonian', bustSize: 'D', hipWidth: 'wide', muscle: 'very_muscular' },
+];
+
+// Male body shape presets
+export const MALE_BODY_SHAPE_PRESETS = [
+  { id: 'slim', label: 'Slim', shoulderWidth: 'narrow', muscle: 'soft', bodyHair: 'light' },
+  { id: 'average', label: 'Average', shoulderWidth: 'average', muscle: 'toned', bodyHair: 'moderate' },
+  { id: 'athletic', label: 'Athletic', shoulderWidth: 'broad', muscle: 'defined', bodyHair: 'light' },
+  { id: 'muscular', label: 'Muscular', shoulderWidth: 'broad', muscle: 'muscular', bodyHair: 'moderate' },
+  { id: 'bodybuilder', label: 'Bodybuilder', shoulderWidth: 'very_broad', muscle: 'big', bodyHair: 'light' },
+  { id: 'swimmer', label: 'Swimmer', shoulderWidth: 'broad', muscle: 'defined', bodyHair: 'none' },
+  { id: 'stocky', label: 'Stocky', shoulderWidth: 'broad', muscle: 'muscular', bodyHair: 'heavy' },
+  { id: 'dad_bod', label: 'Dad Bod', shoulderWidth: 'average', muscle: 'soft', bodyHair: 'moderate' },
+  { id: 'bear', label: 'Bear', shoulderWidth: 'broad', muscle: 'soft', bodyHair: 'heavy' },
+  { id: 'lean', label: 'Lean', shoulderWidth: 'average', muscle: 'fit', bodyHair: 'light' },
+];
+
+// Shoulder width options for males
+export const SHOULDER_WIDTH_OPTIONS = [
+  { value: 'narrow', label: 'Narrow' },
+  { value: 'average', label: 'Average' },
+  { value: 'broad', label: 'Broad' },
+  { value: 'very_broad', label: 'Very Broad' },
+];
 
 // Tattoo style options
 export const TATTOO_STYLE_OPTIONS = [
@@ -370,7 +433,7 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
       if (full.hipWidth) description += `, ${full.hipWidth} hips`;
     }
     if (simple.gender === 'male' || simple.gender === 'other') {
-      if (full.muscleDefinition && full.muscleDefinition !== 'none') description += `, ${full.muscleDefinition} muscles`;
+      if (full.muscleDefinition && full.muscleDefinition !== 'soft') description += `, ${full.muscleDefinition} muscles`;
       if (full.bodyHair && full.bodyHair !== 'none') description += `, ${full.bodyHair} body hair`;
     }
     // Extended body modifications
