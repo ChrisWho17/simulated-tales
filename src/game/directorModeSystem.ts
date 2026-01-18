@@ -48,12 +48,24 @@ export interface DirectorKnobs {
   inventionBudget: number;     // 0-1: DM creativity allowance
 }
 
+// Description levels for narrator verbosity
+export type DescriptionLevel = 'vague' | 'minimal' | 'balanced' | 'detailed' | 'vivid';
+
+export const DESCRIPTION_LEVELS: { id: DescriptionLevel; name: string; description: string }[] = [
+  { id: 'vague', name: 'Vague', description: 'Brief, leaves much to imagination' },
+  { id: 'minimal', name: 'Minimal', description: 'Essential details only' },
+  { id: 'balanced', name: 'Balanced', description: 'Clear without overexplaining' },
+  { id: 'detailed', name: 'Detailed', description: 'Rich sensory descriptions' },
+  { id: 'vivid', name: 'Vivid', description: 'Immersive, elaborate prose' },
+];
+
 export interface DirectorSettings {
   enabled: boolean;
   rawGame: boolean;
   mode: DirectiveMode;
   directorType: DirectorType;
   tightness: number; // 0-1, default 0.80
+  descriptionLevel: DescriptionLevel; // How descriptive vs vague the narrator is
   allowMidCampaignSwap: boolean;
   // Personality toggles
   cruelty: PersonalityLevel;
@@ -69,6 +81,7 @@ export const DEFAULT_DIRECTOR_SETTINGS: DirectorSettings = {
   mode: 'medium',
   directorType: 'cinematic',
   tightness: 0.80,
+  descriptionLevel: 'balanced',
   allowMidCampaignSwap: true,
   cruelty: 'honest',
   weirdness: 'grounded',
