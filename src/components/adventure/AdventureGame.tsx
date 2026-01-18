@@ -832,6 +832,9 @@ export function AdventureGame() {
         content: e.content,
       }));
       
+      // Derive time-of-day string from hour
+      const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
@@ -843,7 +846,10 @@ export function AdventureGame() {
             messageHistory,
             characterProfile: characterVisualProfile,
             genre: scenarioSelection?.genre || 'fantasy',
+            era: worldBible?.warEra || worldBible?.techTier || undefined,
             currentLocation: trigger.location || undefined,
+            timeOfDay: timeOfDayPeriod,
+            weather: weatherState?.current || undefined,
           }),
         }
       );
@@ -2364,6 +2370,9 @@ export function AdventureGame() {
         content: e.content,
       }));
       
+      // Derive time-of-day string from hour
+      const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
@@ -2375,6 +2384,9 @@ export function AdventureGame() {
             messageHistory,
             characterProfile: characterVisualProfile,
             genre: scenarioSelection?.genre || 'fantasy',
+            era: worldBible?.warEra || worldBible?.techTier || undefined,
+            timeOfDay: timeOfDayPeriod,
+            weather: weatherState?.current || undefined,
           }),
         }
       );

@@ -9,72 +9,104 @@ const corsHeaders = {
 // HAIKU LLM PREPROCESSING SYSTEM
 // ============================================================================
 
-const HAIKU_SYSTEM_PROMPT = `You are a visual scene extractor. Given GENRE, ACTION, and NARRATOR text, output a single image generation prompt (40-60 words).
+const HAIKU_SYSTEM_PROMPT = `You are a visual scene extractor. Given GENRE, ERA, TIME_OF_DAY, WEATHER, ACTION, and NARRATOR text, output a single image generation prompt (40-60 words).
 
 RULES:
-- Lead with environment/setting, never character faces
-- Include lighting and atmosphere
-- Use genre-appropriate visual language
+- Lead with environment/setting appropriate to GENRE and ERA
+- Include lighting based on TIME_OF_DAY and WEATHER
+- Use genre-appropriate visual language - STRICTLY avoid cross-genre contamination
 - Never include character names, only descriptors (the woman, the figure, the warrior)
 - Never include text/signs in prompts
 - Prefer wider shots over close-ups
 - Focus on the most visually striking moment
+- If ERA is provided, match technology/clothing/architecture to that era
 
-OUTPUT FORMAT: Single paragraph, comma-separated: [genre style], [location], [time/lighting], [atmosphere], [composition], [subject action], [mood], [2-3 quality tokens like: cinematic lighting, atmospheric, detailed environment, concept art]
+OUTPUT FORMAT: Single paragraph, comma-separated: [genre style], [era-appropriate setting], [time/weather lighting], [atmosphere], [composition], [subject action], [mood], [2-3 quality tokens]
 
-GENRE VISUAL GUIDES:
-- Fantasy: medieval stone, torchlight, mystical mist, earth tones, painterly
-- Sci-Fi: spacecraft, holograms, sterile light, cool blues, chrome
-- Horror: decay, flickering light, deep shadows, desaturated, dread
-- Mystery: 1940s noir, rain-streaked, venetian blind shadows, high contrast
-- Pirate: ship decks, tropical sun, salt spray, weathered wood, caribbean blue
-- Western: dusty frontier, harsh sun, golden hour, isolation, earth browns
-- Cyberpunk: neon rain, holographic ads, pink/blue glow, overcrowded, dystopian
-- Post-Apocalyptic: ruins, overgrown, ash gray, rust, scavenged
-- War: trenches, muzzle flash, smoke, mud, military green
-- Modern Life: contemporary, fluorescent or natural light, everyday realism
-- Medieval: castle interiors, candlelit chambers, stone architecture, heraldic colors`;
+GENRE VISUAL GUIDES (STRICT - never mix elements):
+- Fantasy: medieval stone, torchlight, mystical mist, earth tones, painterly, NO modern tech
+- Sci-Fi: spacecraft, holograms, sterile light, cool blues, chrome, NO medieval/magic
+- Horror: decay, flickering light, deep shadows, desaturated, dread, creepy atmosphere
+- Mystery/Noir: 1940s noir, rain-streaked, venetian blind shadows, high contrast, fedoras
+- Pirate: ship decks, tropical sun, salt spray, weathered wood, caribbean blue, 18th century
+- Western: dusty frontier, harsh sun, golden hour, isolation, earth browns, 1870s-1890s
+- Cyberpunk: neon rain, holographic ads, pink/blue glow, overcrowded, dystopian, NO nature
+- Post-Apocalyptic: ruins, overgrown, ash gray, rust, scavenged gear, destroyed civilization
+- War/WW2: trenches, muzzle flash, smoke, mud, military green, period-accurate uniforms
+- Modern/Modern Life: contemporary urban, fluorescent or natural light, everyday realism
+- Medieval: castle interiors, candlelit chambers, stone architecture, heraldic colors
+- Steampunk: brass and copper, steam, Victorian industrial, gears, airships
+- Supernatural: ethereal lighting, otherworldly glow, mysterious entities
+
+TIME LIGHTING:
+- dawn/morning: soft golden light, warm sunrise, fresh atmosphere
+- afternoon/day: bright daylight, defined shadows, clear visibility
+- evening/dusk: golden hour, orange sunset, long shadows
+- night/late_night: moonlight, artificial lights, deep shadows, cool blue tones
+
+WEATHER EFFECTS:
+- clear: crisp visibility, sharp details
+- rain/storm: wet surfaces, reflections, dark clouds, rain streaks
+- fog/mist: limited visibility, mysterious, diffused light
+- snow: white blanket, cold blue tones, frost
+- overcast: flat gray light, muted colors`;
 
 const genreStyleTokens: Record<string, string> = {
-  'fantasy': 'fantasy art, medieval aesthetic, painterly',
-  'sci-fi': 'sci-fi concept art, cinematic sci-fi, futuristic',
-  'scifi': 'sci-fi concept art, cinematic sci-fi, futuristic',
-  'horror': 'horror atmosphere, psychological horror, dread-filled',
-  'mystery': 'film noir, noir lighting, 1940s detective aesthetic',
-  'pirate': 'golden age of piracy, swashbuckler aesthetic, seafaring',
-  'western': 'western frontier, spaghetti western, wild west',
-  'cyberpunk': 'cyberpunk aesthetic, neon noir, blade runner style',
+  'fantasy': 'fantasy art, medieval aesthetic, painterly, magical world',
+  'sci-fi': 'sci-fi concept art, cinematic sci-fi, futuristic technology',
+  'scifi': 'sci-fi concept art, cinematic sci-fi, futuristic technology',
+  'horror': 'horror atmosphere, psychological horror, dread-filled, unsettling',
+  'mystery': 'film noir, noir lighting, 1940s detective aesthetic, shadows',
+  'pirate': 'golden age of piracy, 18th century seafaring, swashbuckler aesthetic',
+  'western': 'western frontier, spaghetti western, 1870s wild west',
+  'cyberpunk': 'cyberpunk aesthetic, neon noir, blade runner style, dystopian',
   'post-apocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
   'postapocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
+  'post_apocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
   'war': 'military realism, battlefield atmosphere, gritty warfare',
-  'modern': 'contemporary realism, slice of life, modern day',
-  'modern-life': 'contemporary realism, slice of life, modern day',
+  'ww2': 'world war 2, 1940s military, period-accurate uniforms and equipment',
+  'ww1': 'world war 1, trench warfare, 1910s military aesthetic',
+  'modern': 'contemporary realism, slice of life, modern day urban',
+  'modern-life': 'contemporary realism, slice of life, modern day urban',
+  'modern_life': 'contemporary realism, slice of life, modern day urban',
+  'modernlife': 'contemporary realism, slice of life, modern day urban',
   'medieval': 'medieval aesthetic, illuminated manuscript style, classical painting',
   'steampunk': 'steampunk aesthetic, victorian industrial, brass and copper',
-  'noir': 'film noir, black and white aesthetic, hard shadows',
+  'noir': 'film noir, black and white aesthetic, hard shadows, 1940s',
   'romance': 'romantic atmosphere, soft lighting, intimate mood',
   'supernatural': 'supernatural horror, ethereal lighting, otherworldly',
+  'victorian': 'victorian era, gaslight aesthetic, 1880s period accurate',
+  'ancient': 'ancient civilization, bronze age, classical architecture',
+  'renaissance': 'renaissance era, 15th-16th century, artistic flourishing',
 };
 
 const genreNegativePrompts: Record<string, string> = {
-  'fantasy': 'modern elements, technology, cars, phones, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'sci-fi': 'medieval, magic wands, horses, primitive, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'scifi': 'medieval, magic wands, horses, primitive, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'horror': 'bright cheerful, cartoon, cute, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'mystery': 'bright colors, modern tech, casual, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'pirate': 'modern ships, technology, contemporary, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'western': 'modern vehicles, urban, technology, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'cyberpunk': 'nature, clean pristine, historical, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'post-apocalyptic': 'pristine, clean, thriving city, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'postapocalyptic': 'pristine, clean, thriving city, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'war': 'peaceful, clean uniforms, casual, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modern': 'fantasy elements, historical, futuristic tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modern-life': 'fantasy elements, historical, futuristic tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'medieval': 'modern elements, technology, cars, guns, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'steampunk': 'modern technology, clean minimal, digital screens, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'noir': 'bright colors, cartoon, fantasy elements, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'romance': 'violence, gore, horror, dark, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'supernatural': 'mundane, bright cheerful, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'fantasy': 'modern elements, technology, cars, phones, guns, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'sci-fi': 'medieval, magic wands, horses, primitive, swords, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'scifi': 'medieval, magic wands, horses, primitive, swords, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'horror': 'bright cheerful, cartoon, cute, happy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'mystery': 'bright colors, modern tech, casual, fantasy elements, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'pirate': 'modern ships, technology, contemporary, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'western': 'modern vehicles, urban, technology, medieval, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'cyberpunk': 'nature, clean pristine, historical, medieval, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'post-apocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'postapocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'post_apocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'war': 'peaceful, clean uniforms, casual, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'ww2': 'modern technology, smartphones, fantasy, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'ww1': 'modern technology, ww2 equipment, fantasy, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modern': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modern-life': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modern_life': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'modernlife': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'medieval': 'modern elements, technology, cars, guns, electricity, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'steampunk': 'modern technology, clean minimal, digital screens, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'noir': 'bright colors, cartoon, fantasy elements, modern tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'romance': 'violence, gore, horror, dark, weapons, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'supernatural': 'mundane, bright cheerful, cartoon, happy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'victorian': 'modern technology, medieval, fantasy, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'ancient': 'modern technology, medieval castles, guns, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  'renaissance': 'modern technology, cars, guns, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
 };
 
 const DEFAULT_NEGATIVE = 'blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy, disfigured, poorly drawn, ugly, duplicate';
@@ -85,7 +117,10 @@ const DEFAULT_NEGATIVE = 'blurry, deformed, extra limbs, mutated, text, watermar
 async function extractPromptWithHaiku(
   genre: string,
   action: string | null,
-  narratorText: string
+  narratorText: string,
+  era?: string,
+  timeOfDay?: string,
+  weather?: string
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
@@ -98,6 +133,14 @@ async function extractPromptWithHaiku(
     console.log('Calling Haiku for prompt extraction...');
     const startTime = Date.now();
     
+    // Build context string with all available information
+    const contextParts = [`GENRE: ${genre}`];
+    if (era) contextParts.push(`ERA: ${era}`);
+    if (timeOfDay) contextParts.push(`TIME_OF_DAY: ${timeOfDay}`);
+    if (weather) contextParts.push(`WEATHER: ${weather}`);
+    contextParts.push(`ACTION: ${action || 'none'}`);
+    contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
+    
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -108,10 +151,7 @@ async function extractPromptWithHaiku(
         model: 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: HAIKU_SYSTEM_PROMPT },
-          { 
-            role: 'user', 
-            content: `GENRE: ${genre}\nACTION: ${action || 'none'}\nNARRATOR: ${narratorText.slice(0, 1500)}` 
-          }
+          { role: 'user', content: contextParts.join('\n') }
         ],
         max_tokens: 150,
         temperature: 0.7,
@@ -1918,9 +1958,15 @@ serve(async (req) => {
     requestData.lastUserAction = lastUserAction;
 
     const genre = (requestData.genre || requestData.style || 'fantasy').toLowerCase();
+    const era = requestData.era || undefined;
+    const timeOfDay = requestData.timeOfDay || undefined;
+    const weather = requestData.weather || undefined;
 
     console.log('Scene generation request:', {
       genre,
+      era,
+      timeOfDay,
+      weather,
       hasNarratorMessage: !!lastNarratorMessage,
       hasUserAction: !!lastUserAction,
       hasCharacterProfile: !!requestData.characterProfile,
@@ -1934,7 +1980,14 @@ serve(async (req) => {
     let negativePrompt: string;
     let usedHaiku = false;
     
-    const haikuResult = await extractPromptWithHaiku(genre, lastUserAction, lastNarratorMessage);
+    const haikuResult = await extractPromptWithHaiku(
+      genre, 
+      lastUserAction, 
+      lastNarratorMessage,
+      era,
+      timeOfDay,
+      weather
+    );
     
     if (haikuResult.extractedPrompt) {
       // Use Haiku-extracted prompt with genre tokens
