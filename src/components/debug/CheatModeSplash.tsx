@@ -333,6 +333,35 @@ const TELEPORT_LOCATIONS = [
   { id: 'harbor', name: 'Harbor', icon: '⚓' },
 ];
 
+// Personality quirks - small behavioral traits (1-2 assigned)
+const PERSONALITY_QUIRKS = [
+  'hums when nervous',
+  'always carries a lucky charm',
+  'quotes old proverbs',
+  'talks to themselves quietly',
+  'cracks knuckles when thinking',
+  'never sits with back to door',
+  'collects small trinkets',
+  'always hungry',
+  'overly polite to strangers',
+  'distrusts magic/technology',
+  'tells stories about "the old days"',
+  'laughs at inappropriate moments',
+  'fidgets with jewelry or buttons',
+  'speaks in third person occasionally',
+  'apologizes too much',
+  'gives nicknames to everyone',
+  'obsessed with cleanliness',
+  'terrible with names',
+  'snores loudly',
+  'early riser, grumpy at night',
+  'night owl, slow to wake',
+  'superstitious about small things',
+  'counts things compulsively',
+  'talks too loud',
+  'whispers secrets even when alone',
+];
+
 // Enhanced Companion creator state with armor and origin
 interface CompanionCreatorState {
   name: string;
@@ -354,6 +383,7 @@ interface CompanionCreatorState {
   catchphrases: string[];
   age: string;
   distinguishingFeatures: string[];
+  quirks: string[];
   portraitUrl: string | null;
   isGeneratingPortrait: boolean;
 }
@@ -378,6 +408,7 @@ const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   catchphrases: [],
   age: 'adult',
   distinguishingFeatures: [],
+  quirks: [],
   portraitUrl: null,
   isGeneratingPortrait: false,
 };
@@ -983,6 +1014,11 @@ export function CheatModeSplash({
     // Combine features and accessories
     const allDistinguishing = [...randomFeatures, ...randomAccessories];
     
+    // 1-2 personality quirks
+    const quirkCount = 1 + Math.floor(Math.random() * 2); // 1-2
+    const shuffledQuirks = [...PERSONALITY_QUIRKS].sort(() => Math.random() - 0.5);
+    const randomQuirks = shuffledQuirks.slice(0, quirkCount);
+    
     // Simple hair styles only (avoid the more exotic ones)
     const SIMPLE_HAIR_STYLES = ['Short', 'Medium', 'Long', 'Ponytail', 'Braided', 'Curly', 'Wavy', 'Bun'];
     const randomHairStyle = SIMPLE_HAIR_STYLES[Math.floor(Math.random() * SIMPLE_HAIR_STYLES.length)];
@@ -1016,6 +1052,7 @@ export function CheatModeSplash({
       speechPattern: ['formal and eloquent', 'casual, friendly', 'gruff, few words', 'mysterious, cryptic', 'jovial, always joking'][Math.floor(Math.random() * 5)],
       age: ADULT_AGE_CATEGORIES[Math.floor(Math.random() * ADULT_AGE_CATEGORIES.length)],
       distinguishingFeatures: allDistinguishing,
+      quirks: randomQuirks,
       portraitUrl: null,
     }));
     
