@@ -6,7 +6,9 @@ import {
   Shirt, Sparkles, Activity, Database, ShieldCheck, CheckCircle2, XCircle,
   ChevronLeft, ChevronRight, Users, Plus, Trash2, Edit3, Package,
   Flame, Clock, MapPin, Infinity, Crown, Skull, Eye, Volume2, VolumeX,
-  Crosshair, Target, Dices, RotateCcw, Settings, Gauge
+  Crosshair, Target, Dices, RotateCcw, Settings, Gauge, Navigation,
+  FastForward, Rewind, Sun, Moon, Backpack, Swords, PlusCircle, Timer,
+  SkipForward, Play, Pause, MessageSquare
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAchievementsOptional } from '@/components/game/Achievements';
@@ -171,7 +173,44 @@ interface CheatState {
   unlockAll: boolean;
   invisibility: boolean;
   infiniteAmmo: boolean;
+  // New cheats
+  freezeTime: boolean;
+  skipToDay: boolean;
+  skipToNight: boolean;
+  revealMap: boolean;
+  noHunger: boolean;
+  noFatigue: boolean;
 }
+
+// Common spawnable items
+const SPAWNABLE_ITEMS = [
+  { id: 'health_potion', name: 'Health Potion', category: 'consumable', icon: '🧪' },
+  { id: 'mana_potion', name: 'Mana Potion', category: 'consumable', icon: '💧' },
+  { id: 'gold_coins_100', name: 'Gold (100)', category: 'currency', icon: '💰' },
+  { id: 'gold_coins_1000', name: 'Gold (1000)', category: 'currency', icon: '💎' },
+  { id: 'iron_sword', name: 'Iron Sword', category: 'weapon', icon: '⚔️' },
+  { id: 'steel_sword', name: 'Steel Sword', category: 'weapon', icon: '🗡️' },
+  { id: 'iron_armor', name: 'Iron Armor', category: 'armor', icon: '🛡️' },
+  { id: 'leather_armor', name: 'Leather Armor', category: 'armor', icon: '🥋' },
+  { id: 'lockpick', name: 'Lockpick', category: 'tool', icon: '🔓' },
+  { id: 'torch', name: 'Torch', category: 'tool', icon: '🔦' },
+  { id: 'rope', name: 'Rope', category: 'tool', icon: '🪢' },
+  { id: 'rations', name: 'Rations', category: 'consumable', icon: '🍖' },
+];
+
+// Teleport locations
+const TELEPORT_LOCATIONS = [
+  { id: 'town_square', name: 'Town Square', icon: '🏘️' },
+  { id: 'tavern', name: 'The Tavern', icon: '🍺' },
+  { id: 'blacksmith', name: 'Blacksmith', icon: '⚒️' },
+  { id: 'market', name: 'Market', icon: '🏪' },
+  { id: 'castle', name: 'Castle', icon: '🏰' },
+  { id: 'forest', name: 'Dark Forest', icon: '🌲' },
+  { id: 'cave', name: 'Cave Entrance', icon: '🕳️' },
+  { id: 'dungeon', name: 'Dungeon', icon: '⛓️' },
+  { id: 'temple', name: 'Temple', icon: '⛪' },
+  { id: 'harbor', name: 'Harbor', icon: '⚓' },
+];
 
 // Enhanced Companion creator state with armor and origin
 interface CompanionCreatorState {
@@ -286,7 +325,17 @@ export function CheatModeSplash({
     unlockAll: false,
     invisibility: false,
     infiniteAmmo: false,
+    freezeTime: false,
+    skipToDay: false,
+    skipToNight: false,
+    revealMap: false,
+    noHunger: false,
+    noFatigue: false,
   });
+  
+  // Spawning state
+  const [spawnCategory, setSpawnCategory] = useState<string>('all');
+  const [teleportTarget, setTeleportTarget] = useState<string>('');
   
   // Character stats
   const [name, setName] = useState(character?.name || '');
@@ -509,6 +558,76 @@ export function CheatModeSplash({
     toast.success('Fully healed!');
   };
   
+  // Time manipulation functions
+  const skipTime = (hours: number) => {
+    toast.success(`Skipped ${hours} hour${hours > 1 ? 's' : ''} ahead!`);
+    // Store time skip in localStorage for game engine to process
+    try {
+      const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+      cheatActions.push({ type: 'time_skip', hours, timestamp: Date.now() });
+      localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+    } catch (e) {
+      console.error('Failed to queue time skip:', e);
+    }
+  };
+  
+  const setTimeOfDay = (time: 'dawn' | 'noon' | 'dusk' | 'midnight') => {
+    const timeMap = { dawn: 6, noon: 12, dusk: 18, midnight: 0 };
+    toast.success(`Time set to ${time}!`);
+    try {
+      const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+      cheatActions.push({ type: 'set_time', time, hour: timeMap[time], timestamp: Date.now() });
+      localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+    } catch (e) {
+      console.error('Failed to queue time set:', e);
+    }
+  };
+  
+  // Teleport function
+  const teleportTo = (locationId: string) => {
+    const location = TELEPORT_LOCATIONS.find(l => l.id === locationId);
+    if (location) {
+      toast.success(`Teleported to ${location.name}!`);
+      try {
+        const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+        cheatActions.push({ type: 'teleport', location: location.name, locationId, timestamp: Date.now() });
+        localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+      } catch (e) {
+        console.error('Failed to queue teleport:', e);
+      }
+    }
+    setTeleportTarget('');
+  };
+  
+  // Spawn item function
+  const spawnItem = (itemId: string) => {
+    const item = SPAWNABLE_ITEMS.find(i => i.id === itemId);
+    if (item) {
+      toast.success(`Spawned ${item.name}!`);
+      
+      // Handle gold specially
+      if (item.category === 'currency') {
+        const amount = itemId.includes('1000') ? 1000 : 100;
+        setGold(prev => prev + amount);
+      } else {
+        // Queue item spawn for inventory system
+        try {
+          const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+          cheatActions.push({ 
+            type: 'spawn_item', 
+            itemId: item.id,
+            itemName: item.name,
+            category: item.category,
+            timestamp: Date.now() 
+          });
+          localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+        } catch (e) {
+          console.error('Failed to queue item spawn:', e);
+        }
+      }
+    }
+  };
+  
   // Navigation
   const currentScreenIndex = SCREENS.findIndex(s => s.id === currentScreen);
   const canGoLeft = currentScreenIndex > 0;
@@ -636,13 +755,30 @@ export function CheatModeSplash({
     companionSystem.getAllCompanions().push(companion);
     companionSystem.recruitCompanion(companion.id);
     
+    // Queue the companion introduction to be displayed in the story
+    try {
+      const pendingIntros = JSON.parse(localStorage.getItem('pending-companion-introductions') || '[]');
+      pendingIntros.push({
+        companionId,
+        name: companion.name,
+        introduction: storyIntroduction,
+        portraitUrl: companionCreator.portraitUrl,
+        origin: companionCreator.originStory,
+        timestamp: Date.now(),
+        displayed: false,
+      });
+      localStorage.setItem('pending-companion-introductions', JSON.stringify(pendingIntros));
+    } catch (e) {
+      console.error('Failed to queue companion introduction:', e);
+    }
+    
     setCompanions(companionSystem.getActiveCompanions());
     setShowCompanionCreator(false);
     setCompanionCreator(DEFAULT_COMPANION_CREATOR);
     setCompanionCreatorStep('basics');
     
     toast.success(`${companion.name} has joined your party!`, {
-      description: storyIntroduction.slice(0, 100) + '...',
+      description: 'Their introduction will appear in the story.',
       duration: 5000,
     });
   };
@@ -1008,6 +1144,158 @@ export function CheatModeSplash({
         </div>
       </div>
       
+      {/* Time Manipulation */}
+      <div className="space-y-3 p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
+        <Label className="text-xs uppercase text-muted-foreground flex items-center gap-2">
+          <Clock className="w-4 h-4 text-indigo-400" /> Time Manipulation
+        </Label>
+        
+        <div className="grid grid-cols-4 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeOfDay('dawn')}
+            className="text-xs border-indigo-500/30 hover:bg-indigo-500/20"
+          >
+            <Sun className="w-3 h-3 mr-1 text-orange-400" /> Dawn
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeOfDay('noon')}
+            className="text-xs border-indigo-500/30 hover:bg-indigo-500/20"
+          >
+            <Sun className="w-3 h-3 mr-1 text-yellow-400" /> Noon
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeOfDay('dusk')}
+            className="text-xs border-indigo-500/30 hover:bg-indigo-500/20"
+          >
+            <Moon className="w-3 h-3 mr-1 text-orange-300" /> Dusk
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimeOfDay('midnight')}
+            className="text-xs border-indigo-500/30 hover:bg-indigo-500/20"
+          >
+            <Moon className="w-3 h-3 mr-1 text-purple-400" /> Midnight
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => skipTime(1)}
+            className="text-xs"
+          >
+            <FastForward className="w-3 h-3 mr-1" /> +1 Hour
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => skipTime(6)}
+            className="text-xs"
+          >
+            <FastForward className="w-3 h-3 mr-1" /> +6 Hours
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => skipTime(24)}
+            className="text-xs"
+          >
+            <SkipForward className="w-3 h-3 mr-1" /> +1 Day
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => skipTime(168)}
+            className="text-xs"
+          >
+            <SkipForward className="w-3 h-3 mr-1" /> +1 Week
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Pause className="w-4 h-4 text-red-400" />
+            <span className="text-sm font-medium">Freeze Time</span>
+          </div>
+          <Switch
+            checked={cheats.freezeTime}
+            onCheckedChange={(v) => {
+              setCheats(prev => ({ ...prev, freezeTime: v }));
+              toast.success(v ? 'Time frozen!' : 'Time resumed!');
+            }}
+          />
+        </div>
+      </div>
+      
+      {/* Teleport */}
+      <div className="space-y-3 p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+        <Label className="text-xs uppercase text-muted-foreground flex items-center gap-2">
+          <Navigation className="w-4 h-4 text-cyan-400" /> Teleport
+        </Label>
+        
+        <div className="grid grid-cols-5 gap-2">
+          {TELEPORT_LOCATIONS.map((loc) => (
+            <Button
+              key={loc.id}
+              variant={teleportTarget === loc.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => teleportTo(loc.id)}
+              className="text-xs flex flex-col h-auto py-2 border-cyan-500/30 hover:bg-cyan-500/20"
+            >
+              <span className="text-base mb-1">{loc.icon}</span>
+              <span className="truncate w-full text-[10px]">{loc.name}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Spawn Items */}
+      <div className="space-y-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs uppercase text-muted-foreground flex items-center gap-2">
+            <Backpack className="w-4 h-4 text-amber-400" /> Spawn Items
+          </Label>
+          <Select value={spawnCategory} onValueChange={setSpawnCategory}>
+            <SelectTrigger className="w-32 h-7 text-xs">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="consumable">Consumables</SelectItem>
+              <SelectItem value="weapon">Weapons</SelectItem>
+              <SelectItem value="armor">Armor</SelectItem>
+              <SelectItem value="tool">Tools</SelectItem>
+              <SelectItem value="currency">Currency</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-2">
+          {SPAWNABLE_ITEMS
+            .filter(item => spawnCategory === 'all' || item.category === spawnCategory)
+            .map((item) => (
+              <Button
+                key={item.id}
+                variant="outline"
+                size="sm"
+                onClick={() => spawnItem(item.id)}
+                className="text-xs flex flex-col h-auto py-2 border-amber-500/30 hover:bg-amber-500/20"
+              >
+                <span className="text-base mb-1">{item.icon}</span>
+                <span className="truncate w-full text-[10px]">{item.name}</span>
+              </Button>
+            ))}
+        </div>
+      </div>
+      
       {/* Speed/Time Sliders */}
       <div className="space-y-4 p-3 bg-muted/20 rounded-lg border border-border/50">
         <div className="space-y-2">
@@ -1042,6 +1330,49 @@ export function CheatModeSplash({
             step={0.25}
             className="flex-1"
           />
+        </div>
+        
+        {/* Additional toggle cheats */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Activity className="w-3 h-3 text-green-400" />
+              <span className="text-xs">No Hunger</span>
+            </div>
+            <Switch
+              checked={cheats.noHunger}
+              onCheckedChange={(v) => {
+                setCheats(prev => ({ ...prev, noHunger: v }));
+                if (v) toast.success('Hunger disabled!');
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Zap className="w-3 h-3 text-blue-400" />
+              <span className="text-xs">No Fatigue</span>
+            </div>
+            <Switch
+              checked={cheats.noFatigue}
+              onCheckedChange={(v) => {
+                setCheats(prev => ({ ...prev, noFatigue: v }));
+                if (v) toast.success('Fatigue disabled!');
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Eye className="w-3 h-3 text-purple-400" />
+              <span className="text-xs">Reveal Map</span>
+            </div>
+            <Switch
+              checked={cheats.revealMap}
+              onCheckedChange={(v) => {
+                setCheats(prev => ({ ...prev, revealMap: v }));
+                if (v) toast.success('Map revealed!');
+              }}
+            />
+          </div>
         </div>
       </div>
       
