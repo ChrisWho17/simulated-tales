@@ -1,8 +1,9 @@
 // ============================================================================
 // CLOUD SYNC INDICATOR - Shows save status and Google account info
+// Unified with UnifiedSaveArchitecture used by CampaignContext
 // ============================================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -19,10 +20,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  UnifiedSaveService, 
-  SaveAccount, 
-  SyncStatus 
-} from '@/services/unifiedSaveService';
+  UnifiedSaveArchitecture, 
+  UnifiedAccount,
+  SyncState,
+} from '@/services/unifiedSaveArchitecture';
 import { 
   Cloud, 
   CloudOff, 
@@ -32,7 +33,8 @@ import {
   LogIn,
   LogOut,
   User,
-  Clock
+  Clock,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,35 +60,70 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
-  const [account, setAccount] = useState<SaveAccount>(UnifiedSaveService.getAccount());
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(UnifiedSaveService.getStatus());
-  const [lastSyncTime, setLastSyncTime] = useState<number | null>(UnifiedSaveService.getLastSyncTime());
-  const [syncProgress, setSyncProgress] = useState<number>(UnifiedSaveService.getSyncProgress());
+  const [account, setAccount] = useState<UnifiedAccount>(
+    UnifiedSaveArchitecture.getAccount()
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(
+    account.lastSyncedAt || null
+  );
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
   const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    const unsubAccount = UnifiedSaveService.onAccountChange(setAccount);
-    const unsubStatus = UnifiedSaveService.onStatusChange(setSyncStatus);
-    const unsubLastSync = UnifiedSaveService.onLastSyncTimeChange(setLastSyncTime);
-    const unsubProgress = UnifiedSaveService.onProgressChange(setSyncProgress);
+    // Initialize the architecture
+    UnifiedSaveArchitecture.initialize();
+    
+    // Subscribe to account changes
+    const unsubAccount = UnifiedSaveArchitecture.onAccountChange((newAccount) => {
+      setAccount(newAccount);
+      if (newAccount.lastSyncedAt) {
+        setLastSyncTime(newAccount.lastSyncedAt);
+      }
+    });
     
     // Update relative time every 30 seconds
     const interval = setInterval(() => forceUpdate(n => n + 1), 30000);
     
     return () => {
       unsubAccount();
-      unsubStatus();
-      unsubLastSync();
-      unsubProgress();
       clearInterval(interval);
     };
   }, []);
 
+  const handleSync = useCallback(async () => {
+    if (account.mode !== 'cloud') return;
+    
+    setIsSyncing(true);
+    setSyncProgress(30);
+    
+    try {
+      const result = await UnifiedSaveArchitecture.syncWithCloud();
+      setSyncProgress(100);
+      
+      if (result.conflicts > 0) {
+        toast.warning(`Sync complete with ${result.conflicts} conflict(s)`);
+      } else if (result.synced > 0) {
+        toast.success(`Synced ${result.synced} campaign(s)`);
+      } else {
+        toast.success('Everything up to date');
+      }
+      
+      setLastSyncTime(Date.now());
+    } catch (error) {
+      console.error('[CloudSync] Sync failed:', error);
+      toast.error('Sync failed');
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress(0);
+    }
+  }, [account.mode]);
+
   const handleSignIn = async () => {
     setIsSigningIn(true);
     try {
-      await UnifiedSaveService.signInWithGoogle();
+      await UnifiedSaveArchitecture.signInWithGoogle();
     } catch (error) {
       toast.error('Sign in failed');
     }
@@ -94,14 +131,12 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
   };
 
   const handleSignOut = async () => {
-    await UnifiedSaveService.signOut();
+    await UnifiedSaveArchitecture.signOut();
     toast.success('Signed out');
   };
 
   const isCloud = account.mode === 'cloud';
-  const isSyncing = syncStatus === 'syncing';
-  const isSynced = syncStatus === 'synced';
-  const hasError = syncStatus === 'error';
+  const hasConflicts = UnifiedSaveArchitecture.getConflicts().length > 0;
 
   // Get icon based on state
   const getIcon = () => {
@@ -111,10 +146,10 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
     if (!isCloud) {
       return <CloudOff className="w-3 h-3 md:w-3.5 md:h-3.5" />;
     }
-    if (hasError) {
-      return <AlertTriangle className="w-3 h-3 md:w-3.5 md:h-3.5 text-destructive" />;
+    if (hasConflicts) {
+      return <AlertTriangle className="w-3 h-3 md:w-3.5 md:h-3.5 text-yellow-500" />;
     }
-    if (isSynced) {
+    if (lastSyncTime && Date.now() - lastSyncTime < 60000) {
       return <Check className="w-3 h-3 md:w-3.5 md:h-3.5 text-green-500" />;
     }
     return <Cloud className="w-3 h-3 md:w-3.5 md:h-3.5" />;
@@ -123,8 +158,8 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
   // Get status color
   const getStatusColor = () => {
     if (!isCloud) return 'text-muted-foreground/50';
-    if (hasError) return 'text-destructive';
-    if (isSynced) return 'text-green-500';
+    if (hasConflicts) return 'text-yellow-500';
+    if (lastSyncTime && Date.now() - lastSyncTime < 60000) return 'text-green-500';
     if (isSyncing) return 'text-primary';
     return 'text-muted-foreground';
   };
@@ -132,9 +167,9 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
   // Get tooltip text
   const getTooltipText = () => {
     if (!isCloud) return 'Guest mode - Sign in to sync';
-    if (isSyncing) return `Syncing... ${syncProgress}%`;
-    if (isSynced) return `Synced as ${account.email}`;
-    if (hasError) return 'Sync error';
+    if (isSyncing) return `Syncing...`;
+    if (hasConflicts) return 'Sync conflicts detected';
+    if (lastSyncTime) return `Synced as ${account.email}`;
     return account.email || 'Cloud sync';
   };
 
@@ -175,7 +210,15 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
             {isCloud ? (
               <>
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary" />
+                  {account.avatarUrl ? (
+                    <img 
+                      src={account.avatarUrl} 
+                      alt="Avatar" 
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <User className="w-4 h-4 text-primary" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">
@@ -211,17 +254,17 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
                   <Loader2 className="w-3 h-3 animate-spin text-primary" />
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full animate-ping" />
                 </div>
-                <span className="text-primary font-medium">Syncing... {syncProgress}%</span>
+                <span className="text-primary font-medium">Syncing...</span>
               </>
-            ) : isSynced ? (
+            ) : hasConflicts ? (
+              <>
+                <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                <span className="text-yellow-500">Conflicts detected</span>
+              </>
+            ) : lastSyncTime && Date.now() - lastSyncTime < 60000 ? (
               <>
                 <Check className="w-3 h-3 text-green-500" />
                 <span className="text-muted-foreground">All changes saved</span>
-              </>
-            ) : hasError ? (
-              <>
-                <AlertTriangle className="w-3 h-3 text-destructive" />
-                <span className="text-destructive">Sync error</span>
               </>
             ) : !isCloud ? (
               <>
@@ -258,10 +301,16 @@ export function CloudSyncIndicator({ className }: CloudSyncIndicatorProps) {
 
         {/* Actions */}
         {isCloud ? (
-          <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign out
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem onClick={handleSync} disabled={isSyncing}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+              Sync now
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </DropdownMenuItem>
+          </>
         ) : (
           <DropdownMenuItem onClick={handleSignIn} disabled={isSigningIn}>
             <LogIn className="w-4 h-4 mr-2" />
