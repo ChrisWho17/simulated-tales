@@ -1,14 +1,115 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { GameEvent } from '@/types/game';
-import { User, ChevronDown } from 'lucide-react';
+import { User, ChevronDown, History, BookOpen } from 'lucide-react';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { cn } from '@/lib/utils';
+
+// Performance optimization: Only show last N messages by default
+const VISIBLE_MESSAGE_COUNT = 8;
 
 interface NarrativeDisplayProps {
   events: GameEvent[];
   highlightedMessageId?: string | null;
   onRegisterMessage?: (messageId: string, element: HTMLDivElement | null, turnId?: number) => void;
   onContainerRef?: (element: HTMLDivElement | null) => void;
+}
+
+// Generate a summary of hidden story content
+function generateStorySummary(hiddenEvents: GameEvent[]): string {
+  if (hiddenEvents.length === 0) return '';
+  
+  // Extract key information from hidden events
+  const dialogues: string[] = [];
+  const discoveries: string[] = [];
+  const actions: string[] = [];
+  const locations: string[] = [];
+  
+  hiddenEvents.forEach(event => {
+    const content = cleanNarrativeForDisplay(event.content);
+    
+    // Extract quoted dialogue
+    const quoteMatches = content.match(/"([^"]+)"/g);
+    if (quoteMatches && event.type === 'dialogue') {
+      dialogues.push(...quoteMatches.slice(0, 2).map(q => q.replace(/"/g, '')));
+    }
+    
+    // Look for discovery/observation keywords
+    if (event.type === 'discovery' || content.includes('discover') || content.includes('notice') || content.includes('find')) {
+      const firstSentence = content.split(/[.!?]/)[0];
+      if (firstSentence && firstSentence.length < 100) {
+        discoveries.push(firstSentence.trim());
+      }
+    }
+    
+    // Look for location mentions
+    const locationPatterns = /(?:enter|arrive|reach|approach|inside|outside)\s+(?:the\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g;
+    let match;
+    while ((match = locationPatterns.exec(content)) !== null) {
+      if (!locations.includes(match[1])) {
+        locations.push(match[1]);
+      }
+    }
+    
+    // Extract action verbs from observation events
+    if (event.type === 'observation') {
+      const firstSentence = content.split(/[.!?]/)[0];
+      if (firstSentence && firstSentence.length < 80) {
+        actions.push(firstSentence.trim());
+      }
+    }
+  });
+  
+  // Build a narrative summary
+  const parts: string[] = [];
+  
+  // Opening
+  parts.push(`In the earlier moments of your journey (${hiddenEvents.length} events ago)`);
+  
+  // Locations visited
+  if (locations.length > 0) {
+    parts.push(`you passed through ${locations.slice(0, 3).join(', ')}`);
+  }
+  
+  // Key actions
+  if (actions.length > 0) {
+    const sampleActions = actions.slice(0, 3);
+    parts.push(`where ${sampleActions[0].toLowerCase()}`);
+    if (sampleActions.length > 1) {
+      parts.push(`and ${sampleActions[1].toLowerCase()}`);
+    }
+  }
+  
+  // Discoveries
+  if (discoveries.length > 0) {
+    parts.push(`Along the way, ${discoveries[0].toLowerCase()}`);
+  }
+  
+  // Dialogues
+  if (dialogues.length > 0) {
+    const sampleDialogues = dialogues.slice(0, 2);
+    parts.push(`Words were exchanged: "${sampleDialogues[0]}"`);
+    if (sampleDialogues.length > 1) {
+      parts.push(`and "${sampleDialogues[1]}"`);
+    }
+  }
+  
+  // Fallback if we didn't extract much
+  if (parts.length <= 1) {
+    const eventTypes = hiddenEvents.reduce((acc, e) => {
+      acc[e.type] = (acc[e.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const typeDescriptions: string[] = [];
+    if (eventTypes.dialogue) typeDescriptions.push(`${eventTypes.dialogue} conversation${eventTypes.dialogue > 1 ? 's' : ''}`);
+    if (eventTypes.observation) typeDescriptions.push(`${eventTypes.observation} observation${eventTypes.observation > 1 ? 's' : ''}`);
+    if (eventTypes.discovery) typeDescriptions.push(`${eventTypes.discovery} discover${eventTypes.discovery > 1 ? 'ies' : 'y'}`);
+    if (eventTypes.action) typeDescriptions.push(`${eventTypes.action} action${eventTypes.action > 1 ? 's' : ''}`);
+    
+    return `Your adventure began with ${typeDescriptions.join(', ')}. The story unfolded through moments of tension and discovery, each step bringing you closer to where you stand now. The echoes of those early encounters still resonate, shaping the path ahead.`;
+  }
+  
+  return parts.join('. ') + '.';
 }
 
 export function NarrativeDisplay({ 
@@ -20,7 +121,41 @@ export function NarrativeDisplay({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [hasNewContent, setHasNewContent] = useState(false);
+  const [showAllMessages, setShowAllMessages] = useState(false);
   const previousEventCount = useRef(events.length);
+  
+  // Calculate hidden and visible messages
+  const hiddenCount = Math.max(0, events.length - VISIBLE_MESSAGE_COUNT);
+  const hasHiddenMessages = hiddenCount > 0 && !showAllMessages;
+  
+  // Get visible events (either all or just the last N)
+  const visibleEvents = useMemo(() => {
+    if (showAllMessages || events.length <= VISIBLE_MESSAGE_COUNT) {
+      return events;
+    }
+    return events.slice(-VISIBLE_MESSAGE_COUNT);
+  }, [events, showAllMessages]);
+  
+  // Get hidden events for summary
+  const hiddenEvents = useMemo(() => {
+    if (showAllMessages || events.length <= VISIBLE_MESSAGE_COUNT) {
+      return [];
+    }
+    return events.slice(0, -VISIBLE_MESSAGE_COUNT);
+  }, [events, showAllMessages]);
+  
+  // Generate story summary
+  const storySummary = useMemo(() => {
+    return generateStorySummary(hiddenEvents);
+  }, [hiddenEvents]);
+  
+  // Reset to collapsed view when story grows
+  useEffect(() => {
+    if (events.length > previousEventCount.current && showAllMessages) {
+      // Auto-collapse when new content arrives
+      setShowAllMessages(false);
+    }
+  }, [events.length, showAllMessages]);
 
   // Track scroll position
   const checkIfAtBottom = useCallback(() => {
@@ -125,6 +260,60 @@ export function NarrativeDisplay({
         className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
       >
         <div className="p-6 space-y-6 font-narrative text-xl leading-relaxed">
+          {/* Hidden messages summary panel */}
+          {hasHiddenMessages && (
+            <div className="animate-fade-in mb-6">
+              <div className="bg-muted/30 border border-border/50 rounded-lg p-4 backdrop-blur-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Story So Far
+                      </h3>
+                      <button
+                        onClick={() => setShowAllMessages(true)}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                          "bg-primary/10 hover:bg-primary/20 text-primary",
+                          "border border-primary/20 hover:border-primary/40",
+                          "flex items-center gap-1.5"
+                        )}
+                      >
+                        <History className="w-3.5 h-3.5" />
+                        Load Previous ({hiddenCount})
+                      </button>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {storySummary}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Collapse button when showing all messages */}
+          {showAllMessages && events.length > VISIBLE_MESSAGE_COUNT && (
+            <div className="animate-fade-in mb-4">
+              <button
+                onClick={() => setShowAllMessages(false)}
+                className={cn(
+                  "w-full px-4 py-2 text-sm font-medium rounded-md transition-all",
+                  "bg-muted/50 hover:bg-muted text-muted-foreground",
+                  "border border-border/50 hover:border-border",
+                  "flex items-center justify-center gap-2"
+                )}
+              >
+                <ChevronDown className="w-4 h-4 rotate-180" />
+                Collapse to Recent ({VISIBLE_MESSAGE_COUNT})
+              </button>
+            </div>
+          )}
+          
           {events.length === 0 ? (
             <div className="animate-fade-in text-center py-12">
               <p className="text-muted-foreground italic">
@@ -135,7 +324,7 @@ export function NarrativeDisplay({
               </p>
             </div>
           ) : (
-            events.map((event, index) => (
+            visibleEvents.map((event, index) => (
               <div
                 key={event.id}
                 ref={registerRef(event)}
