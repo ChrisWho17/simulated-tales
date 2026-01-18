@@ -483,15 +483,102 @@ export function AdventureGame() {
     setPhase('scenario');
   }, [initialLoading, phase, campaignContext?.activeCampaign, restoreWorldBible]);
   
-  
+  // CRITICAL: Handle campaign switching - when a new campaign is loaded via Load Story,
+  // this effect detects the campaign ID change and reinitializes the game state
+  const lastCampaignIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentCampaignId = campaignContext?.activeCampaign?.id || null;
+    
+    // Skip if no campaign is active
+    if (!currentCampaignId || !campaignContext?.activeCampaign) return;
+    
+    // Skip if this is the same campaign we already loaded
+    if (lastCampaignIdRef.current === currentCampaignId) return;
+    
+    // A different campaign is now active - reinitialize!
+    console.log('[AdventureGame] Campaign changed from', lastCampaignIdRef.current, 'to', currentCampaignId);
+    lastCampaignIdRef.current = currentCampaignId;
+    
+    const campaign = campaignContext.activeCampaign;
+    
+    // Set relationship journal context for this campaign + character
+    setJournalContext(campaign.id, campaign.player.name);
+    
+    // Migrate character health if needed
+    const migratedPlayer = migrateCharacterHealth(campaign.player);
+    
+    setCharacter(migratedPlayer);
+    setStory(campaign.narrativeHistory);
+    setScenarioSelection({
+      scenario: campaign.scenario,
+      genre: campaign.meta.primaryGenre,
+      genreTitle: campaign.meta.name,
+      diceMode: loadDiceMode(),
+    });
+    
+    // Rebuild character visual profile from saved character data
+    const playerAny = migratedPlayer as any;
+    const restoredVisualProfile = buildCharacterVisualProfile({
+      name: migratedPlayer.name,
+      gender: playerAny.gender || 'male',
+      role: playerAny.role || migratedPlayer.classId || 'soldier',
+      build: playerAny.build,
+      skinTone: playerAny.skinTone,
+      hairColor: playerAny.hairColor,
+      hairStyle: playerAny.hairStyle,
+      eyeColor: playerAny.eyeColor,
+      details: playerAny.details,
+    }, campaign.meta.primaryGenre || 'fantasy');
+    setCharacterVisualProfile(restoredVisualProfile);
+    
+    // Restore world bible if available
+    if (campaign.worldBible) {
+      restoreWorldBible(JSON.stringify(campaign.worldBible));
+    }
+    
+    // Restore weather state if available
+    if (campaign.weatherState) {
+      setWeatherState(campaign.weatherState);
+    }
+    
+    // Restore time state if available
+    if (campaign.timeState) {
+      setTimeState(campaign.timeState);
+    }
+    
+    // Restore director settings if available
+    if (campaign.settings?.directorSettings) {
+      setDirectorSettings(campaign.settings.directorSettings);
+    }
+    
+    // Check if we need to generate initial narrative
+    if (campaign.narrativeHistory.length === 0) {
+      needsInitialNarrative.current = true;
+      setIsLoading(true);
+    }
+    
+    // Transition to playing phase
+    setPhase('playing');
+    console.log('[AdventureGame] Campaign switched, now playing:', campaign.meta.name);
+  }, [campaignContext?.activeCampaign?.id, restoreWorldBible]);
+
   // Sync local state when campaign data changes (e.g., after checkpoint restore)
   // CRITICAL: Only sync when tick DECREASES (rollback) or on initial load, not on every narrative entry
   const lastSyncedTick = useRef<number>(-1);
+  const lastSyncedCampaignId = useRef<string | null>(null);
   useEffect(() => {
     if (phase !== 'playing' || !campaignContext?.activeCampaign) return;
     
     const campaign = campaignContext.activeCampaign;
     const currentTick = campaign.currentTick;
+    
+    // Reset sync state when campaign ID changes
+    if (lastSyncedCampaignId.current !== campaign.id) {
+      lastSyncedCampaignId.current = campaign.id;
+      lastSyncedTick.current = currentTick;
+      console.log('[Campaign Sync] New campaign detected, initialized sync state');
+      return;
+    }
     
     // Initial load case - sync everything
     if (lastSyncedTick.current === -1) {
