@@ -9,104 +9,181 @@ const corsHeaders = {
 // HAIKU LLM PREPROCESSING SYSTEM
 // ============================================================================
 
-const HAIKU_SYSTEM_PROMPT = `You are a visual scene extractor. Given GENRE, ERA, TIME_OF_DAY, WEATHER, ACTION, and NARRATOR text, output a single image generation prompt (40-60 words).
+const HAIKU_SYSTEM_PROMPT = `You are a master visual scene director. Given GENRE, ERA, TIME_OF_DAY, WEATHER, ACTION, and NARRATOR text, craft a vivid, cinematic image generation prompt (50-80 words).
+
+YOUR MISSION: Create prompts that capture the SOUL of the genre, not just surface details.
 
 RULES:
-- Lead with environment/setting appropriate to GENRE and ERA
-- Include lighting based on TIME_OF_DAY and WEATHER
-- Use genre-appropriate visual language - STRICTLY avoid cross-genre contamination
-- Never include character names, only descriptors (the woman, the figure, the warrior)
+- Open with the genre's signature visual language and artistic style
+- Describe the environment as if composing a film still or painting
+- Include dramatic lighting based on TIME_OF_DAY and WEATHER - light tells the story
+- Capture the emotional atmosphere: tension, wonder, dread, hope, melancholy
+- Focus on composition: foreground interest, middle ground action, background depth
+- Include textural details: weathered, gleaming, rusted, worn, pristine
+- Suggest color palette: warm/cool dominant, accent colors, contrast
+- Describe the most visually striking moment from the narrative
+- Never include character names, only evocative descriptors (the weary traveler, the shadowed figure)
 - Never include text/signs in prompts
-- Prefer wider shots over close-ups
-- Focus on the most visually striking moment
-- If ERA is provided, match technology/clothing/architecture to that era
+- Prefer establishing shots and dynamic compositions over static poses
 
-OUTPUT FORMAT: Single paragraph, comma-separated: [genre style], [era-appropriate setting], [time/weather lighting], [atmosphere], [composition], [subject action], [mood], [2-3 quality tokens]
+OUTPUT FORMAT: Single flowing paragraph: [genre artistic style], [dramatic setting with atmosphere], [lighting and weather effects], [textural and color details], [subject in action/pose with emotion], [compositional notes], [3-4 quality/style tokens]
 
-GENRE VISUAL GUIDES (STRICT - never mix elements):
-- Fantasy: medieval stone, torchlight, mystical mist, earth tones, painterly, NO modern tech
-- Sci-Fi: spacecraft, holograms, sterile light, cool blues, chrome, NO medieval/magic
-- Horror: decay, flickering light, deep shadows, desaturated, dread, creepy atmosphere
-- Mystery/Noir: 1940s noir, rain-streaked, venetian blind shadows, high contrast, fedoras
-- Pirate: ship decks, tropical sun, salt spray, weathered wood, caribbean blue, 18th century
-- Western: dusty frontier, harsh sun, golden hour, isolation, earth browns, 1870s-1890s
-- Cyberpunk: neon rain, holographic ads, pink/blue glow, overcrowded, dystopian, NO nature
-- Post-Apocalyptic: ruins, overgrown, ash gray, rust, scavenged gear, destroyed civilization
-- War/WW2: trenches, muzzle flash, smoke, mud, military green, period-accurate uniforms
-- Modern/Modern Life: contemporary urban, fluorescent or natural light, everyday realism
-- Medieval: castle interiors, candlelit chambers, stone architecture, heraldic colors
-- Steampunk: brass and copper, steam, Victorian industrial, gears, airships
-- Supernatural: ethereal lighting, otherworldly glow, mysterious entities
+GENRE-SPECIFIC VISUAL LANGUAGE (invoke the FEELING of each genre):
 
-TIME LIGHTING:
-- dawn/morning: soft golden light, warm sunrise, fresh atmosphere
-- afternoon/day: bright daylight, defined shadows, clear visibility
-- evening/dusk: golden hour, orange sunset, long shadows
-- night/late_night: moonlight, artificial lights, deep shadows, cool blue tones
+FANTASY: Epic scope, magical wonder, ancient mysteries. Think towering spires wreathed in mist, arcane symbols glowing softly, weathered heroes in ornate armor. Colors: rich golds, deep purples, forest greens. Mood: awe, destiny, mythic weight.
 
-WEATHER EFFECTS:
-- clear: crisp visibility, sharp details
-- rain/storm: wet surfaces, reflections, dark clouds, rain streaks
-- fog/mist: limited visibility, mysterious, diffused light
-- snow: white blanket, cold blue tones, frost
-- overcast: flat gray light, muted colors`;
+SCI-FI: Technological sublime, vast scale, alien beauty. Think gleaming corridors, holographic interfaces, starfields through viewports. Colors: cool blues, warning oranges, chrome reflections. Mood: wonder, isolation, progress.
+
+HORROR: Creeping dread, wrongness, violation of safety. Think shadows that move wrong, decay at the edges, faces half-seen. Colors: sickly yellows, blood reds, void blacks. Mood: unease, terror, the uncanny.
+
+NOIR/MYSTERY: Moral ambiguity, urban loneliness, secrets. Think rain on windows, smoke in shafts of light, faces half in shadow. Colors: high contrast blacks and whites, selective neon. Mood: cynicism, longing, danger.
+
+WESTERN: Harsh beauty, isolation, frontier justice. Think sun-bleached bones, dust devils, men squinting at horizons. Colors: burnt oranges, desert tans, sunset reds. Mood: stoic endurance, violence, freedom.
+
+CYBERPUNK: Neon oversaturation, corporate oppression, human grit. Think holographic ads reflected in puddles, chrome implants, crowded markets. Colors: magenta, cyan, acid green. Mood: rebellion, desperation, sensory overload.
+
+POST-APOCALYPTIC: Beauty in destruction, survival, nature reclaiming. Think rusted hulks, overgrown highways, jury-rigged gear. Colors: rust browns, radiation greens, ash grays. Mood: resilience, loss, fragile hope.
+
+ROMANCE: Emotional intensity, beauty, connection. Think soft focus, intimate spaces, meaningful glances. Colors: warm golds, blush pinks, candlelight. Mood: longing, passion, vulnerability.
+
+TIME LIGHTING MASTERY:
+- dawn: ethereal pink and gold, world awakening, fresh and delicate
+- morning: crisp clarity, warm but not harsh, hopeful energy
+- afternoon: full bright drama, defined shadows, confident power
+- evening/dusk: golden hour magic, long shadows, nostalgic beauty
+- night: selective light sources, mystery in darkness, dramatic contrast
+- late_night: deep shadows, isolated pools of light, secrets and danger
+
+WEATHER AS CHARACTER:
+- clear: sharp visibility, confident mood, nothing to hide
+- rain: reflections everywhere, cleansing or melancholic, life-giving or oppressive
+- storm: dramatic power, conflict externalized, nature's fury
+- fog/mist: mystery, transition, the unknown lurking
+- snow: silence, purity, cold beauty or deadly isolation
+- overcast: subdued emotion, tension before the storm`;
+
+// ============================================================================
+// ENHANCED GENRE VISUAL STYLE SYSTEM
+
+// ============================================================================
+// ENHANCED GENRE VISUAL STYLE SYSTEM
+// Each genre has a rich, immersive visual identity with artistic direction
+// ============================================================================
 
 const genreStyleTokens: Record<string, string> = {
-  'fantasy': 'fantasy art, medieval aesthetic, painterly, magical world',
-  'sci-fi': 'sci-fi concept art, cinematic sci-fi, futuristic technology',
-  'scifi': 'sci-fi concept art, cinematic sci-fi, futuristic technology',
-  'horror': 'horror atmosphere, psychological horror, dread-filled, unsettling',
-  'mystery': 'film noir, noir lighting, 1940s detective aesthetic, shadows',
-  'pirate': 'golden age of piracy, 18th century seafaring, swashbuckler aesthetic',
-  'western': 'western frontier, spaghetti western, 1870s wild west',
-  'cyberpunk': 'cyberpunk aesthetic, neon noir, blade runner style, dystopian',
-  'post-apocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
-  'postapocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
-  'post_apocalyptic': 'wasteland aesthetic, post-apocalyptic, ruins and decay',
-  'war': 'military realism, battlefield atmosphere, gritty warfare',
-  'ww2': 'world war 2, 1940s military, period-accurate uniforms and equipment',
-  'ww1': 'world war 1, trench warfare, 1910s military aesthetic',
-  'modern': 'contemporary realism, slice of life, modern day urban',
-  'modern-life': 'contemporary realism, slice of life, modern day urban',
-  'modern_life': 'contemporary realism, slice of life, modern day urban',
-  'modernlife': 'contemporary realism, slice of life, modern day urban',
-  'medieval': 'medieval aesthetic, illuminated manuscript style, classical painting',
-  'steampunk': 'steampunk aesthetic, victorian industrial, brass and copper',
-  'noir': 'film noir, black and white aesthetic, hard shadows, 1940s',
-  'romance': 'romantic atmosphere, soft lighting, intimate mood',
-  'supernatural': 'supernatural horror, ethereal lighting, otherworldly',
-  'victorian': 'victorian era, gaslight aesthetic, 1880s period accurate',
-  'ancient': 'ancient civilization, bronze age, classical architecture',
-  'renaissance': 'renaissance era, 15th-16th century, artistic flourishing',
+  // === FANTASY ===
+  'fantasy': 'epic fantasy art, by Greg Rutkowski and Alan Lee, painterly oil painting style, rich saturated colors, magical atmosphere, dramatic lighting, mystical fog, ornate medieval details, weathered textures, heroic composition, detailed environment, golden hour glow',
+  
+  // === SCI-FI ===
+  'sci-fi': 'cinematic sci-fi concept art, by Syd Mead and Simon Stalenhag, sleek futuristic design, holographic displays, atmospheric haze, chrome and glass surfaces, lens flares, volumetric lighting, anamorphic widescreen aesthetic, cool blue and warm orange color contrast, technological wonder',
+  'scifi': 'cinematic sci-fi concept art, by Syd Mead and Simon Stalenhag, sleek futuristic design, holographic displays, atmospheric haze, chrome and glass surfaces, lens flares, volumetric lighting, anamorphic widescreen aesthetic, cool blue and warm orange color contrast, technological wonder',
+  
+  // === HORROR ===
+  'horror': 'atmospheric horror art, by Zdzisław Beksiński and H.R. Giger, oppressive dread, deep shadows consuming light, desaturated sickly color palette, twisted organic forms, psychological unease, fog and decay, chiaroscuro lighting, grotesque beauty, liminal spaces, uncanny valley',
+  
+  // === MYSTERY / NOIR ===
+  'mystery': 'classic film noir cinematography, by Edward Hopper and James Tissot, dramatic venetian blind shadows, rain-slicked streets reflecting neon, high contrast black and white with selective color, 1940s fedora aesthetic, smoke curling in lamplight, moral ambiguity, urban isolation',
+  'noir': 'pure film noir aesthetic, stark black and white photography, extreme chiaroscuro, hard shadows cutting across faces, cigarette smoke in shafts of light, 1940s detective atmosphere, rain-soaked city nights, reflections on wet pavement, fatalistic mood, urban poetry',
+  
+  // === PIRATE ===
+  'pirate': 'golden age of piracy adventure art, by N.C. Wyeth and Howard Pyle, sun-bleached sails and weathered wood, caribbean turquoise waters, dramatic storm clouds, treasure map aesthetic, rum-soaked taverns, salt spray and cannon smoke, romanticized swashbuckler adventure, 18th century naval authenticity',
+  
+  // === WESTERN ===
+  'western': 'spaghetti western cinematography, by Sergio Leone and Frederic Remington, scorched desert landscapes, dust and tumbleweeds, harsh noon sun or golden hour, weathered leather and wood, frontier isolation, wide panoramic vistas, sun-bleached earth tones, 1870s authenticity, haunting silence',
+  
+  // === CYBERPUNK ===
+  'cyberpunk': 'neon-drenched cyberpunk art, by Blade Runner and Ghost in the Shell, rain-soaked megacity streets, holographic advertisements bleeding color, pink and cyan neon reflections on wet surfaces, crowded Asian-fusion urban sprawl, corporate dystopia, augmented reality overlays, high tech low life',
+  
+  // === POST-APOCALYPTIC ===
+  'post-apocalyptic': 'wasteland survival art, by The Road and Mad Max, rust and decay reclaiming civilization, ash-gray skies and toxic sunsets, overgrown ruins, scavenged improvised gear, dust storms and sandblasted metal, desperate hope amid desolation, nature reclaiming concrete',
+  'postapocalyptic': 'wasteland survival art, by The Road and Mad Max, rust and decay reclaiming civilization, ash-gray skies and toxic sunsets, overgrown ruins, scavenged improvised gear, dust storms and sandblasted metal, desperate hope amid desolation, nature reclaiming concrete',
+  'post_apocalyptic': 'wasteland survival art, by The Road and Mad Max, rust and decay reclaiming civilization, ash-gray skies and toxic sunsets, overgrown ruins, scavenged improvised gear, dust storms and sandblasted metal, desperate hope amid desolation, nature reclaiming concrete',
+  
+  // === WAR / MILITARY ===
+  'war': 'gritty military realism, by war photographers and combat artists, mud and blood, muzzle flash illuminating exhausted faces, smoke obscuring horizons, period-accurate uniforms and equipment, visceral intensity, brotherhood under fire, moral weight of conflict',
+  'ww2': 'World War 2 historical accuracy, by war correspondents, olive drab and field gray, period weapons and vehicles, European theater or Pacific islands, Band of Brothers aesthetic, 1940s authenticity, sacrifice and determination, grainy documentary feel',
+  'ww1': 'World War 1 trench warfare horror, by Otto Dix and war poets, mud-filled trenches, gas mask desperation, barbed wire and shell craters, gray-brown color palette, haunted thousand-yard stares, 1910s authenticity, industrial scale tragedy, lost generation',
+  
+  // === MODERN / CONTEMPORARY ===
+  'modern': 'contemporary urban realism, by Edward Hopper and Gregory Crewdson, natural daylight through city windows, everyday beauty in mundane moments, clean modern interiors, authentic street life, warm domestic spaces, current fashion and technology, grounded authenticity',
+  'modern-life': 'slice of life realism, by contemporary photographers, genuine human moments, natural lighting, relatable environments, emotional authenticity, modern urban and suburban settings, smartphones and coffee shops, intimate character focus',
+  'modern_life': 'slice of life realism, by contemporary photographers, genuine human moments, natural lighting, relatable environments, emotional authenticity, modern urban and suburban settings, smartphones and coffee shops, intimate character focus',
+  'modernlife': 'slice of life realism, by contemporary photographers, genuine human moments, natural lighting, relatable environments, emotional authenticity, modern urban and suburban settings, smartphones and coffee shops, intimate character focus',
+  
+  // === MEDIEVAL ===
+  'medieval': 'illuminated manuscript meets renaissance painting, by the Limbourg Brothers and Jan van Eyck, candlelit stone chambers, heraldic colors and gold leaf, castle architecture, rich tapestries, religious reverence, feudal society, oil painting texture, historical authenticity',
+  
+  // === STEAMPUNK ===
+  'steampunk': 'Victorian industrial fantasy, by Jules Verne illustrations, brass gears and copper pipes, steam billowing from ornate machinery, gaslight and coal smoke, airships and clockwork, goggles and top hats, mahogany and leather, retro-futuristic optimism',
+  
+  // === ROMANCE ===
+  'romance': 'romantic atmospheric beauty, by classic romance novel covers, soft diffused lighting, intimate close compositions, warm golden tones, flowing fabrics and hair, emotional intensity in eyes and gestures, sensual but tasteful, breathtaking natural backdrops, heightened emotion',
+  
+  // === SUPERNATURAL ===
+  'supernatural': 'ethereal otherworldly horror, by Gustave Doré and dark fantasy artists, supernatural entities manifesting, reality bending at edges, ghostly translucence, eldritch geometry, mysterious fog and strange light sources, liminal boundary between worlds, awe and terror combined',
+  
+  // === VICTORIAN ===
+  'victorian': 'gaslight era historical accuracy, by Victorian painters, ornate interiors and cobblestone streets, fog-shrouded London, strict social hierarchy visible in dress, gas lamps and horse carriages, mysterious undertones, 1880s period authenticity, industrial age contrasts',
+  
+  // === ANCIENT ===
+  'ancient': 'ancient civilization grandeur, by Lawrence Alma-Tadema, classical architecture and monuments, bronze age weapons and tools, togas and tunics, marble and stone, Mediterranean light, mythological undertones, historical authenticity, epic scale',
+  
+  // === RENAISSANCE ===
+  'renaissance': 'Italian Renaissance artistic mastery, by the Old Masters, rich fabric textures and patterns, architectural perspective, humanism and classical revival, warm Florentine light, artistic patronage and intrigue, 15th-16th century authenticity, oil painting technique',
+  
+  // === THRILLER ===
+  'thriller': 'tense thriller cinematography, by David Fincher, desaturated color grading, oppressive shadows, paranoid framing, urban environments at night, rain and cold light, psychological tension in composition, voyeuristic angles, dread building',
+  
+  // === COMEDY ===
+  'comedy': 'bright comedic staging, by Wes Anderson, saturated whimsical colors, symmetrical compositions, charming imperfection, warm inviting lighting, expressive character moments, playful environments, quirky details, joyful atmosphere',
+  
+  // === HISTORICAL ===
+  'historical': 'period-accurate historical painting, by academic realism artists, authentic architecture and costume, natural lighting of the era, social context visible, documentary attention to detail, weathered authentic textures, immersive time travel',
+  
+  // === CRIME ===
+  'crime': 'gritty crime drama cinematography, by Michael Mann, urban nightscapes, fluorescent and neon lighting, morally gray atmosphere, authentic street-level details, surveillance aesthetic, tension in mundane spaces, blue and amber color contrast',
+  
+  // === ADVENTURE ===
+  'adventure': 'epic adventure illustration, by Frank Frazetta and the pulp era, dynamic action composition, exotic locations, treasure and danger, heroic lighting, saturated adventure palette, sense of wonder and peril, larger than life moments',
+  
+  // === ESPIONAGE ===
+  'espionage': 'cold war spy thriller aesthetic, by John le Carré adaptations, muted gray and brown palette, surveillance paranoia, European city sophistication, trench coats and secrets, moral ambiguity, documentary realism, tense quiet moments',
 };
 
 const genreNegativePrompts: Record<string, string> = {
-  'fantasy': 'modern elements, technology, cars, phones, guns, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'sci-fi': 'medieval, magic wands, horses, primitive, swords, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'scifi': 'medieval, magic wands, horses, primitive, swords, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'horror': 'bright cheerful, cartoon, cute, happy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'mystery': 'bright colors, modern tech, casual, fantasy elements, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'pirate': 'modern ships, technology, contemporary, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'western': 'modern vehicles, urban, technology, medieval, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'cyberpunk': 'nature, clean pristine, historical, medieval, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'post-apocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'postapocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'post_apocalyptic': 'pristine, clean, thriving city, modern civilization, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'war': 'peaceful, clean uniforms, casual, fantasy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'ww2': 'modern technology, smartphones, fantasy, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'ww1': 'modern technology, ww2 equipment, fantasy, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modern': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modern-life': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modern_life': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'modernlife': 'fantasy elements, historical, futuristic tech, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'medieval': 'modern elements, technology, cars, guns, electricity, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'steampunk': 'modern technology, clean minimal, digital screens, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'noir': 'bright colors, cartoon, fantasy elements, modern tech, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'romance': 'violence, gore, horror, dark, weapons, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'supernatural': 'mundane, bright cheerful, cartoon, happy, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'victorian': 'modern technology, medieval, fantasy, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'ancient': 'modern technology, medieval castles, guns, cars, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
-  'renaissance': 'modern technology, cars, guns, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality',
+  // Core quality negatives applied to all
+  'fantasy': 'modern elements, technology, cars, phones, guns, neon lights, digital screens, contemporary clothing, photorealistic, anime, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'sci-fi': 'medieval, magic wands, horses, swords, castles, fantasy creatures, wood textures, rustic, historical clothing, anime, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'scifi': 'medieval, magic wands, horses, swords, castles, fantasy creatures, wood textures, rustic, historical clothing, anime, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'horror': 'bright cheerful, cartoon, cute, happy, colorful, whimsical, sunny, safe, comfortable, cozy, anime style, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'mystery': 'bright saturated colors, modern smartphones, casual wear, fantasy elements, magic, medieval, cartoon, happy, cheerful, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'noir': 'bright saturated colors, modern technology, casual contemporary, fantasy elements, magic, medieval, cheerful, happy, cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'pirate': 'modern ships, technology, contemporary clothing, cars, aircraft, neon, electricity, medieval castles, fantasy magic, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'western': 'modern vehicles, urban cityscape, technology, neon, medieval, fantasy creatures, magic, cars, phones, contemporary fashion, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'cyberpunk': 'nature scenes, clean pristine environments, historical, medieval, fantasy, magic, rural, organic, traditional, pastoral, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'post-apocalyptic': 'pristine, clean, thriving modern city, functioning civilization, new cars, maintained buildings, bright cheerful, fantasy magic, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'postapocalyptic': 'pristine, clean, thriving modern city, functioning civilization, new cars, maintained buildings, bright cheerful, fantasy magic, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'post_apocalyptic': 'pristine, clean, thriving modern city, functioning civilization, new cars, maintained buildings, bright cheerful, fantasy magic, medieval, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'war': 'peaceful serene, clean pristine uniforms, casual civilian, fantasy creatures, magic, medieval, colorful cheerful, anime cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'ww2': 'modern technology, smartphones, computers, fantasy magic, medieval, contemporary cars, bright cheerful, anime cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'ww1': 'modern technology, ww2 equipment, fantasy magic, medieval, smartphones, computers, contemporary, anime cartoon, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'modern': 'fantasy elements, historical costumes, futuristic sci-fi tech, medieval architecture, magic spells, dragons, knights, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'modern-life': 'fantasy elements, historical costumes, futuristic sci-fi tech, medieval architecture, magic spells, dragons, knights, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'modern_life': 'fantasy elements, historical costumes, futuristic sci-fi tech, medieval architecture, magic spells, dragons, knights, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'modernlife': 'fantasy elements, historical costumes, futuristic sci-fi tech, medieval architecture, magic spells, dragons, knights, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'medieval': 'modern elements, technology, cars, guns, electricity, neon lights, digital screens, contemporary clothing, sci-fi, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'steampunk': 'modern digital technology, clean minimal design, digital screens, medieval fantasy, cars, contemporary, smartphones, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'romance': 'violence, gore, horror, weapons, blood, dark horror, scary, grotesque, combat, warfare, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'supernatural': 'mundane ordinary, bright cheerful cartoon, happy whimsical, safe comfortable, modern technology, anime style, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'victorian': 'modern technology, medieval fantasy, cars, neon lights, digital screens, contemporary fashion, sci-fi elements, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'ancient': 'modern technology, medieval castles, guns, cars, neon, digital, contemporary, sci-fi, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'renaissance': 'modern technology, cars, guns, neon, digital screens, sci-fi elements, contemporary fashion, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'thriller': 'cartoon, anime, whimsical, fantasy magic, medieval, cheerful bright, comfortable safe, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'comedy': 'dark horror, violence, gore, scary, grotesque, gritty realistic, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'historical': 'modern technology, anachronistic elements, fantasy magic, sci-fi, contemporary, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'crime': 'fantasy magic, medieval, cheerful bright cartoon, whimsical, pastoral rural, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'adventure': 'mundane boring, static lifeless, dark horror, modern office, contemporary urban, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
+  'espionage': 'bright colorful cartoon, fantasy magic, medieval, cheerful whimsical, anime style, blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy',
 };
 
 const DEFAULT_NEGATIVE = 'blurry, deformed, extra limbs, mutated, text, watermark, low quality, bad anatomy, disfigured, poorly drawn, ugly, duplicate';
