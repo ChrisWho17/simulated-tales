@@ -8,7 +8,7 @@ import {
   Flame, Clock, MapPin, Infinity, Crown, Skull, Eye, Volume2, VolumeX,
   Crosshair, Target, Dices, RotateCcw, Settings, Gauge, Navigation,
   FastForward, Rewind, Sun, Moon, Backpack, Swords, PlusCircle, Timer,
-  SkipForward, Play, Pause, MessageSquare
+  SkipForward, Play, Pause, MessageSquare, HeartPulse, Sparkle
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAchievementsOptional } from '@/components/game/Achievements';
@@ -460,8 +460,8 @@ export function CheatModeSplash({
           const description = buildClothingDescriptionForAI(equippedItems, genre);
           setClothingDescription(description);
           
-          // Load companions
-          setCompanions(companionSystem.getActiveCompanions());
+          // Load all companions (including dead ones for resuscitation)
+          setCompanions(companionSystem.getAllCompanions());
         } catch (e) {
           console.error('[CheatMode] Failed to load character:', e);
         } finally {
@@ -772,7 +772,7 @@ export function CheatModeSplash({
       console.error('Failed to queue companion introduction:', e);
     }
     
-    setCompanions(companionSystem.getActiveCompanions());
+    setCompanions(companionSystem.getAllCompanions());
     setShowCompanionCreator(false);
     setCompanionCreator(DEFAULT_COMPANION_CREATOR);
     setCompanionCreatorStep('basics');
@@ -785,7 +785,7 @@ export function CheatModeSplash({
   
   const handleRemoveCompanion = (companionId: string) => {
     companionSystem.dismissCompanion(companionId, 'player');
-    setCompanions(companionSystem.getActiveCompanions());
+    setCompanions(companionSystem.getAllCompanions());
     setEditingCompanion(null);
     toast.success('Companion dismissed');
   };
@@ -795,7 +795,7 @@ export function CheatModeSplash({
     const index = allCompanions.findIndex(c => c.id === updated.id);
     if (index !== -1) {
       allCompanions[index] = updated;
-      setCompanions(companionSystem.getActiveCompanions());
+      setCompanions(companionSystem.getAllCompanions());
       setEditingCompanion(null);
       toast.success(`${updated.name} updated!`);
     }
@@ -2100,35 +2100,97 @@ export function CheatModeSplash({
     </div>
   );
 
+  // Handle companion resuscitation
+  const handleResuscitateCompanion = useCallback((companionId: string) => {
+    const result = companionSystem.reviveCompanion(companionId);
+    
+    if (result.success) {
+      // Queue the resurrection story event
+      if (result.storyIntro) {
+        const pendingResurrections = JSON.parse(localStorage.getItem('pending-resurrection-events') || '[]');
+        pendingResurrections.push({
+          companionId,
+          storyIntro: result.storyIntro,
+          timestamp: Date.now()
+        });
+        localStorage.setItem('pending-resurrection-events', JSON.stringify(pendingResurrections));
+      }
+      
+      // Refresh the companion list
+      setCompanions(companionSystem.getAllCompanions());
+      toast.success(result.message, {
+        description: 'A miraculous resurrection has occurred...',
+        duration: 5000
+      });
+    } else {
+      toast.error(result.message);
+    }
+  }, []);
+
   const renderCompanionCard = (companion: CompanionState) => (
-    <div key={companion.id} className="border border-border/50 rounded-lg p-4 space-y-3">
+    <div key={companion.id} className={`border rounded-lg p-4 space-y-3 ${
+      companion.status === 'dead' 
+        ? 'border-red-500/50 bg-red-500/5' 
+        : 'border-border/50'
+    }`}>
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium">{companion.name}</h4>
+          <h4 className="font-medium flex items-center gap-2">
+            {companion.name}
+            {companion.status === 'dead' && (
+              <Skull className="w-4 h-4 text-red-400" />
+            )}
+          </h4>
           <p className="text-xs text-muted-foreground capitalize">
             {companion.personality.traits.slice(0, 3).join(', ')}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={companion.status === 'active' ? 'default' : 'secondary'}>
+          <Badge variant={
+            companion.status === 'active' ? 'default' : 
+            companion.status === 'dead' ? 'destructive' : 
+            'secondary'
+          }>
             {companion.status}
           </Badge>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setEditingCompanion(companion)}
-          >
-            <Edit3 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleRemoveCompanion(companion.id)}
-          >
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
+          {companion.status === 'dead' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleResuscitateCompanion(companion.id)}
+              className="text-green-400 border-green-500/50 hover:bg-green-500/10 hover:text-green-300"
+            >
+              <HeartPulse className="w-4 h-4 mr-1" />
+              Revive
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditingCompanion(companion)}
+              >
+                <Edit3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveCompanion(companion.id)}
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
+      
+      {companion.status === 'dead' && (
+        <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+          <p className="text-xs text-red-300 italic">
+            This companion has fallen. Use the Revive button to bring them back with a story event.
+          </p>
+        </div>
+      )}
       
       <div className="grid grid-cols-4 gap-2 text-xs">
         <div>
@@ -2145,7 +2207,7 @@ export function CheatModeSplash({
         </div>
         <div>
           <span className="text-muted-foreground">Mood</span>
-          <div className="capitalize">{companion.mood}</div>
+          <div className="capitalize">{companion.status === 'dead' ? '-' : companion.mood}</div>
         </div>
       </div>
     </div>
@@ -2280,39 +2342,82 @@ export function CheatModeSplash({
     );
   };
 
-  const renderCompanionsScreen = () => (
-    <div className="space-y-4">
-      {showCompanionCreator ? (
-        renderCompanionCreator()
-      ) : editingCompanion ? (
-        renderCompanionEditor()
-      ) : (
-        <>
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Party ({companions.length}/3)</h3>
-            <Button variant="outline" size="sm" onClick={() => setShowCompanionCreator(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Create New
-            </Button>
-          </div>
-          
-          {companions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No companions yet</p>
-              <p className="text-xs mb-4">Create a custom companion to join your party</p>
+  const renderCompanionsScreen = () => {
+    const activeCompanions = companions.filter(c => c.status === 'active');
+    const deadCompanions = companions.filter(c => c.status === 'dead');
+    const otherCompanions = companions.filter(c => c.status !== 'active' && c.status !== 'dead');
+    
+    return (
+      <div className="space-y-4">
+        {showCompanionCreator ? (
+          renderCompanionCreator()
+        ) : editingCompanion ? (
+          renderCompanionEditor()
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium">Party ({activeCompanions.length}/3)</h3>
+                <p className="text-xs text-muted-foreground">{companions.length} total companions</p>
+              </div>
               <Button variant="outline" size="sm" onClick={() => setShowCompanionCreator(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Create Companion
+                <Plus className="w-4 h-4 mr-1" /> Create New
               </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {companions.map(renderCompanionCard)}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+            
+            {companions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No companions yet</p>
+                <p className="text-xs mb-4">Create a custom companion to join your party</p>
+                <Button variant="outline" size="sm" onClick={() => setShowCompanionCreator(true)}>
+                  <Plus className="w-4 h-4 mr-1" /> Create Companion
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Active Companions */}
+                {activeCompanions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+                      <Users className="w-3 h-3" /> Active Party
+                    </h4>
+                    <div className="space-y-3">
+                      {activeCompanions.map(renderCompanionCard)}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Dead Companions - Highlighted for Resuscitation */}
+                {deadCompanions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-red-400 uppercase flex items-center gap-2">
+                      <Skull className="w-3 h-3" /> Fallen ({deadCompanions.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {deadCompanions.map(renderCompanionCard)}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Other companions (waiting, left, etc) */}
+                {otherCompanions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+                      Other Companions
+                    </h4>
+                    <div className="space-y-3">
+                      {otherCompanions.map(renderCompanionCard)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderCurrentScreen = () => {
     if (isLoading && currentScreen === 'character') {
