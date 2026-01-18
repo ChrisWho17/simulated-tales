@@ -2951,33 +2951,42 @@ export function CheatModeSplash({
               </Button>
             </div>
             
-            {/* Screen Navigation */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/20">
+            {/* Screen Navigation - Horizontal Slider */}
+            <div className="flex items-center gap-2 px-2 py-2 border-b border-border/50 bg-muted/20">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={goLeft}
                 disabled={!canGoLeft}
-                className="h-8 w-8"
+                className="h-8 w-8 flex-shrink-0"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               
-              <div className="flex items-center gap-1">
-                {SCREENS.map((screen, i) => (
-                  <button
-                    key={screen.id}
-                    onClick={() => goToScreen(screen.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      currentScreen === screen.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                    }`}
-                  >
-                    {screen.icon}
-                    <span className="hidden sm:inline">{screen.label}</span>
-                  </button>
-                ))}
+              <div 
+                className="flex-1 overflow-x-auto scrollbar-hide"
+                style={{ 
+                  scrollbarWidth: 'none', 
+                  msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-max px-1">
+                  {SCREENS.map((screen) => (
+                    <button
+                      key={screen.id}
+                      onClick={() => goToScreen(screen.id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                        currentScreen === screen.id
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      {screen.icon}
+                      <span>{screen.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
               
               <Button
@@ -2985,7 +2994,7 @@ export function CheatModeSplash({
                 size="icon"
                 onClick={goRight}
                 disabled={!canGoRight}
-                className="h-8 w-8"
+                className="h-8 w-8 flex-shrink-0"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
