@@ -7,7 +7,6 @@ import { GameProvider } from "@/contexts/GameContext";
 import { CampaignProvider } from "@/contexts/CampaignContext";
 import { InventoryProvider, InventoryAction } from "@/game/inventorySystem";
 import { CampaignInventorySync } from "@/components/campaign/CampaignInventorySync";
-// Migration removed - cloud handles everything
 import { ScreenEffectsProvider } from "@/components/game/ScreenEffects";
 import { SessionStatsProvider } from "@/components/game/SessionStats";
 import { AchievementsProvider } from "@/components/game/Achievements";
@@ -16,6 +15,7 @@ import { SessionAchievementBridge } from "@/components/game/SessionAchievementBr
 import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
 import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
+import { RecoveryBoundary } from "@/components/error/RecoveryBoundary";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -40,45 +40,47 @@ const handleInventoryNarrativeAction = (action: InventoryAction) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AccessibilityProvider>
-      <ScreenEffectsProvider>
-        <SessionStatsProvider>
-          <AchievementsProvider>
-            {/* Bridge to connect session stats to achievements */}
-            <SessionAchievementBridge />
-            {/* Bridge to connect EventBus game events to session stats */}
-            <SessionStatsBridge />
-            <GameProvider>
-              <CampaignProvider>
-                <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
-                  <CampaignInventorySync>
-                    <TooltipProvider>
-                      <StartupIntegrityMonitor />
-                      <Toaster />
-                      <Sonner />
-                      <BrowserRouter>
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/campaigns" element={<Campaigns />} />
-                          <Route path="/campaigns/new" element={<Index />} />
-                          <Route path="/play" element={<Index />} />
-                          <Route path="/profile" element={<Profile />} />
-                          <Route path="/loadout-test" element={<LoadoutTest />} />
-                          <Route path="/inventory-test" element={<InventoryTest />} />
-                          <Route path="/achievements" element={<AchievementGallery />} />
-                          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </BrowserRouter>
-                    </TooltipProvider>
-                  </CampaignInventorySync>
-                </InventoryProvider>
-              </CampaignProvider>
-            </GameProvider>
-          </AchievementsProvider>
-        </SessionStatsProvider>
-      </ScreenEffectsProvider>
-    </AccessibilityProvider>
+    <RecoveryBoundary>
+      <AccessibilityProvider>
+        <ScreenEffectsProvider>
+          <SessionStatsProvider>
+            <AchievementsProvider>
+              {/* Bridge to connect session stats to achievements */}
+              <SessionAchievementBridge />
+              {/* Bridge to connect EventBus game events to session stats */}
+              <SessionStatsBridge />
+              <GameProvider>
+                <CampaignProvider>
+                  <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
+                    <CampaignInventorySync>
+                      <TooltipProvider>
+                        <StartupIntegrityMonitor />
+                        <Toaster />
+                        <Sonner />
+                        <BrowserRouter>
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/campaigns" element={<Campaigns />} />
+                            <Route path="/campaigns/new" element={<Index />} />
+                            <Route path="/play" element={<Index />} />
+                            <Route path="/profile" element={<Profile />} />
+                            <Route path="/loadout-test" element={<LoadoutTest />} />
+                            <Route path="/inventory-test" element={<InventoryTest />} />
+                            <Route path="/achievements" element={<AchievementGallery />} />
+                            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </BrowserRouter>
+                      </TooltipProvider>
+                    </CampaignInventorySync>
+                  </InventoryProvider>
+                </CampaignProvider>
+              </GameProvider>
+            </AchievementsProvider>
+          </SessionStatsProvider>
+        </ScreenEffectsProvider>
+      </AccessibilityProvider>
+    </RecoveryBoundary>
   </QueryClientProvider>
 );
 
