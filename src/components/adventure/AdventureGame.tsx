@@ -1066,6 +1066,7 @@ export function AdventureGame() {
           description: content.slice(0, 200),
           priority: 1,
           entities: [],
+          location: scenarioSelection?.scenario || 'unknown',
         };
         generateSceneIllustration(content, trigger);
       }
