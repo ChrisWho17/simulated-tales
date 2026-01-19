@@ -1475,6 +1475,11 @@ export function AdventureGame() {
       // Use the narrative even if response wasn't "ok" - the edge function now returns fallbacks
       let finalMechanics = data.mechanics ? { ...data.mechanics } : {};
       
+      // Log received mechanics from backend
+      console.log('[AdventureGame] ========== MECHANICS FROM BACKEND ==========');
+      console.log('[AdventureGame] Raw data.mechanics:', JSON.stringify(data.mechanics, null, 2));
+      console.log('[AdventureGame] Damage:', finalMechanics.damage, 'Heal:', finalMechanics.heal, 'Gold:', finalMechanics.goldGained);
+      
       // === FALLBACK LOOT DETECTION ===
       // If AI forgot to use [LOOT:] tags, try to detect item pickups from narrative
       if (data.narrative) {

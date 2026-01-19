@@ -2961,13 +2961,26 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         mechanics.xpGained = { amount: totalXp };
       }
       
-      const goldMatches = [...narrative.matchAll(/\[GOLD:(\d+)\]/g)];
+      // Parse gold gains - handle both [GOLD:50] and [GOLD:+50] formats
+      const goldMatches = [...narrative.matchAll(/\[GOLD:\+?(\d+)\]/g)];
       if (goldMatches.length > 0) {
         let totalGold = 0;
         for (const match of goldMatches) {
           totalGold += parseInt(match[1]);
         }
         mechanics.goldGained = totalGold;
+        console.log('[parseNarrativeMechanics] Parsed gold:', totalGold);
+      }
+      
+      // Also check for gold loss [GOLD:-50]
+      const goldLossMatches = [...narrative.matchAll(/\[GOLD:-(\d+)\]/g)];
+      if (goldLossMatches.length > 0) {
+        let totalLoss = 0;
+        for (const match of goldLossMatches) {
+          totalLoss += parseInt(match[1]);
+        }
+        mechanics.goldLost = totalLoss;
+        console.log('[parseNarrativeMechanics] Parsed gold loss:', totalLoss);
       }
       
       const lootMatches = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)];
@@ -2978,11 +2991,13 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
       if (damageMatch) {
         mechanics.damage = parseInt(damageMatch[1]);
+        console.log('[parseNarrativeMechanics] Parsed damage:', mechanics.damage);
       }
       
       const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
       if (healMatch) {
         mechanics.heal = parseInt(healMatch[1]);
+        console.log('[parseNarrativeMechanics] Parsed heal:', mechanics.heal);
       }
       
       return mechanics;
@@ -3243,11 +3258,19 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // Check for chapter end
     const isChapterEnd = narrative.includes('[CHAPTER_END]');
     
-    // Parse ALL gold awards
-    const goldMatches = [...narrative.matchAll(/\[GOLD:(\d+)\]/g)];
+    // Parse ALL gold awards (handle both [GOLD:50] and [GOLD:+50] formats)
+    const goldMatches = [...narrative.matchAll(/\[GOLD:\+?(\d+)\]/g)];
     let totalGold = 0;
     for (const match of goldMatches) {
       totalGold += parseInt(match[1]);
+    }
+    console.log('[generate-adventure] Parsed gold from narrative:', totalGold);
+    
+    // Parse gold losses [GOLD:-50]
+    const goldLossMatches = [...narrative.matchAll(/\[GOLD:-(\d+)\]/g)];
+    let goldLost = 0;
+    for (const match of goldLossMatches) {
+      goldLost += parseInt(match[1]);
     }
     
     // Parse ALL loot items
@@ -3322,7 +3345,7 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       .replace(/\[XP:[^\]]+\]/g, '')
       .replace(/\[NEUTRAL_XP:[^\]]+\]/g, '')
       .replace(/\[CHAPTER_END\]/g, '')
-      .replace(/\[GOLD:\d+\]/g, '')
+      .replace(/\[GOLD:[+-]?\d+\]/g, '')
       .replace(/\[LOOT:[^\]]+\]/g, '')
       .replace(/\[DROP:[^\]]+\]/g, '')  // Clean dropped item tags
       .replace(/\[USE:[^\]]+\]/g, '')   // Clean consumed item tags
@@ -3352,6 +3375,11 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     }
     if (totalGold > 0) {
       mechanics.goldGained = totalGold;
+      console.log('[generate-adventure] Mechanics goldGained:', totalGold);
+    }
+    if (goldLost > 0) {
+      mechanics.goldLost = goldLost;
+      console.log('[generate-adventure] Mechanics goldLost:', goldLost);
     }
     if (allLoot.length > 0) {
       mechanics.lootGained = allLoot;
@@ -3367,9 +3395,11 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     }
     if (damageMatch) {
       mechanics.damage = parseInt(damageMatch[1]);
+      console.log('[generate-adventure] Mechanics damage:', mechanics.damage);
     }
     if (healMatch) {
       mechanics.heal = parseInt(healMatch[1]);
+      console.log('[generate-adventure] Mechanics heal:', mechanics.heal);
     }
     if (relationshipMoments.length > 0) {
       mechanics.relationshipMoments = relationshipMoments;

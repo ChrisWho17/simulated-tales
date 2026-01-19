@@ -482,36 +482,57 @@ export function detectMissingDropTags(
 // When AI forgets to include [DAMAGE:X] tags
 // ============================================================================
 
-// Patterns that indicate the player took damage
+// Patterns that indicate the player took damage - ordered by confidence
 const DAMAGE_PATTERNS = [
-  // Direct hit patterns
+  // EXPLICIT DAMAGE TAGS (highest priority - AI should use these)
+  /\[DAMAGE:(\d+)\]/gi,
+  
+  // Direct hit patterns with numbers
   /(?:you\s+(?:take|receive|suffer|sustain))\s+(\d+)\s+(?:points?\s+of\s+)?damage/gi,
   /(?:deals?|inflicts?|causes?)\s+(\d+)\s+(?:points?\s+of\s+)?damage\s+(?:to\s+you|against\s+you)/gi,
   /(?:hits?\s+you\s+for|strikes?\s+you\s+for)\s+(\d+)\s+(?:points?\s+of\s+)?damage/gi,
   /(?:you\s+lose)\s+(\d+)\s+(?:health|hp|hit\s+points?)/gi,
+  /(\d+)\s+(?:points?\s+of\s+)?damage\s+(?:to\s+you|against\s+you)/gi,
+  
+  // Damage estimation patterns (numbers in context)
+  /(?:hits?\s+you|strikes?\s+you|wounds?\s+you).*?(\d+)/gi,
   
   // Combat damage without numbers (estimate based on severity)
   /(?:the\s+)?(?:blow|strike|attack|slash|stab)\s+(?:lands|connects|hits)\s+(?:hard|solidly|true)/gi,
   /(?:you're|you\s+are)\s+(?:wounded|injured|hurt|struck|hit)/gi,
   /(?:blood\s+(?:flows|streams|pours)|you\s+(?:bleed|stagger|reel))\s+from\s+(?:the\s+)?(?:wound|injury|blow|impact)/gi,
   /(?:pain\s+(?:shoots|lances|explodes)|agony\s+(?:rips|tears))\s+through\s+(?:you|your\s+body)/gi,
+  /(?:bullet|blade|arrow|claws?|fist|club)\s+(?:slams?|tears?|rips?|bites?|hits?)\s+into\s+(?:your|you)/gi,
+  /you\s+(?:crash|slam|fall|tumble|collapse).*?(?:hard|heavily|painfully)/gi,
 ];
 
 // Patterns that explicitly mention healing
 const HEAL_PATTERNS = [
+  // EXPLICIT HEAL TAGS (highest priority - AI should use these)
+  /\[HEAL:(\d+)\]/gi,
+  
   /(?:you\s+(?:heal|recover|regain|restore))\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp|hit\s+points?)/gi,
   /(?:heals?\s+you\s+for|restores?\s+you\s+for)\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp)/gi,
   /(?:you\s+feel)\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp)\s+(?:return|restore)/gi,
+  /(?:regains?|recovers?|restores?)\s+(\d+)\s+(?:health|hp)/gi,
+  /\+(\d+)\s+(?:health|hp)/gi,
 ];
 
 // Patterns that indicate gaining money
 const GOLD_PATTERNS = [
-  // Explicit amounts
-  /(?:you\s+(?:gain|receive|find|collect|pocket|earn|acquire|obtain))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency)/gi,
-  /(?:hands?\s+you|gives?\s+you|pays?\s+you|rewards?\s+you\s+with)\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency)/gi,
-  /(?:your\s+(?:reward|payment|bounty|fee)\s+(?:is|comes\s+to))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?)/gi,
-  /(?:a\s+(?:pouch|bag|purse)\s+(?:containing|with|holding))\s+(\d+)\s+(?:gold|coins?|credits?)/gi,
-  /(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?)\s+(?:richer|wealthier)/gi,
+  // EXPLICIT GOLD TAGS (highest priority - AI should use these)
+  /\[GOLD:(\d+)\]/gi,
+  /\[GOLD:\+(\d+)\]/gi,
+  
+  // Explicit amounts in narrative
+  /(?:you\s+(?:gain|receive|find|collect|pocket|earn|acquire|obtain|get))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency|marks?|crowns?|silver|copper)/gi,
+  /(?:hands?\s+you|gives?\s+you|pays?\s+you|rewards?\s+you\s+with|tosses?\s+you)\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency)/gi,
+  /(?:your\s+(?:reward|payment|bounty|fee|share)\s+(?:is|comes\s+to|totals?))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?)/gi,
+  /(?:a\s+(?:pouch|bag|purse|stack)\s+(?:containing|with|holding|of))\s+(\d+)\s+(?:gold|coins?|credits?)/gi,
+  /(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?)\s+(?:richer|wealthier|heavier)/gi,
+  /(?:counts?\s+out|counts?)\s+(\d+)\s+(?:gold|coins?|credits?)/gi,
+  /(?:sells?\s+for|worth|valued\s+at)\s+(\d+)\s+(?:gold|coins?|credits?)/gi,
+  /\+(\d+)\s+(?:gold|coins?|credits?)/gi,
 ];
 
 export interface ParsedDamage {
@@ -533,48 +554,60 @@ export interface ParsedGold {
 }
 
 /**
- * Detect damage in narrative when AI forgets [DAMAGE:X] tags
+ * Detect damage in narrative - checks both explicit tags and narrative patterns
  */
 export function detectMissingDamageTags(
   narrative: string,
   existingDamage?: number,
   options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
 ): number | null {
-  // If damage was already tagged, don't double-count
+  // If damage was already detected/passed in, don't double-count
   if (existingDamage && existingDamage > 0) return null;
-  
-  // Check for [DAMAGE:X] tag already present
-  if (/\[DAMAGE:\d+\]/i.test(narrative)) return null;
   
   const minConfidence = options.minConfidence || 'high';
   
-  // Try to find explicit damage amounts first
-  for (const pattern of DAMAGE_PATTERNS.slice(0, 4)) {
-    const matches = [...narrative.matchAll(pattern)];
+  // PRIORITY 1: Check for explicit [DAMAGE:X] tag - AI should use this
+  const damageTagMatch = narrative.match(/\[DAMAGE:(\d+)\]/i);
+  if (damageTagMatch && damageTagMatch[1]) {
+    const amount = parseInt(damageTagMatch[1]);
+    if (amount > 0 && amount <= 100) {
+      console.log('[DamageParser] Found explicit DAMAGE tag:', amount);
+      return amount;
+    }
+  }
+  
+  // PRIORITY 2: Try to find explicit damage amounts in narrative text
+  // These patterns have explicit numbers
+  const explicitNumberPatterns = DAMAGE_PATTERNS.slice(1, 7); // Skip the tag pattern we already checked
+  for (const pattern of explicitNumberPatterns) {
+    const freshPattern = new RegExp(pattern.source, pattern.flags);
+    const matches = [...narrative.matchAll(freshPattern)];
     for (const match of matches) {
       if (match[1]) {
         const amount = parseInt(match[1]);
         if (amount > 0 && amount <= 100) {
-          console.log('[DamageParser] Detected damage:', amount, 'from pattern:', pattern);
+          console.log('[DamageParser] Detected damage from narrative:', amount, 'pattern:', pattern.source.slice(0, 50));
           return amount;
         }
       }
     }
   }
   
-  // If no explicit amount, check for combat damage descriptions (estimate)
+  // PRIORITY 3: If no explicit amount, check for combat damage descriptions (estimate)
+  // Only use if medium/low confidence is acceptable
   if (minConfidence !== 'high') {
-    for (const pattern of DAMAGE_PATTERNS.slice(4)) {
-      if (pattern.test(narrative)) {
-        // Estimate damage based on severity words
-        const severeHit = /(?:devastating|crushing|massive|brutal|vicious|terrible)/i.test(narrative);
-        const moderateHit = /(?:solid|hard|painful|sharp)/i.test(narrative);
-        const lightHit = /(?:glancing|minor|slight|graze)/i.test(narrative);
+    const descriptivePatterns = DAMAGE_PATTERNS.slice(7); // Patterns without capture groups
+    for (const pattern of descriptivePatterns) {
+      const freshPattern = new RegExp(pattern.source, pattern.flags);
+      if (freshPattern.test(narrative)) {
+        // Estimate damage based on severity words in context
+        const severeHit = /(?:devastating|crushing|massive|brutal|vicious|terrible|critical|lethal|mortal)/i.test(narrative);
+        const moderateHit = /(?:solid|hard|painful|sharp|direct|clean|powerful)/i.test(narrative);
+        const lightHit = /(?:glancing|minor|slight|graze|scratch|nick)/i.test(narrative);
         
-        if (severeHit) return 15;
-        if (moderateHit) return 8;
-        if (lightHit) return 3;
-        return 5; // Default estimate
+        const estimatedDamage = severeHit ? 15 : moderateHit ? 8 : lightHit ? 3 : 5;
+        console.log('[DamageParser] Estimated damage from description:', estimatedDamage);
+        return estimatedDamage;
       }
     }
   }
@@ -583,27 +616,35 @@ export function detectMissingDamageTags(
 }
 
 /**
- * Detect healing in narrative when AI forgets [HEAL:X] tags
+ * Detect healing in narrative - checks both explicit tags and narrative patterns
  */
 export function detectMissingHealTags(
   narrative: string,
   existingHeal?: number,
   options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
 ): number | null {
-  // If heal was already tagged, don't double-count
+  // If heal was already detected/passed in, don't double-count
   if (existingHeal && existingHeal > 0) return null;
   
-  // Check for [HEAL:X] tag already present
-  if (/\[HEAL:\d+\]/i.test(narrative)) return null;
+  // PRIORITY 1: Check for explicit [HEAL:X] tag - AI should use this
+  const healTagMatch = narrative.match(/\[HEAL:(\d+)\]/i);
+  if (healTagMatch && healTagMatch[1]) {
+    const amount = parseInt(healTagMatch[1]);
+    if (amount > 0 && amount <= 100) {
+      console.log('[HealParser] Found explicit HEAL tag:', amount);
+      return amount;
+    }
+  }
   
-  // Try to find explicit heal amounts
-  for (const pattern of HEAL_PATTERNS) {
-    const matches = [...narrative.matchAll(pattern)];
+  // PRIORITY 2: Try to find explicit heal amounts in narrative text
+  for (const pattern of HEAL_PATTERNS.slice(1)) { // Skip the tag pattern
+    const freshPattern = new RegExp(pattern.source, pattern.flags);
+    const matches = [...narrative.matchAll(freshPattern)];
     for (const match of matches) {
       if (match[1]) {
         const amount = parseInt(match[1]);
         if (amount > 0 && amount <= 100) {
-          console.log('[HealParser] Detected healing:', amount);
+          console.log('[HealParser] Detected healing from narrative:', amount);
           return amount;
         }
       }
@@ -614,27 +655,35 @@ export function detectMissingHealTags(
 }
 
 /**
- * Detect gold gains in narrative when AI forgets [GOLD:X] tags
+ * Detect gold gains in narrative - checks both explicit tags and narrative patterns
  */
 export function detectMissingGoldTags(
   narrative: string,
   existingGold?: number,
   options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
 ): number | null {
-  // If gold was already tagged, don't double-count
+  // If gold was already detected/passed in, don't double-count
   if (existingGold && existingGold > 0) return null;
   
-  // Check for [GOLD:X] tag already present
-  if (/\[GOLD:\d+\]/i.test(narrative)) return null;
+  // PRIORITY 1: Check for explicit [GOLD:X] or [GOLD:+X] tag - AI should use this
+  const goldTagMatch = narrative.match(/\[GOLD:\+?(\d+)\]/i);
+  if (goldTagMatch && goldTagMatch[1]) {
+    const amount = parseInt(goldTagMatch[1]);
+    if (amount > 0 && amount <= 100000) {
+      console.log('[GoldParser] Found explicit GOLD tag:', amount);
+      return amount;
+    }
+  }
   
-  // Try to find explicit gold amounts
-  for (const pattern of GOLD_PATTERNS) {
-    const matches = [...narrative.matchAll(pattern)];
+  // PRIORITY 2: Try to find explicit gold amounts in narrative text
+  for (const pattern of GOLD_PATTERNS.slice(2)) { // Skip the tag patterns
+    const freshPattern = new RegExp(pattern.source, pattern.flags);
+    const matches = [...narrative.matchAll(freshPattern)];
     for (const match of matches) {
       if (match[1]) {
         const amount = parseInt(match[1]);
-        if (amount > 0 && amount <= 10000) {
-          console.log('[GoldParser] Detected gold gain:', amount);
+        if (amount > 0 && amount <= 100000) {
+          console.log('[GoldParser] Detected gold from narrative:', amount);
           return amount;
         }
       }
