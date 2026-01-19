@@ -1029,6 +1029,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
+                        {/* Stat bonuses */}
+                        {Object.keys(bg.statBonuses).length > 0 && (
+                          <div className="flex gap-2 mt-2 text-xs text-accent">
+                            <span>+{Object.entries(bg.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
+                          </div>
+                        )}
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {bg.skills.map(skill => (
                             <span key={skill} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
