@@ -47,6 +47,8 @@ export interface SaveAccount {
 }
 
 interface ExtendedCampaignContextType extends CampaignContextType {
+  // Initialization state
+  isInitialized: boolean;
   // Cloud/Account info
   account: SaveAccount;
   syncStatus: SyncStatus;
@@ -136,6 +138,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   const [conflicts, setConflicts] = useState<SaveConflict[]>([]);
   const [syncStates, setSyncStates] = useState<Map<string, SyncState>>(new Map());
   
+  // Initialization state
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   // Campaign list
   const [campaigns, setCampaigns] = useState<CampaignMetadata[]>([]);
   
@@ -177,6 +182,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
           setActiveCampaign(campaign);
         }
       }
+      
+      // Mark initialization complete
+      setIsInitialized(true);
     };
     
     init();
@@ -707,6 +715,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   }, [syncStates]);
   
   const value: ExtendedCampaignContextType = {
+    // Initialization state
+    isInitialized,
     campaigns,
     activeCampaign,
     activeCampaignId: activeCampaign?.id ?? null,
