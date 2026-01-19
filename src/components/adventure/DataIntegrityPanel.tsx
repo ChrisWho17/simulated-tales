@@ -40,7 +40,7 @@ import {
   IntegrityCheckResult,
   IntegrityIssue 
 } from '@/services/dataIntegrityService';
-import { deleteCampaignData } from '@/lib/campaignStorage';
+import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 import { toast } from 'sonner';
 
 interface DataIntegrityPanelProps {
@@ -253,11 +253,12 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
                           variant="destructive"
                           size="sm"
                           className="mt-2 h-7 text-xs"
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm(`Delete "${result.campaignName || result.campaignId}"? This cannot be undone.`)) {
                               setDeletingId(result.campaignId);
                               try {
-                                deleteCampaignData(result.campaignId);
+                                // Use unified architecture for cloud sync delete
+                                await UnifiedSaveArchitecture.deleteCampaign(result.campaignId);
                                 toast.success('Deleted broken campaign');
                                 runScan();
                               } catch (e) {
