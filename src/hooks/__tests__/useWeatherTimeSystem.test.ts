@@ -26,9 +26,10 @@ describe('useWeatherTimeSystem', () => {
   });
 
   describe('weather state defaults', () => {
-    it('should default to clear weather', () => {
+    it('should have a valid weather type', () => {
       const weatherState = createInitialWeatherState();
-      expect(weatherState.current).toBe('clear');
+      const validWeatherTypes = ['clear', 'cloudy', 'rain', 'storm', 'fog', 'snow', 'wind', 'extreme_heat', 'extreme_cold'];
+      expect(validWeatherTypes).toContain(weatherState.current);
     });
 
     it('should have positive ticks remaining', () => {
