@@ -1,31 +1,54 @@
 import { useState, useCallback, useEffect } from 'react';
 import { CompanionState, companionSystem } from '@/game/companionSystem';
+import {
+  PendingCompanionWithTiming,
+  AppearanceTimingType,
+  getPendingIntroductions,
+  savePendingIntroductions,
+  getNextReadyCompanion,
+  shouldCompanionAppearNow,
+  markCompanionDisplayed,
+  updateCompanionTurnTracking,
+  markContextTrigger,
+  hasImmediateCompanions,
+  buildCompanionIntroductionContext,
+} from '@/game/companionTimingSystem';
 
-export interface PendingCompanionIntroduction {
-  companionId: string;
-  name: string;
-  introduction: string;
-  portraitUrl: string | null;
-  origin: string;
-  timestamp: number;
-  displayed: boolean;
-}
+// Re-export for backwards compatibility
+export interface PendingCompanionIntroduction extends PendingCompanionWithTiming {}
 
 interface UseCompanionIntroductionReturn {
   pendingIntroductions: PendingCompanionIntroduction[];
   currentIntroduction: PendingCompanionIntroduction | null;
   showIntroduction: () => void;
   dismissIntroduction: () => void;
-  getNextIntroduction: () => PendingCompanionIntroduction | null;
+  getNextIntroduction: (context?: AppearanceContext) => PendingCompanionIntroduction | null;
   hasUnreadIntroductions: boolean;
   markIntroductionAsDisplayed: (companionId: string) => void;
   getCompanionDialogue: (companionId: string) => string | null;
+  // New timing-aware methods
+  checkForReadyCompanion: (context: AppearanceContext) => PendingCompanionIntroduction | null;
+  onPlayerAction: () => void;
+  onSceneChange: () => void;
+  onCombatEnd: () => void;
+  onRest: () => void;
+  onLocationChange: () => void;
+  hasImmediateCompanion: boolean;
+  getIntroductionContextForAI: () => string | null;
+}
+
+export interface AppearanceContext {
+  turnNumber: number;
+  isNewScene?: boolean;
+  justFinishedCombat?: boolean;
+  justRested?: boolean;
+  locationChanged?: boolean;
+  narrativeContext?: string;
 }
 
 /**
  * Hook for managing companion introduction dialogues in the story
- * When a companion is created via cheat mode, their introduction is queued
- * and will be displayed in the story flow
+ * Now with timing-aware companion appearances!
  */
 export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
   const [pendingIntroductions, setPendingIntroductions] = useState<PendingCompanionIntroduction[]>([]);
@@ -33,32 +56,14 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
 
   // Load pending introductions from localStorage
   const loadIntroductions = useCallback(() => {
-    try {
-      const stored = localStorage.getItem('pending-companion-introductions');
-      if (stored) {
-        const intros = JSON.parse(stored) as PendingCompanionIntroduction[];
-        setPendingIntroductions(intros);
-      }
-    } catch (e) {
-      console.error('Failed to load companion introductions:', e);
-    }
-  }, []);
-
-  // Save introductions to localStorage
-  const saveIntroductions = useCallback((intros: PendingCompanionIntroduction[]) => {
-    try {
-      localStorage.setItem('pending-companion-introductions', JSON.stringify(intros));
-      setPendingIntroductions(intros);
-    } catch (e) {
-      console.error('Failed to save companion introductions:', e);
-    }
+    const intros = getPendingIntroductions();
+    setPendingIntroductions(intros);
   }, []);
 
   // Load on mount and listen for storage changes
   useEffect(() => {
     loadIntroductions();
 
-    // Listen for storage changes from other tabs/components
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'pending-companion-introductions') {
         loadIntroductions();
@@ -75,19 +80,28 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
     return () => clearInterval(interval);
   }, [loadIntroductions]);
 
-  // Get the next undisplayed introduction
-  const getNextIntroduction = useCallback((): PendingCompanionIntroduction | null => {
+  // Get the next undisplayed introduction based on context
+  const getNextIntroduction = useCallback((context?: AppearanceContext): PendingCompanionIntroduction | null => {
+    if (context) {
+      return getNextReadyCompanion(context);
+    }
+    // Fallback: return first undisplayed (legacy behavior)
     const undisplayed = pendingIntroductions.filter(i => !i.displayed);
     if (undisplayed.length > 0) {
-      // Sort by timestamp, oldest first
       return undisplayed.sort((a, b) => a.timestamp - b.timestamp)[0];
     }
     return null;
   }, [pendingIntroductions]);
 
+  // Check if any companion is ready to appear given current context
+  const checkForReadyCompanion = useCallback((context: AppearanceContext): PendingCompanionIntroduction | null => {
+    return getNextReadyCompanion(context);
+  }, []);
+
   // Show the next pending introduction
   const showIntroduction = useCallback(() => {
-    const next = getNextIntroduction();
+    // For showing, prioritize 'immediately' timing
+    const next = getNextIntroduction({ turnNumber: 0 });
     if (next) {
       setCurrentIntroduction(next);
       
@@ -103,13 +117,8 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
   // Dismiss the current introduction
   const dismissIntroduction = useCallback(() => {
     if (currentIntroduction) {
-      // Mark as displayed
-      const updated = pendingIntroductions.map(i =>
-        i.companionId === currentIntroduction.companionId
-          ? { ...i, displayed: true }
-          : i
-      );
-      saveIntroductions(updated);
+      markCompanionDisplayed(currentIntroduction.companionId);
+      loadIntroductions();
       
       // Clear the companion's pending reaction
       const companion = companionSystem.getCompanion(currentIntroduction.companionId);
@@ -119,19 +128,15 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
       }
     }
     setCurrentIntroduction(null);
-  }, [currentIntroduction, pendingIntroductions, saveIntroductions]);
+  }, [currentIntroduction, loadIntroductions]);
 
   // Mark a specific introduction as displayed
   const markIntroductionAsDisplayed = useCallback((companionId: string) => {
-    const updated = pendingIntroductions.map(i =>
-      i.companionId === companionId
-        ? { ...i, displayed: true }
-        : i
-    );
-    saveIntroductions(updated);
-  }, [pendingIntroductions, saveIntroductions]);
+    markCompanionDisplayed(companionId);
+    loadIntroductions();
+  }, [loadIntroductions]);
 
-  // Get saved dialogue for a companion (from the introductions store)
+  // Get saved dialogue for a companion
   const getCompanionDialogue = useCallback((companionId: string): string | null => {
     try {
       const intros = JSON.parse(localStorage.getItem('companion-introductions') || '{}');
@@ -139,6 +144,49 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
     } catch {
       return null;
     }
+  }, []);
+
+  // Timing event handlers
+  const onPlayerAction = useCallback(() => {
+    updateCompanionTurnTracking();
+    loadIntroductions();
+  }, [loadIntroductions]);
+
+  const onSceneChange = useCallback(() => {
+    // Scene changes make 'next_scene' companions eligible
+    loadIntroductions();
+  }, [loadIntroductions]);
+
+  const onCombatEnd = useCallback(() => {
+    markContextTrigger('combatEnded');
+    loadIntroductions();
+  }, [loadIntroductions]);
+
+  const onRest = useCallback(() => {
+    markContextTrigger('restOccurred');
+    loadIntroductions();
+  }, [loadIntroductions]);
+
+  const onLocationChange = useCallback(() => {
+    markContextTrigger('locationChanged');
+    loadIntroductions();
+  }, [loadIntroductions]);
+
+  // Check if there's an immediate companion waiting
+  const hasImmediateCompanion = hasImmediateCompanions();
+
+  // Get AI context for next ready companion
+  const getIntroductionContextForAI = useCallback((): string | null => {
+    // Get companions ready to appear NOW
+    const ready = getNextReadyCompanion({ 
+      turnNumber: 0, 
+      // Immediately timing should always be ready
+    });
+    
+    if (ready) {
+      return buildCompanionIntroductionContext(ready);
+    }
+    return null;
   }, []);
 
   const hasUnreadIntroductions = pendingIntroductions.some(i => !i.displayed);
@@ -152,5 +200,14 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
     hasUnreadIntroductions,
     markIntroductionAsDisplayed,
     getCompanionDialogue,
+    // New timing-aware methods
+    checkForReadyCompanion,
+    onPlayerAction,
+    onSceneChange,
+    onCombatEnd,
+    onRest,
+    onLocationChange,
+    hasImmediateCompanion,
+    getIntroductionContextForAI,
   };
 }

@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Sparkles, HeartPulse, Users, X, ChevronRight, Scroll } from 'lucide-react';
+import { Heart, Sparkles, HeartPulse, Users, X, ChevronRight, Scroll, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CompanionState, companionSystem } from '@/game/companionSystem';
 import { cn } from '@/lib/utils';
+import {
+  PendingCompanionWithTiming,
+  AppearanceTimingType,
+  getPendingIntroductions,
+  savePendingIntroductions,
+  getNextReadyCompanion,
+  shouldCompanionAppearNow,
+} from '@/game/companionTimingSystem';
 
-// Pending introduction from localStorage
-export interface PendingCompanionIntroduction {
-  companionId: string;
-  name: string;
-  introduction: string;
-  portraitUrl: string | null;
-  origin: string;
-  timestamp: number;
-  displayed: boolean;
-}
+// Pending introduction from localStorage (now includes timing)
+export interface PendingCompanionIntroduction extends PendingCompanionWithTiming {}
 
 // Pending resurrection from localStorage
 export interface PendingResurrectionEvent {
@@ -181,7 +181,7 @@ export function useCompanionStoryEvents() {
   // Load events from localStorage
   const loadEvents = useCallback(() => {
     try {
-      const intros = JSON.parse(localStorage.getItem('pending-companion-introductions') || '[]');
+      const intros = getPendingIntroductions();
       const undisplayedIntros = intros.filter((i: PendingCompanionIntroduction) => !i.displayed);
       setPendingIntroductions(undisplayedIntros);
       
@@ -199,17 +199,39 @@ export function useCompanionStoryEvents() {
     return () => clearInterval(interval);
   }, [loadEvents]);
 
-  // Show the next pending event
-  const showNextEvent = useCallback(() => {
+  // Show the next pending event (respects timing)
+  const showNextEvent = useCallback((context?: { 
+    turnNumber?: number; 
+    isNewScene?: boolean;
+    justFinishedCombat?: boolean;
+    justRested?: boolean;
+    locationChanged?: boolean;
+  }) => {
     // Prioritize resurrections (more dramatic)
     if (pendingResurrections.length > 0) {
       setCurrentEvent({ event: pendingResurrections[0], type: 'resurrection' });
       return true;
     }
     
+    // For introductions, check timing if context provided
     if (pendingIntroductions.length > 0) {
-      setCurrentEvent({ event: pendingIntroductions[0], type: 'introduction' });
-      return true;
+      if (context) {
+        const ready = getNextReadyCompanion({
+          turnNumber: context.turnNumber || 0,
+          isNewScene: context.isNewScene,
+          justFinishedCombat: context.justFinishedCombat,
+          justRested: context.justRested,
+          locationChanged: context.locationChanged,
+        });
+        if (ready) {
+          setCurrentEvent({ event: ready, type: 'introduction' });
+          return true;
+        }
+      } else {
+        // No context = show first undisplayed (legacy behavior, for manual trigger)
+        setCurrentEvent({ event: pendingIntroductions[0], type: 'introduction' });
+        return true;
+      }
     }
     
     return false;
@@ -222,11 +244,11 @@ export function useCompanionStoryEvents() {
     try {
       if (currentEvent.type === 'introduction') {
         const intro = currentEvent.event as PendingCompanionIntroduction;
-        const stored = JSON.parse(localStorage.getItem('pending-companion-introductions') || '[]');
+        const stored = getPendingIntroductions();
         const updated = stored.map((i: PendingCompanionIntroduction) =>
           i.companionId === intro.companionId ? { ...i, displayed: true } : i
         );
-        localStorage.setItem('pending-companion-introductions', JSON.stringify(updated));
+        savePendingIntroductions(updated);
       } else {
         const resurrection = currentEvent.event as PendingResurrectionEvent;
         const stored = JSON.parse(localStorage.getItem('pending-resurrection-events') || '[]');
