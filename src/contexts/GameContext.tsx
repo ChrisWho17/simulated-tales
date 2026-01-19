@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { DirectorSettings, DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
+import { StateSyncBus } from '@/services/stateSyncBus';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { 
   CampaignMemoryStore, 
   Campaign,
@@ -539,10 +541,31 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     applyColorTheme(colorTheme);
   }, []);
   
-  // Listen for storage changes (cross-tab sync and campaign loads)
+  // Listen for state sync events via StateSyncBus
   useEffect(() => {
+    // Subscribe to director settings updates from CampaignContext
+    const unsubDirector = StateSyncBus.subscribe('settings:director-updated', (event) => {
+      console.log('[GameContext] Received settings:director-updated via StateSyncBus:', event.payload);
+      setSettings(prev => ({
+        ...prev,
+        directorSettings: event.payload.directorSettings,
+      }));
+    });
+    
+    // Subscribe to campaign loaded events
+    const unsubCampaign = StateSyncBus.subscribe('campaign:loaded', (event) => {
+      console.log('[GameContext] Received campaign:loaded via StateSyncBus:', event.payload);
+      if (event.payload.directorSettings) {
+        setSettings(prev => ({
+          ...prev,
+          directorSettings: event.payload.directorSettings!,
+        }));
+      }
+    });
+    
+    // Also listen for storage changes (cross-tab sync)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === SETTINGS_STORAGE_KEY && e.newValue) {
+      if (e.key === STORAGE_KEYS.GAME_SETTINGS && e.newValue) {
         try {
           const newSettings = JSON.parse(e.newValue);
           // Update director settings from storage changes (cross-tab sync)
@@ -559,24 +582,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     };
     
-    // Listen for custom event from CampaignContext (same tab)
-    const handleCampaignSettingsLoaded = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail?.directorSettings) {
-        console.log('[GameContext] Campaign settings loaded event, syncing director settings:', customEvent.detail.directorSettings);
-        setSettings(prev => ({
-          ...prev,
-          directorSettings: customEvent.detail.directorSettings,
-        }));
-      }
-    };
-    
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded);
     
     return () => {
+      unsubDirector();
+      unsubCampaign();
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded);
     };
   }, []); // Empty deps - handlers use functional updates so no stale closures
   

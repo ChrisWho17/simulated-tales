@@ -1,6 +1,7 @@
 // ============================================================================
 // CAMPAIGN CONTEXT - Cloud-first with Google auth, GUEST-LOCAL fallback
 // Integrated with UnifiedSaveArchitecture for transactional saves
+// Enhanced with StateSyncBus for cross-context synchronization
 // ============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
@@ -21,6 +22,8 @@ import {
   CampaignSyncStatus 
 } from '@/services/unifiedSaveArchitecture';
 import { DataIntegrityService } from '@/services/dataIntegrityService';
+import { StateSyncBus } from '@/services/stateSyncBus';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { WorldBible } from '@/game/worldBible/types';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { StoryEntry } from '@/components/adventure/types';
@@ -280,7 +283,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     if (campaign.settings?.directorSettings) {
       console.log('[Campaign] Syncing director settings from campaign:', campaign.settings.directorSettings);
       try {
-        const storedSettings = localStorage.getItem('untold-game-settings');
+        const storedSettings = localStorage.getItem(STORAGE_KEYS.GAME_SETTINGS);
         let parsed: Record<string, unknown>;
         
         if (storedSettings) {
@@ -292,21 +295,37 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
         
         // Always update director settings from campaign
         parsed.directorSettings = campaign.settings.directorSettings;
-        localStorage.setItem('untold-game-settings', JSON.stringify(parsed));
+        localStorage.setItem(STORAGE_KEYS.GAME_SETTINGS, JSON.stringify(parsed));
         
-        // Dispatch custom event to notify GameContext in the same tab
+        // Emit via StateSyncBus for cross-context synchronization
         // Use setTimeout to ensure this happens after the current React render cycle
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('campaign-settings-loaded', {
-            detail: { directorSettings: campaign.settings.directorSettings }
-          }));
-          console.log('[Campaign] Dispatched campaign-settings-loaded event');
+          StateSyncBus.emit('settings:director-updated', {
+            directorSettings: campaign.settings.directorSettings!,
+            source: 'campaign',
+          }, 'CampaignContext');
+          
+          StateSyncBus.emit('campaign:loaded', {
+            campaignId: campaign.id,
+            campaignName: campaign.meta.name,
+            directorSettings: campaign.settings.directorSettings,
+          }, 'CampaignContext');
+          
+          console.log('[Campaign] Emitted campaign:loaded and settings:director-updated via StateSyncBus');
         }, 0);
       } catch (e) {
         console.warn('[Campaign] Failed to sync director settings:', e);
       }
     } else {
       console.log('[Campaign] Campaign has no director settings, using defaults');
+      
+      // Still emit campaign loaded event
+      setTimeout(() => {
+        StateSyncBus.emit('campaign:loaded', {
+          campaignId: campaign.id,
+          campaignName: campaign.meta.name,
+        }, 'CampaignContext');
+      }, 0);
     }
   }, []);
   

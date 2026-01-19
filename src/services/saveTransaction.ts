@@ -1,12 +1,14 @@
 // ============================================================================
 // SAVE TRANSACTION SYSTEM - Write-ahead logging with atomic operations
-// Phase 2: Transactional saves for data integrity
+// Phase 3 Enhanced: Transactional saves with verification and sync bus integration
 // ============================================================================
 
 import { CampaignData } from '@/types/campaign';
+import { STORAGE_KEYS, getCampaignKey, getWALKey } from '@/lib/storageKeys';
+import { StateSyncBus } from './stateSyncBus';
 
 // Transaction states
-export type TransactionState = 'pending' | 'committed' | 'rolled_back' | 'failed';
+export type TransactionState = 'pending' | 'committed' | 'rolled_back' | 'failed' | 'verified';
 
 export interface SaveTransaction {
   id: string;
@@ -18,6 +20,8 @@ export interface SaveTransaction {
   previousChecksum?: string;
   dataSize: number;
   error?: string;
+  verificationPassed?: boolean;
+  retryCount?: number;
 }
 
 export interface WriteAheadLogEntry {
@@ -27,12 +31,22 @@ export interface WriteAheadLogEntry {
   timestamp: number;
   data?: string; // Compressed campaign data
   checksum: string;
+  version?: number; // Schema version
 }
 
-const WAL_KEY = 'lwe_write_ahead_log';
+export interface TransactionVerificationResult {
+  success: boolean;
+  checksumMatch: boolean;
+  dataIntact: boolean;
+  sizeMatch: boolean;
+  error?: string;
+}
+
+const WAL_KEY = STORAGE_KEYS.WAL_PREFIX.slice(0, -1); // Remove trailing underscore for base key
 const TRANSACTION_LOG_KEY = 'lwe_transaction_log';
 const MAX_WAL_ENTRIES = 10;
 const MAX_TRANSACTION_LOG = 50;
+const MAX_RETRY_ATTEMPTS = 3;
 
 // ============================================================================
 // CHECKSUM GENERATION (SHA-256)
@@ -130,23 +144,19 @@ class SaveTransactionManager {
       }
       
       // Write to localStorage (atomic)
-      const key = `lwe_campaign_${transaction.campaignId}`;
+      const key = getCampaignKey(transaction.campaignId);
       localStorage.setItem(key, walEntry.data);
       
-      // Verify write
-      const written = localStorage.getItem(key);
-      if (!written) {
-        throw new Error('Write verification failed');
+      // Verify write with full verification
+      const verification = await this.verifyWrite(key, transaction.checksum, walEntry.data.length);
+      if (!verification.success) {
+        throw new Error(`Write verification failed: ${verification.error}`);
       }
       
-      const writtenChecksum = await generateChecksum(written);
-      if (writtenChecksum !== transaction.checksum) {
-        throw new Error('Write checksum verification failed');
-      }
-      
-      // Update transaction state
-      transaction.state = 'committed';
+      // Update transaction state to verified
+      transaction.state = 'verified';
       transaction.completedAt = Date.now();
+      transaction.verificationPassed = true;
       
       // Log transaction
       this.logTransaction(transaction);
@@ -156,16 +166,83 @@ class SaveTransactionManager {
       
       this.activeTransactions.delete(transactionId);
       
-      console.log(`[Transaction] Committed: ${transactionId}`);
+      // Emit success event via StateSyncBus
+      StateSyncBus.emit('campaign:saved', {
+        campaignId: transaction.campaignId,
+        timestamp: Date.now(),
+        syncedToCloud: false, // Will be updated by cloud sync
+      }, 'SaveTransaction');
+      
+      console.log(`[Transaction] Committed and verified: ${transactionId}`);
       return true;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       transaction.state = 'failed';
-      transaction.error = error instanceof Error ? error.message : String(error);
+      transaction.error = errorMessage;
       transaction.completedAt = Date.now();
+      transaction.retryCount = (transaction.retryCount || 0) + 1;
       
       this.logTransaction(transaction);
+      
+      // Emit failure event via StateSyncBus
+      StateSyncBus.emit('error:save-failed', {
+        campaignId: transaction.campaignId,
+        error: errorMessage,
+        recoverable: (transaction.retryCount || 0) < MAX_RETRY_ATTEMPTS,
+      }, 'SaveTransaction');
+      
       console.error(`[Transaction] Commit failed: ${transactionId}`, error);
       return false;
+    }
+  }
+  
+  // Verify a write was successful
+  private async verifyWrite(
+    key: string,
+    expectedChecksum: string,
+    expectedSize: number
+  ): Promise<TransactionVerificationResult> {
+    try {
+      const written = localStorage.getItem(key);
+      
+      if (!written) {
+        return {
+          success: false,
+          checksumMatch: false,
+          dataIntact: false,
+          sizeMatch: false,
+          error: 'No data found after write',
+        };
+      }
+      
+      const writtenChecksum = await generateChecksum(written);
+      const checksumMatch = writtenChecksum === expectedChecksum;
+      const sizeMatch = Math.abs(written.length - expectedSize) < 10; // Allow small variance
+      
+      // Verify JSON is parseable
+      let dataIntact = false;
+      try {
+        JSON.parse(written);
+        dataIntact = true;
+      } catch {
+        dataIntact = false;
+      }
+      
+      return {
+        success: checksumMatch && dataIntact,
+        checksumMatch,
+        dataIntact,
+        sizeMatch,
+        error: !checksumMatch ? 'Checksum mismatch' : !dataIntact ? 'Data corruption' : undefined,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        checksumMatch: false,
+        dataIntact: false,
+        sizeMatch: false,
+        error: error instanceof Error ? error.message : 'Unknown verification error',
+      };
     }
   }
   
