@@ -539,6 +539,47 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     applyColorTheme(colorTheme);
   }, []);
   
+  // Listen for storage changes (cross-tab sync and campaign loads)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SETTINGS_STORAGE_KEY && e.newValue) {
+        try {
+          const newSettings = JSON.parse(e.newValue);
+          // Only update director settings if they changed significantly
+          if (newSettings.directorSettings && 
+              JSON.stringify(newSettings.directorSettings) !== JSON.stringify(settings.directorSettings)) {
+            console.log('[GameContext] Storage change detected, syncing director settings');
+            setSettings(prev => ({
+              ...prev,
+              directorSettings: newSettings.directorSettings,
+            }));
+          }
+        } catch (e) {
+          console.warn('[GameContext] Failed to parse storage change:', e);
+        }
+      }
+    };
+    
+    // Listen for custom event from CampaignContext (same tab)
+    const handleCampaignSettingsLoaded = (e: CustomEvent) => {
+      if (e.detail?.directorSettings) {
+        console.log('[GameContext] Campaign settings loaded event, syncing director settings');
+        setSettings(prev => ({
+          ...prev,
+          directorSettings: e.detail.directorSettings,
+        }));
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded as EventListener);
+    };
+  }, [settings.directorSettings]);
+  
   // Save settings when they change
   useEffect(() => {
     saveSettings(settings);

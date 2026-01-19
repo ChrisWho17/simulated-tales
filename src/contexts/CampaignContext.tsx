@@ -214,6 +214,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   
   // Setup NPC registry and companion state when loading a campaign
   const setupCampaignForLoad = useCallback((campaign: CampaignData) => {
+    console.log('[Campaign] Setting up campaign for load:', campaign.id);
+    console.log('[Campaign] Campaign settings:', campaign.settings);
+    
     // Clear NPC registry before loading
     const emptyRegistry: NPCIdentityRegistry = {
       npcs: {},
@@ -270,6 +273,27 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       }
     } catch (e) {
       console.warn('[Campaign] Failed to restore companion localStorage data:', e);
+    }
+    
+    // CRITICAL: Sync campaign director settings to global settings storage
+    // This ensures the GameContext sees the campaign's director settings on next load
+    if (campaign.settings?.directorSettings) {
+      console.log('[Campaign] Syncing director settings from campaign:', campaign.settings.directorSettings);
+      try {
+        const storedSettings = localStorage.getItem('untold-game-settings');
+        if (storedSettings) {
+          const parsed = JSON.parse(storedSettings);
+          parsed.directorSettings = campaign.settings.directorSettings;
+          localStorage.setItem('untold-game-settings', JSON.stringify(parsed));
+          
+          // Dispatch custom event to notify GameContext in the same tab
+          window.dispatchEvent(new CustomEvent('campaign-settings-loaded', {
+            detail: { directorSettings: campaign.settings.directorSettings }
+          }));
+        }
+      } catch (e) {
+        console.warn('[Campaign] Failed to sync director settings:', e);
+      }
     }
   }, []);
   
@@ -343,7 +367,13 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   
   // Save now - using integrity-validated save with storage cleanup
   const saveNow = useCallback(async () => {
-    if (!activeCampaign) return;
+    if (!activeCampaign) {
+      console.log('[Campaign] saveNow called but no active campaign');
+      return;
+    }
+    
+    console.log('[Campaign] saveNow triggered for:', activeCampaign.id);
+    console.log('[Campaign] Current settings:', activeCampaign.settings);
     
     // CRITICAL: Check and cleanup storage BEFORE saving to prevent quota errors
     checkAndCleanupStorage();
@@ -357,24 +387,30 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       },
     });
     
+    console.log('[Campaign] Prepared campaign for save, director settings:', updatedCampaign.settings?.directorSettings);
+    
     setSyncStatus('syncing');
     
     // Use integrity-validated save
     const result = await DataIntegrityService.saveWithIntegrity(updatedCampaign);
+    console.log('[Campaign] Integrity save result:', result.success, result.error || '');
     
     if (result.success) {
       // Also sync to cloud via UnifiedSaveArchitecture
-      await UnifiedSaveArchitecture.saveCampaign(updatedCampaign);
+      const cloudResult = await UnifiedSaveArchitecture.saveCampaign(updatedCampaign);
+      console.log('[Campaign] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
       
       setActiveCampaign(updatedCampaign);
       setIsDirty(false);
       setLastSaved(Date.now());
       playTimeRef.current = 0;
-      setSyncStatus('synced');
+      setSyncStatus(cloudResult.syncedToCloud ? 'synced' : 'idle');
       
       // Refresh list
       const list = await UnifiedSaveArchitecture.listCampaigns();
       setCampaigns(list);
+      
+      console.log('[Campaign] Save completed successfully at', new Date().toISOString());
     } else {
       console.error('[Campaign] Save failed:', result.error);
       setSyncStatus('error');

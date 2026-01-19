@@ -195,12 +195,15 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async saveLocal(campaign: CampaignData): Promise<SaveResult> {
+    console.log('[UnifiedSave] saveLocal starting for:', campaign.id);
     try {
       // Begin transaction
       const transaction = await TransactionManager.beginTransaction(campaign.id, campaign);
+      console.log('[UnifiedSave] Transaction started:', transaction.id);
       
       // Commit transaction
       const committed = await TransactionManager.commit(transaction.id);
+      console.log('[UnifiedSave] Transaction commit result:', committed);
       
       if (!committed) {
         await TransactionManager.rollback(transaction.id);
@@ -209,6 +212,7 @@ class UnifiedSaveArchitectureClass {
       
       // Update index
       await this.updateCampaignIndex(campaign);
+      console.log('[UnifiedSave] Campaign index updated');
       
       // Update sync status
       const checksum = await generateChecksum(JSON.stringify(campaign));
@@ -218,8 +222,10 @@ class UnifiedSaveArchitectureClass {
         state: this.account.mode === 'cloud' ? 'pending' : 'synced',
       });
       
+      console.log('[UnifiedSave] saveLocal completed successfully');
       return { success: true, transactionId: transaction.id };
     } catch (error) {
+      console.error('[UnifiedSave] saveLocal failed:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : String(error) 
@@ -342,8 +348,12 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async saveCampaign(campaign: CampaignData): Promise<SaveResult> {
+    console.log('[UnifiedSave] saveCampaign starting for:', campaign.id, 'mode:', this.account.mode);
+    console.log('[UnifiedSave] Campaign settings:', campaign.settings);
+    
     // Always save locally first (transactional)
     const localResult = await this.saveLocal(campaign);
+    console.log('[UnifiedSave] Local save result:', localResult.success, localResult.error || '');
     
     if (!localResult.success) {
       return localResult;
@@ -351,7 +361,9 @@ class UnifiedSaveArchitectureClass {
     
     // If cloud mode, sync to cloud
     if (this.account.mode === 'cloud') {
+      console.log('[UnifiedSave] Cloud mode active, syncing to cloud...');
       const cloudResult = await this.saveToCloud(campaign);
+      console.log('[UnifiedSave] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
       
       if (!cloudResult.success && cloudResult.error !== 'Conflict detected') {
         // Cloud save failed but local succeeded - mark as pending
@@ -365,6 +377,7 @@ class UnifiedSaveArchitectureClass {
       };
     }
     
+    console.log('[UnifiedSave] Local-only mode, skipping cloud sync');
     return localResult;
   }
   
