@@ -34,6 +34,9 @@ export const ACHIEVEMENT_CATEGORIES = [
 
 // Pre-defined achievements
 const ACHIEVEMENTS: Achievement[] = [
+  // Tutorial / Meta
+  { id: 'dust_off_the_cover', name: 'Dust Off the Cover', description: 'Complete the tutorial and begin your first adventure', icon: '📕', category: 'story', rarity: 'common' },
+  
   // Exploration
   { id: 'first_steps', name: 'First Steps', description: 'Visit your first location', icon: '👣', category: 'exploration', rarity: 'common' },
   { id: 'wanderer', name: 'Wanderer', description: 'Visit 5 different locations', icon: '🗺️', category: 'exploration', rarity: 'uncommon', maxProgress: 5 },
