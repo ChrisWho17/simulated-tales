@@ -4,6 +4,7 @@ import { Heart, Sparkles, HeartPulse, Users, X, ChevronRight, Scroll, Clock } fr
 import { Button } from '@/components/ui/button';
 import { CompanionState, companionSystem } from '@/game/companionSystem';
 import { cn } from '@/lib/utils';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import {
   PendingCompanionWithTiming,
   AppearanceTimingType,
@@ -185,7 +186,7 @@ export function useCompanionStoryEvents() {
       const undisplayedIntros = intros.filter((i: PendingCompanionIntroduction) => !i.displayed);
       setPendingIntroductions(undisplayedIntros);
       
-      const resurrections = JSON.parse(localStorage.getItem('pending-resurrection-events') || '[]');
+      const resurrections = JSON.parse(localStorage.getItem(STORAGE_KEYS.PENDING_RESURRECTION_EVENTS) || '[]');
       setPendingResurrections(resurrections);
     } catch (e) {
       console.error('Failed to load companion events:', e);

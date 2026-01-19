@@ -33,6 +33,7 @@ import {
 import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
 import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -155,17 +156,17 @@ export function loadCampaign(campaignId: string): CampaignData | null {
     // CRITICAL: Restore companion localStorage data from campaign save
     try {
       if (campaign.companionAppearances && Object.keys(campaign.companionAppearances).length > 0) {
-        localStorage.setItem('companion-appearances', JSON.stringify(campaign.companionAppearances));
+        localStorage.setItem(STORAGE_KEYS.COMPANION_APPEARANCES, JSON.stringify(campaign.companionAppearances));
         console.log(`[Campaign Storage] Restored ${Object.keys(campaign.companionAppearances).length} companion appearances`);
       }
       
       if (campaign.companionIntroductions && Object.keys(campaign.companionIntroductions).length > 0) {
-        localStorage.setItem('companion-introductions', JSON.stringify(campaign.companionIntroductions));
+        localStorage.setItem(STORAGE_KEYS.COMPANION_INTRODUCTIONS, JSON.stringify(campaign.companionIntroductions));
         console.log(`[Campaign Storage] Restored companion introductions`);
       }
       
       if (campaign.pendingCompanionIntroductions && campaign.pendingCompanionIntroductions.length > 0) {
-        localStorage.setItem('pending-companion-introductions', JSON.stringify(campaign.pendingCompanionIntroductions));
+        localStorage.setItem(STORAGE_KEYS.PENDING_COMPANION_INTRODUCTIONS, JSON.stringify(campaign.pendingCompanionIntroductions));
         console.log(`[Campaign Storage] Restored ${campaign.pendingCompanionIntroductions.length} pending companion introductions`);
       }
     } catch (e) {
@@ -194,13 +195,13 @@ export function saveCampaign(campaign: CampaignData, autoSyncToCloud: boolean = 
     let pendingCompanionIntroductions: unknown[] = [];
     
     try {
-      const appearances = localStorage.getItem('companion-appearances');
+      const appearances = localStorage.getItem(STORAGE_KEYS.COMPANION_APPEARANCES);
       if (appearances) companionAppearances = JSON.parse(appearances);
       
-      const introductions = localStorage.getItem('companion-introductions');
+      const introductions = localStorage.getItem(STORAGE_KEYS.COMPANION_INTRODUCTIONS);
       if (introductions) companionIntroductions = JSON.parse(introductions);
       
-      const pending = localStorage.getItem('pending-companion-introductions');
+      const pending = localStorage.getItem(STORAGE_KEYS.PENDING_COMPANION_INTRODUCTIONS);
       if (pending) pendingCompanionIntroductions = JSON.parse(pending);
     } catch (e) {
       console.warn('[Campaign Storage] Failed to capture companion localStorage data:', e);

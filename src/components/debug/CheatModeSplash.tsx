@@ -58,6 +58,7 @@ import { ClothingSlot } from '@/game/clothingItemSystem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryEditor } from './InventoryEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { 
   companionEquipmentManager, 
   generateRoleBasedEquipment, 
@@ -1060,9 +1061,9 @@ export function CheatModeSplash({
     toast.success(`Skipped ${hours} hour${hours > 1 ? 's' : ''} ahead!`);
     // Store time skip in localStorage for game engine to process
     try {
-      const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+      const cheatActions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS) || '[]');
       cheatActions.push({ type: 'time_skip', hours, timestamp: Date.now() });
-      localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+      localStorage.setItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS, JSON.stringify(cheatActions));
     } catch (e) {
       console.error('Failed to queue time skip:', e);
     }
@@ -1072,9 +1073,9 @@ export function CheatModeSplash({
     const timeMap = { dawn: 6, noon: 12, dusk: 18, midnight: 0 };
     toast.success(`Time set to ${time}!`);
     try {
-      const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+      const cheatActions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS) || '[]');
       cheatActions.push({ type: 'set_time', time, hour: timeMap[time], timestamp: Date.now() });
-      localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+      localStorage.setItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS, JSON.stringify(cheatActions));
     } catch (e) {
       console.error('Failed to queue time set:', e);
     }
@@ -1086,9 +1087,9 @@ export function CheatModeSplash({
     if (location) {
       toast.success(`Teleported to ${location.name}!`);
       try {
-        const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+        const cheatActions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS) || '[]');
         cheatActions.push({ type: 'teleport', location: location.name, locationId, timestamp: Date.now() });
-        localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+        localStorage.setItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS, JSON.stringify(cheatActions));
       } catch (e) {
         console.error('Failed to queue teleport:', e);
       }
@@ -1109,7 +1110,7 @@ export function CheatModeSplash({
       } else {
         // Queue item spawn for inventory system
         try {
-          const cheatActions = JSON.parse(localStorage.getItem('cheat-pending-actions') || '[]');
+          const cheatActions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS) || '[]');
           cheatActions.push({ 
             type: 'spawn_item', 
             itemId: item.id,
@@ -1117,7 +1118,7 @@ export function CheatModeSplash({
             category: item.category,
             timestamp: Date.now() 
           });
-          localStorage.setItem('cheat-pending-actions', JSON.stringify(cheatActions));
+          localStorage.setItem(STORAGE_KEYS.CHEAT_PENDING_ACTIONS, JSON.stringify(cheatActions));
         } catch (e) {
           console.error('Failed to queue item spawn:', e);
         }
