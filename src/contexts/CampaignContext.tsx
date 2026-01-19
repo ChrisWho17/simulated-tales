@@ -724,10 +724,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     restoreCheckpoint,
     deleteCheckpoint,
     exportCampaign,
-    importCampaign: async (json) => {
-      await importCampaign(json);
-      return null;
-    },
+    importCampaign,
     isDirty,
     lastSaved,
     saveNow: async () => { await saveNow(); },
