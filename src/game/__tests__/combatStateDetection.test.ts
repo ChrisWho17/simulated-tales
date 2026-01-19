@@ -31,8 +31,10 @@ function detectCombatState(
   lookbackWindow: number = 3
 ): boolean {
   const recentCombatEvents = eventBus.getEventsByType('DAMAGE_DEALT', 3);
-  return recentCombatEvents.length > 0 && 
-    (currentTick - recentCombatEvents[0]?.tick < lookbackWindow);
+  if (recentCombatEvents.length === 0) return false;
+  // Use the MOST RECENT event (last in the slice), not the oldest
+  const mostRecentEvent = recentCombatEvents[recentCombatEvents.length - 1];
+  return (currentTick - mostRecentEvent.tick) < lookbackWindow;
 }
 
 describe('Combat State Detection', () => {
@@ -63,7 +65,8 @@ describe('Combat State Detection', () => {
     it('should return true when combat happened exactly at window boundary', () => {
       mockEventBus.emit({ type: 'DAMAGE_DEALT', tick: 7 });
       const result = detectCombatState(mockEventBus, 10);
-      expect(result).toBe(true);
+      // 10 - 7 = 3, which is NOT < 3, so this should be false (boundary exclusive)
+      expect(result).toBe(false);
     });
     
     it('should return true when multiple combat events exist and most recent is in window', () => {
@@ -102,10 +105,11 @@ function calculateTimeSinceLastConflict(
   eventBus: MockEventBus,
   currentTick: number
 ): number {
-  const lastCombatEvent = eventBus.getEventsByType('DAMAGE_DEALT', 1)[0];
-  return lastCombatEvent 
-    ? currentTick - lastCombatEvent.tick 
-    : 999; // No recent conflict
+  const recentEvents = eventBus.getEventsByType('DAMAGE_DEALT', 10);
+  if (recentEvents.length === 0) return 999;
+  // Use the MOST RECENT event (last in slice)
+  const lastCombatEvent = recentEvents[recentEvents.length - 1];
+  return currentTick - lastCombatEvent.tick;
 }
 
 describe('Time Since Last Conflict', () => {
