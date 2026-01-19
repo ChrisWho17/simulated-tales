@@ -82,6 +82,32 @@ export interface QuirkDiscoveryState {
   lastDiscoveryCheck: number;
 }
 
+// ========== CONVERSATION MEMORY SYSTEM ==========
+// Tracks what personal topics the player has shared with EACH companion (isolated per companion)
+
+export type ConversationTopic = 
+  | 'dreams' | 'relationships' | 'memories' | 'fears' | 'future'
+  | 'loss' | 'origin' | 'philosophy' | 'secrets' | 'regrets'
+  | 'motivation' | 'love' | 'courage' | 'peace' | 'wanderlust';
+
+export interface SharedTopicMemory {
+  topic: ConversationTopic;
+  sharedAt: number; // timestamp
+  responseType: 'honest' | 'emotional' | 'deflect' | 'lie';
+  playerSummary?: string; // Optional player-provided context
+  companionReaction: string; // How they reacted
+  referencedCount: number; // How many times companion has referenced this
+  lastReferenced?: number; // Last time companion brought it up
+}
+
+export interface ConversationMemoryState {
+  companionId: string; // Ties memory to specific companion
+  sharedTopics: SharedTopicMemory[];
+  askedTopics: ConversationTopic[]; // Topics this companion has already asked about
+  lastAskedAt: number;
+  conversationDepth: number; // 0-100, increases as more is shared
+}
+
 export interface CompanionMemory {
   timestamp: number;
   type: 'action' | 'dialogue' | 'event' | 'gift' | 'betrayal';
@@ -112,6 +138,9 @@ export interface CompanionState {
   
   // Quirk discovery system
   quirkDiscovery: QuirkDiscoveryState;
+  
+  // Conversation memory - what personal topics player has shared with THIS companion
+  conversationMemory: ConversationMemoryState;
   
   // Memories of player actions
   memories: CompanionMemory[];
@@ -274,6 +303,13 @@ class CompanionSystemManager {
       quirkDiscovery: {
         discoveredQuirks: [],
         lastDiscoveryCheck: Date.now(),
+      },
+      conversationMemory: {
+        companionId: id,
+        sharedTopics: [],
+        askedTopics: [],
+        lastAskedAt: 0,
+        conversationDepth: 0,
       },
       memories: [],
       internalThoughts: `I wonder what kind of person ${name} will turn out to be...`,
@@ -960,10 +996,10 @@ class CompanionSystemManager {
     // Check if they want to ask about the player (curiosity system)
     if (trigger.bondingDialogueType === 'curious' || 
         (companion.affinity >= 30 && companion.trust >= 40 && Math.random() < 0.4)) {
-      const curiosityDialogue = this.generateCuriosityQuestion(companion);
+      const curiosityResult = this.generateCuriosityQuestion(companion);
       companion.wantsToSpeak = true;
-      companion.pendingReaction = curiosityDialogue;
-      return { bonded: true, dialogue: curiosityDialogue, dialogueType: 'curiosity' };
+      companion.pendingReaction = curiosityResult.dialogue;
+      return { bonded: true, dialogue: curiosityResult.dialogue, dialogueType: 'curiosity' };
     }
     
     companion.wantsToSpeak = true;
@@ -1069,9 +1105,18 @@ class CompanionSystemManager {
   
   /**
    * Generate a question the companion asks to understand the player better
+   * Avoids topics this specific companion has already asked about
    */
-  private generateCuriosityQuestion(companion: CompanionState): string {
-    const questionData = this.playerQuestions[Math.floor(Math.random() * this.playerQuestions.length)];
+  private generateCuriosityQuestion(companion: CompanionState): { dialogue: string; topic: ConversationTopic } {
+    // Filter out topics this companion has already asked about
+    const askedTopics = companion.conversationMemory?.askedTopics || [];
+    const availableQuestions = this.playerQuestions.filter(
+      q => !askedTopics.includes(q.topic as ConversationTopic)
+    );
+    
+    // If they've asked all questions, reset to allow re-asking (with different framing)
+    const questionPool = availableQuestions.length > 0 ? availableQuestions : this.playerQuestions;
+    const questionData = questionPool[Math.floor(Math.random() * questionPool.length)];
     
     const intros = [
       `*settles in close* I've been wanting to ask you something...`,
@@ -1082,7 +1127,10 @@ class CompanionSystemManager {
     ];
     
     const intro = intros[Math.floor(Math.random() * intros.length)];
-    return `${intro} ${questionData.question}`;
+    return { 
+      dialogue: `${intro} ${questionData.question}`,
+      topic: questionData.topic as ConversationTopic
+    };
   }
   
   /**
@@ -1106,37 +1154,47 @@ class CompanionSystemManager {
     if (Math.random() > 0.15) return null;
     
     const companion = curiousCompanions[Math.floor(Math.random() * curiousCompanions.length)];
-    const questionData = this.playerQuestions[Math.floor(Math.random() * this.playerQuestions.length)];
-    const question = this.generateCuriosityQuestion(companion);
+    const questionResult = this.generateCuriosityQuestion(companion);
     
     companion.wantsToSpeak = true;
-    companion.pendingReaction = question;
+    companion.pendingReaction = questionResult.dialogue;
     
-    console.log(`[Companion] ${companion.name} wants to know more about player (topic: ${questionData.topic})`);
+    // Track that this companion asked about this topic
+    if (!companion.conversationMemory.askedTopics.includes(questionResult.topic)) {
+      companion.conversationMemory.askedTopics.push(questionResult.topic);
+    }
+    companion.conversationMemory.lastAskedAt = Date.now();
     
-    return { companion, question, topic: questionData.topic };
+    console.log(`[Companion] ${companion.name} wants to know more about player (topic: ${questionResult.topic})`);
+    
+    return { companion, question: questionResult.dialogue, topic: questionResult.topic };
   }
   
   /**
    * Process player's response to a companion's question
-   * This strengthens the bond and may trigger quirk reveals
+   * This strengthens the bond, records the shared topic, and may trigger quirk reveals
    */
   processPlayerConfidingResponse(
     companionId: string, 
-    responseType: 'honest' | 'deflect' | 'lie' | 'emotional'
-  ): { affinityChange: number; trustChange: number; dialogue: string } | null {
+    topic: ConversationTopic,
+    responseType: 'honest' | 'deflect' | 'lie' | 'emotional',
+    playerSummary?: string // Optional player-provided context for what they shared
+  ): { affinityChange: number; trustChange: number; dialogue: string; topicRecorded: boolean } | null {
     const companion = this.companions.get(companionId);
     if (!companion) return null;
     
     let affinityChange = 0;
     let trustChange = 0;
     let dialogue = '';
+    let topicRecorded = false;
     
     switch (responseType) {
       case 'honest':
         affinityChange = 8;
         trustChange = 10;
         dialogue = this.generateResponseToConfiding(companion, 'honest');
+        // Record the shared topic for this companion
+        topicRecorded = this.recordSharedTopic(companionId, topic, responseType, playerSummary, dialogue);
         // Chance to trigger bonding moment
         if (Math.random() < 0.5) {
           this.triggerBondingMoment(companionId, 'player_confided_in_companion');
@@ -1146,6 +1204,8 @@ class CompanionSystemManager {
         affinityChange = 12;
         trustChange = 15;
         dialogue = this.generateResponseToConfiding(companion, 'emotional');
+        // Record the shared topic for this companion
+        topicRecorded = this.recordSharedTopic(companionId, topic, responseType, playerSummary, dialogue);
         // Higher chance to trigger bonding moment
         if (Math.random() < 0.7) {
           this.triggerBondingMoment(companionId, 'player_confided_in_companion');
@@ -1155,20 +1215,437 @@ class CompanionSystemManager {
         affinityChange = -2;
         trustChange = -3;
         dialogue = this.generateResponseToConfiding(companion, 'deflect');
+        // Don't record - player didn't share
         break;
       case 'lie':
         affinityChange = 0;
         trustChange = -8; // Companions may sense dishonesty
         dialogue = this.generateResponseToConfiding(companion, 'lie');
+        // Record as lie (companion may reference this differently later)
+        topicRecorded = this.recordSharedTopic(companionId, topic, responseType, playerSummary, dialogue);
         break;
     }
     
     companion.affinity = Math.max(-100, Math.min(100, companion.affinity + affinityChange));
     companion.trust = Math.max(0, Math.min(100, companion.trust + trustChange));
     
-    this.addMemory(companionId, 'dialogue', `Player ${responseType} response to personal question`, affinityChange);
+    // Update conversation depth
+    if (responseType === 'honest' || responseType === 'emotional') {
+      companion.conversationMemory.conversationDepth = Math.min(
+        100, 
+        companion.conversationMemory.conversationDepth + (responseType === 'emotional' ? 8 : 5)
+      );
+    }
     
-    return { affinityChange, trustChange, dialogue };
+    this.addMemory(companionId, 'dialogue', `Player ${responseType} response about ${topic}`, affinityChange);
+    
+    return { affinityChange, trustChange, dialogue, topicRecorded };
+  }
+  
+  /**
+   * Record a shared topic in the companion's conversation memory
+   * Returns true if this was a new topic, false if updating an existing one
+   */
+  private recordSharedTopic(
+    companionId: string,
+    topic: ConversationTopic,
+    responseType: 'honest' | 'deflect' | 'lie' | 'emotional',
+    playerSummary: string | undefined,
+    companionReaction: string
+  ): boolean {
+    const companion = this.companions.get(companionId);
+    if (!companion) return false;
+    
+    // Check if this topic was already shared with THIS companion
+    const existingTopic = companion.conversationMemory.sharedTopics.find(t => t.topic === topic);
+    
+    if (existingTopic) {
+      // Update existing topic memory
+      existingTopic.responseType = responseType;
+      if (playerSummary) existingTopic.playerSummary = playerSummary;
+      existingTopic.companionReaction = companionReaction;
+      console.log(`[Companion] ${companion.name} - Updated shared topic: ${topic}`);
+      return false;
+    }
+    
+    // Add new topic memory
+    const newTopicMemory: SharedTopicMemory = {
+      topic,
+      sharedAt: Date.now(),
+      responseType,
+      playerSummary,
+      companionReaction,
+      referencedCount: 0,
+    };
+    
+    companion.conversationMemory.sharedTopics.push(newTopicMemory);
+    
+    console.log(`[Companion] ${companion.name} - Recorded new shared topic: ${topic}`);
+    
+    return true;
+  }
+  
+  // ========== CONVERSATION REFERENCE SYSTEM ==========
+  // Companions can reference past conversations with the player
+  
+  /**
+   * Topic-specific dialogue templates for when companions reference past conversations
+   */
+  private topicReferenceTemplates: Record<ConversationTopic, {
+    sincere: string[];  // When player was honest/emotional
+    suspicious: string[];  // When player lied
+    casual: string[];  // General references
+  }> = {
+    dreams: {
+      sincere: [
+        `*thoughtful* You know, I've been thinking about what you said about your dreams...`,
+        `Remember when you told me about what you wanted to become? That stuck with me.`,
+        `*smiles* You opened up about your dreams once. I haven't forgotten.`,
+      ],
+      suspicious: [
+        `*studies you* You told me about your dreams before. Though... I'm not sure I believe all of it.`,
+        `*tilts head* Those dreams you mentioned... were they real? Sometimes I wonder.`,
+      ],
+      casual: [
+        `This reminds me of those dreams you mentioned.`,
+        `*glances at you* Chasing dreams, are we?`,
+      ],
+    },
+    relationships: {
+      sincere: [
+        `You told me about the people in your life. I know that wasn't easy.`,
+        `*quietly* I remember what you said about the people who matter to you.`,
+        `The way you talked about your loved ones... it told me a lot about who you are.`,
+      ],
+      suspicious: [
+        `*watching* You mentioned people who matter to you. I'm still not sure what's true.`,
+        `Those relationships you talked about... I wonder what you left out.`,
+      ],
+      casual: [
+        `Relationships are complicated. You'd know that.`,
+        `*knowing look* We've talked about this before.`,
+      ],
+    },
+    memories: {
+      sincere: [
+        `That memory you shared with me... I think about it sometimes.`,
+        `*warmly* You trusted me with a piece of your past. I carry that with me.`,
+        `Your happiest memory... it says so much about what you value.`,
+      ],
+      suspicious: [
+        `*skeptical* That memory you told me about... was it the whole truth?`,
+        `You shared a memory once. I'm still not sure it happened like you said.`,
+      ],
+      casual: [
+        `We all carry our memories with us.`,
+        `*reflective* The past shapes us, doesn't it?`,
+      ],
+    },
+    fears: {
+      sincere: [
+        `*serious* You trusted me with your fears. That takes strength.`,
+        `I know what haunts you. And I won't use it against you.`,
+        `What you told me about your fears... I'm here if it ever gets too heavy.`,
+      ],
+      suspicious: [
+        `*searching gaze* You told me what scares you. Or did you?`,
+        `Those fears you mentioned... were they real, or a mask for something deeper?`,
+      ],
+      casual: [
+        `We all have things that haunt us.`,
+        `*quietly* Fear is a universal language.`,
+      ],
+    },
+    future: {
+      sincere: [
+        `You told me what you'd do if this was all over. I hope you get that chance.`,
+        `*hopeful* That future you imagined... I want to see you reach it.`,
+        `Remember what you said about tomorrow? I believed every word.`,
+      ],
+      suspicious: [
+        `*doubtful* The future you painted... I wonder if that's really what you want.`,
+        `You talked about tomorrow. But something tells me you weren't being honest.`,
+      ],
+      casual: [
+        `The future is uncertain for all of us.`,
+        `*gazes ahead* One day at a time, right?`,
+      ],
+    },
+    loss: {
+      sincere: [
+        `*gently* You told me about someone you lost. I'll never forget that trust.`,
+        `I know you've lost people. That kind of pain... it never fully goes away.`,
+        `What you shared about loss... I understand you better now.`,
+      ],
+      suspicious: [
+        `You mentioned losing someone. I couldn't tell if the grief was real.`,
+        `*careful* That loss you described... I hope it was the truth.`,
+      ],
+      casual: [
+        `Loss is something we all understand eventually.`,
+        `*solemn* We carry our ghosts with us.`,
+      ],
+    },
+    origin: {
+      sincere: [
+        `You told me how you became who you are. That story stays with me.`,
+        `*appreciative* Knowing where you came from... it explains a lot.`,
+        `Your past shaped you. And you trusted me with it.`,
+      ],
+      suspicious: [
+        `*probing* That origin story you gave... how much was real?`,
+        `You told me how you became this. I'm still sorting truth from fiction.`,
+      ],
+      casual: [
+        `We're all products of our past.`,
+        `*thoughtful* Everyone has a beginning.`,
+      ],
+    },
+    philosophy: {
+      sincere: [
+        `Remember when we talked about fate? Your perspective was... illuminating.`,
+        `*contemplative* What you believe about the world... it matters to me.`,
+        `That philosophical moment we had... I think about it often.`,
+      ],
+      suspicious: [
+        `*skeptical* Those beliefs you shared... were they really yours?`,
+        `You talked about fate and choice. I'm not sure you meant it.`,
+      ],
+      casual: [
+        `Big questions require big thinking.`,
+        `*musing* Philosophy in the middle of chaos. Classic.`,
+      ],
+    },
+    secrets: {
+      sincere: [
+        `*quietly* You trusted me with a secret. That bond is sacred.`,
+        `What you told me in confidence... it's safe with me. Always.`,
+        `I carry your secret like it's my own now.`,
+      ],
+      suspicious: [
+        `*narrowed eyes* That secret you shared... was it the real one?`,
+        `You gave me a secret. But I wonder if it was a decoy.`,
+      ],
+      casual: [
+        `We all have secrets.`,
+        `*knowing* Some things are best kept hidden.`,
+      ],
+    },
+    regrets: {
+      sincere: [
+        `You told me about your regrets. That took courage.`,
+        `*understanding* We all have things we'd do differently. Yours... I understand.`,
+        `What you regret... it makes you human. And I respect you for sharing it.`,
+      ],
+      suspicious: [
+        `*watching* Those regrets you mentioned... or were those someone else's?`,
+        `You talked about what you'd change. Something felt off about it.`,
+      ],
+      casual: [
+        `Regret is a heavy companion.`,
+        `*sighs* The past is fixed. Only the future can change.`,
+      ],
+    },
+    motivation: {
+      sincere: [
+        `I know what drives you now. That changes how I see everything you do.`,
+        `*admiring* What keeps you going... it's inspiring, honestly.`,
+        `You told me your motivation. And I believe in it.`,
+      ],
+      suspicious: [
+        `*cautious* You told me what drives you. I'm still not sure I buy it.`,
+        `Your motivation... was that the truth, or what you wanted me to hear?`,
+      ],
+      casual: [
+        `Everyone needs a reason to keep going.`,
+        `*determined* Purpose is everything.`,
+      ],
+    },
+    love: {
+      sincere: [
+        `*softly* You told me about love. Real love. That vulnerability... I treasure it.`,
+        `What you said about love... it showed me your heart.`,
+        `I know you've loved. And lost. That trust you gave me... I honor it.`,
+      ],
+      suspicious: [
+        `*searching* You talked about love. But was it real?`,
+        `That story about love... something in your eyes didn't match.`,
+      ],
+      casual: [
+        `Love makes fools of us all.`,
+        `*wistful* The heart wants what it wants.`,
+      ],
+    },
+    courage: {
+      sincere: [
+        `You told me about the bravest thing you've done. It inspired me.`,
+        `*respectful* That act of courage you shared... I see you differently now.`,
+        `What you did took guts. And you trusted me with that story.`,
+      ],
+      suspicious: [
+        `*skeptical* That brave act you described... did it really happen that way?`,
+        `You told me about courage. I'm still deciding if I believe it.`,
+      ],
+      casual: [
+        `Courage comes in many forms.`,
+        `*nods* Bravery isn't the absence of fear.`,
+      ],
+    },
+    peace: {
+      sincere: [
+        `I know what brings you peace now. And I want to help you find more of it.`,
+        `*gentle* What you said about peace... it was beautiful.`,
+        `That moment of honesty about what calms you... I remember it.`,
+      ],
+      suspicious: [
+        `*uncertain* You told me what brings you peace. But did you mean it?`,
+        `That peace you described... I'm not sure it was real.`,
+      ],
+      casual: [
+        `We all need moments of calm.`,
+        `*peaceful* Serenity is hard to find.`,
+      ],
+    },
+    wanderlust: {
+      sincere: [
+        `You told me where you'd go if you could. Maybe we'll get there together.`,
+        `*dreamily* That place you imagined... I want to see it through your eyes.`,
+        `Where you'd travel... it tells me so much about your soul.`,
+      ],
+      suspicious: [
+        `*doubtful* That destination you mentioned... was it real or fantasy?`,
+        `You talked about where you'd go. I'm not sure you were honest.`,
+      ],
+      casual: [
+        `The road calls to all of us sometimes.`,
+        `*wistful* There's always somewhere else to be.`,
+      ],
+    },
+  };
+  
+  /**
+   * Check if a companion should reference a past conversation
+   * Only references conversations THEY had with the player (no companion leak)
+   */
+  checkForConversationReference(
+    companionId: string,
+    context?: { situation?: string; mood?: string }
+  ): { shouldReference: boolean; dialogue: string; topic: ConversationTopic } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion || companion.status !== 'active') return null;
+    
+    const sharedTopics = companion.conversationMemory.sharedTopics;
+    if (sharedTopics.length === 0) return null;
+    
+    // Higher chance to reference if relationship is healthy
+    const referenceChance = companion.trust >= 50 ? 0.20 : 0.10;
+    if (Math.random() > referenceChance) return null;
+    
+    // Pick a topic that hasn't been referenced recently
+    const now = Date.now();
+    const REFERENCE_COOLDOWN = 1000 * 60 * 10; // 10 minute cooldown per topic
+    
+    const eligibleTopics = sharedTopics.filter(t => {
+      if (!t.lastReferenced) return true;
+      return (now - t.lastReferenced) > REFERENCE_COOLDOWN;
+    });
+    
+    if (eligibleTopics.length === 0) return null;
+    
+    // Weighted selection - more recently shared topics are more likely
+    const sortedByRecency = [...eligibleTopics].sort((a, b) => b.sharedAt - a.sharedAt);
+    const weights = sortedByRecency.map((_, i) => Math.max(1, sortedByRecency.length - i));
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    
+    let random = Math.random() * totalWeight;
+    let selectedTopic: SharedTopicMemory | null = null;
+    for (let i = 0; i < sortedByRecency.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        selectedTopic = sortedByRecency[i];
+        break;
+      }
+    }
+    
+    if (!selectedTopic) selectedTopic = sortedByRecency[0];
+    
+    // Generate appropriate dialogue based on how the player responded
+    const templates = this.topicReferenceTemplates[selectedTopic.topic];
+    let dialoguePool: string[];
+    
+    if (selectedTopic.responseType === 'lie') {
+      dialoguePool = templates.suspicious;
+    } else if (selectedTopic.responseType === 'honest' || selectedTopic.responseType === 'emotional') {
+      dialoguePool = templates.sincere;
+    } else {
+      dialoguePool = templates.casual;
+    }
+    
+    const dialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+    
+    // Update reference count
+    selectedTopic.referencedCount++;
+    selectedTopic.lastReferenced = now;
+    
+    console.log(`[Companion] ${companion.name} referencing past conversation about: ${selectedTopic.topic}`);
+    
+    return { shouldReference: true, dialogue, topic: selectedTopic.topic };
+  }
+  
+  /**
+   * Get what topics a specific companion knows about the player
+   */
+  getSharedTopicsForCompanion(companionId: string): SharedTopicMemory[] {
+    const companion = this.companions.get(companionId);
+    if (!companion) return [];
+    return [...companion.conversationMemory.sharedTopics];
+  }
+  
+  /**
+   * Check if a companion knows about a specific topic
+   */
+  companionKnowsTopic(companionId: string, topic: ConversationTopic): boolean {
+    const companion = this.companions.get(companionId);
+    if (!companion) return false;
+    return companion.conversationMemory.sharedTopics.some(t => t.topic === topic);
+  }
+  
+  /**
+   * Get conversation depth with a specific companion
+   */
+  getConversationDepth(companionId: string): number {
+    const companion = this.companions.get(companionId);
+    if (!companion) return 0;
+    return companion.conversationMemory.conversationDepth;
+  }
+  
+  /**
+   * Force a companion to reference a specific past conversation (debug/story use)
+   */
+  forceConversationReference(companionId: string, topic?: ConversationTopic): string | null {
+    const companion = this.companions.get(companionId);
+    if (!companion) return null;
+    
+    const sharedTopics = companion.conversationMemory.sharedTopics;
+    if (sharedTopics.length === 0) return null;
+    
+    let selectedTopic: SharedTopicMemory | undefined;
+    
+    if (topic) {
+      selectedTopic = sharedTopics.find(t => t.topic === topic);
+      if (!selectedTopic) return null;
+    } else {
+      selectedTopic = sharedTopics[Math.floor(Math.random() * sharedTopics.length)];
+    }
+    
+    const templates = this.topicReferenceTemplates[selectedTopic.topic];
+    const dialoguePool = selectedTopic.responseType === 'lie' ? templates.suspicious : templates.sincere;
+    const dialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+    
+    selectedTopic.referencedCount++;
+    selectedTopic.lastReferenced = Date.now();
+    
+    return dialogue;
   }
   
   /**

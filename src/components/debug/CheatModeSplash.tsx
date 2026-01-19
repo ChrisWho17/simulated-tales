@@ -904,6 +904,13 @@ export function CheatModeSplash({
         discoveredQuirks: [],
         lastDiscoveryCheck: Date.now(),
       },
+      conversationMemory: {
+        companionId: companionId,
+        sharedTopics: [],
+        askedTopics: [],
+        lastAskedAt: 0,
+        conversationDepth: 0,
+      },
       memories: [{
         timestamp: Date.now(),
         type: 'event' as const,
