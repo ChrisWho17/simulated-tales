@@ -17,6 +17,7 @@ import { CharacterSheet } from './CharacterSheet';
 import { StoryRollbackModal } from './StoryRollbackModal';
 import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
+import { NarrativeLoadingIndicator } from './NarrativeLoadingIndicator';
 import { SavesDropdown } from '@/components/campaign';
 
 import { SceneIllustration } from '@/components/game/SceneIllustration';
@@ -1750,10 +1751,7 @@ export function AdventureDisplay({
         <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 overflow-x-hidden">
           {/* Initial loading state when story is empty */}
           {story.length === 0 && isLoading && (
-            <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-              <p className="text-muted-foreground font-narrative text-lg">Your story is being written...</p>
-            </div>
+            <NarrativeLoadingIndicator isInitial genre={genre} />
           )}
 
           {/* Empty state when no story and not loading */}
@@ -1957,10 +1955,7 @@ export function AdventureDisplay({
 
           {/* Loading indicator for ongoing narrative generation (only when story has content) */}
           {isLoading && story.length > 0 && (
-            <div className="flex items-center gap-3 text-primary animate-pulse glass-panel-subtle px-4 py-3 rounded-xl inline-flex">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="font-narrative italic">The story unfolds...</span>
-            </div>
+            <NarrativeLoadingIndicator genre={genre} />
           )}
         </div>
       </ScrollArea>
