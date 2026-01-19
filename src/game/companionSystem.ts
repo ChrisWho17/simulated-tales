@@ -108,6 +108,12 @@ export interface ConversationMemoryState {
   conversationDepth: number; // 0-100, increases as more is shared
 }
 
+export type SituationType = 
+  | 'combat_start' | 'combat_losing' | 'combat_won' | 'near_death'
+  | 'difficult_choice' | 'moral_dilemma' | 'negotiation' | 'intimidation'
+  | 'emotional_moment' | 'failure' | 'success' | 'danger_ahead'
+  | 'meeting_stranger' | 'facing_enemy' | 'moment_of_doubt' | 'celebration';
+
 export interface CompanionMemory {
   timestamp: number;
   type: 'action' | 'dialogue' | 'event' | 'gift' | 'betrayal';
@@ -1995,6 +2001,801 @@ class CompanionSystemManager {
     
     return Math.round((knownCount / allTopics) * 100);
   }
+  
+  // ========== KNOWLEDGE-BASED CONTEXTUAL SUPPORT SYSTEM ==========
+  // Companions use their knowledge about the player to offer advice, help, or (if hostile) use it against them
+  
+  // SituationType defined at module level - see line ~85
+  
+  /**
+   * Context-aware support templates based on what the companion knows about the player
+   */
+  private contextualSupportTemplates: Record<ConversationTopic, {
+    supportive: Record<SituationType, string[]>;  // Positive affinity - helpful
+    hostile: Record<SituationType, string[]>;     // Negative affinity - uses knowledge against player
+  }> = {
+    dreams: {
+      supportive: {
+        combat_start: [`Remember what you're fighting for. Those dreams don't die here.`],
+        combat_losing: [`Don't give up! You told me about your dreams—they need you alive!`],
+        combat_won: [`One step closer to those dreams you told me about.`],
+        near_death: [`Stay with me! Your dreams... they're still waiting for you.`],
+        difficult_choice: [`Think about what young you would've wanted. The one who dreamed big.`],
+        moral_dilemma: [`Would achieving your dreams this way even matter?`],
+        negotiation: [`Remember what you're building toward. Don't sell yourself short.`],
+        intimidation: [`They don't know what you've dreamed of becoming. Show them.`],
+        emotional_moment: [`*softly* I know what you dreamed of. This moment matters.`],
+        failure: [`Dreams don't die from one setback. You taught me that.`],
+        success: [`Look at you. Getting closer to everything you ever wanted.`],
+        danger_ahead: [`Your dreams are on the other side of this. Let's go.`],
+        meeting_stranger: [`Be careful—not everyone deserves to know about your aspirations.`],
+        facing_enemy: [`They can't take your dreams from you. Not unless you let them.`],
+        moment_of_doubt: [`I remember what you told me about your dreams. They're worth fighting for.`],
+        celebration: [`You earned this. One step closer to that dream you shared with me.`],
+      },
+      hostile: {
+        combat_start: [`Still chasing those childish dreams? Let's see how that works out.`],
+        combat_losing: [`Maybe those dreams of yours were always just fantasy.`],
+        combat_won: [`Lucky. But you're still no closer to what you actually want.`],
+        near_death: [`Dying here... so much for those big dreams, huh?`],
+        difficult_choice: [`*mocking* What would your 'dreamer' self think of you now?`],
+        moral_dilemma: [`Your dreams always were built on sand.`],
+        negotiation: [`You're not the person you pretend to dream of being.`],
+        intimidation: [`I know what you really want. It's pathetic.`],
+        emotional_moment: [`*cold* Those dreams you told me about? They were always foolish.`],
+        failure: [`Dreams crumbling. How predictable.`],
+        success: [`Enjoy it. We both know it won't last.`],
+        danger_ahead: [`Run toward your dreams. Maybe they'll kill you.`],
+        meeting_stranger: [`Careful—they might see through you like I did.`],
+        facing_enemy: [`I told them what you dream of. They found it amusing.`],
+        moment_of_doubt: [`*cruel smile* Those dreams I heard about? You were never good enough.`],
+        celebration: [`Celebrating? You're still the same failure with delusions.`],
+      },
+    },
+    fears: {
+      supportive: {
+        combat_start: [`I know what scares you. This isn't it. You've got this.`],
+        combat_losing: [`I remember your fears—this isn't how you fall. Fight back!`],
+        combat_won: [`You faced your fear and won. I'm proud of you.`],
+        near_death: [`Don't let fear take you now. Breathe. I'm right here.`],
+        difficult_choice: [`I know what you're afraid of. Let that guide you away from the wrong path.`],
+        moral_dilemma: [`Your fear of becoming something dark... let it protect you now.`],
+        negotiation: [`Don't show your fear. I know it's there, but hide it.`],
+        intimidation: [`They can't hurt you worse than what you already fear. Use that.`],
+        emotional_moment: [`*gently* I know your fears. You don't have to hide them from me.`],
+        failure: [`Failure isn't what you truly fear. Get back up.`],
+        success: [`You conquered something scarier than this. Well done.`],
+        danger_ahead: [`I know this triggers something in you. Breathe. I'm with you.`],
+        meeting_stranger: [`Stay calm. Not everyone is a threat.`],
+        facing_enemy: [`I know what haunts you. This enemy isn't it. Focus.`],
+        moment_of_doubt: [`Your fears are real, but so is your strength. I've seen both.`],
+        celebration: [`You deserve to feel safe. Even just for tonight.`],
+      },
+      hostile: {
+        combat_start: [`*cold* I know exactly what terrifies you. Maybe I should tell them.`],
+        combat_losing: [`This must feel like your worst nightmare. *smirks* Good.`],
+        combat_won: [`You won, but that fear I know about? Still waiting.`],
+        near_death: [`*cruel* Dying alone. Isn't that what you told me you feared most?`],
+        difficult_choice: [`Choose wrong and face everything you're afraid of.`],
+        moral_dilemma: [`Your fears make you weak. This proves it.`],
+        negotiation: [`I could mention what you're really afraid of. They'd love to know.`],
+        intimidation: [`I know your fears. Don't make me share them.`],
+        emotional_moment: [`*mocking* You told me your fears once. Foolish.`],
+        failure: [`This is what fear does. Makes you fail. Predictable.`],
+        success: [`Success doesn't erase what haunts you.`],
+        danger_ahead: [`This looks a lot like what you told me terrifies you...`],
+        meeting_stranger: [`Should I tell them what scares you? Could be useful.`],
+        facing_enemy: [`I told them your fears. They're... creative with that information.`],
+        moment_of_doubt: [`*cruel* Your fears are written all over your face. Pathetic.`],
+        celebration: [`Celebrate while you can. Your fears are still out there.`],
+      },
+    },
+    loss: {
+      supportive: {
+        combat_start: [`Fight for those you've lost. Honor them.`],
+        combat_losing: [`You survived losing everything once. You'll survive this.`],
+        combat_won: [`Victory. For everyone we've lost along the way.`],
+        near_death: [`Stay! The ones you lost—they're not waiting for you yet.`],
+        difficult_choice: [`What would they have wanted? The ones you lost?`],
+        moral_dilemma: [`I know you've lost people. Don't lose yourself too.`],
+        negotiation: [`You've lost before. Don't give away more than you have to.`],
+        intimidation: [`You've survived worse losses than anything they can threaten.`],
+        emotional_moment: [`*touches your arm* I know about your loss. I'm here.`],
+        failure: [`Loss taught you resilience. Use it now.`],
+        success: [`I hope somewhere, they're proud of you.`],
+        danger_ahead: [`You've lost so much. Don't add to that list today.`],
+        meeting_stranger: [`Not everyone will leave you. Give them a chance.`],
+        facing_enemy: [`For everyone you've lost—make this count.`],
+        moment_of_doubt: [`You carry your losses with dignity. Keep going.`],
+        celebration: [`They'd want you to be happy. Even without them.`],
+      },
+      hostile: {
+        combat_start: [`Think of everyone you've lost. Maybe you'll join them.`],
+        combat_losing: [`Losing again. It's what you do, isn't it?`],
+        combat_won: [`Won the fight. But still alone, aren't you?`],
+        near_death: [`*cold* The ones you lost are waiting. Don't keep them.`],
+        difficult_choice: [`Your judgment got people killed before. Choose wisely.`],
+        moral_dilemma: [`The people you lost... maybe they died because of choices like this.`],
+        negotiation: [`You've lost everything before. What's a little more?`],
+        intimidation: [`I know about your losses. Want me to add to them?`],
+        emotional_moment: [`*mocking* Still grieving? How touching.`],
+        failure: [`Another loss. You're collecting them.`],
+        success: [`They're not here to see it. That must sting.`],
+        danger_ahead: [`More chances to lose people. Exciting for you.`],
+        meeting_stranger: [`Everyone leaves you eventually. Or dies.`],
+        facing_enemy: [`I told them about your losses. They know your weak points now.`],
+        moment_of_doubt: [`The ghosts of your losses are heavy, aren't they?`],
+        celebration: [`Celebrating alone. As usual.`],
+      },
+    },
+    motivation: {
+      supportive: {
+        combat_start: [`Remember why you fight. Hold onto that.`],
+        combat_losing: [`Your reason for fighting—focus on it! Don't quit!`],
+        combat_won: [`That's what fighting for something real looks like.`],
+        near_death: [`Your purpose isn't finished! Stay with me!`],
+        difficult_choice: [`What drives you? Let that decide this.`],
+        moral_dilemma: [`Stay true to what motivates you. That's your compass.`],
+        negotiation: [`Know your worth. You have purpose. Act like it.`],
+        intimidation: [`You have something worth fighting for. Let them see that fire.`],
+        emotional_moment: [`*warmly* I know what keeps you going. I admire it.`],
+        failure: [`Your motivation doesn't vanish with one failure.`],
+        success: [`This is why you keep pushing. Look what it earned you.`],
+        danger_ahead: [`What you're fighting for is on the other side. Push through.`],
+        meeting_stranger: [`Stay grounded in your purpose. Don't get distracted.`],
+        facing_enemy: [`They don't have what you have—true motivation.`],
+        moment_of_doubt: [`I know why you fight. It's still worth it. Trust me.`],
+        celebration: [`You earned this. Your drive made it happen.`],
+      },
+      hostile: {
+        combat_start: [`Fighting for that pathetic 'motivation' of yours?`],
+        combat_losing: [`Your motivation wasn't strong enough. Clearly.`],
+        combat_won: [`Your 'purpose' won. For now.`],
+        near_death: [`*bitter* That motivation you bragged about? Useless now.`],
+        difficult_choice: [`Your motivations are selfish. We both know it.`],
+        moral_dilemma: [`What drives you is darkness. This proves it.`],
+        negotiation: [`I know what you really want. It's not noble.`],
+        intimidation: [`I could tell them what really motivates you. The ugly truth.`],
+        emotional_moment: [`*cold* Your 'purpose' is a lie you tell yourself.`],
+        failure: [`Your motivation led you here. To failure.`],
+        success: [`Success doesn't purify your motives.`],
+        danger_ahead: [`Running toward danger for your 'cause.' Predictable.`],
+        meeting_stranger: [`They'd be disgusted if they knew what really drives you.`],
+        facing_enemy: [`I told them your real motivations. They laughed.`],
+        moment_of_doubt: [`Doubt is fitting. Your motivations were always questionable.`],
+        celebration: [`Celebrating a hollow victory for hollow reasons.`],
+      },
+    },
+    courage: {
+      supportive: {
+        combat_start: [`You've been braver than this before. You told me. Channel it.`],
+        combat_losing: [`Remember your bravest moment—this is another one. Fight!`],
+        combat_won: [`Courage wins again. Just like you told me it did before.`],
+        near_death: [`The bravest thing you ever did—do it again. Live.`],
+        difficult_choice: [`Be as brave now as you were then. You have it in you.`],
+        moral_dilemma: [`Courage isn't just physical. Show it here.`],
+        negotiation: [`Stand tall. You've faced worse and won.`],
+        intimidation: [`You've been brave before. Let them see that same fire.`],
+        emotional_moment: [`*proud* I've seen your courage. It's real.`],
+        failure: [`Even the bravest fail. It's getting back up that matters.`],
+        success: [`That's the courage I knew was in you.`],
+        danger_ahead: [`You've done brave things before. One more won't hurt.`],
+        meeting_stranger: [`Be confident. You've earned the right to be.`],
+        facing_enemy: [`You're braver than they know. I know the stories.`],
+        moment_of_doubt: [`You told me about your courage. Don't forget it now.`],
+        celebration: [`To bravery—yours especially.`],
+      },
+      hostile: {
+        combat_start: [`Let's see if you're as brave as you claimed.`],
+        combat_losing: [`Where's that 'courage' you bragged about?`],
+        combat_won: [`Lucky. Not brave.`],
+        near_death: [`*sneering* Not so brave now, are you?`],
+        difficult_choice: [`Your so-called 'courage' is just recklessness.`],
+        moral_dilemma: [`Coward in a brave person's costume.`],
+        negotiation: [`I know you're not as brave as you pretend.`],
+        intimidation: [`That 'bravest moment' you told me about? I have my doubts.`],
+        emotional_moment: [`*mocking* The 'brave' hero, feeling fragile.`],
+        failure: [`Failure suits you better than fake courage.`],
+        success: [`Courage? Or just dumb luck?`],
+        danger_ahead: [`Go on, be 'brave.' See where it gets you.`],
+        meeting_stranger: [`They'll see through your brave act eventually.`],
+        facing_enemy: [`I told them you're not as courageous as you seem.`],
+        moment_of_doubt: [`Doubt is honest. Your 'courage' wasn't.`],
+        celebration: [`Celebrating borrowed courage.`],
+      },
+    },
+    love: {
+      supportive: {
+        combat_start: [`Love gives you something to protect. Use it.`],
+        combat_losing: [`Think of love—fight for it!`],
+        combat_won: [`Love won today. Your kind of love.`],
+        near_death: [`Love is waiting for you. Don't go yet.`],
+        difficult_choice: [`What would love tell you to do?`],
+        moral_dilemma: [`Let love guide you. Not anger.`],
+        negotiation: [`You know what love means. Fight for what matters.`],
+        intimidation: [`You've loved deeply. That makes you stronger, not weaker.`],
+        emotional_moment: [`*gently* I know about love in your life. It shows.`],
+        failure: [`Love survives failure. So will you.`],
+        success: [`Love brought you here. Remember that.`],
+        danger_ahead: [`Love is worth facing danger for.`],
+        meeting_stranger: [`Your capacity for love is a strength. Don't hide it.`],
+        facing_enemy: [`They can't understand what love gives you.`],
+        moment_of_doubt: [`Love is real. You told me. Hold onto that.`],
+        celebration: [`To love—past, present, and future.`],
+      },
+      hostile: {
+        combat_start: [`*cold* Fighting for love? How pathetic.`],
+        combat_losing: [`Love can't save you now.`],
+        combat_won: [`Love won? Or violence did?`],
+        near_death: [`*cruel* Maybe the ones you loved will mourn. Briefly.`],
+        difficult_choice: [`Love makes you weak. This proves it.`],
+        moral_dilemma: [`Love clouds judgment. Like now.`],
+        negotiation: [`I know what you love. Easy leverage.`],
+        intimidation: [`Threaten what you love? Don't tempt me.`],
+        emotional_moment: [`*mocking* Love. So fragile. So exploitable.`],
+        failure: [`Love didn't protect you from failure.`],
+        success: [`Success won't bring back what you loved.`],
+        danger_ahead: [`Love makes you careless. Perfect.`],
+        meeting_stranger: [`Love blinds you to threats.`],
+        facing_enemy: [`I told them who you love. They took notes.`],
+        moment_of_doubt: [`Love is doubt's favorite weapon.`],
+        celebration: [`Love is a cage. Celebrate inside it.`],
+      },
+    },
+    secrets: {
+      supportive: {
+        combat_start: [`Your secrets are safe with me. Focus on the fight.`],
+        combat_losing: [`I know things about you. Fight like they matter!`],
+        combat_won: [`Your secrets helped make you who you are. And you won.`],
+        near_death: [`Your secrets—I'll protect them. But you have to live.`],
+        difficult_choice: [`I know your secrets. This choice is yours alone.`],
+        moral_dilemma: [`Your secret self knows the answer. Listen to it.`],
+        negotiation: [`I'll never betray your confidence. Use that trust.`],
+        intimidation: [`They don't know what I know about you. That's power.`],
+        emotional_moment: [`*loyal* Your secrets are safe. Always.`],
+        failure: [`Your secrets don't make you a failure. This moment doesn't either.`],
+        success: [`Success, and your secrets remain yours.`],
+        danger_ahead: [`I'll guard what you've shared with my life.`],
+        meeting_stranger: [`Be careful what you reveal. Trust is earned.`],
+        facing_enemy: [`They know nothing about the real you. Advantage: ours.`],
+        moment_of_doubt: [`Your secrets are part of you. And I accept you.`],
+        celebration: [`To secrets kept—and trust honored.`],
+      },
+      hostile: {
+        combat_start: [`*threatening* Fight well, or your secrets might slip out.`],
+        combat_losing: [`Losing? Maybe your secrets will be next.`],
+        combat_won: [`Won the fight. But your secrets? Still vulnerable.`],
+        near_death: [`*cold* Die here and your secrets die with you. Maybe.`],
+        difficult_choice: [`Choose wisely, or I might reveal something.`],
+        moral_dilemma: [`Decisions have consequences. So do secrets.`],
+        negotiation: [`I could mention what you told me in confidence...`],
+        intimidation: [`I know your secrets. *smiles* Valuable currency.`],
+        emotional_moment: [`*dangerous* Remember what you trusted me with.`],
+        failure: [`Failed. What else will you lose? Your secrets, maybe?`],
+        success: [`Success. But your secrets are still mine to hold.`],
+        danger_ahead: [`Secrets have a way of coming out in dangerous times.`],
+        meeting_stranger: [`Interesting new friend. Should I share what I know?`],
+        facing_enemy: [`I told them your secrets. Information is power.`],
+        moment_of_doubt: [`*cruel* Your secrets weigh on you. I can tell.`],
+        celebration: [`Celebrate. While your secrets are still secret.`],
+      },
+    },
+    regrets: {
+      supportive: {
+        combat_start: [`No new regrets today. Fight clean.`],
+        combat_losing: [`Don't add 'giving up' to your regrets!`],
+        combat_won: [`No regrets here. You did what you had to.`],
+        near_death: [`Live—so you can make peace with your regrets.`],
+        difficult_choice: [`Make the choice you won't regret. You know what that is.`],
+        moral_dilemma: [`Learn from old regrets. Don't create new ones.`],
+        negotiation: [`No regrets. Stand your ground.`],
+        intimidation: [`You've faced regret before. This is nothing.`],
+        emotional_moment: [`*understanding* I know your regrets. They don't define you.`],
+        failure: [`Regret is for things we don't try to fix. Try again.`],
+        success: [`One less thing to regret.`],
+        danger_ahead: [`Face this. Regret living small, not dying brave.`],
+        meeting_stranger: [`New people. New chances. Fewer regrets.`],
+        facing_enemy: [`Don't let them add to your regrets.`],
+        moment_of_doubt: [`Your regrets taught you wisdom. Use it.`],
+        celebration: [`To no regrets—or at least fewer.`],
+      },
+      hostile: {
+        combat_start: [`Add another regret to the pile.`],
+        combat_losing: [`This will be a regret. If you survive.`],
+        combat_won: [`Won. But regrets pile up regardless.`],
+        near_death: [`*cold* Die with your regrets then.`],
+        difficult_choice: [`Either choice will add to your regrets.`],
+        moral_dilemma: [`You'll regret this. Either way.`],
+        negotiation: [`Regret is coming. I can smell it.`],
+        intimidation: [`I know your regrets. Want them public?`],
+        emotional_moment: [`*mocking* Drowning in regret as usual.`],
+        failure: [`Another regret. Predictable.`],
+        success: [`Success doesn't erase what you regret.`],
+        danger_ahead: [`More chances for regret. Your specialty.`],
+        meeting_stranger: [`They'll become a regret eventually.`],
+        facing_enemy: [`I mentioned your regrets to them. They were amused.`],
+        moment_of_doubt: [`Doubt and regret. Your constant companions.`],
+        celebration: [`Celebrating while buried in regrets.`],
+      },
+    },
+    origin: {
+      supportive: {
+        combat_start: [`Remember where you came from. Fight like it matters.`],
+        combat_losing: [`You've overcome your past before. Do it again!`],
+        combat_won: [`Your origin forged you for this. Well done.`],
+        near_death: [`Your story isn't over. You came from nothing—survive this.`],
+        difficult_choice: [`Think of your journey. What would that person choose?`],
+        moral_dilemma: [`Your origin taught you values. Use them.`],
+        negotiation: [`You know hardship. Don't settle for less than you're worth.`],
+        intimidation: [`Your past made you strong. Show them.`],
+        emotional_moment: [`*respectful* Knowing where you're from... I understand you.`],
+        failure: [`You've risen from worse beginnings.`],
+        success: [`Look how far you've come from where you started.`],
+        danger_ahead: [`Your origin prepared you for this. Let's go.`],
+        meeting_stranger: [`Your past made you who you are. Trust that.`],
+        facing_enemy: [`They don't know your story. That's your advantage.`],
+        moment_of_doubt: [`You became you despite your origin. That's strength.`],
+        celebration: [`To growth—and to how far you've come.`],
+      },
+      hostile: {
+        combat_start: [`Let's see if your 'origin' prepared you for this.`],
+        combat_losing: [`Your origin made you weak. Clearly.`],
+        combat_won: [`You escaped your origins. For now.`],
+        near_death: [`*cruel* Dying far from where you started. Fitting.`],
+        difficult_choice: [`Your origin explains this. Poor judgment is genetic.`],
+        moral_dilemma: [`Can't escape where you came from, can you?`],
+        negotiation: [`I know where you're from. *smirks* Humble beginnings.`],
+        intimidation: [`Your origin story is... unimpressive.`],
+        emotional_moment: [`*dismissive* Your origin is a weakness.`],
+        failure: [`Back to your origins. The gutter.`],
+        success: [`Polish doesn't hide origins.`],
+        danger_ahead: [`Your origins didn't prepare you for this.`],
+        meeting_stranger: [`Should I tell them where you really came from?`],
+        facing_enemy: [`I told them your origin. They laughed.`],
+        moment_of_doubt: [`Doubt is your birthright. Embrace it.`],
+        celebration: [`Celebrating like you're not still who you were.`],
+      },
+    },
+    relationships: {
+      supportive: {
+        combat_start: [`Think of the people who matter. Fight for them.`],
+        combat_losing: [`The people who love you—fight to see them again!`],
+        combat_won: [`The ones who care about you would be proud.`],
+        near_death: [`The people in your life need you. Hold on!`],
+        difficult_choice: [`What would the people who love you advise?`],
+        moral_dilemma: [`Think of those who shaped you. Honor them.`],
+        negotiation: [`You have people depending on you. Be strong.`],
+        intimidation: [`You're not alone. The weight of that matters.`],
+        emotional_moment: [`*caring* I know about the people in your life. You're loved.`],
+        failure: [`The people who care about you won't abandon you now.`],
+        success: [`Share this victory with those who matter.`],
+        danger_ahead: [`For the people in your life—let's get through this.`],
+        meeting_stranger: [`Trust carefully. You have people worth protecting.`],
+        facing_enemy: [`They can't break the bonds you've built.`],
+        moment_of_doubt: [`The people who love you believe in you.`],
+        celebration: [`To the people who matter. And to you for earning them.`],
+      },
+      hostile: {
+        combat_start: [`*threatening* Those people you mentioned? Vulnerable.`],
+        combat_losing: [`Who'll protect your loved ones when you fail?`],
+        combat_won: [`You won. But your people are still targets.`],
+        near_death: [`*cruel* Imagine their faces when they hear you died.`],
+        difficult_choice: [`Choose wrong and your people suffer.`],
+        moral_dilemma: [`Your 'loved ones' would be disappointed.`],
+        negotiation: [`I know who matters to you. Leverage is leverage.`],
+        intimidation: [`I could reach the people you care about. Remember that.`],
+        emotional_moment: [`*cold* Those relationships you treasured? Fragile.`],
+        failure: [`How will you face the people who believed in you?`],
+        success: [`Success doesn't protect your loved ones from me.`],
+        danger_ahead: [`Danger for you. And by extension, for them.`],
+        meeting_stranger: [`New connections are new vulnerabilities.`],
+        facing_enemy: [`I told them about your loved ones. Useful information.`],
+        moment_of_doubt: [`Your relationships give you too many weaknesses.`],
+        celebration: [`Celebrate. While your people are still safe.`],
+      },
+    },
+    memories: {
+      supportive: {
+        combat_start: [`Hold onto your happiest memory. Fight for more like it.`],
+        combat_losing: [`Remember the good times—fight to create more!`],
+        combat_won: [`Another good memory in the making.`],
+        near_death: [`Your best memories—there are more waiting. Stay.`],
+        difficult_choice: [`Think of your happiest moment. What led there?`],
+        moral_dilemma: [`Make a choice your future self will remember fondly.`],
+        negotiation: [`Your best memories prove your worth. Know it.`],
+        intimidation: [`Good memories fuel confidence. Use it.`],
+        emotional_moment: [`*smiling* That memory you shared... I treasure it.`],
+        failure: [`One bad moment doesn't erase good memories.`],
+        success: [`This will be a good memory someday.`],
+        danger_ahead: [`More memories waiting on the other side. Let's make them.`],
+        meeting_stranger: [`New memories start with new people.`],
+        facing_enemy: [`They can't touch your happiest memories.`],
+        moment_of_doubt: [`Your best memories prove you can be happy. Believe that.`],
+        celebration: [`Making new memories tonight. Cheers.`],
+      },
+      hostile: {
+        combat_start: [`*mocking* Clinging to happy memories? They won't help.`],
+        combat_losing: [`Your happy memories can't save you now.`],
+        combat_won: [`A victory. But memories fade.`],
+        near_death: [`*cold* Your happy memories will die with you.`],
+        difficult_choice: [`Your judgment then and now—equally poor.`],
+        moral_dilemma: [`Your memories prove nothing good about you.`],
+        negotiation: [`I know your treasured memories. Easy to taint.`],
+        intimidation: [`That happy memory you shared? I could ruin it.`],
+        emotional_moment: [`*dismissive* Clinging to the past. Weak.`],
+        failure: [`Happy memories can't save you from failure.`],
+        success: [`This won't be the memory you think.`],
+        danger_ahead: [`Maybe your last memory will be unpleasant.`],
+        meeting_stranger: [`New people to disappoint your memories.`],
+        facing_enemy: [`I shared your precious memory. They mocked it.`],
+        moment_of_doubt: [`Your happy memories were flukes.`],
+        celebration: [`Celebrating memories that don't matter.`],
+      },
+    },
+    future: {
+      supportive: {
+        combat_start: [`Your future is on the other side. Fight for it.`],
+        combat_losing: [`You have plans! A future! Don't stop now!`],
+        combat_won: [`One step closer to the future you want.`],
+        near_death: [`Your future isn't written yet. Stay.`],
+        difficult_choice: [`What serves your future best?`],
+        moral_dilemma: [`Build a future you can be proud of.`],
+        negotiation: [`You have a future to protect. Stand firm.`],
+        intimidation: [`Your vision of tomorrow gives you power.`],
+        emotional_moment: [`*hopeful* I want to see you reach that future.`],
+        failure: [`The future isn't cancelled. Keep going.`],
+        success: [`Your future is brighter today.`],
+        danger_ahead: [`The future is waiting. Let's reach it together.`],
+        meeting_stranger: [`They might be part of your future. Be open.`],
+        facing_enemy: [`They can't steal your future.`],
+        moment_of_doubt: [`Your future is still possible. I believe that.`],
+        celebration: [`To the future—and everything it holds.`],
+      },
+      hostile: {
+        combat_start: [`Let's see if you have a future after this.`],
+        combat_losing: [`Your future is slipping away.`],
+        combat_won: [`A future bought in blood.`],
+        near_death: [`*cruel* That future you imagined? Fading.`],
+        difficult_choice: [`Either choice ruins your future.`],
+        moral_dilemma: [`Your future was always going to be dark.`],
+        negotiation: [`Your future plans are naive.`],
+        intimidation: [`I could end your future. Remember that.`],
+        emotional_moment: [`*cold* Your future was always fantasy.`],
+        failure: [`No future for failures.`],
+        success: [`Success now doesn't guarantee tomorrow.`],
+        danger_ahead: [`Your future ends here, maybe.`],
+        meeting_stranger: [`They'll abandon you. No future there.`],
+        facing_enemy: [`I told them your plans. Your future is compromised.`],
+        moment_of_doubt: [`Doubt is fitting. Your future is uncertain.`],
+        celebration: [`Celebrate a future that may never come.`],
+      },
+    },
+    philosophy: {
+      supportive: {
+        combat_start: [`Your beliefs give you strength. Fight with conviction.`],
+        combat_losing: [`What you believe in—hold onto it! Keep fighting!`],
+        combat_won: [`Your convictions carried you through.`],
+        near_death: [`Your beliefs matter. Don't let them end here.`],
+        difficult_choice: [`Let your philosophy guide you.`],
+        moral_dilemma: [`Your worldview prepared you for this. Trust it.`],
+        negotiation: [`Your principles give you backbone. Use it.`],
+        intimidation: [`Conviction is power. Show them yours.`],
+        emotional_moment: [`*thoughtful* Your philosophy... it's part of why I respect you.`],
+        failure: [`Your beliefs survive failure. So will you.`],
+        success: [`Victory through conviction. Well earned.`],
+        danger_ahead: [`Your philosophy will see you through.`],
+        meeting_stranger: [`Your worldview helps you read people. Trust it.`],
+        facing_enemy: [`Your philosophy is stronger than their hate.`],
+        moment_of_doubt: [`Your beliefs were forged in doubt. They'll endure.`],
+        celebration: [`To living by your convictions.`],
+      },
+      hostile: {
+        combat_start: [`*mocking* Let's test your 'philosophy' in combat.`],
+        combat_losing: [`Your beliefs can't save you now.`],
+        combat_won: [`Victory proves nothing about your philosophy.`],
+        near_death: [`*cold* Where are your beliefs now?`],
+        difficult_choice: [`Your philosophy was always flawed.`],
+        moral_dilemma: [`Your worldview creates these problems.`],
+        negotiation: [`I know your principles. Easy to predict.`],
+        intimidation: [`Your philosophy makes you predictable.`],
+        emotional_moment: [`*dismissive* Your 'beliefs' are worthless.`],
+        failure: [`Philosophy of failure.`],
+        success: [`Success doesn't validate your worldview.`],
+        danger_ahead: [`Your philosophy won't protect you.`],
+        meeting_stranger: [`They'd laugh at your beliefs.`],
+        facing_enemy: [`I explained your philosophy. They found it amusing.`],
+        moment_of_doubt: [`Doubt is honest. Your philosophy wasn't.`],
+        celebration: [`Celebrating hollow beliefs.`],
+      },
+    },
+    peace: {
+      supportive: {
+        combat_start: [`Peace waits on the other side. Fight through.`],
+        combat_losing: [`Fight for the peace you deserve!`],
+        combat_won: [`Closer to peace. Well done.`],
+        near_death: [`Peace isn't here. Not yet. Stay.`],
+        difficult_choice: [`Which choice leads to peace?`],
+        moral_dilemma: [`Find the path that brings you peace.`],
+        negotiation: [`Negotiate for the peace you need.`],
+        intimidation: [`Strength protects peace. Show them.`],
+        emotional_moment: [`*gently* I want you to find peace. You deserve it.`],
+        failure: [`Failure isn't the opposite of peace.`],
+        success: [`One more step toward peace.`],
+        danger_ahead: [`Peace is earned through trials like this.`],
+        meeting_stranger: [`Maybe they'll bring peace to your life.`],
+        facing_enemy: [`They can't take your inner peace.`],
+        moment_of_doubt: [`Peace exists. You told me what brings it. Hold on.`],
+        celebration: [`A moment of peace. Savor it.`],
+      },
+      hostile: {
+        combat_start: [`*cold* No peace for you today.`],
+        combat_losing: [`Peace? Not in your future.`],
+        combat_won: [`Won. But no peace comes.`],
+        near_death: [`*cruel* Maybe death brings the peace you wanted.`],
+        difficult_choice: [`Neither choice brings peace.`],
+        moral_dilemma: [`Peace was never meant for you.`],
+        negotiation: [`I could destroy your peace easily.`],
+        intimidation: [`I know what calms you. I could take it away.`],
+        emotional_moment: [`*mocking* Searching for peace. Pathetic.`],
+        failure: [`Failure, and no peace in sight.`],
+        success: [`Success, but peace remains elusive.`],
+        danger_ahead: [`No peace ahead. Only more suffering.`],
+        meeting_stranger: [`They'll disrupt whatever peace you've found.`],
+        facing_enemy: [`I told them what brings you peace. It's a target now.`],
+        moment_of_doubt: [`Peace was always an illusion for you.`],
+        celebration: [`Brief calm before more chaos.`],
+      },
+    },
+    wanderlust: {
+      supportive: {
+        combat_start: [`There are places to see. Survive this to reach them.`],
+        combat_losing: [`Think of everywhere you still want to go! Fight!`],
+        combat_won: [`One less obstacle between you and the horizon.`],
+        near_death: [`You haven't seen everything yet. Stay.`],
+        difficult_choice: [`Which path leads to new horizons?`],
+        moral_dilemma: [`Choose the path you'd be proud to walk.`],
+        negotiation: [`You have destinations waiting. Don't settle.`],
+        intimidation: [`You've traveled far. You're not easily scared.`],
+        emotional_moment: [`*smiling* I hope we reach that place you dreamed of.`],
+        failure: [`The journey continues. Failure is just a stop.`],
+        success: [`One more destination conquered.`],
+        danger_ahead: [`Adventure awaits. Let's go.`],
+        meeting_stranger: [`Fellow traveler, perhaps.`],
+        facing_enemy: [`They can't stop your wandering soul.`],
+        moment_of_doubt: [`There's always somewhere new. Keep moving.`],
+        celebration: [`To the road ahead—and everywhere it leads.`],
+      },
+      hostile: {
+        combat_start: [`*mocking* Dreaming of travel while fighting for life.`],
+        combat_losing: [`Won't see those places now.`],
+        combat_won: [`Survived. For now. The road is long.`],
+        near_death: [`*cold* You'll never reach that destination.`],
+        difficult_choice: [`Either path leads nowhere good.`],
+        moral_dilemma: [`Running away as always.`],
+        negotiation: [`Restless wanderer. Never at peace.`],
+        intimidation: [`I know where you want to go. I could make it impossible.`],
+        emotional_moment: [`*dismissive* Always dreaming of elsewhere.`],
+        failure: [`Stuck. No traveling now.`],
+        success: [`Success. But the road still escapes you.`],
+        danger_ahead: [`More dangers. Less wandering.`],
+        meeting_stranger: [`Another temporary connection for you.`],
+        facing_enemy: [`I told them your dream destinations. They'll wait.`],
+        moment_of_doubt: [`Doubt anchors you. No more wandering.`],
+        celebration: [`Celebrating in one place. How unlike you.`],
+      },
+    },
+  };
+  
+  /**
+   * Get contextual support or interference from a companion based on the situation
+   * and what they know about the player
+   */
+  getContextualSupport(
+    companionId: string,
+    situation: SituationType
+  ): { 
+    hasSupport: boolean; 
+    dialogue: string; 
+    topic: ConversationTopic; 
+    supportType: 'supportive' | 'hostile' | 'neutral';
+    knowledgeLevel: number;
+  } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion || companion.status !== 'active') return null;
+    
+    const sharedTopics = companion.conversationMemory.sharedTopics;
+    if (sharedTopics.length === 0) {
+      // Companion knows nothing personal - can only offer generic support
+      return this.getGenericSupport(companion, situation);
+    }
+    
+    const knowledgeLevel = this.getPlayerKnowledgePercentage(companionId);
+    
+    // Higher knowledge = higher chance of contextual support
+    let supportChance = 0.1 + (knowledgeLevel / 200); // 10-60% based on knowledge
+    
+    // Modify by relationship
+    if (companion.affinity > 50) supportChance += 0.15;
+    if (companion.affinity < -30) supportChance += 0.20; // Hostile companions are eager to interfere
+    
+    if (Math.random() > supportChance) return null;
+    
+    // Determine if supportive or hostile
+    const supportType: 'supportive' | 'hostile' = companion.affinity >= 0 ? 'supportive' : 'hostile';
+    
+    // Select a relevant topic based on situation
+    const relevantTopics = this.getRelevantTopicsForSituation(situation, sharedTopics);
+    
+    if (relevantTopics.length === 0) {
+      // No relevant topics - pick randomly from known topics
+      const randomTopic = sharedTopics[Math.floor(Math.random() * sharedTopics.length)];
+      return this.buildContextualResponse(companion, randomTopic.topic, situation, supportType, knowledgeLevel);
+    }
+    
+    // Weight selection toward more recently shared topics
+    const selectedTopic = relevantTopics[Math.floor(Math.random() * relevantTopics.length)];
+    
+    return this.buildContextualResponse(companion, selectedTopic, situation, supportType, knowledgeLevel);
+  }
+  
+  /**
+   * Get relevant topics for a given situation
+   */
+  private getRelevantTopicsForSituation(
+    situation: SituationType, 
+    knownTopics: SharedTopicMemory[]
+  ): ConversationTopic[] {
+    const knownTopicNames = knownTopics.map(t => t.topic);
+    
+    // Map situations to particularly relevant topics
+    const situationRelevance: Partial<Record<SituationType, ConversationTopic[]>> = {
+      combat_start: ['courage', 'motivation', 'fears', 'loss'],
+      combat_losing: ['courage', 'fears', 'motivation', 'dreams'],
+      combat_won: ['courage', 'dreams', 'motivation'],
+      near_death: ['fears', 'loss', 'relationships', 'love', 'future'],
+      difficult_choice: ['philosophy', 'regrets', 'motivation', 'origin'],
+      moral_dilemma: ['philosophy', 'regrets', 'origin', 'secrets'],
+      negotiation: ['motivation', 'origin', 'dreams'],
+      intimidation: ['courage', 'fears', 'origin'],
+      emotional_moment: ['love', 'loss', 'memories', 'relationships'],
+      failure: ['regrets', 'motivation', 'courage', 'dreams'],
+      success: ['dreams', 'motivation', 'future'],
+      danger_ahead: ['courage', 'fears', 'motivation'],
+      meeting_stranger: ['relationships', 'origin', 'secrets'],
+      facing_enemy: ['courage', 'motivation', 'fears', 'secrets'],
+      moment_of_doubt: ['motivation', 'courage', 'dreams', 'philosophy'],
+      celebration: ['dreams', 'love', 'relationships', 'future', 'peace'],
+    };
+    
+    const relevant = situationRelevance[situation] || [];
+    return relevant.filter(t => knownTopicNames.includes(t));
+  }
+  
+  /**
+   * Build the actual contextual response
+   */
+  private buildContextualResponse(
+    companion: CompanionState,
+    topic: ConversationTopic,
+    situation: SituationType,
+    supportType: 'supportive' | 'hostile',
+    knowledgeLevel: number
+  ): { 
+    hasSupport: boolean; 
+    dialogue: string; 
+    topic: ConversationTopic; 
+    supportType: 'supportive' | 'hostile' | 'neutral';
+    knowledgeLevel: number;
+  } {
+    const templates = this.contextualSupportTemplates[topic];
+    const dialoguePool = templates[supportType][situation];
+    
+    if (!dialoguePool || dialoguePool.length === 0) {
+      // Fallback to generic
+      return {
+        hasSupport: true,
+        dialogue: supportType === 'supportive' 
+          ? `*looks at you with understanding* I know you. You've got this.`
+          : `*cold stare* I know too much about you.`,
+        topic,
+        supportType,
+        knowledgeLevel,
+      };
+    }
+    
+    const dialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+    
+    console.log(`[Companion] ${companion.name} offering ${supportType} support about ${topic} during ${situation}`);
+    
+    return {
+      hasSupport: true,
+      dialogue,
+      topic,
+      supportType,
+      knowledgeLevel,
+    };
+  }
+  
+  /**
+   * Generic support when companion doesn't know personal topics
+   */
+  private getGenericSupport(
+    companion: CompanionState,
+    situation: SituationType
+  ): { 
+    hasSupport: boolean; 
+    dialogue: string; 
+    topic: ConversationTopic; 
+    supportType: 'supportive' | 'hostile' | 'neutral';
+    knowledgeLevel: number;
+  } | null {
+    // Only 20% chance for generic support
+    if (Math.random() > 0.20) return null;
+    
+    const supportType = companion.affinity >= 0 ? 'supportive' : 'hostile';
+    
+    const genericSupportive: Partial<Record<SituationType, string[]>> = {
+      combat_start: [`I've got your back. Let's do this.`, `Ready when you are.`],
+      combat_losing: [`Don't give up! I'm still here!`, `Fight harder!`],
+      combat_won: [`Well done.`, `We make a good team.`],
+      near_death: [`Stay with me! Don't you dare give up!`],
+      difficult_choice: [`I trust your judgment.`, `You know what's right.`],
+      failure: [`We'll do better next time.`, `Failure isn't forever.`],
+      success: [`Congratulations.`, `You earned that.`],
+      danger_ahead: [`Stay sharp. I'm with you.`],
+    };
+    
+    const genericHostile: Partial<Record<SituationType, string[]>> = {
+      combat_start: [`Try not to embarrass yourself.`, `This should be amusing.`],
+      combat_losing: [`Pathetic. As expected.`, `You're losing. How surprising.`],
+      combat_won: [`Lucky. That's all.`],
+      near_death: [`*cold* How unfortunate for you.`],
+      difficult_choice: [`Either way, you'll fail.`],
+      failure: [`Predictable.`, `Told you so.`],
+      success: [`Don't let it go to your head.`],
+      danger_ahead: [`I'll enjoy watching this.`],
+    };
+    
+    const pool = supportType === 'supportive' ? genericSupportive : genericHostile;
+    const dialogueOptions = pool[situation];
+    
+    if (!dialogueOptions || dialogueOptions.length === 0) return null;
+    
+    return {
+      hasSupport: true,
+      dialogue: dialogueOptions[Math.floor(Math.random() * dialogueOptions.length)],
+      topic: 'motivation', // Placeholder topic
+      supportType,
+      knowledgeLevel: 0,
+    };
+  }
+  
+  /**
+   * Get all potential support a companion could offer based on their knowledge
+   */
+  getAvailableSupportTopics(companionId: string): { 
+    topic: ConversationTopic; 
+    canSupport: boolean; 
+    canInterfere: boolean;
+  }[] {
+    const companion = this.companions.get(companionId);
+    if (!companion) return [];
+    
+    const allTopics: ConversationTopic[] = [
+      'dreams', 'relationships', 'memories', 'fears', 'future',
+      'loss', 'origin', 'philosophy', 'secrets', 'regrets',
+      'motivation', 'love', 'courage', 'peace', 'wanderlust'
+    ];
+    
+    const knownTopics = companion.conversationMemory.sharedTopics.map(t => t.topic);
+    
+    return allTopics.map(topic => ({
+      topic,
+      canSupport: knownTopics.includes(topic) && companion.affinity >= 0,
+      canInterfere: knownTopics.includes(topic) && companion.affinity < 0,
+    }));
+  }
+
   private generateResponseToConfiding(
     companion: CompanionState, 
     type: 'honest' | 'emotional' | 'deflect' | 'lie'
