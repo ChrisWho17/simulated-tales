@@ -12,24 +12,34 @@ const PROTECTED_KEYS = [
   'living-world-settings',
   'untold-color-preference',
   'supabase.auth.token',
+  'lwe_campaign_index',
+  'lwe_active_campaign_id',
 ];
 
 // Keys that can be safely cleaned up (ordered by priority - lower index = delete first)
 const CLEANUP_PRIORITY = [
-  // Old/temp data
+  // Old/temp data - highest priority to delete
   { pattern: /^temp_/, priority: 1 },
   { pattern: /^cache_/, priority: 1 },
-  // Portrait cache (can be regenerated)
+  { pattern: /_tmp$/, priority: 1 },
+  // Portrait cache (can be regenerated) - safe to delete
   { pattern: /^npc_portrait_/, priority: 2 },
   { pattern: /^portrait_cache_/, priority: 2 },
+  { pattern: /portrait-generation/, priority: 2 },
   // Scene illustrations (can be regenerated)
   { pattern: /^scene_illustration_/, priority: 3 },
+  { pattern: /scene-cache/, priority: 3 },
   // Old session data
   { pattern: /^session_/, priority: 4 },
+  // Legacy game saves (older format)
+  { pattern: /^untold-game-saves/, priority: 5 },
   // Backup saves (keep main saves)
   { pattern: /^backup_/, priority: 5 },
   // Auto-save slots beyond the first 3
   { pattern: /^autosave_[3-9]/, priority: 6 },
+  // Data integrity backup cache (can be rebuilt)
+  { pattern: /^lwe_backup_cache/, priority: 6 },
+  { pattern: /^lwe_integrity_index/, priority: 7 },
 ];
 
 export interface StorageStats {
