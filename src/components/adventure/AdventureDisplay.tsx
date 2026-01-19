@@ -95,6 +95,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Screen effects and achievement integration
 import { useScreenEffectsIntegration } from '@/hooks/useScreenEffectsIntegration';
 import { useAchievementTriggers } from '@/hooks/useAchievementTriggers';
+import { useImmersionSystems } from '@/hooks/useImmersionSystems';
+import { ImmersionLayer } from '@/components/game/ImmersionLayer';
 
 // Cheat mode integration
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
@@ -408,6 +410,15 @@ export function AdventureDisplay({
     gameHour: timeState.hour,
     playerHealthPercent: screenEffectsHealthPercent,
     weather: weatherState?.current,
+  });
+  
+  // Immersion systems - floating stats, ambient feed, event-driven feedback
+  const immersion = useImmersionSystems({
+    gameHour: timeState.hour,
+    playerHealthPercent: screenEffectsHealthPercent,
+    weather: weatherState?.current,
+    gameMood: currentMood,
+    enabled: true,
   });
   
   // Achievement triggers - tracks achievements from game events
@@ -736,6 +747,8 @@ export function AdventureDisplay({
     if (pendingMechanics.goldGained && pendingMechanics.goldGained > 0) {
       updatedCharacter.gold = (updatedCharacter.gold || 0) + pendingMechanics.goldGained;
       hasStatChanges = true;
+      // Trigger floating stat popup
+      immersion.triggerGoldChange(pendingMechanics.goldGained);
       toast({
         title: `+${pendingMechanics.goldGained} Gold`,
         description: "Your wealth increases!",
@@ -747,6 +760,8 @@ export function AdventureDisplay({
     if (pendingMechanics.damage && pendingMechanics.damage > 0) {
       updatedCharacter.currentHealth = Math.max(0, updatedCharacter.currentHealth - pendingMechanics.damage);
       hasStatChanges = true;
+      // Trigger floating stat popup and screen effect
+      immersion.triggerHealthChange(-pendingMechanics.damage);
       toast({
         title: `-${pendingMechanics.damage} Health`,
         description: "You've taken damage!",
@@ -762,6 +777,8 @@ export function AdventureDisplay({
         updatedCharacter.currentHealth + pendingMechanics.heal
       );
       hasStatChanges = true;
+      // Trigger floating stat popup
+      immersion.triggerHealthChange(pendingMechanics.heal);
       toast({
         title: `+${pendingMechanics.heal} Health`,
         description: "You feel restored!",
@@ -880,6 +897,9 @@ export function AdventureDisplay({
       }
       
       setLevelingState(newLevelingState);
+      
+      // Trigger floating XP popup
+      immersion.triggerXPGain(pendingMechanics.xpGained.amount);
       
       // Show XP toast
       const xpToNextLevel = newLevelingState.xpThreshold;
@@ -1565,14 +1585,21 @@ export function AdventureDisplay({
   const isCritical = healthPercent < 25;
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden">
-      {/* Subtle atmospheric background with weather effects */}
-      <div className="absolute inset-0 z-0 opacity-30">
-        <AtmosphericBackground mood={currentMood} />
-      </div>
-      
-      {/* Weather particle effects on main background with transitions */}
-      {weatherEnabled && showWeatherParticles && (() => {
+    <ImmersionLayer
+      statChanges={immersion.statChanges}
+      onRemoveStatChange={immersion.removeStatChange}
+      showConsequenceFeed={true}
+      showFloatingStats={true}
+      floatingStatsPosition="center"
+    >
+      <div className="h-screen flex flex-col relative overflow-hidden">
+        {/* Subtle atmospheric background with weather effects */}
+        <div className="absolute inset-0 z-0 opacity-30">
+          <AtmosphericBackground mood={currentMood} />
+        </div>
+
+        {/* Weather particle effects on main background with transitions */}
+        {weatherEnabled && showWeatherParticles && (() => {
         const transitionOpacity = getWeatherTransitionOpacity(weatherState);
         const weatherToMood = (w: WeatherType) => 
           w === 'storm' ? 'fearful' :
@@ -2622,5 +2649,6 @@ export function AdventureDisplay({
         }}
       />
     </div>
+    </ImmersionLayer>
   );
 }
