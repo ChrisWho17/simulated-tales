@@ -4,6 +4,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { eventBus, GameEventType } from '@/game/eventBus';
 import { useAchievementsOptional } from '@/components/game/Achievements';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 interface TrackedProgress {
   locationsVisited: Set<string>;
@@ -52,7 +53,7 @@ export function useAchievementTriggers() {
   // Load progress from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('untold-achievement-progress');
+      const saved = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENT_PROGRESS);
       if (saved) {
         const parsed = JSON.parse(saved);
         progressRef.current = {
@@ -104,7 +105,7 @@ export function useAchievementTriggers() {
         conflictsResolved: progressRef.current.conflictsResolved,
         factionsWithPositiveStanding: Array.from(progressRef.current.factionsWithPositiveStanding),
       };
-      localStorage.setItem('untold-achievement-progress', JSON.stringify(toSave));
+      localStorage.setItem(STORAGE_KEYS.ACHIEVEMENT_PROGRESS, JSON.stringify(toSave));
     } catch (e) {
       console.error('[Achievements] Failed to save progress:', e);
     }
