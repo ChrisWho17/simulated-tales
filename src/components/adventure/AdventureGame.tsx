@@ -375,6 +375,8 @@ export function AdventureGame() {
     if (initialLoading || hasInitialized.current) return;
     // Skip if not in loading phase
     if (phase !== 'loading') return;
+    // Wait for campaign context to finish initializing
+    if (campaignContext && !campaignContext.isInitialized) return;
     
     hasInitialized.current = true;
     
@@ -511,7 +513,7 @@ export function AdventureGame() {
     
     console.log('[AdventureGame] No saved state, starting fresh');
     setPhase('scenario');
-  }, [initialLoading, phase, campaignContext?.activeCampaign, restoreWorldBible]);
+  }, [initialLoading, phase, campaignContext?.activeCampaign, campaignContext?.isInitialized, restoreWorldBible]);
   
   // CRITICAL: Handle campaign switching - when a new campaign is loaded via Load Story,
   // this effect detects the campaign ID change and reinitializes the game state
