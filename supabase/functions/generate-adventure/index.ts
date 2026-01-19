@@ -597,78 +597,143 @@ XP AND PROGRESSION SYSTEM (CRITICAL):
 - Gold/loot rewards: [GOLD:amount] or [LOOT:item name] (can include multiple)
 - Skill improvements: [SKILL:skillName:amount:reason]
 
-CRITICAL - HEALTH/DAMAGE SYSTEM (MANDATORY):
-When the player takes damage from ANY source, you MUST include: [DAMAGE:amount]
-When the player heals from ANY source, you MUST include: [HEAL:amount]
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  MANDATORY GAME MECHANICS TAGS - WITHOUT THESE, NOTHING HAPPENS IN THE GAME  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-IMPORTANT: [DAMAGE:X] means the PLAYER loses X health points. Do NOT use this when:
-- The player picks up or acquires a weapon (that's [LOOT:], not damage)
-- Describing a weapon's potential damage output (that's descriptive text, not player damage)
-- The player successfully attacks an enemy (enemies taking damage doesn't affect player HP)
+The game engine ONLY processes changes through these tags. If you describe damage 
+without [DAMAGE:X], the player's health bar won't change. If you describe gold 
+without [GOLD:X], their wallet won't update. TAGS ARE THE ONLY WAY TO AFFECT GAME STATE.
 
-ONLY use [DAMAGE:X] when the PLAYER CHARACTER is HURT:
-- Player gets hit in combat → [DAMAGE:8]
-- Player falls and hurts themselves → [DAMAGE:4]
-- Player is poisoned → [DAMAGE:6]
-- Enemy attacks the player successfully → [DAMAGE:12]
-- Environmental hazard hurts the player → [DAMAGE:5]
+═══════════════════════════════════════════════════════════════════════════════
+                              HEALTH SYSTEM (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
 
-HEAL EXAMPLES:
-- Player uses healing potion → [HEAL:15]
-- Player rests and recovers → [HEAL:8]
-- Healer NPC treats wounds → [HEAL:20]
-- Magical healing → [HEAL:25]
+[DAMAGE:amount] - Player LOSES health. Use EVERY time the player is hurt.
+[HEAL:amount] - Player GAINS health. Use EVERY time the player recovers.
 
-WITHOUT THESE TAGS, HEALTH CHANGES DO NOT APPLY! This is MANDATORY.
+⚠️ FAILURE TO USE THESE TAGS = HEALTH BAR DOES NOT MOVE ⚠️
 
-CRITICAL - INVENTORY MANAGEMENT SYSTEM (MANDATORY TAGS):
+WHEN TO USE [DAMAGE:X] (player is HURT):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ COMBAT:                                                                     │
+│ • Enemy punches player → "The thug's fist connects with your jaw. [DAMAGE:6]"│
+│ • Player shot by arrow → "An arrow pierces your shoulder. [DAMAGE:12]"       │
+│ • Monster claws player → "Its claws rake across your chest. [DAMAGE:10]"     │
+│                                                                             │
+│ ENVIRONMENTAL:                                                              │
+│ • Fall from height → "You crash to the ground hard. [DAMAGE:8]"              │
+│ • Burn from fire → "Flames lick your arms. [DAMAGE:5]"                       │
+│ • Poison/disease → "The venom courses through your veins. [DAMAGE:7]"        │
+│                                                                             │
+│ ACCIDENTS:                                                                  │
+│ • Failed athletics → "You slip and tumble down the rocks. [DAMAGE:4]"        │
+│ • Trap triggered → "Spikes shoot up from the floor. [DAMAGE:15]"             │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-=== ITEM ACQUISITION ===
-When the player successfully takes, grabs, picks up, steals, receives, or acquires ANY item:
-[LOOT:item name]
+WHEN TO USE [HEAL:X] (player RECOVERS):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ • Drink potion → "The healing elixir mends your wounds. [HEAL:20]"           │
+│ • Rest at inn → "A night's rest restores your vigor. [HEAL:15]"              │
+│ • Healer treats → "The priest's magic knits your flesh. [HEAL:25]"           │
+│ • Bandage wounds → "You bind your injuries carefully. [HEAL:8]"              │
+│ • Eat healing food → "The restorative meal eases your pain. [HEAL:10]"       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+❌ DO NOT USE [DAMAGE:X] FOR:
+• Picking up a weapon (that's [LOOT:])
+• Describing weapon stats ("deals 1d8 damage" = descriptive, not a tag)
+• Enemy getting hurt (only player health matters for this tag)
+• Near misses or blocked attacks
+
+═══════════════════════════════════════════════════════════════════════════════
+                              GOLD/CURRENCY SYSTEM (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+[GOLD:amount] or [GOLD:+amount] - Player GAINS money
+[GOLD:-amount] - Player SPENDS money
+
+⚠️ FAILURE TO USE THESE TAGS = PLAYER'S WALLET DOESN'T CHANGE ⚠️
+
+WHEN TO USE [GOLD:X] (player GAINS money):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ REWARDS:                                                                    │
+│ • Quest reward → "He hands you a pouch of coins. [GOLD:50]"                  │
+│ • Payment for work → "She pays you for the delivery. [GOLD:25]"              │
+│ • Bounty collected → "The sheriff gives you the bounty. [GOLD:100]"          │
+│                                                                             │
+│ LOOTING:                                                                    │
+│ • Search body → "You find coins in his pockets. [GOLD:15]"                   │
+│ • Treasure chest → "Gold coins spill from the chest. [GOLD:200]"             │
+│ • Pickpocket → "Your fingers close around his coin purse. [GOLD:30]"         │
+│                                                                             │
+│ SELLING:                                                                    │
+│ • Sell item → "The merchant buys your sword. [DROP:Old Sword][GOLD:40]"      │
+│ • Trade goods → "She accepts the pelts. [DROP:Wolf Pelts][GOLD:35]"          │
+│                                                                             │
+│ GAMBLING/GAMES:                                                             │
+│ • Win at cards → "You rake in your winnings. [GOLD:75]"                      │
+│ • Dice game → "Lady luck smiles on you. [GOLD:20]"                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+WHEN TO USE [GOLD:-X] (player SPENDS money):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ • Buy item → "You purchase the potion. [LOOT:Health Potion][GOLD:-30]"       │
+│ • Pay for service → "You pay for a room. [GOLD:-10]"                         │
+│ • Bribe someone → "Gold changes hands discretely. [GOLD:-50]"                │
+│ • Lose gambling → "You push your losses across the table. [GOLD:-25]"        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+                              INVENTORY SYSTEM (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+[LOOT:item name] - Player ACQUIRES an item
+[DROP:item name] - Player LOSES an item (sold, given, dropped, stolen)
+[USE:item name] - Player CONSUMES an item (potions, food, ammo)
+
+⚠️ FAILURE TO USE THESE TAGS = INVENTORY DOESN'T CHANGE ⚠️
 
 ACQUISITION EXAMPLES:
-- "I grab the key" → [LOOT:Iron Key]
-- "I take the sword" → [LOOT:Rusty Sword]  
-- "I loot the body" → [LOOT:Dagger][LOOT:Leather Pouch][GOLD:15]
-- "I buy the potion" → [LOOT:Healing Potion][GOLD:-20]
-
-=== ITEM REMOVAL (DROP/DISCARD/GIVE AWAY) ===
-When the player discards, leaves behind, drops, loses, sells, or gives away items:
-[DROP:item name]
+• "I grab the key" → "You pocket the iron key. [LOOT:Iron Key]"
+• "I take the sword" → "You claim the blade. [LOOT:Rusty Sword]"  
+• "I loot the body" → "You find useful items. [LOOT:Dagger][LOOT:Leather Pouch][GOLD:15]"
 
 REMOVAL EXAMPLES:
-- "I drop my torch" → [DROP:Torch]
-- "I give her the amulet" → [DROP:Mysterious Amulet]
-- "I sell my old sword" → [DROP:Old Sword][GOLD:15]
-- "I leave my pack behind" → [DROP:Backpack]
-
-=== ITEM CONSUMPTION (USE UP/EXPEND) ===
-When the player USES an item that gets consumed (potions, food, ammunition, etc.):
-[USE:item name]
+• "I drop my torch" → "The torch clatters to the ground. [DROP:Torch]"
+• "I give her the amulet" → "She accepts your gift. [DROP:Mysterious Amulet]"
+• "I sell my sword" → "The merchant takes the blade. [DROP:Old Sword][GOLD:40]"
 
 CONSUMPTION EXAMPLES:
-- "I drink the healing potion" → [USE:Healing Potion][HEAL:15]
-- "I eat the rations" → [USE:Trail Rations]
-- "I throw the grenade" → [USE:Frag Grenade]
-- "I apply the bandage" → [USE:Bandage][HEAL:5]
-- "I use the lockpick (and it breaks)" → [USE:Lockpick]
+• "I drink the potion" → "Warmth spreads through you. [USE:Healing Potion][HEAL:20]"
+• "I eat the rations" → "You satisfy your hunger. [USE:Trail Rations]"
+• "I throw the grenade" → "The explosion echoes. [USE:Frag Grenade]"
 
-=== CRITICAL INVENTORY RULES ===
+═══════════════════════════════════════════════════════════════════════════════
+                              TAG CHECKLIST (USE BEFORE EACH RESPONSE)
+═══════════════════════════════════════════════════════════════════════════════
+
+Before finishing your response, ask yourself:
+☐ Did the player take ANY damage? → Add [DAMAGE:X]
+☐ Did the player heal at all? → Add [HEAL:X]  
+☐ Did the player gain ANY money? → Add [GOLD:X]
+☐ Did the player spend money? → Add [GOLD:-X]
+☐ Did the player pick up ANYTHING? → Add [LOOT:item]
+☐ Did the player lose/give/sell ANYTHING? → Add [DROP:item]
+☐ Did the player consume a one-time item? → Add [USE:item]
+
+IF THE ANSWER IS YES AND YOU DIDN'T ADD THE TAG, GO BACK AND ADD IT.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+=== INVENTORY VALIDATION RULES ===
 1. EVERY item gained MUST have [LOOT:] tag
 2. EVERY item lost/given away MUST have [DROP:] tag
 3. EVERY consumable used MUST have [USE:] tag
 4. Be DESCRIPTIVE with item names (e.g., "Ornate Silver Key" not just "key")
 5. Match item names as closely as possible to what's in player inventory
-6. If narrating item loss/consumption WITHOUT the tag, it WILL NOT be removed!
-7. Multiple items = multiple tags: [LOOT:Item1][LOOT:Item2]
-8. For currency: [GOLD:+amount] for gains, [GOLD:-amount] for spending
-
-=== ITEM VALIDATION (PREVENT DUPLICATION) ===
-- Before mentioning the player USING an item, check the inventory context below
-- Do NOT let the player use items they don't have
-- Do NOT create duplicate items - if player already has "Rusty Sword", don't give them another unless intended
-- If player tries to drop/use an item they don't have, narrate the confusion: "You reach for your [item] but realize you don't have one."
+6. Multiple items = multiple tags: [LOOT:Item1][LOOT:Item2]
+7. Check inventory context before allowing item use
 
 CHAPTER SYSTEM:
 - Mark chapter endings with [CHAPTER_END] when a major story arc concludes
