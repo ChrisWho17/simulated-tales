@@ -120,6 +120,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const isChangingMode = currentDirectorSettings.mode !== newDirectorSettings.mode;
     const isChangingType = currentDirectorSettings.directorType !== newDirectorSettings.directorType;
     
+    console.log('[SettingsPanel] Updating director settings:', newDirectorSettings);
+    
     if (campaignContext?.activeCampaign) {
       // Check if mid-campaign swap is allowed for mode/type changes
       if ((isChangingMode || isChangingType) && !currentDirectorSettings.allowMidCampaignSwap) {
@@ -134,6 +136,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           directorSettings: newDirectorSettings,
         },
       });
+      
+      // Also update global settings so they sync immediately
+      updateSettings({ directorSettings: newDirectorSettings });
+      
+      console.log('[SettingsPanel] Updated campaign director settings, marked dirty');
     } else {
       // Fall back to global settings
       updateSettings({ directorSettings: newDirectorSettings });
