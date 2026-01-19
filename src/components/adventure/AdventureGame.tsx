@@ -134,7 +134,8 @@ import {
   acquireGenerationLock,
   releaseGenerationLock,
   cancelPendingGeneration,
-  isGenerationInProgress
+  isGenerationInProgress,
+  forceReleaseLock
 } from '@/lib/narrativeGuard';
 import { detectMissingLootTags, detectMissingDropTags } from '@/lib/narrativeLootParser';
 import { 
@@ -1346,17 +1347,38 @@ export function AdventureGame() {
       
       console.log(`[generateNarrative] Request body size: ${JSON.stringify(requestBody).length} chars (retryLevel: ${retryLevel})`);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify(requestBody),
+      // Add timeout to fetch to prevent hanging forever
+      const FETCH_TIMEOUT_MS = 60000; // 60 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.warn('[generateNarrative] Fetch timeout, aborting request');
+        controller.abort();
+      }, FETCH_TIMEOUT_MS);
+
+      let response: Response;
+      try {
+        response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+          {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
+          }
+        );
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error('[generateNarrative] Request timed out after', FETCH_TIMEOUT_MS, 'ms');
+          toast.error('AI took too long to respond. Try again.', { duration: 5000 });
+          return getContextualFallback(genre);
         }
-      );
+        throw fetchError;
+      }
+      clearTimeout(timeoutId);
 
       // CRITICAL: Surface rate limit and payment errors to user with toast
       if (response.status === 429) {
@@ -2803,6 +2825,13 @@ export function AdventureGame() {
         onRegenerateWorld={!worldLocked && story.length === 1 ? handleRegenerateWorld : undefined}
         canRegenerateWorld={!worldLocked && story.length === 1 && !isLoading}
         onRunSystemsTest={handleRunSystemsTest}
+        onCancelGeneration={() => {
+          // Force release any stuck generation lock and reset loading state
+          forceReleaseLock();
+          cancelPendingGeneration();
+          setIsLoading(false);
+          toast.info('Generation cancelled. You can try again.', { duration: 3000 });
+        }}
       />
     );
   }

@@ -231,6 +231,8 @@ interface AdventureDisplayProps {
   canRegenerateWorld?: boolean;
   // Systems test integration
   onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
+  // Cancel stuck generation
+  onCancelGeneration?: () => void;
 }
 
 export function AdventureDisplay({
@@ -263,6 +265,7 @@ export function AdventureDisplay({
   onRegenerateWorld,
   canRegenerateWorld = false,
   onRunSystemsTest,
+  onCancelGeneration,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -1751,7 +1754,12 @@ export function AdventureDisplay({
         <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 overflow-x-hidden">
           {/* Initial loading state when story is empty */}
           {story.length === 0 && isLoading && (
-            <NarrativeLoadingIndicator isInitial genre={genre} />
+            <NarrativeLoadingIndicator 
+              isInitial 
+              genre={genre} 
+              onCancel={onCancelGeneration}
+              showCancelAfterMs={15000}
+            />
           )}
 
           {/* Empty state when no story and not loading */}
@@ -1955,7 +1963,11 @@ export function AdventureDisplay({
 
           {/* Loading indicator for ongoing narrative generation (only when story has content) */}
           {isLoading && story.length > 0 && (
-            <NarrativeLoadingIndicator genre={genre} />
+            <NarrativeLoadingIndicator 
+              genre={genre} 
+              onCancel={onCancelGeneration}
+              showCancelAfterMs={15000}
+            />
           )}
         </div>
       </ScrollArea>
