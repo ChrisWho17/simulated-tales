@@ -2427,6 +2427,24 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         // Detect if this is dialogue/speech (wrapped in say: "..." or ask: "...")
         const isDialogueAction = /^(say|ask|tell|speak|shout|whisper):\s*["']/.test(cleanedAction);
         
+        // CRITICAL NEW CHECK: Detect if the input contains ACTUAL QUOTED DIALOGUE
+        // This catches cases like: 'I walk to the bar. "What can I get you?"'
+        // The player literally put dialogue in quotes - we MUST speak those words!
+        const quotedDialogueMatch = cleanedAction.match(/"([^"]+)"/);
+        const singleQuotedDialogueMatch = !quotedDialogueMatch ? cleanedAction.match(/'([^']+)'/) : null;
+        const containsQuotedDialogue = !!(quotedDialogueMatch || singleQuotedDialogueMatch);
+        const extractedQuotedDialogue = (quotedDialogueMatch ? quotedDialogueMatch[1] : (singleQuotedDialogueMatch ? singleQuotedDialogueMatch[1] : '')) || '';
+        
+        // Extract the action part (text before the quoted dialogue)
+        let actionPart = cleanedAction;
+        if (containsQuotedDialogue) {
+          // Get everything before the quote
+          const quoteIndex = cleanedAction.indexOf('"') !== -1 ? cleanedAction.indexOf('"') : cleanedAction.indexOf("'");
+          actionPart = cleanedAction.substring(0, quoteIndex).trim();
+          // Clean up trailing punctuation/conjunctions
+          actionPart = actionPart.replace(/[,.\s]+(and|then|while|before|after)?\s*$/, '').trim();
+        }
+        
         // CRITICAL: First check if this is DIALOGUE INTENT before checking action verbs
         // Dialogue verbs MUST be checked BEFORE action patterns to prevent verbal intent being treated as physical action
         const dialogueVerbPatterns = [
@@ -2521,11 +2539,48 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
         let actionContent: string;
         
-        if (isDialogueAction) {
+        // FIRST PRIORITY: Check for mixed action + quoted dialogue
+        // This handles: "I walk to the bar. 'What can I get you?'"
+        if (containsQuotedDialogue && extractedQuotedDialogue.length > 0) {
+          actionContent = `PLAYER ACTION WITH SPOKEN DIALOGUE:
+
+ACTION PART: "${actionPart || 'approaches'}"
+SPOKEN WORDS: "${extractedQuotedDialogue}"
+
+CRITICAL - MIXED INPUT DETECTED:
+The player typed BOTH a physical action AND actual quoted dialogue.
+You MUST:
+1. FIRST: Narrate the physical action (${actionPart || 'the approach'}) with appropriate description
+2. THEN: Have the character SPEAK the quoted words: "${extractedQuotedDialogue}"
+3. FINALLY: Show how NPCs/the world REACT to both the action and the dialogue
+
+THE CHARACTER MUST SAY THESE EXACT WORDS (or close paraphrase):
+"${extractedQuotedDialogue}"
+
+EXAMPLE OF CORRECT HANDLING:
+Player input: I walk over to the bar. "You think any of these up and comings got what it takes?"
+
+CORRECT OUTPUT:
+Your movements carry you through the crowd with practiced efficiency, each step measured and deliberate. You slide onto an empty stool, the worn leather creaking beneath you.
+
+"You think any of these up and comings got what it takes to make it?" you ask, your voice cutting through the ambient noise as you meet the bartender's eyes.
+
+The bartender pauses mid-pour, a flicker of interest crossing his weathered features. He sets down the bottle and leans forward...
+
+WRONG OUTPUT:
+Your gaze holds a silent question. You observe without speaking. [NO! The player put dialogue in quotes - SPEAK IT!]
+
+The player explicitly wrote dialogue in quotation marks. Those words MUST be spoken aloud by the character.`;
+
+          if (emotionalContext) {
+            actionContent += `\n\nEMOTIONAL DELIVERY: The character is ${emotionalContext.currentMood}. Their dialogue should be ${emotionalContext.dialogueTone}. Show ${emotionalContext.physicalDescription} as they speak.`;
+          }
+
+        } else if (isDialogueAction) {
           // Extract the actual dialogue
           const dialogueMatch = cleanedAction.match(/^(say|ask|tell|speak|shout|whisper):\s*["'](.+?)["']?$/i);
-          const dialogueVerb = dialogueMatch?.[1] || 'say';
-          const dialogueText = dialogueMatch?.[2] || cleanedAction;
+          const dialogueVerb = dialogueMatch ? dialogueMatch[1] : 'say';
+          const dialogueText = dialogueMatch ? dialogueMatch[2] : cleanedAction;
           
           actionContent = `PLAYER SPEAKS (the character ${dialogueVerb}s this aloud - narrate the NPC/world RESPONSE, do NOT just describe the player speaking):
 "${dialogueText}"
