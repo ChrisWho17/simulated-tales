@@ -877,6 +877,345 @@ class CompanionSystemManager {
     console.log(`[Companion] Force discovered all quirks for ${companion.name}`);
   }
   
+  // ========== BONDING MOMENTS SYSTEM ==========
+  
+  // Story events that can trigger bonding moments
+  private bondingMomentTriggers: Record<string, { 
+    minAffinity: number;
+    minTrust: number;
+    quirkRevealChance: number;
+    bondingDialogueType: 'vulnerable' | 'grateful' | 'protective' | 'curious';
+  }> = {
+    'combat_survived_together': { minAffinity: 10, minTrust: 20, quirkRevealChance: 0.4, bondingDialogueType: 'grateful' },
+    'player_saved_companion': { minAffinity: 0, minTrust: 10, quirkRevealChance: 0.6, bondingDialogueType: 'grateful' },
+    'companion_saved_player': { minAffinity: 20, minTrust: 30, quirkRevealChance: 0.5, bondingDialogueType: 'protective' },
+    'shared_campfire': { minAffinity: 15, minTrust: 25, quirkRevealChance: 0.5, bondingDialogueType: 'vulnerable' },
+    'witnessed_player_kindness': { minAffinity: 10, minTrust: 15, quirkRevealChance: 0.3, bondingDialogueType: 'curious' },
+    'long_journey_together': { minAffinity: 20, minTrust: 30, quirkRevealChance: 0.4, bondingDialogueType: 'vulnerable' },
+    'player_confided_in_companion': { minAffinity: 25, minTrust: 35, quirkRevealChance: 0.7, bondingDialogueType: 'vulnerable' },
+    'faced_danger_together': { minAffinity: 15, minTrust: 25, quirkRevealChance: 0.45, bondingDialogueType: 'protective' },
+    'quiet_moment_alone': { minAffinity: 30, minTrust: 40, quirkRevealChance: 0.6, bondingDialogueType: 'curious' },
+    'celebration_victory': { minAffinity: 20, minTrust: 20, quirkRevealChance: 0.35, bondingDialogueType: 'grateful' },
+  };
+  
+  /**
+   * Trigger a bonding moment - can reveal a hidden quirk during significant story events
+   */
+  triggerBondingMoment(
+    companionId: string, 
+    eventType: string, 
+    context?: string
+  ): { 
+    bonded: boolean; 
+    quirkRevealed?: string; 
+    dialogue: string;
+    dialogueType: 'bonding' | 'quirk_reveal' | 'curiosity';
+  } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion || companion.status !== 'active') return null;
+    
+    const trigger = this.bondingMomentTriggers[eventType];
+    if (!trigger) {
+      console.log(`[Companion] Unknown bonding event type: ${eventType}`);
+      return null;
+    }
+    
+    // Check if relationship meets minimum thresholds
+    if (companion.affinity < trigger.minAffinity || companion.trust < trigger.minTrust) {
+      return null;
+    }
+    
+    // Apply affinity/trust boost from bonding
+    companion.affinity = Math.min(100, companion.affinity + 5);
+    companion.trust = Math.min(100, companion.trust + 3);
+    
+    this.addMemory(companionId, 'event', `Bonding moment: ${eventType}${context ? ` - ${context}` : ''}`, 5);
+    
+    // Check if this triggers a quirk reveal
+    const hiddenQuirks = companion.personality.hiddenQuirks || [];
+    const undiscoveredQuirks = hiddenQuirks.filter(q => !companion.quirkDiscovery.discoveredQuirks.includes(q));
+    
+    if (undiscoveredQuirks.length > 0 && Math.random() < trigger.quirkRevealChance) {
+      // Reveal a quirk through bonding!
+      const quirk = undiscoveredQuirks[Math.floor(Math.random() * undiscoveredQuirks.length)];
+      companion.quirkDiscovery.discoveredQuirks.push(quirk);
+      
+      if (!companion.personality.quirks.includes(quirk)) {
+        companion.personality.quirks.push(quirk);
+      }
+      
+      const dialogue = this.generateBondingQuirkRevealDialogue(companion, quirk, trigger.bondingDialogueType);
+      
+      companion.wantsToSpeak = true;
+      companion.pendingReaction = dialogue;
+      
+      console.log(`[Companion] ${companion.name} revealed quirk during bonding moment (${eventType}): ${quirk}`);
+      
+      return { bonded: true, quirkRevealed: quirk, dialogue, dialogueType: 'quirk_reveal' };
+    }
+    
+    // No quirk revealed, but still a bonding moment
+    const dialogue = this.generateBondingDialogue(companion, trigger.bondingDialogueType, context);
+    
+    // Check if they want to ask about the player (curiosity system)
+    if (trigger.bondingDialogueType === 'curious' || 
+        (companion.affinity >= 30 && companion.trust >= 40 && Math.random() < 0.4)) {
+      const curiosityDialogue = this.generateCuriosityQuestion(companion);
+      companion.wantsToSpeak = true;
+      companion.pendingReaction = curiosityDialogue;
+      return { bonded: true, dialogue: curiosityDialogue, dialogueType: 'curiosity' };
+    }
+    
+    companion.wantsToSpeak = true;
+    companion.pendingReaction = dialogue;
+    
+    return { bonded: true, dialogue, dialogueType: 'bonding' };
+  }
+  
+  /**
+   * Generate dialogue when a quirk is revealed through a bonding moment
+   */
+  private generateBondingQuirkRevealDialogue(
+    companion: CompanionState, 
+    quirk: string, 
+    dialogueType: 'vulnerable' | 'grateful' | 'protective' | 'curious'
+  ): string {
+    const templates: Record<typeof dialogueType, string[]> = {
+      vulnerable: [
+        `*${quirk}* ...I've never shown anyone this side of me. But after everything we've been through, it feels right.`,
+        `I want to be honest with you. *${quirk}* There. Now you know something real about me.`,
+        `Since we're being real with each other... *${quirk}* I don't usually admit that to anyone.`,
+      ],
+      grateful: [
+        `You saved me back there. I think you deserve to know the real me. *${quirk}*`,
+        `I owe you my life. The least I can give you is honesty. *${quirk}* ...That's something I usually hide.`,
+        `*${quirk}* I guess I trust you enough now to let you see that.`,
+      ],
+      protective: [
+        `I couldn't bear to lose you. Which reminds me... *${quirk}* I've always been like this.`,
+        `Keeping you safe matters to me. And since it does... *${quirk}* You should know who I really am.`,
+        `*${quirk}* ...If I'm going to protect you, you should know all of me. The strange parts too.`,
+      ],
+      curious: [
+        `I've been wondering about you, and I realized... you barely know me. *${quirk}* There. Something real.`,
+        `*${quirk}* ...I figured since I want to know more about you, I should share something too.`,
+        `Fair is fair. You've told me things. So... *${quirk}* Now we're even.`,
+      ],
+    };
+    
+    const options = templates[dialogueType];
+    return options[Math.floor(Math.random() * options.length)];
+  }
+  
+  /**
+   * Generate general bonding dialogue (no quirk revealed)
+   */
+  private generateBondingDialogue(
+    companion: CompanionState, 
+    dialogueType: 'vulnerable' | 'grateful' | 'protective' | 'curious',
+    context?: string
+  ): string {
+    const templates: Record<typeof dialogueType, string[]> = {
+      vulnerable: [
+        `*looks at you thoughtfully* I'm glad you're here. Really.`,
+        `...It's been a while since I felt like I could rely on someone.`,
+        `*sighs* I don't say this often, but... thank you. For everything.`,
+        `Moments like this remind me why I stay.`,
+      ],
+      grateful: [
+        `I won't forget what you did. Not ever.`,
+        `*smiles genuinely* You have my gratitude. And my loyalty.`,
+        `Thank you. Those words don't feel like enough, but... thank you.`,
+        `You could have left me. You didn't. That means something.`,
+      ],
+      protective: [
+        `I'll have your back. No matter what comes.`,
+        `*determined expression* If anyone tries to hurt you, they go through me.`,
+        `I've decided. Keeping you safe is my priority now.`,
+        `*watches over you* Rest easy. I'm here.`,
+      ],
+      curious: [
+        `I've been meaning to ask... who were you before all this?`,
+        `*tilts head* There's more to you than meets the eye, isn't there?`,
+        `Tell me something. Something real. I want to understand you better.`,
+        `What drives you? I've watched you, but I still don't quite get it.`,
+      ],
+    };
+    
+    const options = templates[dialogueType];
+    return options[Math.floor(Math.random() * options.length)];
+  }
+  
+  // ========== COMPANION CURIOSITY SYSTEM ==========
+  
+  // Questions companions ask to learn more about the player
+  private playerQuestions = [
+    { question: "What did you dream of becoming when you were young?", topic: 'dreams' },
+    { question: "Do you have anyone waiting for you? Family? Someone special?", topic: 'relationships' },
+    { question: "What's your happiest memory?", topic: 'memories' },
+    { question: "What haunts you? What keeps you up at night?", topic: 'fears' },
+    { question: "If this was all over tomorrow, what would you do with your life?", topic: 'future' },
+    { question: "Have you ever lost someone close to you?", topic: 'loss' },
+    { question: "What made you become who you are today?", topic: 'origin' },
+    { question: "Do you believe in fate, or do we make our own path?", topic: 'philosophy' },
+    { question: "What's something you've never told anyone?", topic: 'secrets' },
+    { question: "Is there something you regret? Something you'd do differently?", topic: 'regrets' },
+    { question: "What do you fight for? What keeps you going?", topic: 'motivation' },
+    { question: "Have you ever been in love?", topic: 'love' },
+    { question: "What's the bravest thing you've ever done?", topic: 'courage' },
+    { question: "What brings you peace?", topic: 'peace' },
+    { question: "If you could go anywhere after this, where would it be?", topic: 'wanderlust' },
+  ];
+  
+  /**
+   * Generate a question the companion asks to understand the player better
+   */
+  private generateCuriosityQuestion(companion: CompanionState): string {
+    const questionData = this.playerQuestions[Math.floor(Math.random() * this.playerQuestions.length)];
+    
+    const intros = [
+      `*settles in close* I've been wanting to ask you something...`,
+      `*looks at you with genuine interest* Can I ask you something personal?`,
+      `*quiet moment* I realized I don't know much about you. Not really.`,
+      `*thoughtful pause* You know a lot about me now. But I want to know you too.`,
+      `*meets your eyes* Tell me something about yourself. The real you.`,
+    ];
+    
+    const intro = intros[Math.floor(Math.random() * intros.length)];
+    return `${intro} ${questionData.question}`;
+  }
+  
+  /**
+   * Check if a companion wants to ask the player something (healthy relationship check)
+   */
+  checkCompanionCuriosity(): { companion: CompanionState; question: string; topic: string } | null {
+    const curiousCompanions = this.activeCompanions
+      .map(id => this.companions.get(id))
+      .filter((c): c is CompanionState => 
+        c !== undefined && 
+        c.status === 'active' &&
+        c.affinity >= 25 && // Healthy affinity
+        c.trust >= 35 && // Good trust
+        c.fear < 30 && // Not afraid of player
+        !c.wantsToSpeak // Not already wanting to say something
+      );
+    
+    if (curiousCompanions.length === 0) return null;
+    
+    // 15% chance per check for curiosity to trigger
+    if (Math.random() > 0.15) return null;
+    
+    const companion = curiousCompanions[Math.floor(Math.random() * curiousCompanions.length)];
+    const questionData = this.playerQuestions[Math.floor(Math.random() * this.playerQuestions.length)];
+    const question = this.generateCuriosityQuestion(companion);
+    
+    companion.wantsToSpeak = true;
+    companion.pendingReaction = question;
+    
+    console.log(`[Companion] ${companion.name} wants to know more about player (topic: ${questionData.topic})`);
+    
+    return { companion, question, topic: questionData.topic };
+  }
+  
+  /**
+   * Process player's response to a companion's question
+   * This strengthens the bond and may trigger quirk reveals
+   */
+  processPlayerConfidingResponse(
+    companionId: string, 
+    responseType: 'honest' | 'deflect' | 'lie' | 'emotional'
+  ): { affinityChange: number; trustChange: number; dialogue: string } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion) return null;
+    
+    let affinityChange = 0;
+    let trustChange = 0;
+    let dialogue = '';
+    
+    switch (responseType) {
+      case 'honest':
+        affinityChange = 8;
+        trustChange = 10;
+        dialogue = this.generateResponseToConfiding(companion, 'honest');
+        // Chance to trigger bonding moment
+        if (Math.random() < 0.5) {
+          this.triggerBondingMoment(companionId, 'player_confided_in_companion');
+        }
+        break;
+      case 'emotional':
+        affinityChange = 12;
+        trustChange = 15;
+        dialogue = this.generateResponseToConfiding(companion, 'emotional');
+        // Higher chance to trigger bonding moment
+        if (Math.random() < 0.7) {
+          this.triggerBondingMoment(companionId, 'player_confided_in_companion');
+        }
+        break;
+      case 'deflect':
+        affinityChange = -2;
+        trustChange = -3;
+        dialogue = this.generateResponseToConfiding(companion, 'deflect');
+        break;
+      case 'lie':
+        affinityChange = 0;
+        trustChange = -8; // Companions may sense dishonesty
+        dialogue = this.generateResponseToConfiding(companion, 'lie');
+        break;
+    }
+    
+    companion.affinity = Math.max(-100, Math.min(100, companion.affinity + affinityChange));
+    companion.trust = Math.max(0, Math.min(100, companion.trust + trustChange));
+    
+    this.addMemory(companionId, 'dialogue', `Player ${responseType} response to personal question`, affinityChange);
+    
+    return { affinityChange, trustChange, dialogue };
+  }
+  
+  /**
+   * Generate companion's response to player confiding in them
+   */
+  private generateResponseToConfiding(
+    companion: CompanionState, 
+    type: 'honest' | 'emotional' | 'deflect' | 'lie'
+  ): string {
+    const responses: Record<typeof type, string[]> = {
+      honest: [
+        `*nods slowly* Thank you for telling me that. It means a lot that you trust me.`,
+        `*listens intently* I appreciate your honesty. I feel like I understand you better now.`,
+        `*touched expression* That took courage to share. I won't forget it.`,
+        `*smiles warmly* Thank you. For being real with me.`,
+      ],
+      emotional: [
+        `*reaches out gently* I had no idea you carried that with you. I'm here for you.`,
+        `*eyes soften* ...Thank you for trusting me with that. It changes how I see you. In a good way.`,
+        `*moved silence* I don't know what to say. Except... I'm glad you told me. I'm glad you're here.`,
+        `*wipes eye* That's... that's heavy. I'm honored you shared that with me. Truly.`,
+      ],
+      deflect: [
+        `*slight frown* Alright. I understand if you're not ready to talk about it.`,
+        `*looks away* I see. Maybe another time, then.`,
+        `*nods, slightly disappointed* Fair enough. When you're ready.`,
+        `*pauses* ...Okay. The offer stands, if you ever want to talk.`,
+      ],
+      lie: [
+        `*studies your face* ...Right. Sure.`,
+        `*tilts head* If you say so. *seems unconvinced*`,
+        `*narrows eyes briefly* I'll take your word for it. For now.`,
+        `*quiet moment* Hm. Alright then.`,
+      ],
+    };
+    
+    const options = responses[type];
+    return options[Math.floor(Math.random() * options.length)];
+  }
+  
+  /**
+   * Get available bonding event types
+   */
+  getBondingEventTypes(): string[] {
+    return Object.keys(this.bondingMomentTriggers);
+  }
+  
   // ========== MEMORY MANAGEMENT ==========
   
   private addMemory(
