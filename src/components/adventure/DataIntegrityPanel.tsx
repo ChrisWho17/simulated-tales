@@ -12,6 +12,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -57,6 +67,7 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
   const [isRepairing, setIsRepairing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<'local' | 'cloud' | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [report, setReport] = useState<IntegrityReport | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
@@ -80,6 +91,25 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
       setIsScanning(false);
     }
   }, []);
+  
+  const handleDeleteCampaign = useCallback(async (campaignId: string) => {
+    setDeleteConfirm(null);
+    setDeletingId(campaignId);
+    setDeleteStatus('local');
+    try {
+      if (isAuthenticated) {
+        setDeleteStatus('cloud');
+      }
+      await UnifiedSaveArchitecture.deleteCampaign(campaignId);
+      toast.success(isAuthenticated ? 'Deleted from device and cloud' : 'Deleted broken campaign');
+      runScan();
+    } catch (e) {
+      toast.error('Failed to delete campaign');
+    } finally {
+      setDeletingId(null);
+      setDeleteStatus(null);
+    }
+  }, [isAuthenticated, runScan]);
   
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -258,27 +288,10 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
                           variant="destructive"
                           size="sm"
                           className="mt-2 h-7 text-xs"
-                          onClick={async () => {
-                            if (confirm(`Delete "${result.campaignName || result.campaignId}"? This cannot be undone.`)) {
-                              setDeletingId(result.campaignId);
-                              setDeleteStatus('local');
-                              try {
-                                // Show cloud status if authenticated
-                                if (isAuthenticated) {
-                                  setDeleteStatus('cloud');
-                                }
-                                // Use unified architecture for cloud sync delete
-                                await UnifiedSaveArchitecture.deleteCampaign(result.campaignId);
-                                toast.success(isAuthenticated ? 'Deleted from device and cloud' : 'Deleted broken campaign');
-                                runScan();
-                              } catch (e) {
-                                toast.error('Failed to delete campaign');
-                              } finally {
-                                setDeletingId(null);
-                                setDeleteStatus(null);
-                              }
-                            }
-                          }}
+                          onClick={() => setDeleteConfirm({
+                            id: result.campaignId,
+                            name: result.campaignName || result.campaignId
+                          })}
                           disabled={deletingId === result.campaignId}
                         >
                           {deletingId === result.campaignId ? (
@@ -368,6 +381,38 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Broken Campaign?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold text-foreground">"{deleteConfirm?.name}"</span>.
+              {isAuthenticated && (
+                <span className="block mt-2 text-muted-foreground">
+                  <Cloud className="inline h-3 w-3 mr-1" />
+                  This will also remove it from the cloud.
+                </span>
+              )}
+              <span className="block mt-2 text-destructive/80">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirm && handleDeleteCampaign(deleteConfirm.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete Forever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
