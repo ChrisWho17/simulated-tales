@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload } from 'lucide-react';
 import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
 import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
@@ -21,6 +21,7 @@ import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSyncStatus } from '@/hooks/useCloudSyncStatus';
+import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { CloudStatusBadge } from '@/components/cloud/CloudStatusBadge';
 import { ConflictResolutionModal } from '@/components/cloud/ConflictResolutionModal';
 import { toast } from 'sonner';
@@ -235,6 +236,102 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// Import Save Button component - allows importing a campaign from a JSON file
+function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void }) {
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const campaignContext = useCampaignOptional();
+  
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+  
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const json = event.target?.result as string;
+      
+      if (campaignContext?.importCampaign) {
+        const result = await campaignContext.importCampaign(json);
+        if (result) {
+          toast.success(`Imported "${result.meta.name}"`);
+          // Load the imported campaign
+          if (onLoad) {
+            onLoad(result.id);
+          } else {
+            window.location.reload();
+          }
+        } else {
+          toast.error('Failed to import campaign');
+        }
+      } else {
+        // Fallback: parse and store directly
+        try {
+          const data = JSON.parse(json);
+          if (data.id && data.meta) {
+            // Store in localStorage
+            localStorage.setItem(`campaign_${data.id}`, json);
+            // Update index
+            const indexStr = localStorage.getItem('campaign_index') || '[]';
+            const index = JSON.parse(indexStr);
+            const existingIdx = index.findIndex((m: any) => m.id === data.id);
+            if (existingIdx >= 0) {
+              index[existingIdx] = data.meta;
+            } else {
+              index.push({ ...data.meta, id: data.id });
+            }
+            localStorage.setItem('campaign_index', JSON.stringify(index));
+            toast.success(`Imported "${data.meta.name}"`);
+            if (onLoad) {
+              onLoad(data.id);
+            } else {
+              window.location.reload();
+            }
+          } else {
+            toast.error('Invalid campaign file format');
+          }
+        } catch (err) {
+          toast.error('Failed to parse campaign file');
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [campaignContext, onLoad]);
+  
+  return (
+    <>
+      <input
+        type="file"
+        ref={importInputRef}
+        onChange={handleImportFile}
+        accept=".json"
+        className="hidden"
+      />
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleImportClick}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/50 text-sm hover:bg-muted/50"
+            >
+              <Upload className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground font-medium hidden sm:inline">Import</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Import a saved campaign file</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </>
   );
 }
 
@@ -562,7 +659,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
           <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-primary font-display text-xl tracking-wide">Genre Contract Setup</h2>
-              <LoadStoryDropdown onLoad={onLoadCampaign} />
+              <div className="flex items-center gap-2">
+                <ImportSaveButton onLoad={onLoadCampaign} />
+                <LoadStoryDropdown onLoad={onLoadCampaign} />
+              </div>
             </div>
 
             {/* Primary Genre Section */}
