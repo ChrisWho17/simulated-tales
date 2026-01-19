@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CampaignData, CampaignMetadata, CAMPAIGN_INDEX_KEY } from '@/types/campaign';
 import { TransactionManager, generateChecksum } from './saveTransaction';
 import { normalizeCampaign } from '@/lib/saveSchemaManager';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 import LZString from 'lz-string';
 
 // ============================================================================
@@ -811,14 +812,14 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   getActiveCampaignId(): string | null {
-    return localStorage.getItem('lwe_active_campaign_id');
+    return localStorage.getItem(STORAGE_KEYS.ACTIVE_CAMPAIGN);
   }
   
   setActiveCampaignId(campaignId: string | null): void {
     if (campaignId) {
-      localStorage.setItem('lwe_active_campaign_id', campaignId);
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CAMPAIGN, campaignId);
     } else {
-      localStorage.removeItem('lwe_active_campaign_id');
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_CAMPAIGN);
     }
   }
   

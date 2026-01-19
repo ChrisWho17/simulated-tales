@@ -64,6 +64,7 @@ export const STORAGE_KEYS = {
   // ============================================================================
   LIFETIME_STATS: 'lwe_lifetime_stats',
   ACHIEVEMENTS: 'lwe_achievements',
+  ACHIEVEMENT_PROGRESS: 'untold-achievement-progress',
   
   // ============================================================================
   // UI STATE
@@ -72,6 +73,25 @@ export const STORAGE_KEYS = {
   WHATS_NEW_SEEN: 'untold-whats-new-seen',
   FIRST_TIME_WIZARD_COMPLETE: 'untold-first-time-wizard-complete',
   BOOKMARKS: 'untold-bookmarks',
+  
+  // ============================================================================
+  // GAME STATE (Legacy/Shared)
+  // ============================================================================
+  QUEST_LOG: 'living-world-quests',
+  ADRENALINE_STATE: 'living-world-adrenaline',
+  CHEAT_PENDING_ACTIONS: 'cheat-pending-actions',
+  LIVING_WORLD_SAVE: 'living-world-save',
+  LIVING_WORLD_CHARACTER: 'living-world-character',
+  NPC_MEMORIES: 'living-world-npc-memories',
+  
+  // ============================================================================
+  // ADVENTURE GAME KEYS (Legacy localStorage)
+  // ============================================================================
+  ADVENTURE_STORY: 'untold-adventure-story',
+  ADVENTURE_CHARACTER: 'untold-adventure-character',
+  ADVENTURE_SCENARIO: 'untold-adventure-scenario',
+  ADVENTURE_GENRE: 'untold-adventure-genre',
+  UI_COLOR_THEME: 'untold-ui-color-theme',
   
   // ============================================================================
   // CACHE PREFIXES (low priority for cleanup)

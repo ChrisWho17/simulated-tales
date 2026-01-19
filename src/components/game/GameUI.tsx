@@ -94,9 +94,11 @@ import { RelationshipEventModal } from './RelationshipEventModal';
 import { LoyaltyQuestNotification } from './LoyaltyQuestNotification';
 import { Users } from 'lucide-react';
 
-const STORAGE_KEY = 'living-world-save';
-const CHARACTER_KEY = 'living-world-character';
-const MEMORY_STORE_KEY = 'living-world-npc-memories';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
+
+const STORAGE_KEY = STORAGE_KEYS.LIVING_WORLD_SAVE;
+const CHARACTER_KEY = STORAGE_KEYS.LIVING_WORLD_CHARACTER;
+const MEMORY_STORE_KEY = STORAGE_KEYS.NPC_MEMORIES;
 
 // Conversation session type for tracking ongoing dialogues
 interface ConversationSession {
@@ -323,7 +325,7 @@ export function GameUI() {
   // RPG System States
   const [weather, setWeather] = useState<WeatherState>(() => initializeWeather('spring'));
   const [questLog, setQuestLog] = useState<QuestLog>(() => {
-    const saved = localStorage.getItem('living-world-quests');
+    const saved = localStorage.getItem(STORAGE_KEYS.QUEST_LOG);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -360,7 +362,7 @@ export function GameUI() {
   
   // Adrenaline System State
   const [adrenalineState, setAdrenalineState] = useState<AdrenalineSystemState>(() => {
-    const saved = localStorage.getItem('living-world-adrenaline');
+    const saved = localStorage.getItem(STORAGE_KEYS.ADRENALINE_STATE);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -420,12 +422,12 @@ export function GameUI() {
   
   // Save quest log when it changes
   useEffect(() => {
-    localStorage.setItem('living-world-quests', JSON.stringify(questLog));
+    localStorage.setItem(STORAGE_KEYS.QUEST_LOG, JSON.stringify(questLog));
   }, [questLog]);
   
   // Save adrenaline state when it changes
   useEffect(() => {
-    localStorage.setItem('living-world-adrenaline', JSON.stringify(adrenalineState));
+    localStorage.setItem(STORAGE_KEYS.ADRENALINE_STATE, JSON.stringify(adrenalineState));
   }, [adrenalineState]);
   
   // Update weather periodically
@@ -1404,7 +1406,7 @@ export function GameUI() {
   const handleNewGame = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(CHARACTER_KEY);
-    localStorage.removeItem('living-world-quests');
+    localStorage.removeItem(STORAGE_KEYS.QUEST_LOG);
     setDisplayEvents([]);
     setQuestLog(initializeQuestLog());
     setWeather(initializeWeather('spring'));
