@@ -545,9 +545,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       if (e.key === SETTINGS_STORAGE_KEY && e.newValue) {
         try {
           const newSettings = JSON.parse(e.newValue);
-          // Only update director settings if they changed significantly
-          if (newSettings.directorSettings && 
-              JSON.stringify(newSettings.directorSettings) !== JSON.stringify(settings.directorSettings)) {
+          // Update director settings from storage changes (cross-tab sync)
+          if (newSettings.directorSettings) {
             console.log('[GameContext] Storage change detected, syncing director settings');
             setSettings(prev => ({
               ...prev,
@@ -561,24 +560,25 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     };
     
     // Listen for custom event from CampaignContext (same tab)
-    const handleCampaignSettingsLoaded = (e: CustomEvent) => {
-      if (e.detail?.directorSettings) {
-        console.log('[GameContext] Campaign settings loaded event, syncing director settings');
+    const handleCampaignSettingsLoaded = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.directorSettings) {
+        console.log('[GameContext] Campaign settings loaded event, syncing director settings:', customEvent.detail.directorSettings);
         setSettings(prev => ({
           ...prev,
-          directorSettings: e.detail.directorSettings,
+          directorSettings: customEvent.detail.directorSettings,
         }));
       }
     };
     
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded as EventListener);
+    window.addEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded as EventListener);
+      window.removeEventListener('campaign-settings-loaded', handleCampaignSettingsLoaded);
     };
-  }, [settings.directorSettings]);
+  }, []); // Empty deps - handlers use functional updates so no stale closures
   
   // Save settings when they change
   useEffect(() => {

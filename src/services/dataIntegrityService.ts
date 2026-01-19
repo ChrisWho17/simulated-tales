@@ -567,11 +567,64 @@ export async function runFullIntegrityScan(): Promise<IntegrityReport> {
       };
     }
     
-    const index = JSON.parse(indexRaw) as Array<{ id: string }>;
+    let index: Array<{ id: string }>;
+    try {
+      const parsed = JSON.parse(indexRaw);
+      
+      // Handle different index formats defensively
+      if (!parsed || !Array.isArray(parsed)) {
+        console.warn('[Integrity] Campaign index is not an array, skipping scan');
+        return {
+          checkedAt: Date.now(),
+          totalCampaigns: 0,
+          valid: 0,
+          corrupted: 0,
+          repaired: 0,
+          unrecoverable: 0,
+          details: [],
+        };
+      }
+      
+      // Normalize index - handle both {id: string} and plain string formats
+      index = parsed.map((item: unknown) => {
+        if (typeof item === 'string') {
+          return { id: item };
+        }
+        if (item && typeof item === 'object' && 'id' in item) {
+          return { id: String((item as { id: unknown }).id) };
+        }
+        return null;
+      }).filter((item): item is { id: string } => item !== null && typeof item.id === 'string');
+      
+    } catch (parseError) {
+      console.warn('[Integrity] Failed to parse campaign index:', parseError);
+      return {
+        checkedAt: Date.now(),
+        totalCampaigns: 0,
+        valid: 0,
+        corrupted: 0,
+        repaired: 0,
+        unrecoverable: 0,
+        details: [],
+      };
+    }
     
     for (const campaign of index) {
-      const result = await checkCampaignIntegrity(campaign.id);
-      details.push(result);
+      try {
+        const result = await checkCampaignIntegrity(campaign.id);
+        details.push(result);
+      } catch (checkError) {
+        console.warn(`[Integrity] Failed to check campaign ${campaign.id}:`, checkError);
+        details.push({
+          status: 'unrecoverable',
+          campaignId: campaign.id,
+          issues: [{
+            type: 'data_corruption',
+            message: `Check failed: ${checkError}`,
+            severity: 'critical',
+          }],
+        });
+      }
     }
     
     return {
