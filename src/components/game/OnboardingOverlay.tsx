@@ -11,6 +11,118 @@ import { toast } from 'sonner';
 const ONBOARDING_COMPLETED_KEY = 'untold-onboarding-completed';
 
 // ============================================================================
+// PAGE TURN ANIMATION - Book-like page flip effect
+// ============================================================================
+
+interface PageTurnProps {
+  direction: 'forward' | 'backward';
+  isAnimating: boolean;
+}
+
+function PageTurnEffect({ direction, isAnimating }: PageTurnProps) {
+  if (!isAnimating) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+      {/* Page turning shadow overlay */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.4, 0] }}
+        transition={{ duration: 0.6, ease: 'easeInOut' }}
+        className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30"
+      />
+      
+      {/* The turning page */}
+      <motion.div
+        initial={{ 
+          rotateY: direction === 'forward' ? 0 : -180,
+          originX: direction === 'forward' ? 1 : 0,
+        }}
+        animate={{ 
+          rotateY: direction === 'forward' ? -180 : 0,
+        }}
+        transition={{ 
+          duration: 0.6, 
+          ease: [0.4, 0, 0.2, 1],
+        }}
+        style={{
+          transformStyle: 'preserve-3d',
+          perspective: 1200,
+        }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        {/* Front of page */}
+        <div 
+          className="absolute inset-8 rounded-lg"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%)',
+            backfaceVisibility: 'hidden',
+            boxShadow: direction === 'forward' 
+              ? '-10px 0 30px rgba(0,0,0,0.3)' 
+              : '10px 0 30px rgba(0,0,0,0.3)',
+          }}
+        />
+        
+        {/* Back of page */}
+        <div 
+          className="absolute inset-8 rounded-lg"
+          style={{
+            background: 'linear-gradient(225deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%)',
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            boxShadow: direction === 'forward' 
+              ? '10px 0 30px rgba(0,0,0,0.3)' 
+              : '-10px 0 30px rgba(0,0,0,0.3)',
+          }}
+        />
+      </motion.div>
+
+      {/* Page edge highlights during turn */}
+      <motion.div
+        initial={{ opacity: 0, x: direction === 'forward' ? '100%' : '-100%' }}
+        animate={{ 
+          opacity: [0, 0.8, 0],
+          x: direction === 'forward' ? [null, '50%', '0%'] : [null, '-50%', '0%'],
+        }}
+        transition={{ duration: 0.6, ease: 'easeInOut' }}
+        className="absolute inset-y-8 w-1 bg-gradient-to-b from-transparent via-primary/60 to-transparent"
+        style={{ 
+          [direction === 'forward' ? 'right' : 'left']: '2rem',
+        }}
+      />
+
+      {/* Dust particles released during page turn */}
+      {Array.from({ length: 12 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ 
+            opacity: 0, 
+            x: direction === 'forward' ? '60%' : '40%',
+            y: '50%',
+            scale: 0,
+          }}
+          animate={{ 
+            opacity: [0, 0.8, 0],
+            x: `${30 + Math.random() * 40}%`,
+            y: `${20 + Math.random() * 60}%`,
+            scale: [0, 1, 0.5],
+          }}
+          transition={{ 
+            duration: 0.8 + Math.random() * 0.4,
+            delay: 0.1 + i * 0.03,
+            ease: 'easeOut',
+          }}
+          className="absolute w-1.5 h-1.5 rounded-full bg-amber-200/70"
+          style={{
+            boxShadow: '0 0 4px hsl(var(--primary) / 0.5)',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
 // TUTORIAL PARTICLES - Magical dust effect for the onboarding
 // ============================================================================
 
@@ -182,6 +294,8 @@ interface OnboardingOverlayProps {
 export function OnboardingOverlay({ onComplete, forceShow = false }: OnboardingOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [isPageTurning, setIsPageTurning] = useState(false);
+  const [turnDirection, setTurnDirection] = useState<'forward' | 'backward'>('forward');
 
   useEffect(() => {
     if (forceShow) {
@@ -219,19 +333,42 @@ export function OnboardingOverlay({ onComplete, forceShow = false }: OnboardingO
     onComplete();
   }, [onComplete]);
 
+  const triggerPageTurn = useCallback((direction: 'forward' | 'backward', callback: () => void) => {
+    setTurnDirection(direction);
+    setIsPageTurning(true);
+    
+    // Change step mid-animation for seamless transition
+    setTimeout(() => {
+      callback();
+    }, 300);
+    
+    // End animation
+    setTimeout(() => {
+      setIsPageTurning(false);
+    }, 600);
+  }, []);
+
   const handleNext = useCallback(() => {
+    if (isPageTurning) return;
+    
     if (currentStep < ONBOARDING_STEPS.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      triggerPageTurn('forward', () => {
+        setCurrentStep(prev => prev + 1);
+      });
     } else {
       handleComplete();
     }
-  }, [currentStep, handleComplete]);
+  }, [currentStep, handleComplete, isPageTurning, triggerPageTurn]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
+    if (isPageTurning) return;
+    
     if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+      triggerPageTurn('backward', () => {
+        setCurrentStep(prev => prev - 1);
+      });
     }
-  };
+  }, [currentStep, isPageTurning, triggerPageTurn]);
 
   const step = ONBOARDING_STEPS[currentStep];
 
@@ -245,6 +382,9 @@ export function OnboardingOverlay({ onComplete, forceShow = false }: OnboardingO
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md"
       >
+        {/* Page turn animation */}
+        <PageTurnEffect direction={turnDirection} isAnimating={isPageTurning} />
+        
         {/* Magical particle effects */}
         <TutorialParticles intensity={currentStep === 0 || currentStep === ONBOARDING_STEPS.length - 1 ? 1.5 : 0.8} />
         
