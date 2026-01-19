@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CampaignData, CampaignMetadata, CAMPAIGN_INDEX_KEY } from '@/types/campaign';
 import { TransactionManager, generateChecksum } from './saveTransaction';
+import { normalizeCampaign } from '@/lib/saveSchemaManager';
 import LZString from 'lz-string';
 
 // ============================================================================
@@ -325,18 +326,27 @@ class UnifiedSaveArchitectureClass {
       const saveData = data.save_data as { compressed?: string };
       if (!saveData?.compressed) return null;
       
-      const campaign = decompressCampaign(saveData.compressed);
+      const rawCampaign = decompressCampaign(saveData.compressed);
       
-      if (campaign) {
+      if (rawCampaign) {
+        // Normalize to ensure all fields exist (handles schema changes between updates)
+        const { campaign, wasModified, backfilledFields } = normalizeCampaign(rawCampaign);
+        
+        if (wasModified) {
+          console.log(`[UnifiedSave] Cloud campaign normalized, backfilled: ${backfilledFields.join(', ')}`);
+        }
+        
         // Update sync status
         this.updateSyncStatus(campaignId, {
           cloudChecksum: data.checksum,
           cloudUpdatedAt: new Date(data.updated_at).getTime(),
           state: 'synced',
         });
+        
+        return campaign;
       }
       
-      return campaign;
+      return null;
     } catch (error) {
       console.error('[UnifiedSave] Cloud load failed:', error);
       return null;
@@ -435,7 +445,11 @@ class UnifiedSaveArchitectureClass {
     try {
       const raw = localStorage.getItem(`lwe_campaign_${campaignId}`);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      
+      // Normalize to ensure all fields exist
+      const { campaign } = normalizeCampaign(parsed);
+      return campaign;
     } catch {
       return null;
     }

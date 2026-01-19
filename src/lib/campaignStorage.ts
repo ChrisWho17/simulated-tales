@@ -20,6 +20,7 @@ import { RPGCharacter } from '@/types/rpgCharacter';
 import { StoryEntry } from '@/components/adventure/types';
 import { GameGenre } from '@/types/genreData';
 import { migrateCampaign, CURRENT_CAMPAIGN_VERSION } from './campaignMigration';
+import { normalizeCampaign, validateCampaign } from './saveSchemaManager';
 import { createInitialWeatherState } from '@/game/weatherSystem';
 import { createInitialTimeState } from '@/game/timeProgressionSystem';
 import { seedWorldForGenre, hasGenreSeed } from '@/game/livingWorld';
@@ -95,16 +96,26 @@ export function loadCampaign(campaignId: string): CampaignData | null {
     const parsed = JSON.parse(saved);
     
     // Run migration if needed
-    const result = migrateCampaign(parsed);
+    const migrationResult = migrateCampaign(parsed);
     
-    if (result.migrated) {
-      console.log(`[Campaign Storage] Migrated campaign ${campaignId} from v${result.fromVersion} to v${result.toVersion}`);
-      if (result.warnings.length > 0) {
-        console.warn('[Campaign Storage] Migration warnings:', result.warnings);
+    if (migrationResult.migrated) {
+      console.log(`[Campaign Storage] Migrated campaign ${campaignId} from v${migrationResult.fromVersion} to v${migrationResult.toVersion}`);
+      if (migrationResult.warnings.length > 0) {
+        console.warn('[Campaign Storage] Migration warnings:', migrationResult.warnings);
       }
-      // Save the migrated version
-      localStorage.setItem(key, JSON.stringify(result.campaign));
     }
+    
+    // CRITICAL: Normalize campaign to ensure all fields exist with valid defaults
+    // This prevents crashes when new fields are added in updates
+    const normResult = normalizeCampaign(migrationResult.campaign);
+    
+    if (normResult.wasModified) {
+      console.log(`[Campaign Storage] Normalized campaign, backfilled: ${normResult.backfilledFields.join(', ')}`);
+      // Save the normalized version
+      localStorage.setItem(key, JSON.stringify(normResult.campaign));
+    }
+    
+    const campaign = normResult.campaign;
     
     // CRITICAL: Clear NPC registry and personality assignments before loading new campaign
     // This ensures old NPC data from previous campaigns doesn't bleed into new ones
@@ -118,17 +129,17 @@ export function loadCampaign(campaignId: string): CampaignData | null {
     clearPersonalityAssignments();
     
     // Set the genre for auto-registration
-    if (result.campaign.meta?.primaryGenre) {
-      setNPCAutoRegistrationGenre(result.campaign.meta.primaryGenre);
+    if (campaign.meta?.primaryGenre) {
+      setNPCAutoRegistrationGenre(campaign.meta.primaryGenre);
     }
     
     // Restore NPC registry state from campaign save if available
-    if (result.campaign.npcRegistryState) {
+    if (campaign.npcRegistryState) {
       const savedRegistry: NPCIdentityRegistry = {
-        npcs: result.campaign.npcRegistryState.npcs as any || {},
-        relationships: result.campaign.npcRegistryState.relationships as any || {},
-        families: result.campaign.npcRegistryState.families as any || {},
-        lockedIds: result.campaign.npcRegistryState.lockedIds || [],
+        npcs: campaign.npcRegistryState.npcs as any || {},
+        relationships: campaign.npcRegistryState.relationships as any || {},
+        families: campaign.npcRegistryState.families as any || {},
+        lockedIds: campaign.npcRegistryState.lockedIds || [],
       };
       setNPCRegistry(savedRegistry);
       console.log(`[Campaign Storage] Restored NPC registry with ${Object.keys(savedRegistry.npcs).length} NPCs`);
@@ -137,31 +148,31 @@ export function loadCampaign(campaignId: string): CampaignData | null {
     }
     
     // Restore NPC personality assignments
-    if (result.campaign.npcPersonalityMap) {
-      importPersonalityMap(result.campaign.npcPersonalityMap as any);
+    if (campaign.npcPersonalityMap) {
+      importPersonalityMap(campaign.npcPersonalityMap as any);
     }
     
     // CRITICAL: Restore companion localStorage data from campaign save
     try {
-      if (result.campaign.companionAppearances && Object.keys(result.campaign.companionAppearances).length > 0) {
-        localStorage.setItem('companion-appearances', JSON.stringify(result.campaign.companionAppearances));
-        console.log(`[Campaign Storage] Restored ${Object.keys(result.campaign.companionAppearances).length} companion appearances`);
+      if (campaign.companionAppearances && Object.keys(campaign.companionAppearances).length > 0) {
+        localStorage.setItem('companion-appearances', JSON.stringify(campaign.companionAppearances));
+        console.log(`[Campaign Storage] Restored ${Object.keys(campaign.companionAppearances).length} companion appearances`);
       }
       
-      if (result.campaign.companionIntroductions && Object.keys(result.campaign.companionIntroductions).length > 0) {
-        localStorage.setItem('companion-introductions', JSON.stringify(result.campaign.companionIntroductions));
+      if (campaign.companionIntroductions && Object.keys(campaign.companionIntroductions).length > 0) {
+        localStorage.setItem('companion-introductions', JSON.stringify(campaign.companionIntroductions));
         console.log(`[Campaign Storage] Restored companion introductions`);
       }
       
-      if (result.campaign.pendingCompanionIntroductions && result.campaign.pendingCompanionIntroductions.length > 0) {
-        localStorage.setItem('pending-companion-introductions', JSON.stringify(result.campaign.pendingCompanionIntroductions));
-        console.log(`[Campaign Storage] Restored ${result.campaign.pendingCompanionIntroductions.length} pending companion introductions`);
+      if (campaign.pendingCompanionIntroductions && campaign.pendingCompanionIntroductions.length > 0) {
+        localStorage.setItem('pending-companion-introductions', JSON.stringify(campaign.pendingCompanionIntroductions));
+        console.log(`[Campaign Storage] Restored ${campaign.pendingCompanionIntroductions.length} pending companion introductions`);
       }
     } catch (e) {
       console.warn('[Campaign Storage] Failed to restore companion localStorage data:', e);
     }
     
-    return result.campaign;
+    return campaign;
   } catch (e) {
     console.error(`[Campaign Storage] Failed to load campaign ${campaignId}:`, e);
     return null;
