@@ -1075,8 +1075,8 @@ export function CheatModeSplash({
       console.error('Failed to save companion data:', e);
     }
     
-    // Add to companion system
-    companionSystem.getAllCompanions().push(companion);
+    // Add to companion system using the proper registration method
+    companionSystem.registerCompanion(companion);
     companionSystem.recruitCompanion(companion.id);
     
     // Generate and equip role-based starting equipment
@@ -1147,14 +1147,11 @@ export function CheatModeSplash({
   };
   
   const handleUpdateCompanion = (updated: CompanionState) => {
-    const allCompanions = companionSystem.getAllCompanions();
-    const index = allCompanions.findIndex(c => c.id === updated.id);
-    if (index !== -1) {
-      allCompanions[index] = updated;
-      setCompanions(companionSystem.getAllCompanions());
-      setEditingCompanion(null);
-      toast.success(`${updated.name} updated!`);
-    }
+    // Use registerCompanion to properly update the internal Map
+    companionSystem.registerCompanion(updated);
+    setCompanions(companionSystem.getAllCompanions());
+    setEditingCompanion(null);
+    toast.success(`${updated.name} updated!`);
   };
   
   const toggleCompanionTrait = (trait: PersonalityTrait) => {

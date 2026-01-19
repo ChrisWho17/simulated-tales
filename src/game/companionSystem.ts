@@ -270,6 +270,27 @@ class CompanionSystemManager {
   
   // ========== COMPANION MANAGEMENT ==========
   
+  /**
+   * Register a fully-formed companion state directly.
+   * Use this when you have a complete CompanionState object (e.g., from cheat mode).
+   */
+  registerCompanion(companion: CompanionState): void {
+    // Enforce companion limit
+    if (this.companions.size >= this.maxTotalCompanions) {
+      const inactiveCompanions = Array.from(this.companions.entries())
+        .filter(([cid]) => !this.activeCompanions.includes(cid))
+        .sort((a, b) => a[1].joinedAt - b[1].joinedAt);
+      
+      if (inactiveCompanions.length > 0) {
+        this.companions.delete(inactiveCompanions[0][0]);
+        console.log(`[Companion] Removed oldest inactive companion to make room`);
+      }
+    }
+    
+    this.companions.set(companion.id, companion);
+    console.log(`[Companion] Registered: ${companion.name} (${companion.id})`);
+  }
+  
   createCompanion(
     id: string,
     name: string,
