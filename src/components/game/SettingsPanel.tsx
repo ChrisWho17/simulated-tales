@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  X, Settings, Palette, Dices, Eye, Volume2, VolumeX, 
+  X, Settings, Palette, Dices, Eye,
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
-  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Music, Headphones, Clapperboard,
-  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard, Timer, Highlighter
+  Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Clapperboard,
+  FileText, Upload, CloudUpload, GripVertical, Accessibility, HelpCircle, Terminal, Keyboard, Timer, Highlighter, Wand2
 } from 'lucide-react';
 import { SaveSlotPreview } from '@/components/campaign/SaveSlotPreview';
 import { CloudSyncPanel } from '@/components/cloud/CloudSyncPanel';
 import { DirectorSettingsTab } from './DirectorSettingsTab';
-import { AudioSettingsPanel } from '@/components/ui/AudioSettingsPanel';
+import { SettingsPresetSelector } from './SettingsPresetSelector';
 import { AccessibilitySettingsPanel, useAccessibilityOptional } from '@/components/game/AccessibilitySettings';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
@@ -60,7 +60,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'audio' | 'accessibility' | 'tutorial'>('gameplay');
+  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'accessibility' | 'tutorial'>('gameplay');
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -213,7 +213,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Tabs - horizontal scroll only, static row */}
         <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
           <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'audio', 'saves', 'cloud', 'display', 'accessibility', 'tutorial'] as const).map((tab) => (
+            {(['gameplay', 'features', 'director', 'weather', 'saves', 'cloud', 'display', 'accessibility', 'tutorial'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -227,7 +227,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {tab === 'director' && <Clapperboard className="w-3 h-3" />}
                 {tab === 'weather' && <Cloud className="w-3 h-3" />}
                 {tab === 'cloud' && <CloudUpload className="w-3 h-3" />}
-                {tab === 'audio' && <Volume2 className="w-3 h-3" />}
                 {tab === 'accessibility' && <Accessibility className="w-3 h-3" />}
                 {tab === 'tutorial' && <HelpCircle className="w-3 h-3" />}
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -245,6 +244,29 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* Gameplay Tab */}
           {activeTab === 'gameplay' && (
             <div className="space-y-6">
+              {/* Quick Settings Presets */}
+              <SettingsPresetSelector 
+                currentDiceMode={diceMode}
+                onApplyPreset={(presetId, preset) => {
+                  // Apply the preset settings
+                  updateSettings({
+                    enableWoundSystem: preset.settings.enableWoundSystem,
+                    enableInventoryWeight: preset.settings.enableInventoryWeight,
+                    inDepthSettings: {
+                      ...settings.inDepthSettings,
+                      enableHunger: preset.settings.enableHunger,
+                      enableFatigue: preset.settings.enableFatigue,
+                      enableInjuryDetail: preset.settings.enableInjuryDetail,
+                      enableEquipmentWear: preset.settings.enableEquipmentWear,
+                      worldTone: preset.settings.worldTone,
+                      consequenceIntensity: preset.settings.consequenceIntensity,
+                      microEventFrequency: preset.settings.microEventFrequency,
+                    },
+                  });
+                  setDiceMode(preset.diceMode);
+                }}
+              />
+              
               {/* Dice Mode */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -955,22 +977,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             />
           )}
           
-          {/* Audio Tab */}
-          {activeTab === 'audio' && (
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-[var(--accent-secondary)]" />
-                  <h3 className="text-sm font-medium">Audio Settings</h3>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Control game sounds and ambient audio
-                </p>
-              </div>
-              
-              <AudioSettingsPanel />
-            </div>
-          )}
           
           {/* Saves Tab */}
           {activeTab === 'saves' && (
