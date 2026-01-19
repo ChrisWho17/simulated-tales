@@ -988,6 +988,13 @@ export function CheatModeSplash({
         appearanceTiming: companionCreator.appearanceTiming,
         timestamp: Date.now(),
         displayed: false,
+        // Initialize context triggers for timing system
+        contextTriggers: {
+          turnsSinceCreated: 0,
+          combatEnded: false,
+          locationChanged: false,
+          restOccurred: false,
+        },
       });
       localStorage.setItem('pending-companion-introductions', JSON.stringify(pendingIntros));
     } catch (e) {

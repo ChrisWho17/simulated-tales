@@ -161,6 +161,14 @@ import {
   getDirectorOpeningStyle,
 } from '@/game/directorModeSystem';
 import { useStreamingNarrative } from '@/hooks/useStreamingNarrative';
+import {
+  updateCompanionTurnTracking,
+  getNextReadyCompanion,
+  markCompanionDisplayed,
+  buildCompanionIntroductionContext,
+  markContextTrigger,
+  PendingCompanionWithTiming,
+} from '@/game/companionTimingSystem';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -790,13 +798,28 @@ export function AdventureGame() {
     playerAction: string,
     history: StoryEntry[],
     diceRoll: any,
-    char: RPGCharacter
+    char: RPGCharacter,
+    context?: { isNewScene?: boolean; justFinishedCombat?: boolean; justRested?: boolean; locationChanged?: boolean }
   ): Promise<Record<string, any>> => {
     // Build minimal but complete request for streaming
     const conversationHistory = history.slice(-6).map(entry => ({
       role: entry.role === 'user' ? 'user' : 'narrator',
       content: entry.content.slice(0, 2000), // Truncate for speed
     }));
+    
+    // Check for pending companion that should appear
+    const pendingCompanion = getNextReadyCompanion({
+      turnNumber: campaignMemory?.campaign.currentTick || 0,
+      isNewScene: context?.isNewScene,
+      justFinishedCombat: context?.justFinishedCombat,
+      justRested: context?.justRested,
+      locationChanged: context?.locationChanged,
+      narrativeContext: history.slice(-1)[0]?.content,
+    });
+    
+    const companionContext = pendingCompanion 
+      ? buildCompanionIntroductionContext(pendingCompanion)
+      : null;
     
     return {
       scenario: scenario.slice(0, 1000),
@@ -819,8 +842,11 @@ export function AdventureGame() {
       adultContent: settings.adultContent,
       diceResult: diceRoll,
       stream: true, // Request streaming response
+      // Include pending companion context if one should appear
+      ...(companionContext && { pendingCompanionIntroduction: companionContext }),
+      ...(pendingCompanion && { pendingCompanionId: pendingCompanion.companionId }),
     };
-  }, [settings.adultContent]);
+  }, [settings.adultContent, campaignMemory?.campaign.currentTick]);
 
   // Retry mechanism for failed AI calls
   const [lastFailedAction, setLastFailedAction] = useState<{
@@ -2266,6 +2292,9 @@ export function AdventureGame() {
     
     // Advance game loop turn (processes pending ripples, decays grudges, spreads rumors)
     advanceTurn(1);
+    
+    // === COMPANION TIMING: Update turn tracking for pending companions ===
+    updateCompanionTurnTracking();
 
     // Check if streaming is enabled (typewriter mode implies streaming support)
     const useStreaming = settings.typewriterEnabled && settings.textSpeed !== 'instant';
