@@ -1350,7 +1350,10 @@ export function AdventureGame() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
           body: JSON.stringify(requestBody),
         }
       );
@@ -1604,7 +1607,10 @@ export function AdventureGame() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
           body: JSON.stringify({
             scenario: scenarioSelection.scenario,
             playerAction: `travel to ${newZone.name}`,
@@ -1725,7 +1731,10 @@ export function AdventureGame() {
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
             body: JSON.stringify({
               scenario: scenarioSelection.scenario,
               conversationHistory: [],
@@ -2528,7 +2537,10 @@ export function AdventureGame() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
           body: JSON.stringify({
             scenario: scenarioSelection.scenario,
             conversationHistory: [],
