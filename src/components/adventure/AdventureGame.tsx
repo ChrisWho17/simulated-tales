@@ -22,6 +22,7 @@ import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
+import { setActiveCampaignId } from '@/lib/campaignStorage';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { 
@@ -2974,8 +2975,9 @@ export function AdventureGame() {
         onSelect={handleScenarioSelect} 
         onLoadCampaign={(campaignId) => {
           console.log('[AdventureGame] Loading campaign:', campaignId);
-          window.location.reload();
-        }} 
+          setActiveCampaignId(campaignId);
+          setTimeout(() => window.location.reload(), 50);
+        }}
         isLoading={isLoading} 
       />
     );
@@ -3081,8 +3083,9 @@ export function AdventureGame() {
       onSelect={handleScenarioSelect} 
       onLoadCampaign={(campaignId) => {
         console.log('[AdventureGame] Loading campaign:', campaignId);
-        window.location.reload();
-      }} 
+        setActiveCampaignId(campaignId);
+        setTimeout(() => window.location.reload(), 50);
+      }}
       isLoading={isLoading} 
     />
   );
