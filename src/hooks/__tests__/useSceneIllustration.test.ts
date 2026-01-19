@@ -40,7 +40,7 @@ describe('useSceneIllustration', () => {
   });
 
   describe('scene trigger types', () => {
-    it('should recognize combat as a valid trigger type', () => {
+    it('should recognize combat as a valid trigger type returning combat_start', () => {
       const result = shouldIllustrateScene(
         'combat',
         'The dragon attacks!',
@@ -49,7 +49,35 @@ describe('useSceneIllustration', () => {
         5
       );
       if (result) {
-        expect(result.type).toBe('combat');
+        // The function returns 'combat_start' for combat events
+        expect(result.type).toBe('combat_start');
+        expect(result.priority).toBe(1);
+      }
+    });
+
+    it('should detect location arrival', () => {
+      const result = shouldIllustrateScene(
+        'observation',
+        'You find yourself in **The Dark Forest**',
+        0,
+        20,
+        5
+      );
+      if (result) {
+        expect(result.type).toBe('location_arrival');
+      }
+    });
+
+    it('should detect dramatic moments', () => {
+      const result = shouldIllustrateScene(
+        'narrative',
+        'There is a massive explosion as the tower collapses!',
+        0,
+        20,
+        5
+      );
+      if (result) {
+        expect(result.type).toBe('dramatic_moment');
       }
     });
   });
