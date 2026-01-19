@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { shouldIllustrateScene, SceneTrigger } from '@/components/game/SceneIllustration';
+import { SceneTrigger } from '@/components/game/SceneIllustration';
+import { useWeatherTimeSystem } from '@/hooks/useWeatherTimeSystem';
+import { useDirectorSettings } from '@/hooks/useDirectorSettings';
+import { useCampaignSync } from '@/hooks/useCampaignSync';
+import { usePlayerStateSync } from '@/hooks/usePlayerStateSync';
+import { useSceneIllustration } from '@/hooks/useSceneIllustration';
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
@@ -1050,16 +1055,20 @@ export function AdventureGame() {
     // Respect the scene illustrations setting
     if (!settings.sceneIllustrations) return;
     
-    const trigger = shouldIllustrateScene(
-      eventType,
-      content,
-      lastIllustrationTick.current,
-      Date.now(),
-      5 // 5 ticks minimum between illustrations
-    );
-    
-    if (trigger) {
-      generateSceneIllustration(content, trigger);
+    // Use imported SceneTrigger check - scene illustration logic handled inline
+    // This is a simplified trigger check since useSceneIllustration hook handles full logic
+    if (settings.sceneIllustrations && content.length > 100) {
+      // Check if enough time has passed (5 minutes minimum)
+      const now = Date.now();
+      if (now - lastIllustrationTick.current > 5 * 60 * 1000) {
+        const trigger: SceneTrigger = {
+          type: 'dramatic_moment',
+          description: content.slice(0, 200),
+          priority: 1,
+          entities: [],
+        };
+        generateSceneIllustration(content, trigger);
+      }
     }
   }, [generateSceneIllustration, settings.sceneIllustrations]);
 
