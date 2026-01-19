@@ -2427,15 +2427,38 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         // Detect if this is dialogue/speech (wrapped in say: "..." or ask: "...")
         const isDialogueAction = /^(say|ask|tell|speak|shout|whisper):\s*["']/.test(cleanedAction);
         
+        // CRITICAL: First check if this is DIALOGUE INTENT before checking action verbs
+        // Dialogue verbs MUST be checked BEFORE action patterns to prevent verbal intent being treated as physical action
+        const dialogueVerbPatterns = [
+          // Direct speech verbs - these are ALWAYS dialogue intent, never physical actions
+          /^(say|saying|ask|asking|tell|telling|speak|speaking|talk|talking|shout|shouting|whisper|whispering|yell|yelling|call|calling|reply|replying|respond|responding|answer|answering)\s/i,
+          // Emotional/expressive speech
+          /^(confess|confessing|admit|admitting|reveal|revealing|declare|declaring|announce|announcing|explain|explaining|describe|describing)\s/i,
+          // Social speech
+          /^(greet|greeting|thank|thanking|apologize|apologizing|compliment|complimenting|insult|insulting|threaten|threatening|warn|warning)\s/i,
+          // Persuasive speech
+          /^(convince|convincing|persuade|persuading|negotiate|negotiating|bargain|bargaining|beg|begging|plead|pleading|demand|demanding|request|requesting)\s/i,
+          // Question patterns that indicate dialogue
+          /^(what|who|where|when|why|how|which|whose|whom)\s+(is|are|was|were|do|does|did|can|could|would|will|should|have|has|had)\b/i,
+          // Common conversational starters
+          /^(yes|no|yeah|nah|sure|okay|ok|maybe|perhaps|definitely|absolutely|never|always|hello|hi|hey|goodbye|bye|thanks|please|sorry)\b/i,
+          // "I" + speech verb patterns
+          /^i\s+(say|ask|tell|speak|shout|whisper|yell|call|reply|respond|answer|confess|admit|reveal|declare|explain)\b/i,
+        ];
+        
+        // Check if this is dialogue intent FIRST - dialogue takes priority over action detection
+        const isDialogueIntent = dialogueVerbPatterns.some(pattern => pattern.test(cleanedAction));
+        
         // CRITICAL: Detect ACTION WORDS that should NEVER be interpreted as dialogue
         // These are movement, physical, tactical, and exploration verbs
+        // NOTE: Only checked if NOT already identified as dialogue
         const actionVerbPatterns = [
           // Movement & Navigation
           /^(go|going|went|move|moving|walk|walking|run|running|head|heading|travel|traveling|proceed|proceeding|advance|advancing|press|pressing)\b/i,
           /^(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|through|past|around|toward|towards)\b/i,
           /^(enter|entering|exit|exiting|leave|leaving|return|returning|approach|approaching|retreat|retreating|flee|fleeing)\b/i,
           
-          // Physical Actions
+          // Physical Actions (NOT speech verbs - those are handled above)
           /^(take|taking|grab|grabbing|pick|picking|drop|dropping|throw|throwing|catch|catching|push|pushing|pull|pulling)\b/i,
           /^(open|opening|close|closing|lock|locking|unlock|unlocking|break|breaking|smash|smashing|kick|kicking)\b/i,
           /^(climb|climbing|jump|jumping|crouch|crouching|crawl|crawling|swim|swimming|dive|diving|duck|ducking)\b/i,
@@ -2467,12 +2490,13 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
           /^(continue|continuing|keep\s*going|carry\s*on|move\s*on|go\s*on|next|then|and\s*then|what\s*happens)\b/i,
         ];
         
-        // Check if the action matches any action verb pattern
-        const matchesActionPattern = actionVerbPatterns.some(pattern => pattern.test(cleanedAction));
+        // Check if the action matches any action verb pattern - but ONLY if not dialogue intent
+        const matchesActionPattern = !isDialogueIntent && actionVerbPatterns.some(pattern => pattern.test(cleanedAction));
         
         // CRITICAL: Detect SHORT IMPERATIVE COMMANDS that are ACTIONS, not speech
         // These are tactical/directive phrases that the AI should NOT interpret as dialogue
-        const isShortImperativeCommand = (
+        // BUT: Skip this check entirely if dialogue intent was already detected
+        const isShortImperativeCommand = !isDialogueIntent && (
           cleanedAction.split(/\s+/).length <= 5 && // Short phrase (increased from 4)
           !cleanedAction.includes('"') && !cleanedAction.includes("'") && // No quotes
           (matchesActionPattern || /^[a-z]+\s+(more|less|faster|slower|deeper|further|ahead|forward|back|again)$/i.test(cleanedAction))
@@ -2483,14 +2507,16 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         const isStageDirection = parentheticalMatch || bracketMatch;
         
         // NEW: Detect movement phrases like "go deeper", "move forward", "head inside"
-        const isMovementPhrase = /^(go|move|head|walk|run|proceed|continue|travel|venture|press)\s+(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|in|out|through|past|around|toward|towards|into|onto)/i.test(cleanedAction);
+        // BUT: Skip if dialogue intent detected
+        const isMovementPhrase = !isDialogueIntent && /^(go|move|head|walk|run|proceed|continue|travel|venture|press)\s+(deeper|forward|backward|onward|ahead|further|back|left|right|up|down|inside|outside|in|out|through|past|around|toward|towards|into|onto)/i.test(cleanedAction);
         
         // NEW: Detect "Continue Story" or similar continuation requests
         // This is when the player wants the story to progress naturally without specific action
         const isContinuationRequest = /^(continue|continue\s*story|continue\s*the\s*story|keep\s*going|carry\s*on|go\s*on|move\s*on|what\s*happens\s*next|next|and\s*then|then\s*what|proceed|what\s*now)$/i.test(cleanedAction);
         
-        // Combine all action detection
-        const isClearlyPhysicalAction = isShortImperativeCommand || isStageDirection || isMovementPhrase || matchesActionPattern;
+        // Combine all action detection - DIALOGUE INTENT TAKES PRIORITY
+        // If dialogue intent is detected, this will be FALSE regardless of other patterns
+        const isClearlyPhysicalAction = !isDialogueIntent && (isShortImperativeCommand || isStageDirection || isMovementPhrase || matchesActionPattern);
         
         // Structure the prompt to prevent echo - tell AI this is intent, not text to copy
         let actionContent: string;
@@ -2562,6 +2588,52 @@ Write the NEXT part of the story. Begin immediately with new narrative.`;
             actionContent += `\n\nCURRENT MOOD: The character is ${emotionalContext.currentMood}. Their internal state: ${emotionalContext.internalDescription}. Let this color the continuation subtly.`;
           }
 
+        } else if (isDialogueIntent) {
+          // DIALOGUE INTENT DETECTED - Player wants their character to SPEAK
+          // This takes priority over physical action detection
+          actionContent = `PLAYER DIALOGUE INTENT (transform this into actual spoken words, DO NOT echo this description):
+"${cleanedAction}"
+
+CRITICAL - DIALOGUE TRANSFORMATION REQUIRED:
+The player typed WHAT they want to say/communicate, not the actual words their character speaks.
+You MUST:
+1. INVENT the actual dialogue the character speaks - create realistic, immersive words
+2. Show the delivery with emotional body language
+3. Show how NPCs REACT to these words
+4. Advance the scene as a RESULT
+
+DIALOGUE TRANSFORMATION EXAMPLES:
+
+Player typed: "ask about the treasure"
+WRONG: "I ask about the treasure," you say.
+RIGHT: "So..." you lean forward, eyes sharp. "Word is there's something valuable hidden here. Care to enlighten me?"
+
+Player typed: "tell them I'm here to help"
+WRONG: You say, "I tell them I'm here to help."
+RIGHT: You raise your hands, palms out. "Easy. I'm not here to cause trouble. If anything, I'm here to help."
+
+Player typed: "yes I would like that"
+WRONG: You perform the action in silence.
+RIGHT: A smile tugs at the corner of your lips. "Yes. I'd like that very much."
+
+Player typed: "what is your name"
+WRONG: You silently observe.
+RIGHT: "Before we go any further..." you meet their gaze directly. "What's your name?"
+
+Player typed: "thank them for the help"
+WRONG: You thank them for the help.
+RIGHT: Genuine warmth colors your voice. "I appreciate this. Really. Not everyone would have helped a stranger."
+
+REMEMBER: The player's input describes their INTENT. Your job is to CREATE the actual spoken words.
+
+NEVER write: "I [player's input]" or "You say you want to [player's input]"
+ALWAYS write: Actual dialogue in quotes, with emotional delivery and NPC reactions.`;
+
+          // Add emotional context if present
+          if (emotionalContext) {
+            actionContent += `\n\nEMOTIONAL DELIVERY: The character is currently feeling ${emotionalContext.currentMood}. Their dialogue should be ${emotionalContext.dialogueTone}. Show ${emotionalContext.physicalDescription} as they speak.`;
+          }
+
         } else if (isClearlyPhysicalAction) {
           // PHYSICAL ACTIONS - PURE PHYSICAL ACTIONS - never speech
           actionContent = `PLAYER PHYSICAL ACTION ONLY (this is a movement/physical/tactical command - the character DOES this, they do NOT say it):
@@ -2610,43 +2682,35 @@ RIGHT: You hold position, breath shallow, listening. Seconds stretch into small 
           }
 
         } else {
-          // Check if this is a dialogue INTENT (I ask..., I tell..., I say to..., etc.)
-          // But EXCLUDE action verbs that might start with similar words
-          const dialogueVerbs = /^(ask|tell|say|speak|confess|express|admit|reveal|declare|apologize|thank|greet|insult|threaten|beg|plead|explain|mention|whisper|shout|yell|murmur|demand|request|suggest|propose|promise|warn|comfort|console|reassure|encourage|praise|criticize|mock|tease|flirt)\s+(about|him|her|them|that|what|why|how|if|whether|for|to)/i;
-          const isDialogueIntent = dialogueVerbs.test(cleanedAction);
-          
-          if (isDialogueIntent) {
-            actionContent = `PLAYER DIALOGUE INTENT (transform this into actual spoken words, DO NOT echo this description):
-"${cleanedAction}"
-
-CRITICAL - DIALOGUE TRANSFORMATION REQUIRED:
-The player typed WHAT they want to say/do, not the actual words their character speaks.
-You MUST:
-1. INVENT the actual dialogue the character speaks - create realistic, immersive words
-2. Show the delivery with emotional body language
-3. Show how NPCs REACT to these words
-4. Advance the scene as a RESULT
-
-Example: If player typed "ask about the treasure" → Write: "So..." you lean forward, eyes sharp. "Word is there's something valuable hidden here. Care to enlighten me?"
-
-NEVER write: "I ask about the treasure" or "You say you want to ask about the treasure."`;
-
-            // Add emotional context if present
-            if (emotionalContext) {
-              actionContent += `\n\nEMOTIONAL DELIVERY: The character is currently feeling ${emotionalContext.currentMood}. Their dialogue should be ${emotionalContext.dialogueTone}. Show ${emotionalContext.physicalDescription} as they speak.`;
-            }
-          } else {
-            actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
+          // FALLBACK: Generic action - analyze context to determine best handling
+          // At this point, it's neither clearly dialogue NOR clearly physical action
+          actionContent = `PLAYER ACTION (narrate the outcome, do NOT echo these words):
 "${cleanedAction}"
 
 Write what happens as a result of this action. Transform it into evocative prose.
-IMPORTANT: This is a PHYSICAL/MENTAL action, NOT something the character says aloud.
-Do NOT have the character speak these words - show them DOING the action.`;
 
-            // Add emotional context for actions too
-            if (emotionalContext) {
-              actionContent += `\n\nEMOTIONAL STATE: The character performs this action ${emotionalContext.actionFlavor}. They are feeling ${emotionalContext.currentMood}. Show ${emotionalContext.physicalDescription}.`;
-            }
+ANALYSIS REQUIRED: Determine if this is:
+1. DIALOGUE INTENT - If the input sounds like something the character would SAY (questions, statements, greetings, responses), create actual spoken dialogue
+2. PHYSICAL ACTION - If the input describes something the character would DO, show them performing the action silently
+
+DIALOGUE INDICATORS (create spoken words if these apply):
+- Questions (what, who, where, when, why, how)
+- Greetings, farewells, thanks, apologies
+- Statements of opinion, feeling, or intent
+- Responses like yes, no, maybe, okay
+- Social interactions (compliments, insults, negotiations)
+
+PHYSICAL ACTION INDICATORS (show silent action if these apply):
+- Movement verbs (go, move, walk, run)
+- Combat verbs (attack, defend, dodge)
+- Observation verbs (look, watch, examine)
+- Manipulation verbs (take, grab, use, open)
+
+IF UNSURE: Default to dialogue for short conversational inputs, physical action for tactical/movement inputs.`;
+
+          // Add emotional context for actions too
+          if (emotionalContext) {
+            actionContent += `\n\nEMOTIONAL STATE: The character is feeling ${emotionalContext.currentMood}. If dialogue: ${emotionalContext.dialogueTone}. If action: ${emotionalContext.actionFlavor}. Show ${emotionalContext.physicalDescription}.`;
           }
         }
         
