@@ -9,6 +9,8 @@ import { NarratorSettingsModal } from './NarratorSettingsModal';
 import { TestConfig, TestScenario } from './SystemsTestPanel';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
+import { FirstTimeWizard, useFirstTimeWizard } from '@/components/game/FirstTimeWizard';
+import { SETTINGS_PRESETS } from '@/components/game/SettingsPresetSelector';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
 import { buildCharacterVisualProfile, CharacterVisualProfile } from '@/lib/characterConsistentIllustration';
@@ -269,6 +271,7 @@ export function AdventureGame() {
     updateCampaignMemory, 
     emotionalState, 
     settings,
+    updateSettings,
     diceMode,
     // World Bible
     initializeWorldBible,
@@ -351,6 +354,10 @@ export function AdventureGame() {
   const [directorSettings, setDirectorSettings] = useState<DirectorSettings>(DEFAULT_DIRECTOR_SETTINGS);
   // Pending character awaiting narrator settings confirmation
   const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
+  
+  // First-time wizard state
+  const { shouldShow: shouldShowWizard } = useFirstTimeWizard();
+  const [showWizard, setShowWizard] = useState(shouldShowWizard);
   
   // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
@@ -2751,6 +2758,38 @@ export function AdventureGame() {
       <CrashRecoveryPrompt
         onContinue={handleLoadSave}
         onNewGame={() => setPhase('scenario')}
+      />
+    );
+  }
+
+  // First-time wizard for new users
+  if (showWizard && phase === 'scenario') {
+    return (
+      <FirstTimeWizard
+        onComplete={(selections) => {
+          // Apply the selected preset
+          const selectedPreset = SETTINGS_PRESETS.find(p => p.id === selections.preset);
+          if (selectedPreset) {
+            // Update game settings with preset values
+            updateSettings({
+              adultContent: selections.adultContent,
+              enableWoundSystem: selectedPreset.settings.enableWoundSystem,
+              enableInventoryWeight: selectedPreset.settings.enableInventoryWeight,
+              inDepthSettings: {
+                ...settings.inDepthSettings,
+                enableHunger: selectedPreset.settings.enableHunger,
+                enableFatigue: selectedPreset.settings.enableFatigue,
+                enableInjuryDetail: selectedPreset.settings.enableInjuryDetail,
+                enableEquipmentWear: selectedPreset.settings.enableEquipmentWear,
+                worldTone: selectedPreset.settings.worldTone,
+                consequenceIntensity: selectedPreset.settings.consequenceIntensity,
+                microEventFrequency: selectedPreset.settings.microEventFrequency,
+              },
+            });
+            setDiceMode(selectedPreset.diceMode);
+          }
+          setShowWizard(false);
+        }}
       />
     );
   }
