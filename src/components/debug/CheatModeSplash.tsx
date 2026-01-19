@@ -133,6 +133,13 @@ const ORIGIN_STORIES = [
   { id: 'debt', label: 'Owes a Debt', description: "They owe you or someone you know" },
 ] as const;
 
+// When companion appears in the story
+const APPEARANCE_TIMING = [
+  { id: 'immediately', label: 'Immediately', description: 'Appears on the very next action' },
+  { id: 'next_scene', label: 'Next Scene', description: 'Appears when the next scenario starts' },
+  { id: 'contextual', label: 'Later On', description: 'Appears when it makes narrative sense' },
+] as const;
+
 // Experience levels with stat ranges
 const EXPERIENCE_LEVELS = [
   { id: 'green', label: 'Green', description: 'Inexperienced, learning the ropes', minStat: 1, maxStat: 4, color: 'text-green-400', bgColor: 'bg-green-500/20' },
@@ -408,6 +415,7 @@ interface CompanionCreatorState {
   armorLevel: typeof ARMOR_LEVELS[number]['id'];
   originStory: typeof ORIGIN_STORIES[number]['id'];
   experienceLevel: typeof EXPERIENCE_LEVELS[number]['id'];
+  appearanceTiming: typeof APPEARANCE_TIMING[number]['id'];
   backstory: string;
   skills: string[];
   speechPattern: string;
@@ -444,6 +452,7 @@ const DEFAULT_COMPANION_CREATOR: CompanionCreatorState = {
   armorLevel: 'light',
   originStory: 'stranger',
   experienceLevel: 'competent',
+  appearanceTiming: 'contextual',
   backstory: '',
   skills: [],
   speechPattern: 'casual, friendly',
@@ -976,6 +985,7 @@ export function CheatModeSplash({
         introduction: storyIntroduction,
         portraitUrl: companionCreator.portraitUrl,
         origin: companionCreator.originStory,
+        appearanceTiming: companionCreator.appearanceTiming,
         timestamp: Date.now(),
         displayed: false,
       });
@@ -989,8 +999,15 @@ export function CheatModeSplash({
     setCompanionCreator(DEFAULT_COMPANION_CREATOR);
     setCompanionCreatorStep('basics');
     
+    const timingLabel = APPEARANCE_TIMING.find(t => t.id === companionCreator.appearanceTiming)?.label || 'Later';
+    const timingDesc = companionCreator.appearanceTiming === 'immediately' 
+      ? 'They will appear on your next action!'
+      : companionCreator.appearanceTiming === 'next_scene'
+      ? 'They will appear when the next scene starts.'
+      : 'They will appear when it makes narrative sense.';
+    
     toast.success(`${companion.name} has joined your party!`, {
-      description: 'Their introduction will appear in the story.',
+      description: timingDesc,
       duration: 5000,
     });
   };
@@ -2297,6 +2314,27 @@ export function CheatModeSplash({
                 >
                   <div className="font-medium text-sm">{origin.label}</div>
                   <div className="text-xs text-muted-foreground">{origin.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* When They Appear */}
+          <div className="space-y-2">
+            <Label>When They Appear</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {APPEARANCE_TIMING.map(timing => (
+                <button
+                  key={timing.id}
+                  onClick={() => setCompanionCreator(prev => ({ ...prev, appearanceTiming: timing.id }))}
+                  className={`p-2 rounded-lg border text-center transition-all ${
+                    companionCreator.appearanceTiming === timing.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border/50 hover:border-border'
+                  }`}
+                >
+                  <div className="font-medium text-xs">{timing.label}</div>
+                  <div className="text-[10px] text-muted-foreground">{timing.description}</div>
                 </button>
               ))}
             </div>
