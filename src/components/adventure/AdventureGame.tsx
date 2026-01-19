@@ -2317,25 +2317,25 @@ export function AdventureGame() {
             console.log('[handlePlayerAction] Streaming complete, mechanics:', mechanics);
             
             // Apply fallback detection for damage, heal, gold when streaming
-            let enhancedMechanics = mechanics ? { ...mechanics } : {};
+            let enhancedMechanics = mechanics ? { ...(mechanics as Record<string, unknown>) } : {} as Record<string, unknown>;
             
             if (fullContent) {
               // === FALLBACK DAMAGE DETECTION (streaming) ===
-              const detectedDamage = detectMissingDamageTags(fullContent, enhancedMechanics.damage, { minConfidence: 'high' });
+              const detectedDamage = detectMissingDamageTags(fullContent, enhancedMechanics.damage as number | undefined, { minConfidence: 'high' });
               if (detectedDamage !== null) {
                 console.log('[handlePlayerAction] Streaming fallback damage:', detectedDamage);
                 enhancedMechanics.damage = detectedDamage;
               }
               
               // === FALLBACK HEAL DETECTION (streaming) ===
-              const detectedHeal = detectMissingHealTags(fullContent, enhancedMechanics.heal, { minConfidence: 'high' });
+              const detectedHeal = detectMissingHealTags(fullContent, enhancedMechanics.heal as number | undefined, { minConfidence: 'high' });
               if (detectedHeal !== null) {
                 console.log('[handlePlayerAction] Streaming fallback heal:', detectedHeal);
                 enhancedMechanics.heal = detectedHeal;
               }
               
               // === FALLBACK GOLD DETECTION (streaming) ===
-              const detectedGold = detectMissingGoldTags(fullContent, enhancedMechanics.goldGained, { minConfidence: 'high' });
+              const detectedGold = detectMissingGoldTags(fullContent, enhancedMechanics.goldGained as number | undefined, { minConfidence: 'high' });
               if (detectedGold !== null) {
                 console.log('[handlePlayerAction] Streaming fallback gold:', detectedGold);
                 enhancedMechanics.goldGained = detectedGold;
