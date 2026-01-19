@@ -196,6 +196,14 @@ function isStackableItem(itemName: string): boolean {
 
 import { TestConfig, TestScenario } from './SystemsTestPanel';
 
+// Streaming narrative state interface
+interface StreamingState {
+  content: string;
+  isStreaming: boolean;
+  isComplete: boolean;
+  error: string | null;
+}
+
 interface AdventureDisplayProps {
   story: StoryEntry[];
   onPlayerAction: (action: string, diceRoll?: any) => void;
@@ -233,6 +241,8 @@ interface AdventureDisplayProps {
   onRunSystemsTest?: (testConfig: TestConfig, scenario: TestScenario) => Promise<void>;
   // Cancel stuck generation
   onCancelGeneration?: () => void;
+  // Streaming narrative support
+  streamingState?: StreamingState | null;
 }
 
 export function AdventureDisplay({
@@ -266,6 +276,7 @@ export function AdventureDisplay({
   canRegenerateWorld = false,
   onRunSystemsTest,
   onCancelGeneration,
+  streamingState,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -1960,9 +1971,44 @@ export function AdventureDisplay({
           );
           })}
 
+          {/* Streaming Narrative Entry - Shows word-by-word AI response */}
+          {streamingState && streamingState.isStreaming && streamingState.content && (
+            <div className="animate-fade-in-up mb-8">
+              <Card 
+                className="border-0 bg-transparent shadow-none rounded-lg p-2 -m-2"
+                style={{
+                  borderColor: MOOD_COLORS[currentMood]?.border || 'rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+                  {streamingState.content.split('\n\n').filter(p => p.trim()).map((paragraph, pIdx) => (
+                    <p 
+                      key={pIdx} 
+                      className="mb-4 last:mb-0 animate-fade-in"
+                      style={{ animationDelay: `${pIdx * 30}ms` }}
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
+                  {/* Streaming cursor */}
+                  <span className="inline-flex items-center ml-0.5">
+                    <span className="animate-pulse text-primary font-mono">▊</span>
+                  </span>
+                </div>
+                
+                {/* Streaming indicator */}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/30">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">
+                    Weaving the narrative...
+                  </span>
+                </div>
+              </Card>
+            </div>
+          )}
 
-          {/* Loading indicator for ongoing narrative generation (only when story has content) */}
-          {isLoading && story.length > 0 && (
+          {/* Loading indicator for ongoing narrative generation (only when story has content and NOT streaming) */}
+          {isLoading && story.length > 0 && !streamingState?.isStreaming && (
             <NarrativeLoadingIndicator 
               genre={genre} 
               onCancel={onCancelGeneration}

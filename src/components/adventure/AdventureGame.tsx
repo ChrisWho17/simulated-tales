@@ -160,6 +160,7 @@ import {
   buildDirectorNarratorPrompt,
   getDirectorOpeningStyle,
 } from '@/game/directorModeSystem';
+import { useStreamingNarrative } from '@/hooks/useStreamingNarrative';
 
 // Helper to format emotional context for AI
 function formatEmotionalContext(
@@ -780,6 +781,47 @@ export function AdventureGame() {
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
   const [characterVisualProfile, setCharacterVisualProfile] = useState<CharacterVisualProfile | null>(null);
   
+  // Streaming narrative hook for word-by-word AI response
+  const streamingNarrative = useStreamingNarrative();
+  
+  // Helper to build streaming request body (simplified version for streaming)
+  const buildStreamingRequestBody = useCallback(async (
+    scenario: string,
+    playerAction: string,
+    history: StoryEntry[],
+    diceRoll: any,
+    char: RPGCharacter
+  ): Promise<Record<string, any>> => {
+    // Build minimal but complete request for streaming
+    const conversationHistory = history.slice(-6).map(entry => ({
+      role: entry.role === 'user' ? 'user' : 'narrator',
+      content: entry.content.slice(0, 2000), // Truncate for speed
+    }));
+    
+    return {
+      scenario: scenario.slice(0, 1000),
+      playerAction: cleanPlayerInputForPrompt(playerAction),
+      conversationHistory,
+      character: {
+        name: char.name,
+        classId: char.classId,
+        backgroundId: char.backgroundId,
+        traits: char.traits?.slice(0, 3) || [],
+        stats: char.stats,
+        maxHealth: char.maxHealth,
+        currentHealth: char.currentHealth,
+        level: char.level,
+        inventory: char.inventory?.slice(0, 10).map(i => ({ name: i.name, quantity: i.quantity || 1 })) || [],
+        abilities: char.abilities?.slice(0, 5) || [],
+        skills: char.skills?.slice(0, 5) || [],
+        gold: char.gold || 0,
+      },
+      adultContent: settings.adultContent,
+      diceResult: diceRoll,
+      stream: true, // Request streaming response
+    };
+  }, [settings.adultContent]);
+
   // Retry mechanism for failed AI calls
   const [lastFailedAction, setLastFailedAction] = useState<{
     action: string;
@@ -2190,7 +2232,37 @@ export function AdventureGame() {
     // Advance game loop turn (processes pending ripples, decays grudges, spreads rumors)
     advanceTurn(1);
 
-    const narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+    // Check if streaming is enabled (typewriter mode implies streaming support)
+    const useStreaming = settings.typewriterEnabled && settings.textSpeed !== 'instant';
+    
+    let narrative: string | null = null;
+    
+    if (useStreaming) {
+      // === STREAMING NARRATIVE GENERATION ===
+      console.log('[handlePlayerAction] Using streaming narrative generation');
+      setIsLoading(true);
+      
+      const streamResult = await streamingNarrative.streamNarrative(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+        await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character),
+        {
+          onComplete: (fullContent, mechanics) => {
+            console.log('[handlePlayerAction] Streaming complete, mechanics:', mechanics);
+            if (mechanics) {
+              setPendingMechanics(prev => ({ ...prev, ...mechanics }));
+            }
+          },
+        }
+      );
+      
+      narrative = streamResult?.content || null;
+      setIsLoading(false);
+      streamingNarrative.reset();
+    } else {
+      // === NON-STREAMING NARRATIVE GENERATION ===
+      narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+    }
+    
     if (narrative) {
       const narratorEntry: StoryEntry = {
         id: `narrator_${Date.now()}`,
@@ -2883,9 +2955,16 @@ export function AdventureGame() {
           // Force release any stuck generation lock and reset loading state
           forceReleaseLock();
           cancelPendingGeneration();
+          streamingNarrative.cancelStream();
           setIsLoading(false);
           toast.info('Generation cancelled. You can try again.', { duration: 3000 });
         }}
+        streamingState={streamingNarrative.isStreaming ? {
+          content: streamingNarrative.content,
+          isStreaming: streamingNarrative.isStreaming,
+          isComplete: streamingNarrative.isComplete,
+          error: streamingNarrative.error,
+        } : null}
       />
     );
   }
