@@ -6,40 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Authentication helper - validates user is logged in
+// Authentication helper - OPTIONAL authentication (game works without login)
 async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
   const authHeader = req.headers.get('Authorization');
   
+  // No auth header - allow anonymous access
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+    console.log('[generate-adventure] No auth header - allowing anonymous access');
+    return { userId: null, error: null };
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const token = authHeader.replace('Bearer ', '');
   
+  // Check if it's just the anon key (not a real user token)
+  // Anon keys are short JWT tokens without user claims
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  if (token === supabaseAnonKey || token.length < 100) {
+    console.log('[generate-adventure] Anon key detected - allowing anonymous access');
+    return { userId: null, error: null };
+  }
+
+  // Try to validate as user token
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } }
   });
 
-  const token = authHeader.replace('Bearer ', '');
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data?.user) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Invalid or expired session' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+    // Token validation failed, but still allow anonymous access
+    console.log('[generate-adventure] Token validation failed - allowing anonymous access:', error?.message);
+    return { userId: null, error: null };
   }
 
+  console.log('[generate-adventure] Authenticated user:', data.user.id);
   return { userId: data.user.id, error: null };
 }
 
