@@ -16,9 +16,10 @@ const NAME_INTRODUCTION_PATTERNS: RegExp[] = [
   /(?:they call me|'round here they call me|around here they call me|some call me|most call me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
   
   // ===== NOIR / DETECTIVE GENRE =====
-  /(?:introduced (?:himself|herself|themselves|themself) as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
-  /(?:goes by the name of|goes by the name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:introduced (?:himself|herself|themselves|themself|itself) as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:go(?:es)? by the name(?: of)?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
   /(?:working under the name|operating under the alias)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
+  /(?:dame|guy|man|woman|fella|broad) named\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
   
   // ===== FANTASY / MEDIEVAL GENRE =====
   /(?:i am called|i'm called|i be called|i be)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
@@ -95,9 +96,10 @@ const EQUIPMENT_POSSESSION_PATTERNS: RegExp[] = [
   /(?:pick up|picks up|picked up|take|takes|took|grab|grabs|grabbed|loot|loots|looted)\s+(?:a|an|the)?\s*([A-Z][a-zA-Z\s]+)/gi,
   /(?:find|finds|found|discover|discovers|discovered|obtain|obtains|obtained)\s+(?:a|an|the)?\s*([A-Z][a-zA-Z\s]+)/gi,
   /(?:drops|drop|fell|falls)\s+(?:the|a|an)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  /(?:the)\s+([A-Z][a-zA-Z\s]+)\s+(?:drops|falls|clatters)/gi,
   
   // ===== EQUIPMENT DESCRIPTIONS =====
-  /(?:a|an|the)\s+([A-Z][a-zA-Z\s]+)\s+(?:glints|gleams|shimmers|glows|pulses|hums|vibrates)/gi,
+  /(?:a|an|the)\s+([A-Z][a-zA-Z\s]+)\s+(?:glints|gleams|shimmers|glows|pulses|hums|vibrates|crackles)/gi,
   /(?:rusty|ancient|enchanted|magical|cursed|blessed|broken|pristine|ornate|gilded|silver|golden|iron|steel|wooden)\s+([A-Z][a-zA-Z\s]+)/gi,
   /([A-Z][a-zA-Z]+)\s+of\s+(?:fire|ice|lightning|thunder|poison|death|life|healing|destruction|protection|strength|agility|wisdom)/gi,
   
@@ -108,6 +110,11 @@ const EQUIPMENT_POSSESSION_PATTERNS: RegExp[] = [
   // ===== ARMOR/CLOTHING CONTEXT =====
   /(?:wearing|donning|removing|putting on|taking off|strapping on)\s+(?:a|an|the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)/gi,
   /(?:the|your|his|her|their)?\s*([A-Z][a-zA-Z\s]+)\s+(?:protects|absorbs|deflects|blocks|saves|shields)/gi,
+  
+  // ===== SCI-FI / MAGIC SPECIFIC =====
+  /(?:charging|activating|deploying|channeling through)\s+(?:the|a|an|your)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  /(?:casting with)\s+(?:the|a|an|your)?\s*([A-Z][a-zA-Z\s]+)/gi,
+  /(?:the)\s+([A-Z][a-zA-Z\s]+)\s+(?:depletes|overloads|overheats|charges|activates)/gi,
 ];
 
 // Helper function to extract names using patterns
