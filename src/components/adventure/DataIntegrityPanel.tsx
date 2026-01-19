@@ -384,13 +384,13 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="animate-scale-in">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
+              <Trash2 className="h-5 w-5 animate-fade-in" />
               Delete Broken Campaign?
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="animate-fade-in" style={{ animationDelay: '50ms' }}>
               This will permanently delete <span className="font-semibold text-foreground">"{deleteConfirm?.name}"</span>.
               {isAuthenticated && (
                 <span className="block mt-2 text-muted-foreground">
@@ -401,10 +401,12 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
               <span className="block mt-2 text-destructive/80">This action cannot be undone.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <AlertDialogCancel className="transition-all duration-200 hover:scale-105">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-200 hover:scale-105"
               onClick={() => deleteConfirm && handleDeleteCampaign(deleteConfirm.id)}
             >
               <Trash2 className="h-4 w-4 mr-1" />
