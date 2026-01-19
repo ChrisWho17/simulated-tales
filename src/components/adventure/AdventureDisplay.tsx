@@ -2169,17 +2169,6 @@ export function AdventureDisplay({
               )}
             </Button>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-            {character.abilities.slice(0, 4).map((ability) => (
-              <button
-                key={ability}
-                onClick={() => setInput(`I use ${ability}`)}
-                className="text-xs px-3 py-1 rounded-full glass-panel-subtle text-muted-foreground hover:text-primary hover:border-primary/50 transition-all border border-transparent"
-              >
-                {ability}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
