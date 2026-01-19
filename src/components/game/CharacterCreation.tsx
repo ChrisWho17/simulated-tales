@@ -37,6 +37,8 @@ import { BackstoryGenerator } from '@/components/adventure/BackstoryGenerator';
 import { Backstory } from '@/game/characterDevelopmentSystem';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { generatePortraitWithFlux } from '@/services/fluxImageGeneration';
+import { buildPortraitPrompt } from '@/utils/portraitPrompts';
 
 type CreationStep = 'basics' | 'appearance' | 'portrait' | 'backstory' | 'background' | 'personality' | 'summary';
 
@@ -157,8 +159,6 @@ export function CharacterCreation({ onComplete, genre = 'modern_life' }: Charact
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      const { generatePortraitWithFlux } = await import('@/services/fluxImageGeneration');
-      const { buildPortraitPrompt } = await import('@/utils/portraitPrompts');
       
       // Build character appearance data
       const characterData = {

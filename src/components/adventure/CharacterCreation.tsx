@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
+import { generatePortraitWithCharacterData } from '@/services/fluxImageGeneration';
 import { SecondaryGenre } from './AdventureCreator';
 import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
 import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
@@ -280,7 +281,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      const { generatePortraitWithCharacterData } = await import('@/services/fluxImageGeneration');
       
       // Get class name for prompt
       const selectedClassData = customClass && selectedClass === customClass.id
