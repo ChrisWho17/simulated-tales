@@ -2792,18 +2792,35 @@ export function AdventureGame() {
       
       const response = await Promise.race([fetchPromise, timeoutPromise]);
       
+      let narrativeContent: string;
+      
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        console.warn(`[RegenerateWorld] API returned ${response.status}, using fallback`);
+        narrativeContent = generateImmersiveOpening({
+          character,
+          genre,
+          scenario: scenarioSelection.scenario,
+          secondaryGenres,
+        });
+      } else {
+        try {
+          const data = await response.json();
+          narrativeContent = data.narrative || generateImmersiveOpening({
+            character,
+            genre,
+            scenario: scenarioSelection.scenario,
+            secondaryGenres,
+          });
+        } catch (parseError) {
+          console.warn('[RegenerateWorld] Failed to parse response, using fallback:', parseError);
+          narrativeContent = generateImmersiveOpening({
+            character,
+            genre,
+            scenario: scenarioSelection.scenario,
+            secondaryGenres,
+          });
+        }
       }
-      
-      const data = await response.json();
-      
-      const narrativeContent = data.narrative || generateImmersiveOpening({
-        character,
-        genre,
-        scenario: scenarioSelection.scenario,
-        secondaryGenres,
-      });
       
       // Replace the story with new opening
       const newStory: StoryEntry[] = [{
@@ -2831,7 +2848,33 @@ export function AdventureGame() {
       
     } catch (error) {
       console.error('[RegenerateWorld] Failed:', error);
-      toast.error('Failed to regenerate world. Please try again.');
+      // Even on complete failure, use fallback instead of error
+      const fallbackNarrative = generateImmersiveOpening({
+        character,
+        genre: scenarioSelection.genre,
+        scenario: scenarioSelection.scenario,
+        secondaryGenres: worldBible?.secondaryGenres || [],
+      });
+      
+      const newStory: StoryEntry[] = [{
+        id: `narrator_${Date.now()}`,
+        role: 'narrator',
+        content: fallbackNarrative,
+        timestamp: Date.now(),
+      }];
+      
+      setStory(newStory);
+      saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+      
+      if (campaignContext?.syncNarrativeHistory) {
+        campaignContext.syncNarrativeHistory(newStory);
+      }
+      
+      setWorldLocked(true);
+      setLockedOpening(fallbackNarrative);
+      playerActionCount.current = 0;
+      
+      toast.success('World regenerated with fallback narrative.');
     } finally {
       setIsLoading(false);
     }

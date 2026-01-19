@@ -281,19 +281,32 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       console.log('[Campaign] Syncing director settings from campaign:', campaign.settings.directorSettings);
       try {
         const storedSettings = localStorage.getItem('untold-game-settings');
+        let parsed: Record<string, unknown>;
+        
         if (storedSettings) {
-          const parsed = JSON.parse(storedSettings);
-          parsed.directorSettings = campaign.settings.directorSettings;
-          localStorage.setItem('untold-game-settings', JSON.stringify(parsed));
-          
-          // Dispatch custom event to notify GameContext in the same tab
+          parsed = JSON.parse(storedSettings);
+        } else {
+          // Create default settings if none exist
+          parsed = {};
+        }
+        
+        // Always update director settings from campaign
+        parsed.directorSettings = campaign.settings.directorSettings;
+        localStorage.setItem('untold-game-settings', JSON.stringify(parsed));
+        
+        // Dispatch custom event to notify GameContext in the same tab
+        // Use setTimeout to ensure this happens after the current React render cycle
+        setTimeout(() => {
           window.dispatchEvent(new CustomEvent('campaign-settings-loaded', {
             detail: { directorSettings: campaign.settings.directorSettings }
           }));
-        }
+          console.log('[Campaign] Dispatched campaign-settings-loaded event');
+        }, 0);
       } catch (e) {
         console.warn('[Campaign] Failed to sync director settings:', e);
       }
+    } else {
+      console.log('[Campaign] Campaign has no director settings, using defaults');
     }
   }, []);
   
