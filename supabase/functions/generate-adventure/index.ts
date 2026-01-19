@@ -2939,21 +2939,76 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
 
     console.log('Calling AI with messages:', messages.length, 'Character:', character?.name || 'none', 'Has memory:', !!memoryContext?.fullContext);
 
+    // Helper function to parse mechanics from narrative (for streaming)
+    function parseNarrativeMechanics(narrative: string): Record<string, any> {
+      const mechanics: Record<string, any> = {};
+      
+      const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
+      if (rollMatch) {
+        mechanics.rollRequired = {
+          stat: rollMatch[1],
+          difficulty: parseInt(rollMatch[2]),
+          reason: rollMatch[3]
+        };
+      }
+      
+      const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
+      if (xpMatches.length > 0) {
+        let totalXp = 0;
+        for (const match of xpMatches) {
+          totalXp += parseInt(match[1]);
+        }
+        mechanics.xpGained = { amount: totalXp };
+      }
+      
+      const goldMatches = [...narrative.matchAll(/\[GOLD:(\d+)\]/g)];
+      if (goldMatches.length > 0) {
+        let totalGold = 0;
+        for (const match of goldMatches) {
+          totalGold += parseInt(match[1]);
+        }
+        mechanics.goldGained = totalGold;
+      }
+      
+      const lootMatches = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)];
+      if (lootMatches.length > 0) {
+        mechanics.lootGained = lootMatches.map(m => m[1]);
+      }
+      
+      const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
+      if (damageMatch) {
+        mechanics.damage = parseInt(damageMatch[1]);
+      }
+      
+      const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
+      if (healMatch) {
+        mechanics.heal = parseInt(healMatch[1]);
+      }
+      
+      return mechanics;
+    }
+
+    // Check if streaming is requested
+    const streamRequested = (req as any).__parsedBody?.stream === true;
+    
+    const aiRequestBody = {
+      model: 'google/gemini-2.5-flash',
+      messages,
+      temperature: 0.88,
+      max_tokens: 1500,
+      top_p: 0.92,
+      frequency_penalty: 0.3,
+      presence_penalty: 0.2,
+      stream: streamRequested,
+    };
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages,
-        temperature: 0.88, // Slightly higher temperature for more variety
-        max_tokens: 1500,  // Increased for richer responses
-        top_p: 0.92,       // Nucleus sampling for diversity
-        frequency_penalty: 0.3, // Penalize repetition
-        presence_penalty: 0.2,  // Encourage new topics
-      }),
+      body: JSON.stringify(aiRequestBody),
     });
 
     if (!response.ok) {
@@ -2983,6 +3038,74 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       throw new Error(`AI API error: ${response.status}`);
     }
 
+    // Handle streaming response
+    if (streamRequested && response.body) {
+      console.log('[generate-adventure] Streaming response initiated');
+      
+      const reader = response.body.getReader();
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      
+      let fullNarrative = '';
+      
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (!line.trim() || !line.startsWith('data: ')) continue;
+                
+                const jsonStr = line.slice(6).trim();
+                if (jsonStr === '[DONE]') {
+                  // Parse mechanics from full narrative and send final message
+                  const mechanics = parseNarrativeMechanics(fullNarrative);
+                  if (mechanics && Object.keys(mechanics).length > 0) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ mechanics })}\n\n`));
+                  }
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                  continue;
+                }
+                
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  const token = parsed.choices?.[0]?.delta?.content;
+                  if (token) {
+                    fullNarrative += token;
+                    // Forward the token to client
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      choices: [{ delta: { content: token } }]
+                    })}\n\n`));
+                  }
+                } catch {
+                  // Ignore parse errors for incomplete chunks
+                }
+              }
+            }
+            controller.close();
+          } catch (error) {
+            console.error('[generate-adventure] Stream error:', error);
+            controller.error(error);
+          }
+        }
+      });
+      
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    // Non-streaming response
     const data = await response.json();
     let narrative = data.choices?.[0]?.message?.content;
 
