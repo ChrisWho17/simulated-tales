@@ -117,12 +117,100 @@ const PERSONALITY_TRAITS: PersonalityTrait[] = [
 ];
 
 const COMBAT_ROLES = ['tank', 'damage', 'support', 'ranged'] as const;
-const ARMOR_LEVELS = [
+
+// Base armor levels (fallback for unrecognized genres)
+const BASE_ARMOR_LEVELS = [
   { id: 'none', label: 'No Armor', description: 'Unarmored, light clothing only' },
   { id: 'light', label: 'Light Armor', description: 'Leather, padded, or cloth protection' },
   { id: 'medium', label: 'Medium Armor', description: 'Chain mail, scale mail, or brigandine' },
   { id: 'heavy', label: 'Heavy Armor', description: 'Plate armor, full mail, heavy protection' },
 ] as const;
+
+// Genre-specific armor descriptions for portrait generation
+const GENRE_ARMOR_DESCRIPTIONS: Record<string, Record<string, string>> = {
+  fantasy: {
+    none: 'casual traveler clothes, simple tunic and breeches',
+    light: 'leather armor with bracers, ranger-style protection',
+    medium: 'chain mail over padded gambeson, adventurer armor',
+    heavy: 'full plate armor with metal helmet, heavy knight protection',
+  },
+  war: {
+    none: 'military fatigues, olive drab uniform without armor',
+    light: 'tactical vest over combat fatigues, light ballistic protection',
+    medium: 'full tactical body armor with combat webbing, military plate carrier',
+    heavy: 'heavy combat armor with bomb disposal suit styling, maximum ballistic protection',
+  },
+  modern: {
+    none: 'casual civilian clothes, jeans and shirt',
+    light: 'leather jacket, urban tactical style',
+    medium: 'tactical vest with knee pads, SWAT-style protection',
+    heavy: 'full riot gear with helmet and shield',
+  },
+  cyberpunk: {
+    none: 'neon-accented streetwear, synth-fabric casual clothes',
+    light: 'light synth-armor with LED accents, street runner gear',
+    medium: 'corporate security armor with tech implants visible',
+    heavy: 'full cyber-enhanced power armor, chrome-plated heavy protection',
+  },
+  scifi: {
+    none: 'spacer jumpsuit, utility wear without armor',
+    light: 'light enviro-suit with minimal plating',
+    medium: 'tactical space marine armor, reinforced suit',
+    heavy: 'power armor exosuit, heavy space marine gear',
+  },
+  western: {
+    none: 'cowboy attire with vest and bandana',
+    light: 'leather duster coat, frontier ranger style',
+    medium: 'reinforced leather with metal studs, outlaw armor',
+    heavy: 'steel-reinforced chest plate under duster, heavy frontier protection',
+  },
+  postapoc: {
+    none: 'scavenged rags and patched clothing',
+    light: 'leather scraps with improvised padding, wasteland survivor gear',
+    medium: 'scrap metal armor bolted together, road warrior style',
+    heavy: 'full salvaged power armor, heavy wasteland raider gear',
+  },
+  pirate: {
+    none: 'loose sailor shirt and breeches, bare-chested option',
+    light: 'leather vest over billowing shirt, cutlass at hip',
+    medium: 'reinforced leather coat with brass buttons, naval officer style',
+    heavy: 'conquistador-style breastplate and helmet, heavy naval armor',
+  },
+  horror: {
+    none: 'everyday civilian clothes, survivor attire',
+    light: 'motorcycle jacket with protective padding',
+    medium: 'improvised armor from sports equipment',
+    heavy: 'riot police gear, full protective suit',
+  },
+  noir: {
+    none: 'trench coat over suit, detective attire',
+    light: 'leather coat with concealed protection',
+    medium: 'bulletproof vest under dress shirt',
+    heavy: 'full police tactical gear, vintage style',
+  },
+  steampunk: {
+    none: 'Victorian gentleman/lady attire with goggles',
+    light: 'brass-reinforced leather corset/vest, clockwork accessories',
+    medium: 'steam-powered mechanical armor pieces, gear-enhanced protection',
+    heavy: 'full mechanical exosuit with brass plating and steam pipes',
+  },
+  mystery: {
+    none: 'casual investigator clothes, trench coat',
+    light: 'leather jacket, urban explorer style',
+    medium: 'tactical vest under jacket',
+    heavy: 'full protective tactical gear',
+  },
+};
+
+// Get genre-appropriate armor description for portrait generation
+function getGenreArmorDescription(genre: string, armorLevel: string): string {
+  const normalizedGenre = genre.toLowerCase().replace(/[_\s-]/g, '');
+  const genreDescriptions = GENRE_ARMOR_DESCRIPTIONS[normalizedGenre] || GENRE_ARMOR_DESCRIPTIONS.fantasy;
+  return genreDescriptions[armorLevel] || genreDescriptions.light;
+}
+
+// Kept for backwards compatibility with UI
+const ARMOR_LEVELS = BASE_ARMOR_LEVELS;
 
 const ORIGIN_STORIES = [
   { id: 'mentor', label: 'Sent by Mentor', description: 'A trusted mentor sent them to aid you' },
@@ -1159,7 +1247,8 @@ export function CheatModeSplash({
     setCompanionCreator(prev => ({ ...prev, isGeneratingPortrait: true }));
     
     try {
-      const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.description || '';
+      // Use genre-specific armor description instead of generic one
+      const armorDesc = getGenreArmorDescription(genre, companionCreator.armorLevel);
       
       // Build explicit body type description based on build
       const buildDescriptions: Record<string, string> = {
@@ -1199,7 +1288,8 @@ export function CheatModeSplash({
       const hairColor = companionCreator.hairColor.toLowerCase();
       const hairStyle = companionCreator.hairStyle.toLowerCase();
       
-      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} character. BODY TYPE: ${bodyDetails}. SKIN: ${companionCreator.skinTone.toLowerCase()} skin tone. HAIR: ${hairColor} colored ${hairStyle} hair (IMPORTANT: hair must be ${hairColor}). EYES: ${companionCreator.eyeColor.toLowerCase()} eyes. ATTIRE: wearing ${armorDesc.toLowerCase()}. EXPRESSION: ${companionCreator.traits.slice(0, 2).join(' and ')} personality visible. High quality digital art, game character portrait, full upper body visible showing build, soft lighting, detailed face and body proportions.`;
+      // Build genre-aware prompt with specific armor/attire description
+      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} character. BODY TYPE: ${bodyDetails}. SKIN: ${companionCreator.skinTone.toLowerCase()} skin tone. HAIR: ${hairColor} colored ${hairStyle} hair (IMPORTANT: hair must be ${hairColor}). EYES: ${companionCreator.eyeColor.toLowerCase()} eyes. ATTIRE: ${armorDesc}. EXPRESSION: ${companionCreator.traits.slice(0, 2).join(' and ')} personality visible. High quality digital art, game character portrait, full upper body visible showing build, soft lighting, detailed face and body proportions.`;
       
       console.log('[Portrait Gen] Prompt:', prompt);
       
@@ -1239,7 +1329,8 @@ export function CheatModeSplash({
   // Build story introduction for companion entry
   const buildCompanionIntroduction = (): string => {
     const origin = ORIGIN_STORIES.find(o => o.id === companionCreator.originStory);
-    const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.label || 'Light Armor';
+    // Use genre-specific armor description for the introduction narrative
+    const armorDesc = getGenreArmorDescription(genre, companionCreator.armorLevel);
     const name = companionCreator.name.trim();
     
     const introTemplates: Record<string, string[]> = {
@@ -2226,9 +2317,9 @@ export function CheatModeSplash({
               <span className="text-muted-foreground">Role:</span>
               <span className="ml-1 capitalize">{companionCreator.combatRole}</span>
             </div>
-            <div className="p-2 bg-muted/20 rounded">
+            <div className="p-2 bg-muted/20 rounded col-span-2">
               <span className="text-muted-foreground">Armor:</span>
-              <span className="ml-1 capitalize">{companionCreator.armorLevel}</span>
+              <span className="ml-1 capitalize text-xs">{getGenreArmorDescription(genre, companionCreator.armorLevel).slice(0, 40)}{getGenreArmorDescription(genre, companionCreator.armorLevel).length > 40 ? '...' : ''}</span>
             </div>
             {/* Female body shape */}
             {companionCreator.gender === 'female' && companionCreator.bustSize && (
@@ -2358,37 +2449,42 @@ export function CheatModeSplash({
         {/* Armor Tab */}
         <TabsContent value="appearance" className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label>Armor Level</Label>
+            <Label>Armor Level ({genre || 'fantasy'})</Label>
             <div className="grid grid-cols-1 gap-2">
-              {ARMOR_LEVELS.map(armor => (
-                <button
-                  key={armor.id}
-                  onClick={() => setCompanionCreator(prev => ({ ...prev, armorLevel: armor.id }))}
-                  className={`p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${
-                    companionCreator.armorLevel === armor.id
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border/50 hover:border-border'
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg ${
-                    armor.id === 'none' ? 'bg-blue-500/20' :
-                    armor.id === 'light' ? 'bg-green-500/20' :
-                    armor.id === 'medium' ? 'bg-amber-500/20' :
-                    'bg-red-500/20'
-                  }`}>
-                    <Shield className={`w-4 h-4 ${
-                      armor.id === 'none' ? 'text-blue-400' :
-                      armor.id === 'light' ? 'text-green-400' :
-                      armor.id === 'medium' ? 'text-amber-400' :
-                      'text-red-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">{armor.label}</div>
-                    <div className="text-xs text-muted-foreground">{armor.description}</div>
-                  </div>
-                </button>
-              ))}
+              {ARMOR_LEVELS.map(armor => {
+                // Get genre-specific description for this armor level
+                const genreArmorDesc = getGenreArmorDescription(genre, armor.id);
+                
+                return (
+                  <button
+                    key={armor.id}
+                    onClick={() => setCompanionCreator(prev => ({ ...prev, armorLevel: armor.id }))}
+                    className={`p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${
+                      companionCreator.armorLevel === armor.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border/50 hover:border-border'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      armor.id === 'none' ? 'bg-blue-500/20' :
+                      armor.id === 'light' ? 'bg-green-500/20' :
+                      armor.id === 'medium' ? 'bg-amber-500/20' :
+                      'bg-red-500/20'
+                    }`}>
+                      <Shield className={`w-4 h-4 ${
+                        armor.id === 'none' ? 'text-blue-400' :
+                        armor.id === 'light' ? 'text-green-400' :
+                        armor.id === 'medium' ? 'text-amber-400' :
+                        'text-red-400'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{armor.label}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{genreArmorDesc}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
           
