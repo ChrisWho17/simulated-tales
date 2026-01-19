@@ -129,6 +129,21 @@ export interface CampaignData {
   // Time progression state
   timeState?: GameTimeState;
   
+  // Companion state - custom companions and their data
+  companionState?: {
+    companions: unknown[];
+    activeIds: string[];
+  };
+  
+  // Companion appearances - visual data for portrait generation
+  companionAppearances?: Record<string, unknown>;
+  
+  // Companion introductions - story intro text for companions
+  companionIntroductions?: Record<string, string>;
+  
+  // Pending companion introductions - companions waiting to be introduced
+  pendingCompanionIntroductions?: unknown[];
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;

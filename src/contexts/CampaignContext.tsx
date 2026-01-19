@@ -32,6 +32,8 @@ import { getNPCRegistry, setNPCRegistry, NPCIdentityRegistry, clearNPCRegistry }
 import { clearPersonalityAssignments, exportPersonalityMap, importPersonalityMap } from '@/game/npcPersonalityDialogue';
 import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
 import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
+import { companionSystem } from '@/game/companionSystem';
+import { checkAndCleanupStorage } from '@/lib/storageCleanup';
 
 // ============================================================================
 // EXTENDED CONTEXT TYPE
@@ -210,7 +212,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     };
   }, []);
   
-  // Setup NPC registry when loading a campaign
+  // Setup NPC registry and companion state when loading a campaign
   const setupCampaignForLoad = useCallback((campaign: CampaignData) => {
     // Clear NPC registry before loading
     const emptyRegistry: NPCIdentityRegistry = {
@@ -242,12 +244,60 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     if (campaign.npcPersonalityMap) {
       importPersonalityMap(campaign.npcPersonalityMap as any);
     }
+    
+    // CRITICAL: Restore companion state from campaign
+    if (campaign.companionState) {
+      console.log('[Campaign] Restoring companion state with', 
+        (campaign.companionState.companions as unknown[])?.length || 0, 'companions');
+      companionSystem.deserialize(campaign.companionState as { companions: any[]; activeIds: string[] });
+    }
+    
+    // Restore companion localStorage data from campaign
+    try {
+      if (campaign.companionAppearances && Object.keys(campaign.companionAppearances).length > 0) {
+        localStorage.setItem('companion-appearances', JSON.stringify(campaign.companionAppearances));
+        console.log('[Campaign] Restored companion appearances');
+      }
+      
+      if (campaign.companionIntroductions && Object.keys(campaign.companionIntroductions).length > 0) {
+        localStorage.setItem('companion-introductions', JSON.stringify(campaign.companionIntroductions));
+        console.log('[Campaign] Restored companion introductions');
+      }
+      
+      if (campaign.pendingCompanionIntroductions && campaign.pendingCompanionIntroductions.length > 0) {
+        localStorage.setItem('pending-companion-introductions', JSON.stringify(campaign.pendingCompanionIntroductions));
+        console.log('[Campaign] Restored pending companion introductions');
+      }
+    } catch (e) {
+      console.warn('[Campaign] Failed to restore companion localStorage data:', e);
+    }
   }, []);
   
-  // Prepare campaign for save (capture NPC state)
+  // Prepare campaign for save (capture NPC state + companion state)
   const prepareCampaignForSave = useCallback((campaign: CampaignData): CampaignData => {
     const npcRegistry = getNPCRegistry();
     const personalityMap = exportPersonalityMap();
+    
+    // Capture companion state from the singleton
+    const companionState = companionSystem.serialize();
+    
+    // Capture companion appearances from localStorage (will be embedded in campaign)
+    let companionAppearances: Record<string, unknown> = {};
+    let companionIntroductions: Record<string, string> = {};
+    let pendingCompanionIntroductions: unknown[] = [];
+    
+    try {
+      const appearances = localStorage.getItem('companion-appearances');
+      if (appearances) companionAppearances = JSON.parse(appearances);
+      
+      const introductions = localStorage.getItem('companion-introductions');
+      if (introductions) companionIntroductions = JSON.parse(introductions);
+      
+      const pending = localStorage.getItem('pending-companion-introductions');
+      if (pending) pendingCompanionIntroductions = JSON.parse(pending);
+    } catch (e) {
+      console.warn('[Campaign] Failed to capture companion localStorage data:', e);
+    }
     
     return {
       ...campaign,
@@ -258,6 +308,10 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
         lockedIds: npcRegistry.lockedIds,
       },
       npcPersonalityMap: personalityMap,
+      companionState: companionState,
+      companionAppearances,
+      companionIntroductions,
+      pendingCompanionIntroductions,
     };
   }, []);
   
@@ -287,9 +341,12 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Save function ref
   const saveNowRef = useRef<() => Promise<void>>(async () => {});
   
-  // Save now - using integrity-validated save
+  // Save now - using integrity-validated save with storage cleanup
   const saveNow = useCallback(async () => {
     if (!activeCampaign) return;
+    
+    // CRITICAL: Check and cleanup storage BEFORE saving to prevent quota errors
+    checkAndCleanupStorage();
     
     const updatedCampaign = prepareCampaignForSave({
       ...activeCampaign,

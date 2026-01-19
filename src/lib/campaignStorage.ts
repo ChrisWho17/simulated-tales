@@ -31,6 +31,7 @@ import {
 } from '@/game/npcPersonalityDialogue';
 import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
 import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
+import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
 
 // ============================================================================
 // INDEX OPERATIONS
@@ -140,6 +141,26 @@ export function loadCampaign(campaignId: string): CampaignData | null {
       importPersonalityMap(result.campaign.npcPersonalityMap as any);
     }
     
+    // CRITICAL: Restore companion localStorage data from campaign save
+    try {
+      if (result.campaign.companionAppearances && Object.keys(result.campaign.companionAppearances).length > 0) {
+        localStorage.setItem('companion-appearances', JSON.stringify(result.campaign.companionAppearances));
+        console.log(`[Campaign Storage] Restored ${Object.keys(result.campaign.companionAppearances).length} companion appearances`);
+      }
+      
+      if (result.campaign.companionIntroductions && Object.keys(result.campaign.companionIntroductions).length > 0) {
+        localStorage.setItem('companion-introductions', JSON.stringify(result.campaign.companionIntroductions));
+        console.log(`[Campaign Storage] Restored companion introductions`);
+      }
+      
+      if (result.campaign.pendingCompanionIntroductions && result.campaign.pendingCompanionIntroductions.length > 0) {
+        localStorage.setItem('pending-companion-introductions', JSON.stringify(result.campaign.pendingCompanionIntroductions));
+        console.log(`[Campaign Storage] Restored ${result.campaign.pendingCompanionIntroductions.length} pending companion introductions`);
+      }
+    } catch (e) {
+      console.warn('[Campaign Storage] Failed to restore companion localStorage data:', e);
+    }
+    
     return result.campaign;
   } catch (e) {
     console.error(`[Campaign Storage] Failed to load campaign ${campaignId}:`, e);
@@ -149,9 +170,30 @@ export function loadCampaign(campaignId: string): CampaignData | null {
 
 export function saveCampaign(campaign: CampaignData, autoSyncToCloud: boolean = true): void {
   try {
+    // CRITICAL: Check and cleanup storage before saving to prevent quota errors
+    checkAndCleanupStorage();
+    
     // Capture current NPC registry state for this campaign
     const npcRegistry = getNPCRegistry();
     const personalityMap = exportPersonalityMap();
+    
+    // Capture companion data from localStorage if present
+    let companionAppearances: Record<string, unknown> = {};
+    let companionIntroductions: Record<string, string> = {};
+    let pendingCompanionIntroductions: unknown[] = [];
+    
+    try {
+      const appearances = localStorage.getItem('companion-appearances');
+      if (appearances) companionAppearances = JSON.parse(appearances);
+      
+      const introductions = localStorage.getItem('companion-introductions');
+      if (introductions) companionIntroductions = JSON.parse(introductions);
+      
+      const pending = localStorage.getItem('pending-companion-introductions');
+      if (pending) pendingCompanionIntroductions = JSON.parse(pending);
+    } catch (e) {
+      console.warn('[Campaign Storage] Failed to capture companion localStorage data:', e);
+    }
     
     const campaignWithNPCs: CampaignData = {
       ...campaign,
@@ -162,10 +204,32 @@ export function saveCampaign(campaign: CampaignData, autoSyncToCloud: boolean = 
         lockedIds: npcRegistry.lockedIds,
       },
       npcPersonalityMap: personalityMap,
+      // Preserve existing companion state if already present, or add localStorage data
+      companionAppearances: campaign.companionAppearances || companionAppearances,
+      companionIntroductions: campaign.companionIntroductions || companionIntroductions,
+      pendingCompanionIntroductions: campaign.pendingCompanionIntroductions || pendingCompanionIntroductions,
     };
     
     const key = `${CAMPAIGN_STORAGE_PREFIX}${campaign.id}`;
-    localStorage.setItem(key, JSON.stringify(campaignWithNPCs));
+    
+    try {
+      localStorage.setItem(key, JSON.stringify(campaignWithNPCs));
+    } catch (e: any) {
+      // Handle quota exceeded with aggressive cleanup and retry
+      if (e.name === 'QuotaExceededError') {
+        console.warn('[Campaign Storage] Quota exceeded, performing aggressive cleanup...');
+        performCleanup(0.4); // Very aggressive cleanup
+        
+        try {
+          localStorage.setItem(key, JSON.stringify(campaignWithNPCs));
+        } catch (retryError) {
+          console.error('[Campaign Storage] Still cannot save after cleanup:', retryError);
+          throw retryError;
+        }
+      } else {
+        throw e;
+      }
+    }
     
     // Update index
     const index = loadCampaignIndex();
@@ -553,7 +617,22 @@ export function saveInventoryForCampaign(campaignId: string, inventoryState: unk
     localStorage.setItem(key, JSON.stringify(inventoryState));
     console.log(`[Campaign Storage] Saved inventory for campaign: ${campaignId}`);
     return true;
-  } catch (e) {
+  } catch (e: any) {
+    // Handle quota exceeded by cleaning up and retrying
+    if (e.name === 'QuotaExceededError') {
+      console.warn('[Campaign Storage] Quota exceeded for inventory, attempting cleanup...');
+      performCleanup(0.3); // Aggressive cleanup
+      
+      try {
+        const key = `${INVENTORY_STORAGE_PREFIX}${campaignId}`;
+        localStorage.setItem(key, JSON.stringify(inventoryState));
+        console.log(`[Campaign Storage] Saved inventory after cleanup for campaign: ${campaignId}`);
+        return true;
+      } catch (retryError) {
+        console.error('[Campaign Storage] Still failed after cleanup:', retryError);
+        return false;
+      }
+    }
     console.error('[Campaign Storage] Failed to save inventory:', e);
     return false;
   }
