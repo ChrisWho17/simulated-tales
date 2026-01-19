@@ -32,6 +32,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -239,28 +247,74 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
   );
 }
 
-// Import Save Button component - allows importing a campaign from a JSON file
+// Import preview data type
+interface ImportPreview {
+  json: string;
+  name: string;
+  characterName: string;
+  characterLevel: number;
+  genre: string;
+  playTime: number;
+  chapterCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Import Save Button component - allows importing a campaign from a JSON file with preview
 function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void }) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const campaignContext = useCampaignOptional();
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   
   const handleImportClick = () => {
     importInputRef.current?.click();
   };
   
-  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Parse file and show preview
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       const json = event.target?.result as string;
-      
+      try {
+        const data = JSON.parse(json);
+        if (data.id && data.meta) {
+          setPreview({
+            json,
+            name: data.meta.name || 'Unnamed Campaign',
+            characterName: data.meta.characterName || 'Unknown',
+            characterLevel: data.meta.characterLevel || 1,
+            genre: data.meta.primaryGenre || 'unknown',
+            playTime: data.meta.playTime || 0,
+            chapterCount: data.meta.chapterCount || 0,
+            createdAt: data.meta.createdAt || Date.now(),
+            updatedAt: data.meta.updatedAt || Date.now(),
+          });
+        } else {
+          toast.error('Invalid campaign file format');
+        }
+      } catch (err) {
+        toast.error('Failed to parse campaign file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, []);
+  
+  // Confirm and import
+  const handleConfirmImport = useCallback(async () => {
+    if (!preview) return;
+    setIsImporting(true);
+    
+    try {
       if (campaignContext?.importCampaign) {
-        const result = await campaignContext.importCampaign(json);
+        const result = await campaignContext.importCampaign(preview.json);
         if (result) {
           toast.success(`Imported "${result.meta.name}"`);
-          // Load the imported campaign
+          setPreview(null);
           if (onLoad) {
             onLoad(result.id);
           } else {
@@ -271,45 +325,38 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
         }
       } else {
         // Fallback: parse and store directly
-        try {
-          const data = JSON.parse(json);
-          if (data.id && data.meta) {
-            // Store in localStorage
-            localStorage.setItem(`campaign_${data.id}`, json);
-            // Update index
-            const indexStr = localStorage.getItem('campaign_index') || '[]';
-            const index = JSON.parse(indexStr);
-            const existingIdx = index.findIndex((m: any) => m.id === data.id);
-            if (existingIdx >= 0) {
-              index[existingIdx] = data.meta;
-            } else {
-              index.push({ ...data.meta, id: data.id });
-            }
-            localStorage.setItem('campaign_index', JSON.stringify(index));
-            toast.success(`Imported "${data.meta.name}"`);
-            if (onLoad) {
-              onLoad(data.id);
-            } else {
-              window.location.reload();
-            }
-          } else {
-            toast.error('Invalid campaign file format');
-          }
-        } catch (err) {
-          toast.error('Failed to parse campaign file');
+        const data = JSON.parse(preview.json);
+        localStorage.setItem(`campaign_${data.id}`, preview.json);
+        const indexStr = localStorage.getItem('campaign_index') || '[]';
+        const index = JSON.parse(indexStr);
+        const existingIdx = index.findIndex((m: any) => m.id === data.id);
+        if (existingIdx >= 0) {
+          index[existingIdx] = data.meta;
+        } else {
+          index.push({ ...data.meta, id: data.id });
+        }
+        localStorage.setItem('campaign_index', JSON.stringify(index));
+        toast.success(`Imported "${data.meta.name}"`);
+        setPreview(null);
+        if (onLoad) {
+          onLoad(data.id);
+        } else {
+          window.location.reload();
         }
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  }, [campaignContext, onLoad]);
+    } catch (err) {
+      toast.error('Failed to import campaign');
+    } finally {
+      setIsImporting(false);
+    }
+  }, [preview, campaignContext, onLoad]);
   
   return (
     <>
       <input
         type="file"
         ref={importInputRef}
-        onChange={handleImportFile}
+        onChange={handleFileSelect}
         accept=".json"
         className="hidden"
       />
@@ -331,6 +378,82 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      
+      {/* Import Preview Dialog */}
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="sm:max-w-md animate-scale-in">
+          <DialogHeader className="animate-fade-in">
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Upload className="h-5 w-5" />
+              Import Campaign
+            </DialogTitle>
+            <DialogDescription>
+              Review the campaign details before importing.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {preview && (
+            <div className="space-y-4 py-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              {/* Campaign Name */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <span className="text-2xl">{GENRE_ICONS[preview.genre as GameGenre] || '📖'}</span>
+                <div>
+                  <div className="font-semibold text-foreground">{preview.name}</div>
+                  <div className="text-sm text-muted-foreground capitalize">{preview.genre.replace('_', ' ')} Adventure</div>
+                </div>
+              </div>
+              
+              {/* Character Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground mb-1">Character</div>
+                  <div className="font-medium text-foreground">{preview.characterName}</div>
+                  <div className="text-sm text-primary">Level {preview.characterLevel}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground mb-1">Progress</div>
+                  <div className="font-medium text-foreground">{preview.chapterCount} Chapters</div>
+                  <div className="text-sm text-muted-foreground">{formatPlayTime(preview.playTime)}</div>
+                </div>
+              </div>
+              
+              {/* Timestamps */}
+              <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/30">
+                <div>Created: {new Date(preview.createdAt).toLocaleDateString()}</div>
+                <div>Last played: {formatLastPlayed(preview.updatedAt)}</div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <Button
+              variant="outline"
+              onClick={() => setPreview(null)}
+              disabled={isImporting}
+              className="transition-all duration-200 hover:scale-105"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmImport}
+              disabled={isImporting}
+              className="bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import & Play
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
