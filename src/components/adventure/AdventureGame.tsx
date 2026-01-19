@@ -32,14 +32,12 @@ import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campa
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { 
   WeatherState, 
-  createInitialWeatherState, 
   getWeatherNarrativeContext,
   formatWeatherEffectsForAI,
   WEATHER_CONFIGS,
 } from '@/game/weatherSystem';
 import {
   GameTimeState,
-  createInitialTimeState,
   getTimeOfDay as getGameTimeOfDay,
   buildTimeContext,
   formatTimeContextForAI,
@@ -337,21 +335,15 @@ export function AdventureGame() {
   const [character, setCharacter] = useState<RPGCharacter | null>(null);
   const [story, setStory] = useState<StoryEntry[]>([]);
   
-  // Weather state - synced from AdventureDisplay for AI context
-  // Initialize from campaign if available, otherwise create fresh
-  const [weatherState, setWeatherState] = useState<WeatherState>(() => {
-    if (campaignContext?.activeCampaign?.weatherState) {
-      return campaignContext.activeCampaign.weatherState;
-    }
-    return createInitialWeatherState();
+  // === USE HOOKS FOR EXTRACTED LOGIC ===
+  // Weather and time system (replaces ~40 lines of inline sync logic)
+  const { weatherState, setWeatherState, timeState, setTimeState } = useWeatherTimeSystem({
+    isPlaying: phase === 'playing',
   });
   
-  // Time state - synced from AdventureDisplay for AI context and campaign persistence
-  const [timeState, setTimeState] = useState<GameTimeState>(() => {
-    if (campaignContext?.activeCampaign?.timeState) {
-      return campaignContext.activeCampaign.timeState;
-    }
-    return createInitialTimeState();
+  // Director settings (replaces ~20 lines of inline sync logic)
+  const { directorSettings, setDirectorSettings } = useDirectorSettings({
+    isPlaying: phase === 'playing',
   });
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
@@ -365,10 +357,6 @@ export function AdventureGame() {
   const [lockedOpening, setLockedOpening] = useState<string | null>(null);
   // Count player actions to know when to lock world
   const playerActionCount = useRef<number>(0);
-  
-  // === DIRECTOR/NARRATOR SETTINGS ===
-  // Stores the chosen director settings for this campaign
-  const [directorSettings, setDirectorSettings] = useState<DirectorSettings>(DEFAULT_DIRECTOR_SETTINGS);
   // Pending character awaiting narrator settings confirmation
   const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
   
@@ -601,203 +589,48 @@ export function AdventureGame() {
     console.log('[AdventureGame] Campaign switched, now playing:', campaign.meta.name);
   }, [campaignContext?.activeCampaign?.id, restoreWorldBible]);
 
-  // Sync local state when campaign data changes (e.g., after checkpoint restore)
-  // CRITICAL: Only sync when tick DECREASES (rollback) or on initial load, not on every narrative entry
-  const lastSyncedTick = useRef<number>(-1);
-  const lastSyncedCampaignId = useRef<string | null>(null);
-  useEffect(() => {
-    if (phase !== 'playing' || !campaignContext?.activeCampaign) return;
-    
-    const campaign = campaignContext.activeCampaign;
-    const currentTick = campaign.currentTick;
-    
-    // Reset sync state when campaign ID changes
-    if (lastSyncedCampaignId.current !== campaign.id) {
-      lastSyncedCampaignId.current = campaign.id;
-      lastSyncedTick.current = currentTick;
-      console.log('[Campaign Sync] New campaign detected, initialized sync state');
-      return;
-    }
-    
-    // Initial load case - sync everything
-    if (lastSyncedTick.current === -1) {
-      lastSyncedTick.current = currentTick;
-      setStory(campaign.narrativeHistory);
-      setCharacter(campaign.player);
-      console.log('[Campaign Sync] Initial sync from campaign');
-      return;
-    }
-    
-    // Only sync if tick DECREASED (indicates checkpoint restore/rollback)
-    // Don't sync when tick increases - that's normal narrative progression
-    if (currentTick < lastSyncedTick.current) {
-      console.log('[Campaign Sync] Checkpoint restore detected, syncing from campaign');
-      lastSyncedTick.current = currentTick;
-      setStory(campaign.narrativeHistory);
-      setCharacter(campaign.player);
-    } else {
-      // Just update the reference tick, don't overwrite local state
-      lastSyncedTick.current = currentTick;
-    }
-  }, [phase, campaignContext?.activeCampaign?.currentTick]);
-
-  // CRITICAL: Sync local story state to campaign before auto-save triggers
-  // This ensures narrator responses are properly persisted
-  const lastSyncedStoryLength = useRef<number>(0);
-  useEffect(() => {
-    if (phase !== 'playing' || !campaignContext?.syncNarrativeHistory) return;
-    
-    // Only sync if story has changed since last sync
-    if (story.length !== lastSyncedStoryLength.current && story.length > 0) {
-      lastSyncedStoryLength.current = story.length;
-      campaignContext.syncNarrativeHistory(story);
-      console.log(`[Story Sync] Synced ${story.length} entries to campaign`);
-    }
-  }, [phase, story, campaignContext]);
-
-  // CRITICAL: Sync local character state to campaign when character changes
-  // This ensures health, gold, XP, inventory are persisted
-  const lastSyncedCharacterRef = useRef<string>('');
-  useEffect(() => {
-    if (phase !== 'playing' || !character || !campaignContext?.updatePlayer) return;
-    
-    // Create a hash of character state to detect actual changes
-    const characterHash = JSON.stringify({
-      currentHealth: character.currentHealth,
-      maxHealth: character.maxHealth,
-      gold: character.gold,
-      experience: character.experience,
-      level: character.level,
-      // Include full inventory content to detect item additions/removals
-      inventory: character.inventory.map(i => ({ name: i.name, quantity: i.quantity })),
-      stats: character.stats,
-    });
-    
-    // Only sync if character data has actually changed
-    if (characterHash !== lastSyncedCharacterRef.current) {
-      lastSyncedCharacterRef.current = characterHash;
-      campaignContext.updatePlayer(character);
-      console.log(`[Character Sync] Synced character to campaign - HP: ${character.currentHealth}/${character.maxHealth}, Gold: ${character.gold}, XP: ${character.experience}`);
-    }
-  }, [phase, character, campaignContext]);
+  // === CAMPAIGN SYNC HOOK ===
+  // Handles bidirectional sync between local state and campaign (replaces ~90 lines of inline sync logic)
+  useCampaignSync({
+    isPlaying: phase === 'playing',
+    story,
+    character,
+    setStory,
+    setCharacter,
+  });
   
-  // CRITICAL: Sync weather state to campaign when weather changes
-  // This ensures weather is persisted across save/load
-  const lastSyncedWeatherRef = useRef<string>('');
-  useEffect(() => {
-    if (phase !== 'playing' || !campaignContext?.updateCampaign) return;
-    
-    // Create a hash of weather state to detect actual changes
-    const weatherHash = JSON.stringify({
-      current: weatherState.current,
-      ticksRemaining: weatherState.ticksRemaining,
-      intensity: weatherState.intensity,
-    });
-    
-    // Only sync if weather data has actually changed
-    if (weatherHash !== lastSyncedWeatherRef.current) {
-      lastSyncedWeatherRef.current = weatherHash;
-      campaignContext.updateCampaign({ weatherState });
-      console.log(`[Weather Sync] Synced weather to campaign - ${weatherState.current} (${weatherState.ticksRemaining} ticks remaining)`);
-    }
-  }, [phase, weatherState, campaignContext]);
-  
-  // CRITICAL: Sync time state to campaign when time changes
-  // This ensures game time is persisted across save/load
-  const lastSyncedTimeRef = useRef<string>('');
-  useEffect(() => {
-    if (phase !== 'playing' || !campaignContext?.updateCampaign) return;
-    
-    // Create a hash of time state to detect actual changes
-    const timeHash = JSON.stringify({
-      totalMinutes: timeState.totalMinutes,
-      multiplier: timeState.multiplier,
-    });
-    
-    // Only sync if time data has actually changed
-    if (timeHash !== lastSyncedTimeRef.current) {
-      lastSyncedTimeRef.current = timeHash;
-      campaignContext.updateCampaign({ timeState });
-      console.log(`[Time Sync] Synced time to campaign - Day ${timeState.day}, ${timeState.hour}:${timeState.minute.toString().padStart(2, '0')}`);
-    }
-  }, [phase, timeState, campaignContext]);
-  
-  // CRITICAL: Sync director settings FROM campaign when campaign changes
-  // This ensures in-game settings panel changes are reflected in local state
-  useEffect(() => {
-    if (phase !== 'playing' || !campaignContext?.activeCampaign?.settings?.directorSettings) return;
-    
-    const campaignSettings = campaignContext.activeCampaign.settings.directorSettings;
-    // Only update if settings actually differ (compare stringified to avoid reference issues)
-    const campaignHash = JSON.stringify(campaignSettings);
-    const localHash = JSON.stringify(directorSettings);
-    
-    if (campaignHash !== localHash) {
-      setDirectorSettings(campaignSettings);
-      console.log(`[Director Sync] Synced director settings from campaign: ${campaignSettings.directorType}`);
-    }
-  }, [phase, campaignContext?.activeCampaign?.settings?.directorSettings]);
-
-  // === PLAYER STATE MANAGER SYNC ===
-  // Initialize playerStateManager with character and sync changes back to React state
-  useEffect(() => {
-    if (!character || phase !== 'playing') return;
-    
-    // Initialize playerStateManager with current character data
-    playerStateManager.syncFromCharacter(character);
-    console.log('[PlayerStateManager] Initialized with character:', character.name);
-    
-    // Subscribe to HP changes
-    const unsubHp = playerStateManager.subscribe('hp', (data: any) => {
-      console.log('[PlayerStateManager] HP change event:', data);
-      setCharacter(prev => {
-        if (!prev) return prev;
-        const newHealth = data.newValue ?? prev.currentHealth;
-        const maxHealth = data.maxHP ?? prev.maxHealth;
-        if (newHealth === prev.currentHealth && maxHealth === prev.maxHealth) return prev;
-        return { ...prev, currentHealth: newHealth, maxHealth };
-      });
-    });
-    
-    // Subscribe to XP changes
-    const unsubXp = playerStateManager.subscribe('xp', (data: any) => {
-      console.log('[PlayerStateManager] XP change event:', data);
-      setCharacter(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          experience: data.newXP ?? prev.experience,
-          level: data.newLevel ?? prev.level,
-        };
-      });
-    });
-    
-    // Subscribe to currency changes  
-    const unsubCurrency = playerStateManager.subscribe('currency', (data: any) => {
-      console.log('[PlayerStateManager] Currency change event:', data);
-      setCharacter(prev => {
-        if (!prev) return prev;
-        const newGold = data.newValue ?? prev.gold;
-        if (newGold === prev.gold) return prev;
-        return { ...prev, gold: newGold };
-      });
-    });
-    
-    return () => {
-      unsubHp();
-      unsubXp();
-      unsubCurrency();
-    };
-  }, [character?.name, phase]); // Only re-subscribe when character name changes (new character)
+  // === PLAYER STATE SYNC HOOK ===
+  // Handles HP, XP, currency sync with playerStateManager (replaces ~50 lines of inline sync logic)
+  usePlayerStateSync({
+    character,
+    isPlaying: phase === 'playing',
+    setCharacter,
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [cheatMode, setCheatMode] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
-  const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
-  const lastIllustrationTick = useRef<number>(0);
-  const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
-  const [isGeneratingScene, setIsGeneratingScene] = useState(false);
   const [characterVisualProfile, setCharacterVisualProfile] = useState<CharacterVisualProfile | null>(null);
+  
+  // === SCENE ILLUSTRATION HOOK ===
+  // Handles scene image generation (replaces ~70 lines of inline logic)
+  const {
+    sceneImageUrl,
+    isGeneratingScene,
+    generateSceneIllustration,
+    checkSceneTriggers,
+    closeSceneImage,
+    generatingImageFor,
+    setGeneratingImageFor,
+  } = useSceneIllustration({
+    genre: scenarioSelection?.genre || 'fantasy',
+    characterVisualProfile,
+    story,
+    weatherState,
+    timeState,
+    worldBible,
+    sceneIllustrationsEnabled: settings.sceneIllustrations,
+  });
   
   // Streaming narrative hook for word-by-word AI response
   const streamingNarrative = useStreamingNarrative();
@@ -999,79 +832,7 @@ export function AdventureGame() {
     }
   }, [campaignContext]);
 
-  // Generate scene illustration based on triggers
-  const generateSceneIllustration = useCallback(async (
-    description: string,
-    trigger: SceneTrigger
-  ) => {
-    if (isGeneratingScene) return;
-    
-    setIsGeneratingScene(true);
-    try {
-      // Get recent story entries for context (last 10 for better understanding)
-      const recentStory = story.slice(-10);
-      const lastNarratorMessage = recentStory.filter(e => e.role === 'narrator').slice(-1)[0]?.content || description;
-      const lastPlayerAction = recentStory.filter(e => e.role === 'user').slice(-1)[0]?.content || '';
-      const messageHistory = recentStory.slice(0, -2).map(e => ({
-        role: e.role as 'narrator' | 'user' | 'system',
-        content: e.content,
-      }));
-      
-      // Derive time-of-day string from hour
-      const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lastNarratorMessage: lastNarratorMessage.slice(0, 800),
-            lastUserAction: lastPlayerAction,
-            messageHistory,
-            characterProfile: characterVisualProfile,
-            genre: scenarioSelection?.genre || 'fantasy',
-            era: worldBible?.warEra || worldBible?.techTier || undefined,
-            currentLocation: trigger.location || undefined,
-            timeOfDay: timeOfDayPeriod,
-            weather: weatherState?.current || undefined,
-          }),
-        }
-      );
-      const data = await response.json();
-      if (data.imageUrl) {
-        setSceneImageUrl(data.imageUrl);
-        lastIllustrationTick.current = Date.now();
-      }
-    } catch (error) {
-      console.error('Failed to generate scene illustration:', error);
-    } finally {
-      setIsGeneratingScene(false);
-    }
-  }, [isGeneratingScene, scenarioSelection, characterVisualProfile, story]);
-
-  // Check for scene illustration triggers
-  const checkSceneTriggers = useCallback((eventType: string, content: string) => {
-    // Respect the scene illustrations setting
-    if (!settings.sceneIllustrations) return;
-    
-    // Use imported SceneTrigger check - scene illustration logic handled inline
-    // This is a simplified trigger check since useSceneIllustration hook handles full logic
-    if (settings.sceneIllustrations && content.length > 100) {
-      // Check if enough time has passed (5 minutes minimum)
-      const now = Date.now();
-      if (now - lastIllustrationTick.current > 5 * 60 * 1000) {
-        const trigger: SceneTrigger = {
-          type: 'dramatic_moment',
-          description: content.slice(0, 200),
-          priority: 1,
-          entities: [],
-          location: scenarioSelection?.scenario || 'unknown',
-        };
-        generateSceneIllustration(content, trigger);
-      }
-    }
-  }, [generateSceneIllustration, settings.sceneIllustrations]);
+  // Scene illustration is now handled by useSceneIllustration hook
 
   // === RETRY WITH REDUCED CONTEXT HELPER ===
   // Retry levels: 0 = full context, 1 = reduced, 2 = minimal, 3 = basic only
@@ -3098,7 +2859,7 @@ export function AdventureGame() {
         generatingImageFor={generatingImageFor}
         sceneImageUrl={sceneImageUrl}
         isGeneratingScene={isGeneratingScene}
-        onCloseSceneImage={() => setSceneImageUrl(null)}
+        onCloseSceneImage={closeSceneImage}
         genre={scenarioSelection?.genre || 'fantasy'}
         currentMood={currentMood}
         moodHistory={moodHistory}
