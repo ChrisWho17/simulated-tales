@@ -27,24 +27,78 @@ export interface StateValidation {
 // ============= GENERATION LOCK =============
 
 let isGenerating = false;
+let lockAcquiredAt = 0;
+let currentLockId: string | null = null;
 const generationQueue: Array<{
   resolve: (value: boolean) => void;
   id: string;
 }> = [];
 
+// Auto-release timeout: 90 seconds max for any generation
+const LOCK_TIMEOUT_MS = 90000;
+
+/**
+ * Check and auto-release stale locks
+ */
+function checkStaleLock(): void {
+  if (isGenerating && lockAcquiredAt > 0) {
+    const elapsed = Date.now() - lockAcquiredAt;
+    if (elapsed > LOCK_TIMEOUT_MS) {
+      console.warn(`[NarrativeGuard] Auto-releasing stale lock after ${elapsed}ms (was: ${currentLockId})`);
+      forceReleaseLock();
+    }
+  }
+}
+
+/**
+ * Force release the lock (for timeout/error recovery)
+ */
+export function forceReleaseLock(): void {
+  console.log(`[NarrativeGuard] Force releasing lock (was: ${currentLockId})`);
+  currentLockId = null;
+  lockAcquiredAt = 0;
+  
+  if (generationQueue.length > 0) {
+    const next = generationQueue.shift()!;
+    console.log(`[NarrativeGuard] Processing queued request after force release: ${next.id}`);
+    isGenerating = true;
+    currentLockId = next.id;
+    lockAcquiredAt = Date.now();
+    next.resolve(true);
+  } else {
+    isGenerating = false;
+  }
+}
+
 /**
  * Acquire generation lock - prevents concurrent generation
  */
 export function acquireGenerationLock(requestId: string): Promise<boolean> {
+  // Check for stale lock before acquiring
+  checkStaleLock();
+  
   if (!isGenerating) {
     isGenerating = true;
+    currentLockId = requestId;
+    lockAcquiredAt = Date.now();
     console.log(`[NarrativeGuard] Lock acquired: ${requestId}`);
     return Promise.resolve(true);
   }
   
-  console.log(`[NarrativeGuard] Generation in progress, queueing: ${requestId}`);
+  console.log(`[NarrativeGuard] Generation in progress (${currentLockId}), queueing: ${requestId}`);
   return new Promise((resolve) => {
     generationQueue.push({ resolve, id: requestId });
+    
+    // Auto-resolve after timeout to prevent infinite waiting
+    setTimeout(() => {
+      const idx = generationQueue.findIndex(q => q.id === requestId);
+      if (idx !== -1) {
+        console.warn(`[NarrativeGuard] Queue timeout for: ${requestId}, forcing through`);
+        generationQueue.splice(idx, 1);
+        checkStaleLock();
+        resolve(!isGenerating); // Resolve based on current lock state
+      }
+    }, LOCK_TIMEOUT_MS);
   });
 }
 
@@ -54,9 +108,22 @@ export function acquireGenerationLock(requestId: string): Promise<boolean> {
 export function releaseGenerationLock(requestId: string): void {
   console.log(`[NarrativeGuard] Lock released: ${requestId}`);
   
+  // Only release if this request holds the lock
+  if (currentLockId !== requestId) {
+    console.warn(`[NarrativeGuard] Attempted release by non-owner: ${requestId} (owner: ${currentLockId})`);
+    // Still check for stale locks
+    checkStaleLock();
+    return;
+  }
+  
+  currentLockId = null;
+  lockAcquiredAt = 0;
+  
   if (generationQueue.length > 0) {
     const next = generationQueue.shift()!;
     console.log(`[NarrativeGuard] Processing queued request: ${next.id}`);
+    currentLockId = next.id;
+    lockAcquiredAt = Date.now();
     next.resolve(true);
   } else {
     isGenerating = false;
@@ -73,12 +140,15 @@ export function cancelPendingGeneration(): void {
     request.resolve(false);
   }
   isGenerating = false;
+  currentLockId = null;
+  lockAcquiredAt = 0;
 }
 
 /**
  * Check if generation is currently in progress
  */
 export function isGenerationInProgress(): boolean {
+  checkStaleLock(); // Auto-cleanup stale locks on check
   return isGenerating;
 }
 

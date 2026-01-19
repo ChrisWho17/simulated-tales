@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Feather, BookOpen, Scroll, Wand2 } from 'lucide-react';
+import { Sparkles, Feather, BookOpen, Scroll, Wand2, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NarrativeLoadingIndicatorProps {
   isInitial?: boolean;
   genre?: string;
   className?: string;
+  onCancel?: () => void;
+  showCancelAfterMs?: number;
 }
 
 // Rotating flavor messages for each genre
@@ -129,10 +132,13 @@ const ICONS = [Sparkles, Feather, BookOpen, Scroll, Wand2];
 export function NarrativeLoadingIndicator({ 
   isInitial = false, 
   genre = 'default',
-  className = '' 
+  className = '',
+  onCancel,
+  showCancelAfterMs = 10000
 }: NarrativeLoadingIndicatorProps) {
   const [messageIndex, setMessageIndex] = useState(0);
   const [iconIndex, setIconIndex] = useState(0);
+  const [showCancel, setShowCancel] = useState(false);
   
   // Get messages for current genre
   const messages = useMemo(() => {
@@ -150,6 +156,14 @@ export function NarrativeLoadingIndicator({
     
     return () => clearInterval(interval);
   }, [messages.length]);
+  
+  // Show cancel button after delay
+  useEffect(() => {
+    if (onCancel) {
+      const timeout = setTimeout(() => setShowCancel(true), showCancelAfterMs);
+      return () => clearTimeout(timeout);
+    }
+  }, [onCancel, showCancelAfterMs]);
   
   const CurrentIcon = ICONS[iconIndex];
   
@@ -249,6 +263,28 @@ export function NarrativeLoadingIndicator({
             />
           ))}
         </div>
+        
+        {/* Cancel button appears after delay */}
+        <AnimatePresence>
+          {showCancel && onCancel && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-4"
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                className="text-muted-foreground hover:text-foreground gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                Taking too long? Reset
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
