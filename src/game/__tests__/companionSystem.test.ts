@@ -277,13 +277,13 @@ describe('Companion System', () => {
     });
 
     it('should discover quirks when threshold is met', () => {
-      system.updateTrust('companion_1', 25); // trust = 75
+      system.updateTrust('companion_1', 26); // trust = 76 (>= 75)
       const companion = system.getCompanion('companion_1');
       expect(companion?.discoveredQuirks).toContain('high_trust_secret');
     });
 
     it('should not discover quirks before threshold', () => {
-      system.updateTrust('companion_1', 20); // trust = 70
+      system.updateTrust('companion_1', 24); // trust = 74 (< 75)
       const companion = system.getCompanion('companion_1');
       expect(companion?.discoveredQuirks).not.toContain('high_trust_secret');
     });
@@ -367,12 +367,13 @@ describe('Companion System', () => {
         personality: { traits: [], preferredTopics: [], avoidedTopics: [], speechStyle: 'normal' },
       });
 
-      // Low trust - no advice
+      // Low trust - no advice (decrease from default 50 to 40)
+      system.updateTrust('companion_1', -15); // trust = 35
       const lowTrustSupport = system.getContextualSupport('companion_1', 'combat');
       expect(lowTrustSupport.advice).toBeUndefined();
 
       // High trust - gives advice
-      system.updateTrust('companion_1', 30); // trust = 80
+      system.updateTrust('companion_1', 45); // trust = 80
       const highTrustSupport = system.getContextualSupport('companion_1', 'combat');
       expect(highTrustSupport.advice).toBeDefined();
       expect(highTrustSupport.advice).toContain('trusted insight');
