@@ -1137,10 +1137,21 @@ export function CheatModeSplash({
     try {
       const armorDesc = ARMOR_LEVELS.find(a => a.id === companionCreator.armorLevel)?.description || '';
       
+      // Build explicit body type description based on build
+      const buildDescriptions: Record<string, string> = {
+        slim: 'slender and lean body, thin frame, narrow waist',
+        athletic: 'athletic and toned body, muscular definition, fit physique',
+        average: 'average body type, normal proportions',
+        stocky: 'stocky and sturdy body, broad frame, thick build',
+        heavyset: 'heavyset body, large frame, fuller figure',
+        muscular: 'heavily muscular body, bodybuilder physique, very defined muscles',
+      };
+      const buildDesc = buildDescriptions[companionCreator.build] || 'average body type';
+      
       // Build body shape description based on gender
       let bodyShapeDesc = '';
       if (companionCreator.gender === 'female') {
-        const bustDesc = companionCreator.bustSize ? `${companionCreator.bustSize} cup bust` : '';
+        const bustDesc = companionCreator.bustSize ? `${companionCreator.bustSize} cup bust size` : '';
         const hipDesc = companionCreator.hipWidth ? `${companionCreator.hipWidth} hips` : '';
         bodyShapeDesc = [bustDesc, hipDesc].filter(Boolean).join(', ');
       } else if (companionCreator.gender === 'male') {
@@ -1149,8 +1160,24 @@ export function CheatModeSplash({
         bodyShapeDesc = [shoulderDesc, physiqueDesc].filter(Boolean).join(', ');
       }
       
-      const bodyDesc = bodyShapeDesc ? ` with ${bodyShapeDesc},` : '';
-      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} ${companionCreator.build} ${companionCreator.height} character${bodyDesc} with ${companionCreator.skinTone.toLowerCase()} skin, ${companionCreator.hairStyle.toLowerCase()} ${companionCreator.hairColor.toLowerCase()} hair, ${companionCreator.eyeColor.toLowerCase()} eyes. Wearing ${armorDesc.toLowerCase()}. ${companionCreator.traits.slice(0, 2).join(' and ')} personality showing in expression. High quality digital art, game character portrait, neutral expression, soft lighting, detailed face.`;
+      // Height descriptions
+      const heightDescriptions: Record<string, string> = {
+        short: 'short stature, petite height',
+        average: 'average height',
+        tall: 'tall stature, above average height',
+        very_tall: 'very tall, towering height',
+      };
+      const heightDesc = heightDescriptions[companionCreator.height] || '';
+      
+      const bodyDetails = [buildDesc, bodyShapeDesc, heightDesc].filter(Boolean).join(', ');
+      
+      // CRITICAL: Explicitly state hair color MULTIPLE times to reinforce
+      const hairColor = companionCreator.hairColor.toLowerCase();
+      const hairStyle = companionCreator.hairStyle.toLowerCase();
+      
+      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} character. BODY TYPE: ${bodyDetails}. SKIN: ${companionCreator.skinTone.toLowerCase()} skin tone. HAIR: ${hairColor} colored ${hairStyle} hair (IMPORTANT: hair must be ${hairColor}). EYES: ${companionCreator.eyeColor.toLowerCase()} eyes. ATTIRE: wearing ${armorDesc.toLowerCase()}. EXPRESSION: ${companionCreator.traits.slice(0, 2).join(' and ')} personality visible. High quality digital art, game character portrait, full upper body visible showing build, soft lighting, detailed face and body proportions.`;
+      
+      console.log('[Portrait Gen] Prompt:', prompt);
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
