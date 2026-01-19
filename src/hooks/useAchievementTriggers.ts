@@ -116,6 +116,13 @@ export function useAchievementTriggers() {
 
     const handlers: Array<() => void> = [];
 
+    // Tutorial completion event (from OnboardingOverlay)
+    const handleTutorialComplete = () => {
+      achievements.unlockAchievement('dust_off_the_cover');
+    };
+    window.addEventListener('tutorial-completed', handleTutorialComplete);
+    handlers.push(() => window.removeEventListener('tutorial-completed', handleTutorialComplete));
+
     // Location events
     handlers.push(eventBus.subscribe(['LOCATION_ENTERED'], (event) => {
       const data = (event as any).data;

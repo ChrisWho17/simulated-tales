@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, ChevronRight, ChevronLeft, Sparkles, 
@@ -6,24 +6,121 @@ import {
   Settings, Keyboard, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const ONBOARDING_COMPLETED_KEY = 'untold-onboarding-completed';
+
+// ============================================================================
+// TUTORIAL PARTICLES - Magical dust effect for the onboarding
+// ============================================================================
+
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+}
+
+function TutorialParticles({ intensity = 1 }: { intensity?: number }) {
+  const [particles, setParticles] = useState<Particle[]>([]);
+
+  useEffect(() => {
+    // Generate initial particles
+    const count = Math.floor(40 * intensity);
+    const newParticles: Particle[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      newParticles.push({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 4 + 2,
+        duration: Math.random() * 8 + 6,
+        delay: Math.random() * 5,
+        opacity: Math.random() * 0.6 + 0.2,
+      });
+    }
+    setParticles(newParticles);
+  }, [intensity]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: particle.size,
+            height: particle.size,
+            background: `radial-gradient(circle, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 70%, transparent 100%)`,
+            boxShadow: `0 0 ${particle.size * 2}px hsl(var(--primary) / 0.5)`,
+          }}
+          animate={{
+            y: [0, -30, -60, -30, 0],
+            x: [0, 10, -10, 5, 0],
+            opacity: [0, particle.opacity, particle.opacity * 0.8, particle.opacity, 0],
+            scale: [0.5, 1, 1.2, 1, 0.5],
+          }}
+          transition={{
+            duration: particle.duration,
+            delay: particle.delay,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+      
+      {/* Floating dust motes - book dust effect */}
+      {Array.from({ length: 20 }).map((_, i) => (
+        <motion.div
+          key={`dust-${i}`}
+          className="absolute w-1 h-1 rounded-full bg-amber-200/60"
+          style={{
+            left: `${20 + Math.random() * 60}%`,
+            top: `${30 + Math.random() * 40}%`,
+          }}
+          animate={{
+            y: [0, -80 - Math.random() * 40],
+            x: [0, (Math.random() - 0.5) * 60],
+            opacity: [0, 0.8, 0.6, 0],
+            scale: [0, 1, 0.8, 0],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 3,
+            delay: i * 0.3,
+            repeat: Infinity,
+            ease: 'easeOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// ONBOARDING STEPS
+// ============================================================================
 
 interface OnboardingStep {
   id: string;
   title: string;
   description: string;
   icon: React.ReactNode;
-  highlight?: string; // CSS selector to highlight
+  highlight?: string;
   position?: 'center' | 'bottom' | 'top';
 }
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to Your Adventure',
-    description: 'This is your story. Every choice you make shapes the narrative. Let\'s learn the basics to get you started.',
-    icon: <Sparkles className="w-8 h-8" />,
+    title: 'A Story Awaits...',
+    description: 'The dust settles as ancient pages stir to life. Every choice you make shapes the narrative ahead.',
+    icon: <BookOpen className="w-8 h-8" />,
     position: 'center',
   },
   {
@@ -70,9 +167,9 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'ready',
-    title: 'You\'re Ready!',
-    description: 'Your adventure awaits. Remember: there are no wrong choices, only different paths. Good luck, adventurer!',
-    icon: <Zap className="w-8 h-8" />,
+    title: 'The Pages Turn...',
+    description: 'Your story begins now. Remember: there are no wrong choices, only different paths. The book is yours to write.',
+    icon: <Sparkles className="w-8 h-8" />,
     position: 'center',
   },
 ];
@@ -100,19 +197,35 @@ export function OnboardingOverlay({ onComplete, forceShow = false }: OnboardingO
     }
   }, [forceShow]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
     setIsVisible(false);
     onComplete();
-  };
+  }, [onComplete]);
 
-  const handleNext = () => {
+  const handleComplete = useCallback(() => {
+    localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+    setIsVisible(false);
+    
+    // Show achievement toast for completing tutorial
+    toast('📕 Achievement Unlocked!', {
+      description: 'Dust Off the Cover — You\'ve opened the book. Your story begins now.',
+      duration: 5000,
+    });
+    
+    // Dispatch event for achievement system to pick up
+    window.dispatchEvent(new CustomEvent('tutorial-completed'));
+    
+    onComplete();
+  }, [onComplete]);
+
+  const handleNext = useCallback(() => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      handleSkip();
+      handleComplete();
     }
-  };
+  }, [currentStep, handleComplete]);
 
   const handlePrev = () => {
     if (currentStep > 0) {
@@ -132,10 +245,14 @@ export function OnboardingOverlay({ onComplete, forceShow = false }: OnboardingO
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md"
       >
+        {/* Magical particle effects */}
+        <TutorialParticles intensity={currentStep === 0 || currentStep === ONBOARDING_STEPS.length - 1 ? 1.5 : 0.8} />
+        
         {/* Decorative background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[var(--accent-primary)]/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-[var(--accent-secondary)]/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         </div>
 
         {/* Skip button */}
