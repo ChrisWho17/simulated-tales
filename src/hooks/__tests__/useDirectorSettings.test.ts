@@ -17,19 +17,25 @@ describe('useDirectorSettings', () => {
       expect(DEFAULT_DIRECTOR_SETTINGS).toHaveProperty('guidance');
     });
 
-    it('should have enabled by default', () => {
-      expect(DEFAULT_DIRECTOR_SETTINGS.enabled).toBe(true);
+    it('should have disabled by default (rawGame mode)', () => {
+      // Director mode starts disabled - rawGame is the default experience
+      expect(DEFAULT_DIRECTOR_SETTINGS.enabled).toBe(false);
+      expect(DEFAULT_DIRECTOR_SETTINGS.rawGame).toBe(true);
     });
 
-    it('should have balanced director type by default', () => {
-      expect(DEFAULT_DIRECTOR_SETTINGS.directorType).toBe('balanced');
+    it('should have cinematic director type by default', () => {
+      expect(DEFAULT_DIRECTOR_SETTINGS.directorType).toBe('cinematic');
     });
 
-    it('should have numeric sliders in valid range', () => {
+    it('should have valid tightness value', () => {
       expect(DEFAULT_DIRECTOR_SETTINGS.tightness).toBeGreaterThanOrEqual(0);
       expect(DEFAULT_DIRECTOR_SETTINGS.tightness).toBeLessThanOrEqual(1);
-      expect(DEFAULT_DIRECTOR_SETTINGS.cruelty).toBeGreaterThanOrEqual(0);
-      expect(DEFAULT_DIRECTOR_SETTINGS.cruelty).toBeLessThanOrEqual(1);
+    });
+
+    it('should have string-based cruelty, weirdness, and guidance levels', () => {
+      expect(typeof DEFAULT_DIRECTOR_SETTINGS.cruelty).toBe('string');
+      expect(typeof DEFAULT_DIRECTOR_SETTINGS.weirdness).toBe('string');
+      expect(typeof DEFAULT_DIRECTOR_SETTINGS.guidance).toBe('string');
     });
   });
 });
