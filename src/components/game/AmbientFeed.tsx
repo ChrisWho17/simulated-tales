@@ -1,12 +1,17 @@
-// Ambient Feed - Simplified version without sound system dependencies
-import React, { useState, useEffect } from 'react';
+// Ambient Feed - Connected to NPC chatter and micro-event systems
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { 
+  getAmbientFeed as getChatterFeed, 
+  ChatterBeat 
+} from '@/game/npcChatterSystem';
+import { MICRO_EVENT_TEMPLATES } from '@/game/microEventSystem';
 
-// Simplified ambient entry type (without sound system)
-interface AmbientEntry {
+// Ambient entry type
+export interface AmbientEntry {
   id: string;
   text: string;
   type: 'micro_event' | 'chatter';
@@ -22,6 +27,11 @@ interface AmbientFeedProps {
   position?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
   autoHide?: boolean;
   autoHideDelay?: number;
+  // External entries can be passed in
+  externalEntries?: AmbientEntry[];
+  // Micro-event settings
+  enableMicroEvents?: boolean;
+  microEventChance?: number;
 }
 
 export function AmbientFeed({
@@ -29,11 +39,119 @@ export function AmbientFeed({
   maxVisible = 3,
   position = 'bottom-left',
   autoHide = true,
-  autoHideDelay = 8000,
+  autoHideDelay = 10000,
+  externalEntries = [],
+  enableMicroEvents = true,
+  microEventChance = 0.12,
 }: AmbientFeedProps) {
-  const [entries, setEntries] = useState<AmbientEntry[]>([]);
+  const [internalEntries, setInternalEntries] = useState<AmbientEntry[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [lastInteraction, setLastInteraction] = useState(Date.now());
+  const lastSyncRef = React.useRef<number>(0);
+  const lastMicroEventRef = React.useRef<number>(0);
+
+  // Sync with chatter system periodically
+  const syncChatterFeed = useCallback(() => {
+    const now = Date.now();
+    // Only sync every 5 seconds to avoid excessive processing
+    if (now - lastSyncRef.current < 5000) return;
+    lastSyncRef.current = now;
+
+    const chatterBeats = getChatterFeed();
+    if (chatterBeats.length === 0) return;
+
+    setInternalEntries(prev => {
+      const existingIds = new Set(prev.map(e => e.id));
+      const newEntries: AmbientEntry[] = [];
+
+      chatterBeats.forEach((beat: ChatterBeat) => {
+        if (!existingIds.has(beat.id)) {
+          newEntries.push({
+            id: beat.id,
+            text: beat.text,
+            type: 'chatter',
+            category: beat.topic,
+            timestamp: beat.timestamp,
+            involvedNPCs: beat.involvedNPCs,
+            containsHook: beat.containsHook,
+          });
+        }
+      });
+
+      if (newEntries.length === 0) return prev;
+
+      const updated = [...prev, ...newEntries];
+      // Keep only last 10 entries
+      return updated.slice(-10);
+    });
+  }, []);
+
+  // Maybe trigger a micro-event
+  const maybeTriggerMicroEvent = useCallback(() => {
+    if (!enableMicroEvents) return;
+    
+    const now = Date.now();
+    // At least 45 seconds between micro-events
+    if (now - lastMicroEventRef.current < 45000) return;
+    
+    // Random chance
+    if (Math.random() > microEventChance) return;
+
+    // Pick a random micro-event
+    const validEvents = MICRO_EVENT_TEMPLATES.filter(e => {
+      // Skip events with complex conditions for ambient display
+      if (e.conditions?.minTurns && e.conditions.minTurns > 10) return false;
+      return true;
+    });
+
+    if (validEvents.length === 0) return;
+
+    // Weighted random selection
+    const totalWeight = validEvents.reduce((sum, e) => sum + e.weight, 0);
+    let random = Math.random() * totalWeight;
+    
+    let selectedEvent = validEvents[0];
+    for (const event of validEvents) {
+      random -= event.weight;
+      if (random <= 0) {
+        selectedEvent = event;
+        break;
+      }
+    }
+
+    const entry: AmbientEntry = {
+      id: `micro_${selectedEvent.id}_${now}`,
+      text: selectedEvent.description,
+      type: 'micro_event',
+      category: selectedEvent.category,
+      timestamp: now,
+      containsHook: !!selectedEvent.followUp,
+    };
+
+    setInternalEntries(prev => [...prev.slice(-9), entry]);
+    lastMicroEventRef.current = now;
+  }, [enableMicroEvents, microEventChance]);
+
+  // Periodic sync and micro-event check
+  useEffect(() => {
+    const interval = setInterval(() => {
+      syncChatterFeed();
+      maybeTriggerMicroEvent();
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [syncChatterFeed, maybeTriggerMicroEvent]);
+
+  // Cleanup old entries
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const fadeTime = 90000; // 1.5 minutes
+      const now = Date.now();
+      setInternalEntries(prev => prev.filter(entry => now - entry.timestamp < fadeTime));
+    }, 15000);
+
+    return () => clearInterval(cleanup);
+  }, []);
 
   // Auto-hide after inactivity
   useEffect(() => {
@@ -48,16 +166,21 @@ export function AmbientFeed({
     return () => clearTimeout(timeout);
   }, [lastInteraction, autoHide, autoHideDelay, collapsed]);
 
+  // Combine internal and external entries
+  const allEntries = [...internalEntries, ...externalEntries]
+    .sort((a, b) => a.timestamp - b.timestamp);
+
   const positionClasses = {
-    'bottom-left': 'bottom-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
-    'top-left': 'top-4 left-4',
-    'top-right': 'top-4 right-4',
+    'bottom-left': 'bottom-20 left-4',
+    'bottom-right': 'bottom-20 right-4',
+    'top-left': 'top-20 left-4',
+    'top-right': 'top-20 right-4',
   };
 
-  const visibleEntries = entries.slice(-maxVisible);
+  const visibleEntries = allEntries.slice(-maxVisible);
 
-  if (entries.length === 0 && collapsed) {
+  // Don't render if no entries and collapsed
+  if (allEntries.length === 0 && collapsed) {
     return null;
   }
 
@@ -68,27 +191,32 @@ export function AmbientFeed({
         positionClasses[position],
         className
       )}
-      onMouseEnter={() => setLastInteraction(Date.now())}
+      onMouseEnter={() => {
+        setLastInteraction(Date.now());
+        setCollapsed(false);
+      }}
     >
       {/* Toggle button */}
-      <div className="pointer-events-auto mb-2 flex justify-end">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 bg-background/60 backdrop-blur-sm hover:bg-background/80"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? (
-            <Eye className="h-3 w-3 text-muted-foreground" />
-          ) : (
-            <EyeOff className="h-3 w-3 text-muted-foreground" />
-          )}
-        </Button>
-      </div>
+      {allEntries.length > 0 && (
+        <div className="pointer-events-auto mb-2 flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 bg-background/60 backdrop-blur-sm hover:bg-background/80"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? (
+              <Eye className="h-3 w-3 text-muted-foreground" />
+            ) : (
+              <EyeOff className="h-3 w-3 text-muted-foreground" />
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Feed container */}
       <AnimatePresence>
-        {!collapsed && (
+        {!collapsed && visibleEntries.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -114,9 +242,9 @@ interface AmbientEntryItemProps {
 function AmbientEntryItem({ entry }: AmbientEntryItemProps) {
   const isChatter = entry.type === 'chatter';
   const age = Date.now() - entry.timestamp;
-  const fadeStart = 15000;
-  const fadeEnd = 30000;
-  const opacity = age < fadeStart ? 1 : Math.max(0.3, 1 - (age - fadeStart) / (fadeEnd - fadeStart));
+  const fadeStart = 20000;
+  const fadeEnd = 60000;
+  const opacity = age < fadeStart ? 1 : Math.max(0.4, 1 - (age - fadeStart) / (fadeEnd - fadeStart));
 
   return (
     <motion.div
