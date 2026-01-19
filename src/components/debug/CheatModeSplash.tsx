@@ -362,6 +362,37 @@ const PERSONALITY_QUIRKS = [
   'whispers secrets even when alone',
 ];
 
+// Hidden quirks pool - revealed as relationship deepens
+const HIDDEN_QUIRKS_POOL = [
+  'secretly writes poetry',
+  'has a phobia they never mention',
+  'talks in their sleep',
+  'collects pressed flowers',
+  'is terrified of a specific animal',
+  'has a secret sweet tooth',
+  'cries during sad stories',
+  'keeps a journal of memories',
+  'practices speeches alone',
+  'has an imaginary friend from childhood they still think about',
+  'secretly believes in old superstitions',
+  'hums lullabies when alone',
+  'has a hidden talent they never show',
+  'keeps a memento from someone lost',
+  'is secretly sentimental about gifts',
+  'talks to the moon when no one watches',
+  'has recurring nightmares they hide',
+  'makes up stories about strangers',
+  'secretly afraid of being abandoned',
+  'has a comfort item they hide from others',
+];
+
+// Generate 2-3 hidden quirks based on personality traits
+function generateHiddenQuirks(traits: string[]): string[] {
+  const numQuirks = 2 + Math.floor(Math.random() * 2); // 2-3 quirks
+  const shuffled = [...HIDDEN_QUIRKS_POOL].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, numQuirks);
+}
+
 // Enhanced Companion creator state with armor and origin
 interface CompanionCreatorState {
   name: string;
@@ -850,7 +881,8 @@ export function CheatModeSplash({
       catchphrases: companionCreator.catchphrases.length > 0 
         ? companionCreator.catchphrases 
         : ['Interesting...', 'I see.'],
-      quirks: [],
+      quirks: companionCreator.quirks || [],
+      hiddenQuirks: generateHiddenQuirks(companionCreator.traits),
     };
     
     // Build the story introduction
@@ -868,6 +900,10 @@ export function CheatModeSplash({
       fear: 0,
       romanticInterest: companionCreator.traits.includes('romantic') ? 20 : 0,
       personality: customPersonality as any,
+      quirkDiscovery: {
+        discoveredQuirks: [],
+        lastDiscoveryCheck: Date.now(),
+      },
       memories: [{
         timestamp: Date.now(),
         type: 'event' as const,

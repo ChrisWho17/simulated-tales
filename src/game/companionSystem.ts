@@ -68,7 +68,18 @@ export interface CompanionPersonality {
   // Dialogue style
   speechPattern: string;
   catchphrases: string[];
-  quirks: string[];
+  quirks: string[]; // Known quirks (visible to player)
+  hiddenQuirks: string[]; // Quirks that are revealed as relationship deepens
+}
+
+// Quirk discovery thresholds - what trust/affinity level reveals each hidden quirk
+export interface QuirkDiscoveryState {
+  discoveredQuirks: string[]; // Quirks that have been revealed
+  pendingDiscovery?: {
+    quirk: string;
+    discoveryDialogue: string;
+  };
+  lastDiscoveryCheck: number;
 }
 
 export interface CompanionMemory {
@@ -98,6 +109,9 @@ export interface CompanionState {
   
   // Their personality
   personality: CompanionPersonality;
+  
+  // Quirk discovery system
+  quirkDiscovery: QuirkDiscoveryState;
   
   // Memories of player actions
   memories: CompanionMemory[];
@@ -146,7 +160,8 @@ export const COMPANION_TEMPLATES: Record<string, Partial<CompanionState>> = {
       departureThreshold: -40,
       speechPattern: 'direct, military, formal',
       catchphrases: ['By my blade, I swear it.', 'Honor demands action.', 'We stand together.'],
-      quirks: ['polishes weapon when nervous', 'always faces the door', 'never sits with back to entrance'],
+      quirks: ['polishes weapon when nervous', 'always faces the door'],
+      hiddenQuirks: ['never sits with back to entrance', 'writes letters to fallen comrades', 'hums old war songs when anxious'],
     },
     combatRole: 'tank',
     skills: ['shield_wall', 'taunt', 'protect_ally'],
@@ -163,7 +178,8 @@ export const COMPANION_TEMPLATES: Record<string, Partial<CompanionState>> = {
       departureThreshold: -20,
       speechPattern: 'witty, sarcastic, flirtatious',
       catchphrases: ['Well, that was unexpected.', 'I\'m not running, I\'m repositioning.', 'Everyone has a price.'],
-      quirks: ['counts coins when idle', 'always has an exit planned', 'winks too much'],
+      quirks: ['counts coins when idle', 'winks too much'],
+      hiddenQuirks: ['always has an exit planned', 'keeps a lucky charm from their first heist', 'actually terrible at gambling'],
     },
     combatRole: 'damage',
     skills: ['backstab', 'lockpick', 'distract'],
@@ -180,7 +196,8 @@ export const COMPANION_TEMPLATES: Record<string, Partial<CompanionState>> = {
       departureThreshold: -35,
       speechPattern: 'cryptic, intellectual, distant',
       catchphrases: ['Fascinating...', 'The arcane reveals all truths.', 'You cannot comprehend the forces at play.'],
-      quirks: ['stares into middle distance', 'mutters incantations', 'never explains fully'],
+      quirks: ['stares into middle distance', 'mutters incantations'],
+      hiddenQuirks: ['never explains fully', 'secretly afraid of losing their magic', 'collects unusual spell components'],
     },
     combatRole: 'support',
     skills: ['heal', 'barrier', 'arcane_blast'],
@@ -197,7 +214,8 @@ export const COMPANION_TEMPLATES: Record<string, Partial<CompanionState>> = {
       departureThreshold: -50,
       speechPattern: 'direct, nature metaphors, spiritual',
       catchphrases: ['The hunt is life.', 'Nature provides for those who respect her.', 'My arrows fly true.'],
-      quirks: ['talks to animals', 'sleeps outside', 'uncomfortable in cities'],
+      quirks: ['talks to animals', 'sleeps outside'],
+      hiddenQuirks: ['uncomfortable in cities', 'secretly loves a specific type of flower', 'still grieves for a lost animal companion'],
     },
     combatRole: 'ranged',
     skills: ['precise_shot', 'track', 'animal_companion'],
@@ -249,7 +267,14 @@ class CompanionSystemManager {
       respect: 30,
       fear: 0,
       romanticInterest: 0,
-      personality: templateData.personality || COMPANION_TEMPLATES.loyal_warrior.personality!,
+      personality: {
+        ...(templateData.personality || COMPANION_TEMPLATES.loyal_warrior.personality!),
+        hiddenQuirks: templateData.personality?.hiddenQuirks || [],
+      },
+      quirkDiscovery: {
+        discoveredQuirks: [],
+        lastDiscoveryCheck: Date.now(),
+      },
       memories: [],
       internalThoughts: `I wonder what kind of person ${name} will turn out to be...`,
       wantsToSpeak: false,
@@ -697,6 +722,159 @@ class CompanionSystemManager {
     ];
     
     return confessions[Math.floor(Math.random() * confessions.length)];
+  }
+  
+  // ========== QUIRK DISCOVERY SYSTEM ==========
+  
+  // Thresholds for discovering hidden quirks
+  private quirkDiscoveryThresholds = [
+    { trust: 40, affinity: 20 },  // First hidden quirk
+    { trust: 60, affinity: 40 },  // Second hidden quirk  
+    { trust: 80, affinity: 60 },  // Third hidden quirk
+  ];
+  
+  /**
+   * Check if any companions have hidden quirks ready to be discovered
+   * Called periodically during gameplay
+   */
+  checkForQuirkDiscovery(): { companion: CompanionState; quirk: string; dialogue: string } | null {
+    for (const companionId of this.activeCompanions) {
+      const companion = this.companions.get(companionId);
+      if (!companion || companion.status !== 'active') continue;
+      
+      // Don't check too frequently
+      const timeSinceLastCheck = Date.now() - companion.quirkDiscovery.lastDiscoveryCheck;
+      if (timeSinceLastCheck < 60000) continue; // At least 1 minute between checks
+      
+      companion.quirkDiscovery.lastDiscoveryCheck = Date.now();
+      
+      const discovery = this.tryDiscoverQuirk(companion);
+      if (discovery) {
+        return discovery;
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * Try to discover a hidden quirk for a specific companion
+   */
+  private tryDiscoverQuirk(companion: CompanionState): { companion: CompanionState; quirk: string; dialogue: string } | null {
+    const hiddenQuirks = companion.personality.hiddenQuirks || [];
+    const discoveredCount = companion.quirkDiscovery.discoveredQuirks.length;
+    
+    // No more quirks to discover
+    if (discoveredCount >= hiddenQuirks.length) return null;
+    
+    // Check if we meet the threshold for the next quirk
+    const threshold = this.quirkDiscoveryThresholds[discoveredCount];
+    if (!threshold) return null;
+    
+    if (companion.trust >= threshold.trust && companion.affinity >= threshold.affinity) {
+      // Discover the next quirk!
+      const quirk = hiddenQuirks[discoveredCount];
+      companion.quirkDiscovery.discoveredQuirks.push(quirk);
+      
+      // Move quirk to visible quirks
+      if (!companion.personality.quirks.includes(quirk)) {
+        companion.personality.quirks.push(quirk);
+      }
+      
+      // Generate discovery dialogue
+      const dialogue = this.generateQuirkDiscoveryDialogue(companion, quirk);
+      
+      // Add memory of the moment
+      this.addMemory(companion.id, 'event', `Revealed a hidden side: ${quirk}`, 5);
+      
+      // Set pending reaction so they speak about it
+      companion.wantsToSpeak = true;
+      companion.pendingReaction = dialogue;
+      
+      console.log(`[Companion] ${companion.name} revealed hidden quirk: ${quirk}`);
+      
+      // Emit quirk discovery event using SECRET_SHARED type
+      eventBus.emit({
+        type: 'SECRET_SHARED',
+        source: 'companionSystem',
+        priority: 'normal',
+        tick: 0,
+        data: {
+          learnerEntity: 'player',
+          sourceEntity: companion.id,
+          fact: `${companion.name} has quirk: ${quirk}`,
+          factType: 'quirk_discovered',
+          reliability: 100,
+        },
+      } as any);
+      
+      return { companion, quirk, dialogue };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Generate dialogue for when a hidden quirk is discovered
+   */
+  private generateQuirkDiscoveryDialogue(companion: CompanionState, quirk: string): string {
+    const templates = [
+      `*${quirk}* I... don't usually let people see this side of me. But with you, it feels safe.`,
+      `You might have noticed... *${quirk}* I know it's strange, but it's part of who I am.`,
+      `*${quirk}* ...Sorry. I usually hide this, but I suppose there's no point pretending anymore.`,
+      `I've been meaning to tell you... *${quirk}* Not many people know about this.`,
+      `*${quirk}* I guess after all we've been through, you deserve to know the real me.`,
+      `*seems embarrassed* *${quirk}* I've never shown this to anyone before.`,
+      `Between us? *${quirk}* ...Please don't laugh. It means something to me.`,
+      `You know what? *${quirk}* There. Now you know one of my secrets.`,
+    ];
+    
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+  
+  /**
+   * Get all discovered quirks for a companion
+   */
+  getDiscoveredQuirks(companionId: string): string[] {
+    const companion = this.companions.get(companionId);
+    if (!companion) return [];
+    return companion.quirkDiscovery.discoveredQuirks;
+  }
+  
+  /**
+   * Get discovery progress for a companion
+   */
+  getQuirkDiscoveryProgress(companionId: string): { 
+    discovered: number; 
+    total: number; 
+    nextThreshold?: { trust: number; affinity: number } 
+  } {
+    const companion = this.companions.get(companionId);
+    if (!companion) return { discovered: 0, total: 0 };
+    
+    const discovered = companion.quirkDiscovery.discoveredQuirks.length;
+    const total = companion.personality.hiddenQuirks?.length || 0;
+    const nextThreshold = this.quirkDiscoveryThresholds[discovered];
+    
+    return { discovered, total, nextThreshold };
+  }
+  
+  /**
+   * Force discover all quirks (cheat/debug mode)
+   */
+  forceDiscoverAllQuirks(companionId: string): void {
+    const companion = this.companions.get(companionId);
+    if (!companion) return;
+    
+    const hiddenQuirks = companion.personality.hiddenQuirks || [];
+    for (const quirk of hiddenQuirks) {
+      if (!companion.quirkDiscovery.discoveredQuirks.includes(quirk)) {
+        companion.quirkDiscovery.discoveredQuirks.push(quirk);
+        if (!companion.personality.quirks.includes(quirk)) {
+          companion.personality.quirks.push(quirk);
+        }
+      }
+    }
+    console.log(`[Companion] Force discovered all quirks for ${companion.name}`);
   }
   
   // ========== MEMORY MANAGEMENT ==========
