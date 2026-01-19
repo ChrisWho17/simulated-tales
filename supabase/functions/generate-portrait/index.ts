@@ -1,9 +1,47 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Authentication helper - validates user is logged in
+async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data?.user) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Invalid or expired session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  return { userId: data.user.id, error: null };
+}
 
 // ============================================================================
 // STYLE LOCK - Semi-realistic digital art style
@@ -2246,15 +2284,15 @@ async function generateImage(prompt: string, _negative: string): Promise<string>
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error("Lovable AI error:", response.status, error);
+    const errorText = await response.text();
+    console.error("[generate-portrait] API error:", response.status, errorText);
     if (response.status === 429) {
       throw new Error("Rate limit exceeded, please try again later");
     }
     if (response.status === 402) {
-      throw new Error("Payment required, please add credits to your workspace");
+      throw new Error("Service temporarily unavailable");
     }
-    throw new Error(`Generation failed: ${response.status} - ${error}`);
+    throw new Error("Image generation failed");
   }
 
   const data = await response.json();
@@ -2264,8 +2302,8 @@ async function generateImage(prompt: string, _negative: string): Promise<string>
   const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
   
   if (!imageUrl) {
-    console.error("No image in response:", JSON.stringify(data).substring(0, 500));
-    throw new Error("No image returned from Lovable AI");
+    console.error("[generate-portrait] No image in response:", JSON.stringify(data).substring(0, 500));
+    throw new Error("Image generation failed");
   }
 
   console.log("Portrait generated successfully (base64 length:", imageUrl.length, ")");
@@ -2279,6 +2317,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Authenticate request
+  const auth = await authenticateRequest(req);
+  if (auth.error) {
+    return auth.error;
+  }
+  console.log(`[generate-portrait] Authenticated user: ${auth.userId}`);
 
   try {
     const body = await req.json();
@@ -2298,9 +2343,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("[generate-portrait] Error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "Unable to generate portrait at this time" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

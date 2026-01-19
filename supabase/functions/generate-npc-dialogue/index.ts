@@ -1,9 +1,47 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Authentication helper - validates user is logged in
+async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data?.user) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Invalid or expired session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  return { userId: data.user.id, error: null };
+}
 
 // Relationship milestone types for romance progression
 type MilestoneType = 
@@ -117,16 +155,24 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate request
+  const auth = await authenticateRequest(req);
+  if (auth.error) {
+    return auth.error;
+  }
+  console.log(`[generate-npc-dialogue] Authenticated user: ${auth.userId}`);
+
   try {
     const { npc, playerInput, location, timeOfDay, conversationHistory, isFirstInteraction, isFarewell, playerState, weatherContext } = await req.json() as DialogueRequest;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error('[generate-npc-dialogue] LOVABLE_API_KEY not configured');
+      throw new Error("Service configuration error");
     }
 
     if (!npc || !npc.name) {
-      throw new Error("Invalid NPC data");
+      throw new Error("Invalid request data");
     }
 
     // Build personality description
@@ -404,7 +450,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("[generate-npc-dialogue] API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
@@ -417,7 +463,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
-          error: "Usage limit reached",
+          error: "Service temporarily unavailable",
           fallbackDialogue: generateFallbackDialogue(npc, isFirstInteraction)
         }), {
           status: 402,
@@ -425,7 +471,7 @@ Respond ONLY with your dialogue and brief actions. Do not include your name pref
         });
       }
       
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error("Dialogue generation failed");
     }
 
     const data = await response.json();
