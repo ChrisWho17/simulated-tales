@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,6 +111,7 @@ const MAX_SECONDARY_GENRES = 3;
 function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }) {
   const [campaigns, setCampaigns] = useState<CampaignMetadata[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Load campaigns from storage
   useEffect(() => {
@@ -141,6 +142,18 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
     }
   };
 
+  const scrollUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scrollContainerRef.current?.scrollBy({ top: -100, behavior: 'smooth' });
+  };
+
+  const scrollDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scrollContainerRef.current?.scrollBy({ top: 100, behavior: 'smooth' });
+  };
+
   if (campaigns.length === 0) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 text-sm text-muted-foreground">
@@ -149,6 +162,8 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
       </div>
     );
   }
+
+  const showScrollControls = campaigns.length > 3;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -163,35 +178,61 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
-        {campaigns.map((campaign) => (
-          <DropdownMenuItem 
-            key={campaign.id}
-            onClick={() => handleLoad(campaign.id)}
-            className="flex items-start gap-3 p-3 cursor-pointer group"
+      <DropdownMenuContent align="end" className="w-72 p-0">
+        {/* Scroll Up Button */}
+        {showScrollControls && (
+          <div 
+            className="sticky top-0 z-10 flex justify-center p-1 bg-popover border-b border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={scrollUp}
           >
-            <div className="text-xl shrink-0">
-              {GENRE_ICONS[campaign.primaryGenre as GameGenre] || '📖'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-foreground truncate">{campaign.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {campaign.characterName} · Lvl {campaign.characterLevel}
-              </div>
-              <div className="text-xs text-muted-foreground/70">
-                {formatPlayTime(campaign.playTime)} · {formatLastPlayed(campaign.updatedAt)}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={(e) => handleDelete(e, campaign.id, campaign.name)}
+            <ChevronDown className="w-4 h-4 rotate-180 text-muted-foreground" />
+          </div>
+        )}
+        
+        {/* Scrollable content */}
+        <div 
+          ref={scrollContainerRef}
+          className="max-h-64 overflow-y-auto"
+        >
+          {campaigns.map((campaign) => (
+            <DropdownMenuItem 
+              key={campaign.id}
+              onClick={() => handleLoad(campaign.id)}
+              className="flex items-start gap-3 p-3 cursor-pointer group"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </DropdownMenuItem>
-        ))}
+              <div className="text-xl shrink-0">
+                {GENRE_ICONS[campaign.primaryGenre as GameGenre] || '📖'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-foreground truncate">{campaign.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {campaign.characterName} · Lvl {campaign.characterLevel}
+                </div>
+                <div className="text-xs text-muted-foreground/70">
+                  {formatPlayTime(campaign.playTime)} · {formatLastPlayed(campaign.updatedAt)}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => handleDelete(e, campaign.id, campaign.name)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuItem>
+          ))}
+        </div>
+        
+        {/* Scroll Down Button */}
+        {showScrollControls && (
+          <div 
+            className="sticky bottom-0 z-10 flex justify-center p-1 bg-popover border-t border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={scrollDown}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </div>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

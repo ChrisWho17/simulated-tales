@@ -427,8 +427,13 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       },
     };
     
-    // Save immediately using integrity service
-    DataIntegrityService.saveWithIntegrity(campaign);
+    // Save immediately using integrity service - MUST await to ensure save completes
+    const integrityResult = await DataIntegrityService.saveWithIntegrity(campaign);
+    if (!integrityResult.success) {
+      console.error('[Campaign] Integrity save failed:', integrityResult.error);
+    } else {
+      console.log('[Campaign] Integrity save successful, checksum:', integrityResult.checksum);
+    }
     
     // Sync to cloud - await this to ensure it completes
     const saveResult = await UnifiedSaveArchitecture.saveCampaign(campaign);
