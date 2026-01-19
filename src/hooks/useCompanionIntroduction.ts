@@ -13,6 +13,7 @@ import {
   hasImmediateCompanions,
   buildCompanionIntroductionContext,
 } from '@/game/companionTimingSystem';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 // Re-export for backwards compatibility
 export interface PendingCompanionIntroduction extends PendingCompanionWithTiming {}
@@ -139,7 +140,7 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
   // Get saved dialogue for a companion
   const getCompanionDialogue = useCallback((companionId: string): string | null => {
     try {
-      const intros = JSON.parse(localStorage.getItem('companion-introductions') || '{}');
+      const intros = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPANION_INTRODUCTIONS) || '{}');
       return intros[companionId] || null;
     } catch {
       return null;

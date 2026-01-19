@@ -94,6 +94,18 @@ export const STORAGE_KEYS = {
   UI_COLOR_THEME: 'untold-ui-color-theme',
   
   // ============================================================================
+  // PLAYER STATE (mood, tone, language)
+  // ============================================================================
+  PLAYER_MOOD: 'untold-player-mood',
+  TONE_STATE: 'untold-tone-state',
+  LANGUAGE_STATE: 'untold-language-state',
+  
+  // ============================================================================
+  // COMPANION EVENTS
+  // ============================================================================
+  PENDING_RESURRECTION_EVENTS: 'pending-resurrection-events',
+  
+  // ============================================================================
   // CACHE PREFIXES (low priority for cleanup)
   // ============================================================================
   PORTRAIT_CACHE_PREFIX: 'portrait-cache-',

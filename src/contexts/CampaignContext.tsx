@@ -261,17 +261,17 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // Restore companion localStorage data from campaign
     try {
       if (campaign.companionAppearances && Object.keys(campaign.companionAppearances).length > 0) {
-        localStorage.setItem('companion-appearances', JSON.stringify(campaign.companionAppearances));
+        localStorage.setItem(STORAGE_KEYS.COMPANION_APPEARANCES, JSON.stringify(campaign.companionAppearances));
         console.log('[Campaign] Restored companion appearances');
       }
       
       if (campaign.companionIntroductions && Object.keys(campaign.companionIntroductions).length > 0) {
-        localStorage.setItem('companion-introductions', JSON.stringify(campaign.companionIntroductions));
+        localStorage.setItem(STORAGE_KEYS.COMPANION_INTRODUCTIONS, JSON.stringify(campaign.companionIntroductions));
         console.log('[Campaign] Restored companion introductions');
       }
       
       if (campaign.pendingCompanionIntroductions && campaign.pendingCompanionIntroductions.length > 0) {
-        localStorage.setItem('pending-companion-introductions', JSON.stringify(campaign.pendingCompanionIntroductions));
+        localStorage.setItem(STORAGE_KEYS.PENDING_COMPANION_INTRODUCTIONS, JSON.stringify(campaign.pendingCompanionIntroductions));
         console.log('[Campaign] Restored pending companion introductions');
       }
     } catch (e) {
@@ -343,13 +343,13 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     let pendingCompanionIntroductions: unknown[] = [];
     
     try {
-      const appearances = localStorage.getItem('companion-appearances');
+      const appearances = localStorage.getItem(STORAGE_KEYS.COMPANION_APPEARANCES);
       if (appearances) companionAppearances = JSON.parse(appearances);
       
-      const introductions = localStorage.getItem('companion-introductions');
+      const introductions = localStorage.getItem(STORAGE_KEYS.COMPANION_INTRODUCTIONS);
       if (introductions) companionIntroductions = JSON.parse(introductions);
       
-      const pending = localStorage.getItem('pending-companion-introductions');
+      const pending = localStorage.getItem(STORAGE_KEYS.PENDING_COMPANION_INTRODUCTIONS);
       if (pending) pendingCompanionIntroductions = JSON.parse(pending);
     } catch (e) {
       console.warn('[Campaign] Failed to capture companion localStorage data:', e);

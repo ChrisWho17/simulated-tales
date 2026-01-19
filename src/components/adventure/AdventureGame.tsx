@@ -251,11 +251,13 @@ function buildBackgroundNPCActionsContext(
 
 type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'narrator' | 'playing';
 
-const STORY_KEY = 'untold-adventure-story';
-const CHARACTER_KEY = 'untold-adventure-character';
-const SCENARIO_KEY = 'untold-adventure-scenario';
-const GENRE_KEY = 'untold-adventure-genre';
-const COLOR_KEY = 'untold-ui-color-theme';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
+
+const STORY_KEY = STORAGE_KEYS.ADVENTURE_STORY;
+const CHARACTER_KEY = STORAGE_KEYS.ADVENTURE_CHARACTER;
+const SCENARIO_KEY = STORAGE_KEYS.ADVENTURE_SCENARIO;
+const GENRE_KEY = STORAGE_KEYS.ADVENTURE_GENRE;
+const COLOR_KEY = STORAGE_KEYS.UI_COLOR_THEME;
 
 // Helper to sanitize character for API - strips large base64 data to reduce payload size
 function sanitizeCharacterForAPI(char: RPGCharacter): RPGCharacter {
@@ -862,7 +864,7 @@ export function AdventureGame() {
   // Mood state for narrative integration
   const [currentMood, setCurrentMood] = useState<CoreMoodType>(() => {
     try {
-      const saved = localStorage.getItem('untold-player-mood');
+      const saved = localStorage.getItem(STORAGE_KEYS.PLAYER_MOOD);
       if (saved) return JSON.parse(saved) as CoreMoodType;
     } catch {}
     return 'neutral';
@@ -872,7 +874,7 @@ export function AdventureGame() {
   // Tone adaptation system state
   const [toneState, setToneState] = useState<ToneState>(() => {
     try {
-      const saved = localStorage.getItem('untold-tone-state');
+      const saved = localStorage.getItem(STORAGE_KEYS.TONE_STATE);
       if (saved) return JSON.parse(saved);
     } catch {}
     return createInitialToneState();
@@ -881,7 +883,7 @@ export function AdventureGame() {
   // Language barrier system state
   const [languageState, setLanguageState] = useState<LanguageSystemState>(() => {
     try {
-      const saved = localStorage.getItem('untold-language-state');
+      const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE_STATE);
       if (saved) return JSON.parse(saved);
     } catch {}
     return createLanguageSystemState();
@@ -905,17 +907,17 @@ export function AdventureGame() {
   
   // Persist mood changes
   useEffect(() => {
-    localStorage.setItem('untold-player-mood', JSON.stringify(currentMood));
+    localStorage.setItem(STORAGE_KEYS.PLAYER_MOOD, JSON.stringify(currentMood));
   }, [currentMood]);
   
   // Persist tone state
   useEffect(() => {
-    localStorage.setItem('untold-tone-state', JSON.stringify(toneState));
+    localStorage.setItem(STORAGE_KEYS.TONE_STATE, JSON.stringify(toneState));
   }, [toneState]);
   
   // Persist language state
   useEffect(() => {
-    localStorage.setItem('untold-language-state', JSON.stringify(languageState));
+    localStorage.setItem(STORAGE_KEYS.LANGUAGE_STATE, JSON.stringify(languageState));
   }, [languageState]);
   
   // Sync language settings from GameContext
