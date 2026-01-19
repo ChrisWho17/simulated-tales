@@ -802,32 +802,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           </div>
                         </div>
                         
-                        {/* Female Body Shape Presets - Expanded */}
-                        <div>
-                          <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
-                          <div className="grid grid-cols-5 gap-2">
-                            {FEMALE_BODY_SHAPE_PRESETS.map(preset => (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => {
-                                  updateAppearance('full', 'bustSize', preset.bustSize);
-                                  updateAppearance('full', 'hipWidth', preset.hipWidth);
-                                  updateAppearance('full', 'muscleDefinition', preset.muscle);
-                                }}
-                                className={`p-2 text-xs rounded-lg border transition-all ${
-                                  appearance.full?.bustSize === preset.bustSize && 
-                                  appearance.full?.hipWidth === preset.hipWidth &&
-                                  appearance.full?.muscleDefinition === preset.muscle
-                                    ? 'bg-primary/20 border-primary text-primary'
-                                    : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                                }`}
-                              >
-                                {preset.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        {/* Body shape presets removed - use Additional Description instead */}
                       </>
                     )}
 
@@ -867,31 +842,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           </div>
                         </div>
                         
-                        {/* Male Body Shape Presets */}
-                        <div>
-                          <label className="text-sm text-muted-foreground mb-2 block">Body Shape Presets</label>
-                          <div className="grid grid-cols-5 gap-2">
-                            {MALE_BODY_SHAPE_PRESETS.map(preset => (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => {
-                                  updateAppearance('full', 'shoulderWidth', preset.shoulderWidth);
-                                  updateAppearance('full', 'muscleDefinition', preset.muscle);
-                                  updateAppearance('full', 'bodyHair', preset.bodyHair);
-                                  updateAppearance('full', 'physique', preset.id);
-                                }}
-                                className={`p-2 text-xs rounded-lg border transition-all ${
-                                  appearance.full?.physique === preset.id
-                                    ? 'bg-primary/20 border-primary text-primary'
-                                    : 'bg-muted/30 border-border/50 hover:border-primary/50'
-                                }`}
-                              >
-                                {preset.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        {/* Body shape presets removed - use Additional Description instead */}
                       </>
                     )}
 

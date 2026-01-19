@@ -437,106 +437,11 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
                    (appearance.full?.prosthetics?.length || 0) + 
                    (appearance.full?.implants?.length || 0) + 
                    (appearance.full?.mutations?.length || 0);
-  const clothingCount = appearance.full?.clothingDetails?.length || 0;
+  // Clothing style removed - use Additional Description instead
 
   return (
     <div className="space-y-2">
-      {/* Clothing Style Accordion */}
-      {renderAccordionHeader('clothing', <Shirt className="w-4 h-4 text-primary" />, 'Clothing Style', clothingCount)}
-      {openSection === 'clothing' && (
-        <div className="p-3 border border-border/30 rounded-lg bg-background/30 space-y-3 animate-in slide-in-from-top-2 duration-200">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Overall Style</label>
-            <p className="text-xs text-muted-foreground/70 mb-2">
-              ⚡ Non-genre clothing may trigger NPC reactions
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {CLOTHING_STYLE_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => onUpdateAppearance('full', 'clothingStyle', opt.value)}
-                  className={cn(
-                    "px-2 py-1.5 rounded text-xs transition-all text-left",
-                    appearance.full?.clothingStyle === opt.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background/50 border border-border/30 hover:border-primary/50"
-                  )}
-                >
-                  <div className="font-medium">{opt.label}</div>
-                  <div className="text-[10px] opacity-70 truncate">{opt.description}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Specific Items (optional)</label>
-            
-            {/* Female Clothing */}
-            <div className="mb-3">
-              <span className="text-[10px] text-pink-400 uppercase tracking-wider font-semibold block mb-1">♀ Female</span>
-              <div className="flex flex-wrap gap-1">
-                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'female').map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
-                    className={cn(
-                      "px-2 py-1 rounded text-xs transition-all",
-                      appearance.full?.clothingDetails?.includes(opt.value)
-                        ? "bg-pink-500 text-white"
-                        : "bg-background/50 border border-pink-500/30 hover:border-pink-500/60"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Androgynous Clothing */}
-            <div className="mb-3">
-              <span className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold block mb-1">⚧ Unisex</span>
-              <div className="flex flex-wrap gap-1">
-                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'androgynous').map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
-                    className={cn(
-                      "px-2 py-1 rounded text-xs transition-all",
-                      appearance.full?.clothingDetails?.includes(opt.value)
-                        ? "bg-purple-500 text-white"
-                        : "bg-background/50 border border-purple-500/30 hover:border-purple-500/60"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Male Clothing */}
-            <div className="mb-1">
-              <span className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold block mb-1">♂ Male</span>
-              <div className="flex flex-wrap gap-1">
-                {CLOTHING_DETAIL_OPTIONS.filter(opt => opt.category === 'male').map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => toggleArrayItem('clothingDetails', opt.value)}
-                    className={cn(
-                      "px-2 py-1 rounded text-xs transition-all",
-                      appearance.full?.clothingDetails?.includes(opt.value)
-                        ? "bg-blue-500 text-white"
-                        : "bg-background/50 border border-blue-500/30 hover:border-blue-500/60"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Clothing Style removed - use Additional Description instead */}
 
       {/* Piercings Accordion */}
       {renderAccordionHeader('piercings', <Scissors className="w-4 h-4 text-accent" />, 'Piercings', piercingCount)}
