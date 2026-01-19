@@ -260,12 +260,23 @@ interface ImportPreview {
   updatedAt: number;
 }
 
+// Import progress step type
+type ImportStep = 'idle' | 'validating' | 'saving' | 'syncing' | 'loading' | 'complete';
+
+const IMPORT_STEPS: { step: ImportStep; label: string; icon: React.ReactNode }[] = [
+  { step: 'validating', label: 'Validating campaign data...', icon: <Search className="h-4 w-4" /> },
+  { step: 'saving', label: 'Saving to local storage...', icon: <FolderOpen className="h-4 w-4" /> },
+  { step: 'syncing', label: 'Syncing with cloud...', icon: <Loader2 className="h-4 w-4 animate-spin" /> },
+  { step: 'loading', label: 'Loading campaign...', icon: <Sparkles className="h-4 w-4" /> },
+];
+
 // Import Save Button component - allows importing a campaign from a JSON file with preview
 function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void }) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const campaignContext = useCampaignOptional();
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importStep, setImportStep] = useState<ImportStep>('idle');
   
   const handleImportClick = () => {
     importInputRef.current?.click();
@@ -304,28 +315,35 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
     e.target.value = '';
   }, []);
   
-  // Confirm and import
+  // Confirm and import with step-by-step progress
   const handleConfirmImport = useCallback(async () => {
     if (!preview) return;
     setIsImporting(true);
+    setImportStep('validating');
     
     try {
+      // Step 1: Validate
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const data = JSON.parse(preview.json);
+      if (!data.id || !data.meta) {
+        throw new Error('Invalid campaign structure');
+      }
+      
+      // Step 2: Save
+      setImportStep('saving');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      let importedCampaign: { id: string; meta: { name: string } } | null = null;
+      
       if (campaignContext?.importCampaign) {
+        // Step 3: Sync with context (includes cloud sync)
+        setImportStep('syncing');
         const result = await campaignContext.importCampaign(preview.json);
         if (result) {
-          toast.success(`Imported "${result.meta.name}"`);
-          setPreview(null);
-          if (onLoad) {
-            onLoad(result.id);
-          } else {
-            window.location.reload();
-          }
-        } else {
-          toast.error('Failed to import campaign');
+          importedCampaign = result;
         }
       } else {
         // Fallback: parse and store directly
-        const data = JSON.parse(preview.json);
         localStorage.setItem(`campaign_${data.id}`, preview.json);
         const indexStr = localStorage.getItem('campaign_index') || '[]';
         const index = JSON.parse(indexStr);
@@ -336,17 +354,33 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
           index.push({ ...data.meta, id: data.id });
         }
         localStorage.setItem('campaign_index', JSON.stringify(index));
-        toast.success(`Imported "${data.meta.name}"`);
-        setPreview(null);
-        if (onLoad) {
-          onLoad(data.id);
-        } else {
-          window.location.reload();
-        }
+        importedCampaign = { id: data.id, meta: data.meta };
+      }
+      
+      if (!importedCampaign) {
+        throw new Error('Import returned no campaign');
+      }
+      
+      // Step 4: Load
+      setImportStep('loading');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setImportStep('complete');
+      toast.success(`Imported "${importedCampaign.meta.name}"`);
+      
+      // Small delay to show completion before navigating
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      setPreview(null);
+      if (onLoad) {
+        onLoad(importedCampaign.id);
+      } else {
+        window.location.reload();
       }
     } catch (err) {
+      console.error('[Import] Failed:', err);
       toast.error('Failed to import campaign');
-    } finally {
+      setImportStep('idle');
       setIsImporting(false);
     }
   }, [preview, campaignContext, onLoad]);
@@ -380,19 +414,19 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
       </TooltipProvider>
       
       {/* Import Preview Dialog */}
-      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+      <Dialog open={!!preview} onOpenChange={(open) => !open && !isImporting && setPreview(null)}>
         <DialogContent className="sm:max-w-md animate-scale-in">
           <DialogHeader className="animate-fade-in">
             <DialogTitle className="flex items-center gap-2 text-primary">
               <Upload className="h-5 w-5" />
-              Import Campaign
+              {isImporting ? 'Importing Campaign...' : 'Import Campaign'}
             </DialogTitle>
             <DialogDescription>
-              Review the campaign details before importing.
+              {isImporting ? 'Please wait while your campaign is being imported.' : 'Review the campaign details before importing.'}
             </DialogDescription>
           </DialogHeader>
           
-          {preview && (
+          {preview && !isImporting && (
             <div className="space-y-4 py-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
               {/* Campaign Name */}
               <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -425,33 +459,84 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
             </div>
           )}
           
-          <DialogFooter className="gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <Button
-              variant="outline"
-              onClick={() => setPreview(null)}
-              disabled={isImporting}
-              className="transition-all duration-200 hover:scale-105"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmImport}
-              disabled={isImporting}
-              className="bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
-            >
-              {isImporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import & Play
-                </>
+          {/* Import Progress Steps */}
+          {isImporting && (
+            <div className="py-6 space-y-3 animate-fade-in">
+              {IMPORT_STEPS.map((stepInfo, index) => {
+                const stepOrder = ['validating', 'saving', 'syncing', 'loading'];
+                const currentIndex = stepOrder.indexOf(importStep);
+                const stepIndex = stepOrder.indexOf(stepInfo.step);
+                const isActive = importStep === stepInfo.step;
+                const isComplete = stepIndex < currentIndex || importStep === 'complete';
+                const isPending = stepIndex > currentIndex && importStep !== 'complete';
+                
+                return (
+                  <div 
+                    key={stepInfo.step}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-primary/20 border border-primary/40' 
+                        : isComplete 
+                          ? 'bg-green-500/10 border border-green-500/30' 
+                          : 'bg-muted/30 border border-border/30 opacity-50'
+                    }`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-primary/30 text-primary' 
+                        : isComplete 
+                          ? 'bg-green-500/30 text-green-500' 
+                          : 'bg-muted/50 text-muted-foreground'
+                    }`}>
+                      {isComplete ? (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : isActive ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <span className="text-xs font-medium">{index + 1}</span>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${
+                      isActive ? 'text-primary' : isComplete ? 'text-green-500' : 'text-muted-foreground'
+                    }`}>
+                      {isComplete ? stepInfo.label.replace('...', '') : stepInfo.label}
+                    </span>
+                  </div>
+                );
+              })}
+              
+              {importStep === 'complete' && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/20 border border-green-500/40 animate-fade-in">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500/30 text-green-500">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium text-green-500">Campaign imported successfully!</span>
+                </div>
               )}
-            </Button>
-          </DialogFooter>
+            </div>
+          )}
+          
+          {!isImporting && (
+            <DialogFooter className="gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              <Button
+                variant="outline"
+                onClick={() => setPreview(null)}
+                className="transition-all duration-200 hover:scale-105"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmImport}
+                className="bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import & Play
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>
