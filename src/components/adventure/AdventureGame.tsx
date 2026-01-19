@@ -245,6 +245,18 @@ const SCENARIO_KEY = 'untold-adventure-scenario';
 const GENRE_KEY = 'untold-adventure-genre';
 const COLOR_KEY = 'untold-ui-color-theme';
 
+// Helper to sanitize character for API - strips large base64 data to reduce payload size
+function sanitizeCharacterForAPI(char: RPGCharacter): RPGCharacter {
+  const charAny = char as any;
+  return {
+    ...char,
+    // Strip large base64 portrait data (>500 chars typically means base64)
+    portraitUrl: charAny.portraitUrl && charAny.portraitUrl.length > 500 ? null : charAny.portraitUrl,
+    // Limit appearance description length
+    appearanceDescription: charAny.appearanceDescription?.slice(0, 2000) || null,
+  } as RPGCharacter;
+}
+
 export function AdventureGame() {
   const navigate = useNavigate();
   const { 
@@ -1221,17 +1233,20 @@ export function AdventureGame() {
       const includeIntermediateContext = retryLevel <= 1;
       const includeBasicContext = retryLevel <= 2;
       
+      // Sanitize character data - strip out large base64 data that inflates payload
+      const sanitizedCharacter = sanitizeCharacterForAPI(activeChar);
+      
       const requestBody: Record<string, any> = {
         scenario: enhancedScenario,
         playerAction: cleanedPlayerAction,
         conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
         cheatMode,
-        character: activeChar,
+        character: sanitizedCharacter,
         diceRoll,
         // Pass adult content setting for NSFW control
         adultContent: settings.adultContent,
         // Pass character appearance description for narrative (includes adult details when enabled)
-        characterAppearance: (activeChar as any).appearanceDescription || null,
+        characterAppearance: (sanitizedCharacter as any).appearanceDescription,
         // Pass narrator style configuration
         narratorConfig: settings.narratorConfig,
         // Pass dice mode for roll frequency
@@ -1637,7 +1652,7 @@ export function AdventureGame() {
             scenario: scenarioSelection.scenario,
             playerAction: `travel to ${newZone.name}`,
             conversationHistory: story.slice(-10).map(e => ({ role: e.role, content: e.content })),
-            character: character,
+            character: sanitizeCharacterForAPI(character),
             adultContent: settings.adultContent,
             genreContract: worldBible?.contractSummary || null,
             narratorConfig: settings.narratorConfig,
@@ -1760,7 +1775,7 @@ export function AdventureGame() {
             body: JSON.stringify({
               scenario: scenarioSelection.scenario,
               conversationHistory: [],
-              character: character,
+              character: sanitizeCharacterForAPI(character),
               adultContent: settings.adultContent,
               genreContract: worldBible?.contractSummary || null,
               narratorConfig: settings.narratorConfig,
@@ -2566,7 +2581,7 @@ export function AdventureGame() {
           body: JSON.stringify({
             scenario: scenarioSelection.scenario,
             conversationHistory: [],
-            character: character,
+            character: sanitizeCharacterForAPI(character),
             adultContent: settings.adultContent,
             genreContract: worldBible?.contractSummary || null,
             narratorConfig: settings.narratorConfig,
