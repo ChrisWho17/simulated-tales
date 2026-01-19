@@ -1069,8 +1069,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     <div key={stat} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
                       <div>
                         <span className="font-medium capitalize">{stat}</span>
-                        {(classBonus > 0 || bgBonus > 0) && (
-                          <span className="text-xs text-primary ml-2">(+{classBonus + bgBonus})</span>
+                        {classBonus > 0 && (
+                          <span className="text-xs text-primary ml-2">(+{classBonus})</span>
+                        )}
+                        {bgBonus > 0 && (
+                          <span className="text-xs text-accent ml-1">(+{bgBonus})</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
