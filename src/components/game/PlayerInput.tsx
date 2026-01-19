@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Eye, MessageSquare, Backpack, Clock, HelpCircle, Play } from 'lucide-react';
 import { parseEnhancedCommand, getCommandTypeInfo } from '@/game/commandParser';
-import { InputFormatGuide, InputHint } from './InputFormatGuide';
+import { InputHint } from './InputFormatGuide';
 import { EmotionPicker } from './EmotionPicker';
 import { OutfitChangeMenu } from './OutfitChangeMenu';
 import { CoreMoodType } from '@/game/moodSystem';
@@ -183,9 +183,8 @@ export function PlayerInput({
         </Button>
       </form>
       
-      {/* Bottom row: Input guide + keyword hints */}
-      <div className="flex items-center justify-between mt-2">
-        <InputFormatGuide />
+      {/* Bottom row: keyword hints */}
+      <div className="flex items-center justify-end mt-2">
         <p className="text-[10px] text-muted-foreground">
           <span className="text-primary/70">"quotes"</span> = speech • <span className="text-primary/70">verbs</span> = action • <span className="text-primary/70">tactics</span> = approach
         </p>
