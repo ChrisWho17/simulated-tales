@@ -33,6 +33,8 @@ import {
   Upload,
   Loader2,
   Trash2,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import { 
   DataIntegrityService, 
@@ -41,6 +43,7 @@ import {
   IntegrityIssue 
 } from '@/services/dataIntegrityService';
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface DataIntegrityPanelProps {
@@ -49,9 +52,11 @@ interface DataIntegrityPanelProps {
 }
 
 export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
+  const { isAuthenticated } = useAuth();
   const [isScanning, setIsScanning] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteStatus, setDeleteStatus] = useState<'local' | 'cloud' | null>(null);
   const [report, setReport] = useState<IntegrityReport | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
@@ -256,26 +261,41 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
                           onClick={async () => {
                             if (confirm(`Delete "${result.campaignName || result.campaignId}"? This cannot be undone.`)) {
                               setDeletingId(result.campaignId);
+                              setDeleteStatus('local');
                               try {
+                                // Show cloud status if authenticated
+                                if (isAuthenticated) {
+                                  setDeleteStatus('cloud');
+                                }
                                 // Use unified architecture for cloud sync delete
                                 await UnifiedSaveArchitecture.deleteCampaign(result.campaignId);
-                                toast.success('Deleted broken campaign');
+                                toast.success(isAuthenticated ? 'Deleted from device and cloud' : 'Deleted broken campaign');
                                 runScan();
                               } catch (e) {
                                 toast.error('Failed to delete campaign');
                               } finally {
                                 setDeletingId(null);
+                                setDeleteStatus(null);
                               }
                             }
                           }}
                           disabled={deletingId === result.campaignId}
                         >
                           {deletingId === result.campaignId ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            <div className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {deleteStatus === 'cloud' && (
+                                <Cloud className="h-3 w-3 text-sky-300" />
+                              )}
+                              <span>{deleteStatus === 'cloud' ? 'Syncing...' : 'Deleting...'}</span>
+                            </div>
                           ) : (
-                            <Trash2 className="h-3 w-3 mr-1" />
+                            <>
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Delete Campaign
+                              {isAuthenticated && <Cloud className="h-3 w-3 ml-1 opacity-60" />}
+                            </>
                           )}
-                          Delete Campaign
                         </Button>
                       )}
                     </div>
