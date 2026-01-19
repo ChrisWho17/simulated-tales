@@ -218,38 +218,47 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
         
         {/* Scan Results */}
         {report && report.details.length > 0 && (
-          <ScrollArea className="max-h-[40vh] pr-4">
-            <div className="space-y-3">
+          <ScrollArea className="max-h-[40vh]">
+            <div className="space-y-3 pr-2">
               {report.details.map((result) => (
-                <Card key={result.campaignId} className="p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Card key={result.campaignId} className="p-3 overflow-hidden">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 mt-0.5">
                       {getStatusIcon(result.status)}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium break-all text-sm">
                           {result.campaignName || result.campaignId}
                         </p>
-                        {result.repairedFrom && (
-                          <p className="text-xs text-muted-foreground">
-                            Repaired from {result.repairedFrom}
-                          </p>
-                        )}
+                        {getStatusBadge(result.status)}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {getStatusBadge(result.status)}
+                      {result.repairedFrom && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Repaired from {result.repairedFrom}
+                        </p>
+                      )}
+                      {result.issues.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {result.issues.map((issue, i) => (
+                            <p key={i} className={`text-xs ${getSeverityColor(issue.severity)}`}>
+                              • {issue.message}
+                              {issue.field && <span className="text-muted-foreground"> ({issue.field})</span>}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       {(result.status === 'unrecoverable' || result.status === 'corrupted') && (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          variant="destructive"
+                          size="sm"
+                          className="mt-2 h-7 text-xs"
                           onClick={() => {
                             if (confirm(`Delete "${result.campaignName || result.campaignId}"? This cannot be undone.`)) {
                               setDeletingId(result.campaignId);
                               try {
                                 deleteCampaignData(result.campaignId);
                                 toast.success('Deleted broken campaign');
-                                // Re-run scan to update
                                 runScan();
                               } catch (e) {
                                 toast.error('Failed to delete campaign');
@@ -261,25 +270,15 @@ export function DataIntegrityPanel({ open, onClose }: DataIntegrityPanelProps) {
                           disabled={deletingId === result.campaignId}
                         >
                           {deletingId === result.campaignId ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 mr-1" />
                           )}
+                          Delete Campaign
                         </Button>
                       )}
                     </div>
                   </div>
-                  
-                  {result.issues.length > 0 && (
-                    <div className="mt-2 pl-6 space-y-1">
-                      {result.issues.map((issue, i) => (
-                        <p key={i} className={`text-xs ${getSeverityColor(issue.severity)}`}>
-                          • {issue.message}
-                          {issue.field && <span className="text-muted-foreground"> ({issue.field})</span>}
-                        </p>
-                      ))}
-                    </div>
-                  )}
                 </Card>
               ))}
             </div>
