@@ -476,3 +476,170 @@ export function detectMissingDropTags(
   // The parsed results already contain the correct inventory item names
   return filtered.slice(0, maxItems).map(p => p.itemName);
 }
+
+// ============================================================================
+// FALLBACK DAMAGE DETECTION
+// When AI forgets to include [DAMAGE:X] tags
+// ============================================================================
+
+// Patterns that indicate the player took damage
+const DAMAGE_PATTERNS = [
+  // Direct hit patterns
+  /(?:you\s+(?:take|receive|suffer|sustain))\s+(\d+)\s+(?:points?\s+of\s+)?damage/gi,
+  /(?:deals?|inflicts?|causes?)\s+(\d+)\s+(?:points?\s+of\s+)?damage\s+(?:to\s+you|against\s+you)/gi,
+  /(?:hits?\s+you\s+for|strikes?\s+you\s+for)\s+(\d+)\s+(?:points?\s+of\s+)?damage/gi,
+  /(?:you\s+lose)\s+(\d+)\s+(?:health|hp|hit\s+points?)/gi,
+  
+  // Combat damage without numbers (estimate based on severity)
+  /(?:the\s+)?(?:blow|strike|attack|slash|stab)\s+(?:lands|connects|hits)\s+(?:hard|solidly|true)/gi,
+  /(?:you're|you\s+are)\s+(?:wounded|injured|hurt|struck|hit)/gi,
+  /(?:blood\s+(?:flows|streams|pours)|you\s+(?:bleed|stagger|reel))\s+from\s+(?:the\s+)?(?:wound|injury|blow|impact)/gi,
+  /(?:pain\s+(?:shoots|lances|explodes)|agony\s+(?:rips|tears))\s+through\s+(?:you|your\s+body)/gi,
+];
+
+// Patterns that explicitly mention healing
+const HEAL_PATTERNS = [
+  /(?:you\s+(?:heal|recover|regain|restore))\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp|hit\s+points?)/gi,
+  /(?:heals?\s+you\s+for|restores?\s+you\s+for)\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp)/gi,
+  /(?:you\s+feel)\s+(\d+)\s+(?:points?\s+of\s+)?(?:health|hp)\s+(?:return|restore)/gi,
+];
+
+// Patterns that indicate gaining money
+const GOLD_PATTERNS = [
+  // Explicit amounts
+  /(?:you\s+(?:gain|receive|find|collect|pocket|earn|acquire|obtain))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency)/gi,
+  /(?:hands?\s+you|gives?\s+you|pays?\s+you|rewards?\s+you\s+with)\s+(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?|currency)/gi,
+  /(?:your\s+(?:reward|payment|bounty|fee)\s+(?:is|comes\s+to))\s+(\d+)\s+(?:gold|coins?|credits?|dollars?)/gi,
+  /(?:a\s+(?:pouch|bag|purse)\s+(?:containing|with|holding))\s+(\d+)\s+(?:gold|coins?|credits?)/gi,
+  /(\d+)\s+(?:gold|coins?|credits?|dollars?|caps?)\s+(?:richer|wealthier)/gi,
+];
+
+export interface ParsedDamage {
+  amount: number;
+  confidence: 'high' | 'medium' | 'low';
+  source: string;
+}
+
+export interface ParsedHeal {
+  amount: number;
+  confidence: 'high' | 'medium' | 'low';
+  source: string;
+}
+
+export interface ParsedGold {
+  amount: number;
+  confidence: 'high' | 'medium' | 'low';
+  source: string;
+}
+
+/**
+ * Detect damage in narrative when AI forgets [DAMAGE:X] tags
+ */
+export function detectMissingDamageTags(
+  narrative: string,
+  existingDamage?: number,
+  options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
+): number | null {
+  // If damage was already tagged, don't double-count
+  if (existingDamage && existingDamage > 0) return null;
+  
+  // Check for [DAMAGE:X] tag already present
+  if (/\[DAMAGE:\d+\]/i.test(narrative)) return null;
+  
+  const minConfidence = options.minConfidence || 'high';
+  
+  // Try to find explicit damage amounts first
+  for (const pattern of DAMAGE_PATTERNS.slice(0, 4)) {
+    const matches = [...narrative.matchAll(pattern)];
+    for (const match of matches) {
+      if (match[1]) {
+        const amount = parseInt(match[1]);
+        if (amount > 0 && amount <= 100) {
+          console.log('[DamageParser] Detected damage:', amount, 'from pattern:', pattern);
+          return amount;
+        }
+      }
+    }
+  }
+  
+  // If no explicit amount, check for combat damage descriptions (estimate)
+  if (minConfidence !== 'high') {
+    for (const pattern of DAMAGE_PATTERNS.slice(4)) {
+      if (pattern.test(narrative)) {
+        // Estimate damage based on severity words
+        const severeHit = /(?:devastating|crushing|massive|brutal|vicious|terrible)/i.test(narrative);
+        const moderateHit = /(?:solid|hard|painful|sharp)/i.test(narrative);
+        const lightHit = /(?:glancing|minor|slight|graze)/i.test(narrative);
+        
+        if (severeHit) return 15;
+        if (moderateHit) return 8;
+        if (lightHit) return 3;
+        return 5; // Default estimate
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Detect healing in narrative when AI forgets [HEAL:X] tags
+ */
+export function detectMissingHealTags(
+  narrative: string,
+  existingHeal?: number,
+  options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
+): number | null {
+  // If heal was already tagged, don't double-count
+  if (existingHeal && existingHeal > 0) return null;
+  
+  // Check for [HEAL:X] tag already present
+  if (/\[HEAL:\d+\]/i.test(narrative)) return null;
+  
+  // Try to find explicit heal amounts
+  for (const pattern of HEAL_PATTERNS) {
+    const matches = [...narrative.matchAll(pattern)];
+    for (const match of matches) {
+      if (match[1]) {
+        const amount = parseInt(match[1]);
+        if (amount > 0 && amount <= 100) {
+          console.log('[HealParser] Detected healing:', amount);
+          return amount;
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Detect gold gains in narrative when AI forgets [GOLD:X] tags
+ */
+export function detectMissingGoldTags(
+  narrative: string,
+  existingGold?: number,
+  options: { minConfidence?: 'high' | 'medium' | 'low' } = {}
+): number | null {
+  // If gold was already tagged, don't double-count
+  if (existingGold && existingGold > 0) return null;
+  
+  // Check for [GOLD:X] tag already present
+  if (/\[GOLD:\d+\]/i.test(narrative)) return null;
+  
+  // Try to find explicit gold amounts
+  for (const pattern of GOLD_PATTERNS) {
+    const matches = [...narrative.matchAll(pattern)];
+    for (const match of matches) {
+      if (match[1]) {
+        const amount = parseInt(match[1]);
+        if (amount > 0 && amount <= 10000) {
+          console.log('[GoldParser] Detected gold gain:', amount);
+          return amount;
+        }
+      }
+    }
+  }
+  
+  return null;
+}

@@ -139,7 +139,7 @@ import {
   isGenerationInProgress,
   forceReleaseLock
 } from '@/lib/narrativeGuard';
-import { detectMissingLootTags, detectMissingDropTags } from '@/lib/narrativeLootParser';
+import { detectMissingLootTags, detectMissingDropTags, detectMissingDamageTags, detectMissingHealTags, detectMissingGoldTags } from '@/lib/narrativeLootParser';
 import { 
   runMoveSync, 
   initializeMoveSyncState, 
@@ -1511,6 +1511,36 @@ export function AdventureGame() {
           finalMechanics.itemsDropped = allDrops;
         }
         
+        // === FALLBACK DAMAGE DETECTION ===
+        // If AI forgot to use [DAMAGE:X] tags, try to detect damage from narrative
+        const detectedDamage = detectMissingDamageTags(data.narrative, finalMechanics.damage, {
+          minConfidence: 'high'
+        });
+        if (detectedDamage !== null) {
+          console.log('[AdventureGame] Fallback damage detection found:', detectedDamage);
+          finalMechanics.damage = detectedDamage;
+        }
+        
+        // === FALLBACK HEAL DETECTION ===
+        // If AI forgot to use [HEAL:X] tags, try to detect healing from narrative
+        const detectedHeal = detectMissingHealTags(data.narrative, finalMechanics.heal, {
+          minConfidence: 'high'
+        });
+        if (detectedHeal !== null) {
+          console.log('[AdventureGame] Fallback heal detection found:', detectedHeal);
+          finalMechanics.heal = detectedHeal;
+        }
+        
+        // === FALLBACK GOLD DETECTION ===
+        // If AI forgot to use [GOLD:X] tags, try to detect gold gains from narrative
+        const detectedGold = detectMissingGoldTags(data.narrative, finalMechanics.goldGained, {
+          minConfidence: 'high'
+        });
+        if (detectedGold !== null) {
+          console.log('[AdventureGame] Fallback gold detection found:', detectedGold);
+          finalMechanics.goldGained = detectedGold;
+        }
+        
         // Log mechanics for debugging
         console.log('[AdventureGame] Final mechanics:', finalMechanics);
       }
@@ -2248,8 +2278,45 @@ export function AdventureGame() {
         {
           onComplete: (fullContent, mechanics) => {
             console.log('[handlePlayerAction] Streaming complete, mechanics:', mechanics);
-            if (mechanics) {
-              setPendingMechanics(prev => ({ ...prev, ...mechanics }));
+            
+            // Apply fallback detection for damage, heal, gold when streaming
+            let enhancedMechanics = mechanics ? { ...mechanics } : {};
+            
+            if (fullContent) {
+              // === FALLBACK DAMAGE DETECTION (streaming) ===
+              const detectedDamage = detectMissingDamageTags(fullContent, enhancedMechanics.damage, { minConfidence: 'high' });
+              if (detectedDamage !== null) {
+                console.log('[handlePlayerAction] Streaming fallback damage:', detectedDamage);
+                enhancedMechanics.damage = detectedDamage;
+              }
+              
+              // === FALLBACK HEAL DETECTION (streaming) ===
+              const detectedHeal = detectMissingHealTags(fullContent, enhancedMechanics.heal, { minConfidence: 'high' });
+              if (detectedHeal !== null) {
+                console.log('[handlePlayerAction] Streaming fallback heal:', detectedHeal);
+                enhancedMechanics.heal = detectedHeal;
+              }
+              
+              // === FALLBACK GOLD DETECTION (streaming) ===
+              const detectedGold = detectMissingGoldTags(fullContent, enhancedMechanics.goldGained, { minConfidence: 'high' });
+              if (detectedGold !== null) {
+                console.log('[handlePlayerAction] Streaming fallback gold:', detectedGold);
+                enhancedMechanics.goldGained = detectedGold;
+              }
+              
+              // === FALLBACK LOOT DETECTION (streaming) ===
+              const existingLoot = Array.isArray(enhancedMechanics.lootGained) 
+                ? enhancedMechanics.lootGained 
+                : (enhancedMechanics.lootGained ? [enhancedMechanics.lootGained] : []);
+              const detectedLoot = detectMissingLootTags(fullContent, existingLoot, { minConfidence: 'high' });
+              if (detectedLoot.length > 0) {
+                console.log('[handlePlayerAction] Streaming fallback loot:', detectedLoot);
+                enhancedMechanics.lootGained = [...existingLoot, ...detectedLoot];
+              }
+            }
+            
+            if (Object.keys(enhancedMechanics).length > 0) {
+              setPendingMechanics(prev => ({ ...prev, ...enhancedMechanics }));
             }
           },
         }
