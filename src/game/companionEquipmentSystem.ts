@@ -278,8 +278,8 @@ class CompanionEquipmentManager {
     if (req.minStrength && combatStats && combatStats.baseStrength < req.minStrength) {
       return { canEquip: false, reason: `Requires ${req.minStrength} Strength` };
     }
-    if (req.minAgility && combatStats && combatStats.baseAgility < req.minAgility) {
-      return { canEquip: false, reason: `Requires ${req.minAgility} Agility` };
+    if (req.minAgility && combatStats && combatStats.baseDexterity < req.minAgility) {
+      return { canEquip: false, reason: `Requires ${req.minAgility} Dexterity` };
     }
     if (req.combatRole && combatRole && !req.combatRole.includes(combatRole)) {
       return { canEquip: false, reason: `Requires ${req.combatRole.join(' or ')} role` };
