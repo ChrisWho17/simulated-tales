@@ -6,41 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Authentication helper - validates user is logged in
+// Authentication helper - optional auth, returns userId if available
 async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
   const authHeader = req.headers.get('Authorization');
   
+  // Auth is optional for portrait generation (happens during character creation, often pre-login)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+    return { userId: null, error: null };
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } }
-  });
-
   const token = authHeader.replace('Bearer ', '');
-  const { data, error } = await supabase.auth.getUser(token);
-
-  if (error || !data?.user) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Invalid or expired session' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+  
+  // Skip validation if token looks like anon key (not a user JWT)
+  if (token === supabaseAnonKey || token.length < 100) {
+    return { userId: null, error: null };
   }
+  
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
-  return { userId: data.user.id, error: null };
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data?.user) {
+      // Auth failed but we allow unauthenticated usage
+      return { userId: null, error: null };
+    }
+
+    return { userId: data.user.id, error: null };
+  } catch {
+    // Auth error but we allow unauthenticated usage
+    return { userId: null, error: null };
+  }
 }
 
 // ============================================================================
