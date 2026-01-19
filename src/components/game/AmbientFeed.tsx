@@ -187,7 +187,7 @@ export function AmbientFeed({
   return (
     <div
       className={cn(
-        'fixed z-40 pointer-events-none',
+        'fixed z-40 pointer-events-none hidden md:block',
         positionClasses[position],
         className
       )}

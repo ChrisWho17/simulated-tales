@@ -10,7 +10,7 @@ import { BookmarkButton } from '@/components/ui/BookmarkButton';
 import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
 import { TypewriterNarrative } from '@/components/ui/TypewriterText';
 import { SystemBadgesSummary } from '@/components/game/SystemHighlight';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark, Globe } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -97,6 +97,8 @@ import { useScreenEffectsIntegration } from '@/hooks/useScreenEffectsIntegration
 import { useAchievementTriggers } from '@/hooks/useAchievementTriggers';
 import { useImmersionSystems } from '@/hooks/useImmersionSystems';
 import { ImmersionLayer } from '@/components/game/ImmersionLayer';
+import { AmbientFeedModal } from '@/components/game/AmbientFeedModal';
+import { useAmbientFeed } from '@/hooks/useAmbientFeed';
 
 // Cheat mode integration
 import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatModeSplash';
@@ -333,6 +335,8 @@ export function AdventureDisplay({
   const [questLog, setQuestLog] = useState<QuestLog>(() => initializeQuestLog());
   const [showMapPanel, setShowMapPanel] = useState(false);
   const [showMobileQuickMenu, setShowMobileQuickMenu] = useState(false);
+  const [showAmbientFeedModal, setShowAmbientFeedModal] = useState(false);
+  const [lastSeenAmbientCount, setLastSeenAmbientCount] = useState(0);
   
   // Cheat mode / Developer tools
   const cheatModePanel = useCheatModeCommand();
@@ -382,7 +386,9 @@ export function AdventureDisplay({
   // Inventory system integration
   const inventory = useInventory();
   
-  // Audio system removed - no sound in game
+  // Ambient feed hook for mobile modal
+  const ambientFeed = useAmbientFeed({ enabled: true });
+  const hasNewAmbientEvents = ambientFeed.entries.length > lastSeenAmbientCount;
   
   // Get weather settings from game context (must come after gameContext declaration)
   const weatherEnabled = gameContext?.settings?.enableWeatherEffects ?? true;
@@ -1659,6 +1665,40 @@ export function AdventureDisplay({
           
           {/* Toolbar buttons - grouped together with no-shrink */}
           <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto">
+            {/* Ambient Feed Button - Mobile only, opens world events modal */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setShowAmbientFeedModal(true);
+                setLastSeenAmbientCount(ambientFeed.entries.length);
+              }}
+              className="md:hidden h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
+              title="World Events"
+            >
+              <Globe className="w-4 h-4" />
+              {hasNewAmbientEvents && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+              )}
+            </Button>
+            
+            {/* Ambient Feed Button - Desktop, same icon for consistency */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setShowAmbientFeedModal(true);
+                setLastSeenAmbientCount(ambientFeed.entries.length);
+              }}
+              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
+              title="World Events"
+            >
+              <Globe className="w-4 h-4" />
+              {hasNewAmbientEvents && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+              )}
+            </Button>
+            
             {/* Pacing Indicator - Compact dropdown */}
             <PacingIndicator
               currentMultiplier={timeState.multiplier}
@@ -2642,6 +2682,14 @@ export function AdventureDisplay({
           // Trigger the companion story as a narrator entry via the player action handler
           onPlayerAction(`[COMPANION EVENT] ${text}`);
         }}
+      />
+      
+      {/* Ambient Feed Modal - Mobile fullscreen for world events */}
+      <AmbientFeedModal
+        isOpen={showAmbientFeedModal}
+        onClose={() => setShowAmbientFeedModal(false)}
+        entries={ambientFeed.entries}
+        onClearEntries={ambientFeed.clearFeed}
       />
     </div>
     </ImmersionLayer>
