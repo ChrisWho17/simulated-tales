@@ -1590,7 +1590,9 @@ export function AdventureDisplay({
       onRemoveStatChange={immersion.removeStatChange}
       showConsequenceFeed={true}
       showFloatingStats={true}
+      showAmbientFeed={true}
       floatingStatsPosition="center"
+      ambientFeedPosition="bottom-left"
     >
       <div className="h-screen flex flex-col relative overflow-hidden">
         {/* Subtle atmospheric background with weather effects */}

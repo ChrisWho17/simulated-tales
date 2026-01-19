@@ -7,13 +7,15 @@ import { ReactNode } from 'react';
 import { ScreenEffectsProvider } from './ScreenEffects';
 import { ConsequenceFeed } from './ConsequenceFeed';
 import { FloatingStatContainer, StatChange } from './FloatingStatChange';
-import { AmbientFeed } from './AmbientFeed';
+import { AmbientFeed, AmbientEntry } from './AmbientFeed';
 
 interface ImmersionLayerProps {
   children: ReactNode;
   // Stat changes to display
   statChanges?: StatChange[];
   onRemoveStatChange?: (id: string) => void;
+  // Ambient feed entries (optional external source)
+  ambientEntries?: AmbientEntry[];
   // Feature toggles
   showConsequenceFeed?: boolean;
   showFloatingStats?: boolean;
@@ -21,17 +23,20 @@ interface ImmersionLayerProps {
   // Styling
   consequenceFeedPosition?: 'top-right' | 'top-left';
   floatingStatsPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'center';
+  ambientFeedPosition?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
 }
 
 export function ImmersionLayer({
   children,
   statChanges = [],
   onRemoveStatChange,
+  ambientEntries = [],
   showConsequenceFeed = true,
   showFloatingStats = true,
-  showAmbientFeed = false,
+  showAmbientFeed = true,
   consequenceFeedPosition = 'top-right',
   floatingStatsPosition = 'center',
+  ambientFeedPosition = 'bottom-left',
 }: ImmersionLayerProps) {
   return (
     <ScreenEffectsProvider>
@@ -59,10 +64,13 @@ export function ImmersionLayer({
       {/* Ambient Feed - micro-events and NPC chatter */}
       {showAmbientFeed && (
         <AmbientFeed
-          position="bottom-left"
+          position={ambientFeedPosition}
           maxVisible={3}
           autoHide
-          autoHideDelay={10000}
+          autoHideDelay={12000}
+          externalEntries={ambientEntries}
+          enableMicroEvents={true}
+          microEventChance={0.1}
         />
       )}
     </ScreenEffectsProvider>
