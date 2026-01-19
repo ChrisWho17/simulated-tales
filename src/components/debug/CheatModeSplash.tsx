@@ -58,6 +58,11 @@ import { ClothingSlot } from '@/game/clothingItemSystem';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InventoryEditor } from './InventoryEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  companionEquipmentManager, 
+  generateRoleBasedEquipment, 
+  CombatRole 
+} from '@/game/companionEquipmentSystem';
 
 const CHARACTER_KEY = 'living-world-character';
 
@@ -671,6 +676,16 @@ export function CheatModeSplash({
   const [showCompanionCreator, setShowCompanionCreator] = useState(false);
   const [companionCreator, setCompanionCreator] = useState<CompanionCreatorState>(DEFAULT_COMPANION_CREATOR);
   const [companionCreatorStep, setCompanionCreatorStep] = useState<'basics' | 'appearance' | 'personality' | 'combat'>('basics');
+  const [equipmentPreviewKey, setEquipmentPreviewKey] = useState(0);
+  
+  // Memoized equipment preview that updates when role, genre, or preview key changes
+  const equipmentPreview = useMemo(() => {
+    return generateRoleBasedEquipment(
+      genre || 'fantasy',
+      companionCreator.combatRole as CombatRole,
+      'uncommon'
+    );
+  }, [genre, companionCreator.combatRole, equipmentPreviewKey]);
   
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1063,6 +1078,23 @@ export function CheatModeSplash({
     // Add to companion system
     companionSystem.getAllCompanions().push(companion);
     companionSystem.recruitCompanion(companion.id);
+    
+    // Generate and equip role-based starting equipment
+    const startingEquipment = generateRoleBasedEquipment(
+      genre || 'fantasy',
+      companionCreator.combatRole as CombatRole,
+      'uncommon' // Starting gear is common to uncommon
+    );
+    
+    if (startingEquipment.weapon) {
+      companionEquipmentManager.equip(companionId, startingEquipment.weapon);
+    }
+    if (startingEquipment.armor) {
+      companionEquipmentManager.equip(companionId, startingEquipment.armor);
+    }
+    if (startingEquipment.accessory) {
+      companionEquipmentManager.equip(companionId, startingEquipment.accessory);
+    }
     
     // Queue the companion introduction to be displayed in the story
     try {
@@ -2699,6 +2731,55 @@ export function CheatModeSplash({
               {companionCreator.combatRole === 'damage' && 'High damage output, focuses on eliminating threats quickly.'}
               {companionCreator.combatRole === 'support' && 'Healing and buffs, keeps the party alive and enhanced.'}
               {companionCreator.combatRole === 'ranged' && 'Attacks from distance, precise shots and area control.'}
+            </p>
+          </div>
+          
+          {/* Starting Equipment Preview */}
+          <div className="p-3 bg-muted/20 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs text-muted-foreground uppercase">Starting Equipment Preview</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEquipmentPreviewKey(prev => prev + 1)}
+                className="h-6 px-2 text-xs"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Reroll
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="p-2 bg-background/50 rounded border border-border/30">
+                <span className="text-muted-foreground block mb-1">Weapon</span>
+                <span className="font-medium">{equipmentPreview.weapon?.name || 'None'}</span>
+                {equipmentPreview.weapon && (
+                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                    +{equipmentPreview.weapon.stats.damageBonus || 0} DMG
+                  </span>
+                )}
+              </div>
+              <div className="p-2 bg-background/50 rounded border border-border/30">
+                <span className="text-muted-foreground block mb-1">Armor</span>
+                <span className="font-medium">{equipmentPreview.armor?.name || 'None'}</span>
+                {equipmentPreview.armor && (
+                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                    +{equipmentPreview.armor.stats.armorBonus || 0} DEF
+                  </span>
+                )}
+              </div>
+              <div className="p-2 bg-background/50 rounded border border-border/30">
+                <span className="text-muted-foreground block mb-1">Accessory</span>
+                <span className="font-medium">{equipmentPreview.accessory?.name || '—'}</span>
+                {equipmentPreview.accessory?.stats.specialEffect && (
+                  <span className="block text-[10px] text-primary mt-0.5 truncate" title={equipmentPreview.accessory.stats.specialEffect}>
+                    ✦ {equipmentPreview.accessory.stats.specialEffect.slice(0, 20)}...
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              Equipment based on <span className="text-primary capitalize">{genre || 'fantasy'}</span> genre 
+              and <span className="text-primary capitalize">{companionCreator.combatRole}</span> role
             </p>
           </div>
         </TabsContent>

@@ -418,3 +418,283 @@ export function generateRandomEquipment(maxRarity: EquipmentRarity = 'rare'): Co
   const equipmentOfRarity = getEquipmentByRarity(selectedRarity);
   return equipmentOfRarity[Math.floor(Math.random() * equipmentOfRarity.length)];
 }
+
+// ============================================================================
+// GENRE-SPECIFIC EQUIPMENT DATABASE
+// ============================================================================
+
+export type CombatRole = 'tank' | 'damage' | 'support' | 'ranged';
+
+interface GenreEquipmentSet {
+  weapons: CompanionEquipment[];
+  armor: CompanionEquipment[];
+  accessories: CompanionEquipment[];
+}
+
+// Role-appropriate equipment mapping for filtering
+const ROLE_WEAPON_TAGS: Record<CombatRole, string[]> = {
+  tank: ['shield', 'mace', 'axe', 'hammer', 'sword'],
+  damage: ['sword', 'axe', 'dagger', 'blade'],
+  support: ['staff', 'wand', 'tome', 'rod'],
+  ranged: ['bow', 'crossbow', 'rifle', 'pistol', 'gun'],
+};
+
+const ROLE_ARMOR_TAGS: Record<CombatRole, string[]> = {
+  tank: ['plate', 'heavy', 'shield', 'mail'],
+  damage: ['leather', 'chain', 'light'],
+  support: ['robes', 'cloth', 'light'],
+  ranged: ['leather', 'cloak', 'light'],
+};
+
+// Genre-specific equipment databases
+const GENRE_EQUIPMENT: Record<string, GenreEquipmentSet> = {
+  fantasy: {
+    weapons: [
+      { id: 'f_longsword', name: 'Longsword', description: 'A balanced blade for skilled warriors.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 3, combatSkillBonus: 2 }, requirements: { combatRole: ['tank', 'damage'] } },
+      { id: 'f_battleaxe', name: 'Battle Axe', description: 'A heavy cleaving weapon.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 5, agilityBonus: -3 }, requirements: { combatRole: ['tank', 'damage'] } },
+      { id: 'f_staff', name: 'Oak Staff', description: 'A sturdy magical focus.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 1, healthBonus: 10 }, requirements: { combatRole: ['support'] } },
+      { id: 'f_shortbow', name: 'Shortbow', description: 'A quick and accurate ranged weapon.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 2, agilityBonus: 3 }, requirements: { combatRole: ['ranged'] } },
+      { id: 'f_healstaff', name: 'Healing Staff', description: 'Imbued with restorative magic.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 1, healthBonus: 15, specialEffect: 'Healing boost +15%' }, requirements: { combatRole: ['support'] } },
+      { id: 'f_longbow', name: 'Elven Longbow', description: 'Crafted by skilled elven artisans.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 4, agilityBonus: 5, criticalChanceBonus: 5 }, requirements: { combatRole: ['ranged'] } },
+    ],
+    armor: [
+      { id: 'f_leather', name: 'Leather Armor', description: 'Basic leather protection.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, healthBonus: 5 } },
+      { id: 'f_chainmail', name: 'Chainmail', description: 'Interlocking metal rings.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 5, healthBonus: 15, agilityBonus: -2 } },
+      { id: 'f_plate', name: 'Plate Armor', description: 'Heavy steel plate protection.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 10, healthBonus: 30, agilityBonus: -5 }, requirements: { combatRole: ['tank'] } },
+      { id: 'f_robes', name: "Healer's Robes", description: 'Enchanted cloth for support.', slot: 'armor', rarity: 'common', stats: { armorBonus: 1, healthBonus: 10, specialEffect: 'Mana regen +10%' }, requirements: { combatRole: ['support'] } },
+      { id: 'f_ranger', name: "Ranger's Garb", description: 'Light armor for mobility.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 3, agilityBonus: 5 }, requirements: { combatRole: ['ranged', 'damage'] } },
+    ],
+    accessories: [
+      { id: 'f_amulet', name: 'Protective Amulet', description: 'A charm of protection.', slot: 'accessory', rarity: 'common', stats: { armorBonus: 1, moraleBonus: 5 } },
+      { id: 'f_ring', name: 'Ring of Vigor', description: 'Enhances vitality.', slot: 'accessory', rarity: 'uncommon', stats: { healthBonus: 15, enduranceBonus: 5 } },
+      { id: 'f_cloak', name: 'Traveler\'s Cloak', description: 'A warm and sturdy cloak.', slot: 'accessory', rarity: 'common', stats: { agilityBonus: 2, moraleBonus: 3 } },
+    ],
+  },
+  war: {
+    weapons: [
+      { id: 'w_rifle', name: 'Combat Rifle', description: 'Standard issue military rifle.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 4, combatSkillBonus: 2 }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 'w_smg', name: 'Submachine Gun', description: 'Compact automatic weapon.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 3, agilityBonus: 3 }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 'w_sniper', name: 'Sniper Rifle', description: 'Precision long-range rifle.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 6, criticalChanceBonus: 10 }, requirements: { combatRole: ['ranged'] } },
+      { id: 'w_shotgun', name: 'Combat Shotgun', description: 'Devastating at close range.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 5, agilityBonus: -2 }, requirements: { combatRole: ['tank', 'damage'] } },
+      { id: 'w_medkit', name: 'Medic Kit', description: 'Advanced medical equipment.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 0, healthBonus: 20, specialEffect: 'Healing actions +25%' }, requirements: { combatRole: ['support'] } },
+      { id: 'w_lmg', name: 'Light Machine Gun', description: 'Suppressive fire capability.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 5, armorBonus: 2, agilityBonus: -4 }, requirements: { combatRole: ['tank'] } },
+    ],
+    armor: [
+      { id: 'w_fatigues', name: 'Military Fatigues', description: 'Standard combat uniform.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, agilityBonus: 2 } },
+      { id: 'w_vest', name: 'Tactical Vest', description: 'Ballistic protection vest.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 5, healthBonus: 15 } },
+      { id: 'w_heavy', name: 'Heavy Body Armor', description: 'Maximum ballistic protection.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 10, healthBonus: 30, agilityBonus: -5 }, requirements: { combatRole: ['tank'] } },
+      { id: 'w_ghillie', name: 'Ghillie Suit', description: 'Camouflage for snipers.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 1, agilityBonus: 5, specialEffect: 'Stealth +20%' }, requirements: { combatRole: ['ranged'] } },
+      { id: 'w_medic', name: 'Medic Uniform', description: 'Marked medical personnel gear.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, healthBonus: 10, specialEffect: 'Healing speed +15%' }, requirements: { combatRole: ['support'] } },
+    ],
+    accessories: [
+      { id: 'w_dogtags', name: 'Dog Tags', description: 'Military identification.', slot: 'accessory', rarity: 'common', stats: { moraleBonus: 5 } },
+      { id: 'w_nvg', name: 'Night Vision Goggles', description: 'Enhanced night combat.', slot: 'accessory', rarity: 'rare', stats: { combatSkillBonus: 5, criticalChanceBonus: 5, specialEffect: 'Night vision' } },
+      { id: 'w_radio', name: 'Tactical Radio', description: 'Squad communication.', slot: 'accessory', rarity: 'uncommon', stats: { combatSkillBonus: 3, moraleBonus: 5 } },
+    ],
+  },
+  cyberpunk: {
+    weapons: [
+      { id: 'c_pistol', name: 'Smart Pistol', description: 'Auto-targeting sidearm.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 3, criticalChanceBonus: 5 }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 'c_katana', name: 'Mono-Katana', description: 'Molecular-edge blade.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 5, agilityBonus: 3 }, requirements: { combatRole: ['damage'] } },
+      { id: 'c_techrifle', name: 'Tech Rifle', description: 'Charged projectile weapon.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 6, criticalChanceBonus: 8 }, requirements: { combatRole: ['ranged'] } },
+      { id: 'c_nanomed', name: 'Nano-Medkit', description: 'Nanite healing system.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 0, healthBonus: 25, specialEffect: 'Rapid healing' }, requirements: { combatRole: ['support'] } },
+      { id: 'c_mantis', name: 'Mantis Blades', description: 'Retractable arm blades.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 6, agilityBonus: 5, criticalChanceBonus: 5 }, requirements: { combatRole: ['damage'] } },
+    ],
+    armor: [
+      { id: 'c_jacket', name: 'Armored Jacket', description: 'Lined with ballistic weave.', slot: 'armor', rarity: 'common', stats: { armorBonus: 3, agilityBonus: 1 } },
+      { id: 'c_subdermal', name: 'Subdermal Armor', description: 'Implanted protection.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 8, healthBonus: 20 } },
+      { id: 'c_netsuit', name: 'Netrunner Suit', description: 'Optimized for hacking.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 2, agilityBonus: 5, specialEffect: 'Hacking +20%' }, requirements: { combatRole: ['support', 'ranged'] } },
+      { id: 'c_exo', name: 'Exoskeleton Frame', description: 'Powered armor frame.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 10, strengthBonus: 10, agilityBonus: -3 }, requirements: { combatRole: ['tank'] } },
+    ],
+    accessories: [
+      { id: 'c_optics', name: 'Kiroshi Optics', description: 'Enhanced cyber-eyes.', slot: 'accessory', rarity: 'uncommon', stats: { criticalChanceBonus: 5, combatSkillBonus: 3 } },
+      { id: 'c_sandevistan', name: 'Sandevistan', description: 'Time-dilation implant.', slot: 'accessory', rarity: 'rare', stats: { agilityBonus: 10, criticalChanceBonus: 10, specialEffect: 'Bullet time' } },
+      { id: 'c_datajack', name: 'Data Jack', description: 'Neural interface port.', slot: 'accessory', rarity: 'common', stats: { combatSkillBonus: 2 } },
+    ],
+  },
+  horror: {
+    weapons: [
+      { id: 'h_shotgun', name: 'Pump Shotgun', description: 'Reliable stopping power.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 4 }, requirements: { combatRole: ['damage', 'tank'] } },
+      { id: 'h_revolver', name: 'Silver Revolver', description: 'Loaded with blessed rounds.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 4, specialEffect: 'Extra damage vs undead' }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 'h_cross', name: 'Holy Symbol', description: 'A blessed protective focus.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 1, moraleBonus: 10, specialEffect: 'Repel evil' }, requirements: { combatRole: ['support'] } },
+      { id: 'h_stake', name: 'Wooden Stakes', description: 'Essential vampire hunting gear.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 2, criticalChanceBonus: 10, specialEffect: 'Instant kill vs vampires' } },
+      { id: 'h_flamethrower', name: 'Flamethrower', description: 'Burns everything.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 6, specialEffect: 'Fire damage, fear effect' }, requirements: { combatRole: ['damage', 'tank'] } },
+    ],
+    armor: [
+      { id: 'h_coat', name: 'Heavy Coat', description: 'Thick protective layer.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, moraleBonus: 3 } },
+      { id: 'h_vest', name: 'Protective Vest', description: 'Hidden body armor.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 4, healthBonus: 10 } },
+      { id: 'h_hunter', name: "Monster Hunter's Garb", description: 'Traditional hunting attire.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 5, agilityBonus: 3, specialEffect: 'Resistance to fear' } },
+    ],
+    accessories: [
+      { id: 'h_crucifix', name: 'Silver Crucifix', description: 'Holy protection.', slot: 'accessory', rarity: 'common', stats: { moraleBonus: 10, specialEffect: 'Ward vs evil' } },
+      { id: 'h_garlic', name: 'Garlic Necklace', description: 'Traditional vampire ward.', slot: 'accessory', rarity: 'common', stats: { healthBonus: 5, specialEffect: 'Vampire repellent' } },
+      { id: 'h_holywater', name: 'Holy Water Vial', description: 'Blessed by a priest.', slot: 'accessory', rarity: 'uncommon', stats: { damageBonus: 2, specialEffect: 'Burn undead' } },
+    ],
+  },
+  western: {
+    weapons: [
+      { id: 'ws_revolver', name: 'Six-Shooter', description: 'Classic frontier revolver.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 3, combatSkillBonus: 2 }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 'ws_rifle', name: 'Lever-Action Rifle', description: 'Reliable repeating rifle.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 4, criticalChanceBonus: 5 }, requirements: { combatRole: ['ranged'] } },
+      { id: 'ws_shotgun', name: 'Coach Gun', description: 'Double-barreled shotgun.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 5, agilityBonus: -2 }, requirements: { combatRole: ['damage', 'tank'] } },
+      { id: 'ws_knife', name: 'Bowie Knife', description: 'Large hunting knife.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 2, agilityBonus: 2 } },
+      { id: 'ws_medical', name: 'Doctor\'s Bag', description: 'Frontier medical supplies.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 0, healthBonus: 20, specialEffect: 'Healing +20%' }, requirements: { combatRole: ['support'] } },
+    ],
+    armor: [
+      { id: 'ws_duster', name: 'Leather Duster', description: 'Long protective coat.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, agilityBonus: 1 } },
+      { id: 'ws_vest', name: 'Leather Vest', description: 'Sturdy frontier protection.', slot: 'armor', rarity: 'common', stats: { armorBonus: 3, healthBonus: 5 } },
+      { id: 'ws_chaps', name: 'Riding Chaps', description: 'Protective leg wear.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 2, agilityBonus: 3 } },
+    ],
+    accessories: [
+      { id: 'ws_hat', name: 'Cowboy Hat', description: 'Iconic western headwear.', slot: 'accessory', rarity: 'common', stats: { moraleBonus: 5, agilityBonus: 1 } },
+      { id: 'ws_watch', name: 'Pocket Watch', description: 'Keeps perfect time.', slot: 'accessory', rarity: 'uncommon', stats: { combatSkillBonus: 3 } },
+      { id: 'ws_badge', name: "Sheriff's Badge", description: 'Symbol of law.', slot: 'accessory', rarity: 'rare', stats: { moraleBonus: 10, armorBonus: 2, specialEffect: 'Intimidation' } },
+    ],
+  },
+  scifi: {
+    weapons: [
+      { id: 's_blaster', name: 'Blaster Pistol', description: 'Standard energy sidearm.', slot: 'weapon', rarity: 'common', stats: { damageBonus: 3, agilityBonus: 2 }, requirements: { combatRole: ['ranged', 'damage'] } },
+      { id: 's_rifle', name: 'Plasma Rifle', description: 'High-powered energy weapon.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 5, criticalChanceBonus: 5 }, requirements: { combatRole: ['ranged'] } },
+      { id: 's_blade', name: 'Energy Blade', description: 'Plasma-edged melee weapon.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 6, agilityBonus: 4 }, requirements: { combatRole: ['damage'] } },
+      { id: 's_medgun', name: 'Medi-Ray', description: 'Healing beam projector.', slot: 'weapon', rarity: 'uncommon', stats: { damageBonus: 0, healthBonus: 25, specialEffect: 'Ranged healing' }, requirements: { combatRole: ['support'] } },
+      { id: 's_heavy', name: 'Heavy Cannon', description: 'Crew-served energy weapon.', slot: 'weapon', rarity: 'rare', stats: { damageBonus: 8, agilityBonus: -5, armorBonus: 2 }, requirements: { combatRole: ['tank'] } },
+    ],
+    armor: [
+      { id: 's_jumpsuit', name: 'Space Jumpsuit', description: 'Standard crew attire.', slot: 'armor', rarity: 'common', stats: { armorBonus: 2, agilityBonus: 2 } },
+      { id: 's_combat', name: 'Combat Suit', description: 'Military-grade protection.', slot: 'armor', rarity: 'uncommon', stats: { armorBonus: 5, healthBonus: 15 } },
+      { id: 's_power', name: 'Power Armor', description: 'Powered exosuit.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 12, strengthBonus: 10, agilityBonus: -3 }, requirements: { combatRole: ['tank'] } },
+      { id: 's_stealth', name: 'Stealth Suit', description: 'Active camouflage.', slot: 'armor', rarity: 'rare', stats: { armorBonus: 3, agilityBonus: 8, specialEffect: 'Cloaking' }, requirements: { combatRole: ['ranged', 'damage'] } },
+    ],
+    accessories: [
+      { id: 's_helmet', name: 'Tactical Helmet', description: 'HUD-equipped headgear.', slot: 'accessory', rarity: 'common', stats: { armorBonus: 2, combatSkillBonus: 2 } },
+      { id: 's_shield', name: 'Personal Shield', description: 'Energy barrier generator.', slot: 'accessory', rarity: 'rare', stats: { armorBonus: 5, healthBonus: 15, specialEffect: 'Shield regen' } },
+      { id: 's_implant', name: 'Combat Implant', description: 'Neural combat enhancer.', slot: 'accessory', rarity: 'uncommon', stats: { agilityBonus: 5, criticalChanceBonus: 5 } },
+    ],
+  },
+};
+
+// Default equipment set for unrecognized genres
+const DEFAULT_EQUIPMENT: GenreEquipmentSet = GENRE_EQUIPMENT.fantasy;
+
+// ============================================================================
+// ROLE-BASED EQUIPMENT GENERATION
+// ============================================================================
+
+/**
+ * Get equipment appropriate for a specific combat role
+ */
+function filterEquipmentByRole(equipment: CompanionEquipment[], role: CombatRole): CompanionEquipment[] {
+  return equipment.filter(item => {
+    // If no role requirements, it's usable by anyone
+    if (!item.requirements?.combatRole) return true;
+    // Check if the item is compatible with the role
+    return item.requirements.combatRole.includes(role);
+  });
+}
+
+/**
+ * Select random equipment from a list weighted by rarity
+ */
+function selectWeightedEquipment(
+  equipment: CompanionEquipment[],
+  maxRarity: EquipmentRarity = 'rare'
+): CompanionEquipment | null {
+  if (equipment.length === 0) return null;
+
+  const rarityOrder: EquipmentRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  const maxIndex = rarityOrder.indexOf(maxRarity);
+  const weights: Record<EquipmentRarity, number> = {
+    common: 40,
+    uncommon: 30,
+    rare: 20,
+    epic: 8,
+    legendary: 2,
+  };
+
+  // Filter by max rarity and calculate total weight
+  const eligibleEquipment = equipment.filter(
+    item => rarityOrder.indexOf(item.rarity) <= maxIndex
+  );
+
+  if (eligibleEquipment.length === 0) return equipment[0]; // Fallback
+
+  const totalWeight = eligibleEquipment.reduce((sum, item) => sum + weights[item.rarity], 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const item of eligibleEquipment) {
+    roll -= weights[item.rarity];
+    if (roll <= 0) return item;
+  }
+
+  return eligibleEquipment[0];
+}
+
+/**
+ * Generate a complete equipment loadout based on genre and combat role
+ */
+export function generateRoleBasedEquipment(
+  genre: string,
+  role: CombatRole,
+  maxRarity: EquipmentRarity = 'uncommon'
+): { weapon: CompanionEquipment | null; armor: CompanionEquipment | null; accessory: CompanionEquipment | null } {
+  // Normalize genre and get equipment set
+  const normalizedGenre = genre.toLowerCase().replace(/[\s-]/g, '_');
+  const genreSet = GENRE_EQUIPMENT[normalizedGenre] || DEFAULT_EQUIPMENT;
+
+  // Filter equipment by role
+  const roleWeapons = filterEquipmentByRole(genreSet.weapons, role);
+  const roleArmor = filterEquipmentByRole(genreSet.armor, role);
+  const roleAccessories = filterEquipmentByRole(genreSet.accessories, role);
+
+  // Fallback to any genre weapons if role-specific not found
+  const weaponPool = roleWeapons.length > 0 ? roleWeapons : genreSet.weapons;
+  const armorPool = roleArmor.length > 0 ? roleArmor : genreSet.armor;
+  const accessoryPool = roleAccessories.length > 0 ? roleAccessories : genreSet.accessories;
+
+  return {
+    weapon: selectWeightedEquipment(weaponPool, maxRarity),
+    armor: selectWeightedEquipment(armorPool, maxRarity),
+    accessory: Math.random() > 0.3 ? selectWeightedEquipment(accessoryPool, maxRarity) : null, // 70% chance for accessory
+  };
+}
+
+/**
+ * Get available equipment options for a specific genre and role (for UI display)
+ */
+export function getEquipmentOptionsForRole(
+  genre: string,
+  role: CombatRole,
+  slot: EquipmentSlot
+): CompanionEquipment[] {
+  const normalizedGenre = genre.toLowerCase().replace(/[\s-]/g, '_');
+  const genreSet = GENRE_EQUIPMENT[normalizedGenre] || DEFAULT_EQUIPMENT;
+
+  let pool: CompanionEquipment[];
+  switch (slot) {
+    case 'weapon':
+      pool = genreSet.weapons;
+      break;
+    case 'armor':
+      pool = genreSet.armor;
+      break;
+    case 'accessory':
+      pool = genreSet.accessories;
+      break;
+  }
+
+  return filterEquipmentByRole(pool, role);
+}
+
+/**
+ * Get all genre equipment (for browsing all options)
+ */
+export function getGenreEquipment(genre: string): GenreEquipmentSet {
+  const normalizedGenre = genre.toLowerCase().replace(/[\s-]/g, '_');
+  return GENRE_EQUIPMENT[normalizedGenre] || DEFAULT_EQUIPMENT;
+}
+
+/**
+ * List all available genres with custom equipment
+ */
+export function getAvailableEquipmentGenres(): string[] {
+  return Object.keys(GENRE_EQUIPMENT);
+}
