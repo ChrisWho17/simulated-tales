@@ -1279,51 +1279,50 @@ export function CheatModeSplash({
     setCompanionCreator(prev => ({ ...prev, isGeneratingPortrait: true }));
     
     try {
-      // Use genre-specific armor description instead of generic one
+      // Use genre-specific armor description for gear
       const armorDesc = getGenreArmorDescription(genre, companionCreator.armorLevel);
       
-      // Build explicit body type description based on build
-      const buildDescriptions: Record<string, string> = {
-        slim: 'slender and lean body, thin frame, narrow waist',
-        athletic: 'athletic and toned body, muscular definition, fit physique',
-        average: 'average body type, normal proportions',
-        stocky: 'stocky and sturdy body, broad frame, thick build',
-        heavyset: 'heavyset body, large frame, fuller figure',
-        muscular: 'heavily muscular body, bodybuilder physique, very defined muscles',
+      // Build structured request body matching the edge function's buildPrompt expectations
+      const portraitRequestBody = {
+        // Basic identity
+        name: companionCreator.name,
+        gender: companionCreator.gender,
+        age: companionCreator.age || 'adult',
+        genre: genre || 'fantasy',
+        
+        // Body type
+        build: companionCreator.build,
+        height: companionCreator.height,
+        skinTone: companionCreator.skinTone,
+        
+        // Hair and eyes
+        hairColor: companionCreator.hairColor,
+        hairStyle: companionCreator.hairStyle,
+        eyeColor: companionCreator.eyeColor,
+        
+        // Gender-specific body proportions
+        bustSize: companionCreator.gender === 'female' ? companionCreator.bustSize : undefined,
+        hipWidth: companionCreator.gender === 'female' ? companionCreator.hipWidth : undefined,
+        shoulderWidth: companionCreator.gender === 'male' ? companionCreator.shoulderWidth : undefined,
+        muscleDefinition: companionCreator.gender === 'male' ? companionCreator.physique : undefined,
+        
+        // Role/class for role-based styling
+        characterClass: companionCreator.combatRole,
+        
+        // Gear description override
+        hasEquippedGear: true,
+        currentGearDescription: armorDesc,
+        
+        // Additional personality context for expression
+        additionalDetails: companionCreator.traits.length > 0 
+          ? `${companionCreator.traits.slice(0, 2).join(' and ')} personality, confident expression`
+          : 'confident expression',
+        
+        // Any distinguishing features
+        distinguishingFeatures: companionCreator.distinguishingFeatures || [],
       };
-      const buildDesc = buildDescriptions[companionCreator.build] || 'average body type';
       
-      // Build body shape description based on gender
-      let bodyShapeDesc = '';
-      if (companionCreator.gender === 'female') {
-        const bustDesc = companionCreator.bustSize ? `${companionCreator.bustSize} cup bust size` : '';
-        const hipDesc = companionCreator.hipWidth ? `${companionCreator.hipWidth} hips` : '';
-        bodyShapeDesc = [bustDesc, hipDesc].filter(Boolean).join(', ');
-      } else if (companionCreator.gender === 'male') {
-        const shoulderDesc = companionCreator.shoulderWidth ? `${companionCreator.shoulderWidth} shoulders` : '';
-        const physiqueDesc = companionCreator.physique ? `${companionCreator.physique} physique` : '';
-        bodyShapeDesc = [shoulderDesc, physiqueDesc].filter(Boolean).join(', ');
-      }
-      
-      // Height descriptions
-      const heightDescriptions: Record<string, string> = {
-        short: 'short stature, petite height',
-        average: 'average height',
-        tall: 'tall stature, above average height',
-        very_tall: 'very tall, towering height',
-      };
-      const heightDesc = heightDescriptions[companionCreator.height] || '';
-      
-      const bodyDetails = [buildDesc, bodyShapeDesc, heightDesc].filter(Boolean).join(', ');
-      
-      // CRITICAL: Explicitly state hair color MULTIPLE times to reinforce
-      const hairColor = companionCreator.hairColor.toLowerCase();
-      const hairStyle = companionCreator.hairStyle.toLowerCase();
-      
-      // Build genre-aware prompt with specific armor/attire description
-      const prompt = `Semi-realistic digital portrait of a ${companionCreator.age || 'adult'} ${companionCreator.gender} character. BODY TYPE: ${bodyDetails}. SKIN: ${companionCreator.skinTone.toLowerCase()} skin tone. HAIR: ${hairColor} colored ${hairStyle} hair (IMPORTANT: hair must be ${hairColor}). EYES: ${companionCreator.eyeColor.toLowerCase()} eyes. ATTIRE: ${armorDesc}. EXPRESSION: ${companionCreator.traits.slice(0, 2).join(' and ')} personality visible. High quality digital art, game character portrait, full upper body visible showing build, soft lighting, detailed face and body proportions.`;
-      
-      console.log('[Portrait Gen] Prompt:', prompt);
+      console.log('[Companion Portrait Gen] Structured request:', portraitRequestBody);
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -1334,7 +1333,7 @@ export function CheatModeSplash({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({ prompt, genre: genre || 'fantasy' }),
+        body: JSON.stringify(portraitRequestBody),
       });
       
       if (!response.ok) {
