@@ -1,9 +1,47 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Authentication helper - validates user is logged in
+async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data?.user) {
+    return {
+      userId: null,
+      error: new Response(
+        JSON.stringify({ error: 'Invalid or expired session' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    };
+  }
+
+  return { userId: data.user.id, error: null };
+}
 
 // ============================================================================
 // PORTRAIT STYLE CONSTANTS - Realistic knee-to-head portraits
@@ -453,7 +491,8 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
   const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
   
   if (!TOGETHER_API_KEY) {
-    throw new Error("TOGETHER_API_KEY is not configured");
+    console.error("[generate-npc-portrait] TOGETHER_API_KEY not configured");
+    throw new Error("Service configuration error");
   }
 
   console.log("Generating NPC portrait with Together.ai (FLUX.1 Schnell)");
@@ -479,16 +518,16 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Together.ai error:", response.status, errorText);
+    console.error("[generate-npc-portrait] API error:", response.status, errorText);
     
     if (response.status === 429) {
-      throw new Error("Rate limit exceeded, please try again later.");
+      throw new Error("Rate limit exceeded, please try again later");
     }
     if (response.status === 402 || response.status === 401) {
-      throw new Error("API key issue or credits exhausted.");
+      throw new Error("Service temporarily unavailable");
     }
     
-    throw new Error(`Together.ai error: ${response.status} - ${errorText}`);
+    throw new Error("Image generation failed");
   }
 
   const result = await response.json();
@@ -497,8 +536,8 @@ async function generateWithTogetherAI(prompt: string): Promise<string> {
   const b64Data = result.data?.[0]?.b64_json;
   
   if (!b64Data) {
-    console.error("No image in response:", JSON.stringify(result).substring(0, 500));
-    throw new Error("No image generated");
+    console.error("[generate-npc-portrait] No image in response:", JSON.stringify(result).substring(0, 500));
+    throw new Error("Image generation failed");
   }
 
   // Return as data URL
@@ -514,11 +553,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Authenticate request
+  const auth = await authenticateRequest(req);
+  if (auth.error) {
+    return auth.error;
+  }
+  console.log(`[generate-npc-portrait] Authenticated user: ${auth.userId}`);
+
   try {
     const { npc, prompt, config } = await req.json();
 
     if (!npc || !npc.meta) {
-      throw new Error("Invalid NPC data");
+      throw new Error("Invalid request data");
     }
 
     console.log("Generating NPC portrait for:", npc.meta.name);
@@ -546,9 +592,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error generating NPC portrait:", error);
+    console.error("[generate-npc-portrait] Error:", error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "Unable to generate portrait at this time",
+      error: "Unable to generate portrait at this time",
       success: false
     }), {
       status: 500,

@@ -736,62 +736,14 @@ export function buildIllustrationPrompt(request: IllustrationRequest): {
 }
 
 // ============================================================================
-// GENERATE ILLUSTRATION (API CALL)
-// ============================================================================
-
-export async function generateIllustration(
-  request: IllustrationRequest,
-  apiKey: string
-): Promise<{ imageUrl: string; debug: any }> {
-  
-  const { prompt, debug } = buildIllustrationPrompt(request);
-  
-  console.log('[ILLUSTRATION] Generated prompt:', prompt);
-  console.log('[ILLUSTRATION] Debug info:', debug);
-  
-  const response = await fetch('https://api.together.xyz/v1/images/generations', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: prompt,
-      width: 1280,
-      height: 720,
-      steps: 4,
-      n: 1,
-    }),
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[ILLUSTRATION] API error:', response.status, errorText);
-    throw new Error(`Together API error: ${response.status}`);
-  }
-  
-  const result = await response.json();
-  
-  if (!result.data || !result.data[0] || !result.data[0].url) {
-    console.error('[ILLUSTRATION] Invalid response:', result);
-    throw new Error('Invalid response from Together API');
-  }
-  
-  const imageUrl = result.data[0].url;
-  console.log('[ILLUSTRATION] Generated image:', imageUrl);
-  
-  return { imageUrl, debug };
-}
-
-// ============================================================================
 // EXPORTS
 // ============================================================================
+// Note: Direct API calls have been removed for security. 
+// Use the generate-scene-image edge function instead.
 
 export default {
   buildIllustrationPrompt,
   extractSceneEssence,
-  generateIllustration,
   GENRE_STYLES,
   CAMERA_ANGLES,
   LIGHTING_VARIATIONS,
