@@ -119,7 +119,7 @@ export interface NarrativeGenerationDependencies {
   
   // World Bible functions
   getEnhancedPromptWithContract: (prompt: string) => string;
-  validateContent: (content: string) => { success: boolean; content: string; log?: string };
+  validateContent: (content: string) => { success: boolean; content: string; log?: string | string[] };
 }
 
 export interface NarrativeGenerationResult {
