@@ -1648,9 +1648,353 @@ class CompanionSystemManager {
     return dialogue;
   }
   
+  // ========== UNKNOWN TOPIC CURIOSITY SYSTEM ==========
+  // Companions express curiosity about things they DON'T know about the player
+  
   /**
-   * Generate companion's response to player confiding in them
+   * Templates for when companions express curiosity about topics they haven't asked about
    */
+  private unknownTopicCuriosityTemplates: Record<ConversationTopic, {
+    musing: string[];  // Wondering aloud
+    direct: string[];  // More direct expressions
+    wistful: string[]; // Longing to know
+  }> = {
+    dreams: {
+      musing: [
+        `*glances at you* I wonder sometimes... what did you want to be when you were young?`,
+        `*thoughtful* We've been through so much, but I still don't know what you dreamed of becoming.`,
+        `*quietly* Everyone has dreams. I wish I knew yours.`,
+      ],
+      direct: [
+        `You know, you've never told me about your dreams. The real ones.`,
+        `*curious* What did you imagine your life would be like?`,
+      ],
+      wistful: [
+        `*gazes into distance* I wonder what you dreamed of, before all this...`,
+        `Sometimes I try to picture you as a child, dreaming of the future. But I can't.`,
+      ],
+    },
+    relationships: {
+      musing: [
+        `*hesitant* Is there... anyone waiting for you somewhere? You never say.`,
+        `*wondering* I know so little about the people in your life. Before me, I mean.`,
+        `*quietly* Do you have family? Someone special? I've never asked.`,
+      ],
+      direct: [
+        `We've been traveling together, but I don't even know if you have someone back home.`,
+        `*carefully* Tell me about your people. If you have any.`,
+      ],
+      wistful: [
+        `*soft sigh* I wish I knew about the people who shaped you.`,
+        `Sometimes I feel like I'm traveling with a mystery. Who matters to you?`,
+      ],
+    },
+    memories: {
+      musing: [
+        `*pensive* What's your happiest memory? I've never thought to ask.`,
+        `*watching you* Everyone carries a golden memory. What's yours?`,
+        `I wonder what moment you hold onto when things get dark...`,
+      ],
+      direct: [
+        `Tell me something good. Your happiest memory. I want to know.`,
+        `*curious* What's the one memory that makes you smile?`,
+      ],
+      wistful: [
+        `*wistful* I'd give a lot to see you truly happy. To know what that looks like for you.`,
+        `I imagine you have moments of pure joy in your past. I wish you'd share one.`,
+      ],
+    },
+    fears: {
+      musing: [
+        `*observing* You're brave. But everyone fears something. I wonder what haunts you.`,
+        `*quiet* What keeps you up at night? You've never told me.`,
+        `We all have shadows. I wish I knew yours.`,
+      ],
+      direct: [
+        `What are you afraid of? Really afraid of?`,
+        `*serious* I should know what scares you. In case I need to protect you from it.`,
+      ],
+      wistful: [
+        `*concerned* I want to understand your fears. So I can stand with you against them.`,
+        `Sometimes I see something in your eyes. Fear, maybe. I wish you'd tell me.`,
+      ],
+    },
+    future: {
+      musing: [
+        `*curious* If this was all over tomorrow... what would you do?`,
+        `*wondering* I don't know what you want from life. After all this ends.`,
+        `Where do you see yourself when the dust settles?`,
+      ],
+      direct: [
+        `What's the plan? After we're done here. You've never said.`,
+        `*tilts head* Do you have a future in mind? Or are you just surviving?`,
+      ],
+      wistful: [
+        `*hopeful* I'd like to imagine your future. If you'd let me in on it.`,
+        `Sometimes I wonder if there's a place for me in whatever comes next for you.`,
+      ],
+    },
+    loss: {
+      musing: [
+        `*gentle* Have you lost someone? You carry a weight I don't understand.`,
+        `*observing* There's grief in you. I can sense it. But I don't know the shape of it.`,
+        `We've never talked about who you've lost. I wonder about that.`,
+      ],
+      direct: [
+        `Who did you lose? I see it in you sometimes.`,
+        `*soft* You don't have to tell me. But if you've lost someone... I'm here.`,
+      ],
+      wistful: [
+        `*sad* I wish I knew who you mourn. So I could mourn them too.`,
+        `Loss changes people. I want to understand how it changed you.`,
+      ],
+    },
+    origin: {
+      musing: [
+        `*curious* How did you become... this? I don't know your story.`,
+        `*thoughtful* Everyone has an origin. A moment that made them. What was yours?`,
+        `I wonder what path led you here, to this moment with me.`,
+      ],
+      direct: [
+        `Where did you come from? Not the place—the person. How did you become you?`,
+        `*interested* Tell me about your beginning. I want to understand.`,
+      ],
+      wistful: [
+        `*musing* I wish I could have seen you become who you are.`,
+        `Your past is a mystery to me. And I find myself wanting to solve it.`,
+      ],
+    },
+    philosophy: {
+      musing: [
+        `*philosophical* Do you believe in fate? Or do we carve our own path? You've never said.`,
+        `*pondering* I wonder what you believe. About life, about meaning.`,
+        `We've never had that conversation. The big one. About what it all means.`,
+      ],
+      direct: [
+        `What do you believe in? Really believe in?`,
+        `*curious* Are we in control, or are we just along for the ride? What do you think?`,
+      ],
+      wistful: [
+        `*contemplative* I'd love to know how you see the world. The philosophy of you.`,
+        `Sometimes I try to guess your beliefs. But I'd rather you just told me.`,
+      ],
+    },
+    secrets: {
+      musing: [
+        `*quiet* Everyone has secrets. I wonder what yours are.`,
+        `*thoughtful* There's something you're not telling me. I can feel it.`,
+        `We're close now. But there are still walls. Things you haven't shared.`,
+      ],
+      direct: [
+        `What haven't you told me? What's the thing you keep locked away?`,
+        `*earnest* I've shared my secrets. Don't you have any for me?`,
+      ],
+      wistful: [
+        `*longing* I want to know all of you. Even the parts you hide.`,
+        `Trust takes time. I hope someday you'll share your secrets with me.`,
+      ],
+    },
+    regrets: {
+      musing: [
+        `*reflective* Do you have regrets? Things you'd do differently?`,
+        `*wondering* I wonder what choices haunt you. If any do.`,
+        `Nobody gets through life without regrets. What are yours?`,
+      ],
+      direct: [
+        `What do you regret? Don't tell me 'nothing.' Everyone regrets something.`,
+        `*searching* If you could go back and change one thing... what would it be?`,
+      ],
+      wistful: [
+        `*gentle* I want to know your regrets. So I can help you carry them.`,
+        `Regret is heavy. I wish you'd let me help with the weight.`,
+      ],
+    },
+    motivation: {
+      musing: [
+        `*curious* What keeps you going? I've never quite figured it out.`,
+        `*watching* You push forward no matter what. But I don't know why.`,
+        `Everyone needs a reason. I wonder what yours is.`,
+      ],
+      direct: [
+        `Why do you fight? What's driving you?`,
+        `*earnest* I need to know what motivates you. It matters to me.`,
+      ],
+      wistful: [
+        `*admiring* You have a fire in you. I wish I knew what lit it.`,
+        `Understanding your motivation... that would tell me so much about you.`,
+      ],
+    },
+    love: {
+      musing: [
+        `*hesitant* Have you ever been in love? You never talk about it.`,
+        `*wondering* I wonder what your heart has been through.`,
+        `Love changes everyone. I wish I knew how it changed you.`,
+      ],
+      direct: [
+        `Have you loved someone? Really loved them?`,
+        `*curious* Tell me about love. Your experience of it.`,
+      ],
+      wistful: [
+        `*softly* I want to know your heart. The parts you protect most.`,
+        `Love is the deepest part of us. Someday I hope you'll share that with me.`,
+      ],
+    },
+    courage: {
+      musing: [
+        `*impressed* You're brave. But what's the bravest thing you've ever done?`,
+        `*curious* Everyone has a moment of true courage. What was yours?`,
+        `I've seen your bravery. But I wonder what tested it most.`,
+      ],
+      direct: [
+        `Tell me about your bravest moment. I want to know.`,
+        `*respectful* What's the hardest thing you've ever faced? And how did you face it?`,
+      ],
+      wistful: [
+        `*admiring* I wish I'd seen you at your bravest. Before we met.`,
+        `Your courage inspires me. I want to know where it comes from.`,
+      ],
+    },
+    peace: {
+      musing: [
+        `*soft* What brings you peace? I've never asked.`,
+        `*curious* We live in chaos. But everyone needs calm. What's yours?`,
+        `I wonder what quiets your mind. What gives you rest.`,
+      ],
+      direct: [
+        `What calms you? Where do you find peace?`,
+        `*genuine* Tell me what brings you serenity. I want to help you find more of it.`,
+      ],
+      wistful: [
+        `*gentle* I want to give you peace. But I don't know what that looks like for you.`,
+        `Someday, I hope to see you truly at rest. And know what brought you there.`,
+      ],
+    },
+    wanderlust: {
+      musing: [
+        `*dreamily* If you could go anywhere... where would it be?`,
+        `*wondering* Is there a place you dream of? Somewhere you've always wanted to go?`,
+        `We travel so much. But I don't know where you'd choose to be.`,
+      ],
+      direct: [
+        `Where's your dream destination? If you could pick anywhere.`,
+        `*curious* What place calls to you? I want to know.`,
+      ],
+      wistful: [
+        `*hopeful* Maybe someday we'll go somewhere you've always dreamed of.`,
+        `I'd love to see your eyes light up at a place you've always wanted to visit.`,
+      ],
+    },
+  };
+  
+  /**
+   * Check if a companion should express curiosity about an unknown topic
+   * Only triggers for topics they HAVEN'T asked about yet
+   */
+  checkForUnknownTopicCuriosity(
+    companionId: string
+  ): { shouldExpress: boolean; dialogue: string; topic: ConversationTopic } | null {
+    const companion = this.companions.get(companionId);
+    if (!companion || companion.status !== 'active') return null;
+    
+    // Require healthy relationship for this intimate curiosity
+    if (companion.affinity < 20 || companion.trust < 30) return null;
+    if (companion.fear > 40) return null; // Afraid companions don't probe
+    
+    // All possible topics
+    const allTopics: ConversationTopic[] = [
+      'dreams', 'relationships', 'memories', 'fears', 'future',
+      'loss', 'origin', 'philosophy', 'secrets', 'regrets',
+      'motivation', 'love', 'courage', 'peace', 'wanderlust'
+    ];
+    
+    // Filter to topics this companion hasn't asked about or had shared
+    const askedTopics = companion.conversationMemory.askedTopics;
+    const sharedTopics = companion.conversationMemory.sharedTopics.map(t => t.topic);
+    const knownTopics = [...new Set([...askedTopics, ...sharedTopics])];
+    
+    const unknownTopics = allTopics.filter(t => !knownTopics.includes(t));
+    
+    if (unknownTopics.length === 0) return null; // They know everything!
+    
+    // Probability based on relationship depth and how much they already know
+    // More curious when they know some things but not all
+    const knowledgeRatio = knownTopics.length / allTopics.length;
+    let curiosityChance = 0.08; // Base 8%
+    
+    // Curiosity peaks at 30-60% knowledge
+    if (knowledgeRatio > 0.3 && knowledgeRatio < 0.6) {
+      curiosityChance = 0.15; // They know enough to want more
+    } else if (knowledgeRatio >= 0.6) {
+      curiosityChance = 0.20; // They're close, want to know everything
+    }
+    
+    // Higher trust = more curiosity
+    if (companion.trust >= 60) curiosityChance += 0.05;
+    
+    if (Math.random() > curiosityChance) return null;
+    
+    // Select a topic to be curious about
+    const selectedTopic = unknownTopics[Math.floor(Math.random() * unknownTopics.length)];
+    
+    // Choose dialogue style based on companion mood and personality
+    const templates = this.unknownTopicCuriosityTemplates[selectedTopic];
+    let dialoguePool: string[];
+    
+    // Romantic companions tend to be more wistful
+    if (companion.romanticInterest > 40) {
+      dialoguePool = templates.wistful;
+    } else if (companion.trust >= 60) {
+      // High trust = more direct
+      dialoguePool = Math.random() < 0.6 ? templates.direct : templates.musing;
+    } else {
+      // Default to musing (wondering aloud)
+      dialoguePool = templates.musing;
+    }
+    
+    const dialogue = dialoguePool[Math.floor(Math.random() * dialoguePool.length)];
+    
+    console.log(`[Companion] ${companion.name} expressing curiosity about unknown topic: ${selectedTopic}`);
+    
+    return { shouldExpress: true, dialogue, topic: selectedTopic };
+  }
+  
+  /**
+   * Get topics a companion doesn't know about yet
+   */
+  getUnknownTopicsForCompanion(companionId: string): ConversationTopic[] {
+    const companion = this.companions.get(companionId);
+    if (!companion) return [];
+    
+    const allTopics: ConversationTopic[] = [
+      'dreams', 'relationships', 'memories', 'fears', 'future',
+      'loss', 'origin', 'philosophy', 'secrets', 'regrets',
+      'motivation', 'love', 'courage', 'peace', 'wanderlust'
+    ];
+    
+    const askedTopics = companion.conversationMemory.askedTopics;
+    const sharedTopics = companion.conversationMemory.sharedTopics.map(t => t.topic);
+    const knownTopics = [...new Set([...askedTopics, ...sharedTopics])];
+    
+    return allTopics.filter(t => !knownTopics.includes(t));
+  }
+  
+  /**
+   * Get a companion's "knowledge percentage" about the player
+   */
+  getPlayerKnowledgePercentage(companionId: string): number {
+    const companion = this.companions.get(companionId);
+    if (!companion) return 0;
+    
+    const allTopics = 15; // Total number of personal topics
+    const askedTopics = companion.conversationMemory.askedTopics.length;
+    const sharedTopics = companion.conversationMemory.sharedTopics.length;
+    const knownCount = new Set([
+      ...companion.conversationMemory.askedTopics,
+      ...companion.conversationMemory.sharedTopics.map(t => t.topic)
+    ]).size;
+    
+    return Math.round((knownCount / allTopics) * 100);
+  }
   private generateResponseToConfiding(
     companion: CompanionState, 
     type: 'honest' | 'emotional' | 'deflect' | 'lie'
