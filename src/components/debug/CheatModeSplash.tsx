@@ -2487,27 +2487,37 @@ export function CheatModeSplash({
               // Generate pseudo-random stats based on name for consistency
               const seed = companionCreator.name.length || 1;
               const strength = level.minStat + Math.floor((seed * 7) % (range + 1));
-              const agility = level.minStat + Math.floor((seed * 13) % (range + 1));
-              const endurance = level.minStat + Math.floor((seed * 11) % (range + 1));
-              const combatSkill = level.minStat + Math.floor((seed * 5) % (range + 1));
+              const dexterity = level.minStat + Math.floor((seed * 13) % (range + 1));
+              const constitution = level.minStat + Math.floor((seed * 11) % (range + 1));
+              const intelligence = level.minStat + Math.floor((seed * 5) % (range + 1));
+              const wisdom = level.minStat + Math.floor((seed * 17) % (range + 1));
+              const charisma = level.minStat + Math.floor((seed * 3) % (range + 1));
               
               return (
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex items-center justify-between p-2 bg-background/50 rounded">
-                    <span className="text-muted-foreground">Strength</span>
+                    <span className="text-muted-foreground">STR</span>
                     <span className={`font-mono ${level.color}`}>{strength}</span>
                   </div>
                   <div className="flex items-center justify-between p-2 bg-background/50 rounded">
-                    <span className="text-muted-foreground">Agility</span>
-                    <span className={`font-mono ${level.color}`}>{agility}</span>
+                    <span className="text-muted-foreground">DEX</span>
+                    <span className={`font-mono ${level.color}`}>{dexterity}</span>
                   </div>
                   <div className="flex items-center justify-between p-2 bg-background/50 rounded">
-                    <span className="text-muted-foreground">Endurance</span>
-                    <span className={`font-mono ${level.color}`}>{endurance}</span>
+                    <span className="text-muted-foreground">CON</span>
+                    <span className={`font-mono ${level.color}`}>{constitution}</span>
                   </div>
                   <div className="flex items-center justify-between p-2 bg-background/50 rounded">
-                    <span className="text-muted-foreground">Combat Skill</span>
-                    <span className={`font-mono ${level.color}`}>{combatSkill}</span>
+                    <span className="text-muted-foreground">INT</span>
+                    <span className={`font-mono ${level.color}`}>{intelligence}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">WIS</span>
+                    <span className={`font-mono ${level.color}`}>{wisdom}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-background/50 rounded">
+                    <span className="text-muted-foreground">CHA</span>
+                    <span className={`font-mono ${level.color}`}>{charisma}</span>
                   </div>
                 </div>
               );

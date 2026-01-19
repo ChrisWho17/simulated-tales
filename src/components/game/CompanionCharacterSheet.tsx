@@ -157,13 +157,15 @@ export function CompanionCharacterSheet({ companion, isOpen, onClose }: Companio
                 Combat Attributes
                 <span className="text-xs text-muted-foreground">(permanent)</span>
               </h3>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {combatStats && (
                   <>
-                    <StatBlock label="Strength" value={combatStats.baseStrength} />
-                    <StatBlock label="Agility" value={combatStats.baseAgility} />
-                    <StatBlock label="Endurance" value={combatStats.baseEndurance} />
-                    <StatBlock label="Combat Skill" value={combatStats.baseCombatSkill} />
+                    <StatBlock label="STR" value={combatStats.baseStrength} />
+                    <StatBlock label="DEX" value={combatStats.baseDexterity} />
+                    <StatBlock label="CON" value={combatStats.baseConstitution} />
+                    <StatBlock label="INT" value={combatStats.baseIntelligence} />
+                    <StatBlock label="WIS" value={combatStats.baseWisdom} />
+                    <StatBlock label="CHA" value={combatStats.baseCharisma} />
                   </>
                 )}
               </div>

@@ -18,11 +18,13 @@ export type CompanionCombatOutcome =
   | 'critical_success'; // Companion helps significantly
 
 export interface CompanionCombatStats {
-  // Permanent stats (never change)
-  baseStrength: number;       // 1-100
-  baseAgility: number;        // 1-100
-  baseEndurance: number;      // 1-100
-  baseCombatSkill: number;    // 1-100
+  // Permanent stats (never change) - matches CharacterStats from rpgCharacter.ts
+  baseStrength: number;       // Physical power, melee damage (1-15+)
+  baseDexterity: number;      // Agility, stealth, ranged attacks (1-15+)
+  baseConstitution: number;   // Health, endurance, resistance (1-15+)
+  baseIntelligence: number;   // Knowledge, magic, problem-solving (1-15+)
+  baseWisdom: number;         // Perception, intuition, willpower (1-15+)
+  baseCharisma: number;       // Social influence, persuasion, leadership (1-15+)
   size: 'small' | 'medium' | 'large' | 'huge';
   
   // Current state (can change)
@@ -89,69 +91,78 @@ const SIZE_MODIFIERS: Record<CompanionCombatStats['size'], { damage: number; acc
 
 export function generateCompanionCombatStats(
   combatRole: CompanionState['combatRole'],
-  skills: string[]
+  skills: string[],
+  experienceLevel?: 'green' | 'novice' | 'competent' | 'skilled' | 'veteran'
 ): CompanionCombatStats {
-  // Generate permanent base stats based on role
-  const roleStats: Record<string, Partial<CompanionCombatStats>> = {
-    tank: {
-      baseStrength: 60 + Math.floor(Math.random() * 30),
-      baseAgility: 30 + Math.floor(Math.random() * 20),
-      baseEndurance: 70 + Math.floor(Math.random() * 25),
-      baseCombatSkill: 50 + Math.floor(Math.random() * 25),
-      size: Math.random() > 0.6 ? 'large' : 'medium',
-      maxHealth: 120,
-      weaponDamage: 12,
-      armorProtection: 15,
-    },
-    damage: {
-      baseStrength: 50 + Math.floor(Math.random() * 30),
-      baseAgility: 60 + Math.floor(Math.random() * 25),
-      baseEndurance: 40 + Math.floor(Math.random() * 20),
-      baseCombatSkill: 60 + Math.floor(Math.random() * 30),
-      size: 'medium',
-      maxHealth: 80,
-      weaponDamage: 18,
-      armorProtection: 5,
-    },
-    support: {
-      baseStrength: 30 + Math.floor(Math.random() * 20),
-      baseAgility: 50 + Math.floor(Math.random() * 25),
-      baseEndurance: 50 + Math.floor(Math.random() * 25),
-      baseCombatSkill: 40 + Math.floor(Math.random() * 20),
-      size: Math.random() > 0.7 ? 'small' : 'medium',
-      maxHealth: 70,
-      weaponDamage: 8,
-      armorProtection: 3,
-    },
-    ranged: {
-      baseStrength: 40 + Math.floor(Math.random() * 20),
-      baseAgility: 70 + Math.floor(Math.random() * 25),
-      baseEndurance: 45 + Math.floor(Math.random() * 20),
-      baseCombatSkill: 65 + Math.floor(Math.random() * 25),
-      size: 'medium',
-      maxHealth: 75,
-      weaponDamage: 15,
-      armorProtection: 4,
-    },
+  // Experience level stat ranges
+  const expLevelRanges: Record<string, { min: number; max: number }> = {
+    green: { min: 1, max: 4 },
+    novice: { min: 3, max: 6 },
+    competent: { min: 5, max: 8 },
+    skilled: { min: 7, max: 10 },
+    veteran: { min: 10, max: 15 },
   };
-
-  const stats = roleStats[combatRole || 'damage'] || roleStats.damage;
+  
+  const expRange = expLevelRanges[experienceLevel || 'competent'] || expLevelRanges.competent;
+  const statRange = expRange.max - expRange.min;
+  
+  // Helper to generate a stat within the experience range
+  const genStat = () => expRange.min + Math.floor(Math.random() * (statRange + 1));
+  
+  // Role-based stat bonuses (added to base roll, clamped to max 15)
+  const roleStatBonuses: Record<string, { str: number; dex: number; con: number; int: number; wis: number; cha: number }> = {
+    tank: { str: 2, dex: -1, con: 3, int: 0, wis: 1, cha: 0 },
+    damage: { str: 2, dex: 2, con: 0, int: 0, wis: 0, cha: 0 },
+    support: { str: -1, dex: 0, con: 1, int: 2, wis: 2, cha: 1 },
+    ranged: { str: 0, dex: 3, con: 0, int: 1, wis: 2, cha: 0 },
+  };
+  
+  const bonuses = roleStatBonuses[combatRole || 'damage'] || roleStatBonuses.damage;
+  
+  // Generate base stats with role bonuses
+  const clampStat = (val: number) => Math.max(1, Math.min(15, val));
+  const baseStrength = clampStat(genStat() + bonuses.str);
+  const baseDexterity = clampStat(genStat() + bonuses.dex);
+  const baseConstitution = clampStat(genStat() + bonuses.con);
+  const baseIntelligence = clampStat(genStat() + bonuses.int);
+  const baseWisdom = clampStat(genStat() + bonuses.wis);
+  const baseCharisma = clampStat(genStat() + bonuses.cha);
+  
+  // Calculate derived stats based on role and constitution
+  const roleDefaults: Record<string, { baseHealth: number; weaponDamage: number; armorProtection: number; size: CompanionCombatStats['size'] }> = {
+    tank: { baseHealth: 100, weaponDamage: 12, armorProtection: 15, size: Math.random() > 0.6 ? 'large' : 'medium' as const },
+    damage: { baseHealth: 70, weaponDamage: 18, armorProtection: 5, size: 'medium' },
+    support: { baseHealth: 60, weaponDamage: 8, armorProtection: 3, size: Math.random() > 0.7 ? 'small' : 'medium' as const },
+    ranged: { baseHealth: 65, weaponDamage: 15, armorProtection: 4, size: 'medium' },
+  };
+  
+  const roleVals = roleDefaults[combatRole || 'damage'] || roleDefaults.damage;
+  
+  // Constitution bonus to health: +5 HP per point above 5
+  const conBonus = Math.max(0, baseConstitution - 5) * 5;
+  const maxHealth = roleVals.baseHealth + conBonus;
+  
+  // Strength bonus to damage
+  const strBonus = Math.floor((baseStrength - 5) / 3);
+  const weaponDamage = roleVals.weaponDamage + strBonus;
   
   return {
-    baseStrength: stats.baseStrength || 50,
-    baseAgility: stats.baseAgility || 50,
-    baseEndurance: stats.baseEndurance || 50,
-    baseCombatSkill: stats.baseCombatSkill || 50,
-    size: stats.size || 'medium',
-    currentHealth: stats.maxHealth || 80,
-    maxHealth: stats.maxHealth || 80,
+    baseStrength,
+    baseDexterity,
+    baseConstitution,
+    baseIntelligence,
+    baseWisdom,
+    baseCharisma,
+    size: roleVals.size,
+    currentHealth: maxHealth,
+    maxHealth,
     currentEnergy: 100,
     morale: 50, // Start steady
     moraleState: 'steady',
     consecutiveFailures: 0,
     consecutiveSuccesses: 0,
-    weaponDamage: stats.weaponDamage || 10,
-    armorProtection: stats.armorProtection || 5,
+    weaponDamage,
+    armorProtection: roleVals.armorProtection,
   };
 }
 
@@ -247,24 +258,29 @@ export function resolveCompanionCombatAction(
   let relevantStat: number;
   switch (actionType) {
     case 'attack':
-      relevantStat = combatStats.baseCombatSkill;
+      // Use strength + dexterity average for attack
+      relevantStat = Math.floor((combatStats.baseStrength + combatStats.baseDexterity) / 2);
       break;
     case 'defend':
-      relevantStat = combatStats.baseEndurance;
+      // Use constitution for defense
+      relevantStat = combatStats.baseConstitution;
       break;
     case 'support':
-      relevantStat = Math.floor((combatStats.baseAgility + combatStats.baseEndurance) / 2);
+      // Use wisdom + intelligence average for support
+      relevantStat = Math.floor((combatStats.baseWisdom + combatStats.baseIntelligence) / 2);
       break;
     case 'special':
-      relevantStat = combatStats.baseCombatSkill;
+      // Use intelligence for special abilities
+      relevantStat = combatStats.baseIntelligence;
       break;
     default:
-      relevantStat = combatStats.baseCombatSkill;
+      relevantStat = combatStats.baseDexterity;
   }
   
   const statModifier = calculateStatModifier(relevantStat);
   const sizeModifier = getSizeModifier(combatStats.size, 'accuracy');
-  const skillModifier = calculateStatModifier(combatStats.baseCombatSkill);
+  // Use dexterity as skill modifier (combat accuracy)
+  const skillModifier = calculateStatModifier(combatStats.baseDexterity);
   const difficultyMod = DIFFICULTY_MODIFIERS[difficulty]?.modifier || 0;
   const moraleModifier = getMoraleModifier(combatStats.morale);
   
