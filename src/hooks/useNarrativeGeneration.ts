@@ -493,12 +493,51 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       const includeIntermediateContext = retryLevel <= 1;
       const includeBasicContext = retryLevel <= 2;
       
+      // CRITICAL: Limit conversation history to prevent old story leakage
+      // After 6+ hours of play, sending entire history causes:
+      // 1. Context overflow - AI mixes old scenes with current
+      // 2. Token limits exceeded - causes truncation/confusion
+      // 3. Story echoing - old actions bleed into new narrative
+      const MAX_HISTORY_ENTRIES = 20; // ~10 turns of player+narrator exchanges
+      const MAX_CONTENT_LENGTH = 1500; // Truncate very long entries
+      
+      const recentHistory = history.slice(-MAX_HISTORY_ENTRIES);
+      
+      // Build compressed history summary if we truncated significant content
+      let historySummary: string | null = null;
+      if (history.length > MAX_HISTORY_ENTRIES && history.length > 40) {
+        // Summarize older content to preserve key context
+        const olderEntries = history.slice(0, -MAX_HISTORY_ENTRIES);
+        const keyEvents = olderEntries
+          .filter(e => e.role === 'narrator')
+          .slice(-5) // Last 5 narrator entries before the window
+          .map(e => e.content.slice(0, 200))
+          .join(' [...] ');
+        
+        if (keyEvents) {
+          historySummary = `[EARLIER IN THIS SESSION: ${keyEvents}...]`;
+        }
+      }
+      
+      // Truncate individual entries to prevent bloat
+      const compressedHistory = recentHistory.map(e => ({
+        role: e.role,
+        content: e.content.length > MAX_CONTENT_LENGTH 
+          ? e.content.slice(0, MAX_CONTENT_LENGTH) + '...'
+          : e.content,
+      }));
+      
+      // Inject summary as first entry if we had to truncate
+      const finalHistory = historySummary
+        ? [{ role: 'system' as const, content: historySummary }, ...compressedHistory]
+        : compressedHistory;
+      
       const sanitizedCharacter = sanitizeCharacterForAPI(activeChar);
       
       const requestBody: Record<string, any> = {
         scenario: enhancedScenario,
         playerAction: cleanedPlayerAction,
-        conversationHistory: history.map(e => ({ role: e.role, content: e.content })),
+        conversationHistory: finalHistory,
         cheatMode,
         character: sanitizedCharacter,
         diceRoll,
