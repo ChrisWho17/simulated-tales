@@ -29,6 +29,11 @@ const CLEANUP_PRIORITY = [
   // Scene illustrations (can be regenerated)
   { pattern: /^scene_illustration_/, priority: 3 },
   { pattern: /scene-cache/, priority: 3 },
+  // Companion appearance data (can be regenerated from companion state)
+  { pattern: /^companion-appearances$/, priority: 3 },
+  { pattern: /^companion-introductions$/, priority: 3 },
+  // Old resurrection events
+  { pattern: /^pending-resurrection-events$/, priority: 4 },
   // Old session data
   { pattern: /^session_/, priority: 4 },
   // Legacy game saves (older format)
@@ -40,6 +45,8 @@ const CLEANUP_PRIORITY = [
   // Data integrity backup cache (can be rebuilt)
   { pattern: /^lwe_backup_cache/, priority: 6 },
   { pattern: /^lwe_integrity_index/, priority: 7 },
+  // Pending companion introductions (older than displayed ones)
+  { pattern: /^pending-companion-introductions$/, priority: 7 },
 ];
 
 export interface StorageStats {
