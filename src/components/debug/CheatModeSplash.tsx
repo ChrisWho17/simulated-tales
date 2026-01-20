@@ -220,8 +220,28 @@ const GENRE_ARMOR_DESCRIPTIONS: Record<string, Record<string, string>> = {
 };
 
 // Get genre-appropriate armor description for portrait generation
-function getGenreArmorDescription(genre: string, armorLevel: string): string {
-  const normalizedGenre = genre.toLowerCase().replace(/[_\s-]/g, '');
+function getGenreArmorDescription(genre: string | undefined, armorLevel: string): string {
+  const raw = (genre || 'fantasy').toLowerCase().replace(/[_\s-]/g, '');
+  
+  // Map genre variants to canonical keys
+  const genreArmorMap: Record<string, string> = {
+    fantasy: 'fantasy',
+    modern: 'modern',
+    modernlife: 'modern',
+    scifi: 'scifi',
+    cyberpunk: 'cyberpunk',
+    western: 'western',
+    noir: 'noir',
+    postapoc: 'postapoc',
+    postapocalyptic: 'postapoc',
+    steampunk: 'steampunk',
+    pirate: 'pirate',
+    war: 'war',
+    horror: 'horror',
+    mystery: 'mystery',
+  };
+  
+  const normalizedGenre = genreArmorMap[raw] || 'fantasy';
   const genreDescriptions = GENRE_ARMOR_DESCRIPTIONS[normalizedGenre] || GENRE_ARMOR_DESCRIPTIONS.fantasy;
   return genreDescriptions[armorLevel] || genreDescriptions.light;
 }
@@ -538,7 +558,33 @@ const GENRE_NAMES: Record<string, { male: string[]; female: string[]; other: str
 
 // Helper to get names for current genre (with optional last name generation)
 const getGenreNames = (genreStr: string): { male: string[]; female: string[]; other: string[]; lastNames?: string[] } => {
-  const normalized = (genreStr || 'fantasy').toLowerCase().replace(/[_\s-]/g, '_');
+  const raw = (genreStr || 'fantasy').toLowerCase().replace(/[_\s-]/g, '');
+  
+  // Map all possible genre variants to canonical keys
+  const genreMap: Record<string, string> = {
+    fantasy: 'fantasy',
+    modern: 'modern',
+    modernlife: 'modern_life',
+    modern_life: 'modern_life',
+    scifi: 'scifi',
+    sci_fi: 'scifi',
+    science_fiction: 'scifi',
+    cyberpunk: 'cyberpunk',
+    cyber_punk: 'cyberpunk',
+    western: 'western',
+    noir: 'noir',
+    postapoc: 'post_apocalyptic',
+    postapocalyptic: 'post_apocalyptic',
+    post_apocalyptic: 'post_apocalyptic',
+    steampunk: 'steampunk',
+    steam_punk: 'steampunk',
+    pirate: 'pirate',
+    war: 'war',
+    horror: 'horror',
+    mystery: 'mystery',
+  };
+  
+  const normalized = genreMap[raw] || genreMap[raw.replace(/_/g, '')] || 'default';
   return GENRE_NAMES[normalized] || GENRE_NAMES.default;
 };
 
@@ -1465,13 +1511,18 @@ export function CheatModeSplash({
   const GENRE_ACCESSORIES: Record<string, string[]> = {
     fantasy: ['amulet', 'ring', 'cloak clasp', 'leather pouch', 'bone necklace', 'rune pendant'],
     modern: ['watch', 'simple earrings', 'thin necklace', 'leather bracelet', 'sunglasses'],
+    modern_life: ['watch', 'simple earrings', 'thin necklace', 'leather bracelet', 'sunglasses'],
     scifi: ['data chip earpiece', 'holo-band', 'neural link visible', 'tech goggles'],
     western: ['bandana', 'pocket watch', 'sheriff badge', 'leather cord necklace'],
     horror: ['cross pendant', 'protective charm', 'worn locket', 'silver ring'],
     cyberpunk: ['LED earrings', 'data jack', 'mirror shades', 'subdermal glow'],
     steampunk: ['brass goggles', 'pocket watch', 'gear pendant', 'clockwork earring'],
     noir: ['fedora', 'thin tie clip', 'cigarette case', 'simple cufflinks'],
+    mystery: ['magnifying glass pendant', 'vintage watch', 'leather notebook', 'wire-frame glasses'],
     post_apocalyptic: ['dog tags', 'bottle cap necklace', 'worn goggles', 'crude bracelet'],
+    postapoc: ['dog tags', 'bottle cap necklace', 'worn goggles', 'crude bracelet'],
+    war: ['dog tags', 'military watch', 'combat bracelet', 'unit insignia pin'],
+    pirate: ['gold earring', 'compass pendant', 'rope bracelet', 'skull ring'],
     default: ['simple earring', 'thin chain', 'leather bracelet', 'ring'],
   };
   
