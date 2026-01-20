@@ -35,6 +35,7 @@ export const STORAGE_KEYS = {
   // ============================================================================
   // COMPANION SYSTEM
   // ============================================================================
+  COMPANION_STATE: 'companion-state',
   COMPANION_APPEARANCES: 'companion-appearances',
   COMPANION_INTRODUCTIONS: 'companion-introductions',
   PENDING_COMPANION_INTRODUCTIONS: 'pending-companion-introductions',
