@@ -932,6 +932,7 @@ export function CheatModeSplash({
   
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPendingCompanionChanges, setHasPendingCompanionChanges] = useState(false);
   
   // Handle initialMode changes when panel opens
   useEffect(() => {
@@ -1490,6 +1491,10 @@ export function CheatModeSplash({
     companionSystem.registerCompanion(updated);
     setCompanions(companionSystem.getAllCompanions());
     setEditingCompanion(null);
+    
+    // Mark that we have pending companion changes that need saving
+    setHasPendingCompanionChanges(true);
+    
     toast.success(`${updated.name} updated!`);
   };
   
@@ -1772,6 +1777,32 @@ export function CheatModeSplash({
       // Save cheat state
       localStorage.setItem('cheat-mode-state', JSON.stringify(cheats));
       
+      // ========== COMPANION PERSISTENCE ==========
+      // Save companion state to localStorage for immediate persistence
+      try {
+        const companionData = companionSystem.serialize();
+        localStorage.setItem(STORAGE_KEYS.COMPANION_STATE, JSON.stringify(companionData));
+        console.log('[CheatMode] Saved companion state:', companionData.companions.length, 'companions');
+        
+        // Also save relationship store
+        const { saveRelationshipStore } = await import('@/game/unifiedRelationshipStore');
+        saveRelationshipStore();
+        console.log('[CheatMode] Saved relationship store');
+      } catch (e) {
+        console.error('[CheatMode] Failed to save companion state:', e);
+      }
+      
+      // Emit event so campaign context can pick up the changes
+      try {
+        const { StateSyncBus } = await import('@/services/stateSyncBus');
+        StateSyncBus.emit('player:state-changed', {
+          changes: { companionsUpdated: true, cheatsUpdated: true }
+        }, 'CheatMode');
+      } catch (e) {
+        console.warn('[CheatMode] Failed to emit sync event:', e);
+      }
+      
+      setHasPendingCompanionChanges(false);
       toast.success('All changes saved!');
       onClose();
     } catch (error) {
