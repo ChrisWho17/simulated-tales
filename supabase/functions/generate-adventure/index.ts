@@ -912,6 +912,26 @@ FORBIDDEN PATTERNS:
 - Circular dialogue that returns to the same point
 - Static descriptions that don't lead anywhere
 
+===== STAGE 2.5: STORY LEAKAGE PREVENTION (LONG SESSIONS) =====
+For games lasting 6+ hours, OLD CONTENT from earlier in the conversation may appear.
+
+CRITICAL LEAKAGE PREVENTION RULES:
+- Focus ONLY on the MOST RECENT 2-3 narrator responses for continuity
+- If you see a [STORY RECAP] block, use it ONLY for world facts, NOT for current action
+- NEVER reference or continue actions from entries marked "earlier events"
+- The CURRENT SCENE is defined by the last 2-3 exchanges, NOT older history
+- If older history describes a different location, IGNORE those details
+- Do NOT mix NPCs from different scenes unless the player explicitly traveled
+
+LEAKAGE DETECTION (ask yourself):
+- Am I describing something that happened "before" the current scene? → STOP
+- Am I referencing an NPC from a location the player left? → STOP
+- Am I continuing an action the player took 10+ turns ago? → STOP
+- Does my response feel like it belongs to a different part of the story? → REWRITE
+
+When in doubt: Write as if the LAST 3 exchanges are the ONLY context that matters.
+Earlier history provides WORLD FACTS (places visited, NPCs met), NOT current action.
+
 ===== STAGE 3: ECHO PREVENTION =====
 CRITICAL - INTERPRETING PLAYER ACTIONS:
 You are the NARRATOR, not a parrot. The player's input is raw intent; your job is to transform it into polished narrative prose.
@@ -2647,19 +2667,59 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
       }
       messages.push({ role: 'user', content: startMessage });
     } else {
-      // Add conversation history
+      // Add conversation history with SAFETY LIMITS
+      // CRITICAL: Long play sessions (6+ hours) can have 100s of entries
+      // Sending all of them causes:
+      // 1. Token overflow - AI truncates middle, loses coherence
+      // 2. Story leakage - old actions bleed into current scene
+      // 3. Context confusion - AI references outdated events
+      const MAX_HISTORY_ENTRIES = 24; // ~12 turns (player + narrator pairs)
+      const MAX_ENTRY_LENGTH = 2000; // Prevent single bloated entries
+      
       // CRITICAL FIX: If we have a playerAction, skip the last entry if it's a user message
       // (because playerAction is already included in conversationHistory and we'll add it below with enhanced context)
-      const historyToAdd = playerAction && 
+      let historyToAdd = playerAction && 
         conversationHistory.length > 0 && 
         conversationHistory[conversationHistory.length - 1].role === 'user'
           ? conversationHistory.slice(0, -1)  // Exclude last user entry to prevent duplication
           : conversationHistory;
       
+      // Apply sliding window - keep only recent history
+      if (historyToAdd.length > MAX_HISTORY_ENTRIES) {
+        const olderEntries = historyToAdd.slice(0, -MAX_HISTORY_ENTRIES);
+        const recentEntries = historyToAdd.slice(-MAX_HISTORY_ENTRIES);
+        
+        // Create a compressed summary of older events (just narrator beats)
+        const olderSummary = olderEntries
+          .filter(e => e.role === 'narrator')
+          .slice(-3)
+          .map(e => {
+            // Extract key action from each narrator beat (first ~100 chars)
+            const content = typeof e.content === 'string' ? e.content : '';
+            return content.slice(0, 100).replace(/\n/g, ' ');
+          })
+          .join(' → ');
+        
+        // Inject compressed history as system context
+        if (olderSummary) {
+          messages.push({
+            role: 'user',
+            content: `[STORY RECAP - earlier events, do NOT repeat: ${olderSummary}...]`
+          });
+        }
+        
+        historyToAdd = recentEntries;
+        console.log(`[generate-adventure] Truncated history from ${conversationHistory.length} to ${recentEntries.length} entries (compressed ${olderEntries.length} older)`);
+      }
+      
       for (const msg of historyToAdd) {
+        // Truncate individual entries to prevent bloat
+        const content = typeof msg.content === 'string' ? msg.content : String(msg.content);
         messages.push({
           role: msg.role === 'narrator' ? 'assistant' : 'user',
-          content: msg.content
+          content: content.length > MAX_ENTRY_LENGTH 
+            ? content.slice(0, MAX_ENTRY_LENGTH) + '...'
+            : content
         });
       }
       
