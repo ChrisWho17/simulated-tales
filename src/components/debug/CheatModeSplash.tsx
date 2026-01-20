@@ -1248,18 +1248,35 @@ export function CheatModeSplash({
     };
     
     // Save companion appearance to localStorage for portrait generation
-    try {
-      const companionAppearances = JSON.parse(localStorage.getItem('companion-appearances') || '{}');
-      companionAppearances[companionId] = companionAppearance;
-      localStorage.setItem('companion-appearances', JSON.stringify(companionAppearances));
+    // Uses compressAndStore to handle quota errors with automatic cleanup
+    const saveCompanionData = async () => {
+      const { compressAndStore, checkAndCleanupStorage } = await import('@/lib/storageCleanup');
       
-      // Also save the story introduction to be displayed in game
-      const companionIntros = JSON.parse(localStorage.getItem('companion-introductions') || '{}');
-      companionIntros[companionId] = storyIntroduction;
-      localStorage.setItem('companion-introductions', JSON.stringify(companionIntros));
-    } catch (e) {
-      console.error('Failed to save companion data:', e);
-    }
+      // First, check storage and cleanup if needed
+      checkAndCleanupStorage();
+      
+      try {
+        const companionAppearances = JSON.parse(localStorage.getItem('companion-appearances') || '{}');
+        companionAppearances[companionId] = companionAppearance;
+        
+        if (!compressAndStore('companion-appearances', companionAppearances)) {
+          throw new Error('Failed to save companion appearances after cleanup');
+        }
+        
+        // Also save the story introduction to be displayed in game
+        const companionIntros = JSON.parse(localStorage.getItem('companion-introductions') || '{}');
+        companionIntros[companionId] = storyIntroduction;
+        
+        if (!compressAndStore('companion-introductions', companionIntros)) {
+          throw new Error('Failed to save companion introductions after cleanup');
+        }
+      } catch (e) {
+        console.error('Failed to save companion data:', e);
+        toast.error('Storage full! Consider deleting old campaigns.');
+      }
+    };
+    
+    saveCompanionData();
     
     // Add to companion system using the proper registration method
     companionSystem.registerCompanion(companion);
@@ -1283,29 +1300,40 @@ export function CheatModeSplash({
     }
     
     // Queue the companion introduction to be displayed in the story
-    try {
-      const pendingIntros = JSON.parse(localStorage.getItem('pending-companion-introductions') || '[]');
-      pendingIntros.push({
-        companionId,
-        name: companion.name,
-        introduction: storyIntroduction,
-        portraitUrl: companionCreator.portraitUrl,
-        origin: companionCreator.originStory,
-        appearanceTiming: companionCreator.appearanceTiming,
-        timestamp: Date.now(),
-        displayed: false,
-        // Initialize context triggers for timing system
-        contextTriggers: {
-          turnsSinceCreated: 0,
-          combatEnded: false,
-          locationChanged: false,
-          restOccurred: false,
-        },
-      });
-      localStorage.setItem('pending-companion-introductions', JSON.stringify(pendingIntros));
-    } catch (e) {
-      console.error('Failed to queue companion introduction:', e);
-    }
+    const queueIntroduction = async () => {
+      try {
+        const { compressAndStore, decompressAndLoad } = await import('@/lib/storageCleanup');
+        
+        const pendingIntros = decompressAndLoad<any[]>('pending-companion-introductions', []);
+        pendingIntros.push({
+          companionId,
+          name: companion.name,
+          introduction: storyIntroduction,
+          portraitUrl: companionCreator.portraitUrl,
+          origin: companionCreator.originStory,
+          appearanceTiming: companionCreator.appearanceTiming,
+          timestamp: Date.now(),
+          displayed: false,
+          // Initialize context triggers for timing system
+          contextTriggers: {
+            turnsSinceCreated: 0,
+            combatEnded: false,
+            locationChanged: false,
+            restOccurred: false,
+          },
+        });
+        
+        if (!compressAndStore('pending-companion-introductions', pendingIntros)) {
+          toast.error('Failed to queue companion - storage full');
+        } else {
+          console.log('[CompanionCreator] Successfully queued introduction for:', companion.name, 'with timing:', companionCreator.appearanceTiming);
+        }
+      } catch (e) {
+        console.error('Failed to queue companion introduction:', e);
+      }
+    };
+    
+    queueIntroduction();
     
     setCompanions(companionSystem.getAllCompanions());
     setShowCompanionCreator(false);
