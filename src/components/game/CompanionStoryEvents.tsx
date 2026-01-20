@@ -327,15 +327,36 @@ export function CompanionStoryEventsContainer({ onInjectToStory }: CompanionStor
     showNextEvent, 
     dismissEvent, 
     hasEvents, 
-    eventCount 
+    eventCount,
+    pendingIntroductions 
   } = useCompanionStoryEvents();
+
+  // AUTO-SHOW: Automatically display companions with 'immediately' timing
+  // This ensures they appear without requiring the user to click the badge
+  useEffect(() => {
+    if (!currentEvent && pendingIntroductions.length > 0) {
+      // Check for any 'immediately' companion that should auto-show
+      const immediateCompanion = pendingIntroductions.find(
+        intro => intro.appearanceTiming === 'immediately' && !intro.displayed
+      );
+      
+      if (immediateCompanion) {
+        console.log('[CompanionEvents] Auto-showing immediate companion:', immediateCompanion.name);
+        // Small delay to ensure UI is stable before showing modal
+        const timer = setTimeout(() => {
+          showNextEvent();
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [currentEvent, pendingIntroductions, showNextEvent]);
 
   return (
     <>
       {/* Floating badge when there are pending events */}
       <AnimatePresence>
         {hasEvents && !currentEvent && (
-          <CompanionEventBadge count={eventCount} onClick={showNextEvent} />
+          <CompanionEventBadge count={eventCount} onClick={() => showNextEvent()} />
         )}
       </AnimatePresence>
       
