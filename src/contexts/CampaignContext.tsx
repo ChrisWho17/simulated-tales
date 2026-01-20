@@ -170,9 +170,22 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       setAccount(convertAccount(UnifiedSaveArchitecture.getAccount()));
       setConflicts(UnifiedSaveArchitecture.getConflicts());
       
-      // Load campaigns
-      const list = await UnifiedSaveArchitecture.listCampaigns();
-      setCampaigns(list);
+      // Load campaigns with recovery handling
+      try {
+        const list = await UnifiedSaveArchitecture.listCampaigns();
+        setCampaigns(list);
+      } catch (e) {
+        console.error('[CampaignContext] Failed to list campaigns, attempting recovery:', e);
+        // Auto-repair corrupted index
+        try {
+          localStorage.removeItem('lwe_campaign_index');
+          localStorage.removeItem('guest_local_campaigns');
+          console.log('[CampaignContext] Corrupted campaign index removed');
+        } catch {
+          // Ignore
+        }
+        setCampaigns([]);
+      }
       
       // Load active campaign if any
       const activeId = UnifiedSaveArchitecture.getActiveCampaignId();

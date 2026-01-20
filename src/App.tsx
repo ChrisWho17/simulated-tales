@@ -16,6 +16,7 @@ import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
 import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
 import { RecoveryBoundary } from "@/components/error/RecoveryBoundary";
+import { repairCorruptedStorage } from "@/lib/storageRepair";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
@@ -24,6 +25,12 @@ import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
 import AchievementGallery from "./pages/AchievementGallery";
 import "@/styles/untold-story-engine.css";
+
+// CRITICAL: Run storage repair BEFORE React renders to prevent crashes
+const repairResult = repairCorruptedStorage();
+if (repairResult.wasCorrupted) {
+  console.warn('[App] Storage was corrupted and repaired:', repairResult.repaired);
+}
 
 const queryClient = new QueryClient();
 
