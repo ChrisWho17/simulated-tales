@@ -6,6 +6,7 @@
 import { CampaignData } from '@/types/campaign';
 import { STORAGE_KEYS, getCampaignKey, getWALKey } from '@/lib/storageKeys';
 import { StateSyncBus } from './stateSyncBus';
+import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
 
 // Transaction states
 export type TransactionState = 'pending' | 'committed' | 'rolled_back' | 'failed' | 'verified';
@@ -143,9 +144,24 @@ class SaveTransactionManager {
         throw new Error('Data corruption detected - checksum mismatch');
       }
       
-      // Write to localStorage (atomic)
+      // Write to localStorage (atomic) with retry on quota error
       const key = getCampaignKey(transaction.campaignId);
-      localStorage.setItem(key, walEntry.data);
+      
+      const attemptCommit = () => {
+        localStorage.setItem(key, walEntry.data!);
+      };
+      
+      try {
+        attemptCommit();
+      } catch (commitError: any) {
+        if (commitError?.name === 'QuotaExceededError') {
+          console.warn('[Transaction] Quota exceeded during commit, cleaning up...');
+          performCleanup(0.4);
+          attemptCommit(); // Retry after cleanup
+        } else {
+          throw commitError;
+        }
+      }
       
       // Verify write with full verification
       const verification = await this.verifyWrite(key, transaction.checksum, walEntry.data.length);
@@ -277,7 +293,10 @@ class SaveTransactionManager {
   // ============================================================================
   
   private async writeToWAL(entry: WriteAheadLogEntry): Promise<void> {
-    try {
+    // Proactive cleanup before write attempt
+    checkAndCleanupStorage();
+    
+    const attemptWrite = () => {
       const walRaw = localStorage.getItem(WAL_KEY);
       const wal: WriteAheadLogEntry[] = walRaw ? JSON.parse(walRaw) : [];
       
@@ -289,9 +308,26 @@ class SaveTransactionManager {
       }
       
       localStorage.setItem(WAL_KEY, JSON.stringify(wal));
-    } catch (error) {
-      console.error('[WAL] Write failed:', error);
-      throw error;
+    };
+    
+    try {
+      attemptWrite();
+    } catch (error: any) {
+      if (error?.name === 'QuotaExceededError') {
+        console.warn('[WAL] Quota exceeded, performing aggressive cleanup...');
+        performCleanup(0.4); // Aggressive cleanup - free 40%
+        
+        try {
+          attemptWrite();
+          console.log('[WAL] Write succeeded after cleanup');
+        } catch (retryError) {
+          console.error('[WAL] Write failed even after cleanup:', retryError);
+          throw retryError;
+        }
+      } else {
+        console.error('[WAL] Write failed:', error);
+        throw error;
+      }
     }
   }
   
