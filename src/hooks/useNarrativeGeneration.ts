@@ -26,7 +26,7 @@ import {
   detectMissingHealTags, 
   detectMissingGoldTags 
 } from '@/lib/narrativeLootParser';
-import { postProcessLanguageInResponse, learnLanguage, getLanguageDisplayName, LanguageSystemState } from '@/game/languageSystem';
+import { postProcessLanguageInResponse, learnLanguage, getLanguageDisplayName, LanguageSystemState, buildLanguageContext } from '@/game/languageSystem';
 import { ToneState, analyzePlayerTone, updateToneState, buildToneContext } from '@/game/toneSystem';
 import { WEATHER_CONFIGS, WeatherState, getWeatherNarrativeContext, formatWeatherEffectsForAI } from '@/game/weatherSystem';
 import { GameTimeState, buildTimeContext } from '@/game/timeProgressionSystem';
@@ -348,7 +348,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         setToneState(prev => updateToneState(prev, playerTone));
       }
       
-      const languageInstructions = deps.languageState ? require('@/game/languageSystem').buildLanguageContext(deps.languageState) : '';
+      const languageInstructions = deps.languageState ? buildLanguageContext(deps.languageState) : '';
       const languageContextPayload = {
         playerKnownLanguages: languageState.playerKnownLanguages,
         translateEnabled: languageState.translateEnabled,
