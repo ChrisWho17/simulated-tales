@@ -3,6 +3,8 @@
 // Controls when custom companions appear in the story based on user selection
 // ============================================================================
 
+import { decompressAndLoad, compressAndStore } from '@/lib/storageCleanup';
+
 export type AppearanceTimingType = 'immediately' | 'next_scene' | 'contextual';
 
 export interface PendingCompanionWithTiming {
@@ -30,25 +32,26 @@ const STORAGE_KEY = 'pending-companion-introductions';
 
 /**
  * Get all pending companion introductions
+ * Uses decompressAndLoad to handle both compressed and uncompressed data
  */
 export function getPendingIntroductions(): PendingCompanionWithTiming[] {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    return decompressAndLoad<PendingCompanionWithTiming[]>(STORAGE_KEY, []);
   } catch (e) {
     console.error('[CompanionTiming] Failed to load introductions:', e);
+    return [];
   }
-  return [];
 }
 
 /**
  * Save pending introductions
+ * Uses compressAndStore for automatic quota handling
  */
 export function savePendingIntroductions(intros: PendingCompanionWithTiming[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(intros));
+    if (!compressAndStore(STORAGE_KEY, intros)) {
+      console.error('[CompanionTiming] Failed to save introductions - storage full');
+    }
   } catch (e) {
     console.error('[CompanionTiming] Failed to save introductions:', e);
   }
