@@ -564,8 +564,27 @@ class UnifiedSaveArchitectureClass {
   private loadCampaignIndex(): CampaignMetadata[] {
     try {
       const raw = localStorage.getItem(CAMPAIGN_INDEX_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
+      if (!raw) return [];
+      
+      const parsed = JSON.parse(raw);
+      
+      // CRITICAL: Defensive check - ensure we always return an array
+      // This prevents "t.sort is not a function" crashes when localStorage is corrupted
+      if (!Array.isArray(parsed)) {
+        console.warn('[UnifiedSave] Campaign index was not an array, resetting to empty');
+        localStorage.setItem(CAMPAIGN_INDEX_KEY, '[]');
+        return [];
+      }
+      
+      return parsed;
+    } catch (e) {
+      console.error('[UnifiedSave] Failed to parse campaign index:', e);
+      // Reset corrupted index
+      try {
+        localStorage.setItem(CAMPAIGN_INDEX_KEY, '[]');
+      } catch {
+        // Ignore quota errors
+      }
       return [];
     }
   }

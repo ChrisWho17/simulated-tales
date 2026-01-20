@@ -493,8 +493,26 @@ class UnifiedSaveServiceClass {
     try {
       const indexStr = localStorage.getItem(GUEST_INDEX_KEY);
       if (!indexStr) return [];
-      return JSON.parse(indexStr) as CampaignMetadata[];
-    } catch {
+      
+      const parsed = JSON.parse(indexStr);
+      
+      // CRITICAL: Defensive check - ensure we always return an array
+      // This prevents "t.sort is not a function" crashes when localStorage is corrupted
+      if (!Array.isArray(parsed)) {
+        console.warn('[UnifiedSave] Guest index was not an array, resetting to empty');
+        localStorage.setItem(GUEST_INDEX_KEY, '[]');
+        return [];
+      }
+      
+      return parsed as CampaignMetadata[];
+    } catch (e) {
+      console.error('[UnifiedSave] Failed to parse guest index:', e);
+      // Reset corrupted index
+      try {
+        localStorage.setItem(GUEST_INDEX_KEY, '[]');
+      } catch {
+        // Ignore quota errors
+      }
       return [];
     }
   }
