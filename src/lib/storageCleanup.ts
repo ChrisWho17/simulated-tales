@@ -3,8 +3,8 @@
 
 import LZString from 'lz-string';
 
-const STORAGE_WARNING_THRESHOLD = 0.8; // 80% of quota
-const STORAGE_CRITICAL_THRESHOLD = 0.95; // 95% of quota
+const STORAGE_WARNING_THRESHOLD = 0.7; // 70% of quota (lowered for earlier cleanup)
+const STORAGE_CRITICAL_THRESHOLD = 0.9; // 90% of quota (lowered for earlier intervention)
 
 // Keys that should never be deleted
 const PROTECTED_KEYS = [
@@ -22,6 +22,10 @@ const CLEANUP_PRIORITY = [
   { pattern: /^temp_/, priority: 1 },
   { pattern: /^cache_/, priority: 1 },
   { pattern: /_tmp$/, priority: 1 },
+  // Streaming/narrative cache (regenerated on each request)
+  { pattern: /^streaming_/, priority: 1 },
+  { pattern: /^narrative_meta_/, priority: 1 },
+  { pattern: /^generation_cache_/, priority: 1 },
   // Portrait cache (can be regenerated) - safe to delete
   { pattern: /^npc_portrait_/, priority: 2 },
   { pattern: /^portrait_cache_/, priority: 2 },
@@ -32,10 +36,14 @@ const CLEANUP_PRIORITY = [
   // Companion appearance data (can be regenerated from companion state)
   { pattern: /^companion-appearances$/, priority: 3 },
   { pattern: /^companion-introductions$/, priority: 3 },
+  { pattern: /^companion_portrait_/, priority: 3 },
   // Old resurrection events
   { pattern: /^pending-resurrection-events$/, priority: 4 },
   // Old session data
   { pattern: /^session_/, priority: 4 },
+  // Transaction logs (can be rebuilt)
+  { pattern: /^lwe_transaction_log/, priority: 4 },
+  { pattern: /^lwe_wal/, priority: 4 },
   // Legacy game saves (older format)
   { pattern: /^untold-game-saves/, priority: 5 },
   // Backup saves (keep main saves)

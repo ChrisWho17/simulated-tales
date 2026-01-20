@@ -4,6 +4,7 @@
 
 import { CampaignMemoryStore } from '@/types/campaignMemory';
 import { serializeCampaignMemory, deserializeCampaignMemory } from '@/game/campaignMemorySystem';
+import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
 
 // ============================================================================
 // VERSION CONSTANTS
@@ -404,7 +405,11 @@ export function getLastBackup(): unknown | null {
 // Atomic write: write to temp key, then swap
 export function atomicWrite(key: string, data: unknown): boolean {
   const tempKey = `${key}_tmp`;
-  try {
+  
+  // Proactive cleanup before attempting write
+  checkAndCleanupStorage();
+  
+  const attemptWrite = (): boolean => {
     const serialized = JSON.stringify(data);
     
     // Size check - warn if save is getting large
@@ -423,8 +428,26 @@ export function atomicWrite(key: string, data: unknown): boolean {
     localStorage.removeItem(tempKey);
     
     return true;
-  } catch (e) {
-    console.error('[SaveSystem] Atomic write failed:', e);
+  };
+  
+  try {
+    return attemptWrite();
+  } catch (e: any) {
+    // Handle quota exceeded with aggressive cleanup and retry
+    if (e.name === 'QuotaExceededError') {
+      console.warn('[SaveSystem] Quota exceeded during atomic write, performing aggressive cleanup...');
+      performCleanup(0.4);
+      
+      try {
+        const result = attemptWrite();
+        console.log('[SaveSystem] Atomic write succeeded after cleanup');
+        return result;
+      } catch (retryError) {
+        console.error('[SaveSystem] Atomic write still failed after cleanup:', retryError);
+      }
+    } else {
+      console.error('[SaveSystem] Atomic write failed:', e);
+    }
     
     // Try to clean up temp
     try {
@@ -556,6 +579,9 @@ export function saveGame(
   isAutoSave: boolean = false,
   campaignMemory?: CampaignMemoryStore
 ): GameSave {
+  // Proactive cleanup before any save operation
+  checkAndCleanupStorage();
+  
   const saves = loadAllSaves();
   const now = Date.now();
   const normalizedName = (characterName || 'Unknown Hero').toLowerCase().trim();
@@ -595,8 +621,23 @@ export function saveGame(
   // Atomic write with backup
   backupBeforeMigrate(saves);
   if (!atomicWrite(SAVES_KEY, updatedSaves)) {
-    // Fallback to direct write
-    savesToStorage(updatedSaves);
+    // Fallback to direct write with error handling
+    console.warn('[SaveSystem] Atomic write failed, trying fallback...');
+    try {
+      savesToStorage(updatedSaves);
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError') {
+        console.error('[SaveSystem] Fallback save also failed due to quota');
+        // Aggressive cleanup and final retry
+        performCleanup(0.5);
+        try {
+          savesToStorage(updatedSaves);
+          console.log('[SaveSystem] Save succeeded after aggressive cleanup');
+        } catch {
+          console.error('[SaveSystem] All save attempts failed');
+        }
+      }
+    }
   }
   
   return newSave;

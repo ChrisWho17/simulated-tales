@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { setActiveCampaignId } from '@/lib/campaignStorage';
+import { checkAndCleanupStorage, performCleanup, compressAndStore } from '@/lib/storageCleanup';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { 
@@ -740,13 +741,38 @@ export function AdventureGame() {
   }, []);
 
   const saveData = useCallback((newStory: StoryEntry[], newCharacter: RPGCharacter, scenario: string, genre: GameGenre) => {
-    // Save to legacy localStorage (backward compatibility)
-    localStorage.setItem(STORY_KEY, JSON.stringify(newStory));
-    localStorage.setItem(CHARACTER_KEY, JSON.stringify(newCharacter));
-    localStorage.setItem(SCENARIO_KEY, scenario);
-    localStorage.setItem(GENRE_KEY, genre);
+    // Proactive cleanup before save to prevent QuotaExceededError
+    checkAndCleanupStorage();
     
-    // Also sync to campaign system if available
+    const attemptSave = () => {
+      // Use compressed storage for story (largest data structure)
+      compressAndStore(STORY_KEY, newStory);
+      localStorage.setItem(CHARACTER_KEY, JSON.stringify(newCharacter));
+      localStorage.setItem(SCENARIO_KEY, scenario);
+      localStorage.setItem(GENRE_KEY, genre);
+    };
+    
+    try {
+      attemptSave();
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError') {
+        console.warn('[SaveData] Quota exceeded, performing aggressive cleanup...');
+        performCleanup(0.4); // Aggressive cleanup
+        
+        try {
+          attemptSave();
+          console.log('[SaveData] Save succeeded after cleanup');
+        } catch (retryError) {
+          console.error('[SaveData] Still failed after cleanup:', retryError);
+          // Show user notification but don't crash - the game can still function
+          toast.warning('Storage full. Some progress may not save locally. Consider clearing browser data or syncing to cloud.');
+        }
+      } else {
+        console.error('[SaveData] Unexpected save error:', e);
+      }
+    }
+    
+    // Also sync to campaign system if available (this is more robust)
     if (campaignContext?.activeCampaign) {
       campaignContext.updatePlayer(newCharacter);
       // Note: narrative entries are added individually via addNarrativeEntry
