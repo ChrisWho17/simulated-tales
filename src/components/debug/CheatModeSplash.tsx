@@ -52,6 +52,17 @@ import {
   COMPANION_TEMPLATES,
   PersonalityTrait,
 } from '@/game/companionSystem';
+import {
+  deriveBeliefSystem,
+  calculateFirstImpression,
+  evaluateJoiningDecision,
+  buildCompanionIdentity,
+  IMPRESSION_DESCRIPTIONS,
+  ImpressionLevel,
+  FirstImpression,
+  JoiningDecision,
+  CompanionBeliefs,
+} from '@/game/companionSentienceSystem';
 import { wardrobeManager, WardrobeState, WardrobeItem } from '@/game/wardrobeSystem';
 import { getStarterClothingForGenre, buildClothingDescriptionForAI } from '@/game/starterClothingSystem';
 import { ClothingSlot } from '@/game/clothingItemSystem';
@@ -1144,6 +1155,46 @@ export function CheatModeSplash({
     
     const companionId = `companion_${Date.now()}`;
     
+    // ====== SENTIENCE SYSTEM: Derive beliefs and calculate first impression ======
+    const beliefs = deriveBeliefSystem(companionCreator.traits);
+    
+    // Get player reputation from game state if available
+    const playerReputation = (() => {
+      try {
+        const gameStateRaw = localStorage.getItem('living-world-game-state');
+        if (gameStateRaw) {
+          const gameState = JSON.parse(gameStateRaw);
+          return {
+            honor: gameState?.player?.reputation?.honor || 0,
+            infamy: gameState?.player?.reputation?.infamy || 0,
+            kindness: gameState?.player?.reputation?.kindness || 0,
+            wealth: gameState?.player?.gold || character?.gold || 0,
+          };
+        }
+      } catch (e) { /* ignore */ }
+      return { honor: 0, infamy: 0, kindness: 0, wealth: character?.gold || 0 };
+    })();
+    
+    // Calculate first impression based on companion's beliefs and player's reputation
+    const firstImpression = calculateFirstImpression(
+      companionCreator.traits,
+      beliefs,
+      character || undefined,
+      playerReputation,
+      undefined // No contextual factors in cheat mode
+    );
+    
+    // ====== AUTONOMOUS JOINING DECISION ======
+    const joiningDecision = evaluateJoiningDecision(
+      { id: companionId, name: companionCreator.name.trim(), personality: { traits: companionCreator.traits } } as CompanionState,
+      beliefs,
+      firstImpression,
+      playerReputation,
+    );
+    
+    // Build companion identity with character sheet name
+    const identity = buildCompanionIdentity(companionCreator.name.trim(), true);
+    
     // Create custom personality based on selected traits
     const customPersonality = {
       traits: companionCreator.traits,
@@ -1183,18 +1234,26 @@ export function CheatModeSplash({
       hiddenQuirks: generateHiddenQuirks(companionCreator.traits),
     };
     
-    // Build the story introduction
-    const storyIntroduction = buildCompanionIntroduction();
+    // Build the story introduction - now includes sentience response
+    const impressionDesc = IMPRESSION_DESCRIPTIONS[firstImpression.level];
+    const storyIntroduction = joiningDecision.willJoin 
+      ? buildCompanionIntroduction() + '\n\n' + joiningDecision.dialogueResponse
+      : joiningDecision.dialogueResponse;
+    
+    // Determine starting affinity based on first impression
+    const startingAffinity = Math.floor(firstImpression.score / 2); // -50 to +50
+    const startingTrust = joiningDecision.willJoin ? 40 + Math.floor(firstImpression.score / 5) : 20;
+    const startingRespect = joiningDecision.willJoin ? 40 + Math.floor(firstImpression.score / 5) : 25;
     
     const companion: CompanionState = {
       id: companionId,
-      name: companionCreator.name.trim(),
-      status: 'active',
-      mood: 'content',
+      name: identity.characterSheetName, // Use character sheet name for important companions
+      status: joiningDecision.willJoin ? 'active' : 'waiting', // Companion decides!
+      mood: joiningDecision.willJoin ? 'content' : (firstImpression.level === 'critical' ? 'angry' : 'neutral'),
       moodIntensity: 60,
-      affinity: 30,
-      trust: 40,
-      respect: 40,
+      affinity: startingAffinity,
+      trust: startingTrust,
+      respect: startingRespect,
       fear: 0,
       romanticInterest: companionCreator.traits.includes('romantic') ? 20 : 0,
       personality: customPersonality as any,
@@ -1212,11 +1271,15 @@ export function CheatModeSplash({
       memories: [{
         timestamp: Date.now(),
         type: 'event' as const,
-        description: `Joined the party: ${ORIGIN_STORIES.find(o => o.id === companionCreator.originStory)?.label || 'Mysterious arrival'}`,
-        affinityChange: 20,
+        description: joiningDecision.willJoin 
+          ? `Joined the party: ${ORIGIN_STORIES.find(o => o.id === companionCreator.originStory)?.label || 'Mysterious arrival'}`
+          : `First meeting: ${impressionDesc.label} impression (${joiningDecision.reason})`,
+        affinityChange: joiningDecision.willJoin ? 20 : 0,
         forgotten: false,
       }],
-      internalThoughts: `Ready to prove myself to this new companion.`,
+      internalThoughts: joiningDecision.willJoin 
+        ? `Ready to prove myself to this new companion.`
+        : `I'm not sure about this person yet...`,
       wantsToSpeak: true,
       pendingReaction: storyIntroduction,
       combatRole: companionCreator.combatRole,
@@ -1230,6 +1293,14 @@ export function CheatModeSplash({
       wasBetrayed: false,
       hasSecret: Math.random() > 0.5,
       secretRevealed: false,
+      // Store sentience data for future reference
+      // @ts-ignore - extending CompanionState
+      sentience: {
+        beliefs,
+        firstImpression,
+        joiningDecision,
+        identity,
+      },
     };
     
     // Store appearance data with enhanced info
@@ -1347,10 +1418,18 @@ export function CheatModeSplash({
       ? 'They will appear when the next scene starts.'
       : 'They will appear when it makes narrative sense.';
     
-    toast.success(`${companion.name} has joined your party!`, {
-      description: timingDesc,
-      duration: 5000,
-    });
+    // Sentient companions decide for themselves!
+    if (joiningDecision.willJoin) {
+      toast.success(`${identity.displayName} has decided to join! (${IMPRESSION_DESCRIPTIONS[firstImpression.level].emoji} ${IMPRESSION_DESCRIPTIONS[firstImpression.level].label})`, {
+        description: timingDesc,
+        duration: 5000,
+      });
+    } else {
+      toast.warning(`${identity.displayName} declined to join. (${IMPRESSION_DESCRIPTIONS[firstImpression.level].emoji} ${IMPRESSION_DESCRIPTIONS[firstImpression.level].label})`, {
+        description: joiningDecision.alternativeCondition || 'Ask the Narrator to convince them through roleplay.',
+        duration: 7000,
+      });
+    }
   };
   
   const handleRemoveCompanion = (companionId: string) => {
