@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { COLOR_PRESETS, ColorPreset, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
 import { StepTransition, useStepDirection, StaggerChildren, StaggerItem } from '@/components/ui/PageTransition';
@@ -63,6 +64,8 @@ interface FirstTimeWizardProps {
   forceShow?: boolean;
 }
 
+const REMEMBER_PREFERENCES_KEY = 'untold-remember-preferences';
+
 export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(() => {
@@ -77,6 +80,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
   const [selectedTheme, setSelectedTheme] = useState<string>('violet');
   const [selectedPreset, setSelectedPreset] = useState<PresetId>('story');
   const [adultContent, setAdultContent] = useState(false);
+  const [rememberPreferences, setRememberPreferences] = useState(true);
 
   const handleThemeSelect = useCallback((themeId: string) => {
     setSelectedTheme(themeId);
@@ -91,10 +95,17 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
     // Save completion state
     localStorage.setItem(WIZARD_COMPLETED_KEY, 'true');
     
-    // Save theme preference - applyColorTheme with isPreview=false saves it
-    const themePreset = COLOR_PRESETS.find(p => p.id === selectedTheme);
-    if (themePreset) {
-      applyColorTheme(themePreset, false);
+    // Save remember preferences setting
+    if (rememberPreferences) {
+      localStorage.setItem(REMEMBER_PREFERENCES_KEY, 'true');
+      
+      // Save theme preference - applyColorTheme with isPreview=false saves it
+      const themePreset = COLOR_PRESETS.find(p => p.id === selectedTheme);
+      if (themePreset) {
+        applyColorTheme(themePreset, false);
+      }
+    } else {
+      localStorage.removeItem(REMEMBER_PREFERENCES_KEY);
     }
     
     setIsVisible(false);
@@ -103,7 +114,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
       preset: selectedPreset,
       adultContent,
     });
-  }, [selectedTheme, selectedPreset, adultContent, onComplete]);
+  }, [selectedTheme, selectedPreset, adultContent, rememberPreferences, onComplete]);
 
   const handleNext = () => {
     if (currentStep < WIZARD_STEPS.length - 1) {
@@ -347,6 +358,23 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Remember preferences checkbox */}
+                    <div className="flex items-center justify-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/10 max-w-xs mx-auto">
+                      <Checkbox
+                        id="remember-preferences"
+                        checked={rememberPreferences}
+                        onCheckedChange={(checked) => setRememberPreferences(checked === true)}
+                        className="border-muted-foreground/50"
+                      />
+                      <label 
+                        htmlFor="remember-preferences" 
+                        className="text-sm text-muted-foreground cursor-pointer select-none"
+                      >
+                        Remember my preferences for next time
+                      </label>
+                    </div>
+                    
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
