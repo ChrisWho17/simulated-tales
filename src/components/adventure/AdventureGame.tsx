@@ -1874,18 +1874,33 @@ export function AdventureGame() {
           }),
         }
       );
+      
+      if (!response.ok) {
+        console.error('[handleGenerateImage] Response not ok:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('[handleGenerateImage] Response data:', { hasImageUrl: !!data.imageUrl, error: data.error });
+      
       if (data.imageUrl) {
         setStory(prev => prev.map(e => 
           e.id === entryId ? { ...e, imageUrl: data.imageUrl } : e
         ));
+        toast.success('Scene illustrated!');
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        throw new Error('No image returned');
       }
     } catch (error) {
-      toast.error('Failed to generate image');
+      console.error('[handleGenerateImage] Error:', error);
+      toast.error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setGeneratingImageFor(undefined);
     }
-  }, [story, scenarioSelection, characterVisualProfile]);
+  }, [story, scenarioSelection, characterVisualProfile, weatherState, timeState, worldBible]);
 
   // Restart game
   const handleRestart = useCallback(() => {
