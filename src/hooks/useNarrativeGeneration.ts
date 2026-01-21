@@ -26,6 +26,25 @@ import {
   detectMissingHealTags, 
   detectMissingGoldTags 
 } from '@/lib/narrativeLootParser';
+
+// Quality Systems Integration
+import { 
+  validateNarrativeQuality, 
+  createSessionState, 
+  updateSessionState, 
+  generateAntiDriftDirectives,
+  SessionState,
+} from '@/lib/narrativeQualitySystem';
+import { 
+  compressConversationHistory, 
+  checkForRepetition, 
+  getLongSessionDirectives,
+} from '@/lib/narrativeLeakagePrevention';
+import { 
+  getGenreWritingInstructions, 
+  validateGenreCompliance,
+  getGenreMicroEvents,
+} from '@/lib/narrativeGenreEnforcement';
 import { postProcessLanguageInResponse, learnLanguage, getLanguageDisplayName, LanguageSystemState, buildLanguageContext } from '@/game/languageSystem';
 import { ToneState, analyzePlayerTone, updateToneState, buildToneContext } from '@/game/toneSystem';
 import { WEATHER_CONFIGS, WeatherState, getWeatherNarrativeContext, formatWeatherEffectsForAI } from '@/game/weatherSystem';
@@ -237,6 +256,10 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     diceRoll?: any;
     storySnapshot: StoryEntry[];
   } | null>(null);
+  
+  // Quality system state
+  const sessionStateRef = useRef<SessionState>(createSessionState());
+  const sessionStartRef = useRef<number>(Date.now());
   
   const {
     character,
@@ -493,44 +516,44 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       const includeIntermediateContext = retryLevel <= 1;
       const includeBasicContext = retryLevel <= 2;
       
-      // CRITICAL: Limit conversation history to prevent old story leakage
-      // After 6+ hours of play, sending entire history causes:
-      // 1. Context overflow - AI mixes old scenes with current
-      // 2. Token limits exceeded - causes truncation/confusion
-      // 3. Story echoing - old actions bleed into new narrative
-      const MAX_HISTORY_ENTRIES = 20; // ~10 turns of player+narrator exchanges
-      const MAX_CONTENT_LENGTH = 1500; // Truncate very long entries
+      // ============= QUALITY SYSTEM INTEGRATION =============
       
-      const recentHistory = history.slice(-MAX_HISTORY_ENTRIES);
+      // Calculate session duration for long-session optimizations
+      const hoursPlayed = (Date.now() - sessionStartRef.current) / (1000 * 60 * 60);
+      const turnCount = sessionStateRef.current.turnCount;
       
-      // Build compressed history summary if we truncated significant content
-      let historySummary: string | null = null;
-      if (history.length > MAX_HISTORY_ENTRIES && history.length > 40) {
-        // Summarize older content to preserve key context
-        const olderEntries = history.slice(0, -MAX_HISTORY_ENTRIES);
-        const keyEvents = olderEntries
-          .filter(e => e.role === 'narrator')
-          .slice(-5) // Last 5 narrator entries before the window
-          .map(e => e.content.slice(0, 200))
-          .join(' [...] ');
-        
-        if (keyEvents) {
-          historySummary = `[EARLIER IN THIS SESSION: ${keyEvents}...]`;
-        }
-      }
+      // Use advanced leakage prevention system for history compression
+      const compressedHistoryResult = compressConversationHistory(history as StoryEntry[], {
+        maxHistoryEntries: 16,
+        maxEntryLength: 1200,
+        summaryThreshold: 24,
+        dedupeSimilarityThreshold: 0.45,
+        maxContextTokens: 8000,
+      });
       
-      // Truncate individual entries to prevent bloat
-      const compressedHistory = recentHistory.map(e => ({
-        role: e.role,
-        content: e.content.length > MAX_CONTENT_LENGTH 
-          ? e.content.slice(0, MAX_CONTENT_LENGTH) + '...'
-          : e.content,
-      }));
+      // Build final history with summary injection
+      const finalHistory = compressedHistoryResult.summary
+        ? [{ role: 'system' as const, content: compressedHistoryResult.summary }, ...compressedHistoryResult.entries]
+        : compressedHistoryResult.entries;
       
-      // Inject summary as first entry if we had to truncate
-      const finalHistory = historySummary
-        ? [{ role: 'system' as const, content: historySummary }, ...compressedHistory]
-        : compressedHistory;
+      // Generate quality enforcement directives
+      const antiDriftDirectives = generateAntiDriftDirectives(sessionStateRef.current);
+      const longSessionDirectives = getLongSessionDirectives(turnCount, hoursPlayed);
+      const genreWritingInstructions = getGenreWritingInstructions(genre);
+      
+      // Combine all quality directives
+      const qualityDirectives = [
+        ...antiDriftDirectives,
+        ...longSessionDirectives,
+      ].filter(Boolean);
+      
+      // Get potential micro-events for freshness
+      const microEvents = turnCount > 10 ? getGenreMicroEvents(genre) : [];
+      const selectedMicroEvent = microEvents.length > 0 
+        ? microEvents[Math.floor(Math.random() * microEvents.length)]
+        : null;
+      
+      console.log(`[Quality] Session: ${turnCount} turns, ${hoursPlayed.toFixed(1)}h played, ${qualityDirectives.length} directives active`);
       
       const sanitizedCharacter = sanitizeCharacterForAPI(activeChar);
       
@@ -579,6 +602,18 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         requestBody.toneContext = toneContextPayload;
         requestBody.languageContext = languageContextPayload;
         requestBody.locationContext = locationContextPayload;
+        
+        // Quality system context injection
+        requestBody.qualityEnforcement = {
+          genreInstructions: genreWritingInstructions,
+          antiDriftDirectives: qualityDirectives,
+          suggestedMicroEvent: selectedMicroEvent,
+          sessionMetrics: {
+            turnCount,
+            hoursPlayed: Math.floor(hoursPlayed * 10) / 10,
+            historyCompressed: compressedHistoryResult.truncatedCount > 0,
+          },
+        };
         
         const activeDirectorSettings = directorSettings || settings.directorSettings;
         if (activeDirectorSettings) {
@@ -768,6 +803,36 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           console.error('[AI] Echo response detected, using contextual fallback');
           return getContextualFallback(genre);
         }
+        
+        // Quality validation
+        const qualityResult = validateNarrativeQuality(
+          data.narrative, 
+          genre, 
+          sessionStateRef.current.lastNarratives
+        );
+        
+        if (!qualityResult.passed) {
+          console.warn('[Quality] Narrative quality issues:', qualityResult.violations);
+          // Log but don't block - use content but warn
+          if (qualityResult.violations.some(v => v.includes('High similarity'))) {
+            console.error('[Quality] Repetition detected, narrative may feel stale');
+          }
+        }
+        
+        // Genre compliance check
+        const genreResult = validateGenreCompliance(data.narrative, genre);
+        if (!genreResult.compliant) {
+          console.warn('[Genre] Compliance issues:', genreResult.issues);
+        }
+        
+        // Repetition check against recent history
+        const repetitionCheck = checkForRepetition(data.narrative, history as StoryEntry[]);
+        if (repetitionCheck.isRepetitive) {
+          console.warn(`[Quality] High repetition (${(repetitionCheck.similarity * 100).toFixed(0)}%):`, repetitionCheck.matchedContent);
+        }
+        
+        // Update session state for drift prevention
+        sessionStateRef.current = updateSessionState(sessionStateRef.current, data.narrative);
         
         const validation = validateContent(data.narrative);
         if (!validation.success) {
