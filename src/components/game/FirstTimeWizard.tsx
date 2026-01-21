@@ -155,12 +155,12 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
           />
         </div>
 
-        {/* Skip button */}
+        {/* Skip button - ensure it's clickable above all layers */}
         <Button
           variant="ghost"
           size="sm"
           onClick={handleSkip}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+          className="absolute top-4 right-4 z-50 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
         >
           Skip Setup
         </Button>
