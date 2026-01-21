@@ -108,7 +108,16 @@ import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatMo
 
 // Companion story events integration
 import { CompanionStoryEventsContainer } from '@/components/game/CompanionStoryEvents';
-import { CompanionQuickView, CompanionWarningToast } from '@/components/companion';
+import { 
+  CompanionQuickView, 
+  CompanionWarningToast, 
+  CompanionCheatPanel, 
+  CompanionCreatorWizardV2,
+  AutonomousActionFeed 
+} from '@/components/companion';
+import { useCompanionAutonomy, companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
+import { AutonomousAction, PlayerResponseOption } from '@/game/companion/companionAutonomy';
+import { companionSystem } from '@/game/companionSystem';
 import { CompanionPanel } from '@/components/game/CompanionPanel';
 
 // Inventory system integration
@@ -343,6 +352,12 @@ export function AdventureDisplay({
   const [showAmbientFeedModal, setShowAmbientFeedModal] = useState(false);
   const [lastSeenAmbientCount, setLastSeenAmbientCount] = useState(0);
   const [showCompanionPanel, setShowCompanionPanel] = useState(false);
+  const [showCompanionCheatPanel, setShowCompanionCheatPanel] = useState(false);
+  const [showCompanionCreator, setShowCompanionCreator] = useState(false);
+  
+  // Companion autonomy system
+  const companionAutonomy = useCompanionAutonomy();
+  const activeCompanions = companionSystem.getActiveCompanions();
   
   // Cheat mode / Developer tools
   const cheatModePanel = useCheatModeCommand();
@@ -1331,6 +1346,31 @@ export function AdventureDisplay({
         return;
       }
       
+      // Companion commands: /companion debug, /companion create, /party, /companions
+      if (trimmedInput.startsWith('/companion') || trimmedInput === '/party' || trimmedInput === '/companions') {
+        const companionArgs = trimmedInput.replace('/companion', '').trim();
+        
+        if (companionArgs === 'debug' || trimmedInput === '/companion debug') {
+          setShowCompanionCheatPanel(true);
+          setInput('');
+          return;
+        }
+        if (companionArgs === 'create' || companionArgs === 'new' || trimmedInput === '/companion create') {
+          setShowCompanionCreator(true);
+          setInput('');
+          return;
+        }
+        // Default: open companion panel
+        setShowCompanionPanel(true);
+        setInput('');
+        return;
+      }
+      if (trimmedInput === '/party' || trimmedInput === '/companions') {
+        setShowCompanionPanel(true);
+        setInput('');
+        return;
+      }
+      
       // Check for /checkself command (with optional parameters)
       const parsed = parseEnhancedCommand(input.trim());
       if (parsed.type === 'checkself') {
@@ -1398,6 +1438,51 @@ export function AdventureDisplay({
     
     setShowCheckSelfModal(false);
   }, [gameLoopState.adrenalineState, checkSelfThoroughness, toast]);
+
+  // Handle companion autonomous action responses
+  const handleAutonomyResponse = useCallback((
+    companionId: string, 
+    action: AutonomousAction, 
+    response: PlayerResponseOption
+  ) => {
+    // Consume the action from the queue
+    companionAutonomy.consumeAction(companionId);
+    
+    // Apply affinity/trust changes
+    const companion = activeCompanions.find(c => c.id === companionId);
+    if (companion) {
+      const updatedCompanion = {
+        ...companion,
+        affinity: Math.max(-100, Math.min(100, companion.affinity + response.affinityChange)),
+        trust: Math.max(0, Math.min(100, companion.trust + response.trustChange)),
+      };
+      companionSystem.registerCompanion(updatedCompanion);
+    }
+    
+    // Show toast with outcome
+    toast({
+      title: `${companion?.name || 'Companion'} responds`,
+      description: response.outcome,
+      duration: 4000,
+    });
+    
+    // If response resolves a grievance, handle it
+    if (response.type === 'comfort' || response.type === 'agree') {
+      const grievances = companionAutonomy.getGrievances(companionId);
+      grievances.forEach(g => {
+        companionAutonomy.resolveGrievance(companionId, g.id, response.type === 'comfort');
+      });
+    }
+    
+    // Inject the outcome into the narrative
+    if (response.outcome) {
+      onPlayerAction(`[COMPANION: ${companion?.name}] ${response.outcome}`);
+    }
+  }, [companionAutonomy, activeCompanions, toast, onPlayerAction]);
+
+  const handleAutonomyDismiss = useCallback((companionId: string, action: AutonomousAction) => {
+    companionAutonomy.consumeAction(companionId);
+  }, [companionAutonomy]);
 
   const handleDiceRollComplete = (roll: any) => {
     // Tick modifiers by 1 turn for dice roll actions too
@@ -2105,6 +2190,18 @@ export function AdventureDisplay({
           );
           })}
 
+          {/* Companion Autonomous Actions - Inline display for companion interruptions */}
+          {companionAutonomy.pendingActions.size > 0 && (
+            <div className="mb-6">
+              <AutonomousActionFeed
+                actions={companionAutonomy.pendingActions}
+                companions={activeCompanions}
+                onPlayerResponse={handleAutonomyResponse}
+                onDismiss={handleAutonomyDismiss}
+              />
+            </div>
+          )}
+
           {/* Streaming Narrative Entry - Shows word-by-word AI response */}
           {streamingState && streamingState.isStreaming && streamingState.content && (
             <div className="animate-fade-in-up mb-8">
@@ -2781,6 +2878,29 @@ export function AdventureDisplay({
         isOpen={showCompanionPanel}
         onClose={() => setShowCompanionPanel(false)}
         genre={genre}
+      />
+      
+      {/* Companion Cheat Panel - Debug controls for companions */}
+      <CompanionCheatPanel
+        isOpen={showCompanionCheatPanel}
+        onClose={() => setShowCompanionCheatPanel(false)}
+        genre={genre}
+      />
+      
+      {/* Companion Creator V2 - Full personality creation wizard */}
+      <CompanionCreatorWizardV2
+        isOpen={showCompanionCreator}
+        onClose={() => setShowCompanionCreator(false)}
+        onCompanionCreated={(companion) => {
+          setShowCompanionCreator(false);
+          toast({
+            title: `${companion.name} Created!`,
+            description: 'Your new companion is ready to join your adventure.',
+            duration: 4000,
+          });
+        }}
+        genre={genre}
+        character={character}
       />
     </div>
     </ImmersionLayer>
