@@ -5,7 +5,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, ScrollText, Backpack, Bookmark, 
-  RotateCcw, X, Info, FolderOpen, Sliders
+  RotateCcw, X, Info, FolderOpen, Sliders, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -149,6 +149,7 @@ interface RadialQuickMenuProps {
   onOpenRecap: () => void;
   onOpenSaves: () => void;
   onRestart: () => void;
+  onOpenCompanions?: () => void;
 }
 
 interface RadialMenuItem {
@@ -184,6 +185,7 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
   onOpenRecap,
   onOpenSaves,
   onRestart,
+  onOpenCompanions,
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -241,6 +243,13 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
       onClick: onOpenInventory,
       color: 'text-amber-400',
       glowColor: 'rgb(251 191 36)',
+    },
+    {
+      icon: <Users className="w-5 h-5" />,
+      label: 'Companions',
+      onClick: onOpenCompanions || (() => {}),
+      color: 'text-pink-400',
+      glowColor: 'rgb(244 114 182)',
     },
     {
       icon: <Bookmark className="w-5 h-5" />,

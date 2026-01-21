@@ -4,7 +4,7 @@
 import React from 'react';
 import { 
   Settings, Trophy, ScrollText, Backpack, Bookmark, 
-  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen
+  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen, Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ interface MobileQuickMenuProps {
   onOpenRecap: () => void;
   onOpenSaves: () => void;
   onRestart: () => void;
+  onOpenCompanions?: () => void;
   characterName?: string;
   currentTime?: string;
   currentWeather?: string;
@@ -46,6 +47,7 @@ export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuP
   onOpenRecap,
   onOpenSaves,
   onRestart,
+  onOpenCompanions,
   characterName,
   currentTime,
   currentWeather,
@@ -66,6 +68,13 @@ export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuP
       onClick: () => { onOpenInventory(); onClose(); },
       color: 'text-amber-400',
       description: 'Items & gear',
+    },
+    {
+      icon: <Users className="w-5 h-5" />,
+      label: 'Companions',
+      onClick: () => { onOpenCompanions?.(); onClose(); },
+      color: 'text-pink-400',
+      description: 'Party members',
     },
     {
       icon: <Clock className="w-5 h-5" />,
