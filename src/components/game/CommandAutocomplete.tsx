@@ -60,6 +60,20 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'social',
   },
   {
+    command: '/companion debug',
+    aliases: ['/c debug'],
+    description: 'Open companion cheat panel',
+    icon: <Wand2 className="w-4 h-4" />,
+    category: 'secret',
+  },
+  {
+    command: '/companion create',
+    aliases: ['/c new'],
+    description: 'Create a new companion',
+    icon: <Users className="w-4 h-4" />,
+    category: 'social',
+  },
+  {
     command: '/relationships',
     aliases: ['/rel', '/npcs'],
     description: 'View NPC relationships',
