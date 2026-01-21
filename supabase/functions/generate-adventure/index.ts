@@ -3218,16 +3218,16 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // Check if streaming is requested (from parsed request body)
     const streamRequested = (requestData as any).stream === true;
     
+    // ============= AAA QUALITY CONFIG FOR 24+ HOUR SESSIONS =============
     const aiRequestBody = {
       // Use the higher-quality pro model for narrative generation
-      // Flash is faster but less nuanced for dialogue/character work
       model: 'google/gemini-2.5-pro',
       messages,
-      temperature: 0.82,          // Slightly lower for more coherent dialogue
-      max_tokens: 2000,           // Increased to prevent mid-sentence truncation
-      top_p: 0.90,                // Slightly lower for more focused responses
-      frequency_penalty: 0.15,    // Reduced - was causing stilted phrasings by avoiding natural repetition
-      presence_penalty: 0.25,     // Slightly higher to encourage topic diversity
+      temperature: 0.78,          // Balanced: creative but coherent for long sessions
+      max_tokens: 2500,           // Increased to prevent mid-sentence truncation
+      top_p: 0.88,                // Focused responses with room for creativity
+      frequency_penalty: 0.20,    // Prevent phrase repetition in long sessions
+      presence_penalty: 0.30,     // Encourage topic diversity, prevent loops
       stream: streamRequested,
     };
 
