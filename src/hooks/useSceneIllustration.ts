@@ -48,6 +48,8 @@ export function useSceneIllustration({
     if (isGeneratingScene) return;
 
     setIsGeneratingScene(true);
+    console.log('[SceneIllustration] Starting generation for trigger:', trigger.type);
+    
     try {
       // Get recent story entries for context (last 10 for better understanding)
       const recentStory = story.slice(-10);
@@ -61,11 +63,16 @@ export function useSceneIllustration({
       // Derive time-of-day string from hour
       const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
 
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             lastNarratorMessage: lastNarratorMessage.slice(0, 800),
             lastUserAction: lastPlayerAction,
@@ -79,13 +86,29 @@ export function useSceneIllustration({
           }),
         }
       );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.error('[SceneIllustration] Response not OK:', response.status);
+        return;
+      }
+      
       const data = await response.json();
+      console.log('[SceneIllustration] Response:', { hasImageUrl: !!data.imageUrl, error: data.error });
+      
       if (data.imageUrl) {
         setSceneImageUrl(data.imageUrl);
         lastIllustrationTick.current = Date.now();
+      } else if (data.error) {
+        console.error('[SceneIllustration] Generation error:', data.error);
       }
     } catch (error) {
-      console.error('Failed to generate scene illustration:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('[SceneIllustration] Request timed out after 60s');
+      } else {
+        console.error('[SceneIllustration] Failed to generate:', error);
+      }
     } finally {
       setIsGeneratingScene(false);
     }

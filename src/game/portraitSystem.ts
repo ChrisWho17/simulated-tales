@@ -378,9 +378,14 @@ async function generatePortraitVariantDirect(
     
     const prompt = buildConsistentPrompt(npcData as NPC, emotion, genre, era, baseDescription);
     
-    console.log(`Generating ${emotion} portrait for NPC ${npcId}`);
+    console.log(`[Portrait] Generating ${emotion} portrait for NPC ${npcId} (genre: ${genre})`);
     
-    const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+    // Add timeout to prevent hanging - 45 seconds max
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => {
+      setTimeout(() => reject(new Error('Portrait generation timeout (45s)')), 45000);
+    });
+    
+    const invokePromise = supabase.functions.invoke('generate-npc-portrait', {
       body: { 
         npc: npcData,
         prompt,
@@ -388,19 +393,24 @@ async function generatePortraitVariantDirect(
       }
     });
     
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+    
     if (error) {
-      console.error('Portrait generation error:', error);
+      console.error('[Portrait] Generation error:', error.message || error);
       return null;
     }
     
     const url = data?.imageUrl;
     if (url) {
+      console.log(`[Portrait] Successfully generated ${emotion} portrait for ${npcId}`);
       setCachedPortrait(npcId, emotion, url);
+    } else {
+      console.warn(`[Portrait] No imageUrl in response for ${npcId}:`, data);
     }
     
     return url || null;
   } catch (err) {
-    console.error('Failed to generate portrait:', err);
+    console.error('[Portrait] Failed to generate portrait:', err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -483,9 +493,14 @@ export async function generateNPCPortrait(
   try {
     const prompt = buildConsistentPrompt(npc, emotion, config.genre, config.era);
     
-    console.log('Generating portrait for:', npc.meta.name);
+    console.log(`[Portrait] Generating for ${npc.meta.name} (${emotion}, ${config.genre})`);
     
-    const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+    // Add timeout to prevent hanging - 45 seconds max
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => {
+      setTimeout(() => reject(new Error('Portrait generation timeout (45s)')), 45000);
+    });
+    
+    const invokePromise = supabase.functions.invoke('generate-npc-portrait', {
       body: { 
         npc: {
           id: npc.id,
@@ -497,19 +512,24 @@ export async function generateNPCPortrait(
       }
     });
     
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+    
     if (error) {
-      console.error('Portrait generation error:', error);
+      console.error('[Portrait] Generation error:', error.message || error);
       return null;
     }
     
     const url = data?.imageUrl;
     if (url) {
+      console.log(`[Portrait] Successfully generated for ${npc.meta.name}`);
       setCachedPortrait(npc.id, emotion, url);
+    } else {
+      console.warn(`[Portrait] No imageUrl in response for ${npc.meta.name}:`, data);
     }
     
     return url || null;
   } catch (err) {
-    console.error('Failed to generate portrait:', err);
+    console.error('[Portrait] Failed to generate:', err instanceof Error ? err.message : err);
     return null;
   }
 }

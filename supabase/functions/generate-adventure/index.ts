@@ -71,6 +71,8 @@ interface CharacterData {
   abilities: string[];
   skills: string[];
   gold: number;
+  // Player gender for correct pronoun usage
+  gender?: 'male' | 'female' | 'non-binary' | 'other' | string;
 }
 
 interface DiceRollRequest {
@@ -1434,12 +1436,32 @@ function formatCharacterContext(character: CharacterData, characterAppearance?: 
   // Cast to any to allow flexible field names from clients
   const charAny = character as any;
   
+  // Extract gender from character data (multiple possible sources)
+  const characterGender = character.gender || charAny.gender || 
+    (characterAppearance?.match(/\b(male|female|man|woman|non-binary|they|he|she)\b/i)?.[1]) || 'unknown';
+  
+  // Determine correct pronouns based on gender
+  let pronouns = { subject: 'they', object: 'them', possessive: 'their', title: '' };
+  const genderLower = characterGender.toLowerCase();
+  if (genderLower === 'male' || genderLower === 'man' || genderLower === 'he') {
+    pronouns = { subject: 'he', object: 'him', possessive: 'his', title: 'sir/Mr.' };
+  } else if (genderLower === 'female' || genderLower === 'woman' || genderLower === 'she') {
+    pronouns = { subject: 'she', object: 'her', possessive: 'her', title: 'ma\'am/Ms.' };
+  }
+  
   let context = `
 PLAYER CHARACTER:
 Name: ${character.name || 'Unknown'}
+Gender: ${characterGender.toUpperCase()} (Pronouns: ${pronouns.subject}/${pronouns.object}/${pronouns.possessive})
 Class: ${character.classId || charAny.class || 'Adventurer'} (Level ${character.level || 1})
 Background: ${character.backgroundId || charAny.background || 'Unknown'}
 Traits: ${traits.length > 0 ? traits.join(', ') : 'None specified'}
+
+CRITICAL PRONOUN/TITLE RULES:
+- ALWAYS use ${pronouns.subject}/${pronouns.object}/${pronouns.possessive} pronouns for the player character
+- NPCs should address this character as "${pronouns.title || 'friend'}" when using titles
+- NEVER misgender the player character - this character is ${characterGender}
+- If an NPC would say "sir" or "ma'am", use the correct one based on the player's gender
 
 STATS:
 - STR: ${stats.strength || 10} (${formatMod(getModifier(stats.strength || 10))})
