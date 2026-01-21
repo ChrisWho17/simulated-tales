@@ -165,46 +165,60 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
-        className="glass-panel w-full max-w-2xl max-h-[80vh] flex flex-col mx-4"
+        initial={{ scale: 0.95, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.95, y: 20, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-2xl max-h-[85vh] flex flex-col mx-4 rounded-2xl border border-primary/30 overflow-hidden"
+        style={{
+          background: 'rgba(15, 15, 25, 0.95)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(139, 92, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/30">
+        <div className="flex items-center justify-between p-4 border-b border-border/40 bg-gradient-to-r from-primary/10 via-transparent to-accent/10">
           <div className="flex items-center gap-3">
-            <Users className="w-5 h-5 text-primary" />
-            <h2 className="font-display text-lg">Companions</h2>
-            <span className="text-sm text-muted-foreground">
-              ({partySize.current}/{partySize.max})
-            </span>
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/30 to-accent/20 border border-primary/40">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg text-foreground">Companions</h2>
+              <span className="text-sm text-muted-foreground">
+                Party: {partySize.current}/{partySize.max}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="default"
               size="sm"
               onClick={() => setShowCreatorWizard(true)}
-              className="gap-1"
+              className="gap-1.5 shadow-lg shadow-primary/20"
             >
               <Wand2 className="w-4 h-4" />
-              Create
+              <span className="hidden sm:inline">Create</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowRecruitMenu(!showRecruitMenu)}
               disabled={partySize.current >= partySize.max}
+              className="bg-background/50 hover:bg-background/80"
             >
-              <UserPlus className="w-4 h-4 mr-1" />
-              Recruit
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1.5">Recruit</span>
             </Button>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-              <X size={20} />
+            <button 
+              onClick={onClose} 
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-colors"
+            >
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -216,10 +230,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="border-b border-border/30 overflow-hidden"
+              className="border-b border-border/40 overflow-hidden"
             >
-              <div className="p-4 bg-muted/20">
-                <h3 className="text-sm font-medium mb-3">Available Companions</h3>
+              <div className="p-4 bg-muted/10">
+                <h3 className="text-sm font-medium mb-3 text-foreground">Quick Templates</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.keys(COMPANION_TEMPLATES).map((key) => {
                     const existing = companions.find(c => c.id.includes(key));
@@ -228,7 +242,7 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
                         key={key}
                         variant="outline"
                         size="sm"
-                        className="justify-start"
+                        className="justify-start bg-background/50 hover:bg-background/80"
                         onClick={() => handleCreateTestCompanion(key)}
                         disabled={!!existing}
                       >
@@ -243,8 +257,9 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
           )}
         </AnimatePresence>
 
-        {/* Active Companions */}
-        <ScrollArea className="flex-1 p-4">
+        {/* Active Companions - Scrollable */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-4 space-y-4">
           {activeCompanions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -304,6 +319,7 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
               </div>
             </div>
           )}
+          </div>
         </ScrollArea>
       </motion.div>
     </motion.div>
