@@ -2158,10 +2158,13 @@ export function AdventureDisplay({
                   } else if (trimmed === '/map' || trimmed === '/m' || trimmed === '/location') {
                     setShowMapPanel(prev => !prev);
                     setInput('');
+                  } else if (trimmed === '/companions' || trimmed === '/party' || trimmed === '/allies') {
+                    setShowCompanionPanel(true);
+                    setInput('');
                   } else if (trimmed === '/help' || trimmed === '/commands' || trimmed === '/?') {
                     toast({
                       title: '📖 Available Commands',
-                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /relationships • /bookmarks • /settings',
+                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /relationships • /companions • /bookmarks • /settings',
                       duration: 5000,
                     });
                     setInput('');
