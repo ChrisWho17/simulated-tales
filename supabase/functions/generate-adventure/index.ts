@@ -3169,8 +3169,8 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       return mechanics;
     }
 
-    // Check if streaming is requested
-    const streamRequested = (req as any).__parsedBody?.stream === true;
+    // Check if streaming is requested (from parsed request body)
+    const streamRequested = (requestData as any).stream === true;
     
     const aiRequestBody = {
       model: 'google/gemini-2.5-flash',
