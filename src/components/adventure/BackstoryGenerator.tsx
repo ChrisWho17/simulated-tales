@@ -5,8 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { 
   Sparkles, User, Heart, Skull, Target, ChevronRight, 
-  Loader2, Shuffle, BookOpen, Users, AlertTriangle, Zap
+  Loader2, Shuffle, BookOpen, Users, AlertTriangle, Zap, ChevronLeft
 } from 'lucide-react';
+import { StepTransition, useStepDirection, StaggerChildren, StaggerItem } from '@/components/ui/PageTransition';
 import { GameGenre } from '@/types/genreData';
 import {
   Origin,
@@ -44,6 +45,12 @@ export function BackstoryGenerator({ genre, characterName, onComplete, onSkip }:
   const [customNarrative, setCustomNarrative] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedNarrative, setGeneratedNarrative] = useState<string | null>(null);
+
+  const steps: Step[] = ['origin', 'motivation', 'personality', 'flaws', 'people', 'generate'];
+  const currentStepIndex = steps.indexOf(step);
+  
+  // Track direction for smooth transitions
+  const stepDirection = useStepDirection(currentStepIndex);
 
   // Get genre-specific origins or fallback to fantasy
   const genreOrigins = useMemo(() => {
@@ -152,9 +159,6 @@ export function BackstoryGenerator({ genre, characterName, onComplete, onSkip }:
     onComplete(backstory);
   };
 
-  const steps: Step[] = ['origin', 'motivation', 'personality', 'flaws', 'people', 'generate'];
-  const currentStepIndex = steps.indexOf(step);
-
   const canProceed = () => {
     switch (step) {
       case 'origin': return selectedOrigin !== null;
@@ -207,8 +211,9 @@ export function BackstoryGenerator({ genre, characterName, onComplete, onSkip }:
 
         {/* Content */}
         <div className="bg-card border border-border/50 rounded-xl p-6">
-          <div className="flex-1 overflow-y-auto max-h-[60vh]">
-            {step === 'origin' && (
+          <StepTransition stepKey={step} direction={stepDirection} variant="slide">
+            <div className="flex-1 overflow-y-auto max-h-[60vh]">
+              {step === 'origin' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -486,7 +491,8 @@ export function BackstoryGenerator({ genre, characterName, onComplete, onSkip }:
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          </StepTransition>
 
           {/* Navigation */}
           <div className="flex justify-between mt-6 pt-4 border-t border-border/30">

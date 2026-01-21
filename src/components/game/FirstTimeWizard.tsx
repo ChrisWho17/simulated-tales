@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { COLOR_PRESETS, ColorPreset, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
+import { StepTransition, useStepDirection, StaggerChildren, StaggerItem } from '@/components/ui/PageTransition';
 import { SETTINGS_PRESETS, PresetId } from './SettingsPresetSelector';
 
 const WIZARD_COMPLETED_KEY = 'untold-first-time-wizard-completed';
@@ -68,6 +69,9 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
     if (forceShow) return true;
     return !localStorage.getItem(WIZARD_COMPLETED_KEY);
   });
+  
+  // Track direction for smooth transitions
+  const stepDirection = useStepDirection(currentStep);
   
   // User selections
   const [selectedTheme, setSelectedTheme] = useState<string>('violet');
@@ -174,15 +178,12 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
 
         {/* Main content */}
         <div className="relative z-10 w-full max-w-2xl mx-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
+          <StepTransition 
+            stepKey={step.id} 
+            direction={currentStep > 0 ? 'forward' : 'forward'}
+            variant="slide"
+            className="space-y-6"
+          >
               {/* Header */}
               <div className="text-center space-y-3">
                 <motion.div
@@ -390,8 +391,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
                   )}
                 </Button>
               </div>
-            </motion.div>
-          </AnimatePresence>
+          </StepTransition>
         </div>
       </motion.div>
     </AnimatePresence>
