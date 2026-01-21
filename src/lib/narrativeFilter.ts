@@ -1,10 +1,69 @@
 /**
  * Narrative Filter System
- * Removes OOC (Out of Character) content, backend talk, and technical instructions
- * from AI-generated narratives to maintain story immersion.
+ * Removes OOC (Out of Character) content, backend talk, technical instructions,
+ * and game mechanic tags from AI-generated narratives to maintain story immersion.
  */
 
-// Patterns that indicate OOC or meta content
+// ============================================================================
+// MECHANIC TAGS - These are parsed by the backend but must be stripped for display
+// ============================================================================
+
+const MECHANIC_TAG_PATTERNS = [
+  // Dice and combat mechanics
+  /\[ROLL:[^\]]*\]/gi,
+  /\[DAMAGE:\d+\]/gi,
+  /\[HEAL:\d+\]/gi,
+  /\[CRITICAL(?:_HIT)?\]/gi,
+  /\[MISS\]/gi,
+  /\[FUMBLE\]/gi,
+  
+  // Economy tags
+  /\[GOLD:[+-]?\d+\]/gi,
+  /\[LOOT:[^\]]+\]/gi,
+  /\[DROP:[^\]]+\]/gi,
+  /\[USE:[^\]]+\]/gi,
+  /\[ITEM:[^\]]+\]/gi,
+  
+  // XP and progression
+  /\[XP:[^\]]+\]/gi,
+  /\[NEUTRAL_XP:[^\]]+\]/gi,
+  /\[LEVEL_UP\]/gi,
+  /\[CHAPTER_END\]/gi,
+  /\[SKILL:[^\]]+\]/gi,
+  
+  // Relationship and NPC tags
+  /\[RELATIONSHIP:[^\]]+\]/gi,
+  /\[MILESTONE:[^\]]+\]/gi,
+  /\[NPC:[^\]]+\]/gi,
+  /\[AFFINITY:[^\]]+\]/gi,
+  /\[TRUST:[^\]]+\]/gi,
+  
+  // Language and communication
+  /\[LANGUAGE:[^\]]+\]/gi,
+  /\[LEARN_LANGUAGE:[^\]]+\]/gi,
+  /\[TRANSLATE:[^\]]+\]/gi,
+  
+  // Quest and location
+  /\[QUEST:[^\]]+\]/gi,
+  /\[LOCATION:[^\]]+\]/gi,
+  /\[DISCOVERY:[^\]]+\]/gi,
+  
+  // Time and weather
+  /\[TIME:[^\]]+\]/gi,
+  /\[WEATHER:[^\]]+\]/gi,
+  
+  // Generic bracketed mechanics (catch-all for any remaining)
+  /\[COMPANION:[^\]]+\]/gi,
+  /\[EVENT:[^\]]+\]/gi,
+  /\[TRIGGER:[^\]]+\]/gi,
+  /\[FLAG:[^\]]+\]/gi,
+  /\[CLOCK:[^\]]+\]/gi,
+];
+
+// ============================================================================
+// OOC AND META PATTERNS
+// ============================================================================
+
 const OOC_PATTERNS = [
   // Explicit OOC markers
   /\(OOC[:\s].+?\)/gi,
@@ -22,12 +81,16 @@ const OOC_PATTERNS = [
   /When the player rolls[^.]*\./gi,
   /please provide a single dice roll result[^.]*\./gi,
   /like '\d+' or 'NATURAL \d+'/gi,
+  /Please indicate[^.]*dice[^.]*\./gi,
+  /Roll a d\d+[^.]*\./gi,
+  /Make a \w+ check[^.]*\./gi,
   
   // Backend/technical talk
   /\[DEBUG[:\s].+?\]/gi,
   /\*\[DEBUG[:\s].+?\]\*/gi,
   /\[System[:\s].+?\]/gi,
   /\[Error[:\s].+?\]/gi,
+  /\[Internal[:\s].+?\]/gi,
   
   // AI self-reference
   /As an AI[,\s].+?(?:\.|$)/gi,
@@ -41,16 +104,20 @@ const OOC_PATTERNS = [
   /\[Please respond with[^\]]+\]/gi,
   /just give the number/gi,
   /they just give the number/gi,
+  /\(Player input expected\)/gi,
+  /\(Awaiting your response\)/gi,
   
   // Mechanical reminders
   /\(Remember to[^)]+\)/gi,
   /\[Remember:[^\]]+\]/gi,
+  /\(Note:[^)]+\)/gi,
   
   // Delta ledger sections (internal tracking, not for display)
   /---INVENTORY_DELTA---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   /---STATE_DELTA---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   /---NEXT_HOOKS---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   /---NEXT_CHOICES---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
+  /---MECHANICS---[\s\S]*?(?=---[A-Z_]+---|$)/gi,
   
   // Prompt injection attempts (author playstyle attacks)
   /\[SYSTEM[:\s].+?\]/gi,
@@ -73,7 +140,10 @@ const OOC_PATTERNS = [
   /<[a-z]+[^>]*>/gi, // HTML tags (but be careful not to strip markdown)
 ];
 
-// Patterns for lines that should be completely removed
+// ============================================================================
+// LINE-LEVEL REMOVAL PATTERNS
+// ============================================================================
+
 const REMOVE_LINE_PATTERNS = [
   /^OOC:/i,
   /^\(OOC\)/i,
@@ -84,11 +154,15 @@ const REMOVE_LINE_PATTERNS = [
   /^The format for/i,
   /^When the player/i,
   /^Please provide/i,
+  /^Roll required:/i,
+  /^Dice check:/i,
+  /^Mechanics:/i,
   // Delta ledger headers and content lines
   /^---INVENTORY_DELTA---/i,
   /^---STATE_DELTA---/i,
   /^---NEXT_HOOKS---/i,
   /^---NEXT_CHOICES---/i,
+  /^---MECHANICS---/i,
   /^Added:/i,
   /^Removed:/i,
   /^Used\/Consumed:/i,
@@ -101,7 +175,36 @@ const REMOVE_LINE_PATTERNS = [
   /^\d+\)\s+.*neutralize/i,
   /^\d+\)\s+.*Engage/i,
   /^\d+\)\s+.*Ascertain/i,
+  // AI instruction leakage
+  /^IMPORTANT:/i,
+  /^CRITICAL:/i,
+  /^FORBIDDEN:/i,
+  /^REQUIRED:/i,
+  /^NEVER:/i,
+  /^ALWAYS:/i,
+  /^DO NOT:/i,
+  /^MUST:/i,
 ];
+
+// ============================================================================
+// CORE FILTERING FUNCTIONS
+// ============================================================================
+
+/**
+ * Strips all mechanic tags from narrative text
+ * These tags are parsed by the backend but should never be displayed
+ */
+export function stripMechanicTags(content: string): string {
+  if (!content) return content;
+  
+  let cleaned = content;
+  
+  for (const pattern of MECHANIC_TAG_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  return cleaned;
+}
 
 /**
  * Filters out OOC content and technical instructions from narrative text
@@ -111,7 +214,10 @@ export function filterNarrativeContent(content: string): string {
   
   let filtered = content;
   
-  // Apply pattern-based filtering
+  // FIRST: Strip all mechanic tags (highest priority)
+  filtered = stripMechanicTags(filtered);
+  
+  // Apply OOC pattern-based filtering
   for (const pattern of OOC_PATTERNS) {
     filtered = filtered.replace(pattern, '');
   }
@@ -132,10 +238,20 @@ export function filterNarrativeContent(content: string): string {
   
   filtered = filteredLines.join('\n');
   
+  // Clean up artifacts from tag removal
+  // Remove orphaned brackets that might remain
+  filtered = filtered.replace(/\[\s*\]/g, '');
+  
   // Clean up multiple consecutive newlines (more than 2)
   filtered = filtered.replace(/\n{3,}/g, '\n\n');
   
-  // Clean up leading/trailing whitespace
+  // Clean up multiple consecutive spaces
+  filtered = filtered.replace(/  +/g, ' ');
+  
+  // Clean up leading/trailing whitespace per line
+  filtered = filtered.split('\n').map(line => line.trim()).join('\n');
+  
+  // Final trim
   filtered = filtered.trim();
   
   return filtered;
