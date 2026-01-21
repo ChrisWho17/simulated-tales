@@ -1478,6 +1478,10 @@ export function AdventureGame() {
               setPendingMechanics(prev => ({ ...prev, ...enhancedMechanics }));
             }
           },
+          onError: (errorMsg) => {
+            console.error('[handlePlayerAction] Streaming error:', errorMsg);
+            // Toast is shown by the else clause when narrative is null
+          },
         }
       );
       
@@ -1652,6 +1656,45 @@ export function AdventureGame() {
       
       // Check for scene illustration triggers
       checkSceneTriggers('observation', narrative);
+    } else {
+      // === CRITICAL FIX: Handle null/empty narrative response ===
+      // This prevents the "no response" bug where player action shows but narrator never responds
+      console.error('[handlePlayerAction] Narrative generation returned null/empty');
+      
+      // Store the failed action for retry
+      setLastFailedAction({
+        action: action,
+        diceRoll: diceRoll,
+        storySnapshot: story, // Story before player entry was added
+      });
+      
+      // Show error toast with retry option
+      toast.error('AI response failed', {
+        description: 'Tap "Retry" below to try again',
+        duration: 10000,
+        action: {
+          label: 'Retry',
+          onClick: () => setRetryRequested(true),
+        },
+      });
+      
+      // Add a fallback narrative so the story doesn't hang
+      const fallbackNarrative = getContextualFallback(scenarioSelection?.genre);
+      const fallbackEntry: StoryEntry = {
+        id: `narrator_fallback_${Date.now()}`,
+        role: 'narrator',
+        content: fallbackNarrative,
+        timestamp: Date.now(),
+      };
+      const fallbackStory = [...updatedStory, fallbackEntry];
+      setStory(fallbackStory);
+      
+      // Save even with fallback to prevent data loss
+      saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+      
+      if (campaignContext) {
+        campaignContext.addNarrativeEntry(fallbackEntry);
+      }
     }
   }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory, sessionStats]);
 
