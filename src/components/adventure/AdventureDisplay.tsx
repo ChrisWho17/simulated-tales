@@ -43,6 +43,8 @@ import {
   TimeSkipConsequence,
   createInitialTimeState, 
   advanceTime,
+  skipTime,
+  formatGameTime,
   hoursToWeatherTicks
 } from '@/game/timeProgressionSystem';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
@@ -84,6 +86,7 @@ import {
   NameRevealResult
 } from '@/game/npcIdentityRegistry';
 import { parseEnhancedCommand } from '@/game/commandParser';
+import { parseTimeString, extractWaitTime, formatDuration } from '@/game/timeParsingUtils';
 import { playerAssessSelf, Wound } from '@/game/adrenalineCombatIntegration';
 import { WeatherState, WeatherType, WEATHER_CONFIGS, createInitialWeatherState, tickWeather, forceWeather, getWeatherModifiers, getWeatherTransitionOpacity, WEATHER_GAMEPLAY_EFFECTS, generateWeatherForecast, ForecastEntry } from '@/game/weatherSystem';
 import { WeatherModalParticles } from '@/components/ui/weather-modal-particles';
@@ -1214,7 +1217,7 @@ export function AdventureDisplay({
         case '/?':
           toast({
             title: '📖 Available Commands',
-            description: '/recap • /inventory • /stats • /roll • /map • /quest • /time • /weather • /relationships • /bookmarks • /settings',
+            description: '/recap • /inventory • /stats • /roll • /map • /quest • /time • /wait • /weather • /relationships • /companions • /bookmarks • /settings',
             duration: 5000,
           });
           setInput('');
@@ -1265,6 +1268,61 @@ export function AdventureDisplay({
           setShowQuestQuickView(true);
           setInput('');
           return;
+      }
+      
+      // Handle /wait shorthand with time argument (e.g., /wait 2h, /skip 30m)
+      const waitTimeArg = extractWaitTime(trimmedInput);
+      if (waitTimeArg) {
+        const parsedTime = parseTimeString(waitTimeArg);
+        if (parsedTime.isValid && parsedTime.totalMinutes > 0) {
+          // Execute inline time skip
+          const hoursToSkip = parsedTime.totalMinutes / 60;
+          const { newState, events } = skipTime(timeState, hoursToSkip);
+          setTimeState(newState);
+          
+          // Advance weather based on hours skipped
+          const weatherTicks = hoursToWeatherTicks(hoursToSkip);
+          for (let i = 0; i < weatherTicks; i++) {
+            setWeatherState(prev => tickWeather(prev, weatherTickRef.current + i));
+          }
+          weatherTickRef.current += weatherTicks;
+          
+          // Show summary toast
+          toast({
+            title: `⏰ Time Skipped: ${formatDuration(parsedTime.totalMinutes)}`,
+            description: `It is now ${formatGameTime(newState)}`,
+            duration: 3000,
+          });
+          
+          // Show consequence toasts
+          events.forEach(c => {
+            toast({
+              title: c.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              description: c.description,
+              duration: 4000,
+            });
+          });
+          
+          setInput('');
+          return;
+        } else {
+          // Invalid time format - show help toast
+          toast({
+            title: '⏰ Invalid time format',
+            description: 'Try: /wait 2h, /wait 30m, /wait 1h30m, or /wait rest',
+            variant: 'destructive',
+            duration: 4000,
+          });
+          setInput('');
+          return;
+        }
+      }
+      
+      // /wait without argument opens modal
+      if (trimmedInput === '/wait' || trimmedInput === '/skip') {
+        setShowTimeSkipModal(true);
+        setInput('');
+        return;
       }
       
       // Check for developer/cheat commands
@@ -2161,10 +2219,19 @@ export function AdventureDisplay({
                   } else if (trimmed === '/companions' || trimmed === '/party' || trimmed === '/allies') {
                     setShowCompanionPanel(true);
                     setInput('');
+                  } else if (trimmed === '/time' || trimmed === '/t' || trimmed === '/clock') {
+                    setShowTimeDisplay(true);
+                    setInput('');
+                  } else if (trimmed === '/wait' || trimmed === '/skip') {
+                    setShowTimeSkipModal(true);
+                    setInput('');
+                  } else if (trimmed === '/quest' || trimmed === '/quests' || trimmed === '/journal' || trimmed === '/q') {
+                    setShowQuestQuickView(true);
+                    setInput('');
                   } else if (trimmed === '/help' || trimmed === '/commands' || trimmed === '/?') {
                     toast({
                       title: '📖 Available Commands',
-                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /relationships • /companions • /bookmarks • /settings',
+                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /time • /wait • /quest • /relationships • /companions • /bookmarks • /settings',
                       duration: 5000,
                     });
                     setInput('');

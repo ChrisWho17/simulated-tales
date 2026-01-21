@@ -88,6 +88,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'game',
   },
   {
+    command: '/wait',
+    aliases: ['/skip', '/rest', '/sleep'],
+    description: 'Skip time (e.g., /wait 2h)',
+    icon: <Clock className="w-4 h-4" />,
+    category: 'game',
+  },
+  {
     command: '/recap',
     aliases: [],
     description: 'Show story recap',
