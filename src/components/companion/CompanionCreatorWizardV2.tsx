@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -572,50 +573,56 @@ export function CompanionCreatorWizardV2({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-3xl max-h-[90vh] bg-card border-2 border-primary/30 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-primary/30 shadow-2xl"
+        style={{
+          background: 'rgba(15, 15, 25, 0.95)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(139, 92, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-primary/10 to-accent/10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-gradient-to-r from-primary/10 via-transparent to-accent/10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/30 to-accent/20 border border-primary/40 shadow-lg shadow-primary/20">
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">Create Sentient Companion</h2>
+              <h2 className="font-bold text-lg text-foreground">Create Companion</h2>
               <p className="text-xs text-muted-foreground">Step {currentStepIndex + 1} of {WIZARD_STEPS.length}: {WIZARD_STEPS[currentStepIndex]?.label}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleFullRandomize} className="gap-2">
+            <Button variant="outline" size="sm" onClick={handleFullRandomize} className="gap-2 bg-background/50 hover:bg-background/80">
               <Shuffle className="w-4 h-4" />
-              Randomize All
+              <span className="hidden sm:inline">Randomize</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-destructive/20 hover:text-destructive">
               <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
         {/* Step Progress */}
-        <div className="flex items-center justify-center gap-1 px-6 py-3 bg-muted/30 border-b border-border">
+        <div className="flex items-center justify-center gap-1 px-4 py-3 bg-muted/20 border-b border-border/30">
           {WIZARD_STEPS.map((step, idx) => (
             <button
               key={step.id}
               onClick={() => idx <= currentStepIndex && setCurrentStep(step.id)}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all",
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
                 currentStep === step.id
-                  ? "bg-primary text-primary-foreground shadow-md"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
                   : idx < currentStepIndex
-                  ? "bg-primary/30 text-primary cursor-pointer hover:bg-primary/40"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
+                  ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
+                  : "bg-muted/50 text-muted-foreground cursor-not-allowed"
               )}
             >
               {step.icon}
@@ -624,17 +631,18 @@ export function CompanionCreatorWizardV2({
           ))}
         </div>
 
-        {/* Content */}
-        <ScrollArea className="flex-1 p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
+        {/* Content - Scrollable */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
               {/* Identity Step */}
               {currentStep === 'identity' && (
                 <div className="space-y-6">
@@ -666,34 +674,35 @@ export function CompanionCreatorWizardV2({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Gender</Label>
-                      <div className="flex gap-2 mt-1">
-                        {(['male', 'female', 'other'] as Gender[]).map(g => (
-                          <Button
-                            key={g}
-                            variant={state.gender === g ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setState(prev => ({ ...prev, gender: g }))}
-                            className="flex-1 capitalize"
-                          >
-                            {g}
-                          </Button>
-                        ))}
-                      </div>
+                      <Select 
+                        value={state.gender} 
+                        onValueChange={(v) => setState(prev => ({ ...prev, gender: v as Gender }))}
+                      >
+                        <SelectTrigger className="mt-1 bg-background/80">
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Non-binary / Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label>Age</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {ADULT_AGES.map(age => (
-                          <Badge
-                            key={age}
-                            variant={state.age === age ? 'default' : 'outline'}
-                            className="cursor-pointer"
-                            onClick={() => setState(prev => ({ ...prev, age }))}
-                          >
-                            {age.split(' ')[0]}
-                          </Badge>
-                        ))}
-                      </div>
+                      <Select 
+                        value={state.age} 
+                        onValueChange={(v) => setState(prev => ({ ...prev, age: v }))}
+                      >
+                        <SelectTrigger className="mt-1 bg-background/80">
+                          <SelectValue placeholder="Select age" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ADULT_AGES.map(age => (
+                            <SelectItem key={age} value={age}>{age}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -866,21 +875,26 @@ export function CompanionCreatorWizardV2({
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Autonomy Level</h3>
-                    <p className="text-sm text-muted-foreground mb-4">How independently will they act?</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {AUTONOMY_LEVELS.map(level => (
-                        <Button
-                          key={level.id}
-                          variant={state.autonomyLevel === level.id ? 'default' : 'outline'}
-                          className="h-auto py-3 flex-col items-start text-left"
-                          onClick={() => setState(prev => ({ ...prev, autonomyLevel: level.id as any }))}
-                        >
-                          <span className="font-semibold">{level.label}</span>
-                          <span className="text-xs text-muted-foreground font-normal">{level.description}</span>
-                        </Button>
-                      ))}
-                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Autonomy Level</h3>
+                    <p className="text-sm text-muted-foreground mb-3">How independently will they act?</p>
+                    <Select 
+                      value={state.autonomyLevel} 
+                      onValueChange={(v) => setState(prev => ({ ...prev, autonomyLevel: v as any }))}
+                    >
+                      <SelectTrigger className="bg-background/80">
+                        <SelectValue placeholder="Select autonomy level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AUTONOMY_LEVELS.map(level => (
+                          <SelectItem key={level.id} value={level.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{level.label}</span>
+                              <span className="text-xs text-muted-foreground">{level.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -908,41 +922,48 @@ export function CompanionCreatorWizardV2({
 
                   <div>
                     <Label>Armor Level</Label>
-                    <div className="flex gap-2 mt-2">
-                      {(['none', 'light', 'medium', 'heavy'] as const).map(level => (
-                        <Button
-                          key={level}
-                          variant={state.armorLevel === level ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setState(prev => ({ ...prev, armorLevel: level }))}
-                          className="flex-1 capitalize"
-                        >
-                          {level}
-                        </Button>
-                      ))}
-                    </div>
+                    <Select 
+                      value={state.armorLevel} 
+                      onValueChange={(v) => setState(prev => ({ ...prev, armorLevel: v as any }))}
+                    >
+                      <SelectTrigger className="mt-2 bg-background/80">
+                        <SelectValue placeholder="Select armor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None - Unarmored</SelectItem>
+                        <SelectItem value="light">Light - Leather/Cloth</SelectItem>
+                        <SelectItem value="medium">Medium - Chainmail</SelectItem>
+                        <SelectItem value="heavy">Heavy - Plate Armor</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
 
               {/* Voice Step */}
               {currentStep === 'voice' && (
-                <div className="space-y-6">
+              <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Voice Style</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {VOICE_STYLES.map(style => (
-                        <Button
-                          key={style.id}
-                          variant={state.voiceStyle === style.id ? 'default' : 'outline'}
-                          className="h-auto py-3 flex-col items-start text-left"
-                          onClick={() => setState(prev => ({ ...prev, voiceStyle: style.id as any }))}
-                        >
-                          <span className="font-semibold">{style.label}</span>
-                          <span className="text-xs text-muted-foreground font-normal">{style.description}</span>
-                        </Button>
-                      ))}
-                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Voice Style</h3>
+                    <p className="text-sm text-muted-foreground mb-3">How will this companion speak?</p>
+                    <Select 
+                      value={state.voiceStyle} 
+                      onValueChange={(v) => setState(prev => ({ ...prev, voiceStyle: v as any }))}
+                    >
+                      <SelectTrigger className="bg-background/80">
+                        <SelectValue placeholder="Select voice style" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VOICE_STYLES.map(style => (
+                          <SelectItem key={style.id} value={style.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{style.label}</span>
+                              <span className="text-xs text-muted-foreground">{style.description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -1052,15 +1073,16 @@ export function CompanionCreatorWizardV2({
               )}
             </motion.div>
           </AnimatePresence>
+          </div>
         </ScrollArea>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-gradient-to-r from-muted/20 via-transparent to-muted/20">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentStepIndex === 0}
-            className="gap-2"
+            className="gap-2 bg-background/50 hover:bg-background/80"
           >
             <ChevronLeft className="w-4 h-4" /> Back
           </Button>
@@ -1069,7 +1091,7 @@ export function CompanionCreatorWizardV2({
             <Button
               onClick={handleCreate}
               disabled={isCreating || !state.name.trim()}
-              className="gap-2"
+              className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/30"
             >
               {isCreating ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
@@ -1081,7 +1103,7 @@ export function CompanionCreatorWizardV2({
             <Button
               onClick={handleNext}
               disabled={!canProceed}
-              className="gap-2"
+              className="gap-2 shadow-lg"
             >
               Next <ChevronRight className="w-4 h-4" />
             </Button>
