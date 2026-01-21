@@ -113,7 +113,7 @@ export function CompanionCheatPanel({ isOpen, onClose, genre = 'fantasy' }: Comp
   const persistChanges = useCallback(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.COMPANION_STATE, JSON.stringify(companionSystem.serialize()));
-      StateSyncBus.emit('player:state-changed', { source: 'companion-cheat-panel' });
+      StateSyncBus.emit('player:state-changed', { changes: { companions: 'updated' } }, 'companion-cheat-panel');
       toast.success('Changes saved!');
     } catch (e) {
       toast.error('Failed to save changes');
