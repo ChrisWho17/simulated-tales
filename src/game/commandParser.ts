@@ -3,7 +3,7 @@
 // NOTE: All commands are case-insensitive - /IMACHEATER works the same as /imacheater
 
 export interface ParsedCommand {
-  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself' | 'developer';
+  type: 'talk' | 'say' | 'end_conversation' | 'action' | 'reply' | 'inventory' | 'terrain' | 'look' | 'move' | 'system' | 'checkself' | 'developer' | 'companion';
   verb: string;
   target?: string;
   args: string[];
@@ -13,6 +13,10 @@ export interface ParsedCommand {
 // Developer commands that open special panels (case-insensitive matching)
 export const DEVELOPER_COMMANDS = ['/imacheater', '/cheat', '/dev', '/integrity', '/events', '/debug'] as const;
 export type DeveloperCommand = typeof DEVELOPER_COMMANDS[number];
+
+// Companion-specific commands
+export const COMPANION_COMMANDS = ['/companion', '/companions', '/party', '/c'] as const;
+export type CompanionCommand = typeof COMPANION_COMMANDS[number];
 
 // Keyword mappings for different command types
 const TALK_KEYWORDS = ['tell', 'greet', 'chat', 'talk'];
@@ -55,6 +59,19 @@ export function parseEnhancedCommand(input: string): ParsedCommand {
       verb: firstWord,
       target: rest[0],
       args: rest,
+      raw: sanitizedRaw,
+    };
+  }
+  
+  // Check for companion commands
+  if (COMPANION_COMMANDS.includes(firstWord as CompanionCommand)) {
+    // Parse subcommands: /companion debug, /companion create, /companion list
+    const subcommand = rest[0] || 'list';
+    return {
+      type: 'companion',
+      verb: subcommand,
+      target: rest[1],
+      args: rest.slice(1),
       raw: sanitizedRaw,
     };
   }
@@ -210,6 +227,8 @@ export function getCommandTypeInfo(type: ParsedCommand['type']): { icon: string;
       return { icon: '⚙️', label: 'System', color: 'text-muted-foreground' };
     case 'developer':
       return { icon: '🔧', label: 'Developer', color: 'text-amber-400' };
+    case 'companion':
+      return { icon: '👥', label: 'Companion', color: 'text-primary' };
     default:
       return { icon: '❓', label: 'Unknown', color: 'text-muted-foreground' };
   }

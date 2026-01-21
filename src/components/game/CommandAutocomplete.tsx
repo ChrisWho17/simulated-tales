@@ -137,6 +137,20 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     icon: <Wand2 className="w-4 h-4" />,
     category: 'secret',
   },
+  {
+    command: '/companion debug',
+    aliases: ['/c debug', '/party debug'],
+    description: 'Open companion debug panel',
+    icon: <Users className="w-4 h-4" />,
+    category: 'secret',
+  },
+  {
+    command: '/companion create',
+    aliases: ['/c create', '/party create'],
+    description: 'Create a new companion',
+    icon: <Users className="w-4 h-4" />,
+    category: 'social',
+  },
 ];
 
 interface CommandAutocompleteProps {
