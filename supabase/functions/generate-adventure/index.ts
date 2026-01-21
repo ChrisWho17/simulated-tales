@@ -396,6 +396,17 @@ interface AdventureRequest {
     firstImpressionMod: number;      // NPC first impression modifier
     specialEffects: string[];        // Special outfit effects
   };
+  // NEW: Quality Enforcement Context - AAA narrative quality for marathon sessions
+  qualityEnforcement?: {
+    genreInstructions: string;          // Genre-specific writing instructions
+    antiDriftDirectives: string[];      // Session drift prevention directives
+    suggestedMicroEvent: string | null; // Fresh micro-event to weave in
+    sessionMetrics: {
+      turnCount: number;                // How many turns this session
+      hoursPlayed: number;              // Session duration in hours
+      historyCompressed: boolean;       // Whether history was compressed
+    };
+  };
 }
 
 // ============= NPC PERSONALITY SYSTEM =============
@@ -1552,7 +1563,7 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as AdventureRequest;
-    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext } = requestData;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
@@ -1574,6 +1585,55 @@ serve(async (req) => {
     // This affects pacing, difficulty, and narrative style
     if (directorContext) {
       systemContent += formatDirectorContext(directorContext);
+    }
+    
+    // === QUALITY ENFORCEMENT SYSTEM - AAA Narrative Quality for Marathon Sessions ===
+    // This is the PRIMARY quality control system that ensures peak narrative across 24+ hour sessions
+    if (qualityEnforcement) {
+      const metrics = qualityEnforcement.sessionMetrics;
+      const isLongSession = metrics.turnCount > 20 || metrics.hoursPlayed > 2;
+      const isMarathonSession = metrics.turnCount > 50 || metrics.hoursPlayed > 6;
+      
+      // Log session metrics for monitoring
+      console.log(`[Quality] Turn ${metrics.turnCount}, ${metrics.hoursPlayed.toFixed(1)}h played, history compressed: ${metrics.historyCompressed}`);
+      
+      // Add genre-specific writing instructions (CRITICAL for tone enforcement)
+      if (qualityEnforcement.genreInstructions) {
+        systemContent += `\n\n${qualityEnforcement.genreInstructions}`;
+      }
+      
+      // Add anti-drift directives for long sessions
+      if (qualityEnforcement.antiDriftDirectives.length > 0) {
+        systemContent += `\n\n===== LONG SESSION QUALITY ENFORCEMENT =====
+The player has been playing for ${metrics.hoursPlayed.toFixed(1)} hours (${metrics.turnCount} turns).
+Peak quality is CRITICAL to maintain engagement.
+
+ANTI-DRIFT DIRECTIVES:
+${qualityEnforcement.antiDriftDirectives.map(d => `• ${d}`).join('\n')}
+
+${isMarathonSession ? `⚠️ MARATHON SESSION DETECTED ⚠️
+After ${metrics.turnCount} turns, narrative fatigue is the enemy. EVERY response must feel:
+• FRESH - No repeated openings, no echoed descriptions
+• SURPRISING - At least one unexpected element per scene
+• VARIED - Mix pacing, tone, and focus deliberately
+• ALIVE - World events independent of player action` : ''}
+
+${isLongSession ? `LONG SESSION FRESHNESS CHECKLIST:
+□ First sentence uses a verb I haven't used recently
+□ Opening paragraph describes something NEW to this scene
+□ At least one NPC does something I didn't expect
+□ Sensory details focus on a sense I haven't emphasized lately` : ''}`;
+      }
+      
+      // Add suggested micro-event for freshness
+      if (qualityEnforcement.suggestedMicroEvent && isLongSession) {
+        systemContent += `\n\n=== FRESHNESS INJECTION ===
+To keep the world feeling alive, consider weaving in this moment:
+"${qualityEnforcement.suggestedMicroEvent}"
+
+This is a SUGGESTION, not a requirement. Use it if it fits naturally.
+The goal is to prevent the world from feeling static in long sessions.`;
+      }
     }
     
     // Add genre contract if provided (World Bible enforcement)
