@@ -6,40 +6,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Authentication helper - validates user is logged in
+// Authentication helper - validates user if logged in, allows anonymous access
 async function authenticateRequest(req: Request): Promise<{ userId: string | null; error: Response | null }> {
   const authHeader = req.headers.get('Authorization');
   
+  // Allow anonymous access - no auth header is fine
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+    console.log('[generate-npc-portrait] No auth header - allowing anonymous access');
+    return { userId: null, error: null };
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
   
+  // Check if it's just the anon key (not a real user token)
+  const token = authHeader.replace('Bearer ', '');
+  if (token === supabaseAnonKey || token.length < 100) {
+    console.log('[generate-npc-portrait] Anon key detected - allowing anonymous access');
+    return { userId: null, error: null };
+  }
+  
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } }
   });
 
-  const token = authHeader.replace('Bearer ', '');
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data?.user) {
-    return {
-      userId: null,
-      error: new Response(
-        JSON.stringify({ error: 'Invalid or expired session' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    };
+    // Token validation failed, but still allow anonymous access
+    console.log('[generate-npc-portrait] Token validation failed - allowing anonymous access:', error?.message);
+    return { userId: null, error: null };
   }
 
+  console.log('[generate-npc-portrait] Authenticated user:', data.user.id);
   return { userId: data.user.id, error: null };
 }
 
