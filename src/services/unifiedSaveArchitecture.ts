@@ -8,6 +8,7 @@ import { CampaignData, CampaignMetadata, CAMPAIGN_INDEX_KEY } from '@/types/camp
 import { TransactionManager, generateChecksum } from './saveTransaction';
 import { normalizeCampaign } from '@/lib/saveSchemaManager';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
+import { toast } from 'sonner';
 import LZString from 'lz-string';
 
 // ============================================================================
@@ -105,6 +106,85 @@ class UnifiedSaveArchitectureClass {
   // INITIALIZATION
   // ============================================================================
   
+  /**
+   * Validates that the current session has a valid JWT with required claims.
+   * Returns true if session is valid, false if corrupted (requires re-auth).
+   */
+  private async validateSession(session: { access_token: string } | null): Promise<boolean> {
+    if (!session?.access_token) return false;
+    
+    try {
+      // Try to decode the JWT and verify it has required claims
+      const parts = session.access_token.split('.');
+      if (parts.length !== 3) {
+        console.warn('[UnifiedSave] Invalid JWT format');
+        return false;
+      }
+      
+      const payload = JSON.parse(atob(parts[1]));
+      
+      // Check for required 'sub' claim (user ID)
+      if (!payload.sub) {
+        console.error('[UnifiedSave] JWT missing sub claim - token is corrupted');
+        return false;
+      }
+      
+      // Check if token is expired
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        console.warn('[UnifiedSave] JWT is expired');
+        return false;
+      }
+      
+      // Make a test request to verify the token works with Supabase
+      const { error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('[UnifiedSave] Session validation failed:', error.message);
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      console.error('[UnifiedSave] Failed to validate session:', e);
+      return false;
+    }
+  }
+  
+  /**
+   * Clears corrupted auth state and resets to local-only mode.
+   */
+  private async clearCorruptedAuth(): Promise<void> {
+    console.warn('[UnifiedSave] Clearing corrupted auth state...');
+    
+    // Clear Supabase auth storage
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.error('[UnifiedSave] Error during sign out:', e);
+    }
+    
+    // Clear any stale auth tokens from localStorage
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('supabase') || key.includes('sb-'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => {
+      console.log('[UnifiedSave] Removing stale key:', key);
+      localStorage.removeItem(key);
+    });
+    
+    this.account = { mode: 'local-only' };
+    this.notifyAccountChange();
+    
+    // Notify user
+    toast.info('Session expired', {
+      description: 'Please sign in again to sync your saves to the cloud.',
+      duration: 8000,
+    });
+  }
+  
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
@@ -120,21 +200,41 @@ class UnifiedSaveArchitectureClass {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (session?.user) {
-      this.account = {
-        mode: 'cloud',
-        userId: session.user.id,
-        email: session.user.email || undefined,
-        displayName: session.user.user_metadata?.name || session.user.email?.split('@')[0],
-        avatarUrl: session.user.user_metadata?.avatar_url,
-      };
+      // CRITICAL: Validate the session JWT before using it
+      const isValid = await this.validateSession(session);
       
-      // Sync on init
-      await this.syncWithCloud();
+      if (isValid) {
+        this.account = {
+          mode: 'cloud',
+          userId: session.user.id,
+          email: session.user.email || undefined,
+          displayName: session.user.user_metadata?.name || session.user.email?.split('@')[0],
+          avatarUrl: session.user.user_metadata?.avatar_url,
+        };
+        
+        // Sync on init
+        await this.syncWithCloud();
+      } else {
+        // Session exists but is corrupted - clear it
+        console.error('[UnifiedSave] Detected corrupted session, clearing auth state');
+        await this.clearCorruptedAuth();
+      }
     }
     
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[UnifiedSave] Auth state change:', event);
+      
       if (event === 'SIGNED_IN' && session?.user) {
+        // Validate new session before trusting it
+        const isValid = await this.validateSession(session);
+        
+        if (!isValid) {
+          console.error('[UnifiedSave] New session is invalid, clearing...');
+          await this.clearCorruptedAuth();
+          return;
+        }
+        
         this.account = {
           mode: 'cloud',
           userId: session.user.id,
@@ -154,9 +254,18 @@ class UnifiedSaveArchitectureClass {
           // Also sync cloud saves down to local
           await this.syncCloudToLocal();
         }, 0);
-      } else if (event === 'SIGNED_OUT') {
-        this.account = { mode: 'local-only' };
-        this.notifyAccountChange();
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        if (event === 'TOKEN_REFRESHED' && session) {
+          // Re-validate refreshed token
+          const isValid = await this.validateSession(session);
+          if (!isValid) {
+            await this.clearCorruptedAuth();
+            return;
+          }
+        } else if (event === 'SIGNED_OUT') {
+          this.account = { mode: 'local-only' };
+          this.notifyAccountChange();
+        }
       }
     });
     
@@ -300,10 +409,28 @@ class UnifiedSaveArchitectureClass {
       
       return { success: true, syncedToCloud: true };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[UnifiedSave] Cloud save failed:', error);
+      
+      // Check for RLS/auth errors that indicate corrupted session
+      if (
+        errorMessage.includes('row-level security') ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('403') ||
+        errorMessage.includes('JWT') ||
+        errorMessage.includes('Unauthorized')
+      ) {
+        console.error('[UnifiedSave] Auth error detected, clearing corrupted session...');
+        await this.clearCorruptedAuth();
+        return { 
+          success: false, 
+          error: 'Session expired. Please sign in again.' 
+        };
+      }
+      
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: errorMessage 
       };
     }
   }
@@ -349,7 +476,21 @@ class UnifiedSaveArchitectureClass {
       
       return null;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[UnifiedSave] Cloud load failed:', error);
+      
+      // Check for auth errors that indicate corrupted session
+      if (
+        errorMessage.includes('row-level security') ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('403') ||
+        errorMessage.includes('JWT') ||
+        errorMessage.includes('Unauthorized')
+      ) {
+        console.error('[UnifiedSave] Auth error in load, clearing corrupted session...');
+        await this.clearCorruptedAuth();
+      }
+      
       return null;
     }
   }
