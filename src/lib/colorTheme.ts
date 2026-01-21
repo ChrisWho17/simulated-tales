@@ -10,9 +10,12 @@ export interface ColorPreset {
   border: string;
   bg: string;
   particles: [string, string, string];
+  category: 'classic' | 'nature' | 'cosmic' | 'elemental';
+  effect?: 'shimmer' | 'pulse' | 'wave' | 'sparkle' | 'flame' | 'aurora' | 'frost' | 'ember';
 }
 
 export const COLOR_PRESETS: ColorPreset[] = [
+  // === CLASSIC ===
   { 
     id: 'violet', 
     name: 'Mystic Violet', 
@@ -23,7 +26,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(139, 92, 246, 0.6)',
     border: 'rgba(139, 92, 246, 0.2)',
     bg: 'rgba(139, 92, 246, 0.1)',
-    particles: ['#8b5cf6', '#a78bfa', '#c4b5fd']
+    particles: ['#8b5cf6', '#a78bfa', '#c4b5fd'],
+    category: 'classic',
+    effect: 'shimmer'
   },
   { 
     id: 'rose', 
@@ -35,7 +40,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(244, 63, 94, 0.6)',
     border: 'rgba(244, 63, 94, 0.2)',
     bg: 'rgba(244, 63, 94, 0.1)',
-    particles: ['#f43f5e', '#fb7185', '#fda4af']
+    particles: ['#f43f5e', '#fb7185', '#fda4af'],
+    category: 'classic',
+    effect: 'pulse'
   },
   { 
     id: 'cyan', 
@@ -47,7 +54,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(34, 211, 238, 0.6)',
     border: 'rgba(34, 211, 238, 0.2)',
     bg: 'rgba(34, 211, 238, 0.1)',
-    particles: ['#22d3ee', '#67e8f9', '#a5f3fc']
+    particles: ['#22d3ee', '#67e8f9', '#a5f3fc'],
+    category: 'classic',
+    effect: 'wave'
   },
   { 
     id: 'emerald', 
@@ -59,7 +68,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(16, 185, 129, 0.6)',
     border: 'rgba(16, 185, 129, 0.2)',
     bg: 'rgba(16, 185, 129, 0.1)',
-    particles: ['#10b981', '#34d399', '#6ee7b7']
+    particles: ['#10b981', '#34d399', '#6ee7b7'],
+    category: 'nature',
+    effect: 'shimmer'
   },
   { 
     id: 'amber', 
@@ -71,7 +82,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(245, 158, 11, 0.6)',
     border: 'rgba(245, 158, 11, 0.2)',
     bg: 'rgba(245, 158, 11, 0.1)',
-    particles: ['#f59e0b', '#fbbf24', '#fcd34d']
+    particles: ['#f59e0b', '#fbbf24', '#fcd34d'],
+    category: 'classic',
+    effect: 'sparkle'
   },
   { 
     id: 'blue', 
@@ -83,7 +96,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(59, 130, 246, 0.6)',
     border: 'rgba(59, 130, 246, 0.2)',
     bg: 'rgba(59, 130, 246, 0.1)',
-    particles: ['#3b82f6', '#60a5fa', '#93c5fd']
+    particles: ['#3b82f6', '#60a5fa', '#93c5fd'],
+    category: 'nature',
+    effect: 'wave'
   },
   { 
     id: 'pink', 
@@ -95,7 +110,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(236, 72, 153, 0.6)',
     border: 'rgba(236, 72, 153, 0.2)',
     bg: 'rgba(236, 72, 153, 0.1)',
-    particles: ['#ec4899', '#f472b6', '#f9a8d4']
+    particles: ['#ec4899', '#f472b6', '#f9a8d4'],
+    category: 'classic',
+    effect: 'pulse'
   },
   { 
     id: 'red', 
@@ -107,129 +124,242 @@ export const COLOR_PRESETS: ColorPreset[] = [
     glowIntense: 'rgba(239, 68, 68, 0.6)',
     border: 'rgba(239, 68, 68, 0.2)',
     bg: 'rgba(239, 68, 68, 0.1)',
-    particles: ['#ef4444', '#f87171', '#fca5a5']
+    particles: ['#ef4444', '#f87171', '#fca5a5'],
+    category: 'elemental',
+    effect: 'ember'
+  },
+
+  // === COSMIC ===
+  { 
+    id: 'midnight', 
+    name: 'Midnight Abyss', 
+    primary: '#312e81', 
+    secondary: '#4338ca', 
+    tertiary: '#6366f1',
+    glow: 'rgba(67, 56, 202, 0.4)',
+    glowIntense: 'rgba(67, 56, 202, 0.6)',
+    border: 'rgba(67, 56, 202, 0.2)',
+    bg: 'rgba(67, 56, 202, 0.1)',
+    particles: ['#312e81', '#4338ca', '#6366f1'],
+    category: 'cosmic',
+    effect: 'shimmer'
   },
   { 
-    id: 'indigo', 
-    name: 'Midnight Indigo', 
-    primary: '#6366f1', 
-    secondary: '#818cf8', 
-    tertiary: '#a5b4fc',
-    glow: 'rgba(99, 102, 241, 0.4)',
-    glowIntense: 'rgba(99, 102, 241, 0.6)',
-    border: 'rgba(99, 102, 241, 0.2)',
-    bg: 'rgba(99, 102, 241, 0.1)',
-    particles: ['#6366f1', '#818cf8', '#a5b4fc']
+    id: 'nebula', 
+    name: 'Nebula Dream', 
+    primary: '#7c3aed', 
+    secondary: '#c026d3', 
+    tertiary: '#e879f9',
+    glow: 'rgba(124, 58, 237, 0.4)',
+    glowIntense: 'rgba(192, 38, 211, 0.6)',
+    border: 'rgba(124, 58, 237, 0.2)',
+    bg: 'rgba(124, 58, 237, 0.1)',
+    particles: ['#7c3aed', '#c026d3', '#e879f9'],
+    category: 'cosmic',
+    effect: 'aurora'
   },
   { 
-    id: 'teal', 
-    name: 'Teal Frost', 
-    primary: '#14b8a6', 
-    secondary: '#2dd4bf', 
-    tertiary: '#5eead4',
-    glow: 'rgba(20, 184, 166, 0.4)',
-    glowIntense: 'rgba(20, 184, 166, 0.6)',
-    border: 'rgba(20, 184, 166, 0.2)',
-    bg: 'rgba(20, 184, 166, 0.1)',
-    particles: ['#14b8a6', '#2dd4bf', '#5eead4']
+    id: 'stardust', 
+    name: 'Stardust', 
+    primary: '#a855f7', 
+    secondary: '#e879f9', 
+    tertiary: '#faf5ff',
+    glow: 'rgba(168, 85, 247, 0.4)',
+    glowIntense: 'rgba(232, 121, 249, 0.6)',
+    border: 'rgba(168, 85, 247, 0.2)',
+    bg: 'rgba(168, 85, 247, 0.1)',
+    particles: ['#a855f7', '#e879f9', '#faf5ff'],
+    category: 'cosmic',
+    effect: 'sparkle'
   },
+
+  // === NATURE ===
   { 
-    id: 'orange', 
+    id: 'sunset', 
     name: 'Sunset Blaze', 
     primary: '#f97316', 
     secondary: '#fb923c', 
-    tertiary: '#fdba74',
+    tertiary: '#fbbf24',
     glow: 'rgba(249, 115, 22, 0.4)',
-    glowIntense: 'rgba(249, 115, 22, 0.6)',
+    glowIntense: 'rgba(251, 146, 60, 0.6)',
     border: 'rgba(249, 115, 22, 0.2)',
     bg: 'rgba(249, 115, 22, 0.1)',
-    particles: ['#f97316', '#fb923c', '#fdba74']
+    particles: ['#f97316', '#fb923c', '#fbbf24'],
+    category: 'nature',
+    effect: 'ember'
   },
   { 
-    id: 'lime', 
-    name: 'Toxic Lime', 
-    primary: '#84cc16', 
-    secondary: '#a3e635', 
-    tertiary: '#bef264',
-    glow: 'rgba(132, 204, 22, 0.4)',
-    glowIntense: 'rgba(132, 204, 22, 0.6)',
-    border: 'rgba(132, 204, 22, 0.2)',
-    bg: 'rgba(132, 204, 22, 0.1)',
-    particles: ['#84cc16', '#a3e635', '#bef264']
-  },
-  // New additional colors
-  { 
-    id: 'purple', 
-    name: 'Royal Purple', 
-    primary: '#9333ea', 
-    secondary: '#a855f7', 
-    tertiary: '#c084fc',
-    glow: 'rgba(147, 51, 234, 0.4)',
-    glowIntense: 'rgba(147, 51, 234, 0.6)',
-    border: 'rgba(147, 51, 234, 0.2)',
-    bg: 'rgba(147, 51, 234, 0.1)',
-    particles: ['#9333ea', '#a855f7', '#c084fc']
+    id: 'aurora', 
+    name: 'Aurora Borealis', 
+    primary: '#22d3ee', 
+    secondary: '#34d399', 
+    tertiary: '#a78bfa',
+    glow: 'rgba(34, 211, 238, 0.4)',
+    glowIntense: 'rgba(52, 211, 153, 0.6)',
+    border: 'rgba(34, 211, 238, 0.2)',
+    bg: 'rgba(34, 211, 238, 0.1)',
+    particles: ['#22d3ee', '#34d399', '#a78bfa'],
+    category: 'nature',
+    effect: 'aurora'
   },
   { 
-    id: 'fuchsia', 
-    name: 'Electric Fuchsia', 
-    primary: '#d946ef', 
-    secondary: '#e879f9', 
-    tertiary: '#f0abfc',
-    glow: 'rgba(217, 70, 239, 0.4)',
-    glowIntense: 'rgba(217, 70, 239, 0.6)',
-    border: 'rgba(217, 70, 239, 0.2)',
-    bg: 'rgba(217, 70, 239, 0.1)',
-    particles: ['#d946ef', '#e879f9', '#f0abfc']
+    id: 'forest', 
+    name: 'Enchanted Forest', 
+    primary: '#166534', 
+    secondary: '#22c55e', 
+    tertiary: '#86efac',
+    glow: 'rgba(22, 101, 52, 0.4)',
+    glowIntense: 'rgba(34, 197, 94, 0.6)',
+    border: 'rgba(22, 101, 52, 0.2)',
+    bg: 'rgba(22, 101, 52, 0.1)',
+    particles: ['#166534', '#22c55e', '#86efac'],
+    category: 'nature',
+    effect: 'shimmer'
   },
   { 
-    id: 'sky', 
-    name: 'Clear Sky', 
-    primary: '#0ea5e9', 
-    secondary: '#38bdf8', 
+    id: 'ocean', 
+    name: 'Deep Sea', 
+    primary: '#0369a1', 
+    secondary: '#0ea5e9', 
     tertiary: '#7dd3fc',
-    glow: 'rgba(14, 165, 233, 0.4)',
+    glow: 'rgba(3, 105, 161, 0.4)',
     glowIntense: 'rgba(14, 165, 233, 0.6)',
-    border: 'rgba(14, 165, 233, 0.2)',
-    bg: 'rgba(14, 165, 233, 0.1)',
-    particles: ['#0ea5e9', '#38bdf8', '#7dd3fc']
+    border: 'rgba(3, 105, 161, 0.2)',
+    bg: 'rgba(3, 105, 161, 0.1)',
+    particles: ['#0369a1', '#0ea5e9', '#7dd3fc'],
+    category: 'nature',
+    effect: 'wave'
+  },
+
+  // === ELEMENTAL ===
+  { 
+    id: 'volcanic', 
+    name: 'Volcanic Fury', 
+    primary: '#dc2626', 
+    secondary: '#f97316', 
+    tertiary: '#fbbf24',
+    glow: 'rgba(220, 38, 38, 0.5)',
+    glowIntense: 'rgba(249, 115, 22, 0.7)',
+    border: 'rgba(220, 38, 38, 0.25)',
+    bg: 'rgba(220, 38, 38, 0.12)',
+    particles: ['#dc2626', '#f97316', '#fbbf24'],
+    category: 'elemental',
+    effect: 'flame'
   },
   { 
-    id: 'slate', 
-    name: 'Steel Slate', 
-    primary: '#64748b', 
-    secondary: '#94a3b8', 
-    tertiary: '#cbd5e1',
-    glow: 'rgba(100, 116, 139, 0.4)',
-    glowIntense: 'rgba(100, 116, 139, 0.6)',
-    border: 'rgba(100, 116, 139, 0.2)',
-    bg: 'rgba(100, 116, 139, 0.1)',
-    particles: ['#64748b', '#94a3b8', '#cbd5e1']
+    id: 'arctic', 
+    name: 'Arctic Frost', 
+    primary: '#7dd3fc', 
+    secondary: '#bae6fd', 
+    tertiary: '#f0f9ff',
+    glow: 'rgba(125, 211, 252, 0.4)',
+    glowIntense: 'rgba(186, 230, 253, 0.6)',
+    border: 'rgba(125, 211, 252, 0.25)',
+    bg: 'rgba(125, 211, 252, 0.1)',
+    particles: ['#7dd3fc', '#bae6fd', '#f0f9ff'],
+    category: 'elemental',
+    effect: 'frost'
   },
+  { 
+    id: 'storm', 
+    name: 'Storm Surge', 
+    primary: '#475569', 
+    secondary: '#94a3b8', 
+    tertiary: '#fbbf24',
+    glow: 'rgba(71, 85, 105, 0.4)',
+    glowIntense: 'rgba(251, 191, 36, 0.6)',
+    border: 'rgba(71, 85, 105, 0.2)',
+    bg: 'rgba(71, 85, 105, 0.1)',
+    particles: ['#475569', '#94a3b8', '#fbbf24'],
+    category: 'elemental',
+    effect: 'pulse'
+  },
+  { 
+    id: 'inferno', 
+    name: 'Inferno', 
+    primary: '#b91c1c', 
+    secondary: '#dc2626', 
+    tertiary: '#f87171',
+    glow: 'rgba(185, 28, 28, 0.5)',
+    glowIntense: 'rgba(220, 38, 38, 0.7)',
+    border: 'rgba(185, 28, 28, 0.25)',
+    bg: 'rgba(185, 28, 28, 0.12)',
+    particles: ['#b91c1c', '#dc2626', '#f87171'],
+    category: 'elemental',
+    effect: 'flame'
+  },
+  { 
+    id: 'glacier', 
+    name: 'Glacier Blue', 
+    primary: '#0891b2', 
+    secondary: '#22d3ee', 
+    tertiary: '#cffafe',
+    glow: 'rgba(8, 145, 178, 0.4)',
+    glowIntense: 'rgba(34, 211, 238, 0.6)',
+    border: 'rgba(8, 145, 178, 0.2)',
+    bg: 'rgba(8, 145, 178, 0.1)',
+    particles: ['#0891b2', '#22d3ee', '#cffafe'],
+    category: 'elemental',
+    effect: 'frost'
+  },
+
+  // === SPECIAL ===
   { 
     id: 'gold', 
     name: 'Mythic Gold', 
     primary: '#eab308', 
     secondary: '#facc15', 
-    tertiary: '#fde047',
-    glow: 'rgba(234, 179, 8, 0.4)',
-    glowIntense: 'rgba(234, 179, 8, 0.6)',
-    border: 'rgba(234, 179, 8, 0.2)',
-    bg: 'rgba(234, 179, 8, 0.1)',
-    particles: ['#eab308', '#facc15', '#fde047']
+    tertiary: '#fef08a',
+    glow: 'rgba(234, 179, 8, 0.5)',
+    glowIntense: 'rgba(250, 204, 21, 0.7)',
+    border: 'rgba(234, 179, 8, 0.25)',
+    bg: 'rgba(234, 179, 8, 0.12)',
+    particles: ['#eab308', '#facc15', '#fef08a'],
+    category: 'classic',
+    effect: 'sparkle'
   },
   { 
-    id: 'crimson', 
-    name: 'Crimson Fury', 
-    primary: '#dc2626', 
-    secondary: '#ef4444', 
-    tertiary: '#f87171',
-    glow: 'rgba(220, 38, 38, 0.4)',
-    glowIntense: 'rgba(220, 38, 38, 0.6)',
-    border: 'rgba(220, 38, 38, 0.2)',
-    bg: 'rgba(220, 38, 38, 0.1)',
-    particles: ['#dc2626', '#ef4444', '#f87171']
-  }
+    id: 'obsidian', 
+    name: 'Obsidian Night', 
+    primary: '#334155', 
+    secondary: '#64748b', 
+    tertiary: '#94a3b8',
+    glow: 'rgba(51, 65, 85, 0.4)',
+    glowIntense: 'rgba(100, 116, 139, 0.6)',
+    border: 'rgba(51, 65, 85, 0.3)',
+    bg: 'rgba(51, 65, 85, 0.15)',
+    particles: ['#334155', '#64748b', '#94a3b8'],
+    category: 'cosmic',
+    effect: 'shimmer'
+  },
+  { 
+    id: 'phoenix', 
+    name: 'Phoenix Fire', 
+    primary: '#ea580c', 
+    secondary: '#f59e0b', 
+    tertiary: '#fcd34d',
+    glow: 'rgba(234, 88, 12, 0.5)',
+    glowIntense: 'rgba(245, 158, 11, 0.7)',
+    border: 'rgba(234, 88, 12, 0.25)',
+    bg: 'rgba(234, 88, 12, 0.12)',
+    particles: ['#ea580c', '#f59e0b', '#fcd34d'],
+    category: 'elemental',
+    effect: 'flame'
+  },
+  { 
+    id: 'sakura', 
+    name: 'Sakura Bloom', 
+    primary: '#f472b6', 
+    secondary: '#fbcfe8', 
+    tertiary: '#fdf2f8',
+    glow: 'rgba(244, 114, 182, 0.4)',
+    glowIntense: 'rgba(251, 207, 232, 0.6)',
+    border: 'rgba(244, 114, 182, 0.2)',
+    bg: 'rgba(244, 114, 182, 0.1)',
+    particles: ['#f472b6', '#fbcfe8', '#fdf2f8'],
+    category: 'nature',
+    effect: 'sparkle'
+  },
 ];
 
 // Helper to convert hex to HSL for CSS variables
