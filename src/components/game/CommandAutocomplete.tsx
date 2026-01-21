@@ -53,6 +53,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'navigation',
   },
   {
+    command: '/companions',
+    aliases: ['/party', '/allies'],
+    description: 'Manage your companions',
+    icon: <Users className="w-4 h-4" />,
+    category: 'social',
+  },
+  {
     command: '/relationships',
     aliases: ['/rel', '/npcs'],
     description: 'View NPC relationships',
