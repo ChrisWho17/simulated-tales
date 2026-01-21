@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Heart, Shield, Sword, Zap, Brain, 
   ChevronDown, ChevronUp, X, UserPlus, UserMinus,
-  MessageCircle, Star, AlertTriangle
+  MessageCircle, Star, AlertTriangle, Wand2
 } from 'lucide-react';
 import { 
   companionSystem, 
@@ -18,11 +18,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
+import { CompanionCreatorWizard } from '@/components/companion';
 
 interface CompanionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onCompanionSpeak?: (companion: CompanionState, dialogue: string) => void;
+  genre?: string;
 }
 
 const roleIcons = {
@@ -69,12 +71,13 @@ function CompanionHealthBadge({ companion, onClick }: { companion: CompanionStat
   );
 }
 
-export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionPanelProps) {
+export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fantasy' }: CompanionPanelProps) {
   const [companions, setCompanions] = useState<CompanionState[]>([]);
   const [activeCompanions, setActiveCompanions] = useState<CompanionState[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRecruitMenu, setShowRecruitMenu] = useState(false);
   const [selectedCompanion, setSelectedCompanion] = useState<CompanionState | null>(null);
+  const [showCreatorWizard, setShowCreatorWizard] = useState(false);
 
   // Refresh companion list
   const refreshCompanions = () => {
@@ -127,12 +130,28 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
     setShowRecruitMenu(false);
   };
 
+  const handleCompanionCreated = (companion: CompanionState) => {
+    refreshCompanions();
+    setShowCreatorWizard(false);
+    toast.success(`${companion.name} has been created!`, {
+      description: 'They will appear when the time is right.',
+    });
+  };
+
   const partySize = companionSystem.getPartySize();
 
   if (!isOpen) return null;
 
   return (
     <>
+      {/* Companion Creator Wizard */}
+      <CompanionCreatorWizard
+        isOpen={showCreatorWizard}
+        onClose={() => setShowCreatorWizard(false)}
+        onCompanionCreated={handleCompanionCreated}
+        genre={genre}
+      />
+
       {/* Character Sheet Modal */}
       {selectedCompanion && (
         <CompanionCharacterSheet
@@ -166,6 +185,15 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak }: CompanionP
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowCreatorWizard(true)}
+              className="gap-1"
+            >
+              <Wand2 className="w-4 h-4" />
+              Create
+            </Button>
             <Button
               variant="outline"
               size="sm"
