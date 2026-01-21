@@ -1,11 +1,13 @@
 // Streaming Narrative Entry Component
 // Displays AI narrative text word-by-word as it streams in
+// Cleans mechanic tags and OOC content in real-time
 
 import React, { memo, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { CoreMoodType, MOOD_COLORS } from '@/game/moodSystem';
 import { cn } from '@/lib/utils';
+import { stripMechanicTags } from '@/lib/narrativeFilter';
 
 interface StreamingNarrativeEntryProps {
   content: string;
@@ -31,11 +33,17 @@ export const StreamingNarrativeEntry = memo(function StreamingNarrativeEntry({
     };
   }, [currentMood]);
 
+  // Clean content of mechanic tags in real-time as it streams
+  const cleanedContent = useMemo(() => {
+    if (!content) return '';
+    return stripMechanicTags(content);
+  }, [content]);
+
   // Split content into paragraphs for better readability
   const paragraphs = useMemo(() => {
-    if (!content) return [];
-    return content.split('\n\n').filter(p => p.trim());
-  }, [content]);
+    if (!cleanedContent) return [];
+    return cleanedContent.split('\n\n').filter(p => p.trim());
+  }, [cleanedContent]);
 
   if (error) {
     return (

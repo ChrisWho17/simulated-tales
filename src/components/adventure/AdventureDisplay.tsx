@@ -2212,7 +2212,8 @@ export function AdventureDisplay({
                 }}
               >
                 <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
-                  {streamingState.content.split('\n\n').filter(p => p.trim()).map((paragraph, pIdx) => (
+                  {/* Clean mechanic tags before display */}
+                  {cleanNarrativeForDisplay(streamingState.content).split('\n\n').filter(p => p.trim()).map((paragraph, pIdx) => (
                     <p 
                       key={pIdx} 
                       className="mb-4 last:mb-0 animate-fade-in"

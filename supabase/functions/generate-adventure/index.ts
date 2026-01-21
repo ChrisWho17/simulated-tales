@@ -3553,23 +3553,62 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       });
     }
 
-    // Clean the narrative of mechanic tags for display
+    // Clean the narrative of ALL mechanic tags for display
+    // This comprehensive regex catches all bracketed mechanics
     let cleanNarrative = narrative
-      .replace(/\[ROLL:[^\]]+\]/g, '')
-      .replace(/\[XP:[^\]]+\]/g, '')
-      .replace(/\[NEUTRAL_XP:[^\]]+\]/g, '')
-      .replace(/\[CHAPTER_END\]/g, '')
-      .replace(/\[GOLD:[+-]?\d+\]/g, '')
-      .replace(/\[LOOT:[^\]]+\]/g, '')
-      .replace(/\[DROP:[^\]]+\]/g, '')  // Clean dropped item tags
-      .replace(/\[USE:[^\]]+\]/g, '')   // Clean consumed item tags
-      .replace(/\[SKILL:[^\]]+\]/g, '')
-      .replace(/\[DAMAGE:\d+\]/g, '')
-      .replace(/\[HEAL:\d+\]/g, '')
-      .replace(/\[RELATIONSHIP:[^\]]+\]/g, '')
-      .replace(/\[MILESTONE:[^\]]+\]/g, '')
-      .replace(/\[LEARN_LANGUAGE:[^\]]+\]/g, '')
-      .replace(/\[LANGUAGE:[^\]]+\]/g, '') // Keep language tags for client-side processing
+      // Combat and dice mechanics
+      .replace(/\[ROLL:[^\]]+\]/gi, '')
+      .replace(/\[DAMAGE:\d+\]/gi, '')
+      .replace(/\[HEAL:\d+\]/gi, '')
+      .replace(/\[CRITICAL(?:_HIT)?\]/gi, '')
+      .replace(/\[MISS\]/gi, '')
+      .replace(/\[FUMBLE\]/gi, '')
+      
+      // Economy and items
+      .replace(/\[GOLD:[+-]?\d+\]/gi, '')
+      .replace(/\[LOOT:[^\]]+\]/gi, '')
+      .replace(/\[DROP:[^\]]+\]/gi, '')
+      .replace(/\[USE:[^\]]+\]/gi, '')
+      .replace(/\[ITEM:[^\]]+\]/gi, '')
+      
+      // Progression
+      .replace(/\[XP:[^\]]+\]/gi, '')
+      .replace(/\[NEUTRAL_XP:[^\]]+\]/gi, '')
+      .replace(/\[LEVEL_UP\]/gi, '')
+      .replace(/\[CHAPTER_END\]/gi, '')
+      .replace(/\[SKILL:[^\]]+\]/gi, '')
+      
+      // Relationships and NPCs
+      .replace(/\[RELATIONSHIP:[^\]]+\]/gi, '')
+      .replace(/\[MILESTONE:[^\]]+\]/gi, '')
+      .replace(/\[NPC:[^\]]+\]/gi, '')
+      .replace(/\[AFFINITY:[^\]]+\]/gi, '')
+      .replace(/\[TRUST:[^\]]+\]/gi, '')
+      
+      // Language
+      .replace(/\[LEARN_LANGUAGE:[^\]]+\]/gi, '')
+      .replace(/\[LANGUAGE:[^\]]+\]/gi, '')
+      .replace(/\[TRANSLATE:[^\]]+\]/gi, '')
+      
+      // Quest and location
+      .replace(/\[QUEST:[^\]]+\]/gi, '')
+      .replace(/\[LOCATION:[^\]]+\]/gi, '')
+      .replace(/\[DISCOVERY:[^\]]+\]/gi, '')
+      
+      // Time and weather
+      .replace(/\[TIME:[^\]]+\]/gi, '')
+      .replace(/\[WEATHER:[^\]]+\]/gi, '')
+      
+      // Generic event/companion tags
+      .replace(/\[COMPANION:[^\]]+\]/gi, '')
+      .replace(/\[EVENT:[^\]]+\]/gi, '')
+      .replace(/\[TRIGGER:[^\]]+\]/gi, '')
+      .replace(/\[FLAG:[^\]]+\]/gi, '')
+      .replace(/\[CLOCK:[^\]]+\]/gi, '')
+      
+      // Clean orphaned brackets and extra whitespace
+      .replace(/\[\s*\]/g, '')
+      .replace(/  +/g, ' ')
       .trim();
 
     const mechanics: any = {};
