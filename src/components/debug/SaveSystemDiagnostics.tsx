@@ -29,13 +29,13 @@ function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString();
 }
 
-export function SaveSystemDiagnostics({
+export const SaveSystemDiagnostics = React.forwardRef<HTMLDivElement, DiagnosticsProps>(({
   isOpen,
   onClose,
   currentStateHash,
   lastSavedStateHash,
   mountCount = 1,
-}: DiagnosticsProps) {
+}, ref) => {
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [operations, setOperations] = useState<SaveOperation[]>([]);
   const [gameKeys, setGameKeys] = useState<string[]>([]);
@@ -431,7 +431,9 @@ export function SaveSystemDiagnostics({
       </Tabs>
     </div>
   );
-}
+});
+
+SaveSystemDiagnostics.displayName = 'SaveSystemDiagnostics';
 
 // Keyboard shortcut hook
 export function useDiagnosticsShortcut() {

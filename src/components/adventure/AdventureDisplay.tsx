@@ -105,6 +105,8 @@ import { CheatModeSplash, useCheatModeCommand } from '@/components/debug/CheatMo
 
 // Companion story events integration
 import { CompanionStoryEventsContainer } from '@/components/game/CompanionStoryEvents';
+import { CompanionQuickView, CompanionWarningToast } from '@/components/companion';
+import { CompanionPanel } from '@/components/game/CompanionPanel';
 
 // Inventory system integration
 import { 
@@ -337,6 +339,7 @@ export function AdventureDisplay({
   const [showMobileQuickMenu, setShowMobileQuickMenu] = useState(false);
   const [showAmbientFeedModal, setShowAmbientFeedModal] = useState(false);
   const [lastSeenAmbientCount, setLastSeenAmbientCount] = useState(0);
+  const [showCompanionPanel, setShowCompanionPanel] = useState(false);
   
   // Cheat mode / Developer tools
   const cheatModePanel = useCheatModeCommand();
@@ -2656,6 +2659,7 @@ export function AdventureDisplay({
           window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
         }}
         onRestart={onRestart}
+        onOpenCompanions={() => setShowCompanionPanel(true)}
         characterName={character.name}
         currentTime={`${timeState.hour}:${String(timeState.minute).padStart(2, '0')}`}
         currentWeather={WEATHER_CONFIGS[weatherState.current].name}
@@ -2674,6 +2678,7 @@ export function AdventureDisplay({
           window.dispatchEvent(new CustomEvent('open-saves-dropdown'));
         }}
         onRestart={onRestart}
+        onOpenCompanions={() => setShowCompanionPanel(true)}
       />
       
       {/* Companion Story Events - introductions and resurrections */}
@@ -2690,6 +2695,22 @@ export function AdventureDisplay({
         onClose={() => setShowAmbientFeedModal(false)}
         entries={ambientFeed.entries}
         onClearEntries={ambientFeed.clearFeed}
+      />
+      
+      {/* Companion Quick View - Floating mini-cards in top-right */}
+      <CompanionQuickView
+        onOpenPanel={() => setShowCompanionPanel(true)}
+        className="fixed top-20 right-4 z-30 hidden md:block"
+      />
+      
+      {/* Companion Warning Toast - Monitors and alerts companion status */}
+      <CompanionWarningToast />
+      
+      {/* Companion Panel Modal */}
+      <CompanionPanel
+        isOpen={showCompanionPanel}
+        onClose={() => setShowCompanionPanel(false)}
+        genre={genre}
       />
     </div>
     </ImmersionLayer>

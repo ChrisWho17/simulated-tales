@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getMostRecentSave, GameSave, loadAllSaves } from '@/lib/saveSystem';
@@ -9,7 +9,7 @@ interface CrashRecoveryPromptProps {
   onNewGame: () => void;
 }
 
-export function CrashRecoveryPrompt({ onContinue, onNewGame }: CrashRecoveryPromptProps) {
+export const CrashRecoveryPrompt = React.forwardRef<HTMLDivElement, CrashRecoveryPromptProps>(({ onContinue, onNewGame }, ref) => {
   const [recentSave, setRecentSave] = useState<GameSave | null>(null);
   const [allSaves, setAllSaves] = useState<GameSave[]>([]);
   const [showAllSaves, setShowAllSaves] = useState(false);
@@ -115,4 +115,6 @@ export function CrashRecoveryPrompt({ onContinue, onNewGame }: CrashRecoveryProm
       </Card>
     </div>
   );
-}
+});
+
+CrashRecoveryPrompt.displayName = 'CrashRecoveryPrompt';
