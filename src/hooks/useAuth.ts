@@ -31,6 +31,27 @@ export function useAuth(): AuthState & AuthActions {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[Auth] State changed:', event);
+        
+        // Validate session before trusting it
+        if (session?.access_token) {
+          try {
+            const parts = session.access_token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (!payload.sub) {
+                console.error('[Auth] Invalid JWT - missing sub claim, clearing session');
+                await supabase.auth.signOut({ scope: 'local' });
+                setSession(null);
+                setUser(null);
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('[Auth] Failed to validate JWT:', e);
+          }
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
@@ -38,7 +59,32 @@ export function useAuth(): AuthState & AuthActions {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      // Validate existing session
+      if (session?.access_token) {
+        try {
+          const parts = session.access_token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (!payload.sub) {
+              console.error('[Auth] Stored JWT is corrupted - missing sub claim');
+              await supabase.auth.signOut({ scope: 'local' });
+              setSession(null);
+              setUser(null);
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error('[Auth] Failed to validate stored JWT:', e);
+          await supabase.auth.signOut({ scope: 'local' });
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
