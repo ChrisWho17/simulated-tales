@@ -2050,7 +2050,7 @@ export function AdventureDisplay({
               <Card 
                 className="border-0 bg-transparent shadow-none rounded-lg p-2 -m-2"
                 style={{
-                  borderColor: MOOD_COLORS[currentMood]?.border || 'rgba(139, 92, 246, 0.3)',
+                  borderColor: MOOD_COLORS[currentMood]?.border || 'var(--accent-border)',
                 }}
               >
                 <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">

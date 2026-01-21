@@ -63,7 +63,7 @@ export function PortraitFrame({
       case 'red': return 'rgba(244, 63, 94, 0.4)';
       case 'pink': return 'rgba(236, 72, 153, 0.4)';
       case 'cyan': return 'rgba(34, 211, 238, 0.4)';
-      default: return 'rgba(139, 92, 246, 0.4)';
+      default: return 'var(--accent-glow)';
     }
   };
 
