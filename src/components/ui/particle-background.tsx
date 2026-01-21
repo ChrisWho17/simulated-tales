@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, forwardRef } from 'react';
 import { CoreMoodType } from '@/game/moodSystem';
 import { WeatherParticles } from './weather-particles';
+
 interface Particle {
   x: number;
   y: number;
@@ -32,13 +33,13 @@ function getParticleColors(): string[] {
   return ['#8b5cf6', '#d946ef', '#22d3ee'];
 }
 
-export function ParticleBackground({
+export const ParticleBackground = forwardRef<HTMLCanvasElement, ParticleBackgroundProps>(function ParticleBackground({
   particleCount = 50,
   colors,
   maxSize = 3,
   speed = 0.3,
   className = '',
-}: ParticleBackgroundProps) {
+}, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number>();
@@ -145,17 +146,17 @@ export function ParticleBackground({
 
   return (
     <canvas
-      ref={canvasRef}
+      ref={ref || canvasRef}
       className={`fixed inset-0 pointer-events-none z-0 ${className}`}
       style={{ opacity: 0.6 }}
     />
   );
-}
+});
 
 // Ambient glow orbs that drift slowly - uses CSS variables for colors
-export function AmbientGlow() {
+export const AmbientGlow = forwardRef<HTMLDivElement>(function AmbientGlow(_, ref) {
   return (
-    <>
+    <div ref={ref}>
       <div 
         className="ambient-glow ambient-glow-primary" 
         style={{ 
@@ -170,9 +171,9 @@ export function AmbientGlow() {
           opacity: 0.12
         }} 
       />
-    </>
+    </div>
   );
-}
+});
 
 // Combined atmospheric background
 export function AtmosphericBackground({ mood = 'neutral' }: { mood?: CoreMoodType }) {
