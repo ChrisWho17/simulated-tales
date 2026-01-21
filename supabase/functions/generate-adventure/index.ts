@@ -836,6 +836,30 @@ FORBIDDEN DIALOGUE PATTERNS (they kill immersion):
 - NPCs who answer exactly what was asked with no personality
 - Everyone speaking in complete, grammatically perfect sentences
 - Dialogue that exists only to convey information
+- Misgendering the player character (see CHARACTER GENDER section)
+- Generic honorifics without checking player's gender
+
+**DIALOGUE QUALITY STANDARDS (CRITICAL FOR LONG-TERM PLAY):**
+Every line of dialogue must feel EARNED. Ask yourself:
+1. Does this NPC have a REASON to say this right now?
+2. Is their mood/attitude affecting HOW they say it?
+3. Could another NPC say this same line? (If yes, make it more distinctive)
+4. Does their body language/action accompany the words?
+5. Are they revealing personality, not just information?
+
+NPC SPEECH DISTINCTIVENESS (MANDATORY):
+- Educated NPCs: Longer sentences, formal word choice, fewer contractions
+- Working class NPCs: Shorter sentences, contractions, practical vocabulary
+- Young NPCs: Current slang, incomplete thoughts, energy
+- Old NPCs: Deliberate pacing, references to the past, wisdom or bitterness
+- Nervous NPCs: Filler words, trailing off, over-explaining
+- Confident NPCs: Direct statements, comfortable silences, brief answers
+
+DIALOGUE ATTRIBUTION FORMAT:
+**NPC Name:** *action or body language* "Their spoken words here." *optional reaction*
+
+Example:
+**Marcus:** *set down his ale with a heavy thunk* "You've got nerve showing up here." *His jaw tightened.* "After what happened to Sera."
 
 **SENSORY ANCHORING (You Are There):**
 Ground every scene in at least TWO senses beyond sight:
@@ -3195,13 +3219,15 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     const streamRequested = (requestData as any).stream === true;
     
     const aiRequestBody = {
-      model: 'google/gemini-2.5-flash',
+      // Use the higher-quality pro model for narrative generation
+      // Flash is faster but less nuanced for dialogue/character work
+      model: 'google/gemini-2.5-pro',
       messages,
-      temperature: 0.88,
-      max_tokens: 1500,
-      top_p: 0.92,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.2,
+      temperature: 0.82,          // Slightly lower for more coherent dialogue
+      max_tokens: 2000,           // Increased to prevent mid-sentence truncation
+      top_p: 0.90,                // Slightly lower for more focused responses
+      frequency_penalty: 0.15,    // Reduced - was causing stilted phrasings by avoiding natural repetition
+      presence_penalty: 0.25,     // Slightly higher to encourage topic diversity
       stream: streamRequested,
     };
 
