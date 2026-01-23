@@ -1981,7 +1981,7 @@ export function AdventureDisplay({
 
       {/* Story Content */}
       <ScrollArea className="flex-1 relative z-10" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 overflow-x-hidden">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-8 py-6 md:py-8 overflow-x-hidden overflow-wrap-anywhere">
           {/* Initial loading state when story is empty */}
           {story.length === 0 && isLoading && (
             <NarrativeLoadingIndicator 
@@ -2094,7 +2094,7 @@ export function AdventureDisplay({
                     </div>
                   )}
                   
-                  <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+                  <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere w-full">
                     {/* System badges summary when highlighting is enabled - shown on latest entry */}
                     {enableSystemHighlight && actualIndex === story.length - 1 && (
                       <SystemBadgesSummary text={entry.content} className="mb-3" />
@@ -2211,7 +2211,7 @@ export function AdventureDisplay({
                   borderColor: MOOD_COLORS[currentMood]?.border || 'var(--accent-border)',
                 }}
               >
-                <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+                <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere w-full">
                   {/* Clean mechanic tags before display */}
                   {cleanNarrativeForDisplay(streamingState.content).split('\n\n').filter(p => p.trim()).map((paragraph, pIdx) => (
                     <p 

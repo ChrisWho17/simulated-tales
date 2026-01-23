@@ -271,7 +271,7 @@ const NarrativeParagraph = memo(function NarrativeParagraph({
   }
 
   return (
-    <p className="my-4 leading-relaxed text-foreground/90 transition-all duration-300">
+    <p className="my-4 leading-relaxed text-foreground/90 transition-all duration-300 break-words">
       <FormatTextSegment
         text={paragraph}
         keyPrefix={`p-${paragraphIndex}`}
@@ -393,7 +393,7 @@ export const MemoizedStoryEntry = memo(function MemoizedStoryEntry({
         )}
         
         {/* Narrative content */}
-        <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere">
+        <div className="font-narrative text-base sm:text-lg text-foreground leading-relaxed break-words overflow-wrap-anywhere w-full">
           {/* System badges summary for latest entry */}
           {isLatest && enableSystemHighlight && (
             <SystemBadgesSummary text={cleanedContent} className="mb-3" />

@@ -226,10 +226,22 @@
     display: none;
   }
   
-  /* Mobile text overflow handling */
+  /* Text overflow handling - applies to all screen sizes */
   .overflow-wrap-anywhere {
     overflow-wrap: anywhere;
     word-break: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+  
+  /* Desktop text safety - ensures no text clipping on wider screens */
+  @media screen and (min-width: 768px) {
+    .font-narrative {
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
   }
   
   /* Prevent iOS zoom on input focus */
