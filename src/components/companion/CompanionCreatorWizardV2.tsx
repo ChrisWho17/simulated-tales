@@ -2,7 +2,7 @@
 // COMPANION CREATOR WIZARD V2 - Full rebuild with deep personality options
 // ============================================================================
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Brain, Sword, Sparkles, Shuffle, ChevronLeft, ChevronRight,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { TouchScrollContainer } from '@/components/ui/touch-scroll-container';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -631,11 +631,8 @@ export function CompanionCreatorWizardV2({
           ))}
         </div>
 
-        {/* Content - Scrollable */}
-        <div 
-          className="flex-1 overflow-y-auto overscroll-contain"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
+        {/* Content - Scrollable with visible slider */}
+        <TouchScrollContainer className="flex-1 min-h-0">
           <div className="p-6 pb-8">
             <AnimatePresence mode="wait">
               <motion.div
@@ -1077,7 +1074,7 @@ export function CompanionCreatorWizardV2({
             </motion.div>
           </AnimatePresence>
           </div>
-        </div>
+        </TouchScrollContainer>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-gradient-to-r from-muted/20 via-transparent to-muted/20">
