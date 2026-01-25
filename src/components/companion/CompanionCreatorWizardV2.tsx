@@ -581,7 +581,7 @@ export function CompanionCreatorWizardV2({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-primary/30 shadow-2xl"
+        className="w-full max-w-3xl h-[90vh] max-h-[90vh] flex flex-col rounded-2xl border border-primary/30 shadow-2xl"
         style={{
           background: 'rgba(15, 15, 25, 0.95)',
           backdropFilter: 'blur(20px) saturate(180%)',
@@ -632,8 +632,11 @@ export function CompanionCreatorWizardV2({
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-6">
+        <div 
+          className="flex-1 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          <div className="p-6 pb-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
