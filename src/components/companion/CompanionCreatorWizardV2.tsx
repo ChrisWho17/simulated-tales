@@ -632,7 +632,7 @@ export function CompanionCreatorWizardV2({
         </div>
 
         {/* Content - Scrollable */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="p-6">
             <AnimatePresence mode="wait">
               <motion.div
@@ -1074,7 +1074,7 @@ export function CompanionCreatorWizardV2({
             </motion.div>
           </AnimatePresence>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-gradient-to-r from-muted/20 via-transparent to-muted/20">
