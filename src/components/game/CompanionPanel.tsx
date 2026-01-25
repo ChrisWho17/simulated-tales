@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
-import { CompanionCreatorWizard } from '@/components/companion';
+import { CompanionCreatorWizardV2 } from '@/components/companion';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -144,8 +144,8 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
 
   return (
     <>
-      {/* Companion Creator Wizard */}
-      <CompanionCreatorWizard
+      {/* Companion Creator Wizard V2 */}
+      <CompanionCreatorWizardV2
         isOpen={showCreatorWizard}
         onClose={() => setShowCreatorWizard(false)}
         onCompanionCreated={handleCompanionCreated}
