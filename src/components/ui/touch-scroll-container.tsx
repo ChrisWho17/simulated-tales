@@ -70,7 +70,15 @@ export function TouchScrollContainer({
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     // Don't start drag if clicking on interactive elements
     const target = e.target as HTMLElement;
-    if (target.closest('button, input, select, textarea, [role="button"], [data-radix-collection-item]')) {
+    const interactiveSelectors = [
+      'button', 'input', 'select', 'textarea', 'a', 'label',
+      '[role="button"]', '[role="checkbox"]', '[role="radio"]', '[role="switch"]',
+      '[role="tab"]', '[role="menuitem"]', '[role="option"]', '[role="listbox"]',
+      '[data-radix-collection-item]', '[data-clickable]',
+      'svg', 'path', // Icons are often SVGs
+    ].join(', ');
+    
+    if (target.closest(interactiveSelectors)) {
       return;
     }
     
