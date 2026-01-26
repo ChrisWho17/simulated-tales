@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Heart, Shield, Sword, Zap, Brain, 
   ChevronDown, ChevronUp, X, UserPlus, UserMinus,
-  MessageCircle, Star, AlertTriangle, Wand2
+  MessageCircle, Star, AlertTriangle, Wand2, Sparkles
 } from 'lucide-react';
 import { 
   companionSystem, 
@@ -24,7 +24,9 @@ interface CompanionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onCompanionSpeak?: (companion: CompanionState, dialogue: string) => void;
+  onEnterScene?: (companion: CompanionState, introNarrative: string) => void;
   genre?: string;
+  currentScene?: string;
 }
 
 const roleIcons = {
@@ -71,7 +73,7 @@ function CompanionHealthBadge({ companion, onClick }: { companion: CompanionStat
   );
 }
 
-export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fantasy' }: CompanionPanelProps) {
+export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene, genre = 'fantasy', currentScene = '' }: CompanionPanelProps) {
   const [companions, setCompanions] = useState<CompanionState[]>([]);
   const [activeCompanions, setActiveCompanions] = useState<CompanionState[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -285,7 +287,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
                   onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
                   onDismiss={() => handleDismiss(companion.id)}
                   onSpeak={onCompanionSpeak}
+                  onEnterScene={onEnterScene}
                   onOpenSheet={() => setSelectedCompanion(companion)}
+                  genre={genre}
+                  currentScene={currentScene}
                 />
               ))}
             </div>
@@ -305,10 +310,14 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
                     >
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden",
                           "bg-background border border-border"
                         )}>
-                          {companion.name.charAt(0)}
+                          {companion.portrait ? (
+                            <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
+                          ) : (
+                            companion.name.charAt(0)
+                          )}
                         </div>
                         <div>
                           <p className="font-medium text-sm">{companion.name}</p>
@@ -347,12 +356,16 @@ interface CompanionCardProps {
   onToggle: () => void;
   onDismiss: () => void;
   onSpeak?: (companion: CompanionState, dialogue: string) => void;
+  onEnterScene?: (companion: CompanionState, introNarrative: string) => void;
   onOpenSheet: () => void;
+  genre?: string;
+  currentScene?: string;
 }
 
-function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onOpenSheet }: CompanionCardProps) {
+function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onEnterScene, onOpenSheet, genre = 'fantasy', currentScene = '' }: CompanionCardProps) {
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
+  const [isGeneratingEntry, setIsGeneratingEntry] = useState(false);
 
   const handleTalk = async () => {
     if (!onSpeak) return;
@@ -391,6 +404,49 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
     }
   };
 
+  // Generate entrance narrative and inject into scene
+  const handleEnterScene = async () => {
+    if (!onEnterScene) return;
+    
+    setIsGeneratingEntry(true);
+    try {
+      const traitsDescription = companion.personality.traits.join(', ');
+      const roleDescription = companion.combatRole || 'companion';
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-companion-dialogue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companion,
+          situation: currentScene || 'The player is exploring the area',
+          playerAction: 'companion_entrance',
+          dialogueType: 'event',
+          genre,
+          customPrompt: `${companion.name} (a ${roleDescription} with traits: ${traitsDescription}) enters the current scene in a dramatic, personality-appropriate way. Describe their entrance in 2-3 sentences that match the scene context and their personality. They should say something characteristic of their personality.`
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const narrative = data.dialogue || `${companion.name} arrives, ready to join you.`;
+        onEnterScene(companion, narrative);
+        toast.success(`${companion.name} enters the scene!`);
+      } else {
+        // Fallback narrative
+        const fallbackNarrative = `${companion.name} steps forward, ready to accompany you on this journey.`;
+        onEnterScene(companion, fallbackNarrative);
+        toast.success(`${companion.name} enters the scene!`);
+      }
+    } catch (error) {
+      console.error('Failed to generate entrance:', error);
+      const fallbackNarrative = `${companion.name} arrives at your side.`;
+      onEnterScene(companion, fallbackNarrative);
+      toast.success(`${companion.name} enters the scene!`);
+    } finally {
+      setIsGeneratingEntry(false);
+    }
+  };
+
   return (
     <motion.div
       layout
@@ -409,10 +465,14 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
           {/* Avatar with mood indicator */}
           <div className="relative">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold",
+              "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold overflow-hidden",
               "bg-background border-2 border-border"
             )}>
-              {companion.name.charAt(0)}
+              {companion.portrait ? (
+                <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
+              ) : (
+                companion.name.charAt(0)
+              )}
             </div>
             <div className={cn(
               "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
@@ -508,11 +568,24 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
                   size="sm"
                   className="flex-1"
                   onClick={handleTalk}
-                  disabled={isGeneratingDialogue}
+                  disabled={isGeneratingDialogue || isGeneratingEntry}
                 >
                   <MessageCircle className="w-4 h-4 mr-1" />
                   {isGeneratingDialogue ? 'Thinking...' : 'Talk'}
                 </Button>
+                {onEnterScene && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                    onClick={handleEnterScene}
+                    disabled={isGeneratingEntry || isGeneratingDialogue}
+                    title="Have this companion dramatically enter the current scene"
+                  >
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    {isGeneratingEntry ? 'Entering...' : 'Enter Scene'}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

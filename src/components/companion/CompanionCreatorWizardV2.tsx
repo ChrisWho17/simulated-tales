@@ -8,7 +8,7 @@ import {
   User, Brain, Sword, Sparkles, Shuffle, ChevronLeft, ChevronRight,
   Check, X, Loader2, Eye, Heart, Shield, Target, Users, Wand2,
   Skull, Star, Moon, Sun, Flame, Droplet, Wind, Mountain,
-  BookOpen, Crown, Zap, Ghost, Feather, Scale, Compass
+  BookOpen, Crown, Zap, Ghost, Feather, Scale, Compass, ImageIcon, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { generateRoleBasedEquipment, companionEquipmentManager, CombatRole } fro
 import { generateVoiceProfile, buildSpeechInstructions, getQuickSpeechSummary } from '@/game/randomizedSpeechSystem';
 import { createDefaultAutonomyState, generateCompanionGoals, AutonomyState } from '@/game/companion/companionAutonomy';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { supabase } from '@/integrations/supabase/client';
 
 // ============================================================================
 // TYPES
@@ -264,6 +265,8 @@ export function CompanionCreatorWizardV2({
   const [state, setState] = useState<CompanionCreatorStateV2>(getDefaultState());
   const [isCreating, setIsCreating] = useState(false);
   const [voicePreview, setVoicePreview] = useState<string>('');
+  const [generatedPortrait, setGeneratedPortrait] = useState<string | null>(null);
+  const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
 
   const currentStepIndex = WIZARD_STEPS.findIndex(s => s.id === currentStep);
 
@@ -403,6 +406,72 @@ export function CompanionCreatorWizardV2({
     setVoicePreview(instructions);
     toast.success('Voice profile generated!');
   }, [state.traits, state.name, genre]);
+
+  // Generate portrait for companion
+  const handleGeneratePortrait = useCallback(async () => {
+    if (!state.name.trim()) {
+      toast.error('Please enter a name first');
+      return;
+    }
+
+    setIsGeneratingPortrait(true);
+    
+    try {
+      // Build description from companion details
+      const genderText = state.gender === 'male' ? 'man' : state.gender === 'female' ? 'woman' : 'person';
+      const traitsText = state.traits.slice(0, 3).join(', ');
+      const roleText = state.combatRole || 'adventurer';
+      
+      const description = `A ${state.age} ${genderText}, ${traitsText} ${roleText}. ${state.backstory || ''}`.trim();
+      
+      const npcData = {
+        id: `preview_${Date.now()}`,
+        meta: {
+          name: state.name.trim(),
+          age: parseInt(state.age.match(/\d+/)?.[0] || '30'),
+          occupation: roleText,
+          description
+        }
+      };
+
+      const prompt = [
+        `portrait, head and shoulders, facing viewer, centered composition`,
+        `${state.age} ${genderText}`,
+        description,
+        `${genre} ${roleText} aesthetic`,
+        'highly detailed face',
+        'looking at viewer'
+      ].filter(Boolean).join(', ');
+
+      console.log('[Portrait] Generating companion portrait:', prompt.substring(0, 100));
+
+      const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
+        body: { 
+          npc: npcData,
+          prompt,
+          config: { genre, era: 'medieval', emotion: 'neutral' }
+        }
+      });
+
+      if (error) {
+        console.error('[Portrait] Generation error:', error);
+        toast.error('Failed to generate portrait');
+        return;
+      }
+
+      if (data?.portraitUrl) {
+        setGeneratedPortrait(data.portraitUrl);
+        toast.success('Portrait generated!');
+      } else {
+        toast.error('No portrait received');
+      }
+    } catch (error) {
+      console.error('[Portrait] Error:', error);
+      toast.error('Portrait generation failed');
+    } finally {
+      setIsGeneratingPortrait(false);
+    }
+  }, [state.name, state.gender, state.age, state.traits, state.combatRole, state.backstory, genre]);
 
   // Create companion
   const handleCreate = useCallback(async () => {
@@ -550,6 +619,11 @@ export function CompanionCreatorWizardV2({
       };
       compressAndStore('companion-extras', companionExtras);
       
+      // Attach generated portrait if available
+      if (generatedPortrait) {
+        companion.portrait = generatedPortrait;
+      }
+      
       onCompanionCreated(companion);
       
       if (!joiningDecision.willJoin) {
@@ -568,6 +642,8 @@ export function CompanionCreatorWizardV2({
       
       setState(getDefaultState());
       setCurrentStep('identity');
+      setGeneratedPortrait(null);
+      setVoicePreview('');
       onClose();
     } catch (error) {
       console.error('Failed to create companion:', error);
@@ -1010,6 +1086,66 @@ export function CompanionCreatorWizardV2({
               {/* Preview Step */}
               {currentStep === 'preview' && (
                 <div className="space-y-6">
+                  {/* Portrait Generator */}
+                  <div className="p-4 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+                    <div className="flex items-start gap-4">
+                      {/* Portrait Display */}
+                      <div className="relative flex-shrink-0">
+                        <div className={cn(
+                          "w-24 h-24 rounded-xl border-2 border-dashed border-border overflow-hidden",
+                          "flex items-center justify-center bg-muted/50",
+                          generatedPortrait && "border-solid border-primary/50"
+                        )}>
+                          {generatedPortrait ? (
+                            <img 
+                              src={generatedPortrait} 
+                              alt={`${state.name}'s portrait`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                          )}
+                          {isGeneratingPortrait && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Portrait Controls */}
+                      <div className="flex-1">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-primary" /> Portrait
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Generate an AI portrait for your companion based on their traits and appearance.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGeneratePortrait}
+                          disabled={isGeneratingPortrait || !state.name.trim()}
+                          className="gap-1.5"
+                        >
+                          {isGeneratingPortrait ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+                            </>
+                          ) : generatedPortrait ? (
+                            <>
+                              <RefreshCw className="w-3 h-3" /> Regenerate
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="w-3 h-3" /> Generate Portrait
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="p-4 rounded-lg border border-border bg-muted/30">
                     <h3 className="text-xl font-bold mb-1">
                       {state.name || 'Unnamed Companion'}
