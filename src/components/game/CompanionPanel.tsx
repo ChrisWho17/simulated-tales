@@ -92,6 +92,15 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
   }, [isOpen]);
 
   const handleRecruit = (companionId: string) => {
+    const partyFull = partySize.current >= partySize.max;
+    
+    // If party is full, dismiss the last active member first
+    if (partyFull && activeCompanions.length > 0) {
+      const lastActive = activeCompanions[activeCompanions.length - 1];
+      companionSystem.dismissCompanion(lastActive.id, 'player');
+      toast.info(`${lastActive.name} stepped aside.`);
+    }
+    
     const result = companionSystem.recruitCompanion(companionId);
     if (result.success) {
       toast.success(result.message);
@@ -287,35 +296,40 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, genre = 'fan
             <div className="mt-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Available to Recruit</h3>
               <div className="space-y-2">
-                {companions.filter(c => c.status === 'waiting').map((companion) => (
-                  <div
-                    key={companion.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                        "bg-background border border-border"
-                      )}>
-                        {companion.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{companion.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {companion.combatRole || 'companion'}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRecruit(companion.id)}
-                      disabled={partySize.current >= partySize.max}
+                {companions.filter(c => c.status === 'waiting').map((companion) => {
+                  const partyFull = partySize.current >= partySize.max;
+                  return (
+                    <div
+                      key={companion.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
                     >
-                      <UserPlus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                          "bg-background border border-border"
+                        )}>
+                          {companion.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{companion.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {companion.combatRole || 'companion'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant={partyFull ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleRecruit(companion.id)}
+                        className={partyFull ? "bg-primary hover:bg-primary/90" : ""}
+                        title={partyFull ? "Join (will swap with last member)" : "Recruit to party"}
+                      >
+                        <UserPlus className="w-4 h-4 mr-1" />
+                        <span className="text-xs">Join</span>
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
