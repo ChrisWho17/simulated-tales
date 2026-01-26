@@ -170,12 +170,21 @@ const COMBAT_ROLES: { id: CombatRole; label: string; description: string; icon: 
 ];
 
 const VOICE_STYLES = [
-  { id: 'formal', label: 'Formal', description: 'Proper, educated speech' },
-  { id: 'casual', label: 'Casual', description: 'Relaxed, friendly tone' },
-  { id: 'gruff', label: 'Gruff', description: 'Rough, no-nonsense delivery' },
-  { id: 'eloquent', label: 'Eloquent', description: 'Poetic, expressive language' },
-  { id: 'mysterious', label: 'Mysterious', description: 'Cryptic, enigmatic words' },
-  { id: 'sardonic', label: 'Sardonic', description: 'Dry wit, cutting remarks' },
+  { id: 'formal', label: 'Formal', description: 'Proper, educated speech', icon: <Crown className="w-4 h-4" /> },
+  { id: 'casual', label: 'Casual', description: 'Relaxed, friendly tone', icon: <Users className="w-4 h-4" /> },
+  { id: 'gruff', label: 'Gruff', description: 'Rough, no-nonsense delivery', icon: <Shield className="w-4 h-4" /> },
+  { id: 'eloquent', label: 'Eloquent', description: 'Poetic, expressive language', icon: <Feather className="w-4 h-4" /> },
+  { id: 'mysterious', label: 'Mysterious', description: 'Cryptic, enigmatic words', icon: <Moon className="w-4 h-4" /> },
+  { id: 'sardonic', label: 'Sardonic', description: 'Dry wit, cutting remarks', icon: <Zap className="w-4 h-4" /> },
+  { id: 'depressed', label: 'Depressed', description: 'Melancholic, halting speech', icon: <Droplet className="w-4 h-4" /> },
+  { id: 'anxious', label: 'Anxious', description: 'Rushed, nervous energy', icon: <Wind className="w-4 h-4" /> },
+  { id: 'jaded', label: 'Jaded', description: 'Cynical, world-weary tone', icon: <Skull className="w-4 h-4" /> },
+  { id: 'performer', label: 'Theatrical', description: 'Dramatic, expressive flair', icon: <Star className="w-4 h-4" /> },
+  { id: 'stoic', label: 'Stoic', description: 'Monotone, emotionless calm', icon: <Mountain className="w-4 h-4" /> },
+  { id: 'warmhearted', label: 'Warmhearted', description: 'Caring, nurturing speech', icon: <Heart className="w-4 h-4" /> },
+  { id: 'cynical', label: 'Cynical', description: 'Cold, dismissive attitude', icon: <Ghost className="w-4 h-4" /> },
+  { id: 'optimist', label: 'Optimist', description: 'Cheerful, upbeat energy', icon: <Sun className="w-4 h-4" /> },
+  { id: 'veteran', label: 'Veteran', description: 'Grizzled, experienced wisdom', icon: <Sword className="w-4 h-4" /> },
 ];
 
 const AUTONOMY_LEVELS = [
@@ -1043,25 +1052,42 @@ export function CompanionCreatorWizardV2({
               <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Voice Style</h3>
-                    <p className="text-sm text-muted-foreground mb-3">How will this companion speak?</p>
-                    <Select 
-                      value={state.voiceStyle} 
-                      onValueChange={(v) => setState(prev => ({ ...prev, voiceStyle: v as any }))}
-                    >
-                      <SelectTrigger className="bg-background/80">
-                        <SelectValue placeholder="Select voice style" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VOICE_STYLES.map(style => (
-                          <SelectItem key={style.id} value={style.id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{style.label}</span>
-                              <span className="text-xs text-muted-foreground">{style.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <p className="text-sm text-muted-foreground mb-4">How will this companion speak? Select their primary speaking style.</p>
+                    
+                    {/* Voice Style Grid */}
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                      {VOICE_STYLES.map(style => (
+                        <Button
+                          key={style.id}
+                          variant={state.voiceStyle === style.id ? 'default' : 'outline'}
+                          className={cn(
+                            "h-auto py-3 flex-col items-center gap-1.5 text-center",
+                            state.voiceStyle === style.id && "ring-2 ring-primary/50 shadow-lg shadow-primary/20"
+                          )}
+                          onClick={() => setState(prev => ({ ...prev, voiceStyle: style.id as any }))}
+                        >
+                          <div className={cn(
+                            "p-1.5 rounded-full",
+                            state.voiceStyle === style.id ? "bg-primary-foreground/20" : "bg-muted"
+                          )}>
+                            {style.icon}
+                          </div>
+                          <span className="font-medium text-xs">{style.label}</span>
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    {/* Selected Style Description */}
+                    {state.voiceStyle && (
+                      <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <p className="text-sm">
+                          <span className="font-semibold text-primary">
+                            {VOICE_STYLES.find(s => s.id === state.voiceStyle)?.label}:
+                          </span>{' '}
+                          {VOICE_STYLES.find(s => s.id === state.voiceStyle)?.description}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div>
