@@ -610,25 +610,35 @@ export function CompanionCreatorWizardV2({
           </div>
         </div>
 
-        {/* Step Progress */}
-        <div className="flex items-center justify-center gap-1 px-4 py-3 bg-muted/20 border-b border-border/30">
-          {WIZARD_STEPS.map((step, idx) => (
-            <button
-              key={step.id}
-              onClick={() => idx <= currentStepIndex && setCurrentStep(step.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
-                currentStep === step.id
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : idx < currentStepIndex
-                  ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
-                  : "bg-muted/50 text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              {step.icon}
-              <span className="hidden md:inline">{step.label}</span>
-            </button>
-          ))}
+        {/* Step Progress - Outside scroll container, explicit pointer events */}
+        <div className="flex items-center justify-center gap-1 px-4 py-3 bg-muted/20 border-b border-border/30 relative z-10">
+          {WIZARD_STEPS.map((step, idx) => {
+            const isAccessible = idx <= currentStepIndex;
+            const isCurrent = currentStep === step.id;
+            const isCompleted = idx < currentStepIndex;
+            
+            return (
+              <button
+                key={step.id}
+                type="button"
+                disabled={!isAccessible}
+                onClick={() => isAccessible && setCurrentStep(step.id)}
+                style={{ touchAction: 'manipulation' }}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                  "touch-manipulation select-none",
+                  isCurrent
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                    : isCompleted
+                    ? "bg-primary/20 text-primary hover:bg-primary/30"
+                    : "bg-muted/50 text-muted-foreground opacity-50"
+                )}
+              >
+                {step.icon}
+                <span className="hidden md:inline">{step.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Content - Scrollable with visible slider */}
