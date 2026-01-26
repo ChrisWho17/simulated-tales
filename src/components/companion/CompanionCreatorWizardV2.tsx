@@ -10,6 +10,7 @@ import {
   Skull, Star, Moon, Sun, Flame, Droplet, Wind, Mountain,
   BookOpen, Crown, Zap, Ghost, Feather, Scale, Compass, ImageIcon, RefreshCw
 } from 'lucide-react';
+import { CompanionRelationshipSummary } from './CompanionRelationshipSummary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1226,6 +1227,15 @@ export function CompanionCreatorWizardV2({
                       </ul>
                     </div>
                   )}
+
+                  {/* Relationship Summary */}
+                  <CompanionRelationshipSummary
+                    name={state.name || 'This Companion'}
+                    traits={state.traits}
+                    worldview={state.deepPersonality.worldview}
+                    playerCharacter={character}
+                    existingCompanions={companionSystem.getActiveCompanions()}
+                  />
                 </div>
               )}
             </motion.div>
