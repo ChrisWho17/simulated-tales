@@ -120,6 +120,7 @@ export interface CompanionMemory {
 export interface CompanionState {
   id: string;
   name: string;
+  portrait?: string; // URL to generated portrait
   
   // Status
   status: CompanionStatus;

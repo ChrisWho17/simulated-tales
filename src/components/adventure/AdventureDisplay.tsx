@@ -2903,6 +2903,17 @@ export function AdventureDisplay({
         isOpen={showCompanionPanel}
         onClose={() => setShowCompanionPanel(false)}
         genre={genre}
+        currentScene={story.length > 0 ? story[story.length - 1].content.slice(0, 500) : ''}
+        onEnterScene={(companion, narrative) => {
+          // Add the companion's entrance to the story as a new narrative event
+          if (onPlayerAction) {
+            onPlayerAction(`*${companion.name} enters*`, { 
+              companionEntrance: true,
+              entranceNarrative: narrative 
+            });
+          }
+          setShowCompanionPanel(false);
+        }}
       />
       
       {/* Companion Cheat Panel - Debug controls for companions */}
