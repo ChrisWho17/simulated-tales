@@ -1,10 +1,12 @@
 // Voice Signature System - Make NPCs recognizable by dialogue alone
 // "A favorite phrase, a speech tempo, a tell"
 
-export type SpeechTempo = 'clipped' | 'measured' | 'flowing' | 'rambling' | 'staccato';
+export type SpeechTempo = 'clipped' | 'measured' | 'flowing' | 'rambling' | 'staccato' | 'halting' | 'rushed' | 'drawling';
 export type VoiceTrait = 
   | 'formal' | 'casual' | 'archaic' | 'modern' | 'technical'
-  | 'poetic' | 'blunt' | 'evasive' | 'precise' | 'vague';
+  | 'poetic' | 'blunt' | 'evasive' | 'precise' | 'vague'
+  | 'melancholic' | 'sardonic' | 'theatrical' | 'monotone' | 'nervous'
+  | 'warm' | 'cold' | 'cryptic' | 'cheerful' | 'gruff';
 
 export interface VoiceSignature {
   npcId: string;
@@ -113,6 +115,124 @@ export const VOICE_ARCHETYPES: Record<string, Partial<VoiceSignature>> = {
     usesQuestions: true,
     tell: "Eyes unfocus when speaking of fate",
     thinkingHabit: "Traces invisible symbols in air"
+  },
+  depressed: {
+    favoritePhrase: "It doesn't really matter anyway...",
+    verbalTic: "*sighs*",
+    tempo: 'halting',
+    voiceTrait: 'melancholic',
+    sentenceLength: 'short',
+    usesContractions: true,
+    usesQuestions: false,
+    tell: "Stares at nothing while speaking",
+    nervousHabit: "Picks at skin or clothing absently",
+    thinkingHabit: "Long pauses mid-sentence"
+  },
+  anxious: {
+    favoritePhrase: "What if something goes wrong?",
+    verbalTic: "I mean—",
+    tempo: 'rushed',
+    voiceTrait: 'nervous',
+    sentenceLength: 'varied',
+    usesContractions: true,
+    usesQuestions: true,
+    tell: "Eyes dart around constantly",
+    nervousHabit: "Wrings hands or fidgets with objects",
+    thinkingHabit: "Trails off into worst-case scenarios"
+  },
+  jaded: {
+    favoritePhrase: "Seen it all before...",
+    verbalTic: "Yeah, well...",
+    tempo: 'drawling',
+    voiceTrait: 'sardonic',
+    sentenceLength: 'medium',
+    usesContractions: true,
+    usesQuestions: false,
+    tell: "Eye-rolls at enthusiasm",
+    nervousHabit: "Inspects fingernails dismissively",
+    thinkingHabit: "Scoffs before answering"
+  },
+  performer: {
+    favoritePhrase: "Picture this...",
+    verbalTic: "darling",
+    tempo: 'flowing',
+    voiceTrait: 'theatrical',
+    sentenceLength: 'long',
+    usesContractions: false,
+    usesQuestions: true,
+    tell: "Makes dramatic gestures while speaking",
+    nervousHabit: "Checks reflection in any surface",
+    thinkingHabit: "Poses dramatically when considering"
+  },
+  stoic: {
+    favoritePhrase: "It is what it is.",
+    tempo: 'measured',
+    voiceTrait: 'monotone',
+    sentenceLength: 'short',
+    usesContractions: false,
+    usesQuestions: false,
+    tell: "Face remains expressionless",
+    nervousHabit: "Clenches jaw imperceptibly",
+    thinkingHabit: "Closes eyes briefly before responding"
+  },
+  warmhearted: {
+    favoritePhrase: "Oh, sweetheart...",
+    verbalTic: "dear",
+    tempo: 'flowing',
+    voiceTrait: 'warm',
+    sentenceLength: 'medium',
+    usesContractions: true,
+    usesQuestions: true,
+    tell: "Reaches out to touch arm when speaking",
+    nervousHabit: "Wraps arms around self protectively",
+    comfortGesture: "Pats shoulder or hand"
+  },
+  cynical: {
+    favoritePhrase: "Of course they did...",
+    verbalTic: "naturally",
+    tempo: 'clipped',
+    voiceTrait: 'cold',
+    sentenceLength: 'short',
+    usesContractions: true,
+    usesQuestions: false,
+    tell: "Thin-lipped smile that doesn't reach eyes",
+    nervousHabit: "Crosses arms defensively",
+    thinkingHabit: "Looks away in disgust"
+  },
+  mysterious: {
+    favoritePhrase: "All will be revealed...",
+    tempo: 'measured',
+    voiceTrait: 'cryptic',
+    sentenceLength: 'varied',
+    usesContractions: false,
+    usesQuestions: true,
+    tell: "Speaks in riddles even for simple things",
+    nervousHabit: "Disappears into shadows",
+    thinkingHabit: "Smiles knowingly before answering"
+  },
+  optimist: {
+    favoritePhrase: "It'll work out, you'll see!",
+    verbalTic: "honestly",
+    tempo: 'rushed',
+    voiceTrait: 'cheerful',
+    sentenceLength: 'medium',
+    usesContractions: true,
+    usesQuestions: true,
+    tell: "Smiles even in bad situations",
+    nervousHabit: "Laughs off concerns",
+    thinkingHabit: "Bounces on heels while considering"
+  },
+  veteran: {
+    favoritePhrase: "Back in my day...",
+    verbalTic: "kid",
+    tempo: 'drawling',
+    voiceTrait: 'gruff',
+    sentenceLength: 'medium',
+    usesContractions: true,
+    usesQuestions: false,
+    tell: "Squints at everything skeptically",
+    nervousHabit: "Rubs old scars unconsciously",
+    thinkingHabit: "Scratches stubble thoughtfully"
   }
 };
 
@@ -186,12 +306,18 @@ export function generateVoiceSignature(
     ? () => ((seed * 9301 + 49297) % 233280) / 233280
     : Math.random;
 
+  const allTempos: SpeechTempo[] = ['clipped', 'measured', 'flowing', 'rambling', 'staccato', 'halting', 'rushed', 'drawling'];
+  const allVoiceTraits: VoiceTrait[] = [
+    'formal', 'casual', 'archaic', 'modern', 'technical', 'poetic', 'blunt', 'evasive', 'precise', 'vague',
+    'melancholic', 'sardonic', 'theatrical', 'monotone', 'nervous', 'warm', 'cold', 'cryptic', 'cheerful', 'gruff'
+  ];
+
   return {
     npcId,
     favoritePhrase: base.favoritePhrase || FAVORITE_PHRASES[Math.floor(random() * FAVORITE_PHRASES.length)],
     verbalTic: base.verbalTic || (random() > 0.6 ? VERBAL_TICS[Math.floor(random() * VERBAL_TICS.length)] : undefined),
-    tempo: base.tempo || (['clipped', 'measured', 'flowing', 'rambling', 'staccato'] as SpeechTempo[])[Math.floor(random() * 5)],
-    voiceTrait: base.voiceTrait || (['formal', 'casual', 'blunt', 'poetic', 'precise'] as VoiceTrait[])[Math.floor(random() * 5)],
+    tempo: base.tempo || allTempos[Math.floor(random() * allTempos.length)],
+    voiceTrait: base.voiceTrait || allVoiceTraits[Math.floor(random() * allVoiceTraits.length)],
     sentenceLength: base.sentenceLength || (['short', 'medium', 'long', 'varied'] as const)[Math.floor(random() * 4)],
     usesContractions: base.usesContractions ?? random() > 0.4,
     usesQuestions: base.usesQuestions ?? random() > 0.5,
