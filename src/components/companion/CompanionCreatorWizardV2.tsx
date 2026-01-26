@@ -524,9 +524,16 @@ export function CompanionCreatorWizardV2({
         secretRevealed: false,
       };
       
-      // Register and equip
+      // Register companion
       companionSystem.registerCompanion(companion);
-      companionSystem.recruitCompanion(companion.id);
+      
+      // Try to recruit - handle full party gracefully
+      const recruitResult = companionSystem.recruitCompanion(companion.id);
+      if (!recruitResult.success) {
+        // Party is full - companion stays in 'waiting' status
+        companion.status = 'waiting';
+        console.log(`[Companion] Party full, ${companion.name} added as waiting`);
+      }
       
       const startingEquipment = generateRoleBasedEquipment(genre, state.combatRole, 'uncommon');
       if (startingEquipment.weapon) companionEquipmentManager.equip(companionId, startingEquipment.weapon);
@@ -545,13 +552,17 @@ export function CompanionCreatorWizardV2({
       
       onCompanionCreated(companion);
       
-      if (joiningDecision.willJoin) {
-        toast.success(`${identity.displayName} has joined!`, {
+      if (!joiningDecision.willJoin) {
+        toast.warning(`${identity.displayName} declined.`, {
+          description: joiningDecision.alternativeCondition,
+        });
+      } else if (recruitResult.success) {
+        toast.success(`${identity.displayName} has joined your party!`, {
           description: `${IMPRESSION_DESCRIPTIONS[firstImpression.level].emoji} ${IMPRESSION_DESCRIPTIONS[firstImpression.level].label}`,
         });
       } else {
-        toast.warning(`${identity.displayName} declined.`, {
-          description: joiningDecision.alternativeCondition,
+        toast.success(`${identity.displayName} created!`, {
+          description: 'Party is full. Dismiss a member to add them.',
         });
       }
       
