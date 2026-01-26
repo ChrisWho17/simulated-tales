@@ -53,6 +53,7 @@ import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { saveGame, GameSave } from '@/lib/saveSystem';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { ModifierManager, createEnvironmentContext, parseNarrativeForModifiers } from '@/game/environmentModifierIntegration';
 import { createDefaultCondition } from '@/game/environmentSystem';
 import { ModifierState, Modifier } from '@/game/buffDebuffSystem';
@@ -1344,6 +1345,29 @@ export function AdventureDisplay({
       if (cheatModePanel.checkCommand(trimmedInput)) {
         setInput('');
         return;
+      }
+      
+      // "Go home for now [name]" command to dismiss companions
+      const goHomeMatch = trimmedInput.toLowerCase().match(/^go home(?: for now)?\s+(.+)$/i);
+      if (goHomeMatch) {
+        const companionName = goHomeMatch[1].trim();
+        const activeCompanions = companionSystem.getActiveCompanions();
+        const companion = activeCompanions.find(c => 
+          c.name.toLowerCase().includes(companionName.toLowerCase())
+        );
+        
+        if (companion) {
+          companionSystem.dismissCompanion(companion.id, 'player');
+          sonnerToast.success(`${companion.name} heads home for now.`, {
+            description: 'They can rejoin from the Companions panel.',
+          });
+          setInput('');
+          return;
+        } else {
+          sonnerToast.error(`No active companion named "${companionName}" found.`);
+          setInput('');
+          return;
+        }
       }
       
       // Companion commands: /companion debug, /companion create, /party, /companions
