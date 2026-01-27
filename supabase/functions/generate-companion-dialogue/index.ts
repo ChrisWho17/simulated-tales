@@ -349,12 +349,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authenticate request
-  const auth = await authenticateRequest(req);
-  if (auth.error) {
-    return auth.error;
+  // Allow anonymous access (JWT verification disabled in config.toml)
+  // Log user if authenticated, but don't require it
+  let userId: string | null = null;
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const token = authHeader.replace('Bearer ', '');
+      const { data } = await supabase.auth.getUser(token);
+      userId = data?.user?.id || null;
+    }
+  } catch (e) {
+    console.log('[generate-companion-dialogue] Auth check failed, allowing anonymous access');
   }
-  console.log(`[generate-companion-dialogue] Authenticated user: ${auth.userId}`);
+  console.log(`[generate-companion-dialogue] User: ${userId || 'anonymous'}`);
 
   try {
     const request: CompanionDialogueRequest = await req.json();
