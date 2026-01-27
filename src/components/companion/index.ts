@@ -11,6 +11,7 @@ export { CompanionWarningToast } from './CompanionWarningToast';
 export { CompanionCheatPanel } from './CompanionCheatPanel';
 export { MoodIndicator, MoodBadge } from './MoodIndicator';
 export { CompanionGoalTracker } from './CompanionGoalTracker';
+export { CompanionGoalsPanel } from './CompanionGoalsPanel';
 export { 
   AutonomousActionDisplay, 
   AutonomousActionFeed, 
