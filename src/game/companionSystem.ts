@@ -56,6 +56,17 @@ import {
 
 import { getContextualSupport, getSupportCapabilities } from './companion/companionContextualSupport';
 
+// Extended reaction result with all metric changes
+interface ExtendedReactionResult {
+  affinityChange: number;
+  trustChange: number;
+  respectChange: number;
+  fearChange: number;
+  romanceChange: number;
+  description: string;
+  dialogue: string;
+}
+
 // ============================================================================
 // COMPANION MANAGER - Slimmed down core logic
 // ============================================================================
@@ -238,22 +249,18 @@ class CompanionSystemManager {
       if (!companion || companion.status !== 'active') continue;
       
       const reaction = this.calculateReaction(companion, actionType, context);
-      companion.affinity = Math.max(-100, Math.min(100, companion.affinity + reaction.affinityChange));
       
-      if (reaction.affinityChange > 0) {
-        companion.trust = Math.min(100, companion.trust + Math.abs(reaction.affinityChange) * 0.5);
-        companion.respect = Math.min(100, companion.respect + Math.abs(reaction.affinityChange) * 0.3);
-      } else if (reaction.affinityChange < 0) {
-        companion.trust = Math.max(0, companion.trust - Math.abs(reaction.affinityChange) * 0.5);
-        if (actionType === 'cruelty' || actionType === 'violence') {
-          companion.fear = Math.min(100, companion.fear + Math.abs(reaction.affinityChange) * 0.3);
-        }
-      }
+      // Apply all metric changes
+      companion.affinity = Math.max(-100, Math.min(100, companion.affinity + reaction.affinityChange));
+      companion.trust = Math.max(0, Math.min(100, companion.trust + reaction.trustChange));
+      companion.respect = Math.max(0, Math.min(100, companion.respect + reaction.respectChange));
+      companion.fear = Math.max(0, Math.min(100, companion.fear + reaction.fearChange));
+      companion.romanticInterest = Math.max(0, Math.min(100, companion.romanticInterest + reaction.romanceChange));
       
       this.addMemory(companionId, 'action', reaction.description, reaction.affinityChange, actionType);
       this.updateMood(companion, reaction.affinityChange);
       
-      if (Math.abs(reaction.affinityChange) >= 5) {
+      if (Math.abs(reaction.affinityChange) >= 5 || Math.abs(reaction.trustChange) >= 5) {
         companion.wantsToSpeak = true;
         companion.pendingReaction = reaction.dialogue;
       }
@@ -262,24 +269,254 @@ class CompanionSystemManager {
     }
   }
   
-  private calculateReaction(companion: CompanionState, actionType: PlayerActionType, context?: string): ReactionResult {
-    let affinityChange = REACTION_VALUES[actionType] || 0;
+  // Extended reaction result with all metric changes
+  private calculateReaction(companion: CompanionState, actionType: PlayerActionType, context?: string): ExtendedReactionResult {
+    const baseValue = REACTION_VALUES[actionType] || 0;
     const approves = companion.personality.approves.includes(actionType);
     const disapproves = companion.personality.disapproves.includes(actionType);
+    const traits = companion.personality.traits;
+    const values = companion.personality.values;
+    
+    // Calculate personality intensity multiplier (how strongly they react)
+    // Some companions are more passionate, others more stoic
+    const intensityMultiplier = this.getPersonalityIntensity(traits);
+    
+    // Base affinity change with approval/disapproval modifier
+    let affinityChange = baseValue;
     let dialogue = '';
     
     if (approves) {
-      affinityChange = Math.abs(affinityChange) * 1.5;
+      affinityChange = Math.abs(baseValue) * 1.5;
       dialogue = generateApprovalDialogue(companion, actionType);
     } else if (disapproves) {
-      affinityChange = -Math.abs(affinityChange) * 1.5;
+      affinityChange = -Math.abs(baseValue) * 1.5;
       dialogue = generateDisapprovalDialogue(companion, actionType);
     } else {
-      affinityChange = affinityChange * (0.5 + Math.random() * 0.5);
+      affinityChange = baseValue * (0.5 + Math.random() * 0.5);
       dialogue = generateNeutralDialogue(companion, actionType);
     }
     
-    return { affinityChange: Math.round(affinityChange), description: `Witnessed: ${actionType}`, dialogue };
+    // Apply intensity multiplier
+    affinityChange = Math.round(affinityChange * intensityMultiplier);
+    
+    // Calculate Trust, Respect, Fear, Romance changes based on action type and personality
+    const { trustChange, respectChange, fearChange, romanceChange } = this.calculateMetricChanges(
+      actionType, 
+      affinityChange, 
+      companion,
+      approves,
+      disapproves
+    );
+    
+    return { 
+      affinityChange, 
+      trustChange,
+      respectChange,
+      fearChange,
+      romanceChange,
+      description: `Witnessed: ${actionType}`, 
+      dialogue 
+    };
+  }
+  
+  // Get personality-based reaction intensity (0.5 = stoic, 2.0 = passionate)
+  private getPersonalityIntensity(traits: string[]): number {
+    let intensity = 1.0;
+    
+    // Passionate traits increase intensity
+    if (traits.includes('vengeful')) intensity += 0.4;
+    if (traits.includes('romantic')) intensity += 0.3;
+    if (traits.includes('loyal')) intensity += 0.2;
+    if (traits.includes('kind')) intensity += 0.2;
+    if (traits.includes('cruel')) intensity += 0.3;
+    
+    // Stoic traits decrease intensity
+    if (traits.includes('pragmatic')) intensity -= 0.2;
+    if (traits.includes('skeptical')) intensity -= 0.2;
+    if (traits.includes('cowardly')) intensity -= 0.1;
+    
+    // Clamp to reasonable range
+    return Math.max(0.5, Math.min(2.0, intensity));
+  }
+  
+  // Calculate how each action type affects Trust, Respect, Fear, and Romance
+  private calculateMetricChanges(
+    actionType: PlayerActionType,
+    affinityChange: number,
+    companion: CompanionState,
+    approves: boolean,
+    disapproves: boolean
+  ): { trustChange: number; respectChange: number; fearChange: number; romanceChange: number } {
+    const traits = companion.personality.traits;
+    const values = companion.personality.values;
+    const absAffinity = Math.abs(affinityChange);
+    
+    let trustChange = 0;
+    let respectChange = 0;
+    let fearChange = 0;
+    let romanceChange = 0;
+    
+    // === ACTION-SPECIFIC IMPACTS ===
+    switch (actionType) {
+      // ---- TRUST ACTIONS ----
+      case 'truth':
+        trustChange = 8 + (values.honor / 20); // Honorable companions value truth more
+        respectChange = 3;
+        if (traits.includes('romantic')) romanceChange = 2;
+        break;
+        
+      case 'lie':
+        trustChange = -12 - (values.honor / 15);
+        respectChange = traits.includes('pragmatic') ? 0 : -5;
+        if (traits.includes('romantic')) romanceChange = -4;
+        break;
+        
+      case 'betrayal':
+        trustChange = -40 - (traits.includes('loyal') ? 20 : 0);
+        respectChange = -20;
+        fearChange = traits.includes('cowardly') ? 15 : 5;
+        romanceChange = -30;
+        break;
+        
+      case 'loyalty':
+        trustChange = 15 + (traits.includes('loyal') ? 10 : 0);
+        respectChange = 10;
+        if (companion.romanticInterest > 30) romanceChange = 5;
+        break;
+        
+      // ---- RESPECT/COURAGE ACTIONS ----
+      case 'bravery':
+        respectChange = 12 + (traits.includes('brave') ? 8 : 0);
+        trustChange = 5;
+        if (traits.includes('romantic')) romanceChange = 4;
+        if (traits.includes('cowardly')) respectChange += 5; // Cowards admire bravery more
+        break;
+        
+      case 'cowardice':
+        respectChange = -15 - (traits.includes('brave') ? 10 : 0);
+        trustChange = -5;
+        if (traits.includes('romantic')) romanceChange = -5;
+        if (traits.includes('cowardly')) respectChange = -3; // Cowards are more understanding
+        break;
+        
+      case 'sacrifice':
+        respectChange = 20;
+        trustChange = 15;
+        romanceChange = traits.includes('romantic') ? 10 : 3;
+        fearChange = -5; // Less afraid of someone who sacrifices
+        break;
+        
+      // ---- FEAR ACTIONS ----
+      case 'violence':
+        fearChange = traits.includes('cowardly') ? 15 : 5;
+        respectChange = traits.includes('ruthless') ? 5 : -3;
+        if (traits.includes('kind')) trustChange = -5;
+        break;
+        
+      case 'cruelty':
+        fearChange = 20 + (traits.includes('cowardly') ? 15 : 0);
+        trustChange = -10;
+        respectChange = traits.includes('ruthless') ? 3 : -15;
+        romanceChange = traits.includes('cruel') ? 2 : -10;
+        break;
+        
+      case 'insult':
+        fearChange = traits.includes('cowardly') ? 5 : 0;
+        respectChange = -8;
+        trustChange = -5;
+        romanceChange = -8;
+        break;
+        
+      // ---- ROMANCE ACTIONS ----
+      case 'romance_flirt':
+        if (companion.personality.romanticInterest.enabled) {
+          romanceChange = companion.personality.romanticInterest.attractedToPlayer ? 12 : 3;
+          if (traits.includes('romantic')) romanceChange += 5;
+        } else {
+          romanceChange = -5; // Unwanted advances
+          respectChange = -3;
+        }
+        break;
+        
+      case 'romance_reject':
+        romanceChange = -20;
+        trustChange = -5;
+        if (traits.includes('romantic')) romanceChange -= 10;
+        break;
+        
+      case 'compliment':
+        romanceChange = traits.includes('romantic') ? 5 : 2;
+        respectChange = 3;
+        trustChange = 2;
+        break;
+        
+      // ---- MORAL ACTIONS ----
+      case 'charity':
+        trustChange = 5 + (traits.includes('kind') ? 5 : 0);
+        respectChange = traits.includes('greedy') ? -3 : 5;
+        if (traits.includes('romantic') && values.love > 50) romanceChange = 3;
+        break;
+        
+      case 'greed':
+        trustChange = -3;
+        respectChange = traits.includes('greedy') ? 5 : -5;
+        if (traits.includes('kind')) romanceChange = -3;
+        break;
+        
+      case 'mercy':
+        trustChange = 5;
+        respectChange = traits.includes('ruthless') ? -5 : 8;
+        if (traits.includes('forgiving')) trustChange += 5;
+        if (traits.includes('vengeful')) respectChange -= 8;
+        break;
+        
+      case 'combat_kill':
+        respectChange = traits.includes('ruthless') ? 5 : 0;
+        if (traits.includes('kind')) trustChange = -3;
+        if (traits.includes('vengeful')) respectChange += 3;
+        break;
+        
+      case 'combat_spare':
+        trustChange = 3;
+        respectChange = traits.includes('forgiving') || traits.includes('kind') ? 8 : 0;
+        if (traits.includes('ruthless')) respectChange = -5;
+        break;
+        
+      case 'theft':
+        trustChange = -8;
+        respectChange = traits.includes('greedy') ? 3 : -5;
+        if (traits.includes('honorable')) trustChange -= 10;
+        break;
+        
+      case 'diplomacy':
+        respectChange = traits.includes('pragmatic') ? 8 : 3;
+        trustChange = 3;
+        if (traits.includes('brave')) respectChange -= 2; // Some see diplomacy as weakness
+        break;
+    }
+    
+    // === APPROVAL/DISAPPROVAL AMPLIFIERS ===
+    if (approves) {
+      // Positive actions they approve of boost trust and respect more
+      trustChange = Math.round(trustChange * 1.3);
+      respectChange = Math.round(respectChange * 1.3);
+      if (romanceChange > 0) romanceChange = Math.round(romanceChange * 1.2);
+    } else if (disapproves) {
+      // Negative actions they disapprove of hit harder
+      trustChange = Math.round(trustChange * 1.4);
+      respectChange = Math.round(respectChange * 1.4);
+      if (romanceChange < 0) romanceChange = Math.round(romanceChange * 1.3);
+      if (fearChange > 0) fearChange = Math.round(fearChange * 1.2);
+    }
+    
+    // === RANDOM VARIANCE (±20%) ===
+    const variance = 0.8 + Math.random() * 0.4;
+    trustChange = Math.round(trustChange * variance);
+    respectChange = Math.round(respectChange * variance);
+    fearChange = Math.round(fearChange * variance);
+    romanceChange = Math.round(romanceChange * variance);
+    
+    return { trustChange, respectChange, fearChange, romanceChange };
   }
 
   private updateMood(companion: CompanionState, affinityChange: number): void {
