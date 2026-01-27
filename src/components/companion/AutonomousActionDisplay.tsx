@@ -305,9 +305,12 @@ export function AutonomousActionDisplay({
                       variant="outline"
                       className={cn(
                         "gap-1 transition-all",
-                        RESPONSE_TYPE_STYLES[option.type]
+                        RESPONSE_TYPE_STYLES[option.type],
+                        // Highlight story-continuing responses differently
+                        option.continuesNarrative && "ring-1 ring-primary/50"
                       )}
                       onClick={() => handleResponse(option)}
+                      title={option.continuesNarrative ? "This choice will continue the story" : "This is a personal moment"}
                     >
                       {option.label}
                       {option.affinityChange !== 0 && (
@@ -317,6 +320,9 @@ export function AutonomousActionDisplay({
                         )}>
                           ({option.affinityChange > 0 ? '+' : ''}{option.affinityChange})
                         </span>
+                      )}
+                      {option.continuesNarrative && (
+                        <ArrowRight className="w-3 h-3 ml-1 opacity-60" />
                       )}
                     </Button>
                   ))}
@@ -489,11 +495,18 @@ export function NarrativeInterruption({
               variant="outline"
               className={cn(
                 "w-full justify-between gap-2",
-                RESPONSE_TYPE_STYLES[option.type]
+                RESPONSE_TYPE_STYLES[option.type],
+                option.continuesNarrative && "ring-1 ring-primary/50"
               )}
               onClick={() => onPlayerResponse(option)}
+              title={option.continuesNarrative ? "This choice will continue the story" : "This is a personal moment"}
             >
-              <span>{option.label}</span>
+              <div className="flex items-center gap-2">
+                <span>{option.label}</span>
+                {option.continuesNarrative && (
+                  <ArrowRight className="w-3 h-3 opacity-60" />
+                )}
+              </div>
               <div className="flex items-center gap-2 text-xs">
                 {option.affinityChange !== 0 && (
                   <span className={option.affinityChange > 0 ? "text-green-400" : "text-red-400"}>

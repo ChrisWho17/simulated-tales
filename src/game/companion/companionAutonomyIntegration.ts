@@ -163,8 +163,8 @@ class CompanionAutonomyManager {
         continue;
       }
       
-      // Rate limit processing (at least 5 seconds between checks)
-      if (Date.now() - data.lastProcessed < 5000) continue;
+      // Rate limit processing (at least 15 seconds between checks - was 5s, too frequent)
+      if (Date.now() - data.lastProcessed < 15000) continue;
       data.lastProcessed = Date.now();
       
       // Evaluate potential autonomous actions
@@ -365,14 +365,14 @@ import { useState, useCallback, useEffect } from 'react';
 export function useCompanionAutonomy() {
   const [pendingActions, setPendingActions] = useState<Map<string, AutonomousAction[]>>(new Map());
   
-  // Process autonomy periodically
+  // Process autonomy periodically (30 seconds to reduce spam)
   useEffect(() => {
     const interval = setInterval(() => {
       const actions = companionAutonomyManager.processAutonomousActions();
       if (actions.size > 0) {
         setPendingActions(new Map(actions));
       }
-    }, 10000); // Check every 10 seconds
+    }, 30000); // Check every 30 seconds (was 10s - too frequent)
     
     return () => clearInterval(interval);
   }, []);
