@@ -797,15 +797,63 @@ export function buildSpeechInstructions(
     lines.push('');
   }
   
-  // Current mood modifications
+  // Current mood modifications with enhanced details
   if (currentMood && MOOD_SPEECH_MODIFIERS[currentMood]) {
     const moodMod = MOOD_SPEECH_MODIFIERS[currentMood];
     lines.push('### CURRENT MOOD EFFECTS');
-    lines.push(`**Current mood:** ${currentMood}`);
+    lines.push(`**Current mood:** ${currentMood.toUpperCase()}`);
     lines.push(`**Voice quality:** ${moodMod.volumeHint}`);
     lines.push(`**Speaking pace:** ${moodMod.paceHint}`);
     if (moodMod.rhythmShift) lines.push(`**Rhythm shifts to:** ${moodMod.rhythmShift}`);
     if (moodMod.expressionShift) lines.push(`**Expression becomes:** ${moodMod.expressionShift}`);
+    lines.push('');
+    
+    // Enhanced mood-specific verbal patterns
+    lines.push('### MOOD-SPECIFIC BEHAVIORS');
+    switch (currentMood) {
+      case 'angry':
+        lines.push('- Voice drops to dangerous quiet or rises to controlled fury');
+        lines.push('- Uses shorter, more forceful sentences');
+        lines.push('- May curse or use profanity uncharacteristically');
+        lines.push('- Physical tells: clenched jaw, tense posture, narrowed eyes');
+        break;
+      case 'fearful':
+        lines.push('- Voice becomes hushed, trembling, breathless');
+        lines.push('- Sentences fragment, thoughts race ahead of words');
+        lines.push('- Seeks reassurance, asks many questions');
+        lines.push('- Physical tells: darting eyes, hunched shoulders, flinching');
+        break;
+      case 'joyful':
+        lines.push('- Voice brightens, words come quickly with enthusiasm');
+        lines.push('- Laughs more freely, shares positive observations');
+        lines.push('- More expressive, uses exclamations naturally');
+        lines.push('- Physical tells: genuine smiles, open posture, animated gestures');
+        break;
+      case 'sad':
+        lines.push('- Voice becomes quiet, words come slowly with effort');
+        lines.push('- Long pauses, trailing off, incomplete thoughts');
+        lines.push('- May avoid eye contact, becomes withdrawn');
+        lines.push('- Physical tells: slumped shoulders, distant gaze, heavy sighs');
+        break;
+      case 'romantic':
+        lines.push('- Voice softens, becomes more intimate');
+        lines.push('- Uses names more frequently, lingers on words');
+        lines.push('- More vulnerable, shares personal thoughts');
+        lines.push('- Physical tells: holding gaze, leaning closer, nervous gestures');
+        break;
+      case 'betrayed':
+        lines.push('- Voice becomes strained, barely controlled hurt');
+        lines.push('- Cold formality replaces warmth, walls go up');
+        lines.push('- References the betrayal directly or obliquely');
+        lines.push('- Physical tells: refusing to look at the person, stepping back, bitter laughs');
+        break;
+      case 'disgusted':
+        lines.push('- Voice becomes cold, clipped, dismissive');
+        lines.push('- Minimal engagement, monosyllabic responses');
+        lines.push('- May refuse to continue conversation');
+        lines.push('- Physical tells: nose wrinkling, stepping away, looking away in revulsion');
+        break;
+    }
     lines.push('');
   }
   
@@ -816,6 +864,7 @@ export function buildSpeechInstructions(
   lines.push('- Show behavioral tells through action beats');
   lines.push('- Every trait influences how they express themselves');
   lines.push('- Mood temporarily modifies their baseline voice');
+  lines.push('- CRITICAL: Maintain voice consistency even when mood changes');
   
   return lines.join('\n');
 }

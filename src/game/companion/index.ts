@@ -17,6 +17,12 @@ export * from './companionMemory';
 // Contextual support system
 export * from './companionContextualSupport';
 
+// Emotional status and mood-based voice modifiers
+export * from './emotionalStatusSystem';
+
+// Backstory generation
+export * from './backstoryGenerator';
+
 // Core manager (import the singleton from the main file)
 // Re-exported from companionSystem.ts for backwards compatibility
 

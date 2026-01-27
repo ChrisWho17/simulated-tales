@@ -30,6 +30,7 @@ import { deriveBeliefSystem, calculateFirstImpression, evaluateJoiningDecision, 
 import { generateRoleBasedEquipment, companionEquipmentManager, CombatRole } from '@/game/companionEquipmentSystem';
 import { generateVoiceProfile, buildSpeechInstructions, getQuickSpeechSummary } from '@/game/randomizedSpeechSystem';
 import { createDefaultAutonomyState, generateCompanionGoals, AutonomyState } from '@/game/companion/companionAutonomy';
+import { generateBackstory, BackstoryInput } from '@/game/companion/backstoryGenerator';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -417,7 +418,7 @@ export function CompanionCreatorWizardV2({
     toast.success('Voice profile generated!');
   }, [state.traits, state.name, genre]);
 
-  // Generate portrait for companion
+  // Generate portrait for companion with enhanced details
   const handleGeneratePortrait = useCallback(async () => {
     if (!state.name.trim()) {
       toast.error('Please enter a name first');
@@ -427,39 +428,90 @@ export function CompanionCreatorWizardV2({
     setIsGeneratingPortrait(true);
     
     try {
-      // Build description from companion details
+      // Build comprehensive description from all companion details
       const genderText = state.gender === 'male' ? 'man' : state.gender === 'female' ? 'woman' : 'person';
       const traitsText = state.traits.slice(0, 3).join(', ');
       const roleText = state.combatRole || 'adventurer';
       
-      const description = `A ${state.age} ${genderText}, ${traitsText} ${roleText}. ${state.backstory || ''}`.trim();
+      // Build emotional description from personality
+      const emotionalDesc = [];
+      if (state.deepPersonality.fears.includes('abandonment')) emotionalDesc.push('haunted eyes');
+      if (state.deepPersonality.fears.includes('death')) emotionalDesc.push('wary expression');
+      if (state.deepPersonality.fears.includes('weakness')) emotionalDesc.push('determined gaze');
+      if (state.deepPersonality.desires.includes('power')) emotionalDesc.push('commanding presence');
+      if (state.deepPersonality.desires.includes('love')) emotionalDesc.push('warm expression');
+      if (state.deepPersonality.desires.includes('revenge')) emotionalDesc.push('cold intensity');
+      if (state.deepPersonality.desires.includes('redemption')) emotionalDesc.push('weary but hopeful');
+      if (state.traits.includes('kind')) emotionalDesc.push('gentle demeanor');
+      if (state.traits.includes('ruthless')) emotionalDesc.push('harsh features');
+      if (state.traits.includes('brave')) emotionalDesc.push('confident stance');
+      if (state.traits.includes('cowardly')) emotionalDesc.push('nervous posture');
+      
+      // Build voice-influenced expression
+      const voiceExpressions: Record<string, string> = {
+        formal: 'dignified bearing',
+        casual: 'relaxed posture',
+        gruff: 'weathered features',
+        eloquent: 'refined appearance',
+        mysterious: 'enigmatic expression',
+        sardonic: 'knowing smirk',
+        depressed: 'melancholic countenance',
+        anxious: 'tense shoulders',
+        jaded: 'world-weary eyes',
+        performer: 'theatrical presence',
+        stoic: 'impassive expression',
+        warmhearted: 'kind smile',
+        cynical: 'skeptical brow',
+        optimist: 'bright eyes',
+        veteran: 'scarred experience',
+      };
+      
+      const voiceInfluence = voiceExpressions[state.voiceStyle] || '';
+      
+      const description = [
+        `A ${state.age} ${genderText}`,
+        traitsText ? `${traitsText} ${roleText}` : roleText,
+        emotionalDesc.length > 0 ? emotionalDesc.slice(0, 2).join(', ') : '',
+        voiceInfluence,
+        state.backstory ? state.backstory.split('.')[0] : '',
+      ].filter(Boolean).join(', ').trim();
+      
+      // Determine emotion based on personality
+      let emotion = 'neutral';
+      if (state.traits.includes('kind') || state.deepPersonality.desires.includes('love')) emotion = 'friendly';
+      if (state.traits.includes('ruthless') || state.deepPersonality.desires.includes('revenge')) emotion = 'cold';
+      if (state.traits.includes('brave') || state.traits.includes('ambitious')) emotion = 'determined';
+      if (state.deepPersonality.fears.length > 2) emotion = 'nervous';
       
       const npcData = {
-        id: `preview_${Date.now()}`,
+        id: `companion_${Date.now()}`,
         meta: {
           name: state.name.trim(),
+          gender: state.gender,
           age: parseInt(state.age.match(/\d+/)?.[0] || '30'),
           occupation: roleText,
-          description
+          description,
+          emotion,
         }
       };
 
       const prompt = [
-        `portrait, head and shoulders, facing viewer, centered composition`,
+        `portrait, three-quarter length, facing viewer, centered composition`,
         `${state.age} ${genderText}`,
         description,
         `${genre} ${roleText} aesthetic`,
         'highly detailed face',
-        'looking at viewer'
+        'looking at viewer',
+        voiceInfluence,
       ].filter(Boolean).join(', ');
 
-      console.log('[Portrait] Generating companion portrait:', prompt.substring(0, 100));
+      console.log('[Portrait] Generating enhanced companion portrait:', prompt.substring(0, 150));
 
       const { data, error } = await supabase.functions.invoke('generate-npc-portrait', {
         body: { 
           npc: npcData,
           prompt,
-          config: { genre, era: 'medieval', emotion: 'neutral' }
+          config: { genre, era: 'medieval', emotion }
         }
       });
 
@@ -481,7 +533,7 @@ export function CompanionCreatorWizardV2({
     } finally {
       setIsGeneratingPortrait(false);
     }
-  }, [state.name, state.gender, state.age, state.traits, state.combatRole, state.backstory, genre]);
+  }, [state.name, state.gender, state.age, state.traits, state.combatRole, state.backstory, state.voiceStyle, state.deepPersonality, genre]);
 
   // Create companion
   const handleCreate = useCallback(async () => {
@@ -814,13 +866,45 @@ export function CompanionCreatorWizardV2({
                   </div>
 
                   <div>
-                    <Label>Backstory <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Backstory <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const backstoryInput: BackstoryInput = {
+                            name: state.name || 'Unknown',
+                            gender: state.gender,
+                            age: state.age,
+                            traits: state.traits,
+                            fears: state.deepPersonality.fears,
+                            desires: state.deepPersonality.desires,
+                            hiddenDepths: state.deepPersonality.hiddenDepths,
+                            combatRole: state.combatRole,
+                            voiceStyle: state.voiceStyle,
+                            worldview: state.deepPersonality.worldview,
+                            genre,
+                          };
+                          const generated = generateBackstory(backstoryInput);
+                          setState(prev => ({ ...prev, backstory: generated.fullBackstory }));
+                          toast.success('Backstory generated!');
+                        }}
+                        className="gap-1 text-xs h-7 px-2 hover:bg-primary/20"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                        Generate
+                      </Button>
+                    </div>
                     <Textarea
                       value={state.backstory}
                       onChange={(e) => setState(prev => ({ ...prev, backstory: e.target.value }))}
-                      placeholder="A brief history of this companion..."
-                      className="mt-1 min-h-[100px]"
+                      placeholder="A brief history of this companion... or click Generate for a random backstory based on their traits."
+                      className="mt-1 min-h-[120px]"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Generate creates a unique backstory based on traits, fears, and desires selected in later steps.
+                    </p>
                   </div>
                 </div>
               )}
