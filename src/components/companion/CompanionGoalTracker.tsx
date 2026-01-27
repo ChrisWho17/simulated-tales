@@ -2,12 +2,13 @@
 // COMPANION GOAL TRACKER - Shows active companion goals with help/block options
 // ============================================================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target, Heart, Sword, BookOpen, Crown, Coins, Users, Eye,
-  HandHelping, Ban, ChevronRight, Lock, CheckCircle, AlertTriangle
+  HandHelping, Ban, ChevronRight, Lock, CheckCircle, AlertTriangle, ExternalLink
 } from 'lucide-react';
+import { CompanionGoalsPanel } from './CompanionGoalsPanel';
 import { CompanionState } from '@/game/companion/companionTypes';
 import { CompanionGoal } from '@/game/companion/companionAutonomy';
 import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
@@ -246,6 +247,8 @@ function GoalItem({
 
 // Main Goal Tracker Component
 export function CompanionGoalTracker({ companion, compact, onGoalAction }: CompanionGoalTrackerProps) {
+  const [showFullPanel, setShowFullPanel] = useState(false);
+  
   // Get goals from autonomy state
   const goals = useMemo(() => {
     const autonomyState = companionAutonomyManager.getAutonomyState(companion.id);
@@ -257,10 +260,23 @@ export function CompanionGoalTracker({ companion, compact, onGoalAction }: Compa
     if (compact) return null;
     
     return (
-      <div className="text-center py-4 text-muted-foreground">
-        <Target className="w-6 h-6 mx-auto mb-2 opacity-30" />
-        <p className="text-xs">No active goals</p>
-      </div>
+      <>
+        <div 
+          className="text-center py-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+          onClick={() => setShowFullPanel(true)}
+        >
+          <Target className="w-6 h-6 mx-auto mb-2 opacity-30" />
+          <p className="text-xs">No active goals</p>
+          <p className="text-[10px] mt-1 opacity-60">Click to view motivations</p>
+        </div>
+        
+        <CompanionGoalsPanel
+          companion={companion}
+          isOpen={showFullPanel}
+          onClose={() => setShowFullPanel(false)}
+          onGoalAction={onGoalAction}
+        />
+      </>
     );
   }
   
@@ -270,55 +286,85 @@ export function CompanionGoalTracker({ companion, compact, onGoalAction }: Compa
   if (compact) {
     // Show only top 2 goals in compact mode
     return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Target className="w-3 h-3" />
-          <span>Active Goals ({goals.length})</span>
+      <>
+        <div 
+          className="space-y-2 cursor-pointer group"
+          onClick={() => setShowFullPanel(true)}
+        >
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Target className="w-3 h-3" />
+              <span>Active Goals ({goals.length})</span>
+            </div>
+            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="space-y-1.5">
+            {sortedGoals.slice(0, 2).map((goal) => (
+              <GoalItem 
+                key={goal.id} 
+                goal={goal} 
+                companionId={companion.id}
+                compact 
+                onAction={onGoalAction}
+              />
+            ))}
+            {goals.length > 2 && (
+              <p className="text-xs text-muted-foreground text-center group-hover:text-primary transition-colors">
+                +{goals.length - 2} more goals • Click to expand
+              </p>
+            )}
+          </div>
         </div>
-        <div className="space-y-1.5">
-          {sortedGoals.slice(0, 2).map((goal) => (
-            <GoalItem 
-              key={goal.id} 
-              goal={goal} 
-              companionId={companion.id}
-              compact 
-              onAction={onGoalAction}
-            />
-          ))}
-          {goals.length > 2 && (
-            <p className="text-xs text-muted-foreground text-center">
-              +{goals.length - 2} more goals
-            </p>
-          )}
-        </div>
-      </div>
+        
+        <CompanionGoalsPanel
+          companion={companion}
+          isOpen={showFullPanel}
+          onClose={() => setShowFullPanel(false)}
+          onGoalAction={onGoalAction}
+        />
+      </>
     );
   }
   
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">Personal Goals</span>
+    <>
+      <div className="space-y-3">
+        <div 
+          className="flex items-center justify-between cursor-pointer group"
+          onClick={() => setShowFullPanel(true)}
+        >
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Personal Goals</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {goals.length} active
+            </span>
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {goals.length} active
-        </span>
+        
+        <AnimatePresence mode="popLayout">
+          <div className="space-y-2">
+            {sortedGoals.map((goal) => (
+              <GoalItem 
+                key={goal.id} 
+                goal={goal} 
+                companionId={companion.id}
+                onAction={onGoalAction}
+              />
+            ))}
+          </div>
+        </AnimatePresence>
       </div>
       
-      <AnimatePresence mode="popLayout">
-        <div className="space-y-2">
-          {sortedGoals.map((goal) => (
-            <GoalItem 
-              key={goal.id} 
-              goal={goal} 
-              companionId={companion.id}
-              onAction={onGoalAction}
-            />
-          ))}
-        </div>
-      </AnimatePresence>
-    </div>
+      <CompanionGoalsPanel
+        companion={companion}
+        isOpen={showFullPanel}
+        onClose={() => setShowFullPanel(false)}
+        onGoalAction={onGoalAction}
+      />
+    </>
   );
 }
