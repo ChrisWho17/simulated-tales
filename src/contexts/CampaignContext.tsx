@@ -264,6 +264,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       importPersonalityMap(campaign.npcPersonalityMap as any);
     }
     
+    // CRITICAL: Set active campaign for companion isolation
+    companionSystem.setActiveCampaign(campaign.id);
+    
     // CRITICAL: Restore companion state from campaign
     if (campaign.companionState) {
       console.log('[Campaign] Restoring companion state with', 

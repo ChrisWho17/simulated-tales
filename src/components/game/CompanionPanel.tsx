@@ -21,7 +21,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
-import { CompanionCreatorWizardV2, CompanionJournal, GrievanceResolutionDialog, MoodIndicator, CompanionGoalTracker } from '@/components/companion';
+import { 
+  CompanionCreatorWizardV2, 
+  CompanionJournal, 
+  GrievanceResolutionDialog, 
+  MoodIndicator, 
+  CompanionGoalTracker,
+  CompanionDetailSplash 
+} from '@/components/companion';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -274,10 +281,12 @@ function RecentReactions({
 export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene, genre = 'fantasy', currentScene = '' }: CompanionPanelProps) {
   const [companions, setCompanions] = useState<CompanionState[]>([]);
   const [activeCompanions, setActiveCompanions] = useState<CompanionState[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRecruitMenu, setShowRecruitMenu] = useState(false);
   const [selectedCompanion, setSelectedCompanion] = useState<CompanionState | null>(null);
   const [showCreatorWizard, setShowCreatorWizard] = useState(false);
+  
+  // Detail splash state - replaces inline expansion
+  const [detailCompanion, setDetailCompanion] = useState<CompanionState | null>(null);
   
   // Grievance resolution state
   const [grievanceDialogOpen, setGrievanceDialogOpen] = useState(false);
@@ -371,6 +380,35 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
         onCompanionCreated={handleCompanionCreated}
         genre={genre}
       />
+
+      {/* Companion Detail Splash - Full-screen detail view */}
+      {detailCompanion && (
+        <CompanionDetailSplash
+          companion={detailCompanion}
+          isOpen={!!detailCompanion}
+          onClose={() => {
+            setDetailCompanion(null);
+            refreshCompanions();
+          }}
+          onDismiss={() => {
+            handleDismiss(detailCompanion.id);
+            setDetailCompanion(null);
+          }}
+          onSpeak={onCompanionSpeak}
+          onEnterScene={onEnterScene}
+          onOpenSheet={() => setSelectedCompanion(detailCompanion)}
+          onOpenJournal={() => {
+            setJournalCompanion(detailCompanion);
+            setJournalOpen(true);
+          }}
+          onResolveGrievance={(grievance) => {
+            setGrievanceToResolve({ companion: detailCompanion, grievance });
+            setGrievanceDialogOpen(true);
+          }}
+          genre={genre}
+          currentScene={currentScene}
+        />
+      )}
 
       {/* Character Sheet Modal */}
       {selectedCompanion && (
@@ -516,25 +554,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
           ) : (
             <div className="space-y-3">
               {activeCompanions.map((companion) => (
-                <CompanionCard
+                <CompanionCardSimple
                   key={companion.id}
                   companion={companion}
-                  isExpanded={expandedId === companion.id}
-                  onToggle={() => setExpandedId(expandedId === companion.id ? null : companion.id)}
-                  onDismiss={() => handleDismiss(companion.id)}
-                  onSpeak={onCompanionSpeak}
-                  onEnterScene={onEnterScene}
-                  onOpenSheet={() => setSelectedCompanion(companion)}
-                  onOpenJournal={() => {
-                    setJournalCompanion(companion);
-                    setJournalOpen(true);
-                  }}
-                  onResolveGrievance={(grievance) => {
-                    setGrievanceToResolve({ companion, grievance });
-                    setGrievanceDialogOpen(true);
-                  }}
-                  genre={genre}
-                  currentScene={currentScene}
+                  onClick={() => setDetailCompanion(companion)}
                 />
               ))}
             </div>
@@ -550,9 +573,12 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
                   return (
                     <div
                       key={companion.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30 hover:bg-muted/30 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setDetailCompanion(companion)}
+                        className="flex items-center gap-3 text-left flex-1 min-w-0"
+                      >
                         <div className="relative">
                           <div className={cn(
                             "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden",
@@ -570,18 +596,18 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
                             className="absolute -bottom-0.5 -right-0.5" 
                           />
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{companion.name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{companion.name}</p>
                           <p className="text-xs text-muted-foreground capitalize">
                             {companion.combatRole || 'companion'}
                           </p>
                         </div>
-                      </div>
+                      </button>
                       <Button
                         variant={partyFull ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleRecruit(companion.id)}
-                        className={partyFull ? "bg-primary hover:bg-primary/90" : ""}
+                        className={cn("shrink-0", partyFull ? "bg-primary hover:bg-primary/90" : "")}
                         title={partyFull ? "Join (will swap with last member)" : "Recruit to party"}
                       >
                         <UserPlus className="w-4 h-4 mr-1" />
@@ -601,6 +627,95 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
   );
 }
 
+// Simple card that opens detail splash on click
+function CompanionCardSimple({ companion, onClick }: { companion: CompanionState; onClick: () => void }) {
+  const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
+  
+  // Calculate relationship health
+  const relationshipHealth = useMemo(() => {
+    const avg = (companion.trust + companion.respect + Math.max(0, companion.affinity + 100) / 2) / 3;
+    if (avg >= 70) return { color: 'border-emerald-500/50', glow: 'shadow-emerald-500/20' };
+    if (avg >= 40) return { color: 'border-primary/50', glow: 'shadow-primary/20' };
+    if (avg >= 20) return { color: 'border-amber-500/50', glow: 'shadow-amber-500/20' };
+    return { color: 'border-red-500/50', glow: 'shadow-red-500/20' };
+  }, [companion.trust, companion.respect, companion.affinity]);
+  
+  // Get grievance count
+  const grievanceCount = useMemo(() => {
+    return companionAutonomyManager.getUnresolvedGrievances(companion.id).length;
+  }, [companion.id]);
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-xl border-2 transition-all duration-300 p-3",
+        "bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm",
+        "hover:shadow-lg cursor-pointer text-left",
+        relationshipHealth.color,
+        `hover:${relationshipHealth.glow}`
+      )}
+    >
+      <div className="flex items-center gap-3">
+        {/* Avatar with mood indicator */}
+        <div className="relative">
+          <div className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold overflow-hidden",
+            "bg-background border-2",
+            relationshipHealth.color
+          )}>
+            {companion.portrait ? (
+              <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xl font-display">{companion.name.charAt(0)}</span>
+            )}
+          </div>
+          <MoodIndicator 
+            mood={companion.mood} 
+            moodIntensity={companion.moodIntensity}
+            size="sm"
+            className="absolute -bottom-0.5 -right-0.5"
+          />
+          {grievanceCount > 0 && (
+            <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-red-500 border-2 border-card flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white">{grievanceCount}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-display font-medium text-base truncate">{companion.name}</span>
+            <RoleIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+            {companion.romanticInterest > 50 && (
+              <Heart className="w-3 h-3 text-pink-400 fill-pink-400/50 shrink-0" />
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className={cn(
+              "capitalize px-1.5 py-0.5 rounded",
+              moodColors[companion.mood]?.replace('bg-', 'bg-opacity-20 text-').replace('-400', '-300').replace('-500', '-300')
+            )}>{companion.mood}</span>
+            <span className="text-muted-foreground/50">|</span>
+            <span className={cn(
+              companion.affinity > 30 && "text-emerald-400",
+              companion.affinity < -30 && "text-red-400"
+            )}>
+              {companion.affinity > 0 ? '+' : ''}{companion.affinity}
+            </span>
+          </div>
+        </div>
+
+        {/* Chevron hint */}
+        <ChevronDown className="w-5 h-5 text-muted-foreground rotate-[-90deg]" />
+      </div>
+    </motion.button>
+  );
+}
+
+// OLD CompanionCard kept for reference - no longer used
 interface CompanionCardProps {
   companion: CompanionState;
   isExpanded: boolean;

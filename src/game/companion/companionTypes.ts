@@ -121,6 +121,7 @@ export interface CompanionState {
   id: string;
   name: string;
   portrait?: string; // URL to generated portrait
+  campaignId?: string; // Campaign this companion belongs to (for isolation)
   
   // Status
   status: CompanionStatus;
