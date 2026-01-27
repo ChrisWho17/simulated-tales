@@ -29,9 +29,22 @@ interface CompanionJournalProps {
 // JOURNAL ENTRY TYPES
 // ============================================================================
 
+// Memory categories for filtering
+type MemoryCategory = 'all' | 'combat' | 'emotional' | 'conflict' | 'milestone' | 'romance';
+
+const MEMORY_CATEGORIES: { id: MemoryCategory; label: string; icon: React.ElementType; color: string }[] = [
+  { id: 'all', label: 'All', icon: Clock, color: 'text-muted-foreground' },
+  { id: 'combat', label: 'Combat', icon: Swords, color: 'text-amber-400' },
+  { id: 'emotional', label: 'Bonds', icon: HandHeart, color: 'text-emerald-400' },
+  { id: 'conflict', label: 'Conflicts', icon: Flame, color: 'text-red-400' },
+  { id: 'milestone', label: 'Milestones', icon: Trophy, color: 'text-primary' },
+  { id: 'romance', label: 'Romance', icon: Heart, color: 'text-pink-400' },
+];
+
 interface JournalEntry {
   id: string;
   type: 'milestone' | 'positive' | 'negative' | 'secret' | 'quirk' | 'confession' | 'bonding';
+  category: MemoryCategory;
   title: string;
   description: string;
   timestamp: number;
@@ -78,7 +91,43 @@ function getMemoryColor(memory: CompanionMemory): string {
 // JOURNAL SECTIONS
 // ============================================================================
 
+// Helper to determine memory category
+function getMemoryCategory(memory: CompanionMemory): MemoryCategory {
+  const desc = memory.description.toLowerCase();
+  
+  // Combat-related keywords
+  if (desc.includes('combat') || desc.includes('battle') || desc.includes('fight') || 
+      desc.includes('killed') || desc.includes('defeated') || desc.includes('victory') ||
+      desc.includes('attack') || desc.includes('weapon') || memory.type === 'action' && desc.includes('enemy')) {
+    return 'combat';
+  }
+  
+  // Romance keywords
+  if (desc.includes('love') || desc.includes('romance') || desc.includes('kiss') ||
+      desc.includes('affection') || desc.includes('intimate') || desc.includes('flirt')) {
+    return 'romance';
+  }
+  
+  // Conflict/negative
+  if (memory.affinityChange <= -5 || memory.type === 'betrayal' ||
+      desc.includes('betray') || desc.includes('angry') || desc.includes('conflict') ||
+      desc.includes('argument') || desc.includes('disagree')) {
+    return 'conflict';
+  }
+  
+  // Emotional bonds/positive
+  if (memory.affinityChange >= 5 || memory.type === 'gift' ||
+      desc.includes('gift') || desc.includes('helped') || desc.includes('saved') ||
+      desc.includes('bond') || desc.includes('trust') || desc.includes('share')) {
+    return 'emotional';
+  }
+  
+  return 'milestone';
+}
+
 function RelationshipTimeline({ companion }: { companion: CompanionState }) {
+  const [activeFilter, setActiveFilter] = useState<MemoryCategory>('all');
+  
   const timeline = useMemo(() => {
     const entries: JournalEntry[] = [];
     
@@ -86,6 +135,7 @@ function RelationshipTimeline({ companion }: { companion: CompanionState }) {
     entries.push({
       id: 'joined',
       type: 'milestone',
+      category: 'milestone',
       title: 'First Meeting',
       description: `${companion.name} joined your party.`,
       timestamp: companion.joinedAt,
@@ -97,17 +147,26 @@ function RelationshipTimeline({ companion }: { companion: CompanionState }) {
     companion.memories
       .filter(m => !m.forgotten && Math.abs(m.affinityChange) >= 5)
       .forEach((memory, index) => {
+        const category = getMemoryCategory(memory);
+        const isCombat = category === 'combat';
+        const isRomance = category === 'romance';
+        
         entries.push({
           id: `memory-${index}`,
           type: memory.affinityChange > 0 ? 'positive' : 'negative',
+          category,
           title: memory.type === 'betrayal' ? 'Betrayal' : 
                  memory.type === 'gift' ? 'Gift Received' :
+                 isCombat ? (memory.affinityChange > 0 ? 'Combat Victory' : 'Combat Failure') :
+                 isRomance ? 'Romantic Moment' :
                  memory.affinityChange > 0 ? 'Positive Moment' : 'Conflict',
           description: memory.description,
           timestamp: memory.timestamp,
           affinityChange: memory.affinityChange,
-          icon: getMemoryIcon(memory),
-          color: getMemoryColor(memory),
+          icon: isCombat ? Swords : isRomance ? Heart : getMemoryIcon(memory),
+          color: isCombat ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' :
+                 isRomance ? 'text-pink-400 bg-pink-500/10 border-pink-500/30' :
+                 getMemoryColor(memory),
         });
       });
     
@@ -116,6 +175,7 @@ function RelationshipTimeline({ companion }: { companion: CompanionState }) {
       entries.push({
         id: 'confession',
         type: 'confession',
+        category: 'romance',
         title: 'Romantic Confession',
         description: `${companion.name} confessed their romantic feelings.`,
         timestamp: companion.lastSpoke || Date.now(),
@@ -128,6 +188,27 @@ function RelationshipTimeline({ companion }: { companion: CompanionState }) {
     return entries.sort((a, b) => b.timestamp - a.timestamp);
   }, [companion]);
   
+  const filteredTimeline = useMemo(() => {
+    if (activeFilter === 'all') return timeline;
+    return timeline.filter(entry => entry.category === activeFilter);
+  }, [timeline, activeFilter]);
+  
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    const counts: Record<MemoryCategory, number> = {
+      all: timeline.length,
+      combat: 0,
+      emotional: 0,
+      conflict: 0,
+      milestone: 0,
+      romance: 0,
+    };
+    timeline.forEach(entry => {
+      counts[entry.category]++;
+    });
+    return counts;
+  }, [timeline]);
+  
   if (timeline.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -138,50 +219,110 @@ function RelationshipTimeline({ companion }: { companion: CompanionState }) {
   }
   
   return (
-    <div className="space-y-3">
-      {timeline.map((entry, index) => {
-        const Icon = entry.icon;
-        return (
-          <motion.div
-            key={entry.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className={cn(
-              "relative flex items-start gap-3 p-3 rounded-lg border",
-              entry.color
-            )}
-          >
-            <div className={cn(
-              "flex-shrink-0 p-2 rounded-lg",
-              entry.color.replace('text-', 'bg-').split(' ')[0] + '/20'
-            )}>
-              <Icon className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="font-medium text-sm">{entry.title}</h4>
-                <span className="text-xs text-muted-foreground">
-                  {formatRelativeTime(entry.timestamp)}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                {entry.description}
-              </p>
-              {entry.affinityChange && (
+    <div className="space-y-4">
+      {/* Category Filters */}
+      <div className="flex flex-wrap gap-1.5">
+        {MEMORY_CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const count = categoryCounts[cat.id];
+          const isActive = activeFilter === cat.id;
+          
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveFilter(cat.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all",
+                isActive
+                  ? "bg-primary/20 text-primary border border-primary/40"
+                  : "bg-muted/20 text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent"
+              )}
+            >
+              <Icon className={cn("w-3 h-3", isActive ? 'text-primary' : cat.color)} />
+              <span>{cat.label}</span>
+              {count > 0 && (
                 <span className={cn(
-                  "inline-block mt-1 px-1.5 py-0.5 text-xs rounded font-mono",
-                  entry.affinityChange > 0 
-                    ? "bg-emerald-500/20 text-emerald-400" 
-                    : "bg-red-500/20 text-red-400"
+                  "px-1.5 py-0.5 rounded-full text-[10px] font-bold",
+                  isActive ? "bg-primary/30 text-primary" : "bg-muted/40"
                 )}>
-                  {entry.affinityChange > 0 ? '+' : ''}{entry.affinityChange} affinity
+                  {count}
                 </span>
               )}
-            </div>
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Timeline */}
+      <AnimatePresence mode="popLayout">
+        {filteredTimeline.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-center py-6 text-muted-foreground"
+          >
+            <p className="text-sm">No events in this category</p>
           </motion.div>
-        );
-      })}
+        ) : (
+          <div className="space-y-3">
+            {filteredTimeline.map((entry, index) => {
+              const Icon = entry.icon;
+              return (
+                <motion.div
+                  key={entry.id}
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: index * 0.03 }}
+                  className={cn(
+                    "relative flex items-start gap-3 p-3 rounded-lg border",
+                    entry.color
+                  )}
+                >
+                  <div className={cn(
+                    "flex-shrink-0 p-2 rounded-lg",
+                    entry.color.replace('text-', 'bg-').split(' ')[0] + '/20'
+                  )}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm">{entry.title}</h4>
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide",
+                          MEMORY_CATEGORIES.find(c => c.id === entry.category)?.color,
+                          "bg-current/10"
+                        )}>
+                          {entry.category}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {formatRelativeTime(entry.timestamp)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                      {entry.description}
+                    </p>
+                    {entry.affinityChange && (
+                      <span className={cn(
+                        "inline-block mt-1 px-1.5 py-0.5 text-xs rounded font-mono",
+                        entry.affinityChange > 0 
+                          ? "bg-emerald-500/20 text-emerald-400" 
+                          : "bg-red-500/20 text-red-400"
+                      )}>
+                        {entry.affinityChange > 0 ? '+' : ''}{entry.affinityChange} affinity
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
