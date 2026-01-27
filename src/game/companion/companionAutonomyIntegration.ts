@@ -25,6 +25,9 @@ interface CompanionAutonomyData {
   recentPlayerActions: PlayerActionType[];
 }
 
+// Storage key for autonomy persistence
+const AUTONOMY_STORAGE_KEY = 'companion-autonomy-state';
+
 class CompanionAutonomyManager {
   private autonomyData: Map<string, CompanionAutonomyData> = new Map();
   private pendingAutonomousActions: Map<string, AutonomousAction[]> = new Map();
@@ -302,51 +305,121 @@ class CompanionAutonomyManager {
   }
   
   // ============================================================================
-  // PERSISTENCE
+  // PERSISTENCE - Full memory persistence across sessions
   // ============================================================================
   
   /**
-   * Save autonomy state to storage
+   * Save autonomy state to storage (called after changes)
    */
   private saveToStorage(companionId: string): void {
     const data = this.autonomyData.get(companionId);
     if (!data) return;
     
     try {
+      // Save to both legacy key and new unified key
       const extras = JSON.parse(localStorage.getItem('companion-extras') || '{}');
       if (!extras[companionId]) extras[companionId] = {};
       extras[companionId].autonomy = data.state;
+      extras[companionId].recentActions = data.recentPlayerActions;
       localStorage.setItem('companion-extras', JSON.stringify(extras));
+      
+      // Also save to unified autonomy key for full persistence
+      this.saveAllToStorage();
     } catch (e) {
       console.error('[CompanionAutonomy] Failed to save:', e);
     }
   }
   
   /**
-   * Serialize all autonomy data for save
+   * Save ALL autonomy data (for campaign save integration)
    */
-  serialize(): Record<string, AutonomyState> {
-    const result: Record<string, AutonomyState> = {};
-    this.autonomyData.forEach((data, id) => {
-      result[id] = data.state;
-    });
-    return result;
+  saveAllToStorage(): void {
+    try {
+      const serialized = this.serialize();
+      localStorage.setItem(AUTONOMY_STORAGE_KEY, JSON.stringify(serialized));
+      console.log(`[CompanionAutonomy] Saved ${Object.keys(serialized.autonomyStates).length} companion autonomy states`);
+    } catch (e) {
+      console.error('[CompanionAutonomy] Failed to save all:', e);
+    }
   }
   
   /**
-   * Deserialize autonomy data from save
+   * Load ALL autonomy data from storage (for session restore)
    */
-  deserialize(data: Record<string, AutonomyState>): void {
+  loadFromStorage(): void {
+    try {
+      const stored = localStorage.getItem(AUTONOMY_STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.autonomyStates) {
+          this.deserialize(data);
+          console.log(`[CompanionAutonomy] Loaded ${Object.keys(data.autonomyStates).length} companion autonomy states`);
+        }
+      }
+    } catch (e) {
+      console.error('[CompanionAutonomy] Failed to load from storage:', e);
+    }
+  }
+  
+  /**
+   * Serialize all autonomy data for save (includes grievances, goals, recent actions)
+   */
+  serialize(): { 
+    autonomyStates: Record<string, AutonomyState>; 
+    recentActions: Record<string, PlayerActionType[]>;
+    version: number;
+  } {
+    const autonomyStates: Record<string, AutonomyState> = {};
+    const recentActions: Record<string, PlayerActionType[]> = {};
+    
+    this.autonomyData.forEach((data, id) => {
+      autonomyStates[id] = data.state;
+      recentActions[id] = data.recentPlayerActions;
+    });
+    
+    return { 
+      autonomyStates, 
+      recentActions,
+      version: 2, // Versioned for future migrations
+    };
+  }
+  
+  /**
+   * Deserialize autonomy data from save (restores grievances, goals, recent actions)
+   */
+  deserialize(data: { 
+    autonomyStates?: Record<string, AutonomyState>; 
+    recentActions?: Record<string, PlayerActionType[]>;
+    version?: number;
+  }): void {
+    // Handle legacy format (just autonomy states without recent actions)
+    const autonomyStates = data.autonomyStates || (data as Record<string, AutonomyState>);
+    const recentActions = data.recentActions || {};
+    
     this.autonomyData.clear();
     this.pendingAutonomousActions.clear();
     
-    Object.entries(data).forEach(([id, state]) => {
+    Object.entries(autonomyStates).forEach(([id, state]) => {
+      // Skip if state is invalid
+      if (!state || typeof state !== 'object') return;
+      
+      // Cast to mutable state for initialization
+      const mutableState = state as AutonomyState;
+      
+      // Ensure grievances array exists
+      if (!mutableState.grievances) mutableState.grievances = [];
+      if (!mutableState.currentGoals) mutableState.currentGoals = [];
+      if (!mutableState.loyaltyEvents) mutableState.loyaltyEvents = [];
+      if (!mutableState.pendingActions) mutableState.pendingActions = [];
+      
       this.autonomyData.set(id, {
-        state,
+        state: mutableState,
         lastProcessed: Date.now(),
-        recentPlayerActions: [],
+        recentPlayerActions: recentActions[id] || [],
       });
     });
+    
+    console.log(`[CompanionAutonomy] Deserialized ${this.autonomyData.size} companion autonomy states`);
   }
 }
 

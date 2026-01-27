@@ -144,6 +144,13 @@ export interface CampaignData {
   // Pending companion introductions - companions waiting to be introduced
   pendingCompanionIntroductions?: unknown[];
   
+  // Companion autonomy state - grievances, goals, recent actions (persisted across sessions)
+  companionAutonomyState?: {
+    autonomyStates?: Record<string, unknown>;
+    recentActions?: Record<string, unknown[]>;
+    version?: number;
+  };
+  
   // Settings specific to this campaign
   settings?: {
     adultContent?: boolean;

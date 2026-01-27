@@ -65,7 +65,7 @@ class CompanionSystemManager {
   private activeCompanions: string[] = [];
   private maxPartySize = 3;
   private maxTotalCompanions = 20;
-  private maxMemoriesPerCompanion = 50;
+  private maxMemoriesPerCompanion = 100; // Increased from 50 for better memory persistence
 
   // ========== COMPANION MANAGEMENT ==========
   
@@ -459,8 +459,38 @@ class CompanionSystemManager {
 
   // ========== SERIALIZATION ==========
   
-  serialize() { return { companions: Array.from(this.companions.values()), activeIds: this.activeCompanions }; }
-  deserialize(data: { companions: CompanionState[]; activeIds: string[] }) { this.companions.clear(); for (const c of data.companions) this.companions.set(c.id, c); this.activeCompanions = data.activeIds; }
+  serialize() { 
+    return { 
+      companions: Array.from(this.companions.values()), 
+      activeIds: this.activeCompanions,
+      version: 2, // Versioned for future migrations
+    }; 
+  }
+  
+  deserialize(data: { companions: CompanionState[]; activeIds: string[]; version?: number }) { 
+    this.companions.clear(); 
+    for (const c of data.companions) {
+      // Ensure memories array exists and is properly sized
+      if (!c.memories) c.memories = [];
+      if (!c.conversationMemory) {
+        c.conversationMemory = {
+          companionId: c.id,
+          sharedTopics: [],
+          askedTopics: [],
+          lastAskedAt: 0,
+          conversationDepth: 0,
+        };
+      }
+      if (!c.quirkDiscovery) {
+        c.quirkDiscovery = {
+          discoveredQuirks: [],
+          lastDiscoveryCheck: Date.now(),
+        };
+      }
+      this.companions.set(c.id, c);
+    }
+    this.activeCompanions = data.activeIds; 
+  }
 }
 
 // Singleton export

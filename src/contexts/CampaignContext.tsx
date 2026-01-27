@@ -271,6 +271,17 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       companionSystem.deserialize(campaign.companionState as { companions: any[]; activeIds: string[] });
     }
     
+    // CRITICAL: Restore companion autonomy state (grievances, goals, recent actions)
+    if (campaign.companionAutonomyState) {
+      try {
+        const { companionAutonomyManager } = require('@/game/companion/companionAutonomyIntegration');
+        companionAutonomyManager.deserialize(campaign.companionAutonomyState as any);
+        console.log('[Campaign] Restored companion autonomy state (grievances, goals)');
+      } catch (e) {
+        console.warn('[Campaign] Failed to restore companion autonomy state:', e);
+      }
+    }
+    
     // Restore companion localStorage data from campaign
     try {
       if (campaign.companionAppearances && Object.keys(campaign.companionAppearances).length > 0) {
@@ -342,13 +353,23 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     }
   }, []);
   
-  // Prepare campaign for save (capture NPC state + companion state)
+  // Prepare campaign for save (capture NPC state + companion state + autonomy state)
   const prepareCampaignForSave = useCallback((campaign: CampaignData): CampaignData => {
     const npcRegistry = getNPCRegistry();
     const personalityMap = exportPersonalityMap();
     
     // Capture companion state from the singleton
     const companionState = companionSystem.serialize();
+    
+    // Capture companion autonomy state (grievances, goals, recent actions)
+    let companionAutonomyState: Record<string, unknown> = {};
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { companionAutonomyManager } = require('@/game/companion/companionAutonomyIntegration');
+      companionAutonomyState = companionAutonomyManager.serialize();
+    } catch (e) {
+      console.warn('[Campaign] Failed to capture companion autonomy state:', e);
+    }
     
     // Capture companion appearances from localStorage (will be embedded in campaign)
     let companionAppearances: Record<string, unknown> = {};
@@ -378,6 +399,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       },
       npcPersonalityMap: personalityMap,
       companionState: companionState,
+      companionAutonomyState: companionAutonomyState, // NEW: Persists grievances & goals
       companionAppearances,
       companionIntroductions,
       pendingCompanionIntroductions,
