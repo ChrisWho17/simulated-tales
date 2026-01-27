@@ -573,10 +573,15 @@ export function CompanionCreatorWizardV2({
         return;
       }
 
-      if (data?.portraitUrl) {
+      // Edge function returns 'imageUrl' not 'portraitUrl'
+      if (data?.imageUrl) {
+        setGeneratedPortrait(data.imageUrl);
+        toast.success('Portrait generated!');
+      } else if (data?.portraitUrl) {
         setGeneratedPortrait(data.portraitUrl);
         toast.success('Portrait generated!');
       } else {
+        console.error('[Portrait] Unexpected response format:', data);
         toast.error('No portrait received');
       }
     } catch (error) {
