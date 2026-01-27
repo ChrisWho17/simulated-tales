@@ -9,8 +9,11 @@ export { GrievanceResolutionDialog } from './GrievanceResolutionDialog';
 export { CompanionQuickView } from './CompanionQuickView';
 export { CompanionWarningToast } from './CompanionWarningToast';
 export { CompanionCheatPanel } from './CompanionCheatPanel';
+export { MoodIndicator, MoodBadge } from './MoodIndicator';
+export { CompanionGoalTracker } from './CompanionGoalTracker';
 export { 
   AutonomousActionDisplay, 
   AutonomousActionFeed, 
   NarrativeInterruption 
 } from './AutonomousActionDisplay';
+
