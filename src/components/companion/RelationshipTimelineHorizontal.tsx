@@ -64,6 +64,155 @@ function getNodeIcon(memory: CompanionMemory): React.ElementType {
   return MessageCircle;
 }
 
+// ============================================================================
+// ANIMATED BLOOD FLOW CONNECTOR
+// ============================================================================
+
+interface BloodFlowConnectorProps {
+  fromChange: number;
+  toChange: number;
+  width?: number;
+}
+
+function BloodFlowConnector({ fromChange, toChange, width = 64 }: BloodFlowConnectorProps) {
+  // Determine colors based on affinity changes
+  const getColor = (change: number) => {
+    if (change >= 10) return { start: '#facc15', end: '#eab308' }; // yellow/gold
+    if (change > 0) return { start: '#34d399', end: '#10b981' }; // emerald
+    if (change <= -10) return { start: '#f87171', end: '#ef4444' }; // red
+    if (change < 0) return { start: '#fb923c', end: '#f97316' }; // orange
+    return { start: '#a78bfa', end: '#8b5cf6' }; // primary/violet
+  };
+  
+  const fromColor = getColor(fromChange);
+  const toColor = getColor(toChange);
+  
+  // Unique ID for gradient
+  const gradientId = `blood-flow-${Math.random().toString(36).substr(2, 9)}`;
+  
+  return (
+    <div className="relative h-8 flex items-center" style={{ width }}>
+      <svg 
+        width={width} 
+        height="32" 
+        viewBox={`0 0 ${width} 32`}
+        className="overflow-visible"
+      >
+        <defs>
+          {/* Gradient from previous node color to current */}
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={fromColor.end} stopOpacity="0.6" />
+            <stop offset="50%" stopColor={toColor.start} stopOpacity="0.8" />
+            <stop offset="100%" stopColor={toColor.end} stopOpacity="0.6" />
+          </linearGradient>
+          
+          {/* Glow filter */}
+          <filter id={`glow-${gradientId}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        {/* Background line */}
+        <line
+          x1="0"
+          y1="16"
+          x2={width}
+          y2="16"
+          stroke="hsl(var(--border))"
+          strokeWidth="2"
+          strokeOpacity="0.3"
+        />
+        
+        {/* Animated gradient line */}
+        <line
+          x1="0"
+          y1="16"
+          x2={width}
+          y2="16"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="3"
+          strokeLinecap="round"
+          filter={`url(#glow-${gradientId})`}
+          className="animate-pulse"
+        />
+        
+        {/* Blood flow particles */}
+        <circle r="2.5" fill={toColor.start} opacity="0.9" filter={`url(#glow-${gradientId})`}>
+          <animate
+            attributeName="cx"
+            from="0"
+            to={width}
+            dur="1.5s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="cy"
+            values="16;14;16;18;16"
+            dur="0.75s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0;0.9;0.9;0.9;0"
+            dur="1.5s"
+            repeatCount="indefinite"
+          />
+        </circle>
+        
+        <circle r="2" fill={fromColor.end} opacity="0.7" filter={`url(#glow-${gradientId})`}>
+          <animate
+            attributeName="cx"
+            from="0"
+            to={width}
+            dur="2s"
+            begin="0.5s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="cy"
+            values="16;18;16;14;16"
+            dur="1s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0;0.7;0.7;0.7;0"
+            dur="2s"
+            begin="0.5s"
+            repeatCount="indefinite"
+          />
+        </circle>
+        
+        <circle r="1.5" fill={toColor.end} opacity="0.5" filter={`url(#glow-${gradientId})`}>
+          <animate
+            attributeName="cx"
+            from="0"
+            to={width}
+            dur="2.5s"
+            begin="1s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0;0.5;0.5;0.5;0"
+            dur="2.5s"
+            begin="1s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      </svg>
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export function RelationshipTimelineHorizontal({ companion }: RelationshipTimelineHorizontalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -241,27 +390,22 @@ export function RelationshipTimelineHorizontal({ companion }: RelationshipTimeli
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <div className="relative min-w-max flex items-center gap-0">
-              {/* Timeline Line */}
-              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/20 via-border to-primary/20 -translate-y-1/2" />
-              
-              {/* Nodes */}
+              {/* Nodes with animated connectors */}
               {nodes.map((node, index) => {
                 const Icon = node.icon;
                 const isSelected = selectedNode?.id === node.id;
                 const isPositive = node.affinityChange > 0;
                 const nodeSize = Math.abs(node.affinityChange) >= 10 ? 'large' : 'normal';
+                const prevNode = index > 0 ? nodes[index - 1] : null;
                 
                 return (
                   <div key={node.id} className="flex items-center">
-                    {/* Connector Line Segment */}
-                    {index > 0 && (
-                      <div 
-                        className={cn(
-                          "h-0.5 w-12 sm:w-16",
-                          node.affinityChange > 0 ? "bg-emerald-500/30" :
-                          node.affinityChange < 0 ? "bg-red-500/30" :
-                          "bg-border"
-                        )}
+                    {/* Animated Blood Flow Connector */}
+                    {prevNode && (
+                      <BloodFlowConnector
+                        fromChange={prevNode.affinityChange}
+                        toChange={node.affinityChange}
+                        width={64}
                       />
                     )}
                     
@@ -278,6 +422,30 @@ export function RelationshipTimelineHorizontal({ companion }: RelationshipTimeli
                             "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-full"
                           )}
                         >
+                          {/* Pulse ring for major events */}
+                          {(node.type === 'major_positive' || node.type === 'major_negative' || node.type === 'betrayal') && (
+                            <motion.div
+                              className={cn(
+                                "absolute inset-0 rounded-full",
+                                node.type === 'major_positive' ? "bg-yellow-500/30" :
+                                node.type === 'betrayal' ? "bg-red-500/30" : "bg-red-500/30"
+                              )}
+                              animate={{
+                                scale: [1, 1.5, 1],
+                                opacity: [0.5, 0, 0.5],
+                              }}
+                              transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                              }}
+                              style={{
+                                width: nodeSize === 'large' ? 48 : 36,
+                                height: nodeSize === 'large' ? 48 : 36,
+                              }}
+                            />
+                          )}
+                          
                           {/* Node Circle */}
                           <div className={cn(
                             "relative rounded-full border-2 flex items-center justify-center transition-all",
