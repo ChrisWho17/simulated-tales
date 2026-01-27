@@ -2,13 +2,15 @@
 // COMPANION JOURNAL - Tracks relationship history, memorable moments, secrets
 // ============================================================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Book, Heart, Shield, Star, Eye, Clock, ChevronLeft,
   Flame, Skull, Brain, MessageCircle, Sparkles, Lock,
-  ThumbsUp, ThumbsDown, Trophy, Swords, HandHeart, X
+  ThumbsUp, ThumbsDown, Trophy, Swords, HandHeart, X, Users
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { CompanionComparisonView } from './CompanionComparisonView';
 import { CompanionState, CompanionMemory } from '@/game/companion/companionTypes';
 import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,7 @@ interface CompanionJournalProps {
   isOpen: boolean;
   onClose: () => void;
   companion: CompanionState;
+  allCompanions?: CompanionState[]; // For comparison view
 }
 
 // ============================================================================
@@ -441,8 +444,16 @@ function RelationshipStats({ companion }: { companion: CompanionState }) {
 
 type JournalTab = 'overview' | 'timeline' | 'secrets' | 'conversations';
 
-export function CompanionJournal({ isOpen, onClose, companion }: CompanionJournalProps) {
-  const [activeTab, setActiveTab] = React.useState<JournalTab>('overview');
+export function CompanionJournal({ isOpen, onClose, companion, allCompanions = [] }: CompanionJournalProps) {
+  const [activeTab, setActiveTab] = useState<JournalTab>('overview');
+  const [showComparison, setShowComparison] = useState(false);
+  
+  // Reset comparison view when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setShowComparison(false);
+    }
+  }, [isOpen]);
   
   const tabs: { id: JournalTab; label: string; icon: React.ElementType }[] = [
     { id: 'overview', label: 'Overview', icon: Book },
@@ -475,120 +486,154 @@ export function CompanionJournal({ isOpen, onClose, companion }: CompanionJourna
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center gap-4 p-4 border-b border-border/40 bg-gradient-to-r from-primary/10 via-transparent to-accent/10">
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              
-              {/* Avatar */}
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/50">
-                  {companion.portrait ? (
-                    <img 
-                      src={companion.portrait} 
-                      alt={companion.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-primary/20 flex items-center justify-center text-lg font-bold">
-                      {companion.name.charAt(0)}
-                    </div>
-                  )}
+            <div className="flex flex-col border-b border-border/40 bg-gradient-to-r from-primary/10 via-transparent to-accent/10">
+              {/* Top Row */}
+              <div className="flex items-center gap-4 p-4">
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                
+                {/* Avatar */}
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/50">
+                    {companion.portrait ? (
+                      <img 
+                        src={companion.portrait} 
+                        alt={companion.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary/20 flex items-center justify-center text-lg font-bold">
+                        {companion.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display text-lg text-foreground truncate">
+                    {showComparison ? 'Party Comparison' : `${companion.name}'s Journal`}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {showComparison ? 'Side-by-side relationship stats' : 'Relationship History & Secrets'}
+                  </p>
+                </div>
+                
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
               
-              <div className="flex-1 min-w-0">
-                <h2 className="font-display text-lg text-foreground truncate">
-                  {companion.name}'s Journal
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Relationship History & Secrets
-                </p>
-              </div>
-              
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-destructive/20 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Comparison Toggle Row */}
+              {allCompanions.length > 1 && (
+                <div className="flex items-center justify-between px-4 pb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span>Compare All Companions</span>
+                  </div>
+                  <Switch
+                    checked={showComparison}
+                    onCheckedChange={setShowComparison}
+                    aria-label="Toggle comparison view"
+                  />
+                </div>
+              )}
             </div>
             
-            {/* Tabs */}
-            <div className="flex gap-1 p-2 border-b border-border/30 bg-muted/5">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all",
-                      activeTab === tab.id
-                        ? "bg-primary/20 text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Tabs - Only show when not in comparison mode */}
+            {!showComparison && (
+              <div className="flex gap-1 p-2 border-b border-border/30 bg-muted/5">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all",
+                        activeTab === tab.id
+                          ? "bg-primary/20 text-primary font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             
             {/* Content */}
             <ScrollArea className="flex-1 min-h-0">
               <div className="p-4">
                 <AnimatePresence mode="wait">
-                  {activeTab === 'overview' && (
+                  {showComparison ? (
                     <motion.div
-                      key="overview"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
+                      key="comparison"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <RelationshipStats companion={companion} />
+                      <CompanionComparisonView companions={allCompanions} />
                     </motion.div>
-                  )}
-                  
-                  {activeTab === 'timeline' && (
-                    <motion.div
-                      key="timeline"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <RelationshipTimeline companion={companion} />
-                    </motion.div>
-                  )}
-                  
-                  {activeTab === 'secrets' && (
-                    <motion.div
-                      key="secrets"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <DiscoveredSecrets companion={companion} />
-                    </motion.div>
-                  )}
-                  
-                  {activeTab === 'conversations' && (
-                    <motion.div
-                      key="conversations"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ConversationTopics companion={companion} />
-                    </motion.div>
+                  ) : (
+                    <>
+                      {activeTab === 'overview' && (
+                        <motion.div
+                          key="overview"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <RelationshipStats companion={companion} />
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'timeline' && (
+                        <motion.div
+                          key="timeline"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <RelationshipTimeline companion={companion} />
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'secrets' && (
+                        <motion.div
+                          key="secrets"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <DiscoveredSecrets companion={companion} />
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'conversations' && (
+                        <motion.div
+                          key="conversations"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ConversationTopics companion={companion} />
+                        </motion.div>
+                      )}
+                    </>
                   )}
                 </AnimatePresence>
               </div>
