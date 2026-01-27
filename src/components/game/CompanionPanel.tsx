@@ -21,7 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
-import { CompanionCreatorWizardV2, CompanionJournal, GrievanceResolutionDialog } from '@/components/companion';
+import { CompanionCreatorWizardV2, CompanionJournal, GrievanceResolutionDialog, MoodIndicator, CompanionGoalTracker } from '@/components/companion';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -553,15 +553,22 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
                       className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden",
-                          "bg-background border border-border"
-                        )}>
-                          {companion.portrait ? (
-                            <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
-                          ) : (
-                            companion.name.charAt(0)
-                          )}
+                        <div className="relative">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden",
+                            "bg-background border border-border"
+                          )}>
+                            {companion.portrait ? (
+                              <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
+                            ) : (
+                              companion.name.charAt(0)
+                            )}
+                          </div>
+                          <MoodIndicator 
+                            mood={companion.mood} 
+                            size="sm" 
+                            className="absolute -bottom-0.5 -right-0.5" 
+                          />
                         </div>
                         <div>
                           <p className="font-medium text-sm">{companion.name}</p>
@@ -744,11 +751,13 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
                 <span className="text-xl font-display">{companion.name.charAt(0)}</span>
               )}
             </div>
-            {/* Mood indicator */}
-            <div className={cn(
-              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card",
-              moodColors[companion.mood]
-            )} title={`Mood: ${companion.mood}`} />
+            {/* Mood indicator - enhanced with tooltip */}
+            <MoodIndicator 
+              mood={companion.mood} 
+              moodIntensity={companion.moodIntensity}
+              size="sm"
+              className="absolute -bottom-0.5 -right-0.5"
+            />
             
             {/* Grievance indicator */}
             {grievanceCount > 0 && (
@@ -832,6 +841,9 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
                 companion={companion} 
                 onResolveGrievance={onResolveGrievance}
               />
+
+              {/* Active Goals */}
+              <CompanionGoalTracker companion={companion} compact />
 
               {/* Personality Traits */}
               <div>
