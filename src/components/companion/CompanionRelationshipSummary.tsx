@@ -3,7 +3,7 @@
 // Shows first impression calculation for newly created companion
 // ============================================================================
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Heart, ThumbsUp, ThumbsDown, AlertTriangle, 
@@ -102,6 +102,12 @@ export function CompanionRelationshipSummary({
   playerCharacter,
   existingCompanions = [],
 }: CompanionRelationshipSummaryProps) {
+  // Stable random values for player reputation - using ref to persist across renders
+  const stableRandomsRef = useRef({
+    honor: 30 + Math.floor(Math.random() * 40),
+    kindness: 20 + Math.floor(Math.random() * 30),
+  });
+
   // Calculate beliefs and first impression
   const { beliefs, impression, decision, partyDynamics } = useMemo(() => {
     const derivedBeliefs = deriveBeliefSystem(traits);
@@ -134,10 +140,10 @@ export function CompanionRelationshipSummary({
       },
     };
     
-    // Get player reputation (mock for preview)
+    // Get player reputation using stable random values (no re-calc on every render)
     const playerRep = playerCharacter ? {
-      honor: 30 + Math.floor(Math.random() * 40),
-      kindness: 20 + Math.floor(Math.random() * 30),
+      honor: stableRandomsRef.current.honor,
+      kindness: stableRandomsRef.current.kindness,
       wealth: 100,
     } : undefined;
     

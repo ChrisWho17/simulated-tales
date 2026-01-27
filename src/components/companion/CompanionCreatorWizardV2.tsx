@@ -406,17 +406,65 @@ export function CompanionCreatorWizardV2({
     }
   }, [currentStepIndex]);
 
-  // Generate voice preview
+  // Generate voice preview - uses selected voiceStyle to build accurate preview
   const handleGenerateVoice = useCallback(() => {
+    // Map voiceStyle to appropriate speech modifiers
+    const voiceStyleMappings: Record<string, Partial<Parameters<typeof generateVoiceProfile>[2]> & { 
+      rhythm?: string; 
+      emotionalExpression?: string; 
+      humorStyle?: string;
+      confidenceLevel?: string;
+    }> = {
+      formal: { mentalState: undefined },
+      casual: { mentalState: undefined },
+      gruff: { experienceLevel: 'veteran' },
+      eloquent: { mentalState: undefined },
+      mysterious: { mentalState: undefined },
+      sardonic: { mentalState: undefined },
+      depressed: { mentalState: 'depressed' },
+      anxious: { mentalState: 'anxious' },
+      jaded: { mentalState: 'burnt-out' as any },
+      performer: { mentalState: 'manic' },
+      stoic: { mentalState: undefined },
+      warmhearted: { mentalState: undefined },
+      cynical: { mentalState: undefined },
+      optimist: { mentalState: undefined },
+      veteran: { experienceLevel: 'veteran' },
+    };
+
+    const styleOptions = voiceStyleMappings[state.voiceStyle] || {};
     const profile = generateVoiceProfile(
-      `preview_${Date.now()}`,
+      `preview_${state.voiceStyle}_${Date.now()}`,
       state.traits,
-      { genre }
+      { genre, ...styleOptions }
     );
+
+    // Override profile properties based on selected voiceStyle for accurate preview
+    const styleOverrides: Record<string, Partial<typeof profile>> = {
+      formal: { wordChoice: 'refined', usesContractions: false, rhythm: 'measured', emotionalExpression: 'restrained' },
+      casual: { wordChoice: 'simple', usesContractions: true, rhythm: 'flowing', emotionalExpression: 'sincere' },
+      gruff: { wordChoice: 'simple', rhythm: 'clipped', emotionalExpression: 'restrained', confidenceLevel: 'quiet' },
+      eloquent: { wordChoice: 'poetic', rhythm: 'flowing', emotionalExpression: 'dramatic' },
+      mysterious: { wordChoice: 'elaborate', rhythm: 'measured', emotionalExpression: 'guarded', usesEllipses: true },
+      sardonic: { humorStyle: 'sardonic', emotionalExpression: 'deadpan', wordChoice: 'refined' },
+      depressed: { rhythm: 'halting', emotionalExpression: 'understated', averageSentenceLength: 'short' },
+      anxious: { rhythm: 'rapid-fire', usesEllipses: true, confidenceLevel: 'nervous', usesInterruptions: true },
+      jaded: { humorStyle: 'dark', emotionalExpression: 'deadpan', rhythm: 'drawling' },
+      performer: { emotionalExpression: 'theatrical', rhythm: 'melodic', usesExclamations: true },
+      stoic: { emotionalExpression: 'restrained', rhythm: 'monotone', averageSentenceLength: 'short' },
+      warmhearted: { emotionalExpression: 'sincere', humorStyle: 'self-deprecating', rhythm: 'flowing' },
+      cynical: { humorStyle: 'sardonic', emotionalExpression: 'guarded', confidenceLevel: 'quiet' },
+      optimist: { emotionalExpression: 'sincere', usesExclamations: true, rhythm: 'melodic' },
+      veteran: { wordChoice: 'simple', rhythm: 'measured', confidenceLevel: 'quiet', averageSentenceLength: 'short' },
+    };
+
+    const overrides = styleOverrides[state.voiceStyle] || {};
+    Object.assign(profile, overrides);
+
     const instructions = buildSpeechInstructions(profile, 'neutral', state.name || 'Companion');
     setVoicePreview(instructions);
     toast.success('Voice profile generated!');
-  }, [state.traits, state.name, genre]);
+  }, [state.traits, state.name, state.voiceStyle, genre]);
 
   // Generate portrait for companion with enhanced details
   const handleGeneratePortrait = useCallback(async () => {
@@ -730,8 +778,10 @@ export function CompanionCreatorWizardV2({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-3xl h-[90vh] max-h-[90vh] flex flex-col rounded-2xl border border-primary/30 shadow-2xl"
+        className="w-full max-w-3xl flex flex-col rounded-2xl border border-primary/30 shadow-2xl"
         style={{
+          height: 'min(90vh, 800px)',
+          maxHeight: 'calc(100dvh - 2rem)',
           background: 'rgba(15, 15, 25, 0.95)',
           backdropFilter: 'blur(20px) saturate(180%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(139, 92, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
@@ -791,8 +841,8 @@ export function CompanionCreatorWizardV2({
         </div>
 
         {/* Content - Scrollable with visible slider */}
-        <TouchScrollContainer className="flex-1 min-h-0">
-          <div className="p-6 pb-8">
+        <TouchScrollContainer className="flex-1 min-h-0 overflow-hidden">
+          <div className="p-6 pb-12">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
