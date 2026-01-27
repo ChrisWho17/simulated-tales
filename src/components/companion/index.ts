@@ -14,6 +14,13 @@ export { MoodIndicator, MoodBadge } from './MoodIndicator';
 export { CompanionGoalTracker } from './CompanionGoalTracker';
 export { CompanionGoalsPanel } from './CompanionGoalsPanel';
 export { CompanionDetailSplash } from './CompanionDetailSplash';
+export { CompanionReactionLog } from './CompanionReactionLog';
+export { 
+  FloatingStatIndicator, 
+  StatIndicatorWrapper, 
+  useFloatingStats,
+  type StatChange 
+} from './FloatingStatIndicator';
 export { 
   AutonomousActionDisplay, 
   AutonomousActionFeed, 

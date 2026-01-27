@@ -9,7 +9,7 @@ import {
   X, Shield, Star, AlertTriangle, Heart, Brain, MessageCircle,
   Sparkles, UserMinus, Book, ThumbsUp, ThumbsDown, Flame,
   Skull, Eye, Scale, HandHeart, Users, ChevronDown, ChevronUp,
-  Target, Zap, Sword
+  Target, Zap, Sword, History
 } from 'lucide-react';
 import { CompanionState, CompanionMood, PlayerActionType } from '@/game/companionSystem';
 import { companionSystem } from '@/game/companionSystem';
@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { MoodIndicator, CompanionGoalTracker } from '@/components/companion';
+import { MoodIndicator, CompanionGoalTracker, CompanionReactionLog } from '@/components/companion';
 
 interface CompanionDetailSplashProps {
   companion: CompanionState;
@@ -404,39 +404,21 @@ export function CompanionDetailSplash({
                 </CollapsibleSection>
               )}
 
-              {/* Recent Reactions Section */}
-              {recentMemories.length > 0 && (
-                <CollapsibleSection
-                  title="Recent Reactions"
-                  icon={<Brain className="w-4 h-4" />}
-                  isExpanded={expandedSection === 'reactions'}
-                  onToggle={() => toggleSection('reactions')}
-                >
-                  <div className="p-3 space-y-1.5">
-                    {recentMemories.map((memory, i) => (
-                      <div 
-                        key={`${memory.timestamp}-${i}`}
-                        className={cn(
-                          "flex items-center gap-2 text-xs px-2.5 py-1.5 rounded",
-                          memory.affinityChange > 0 
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-red-500/10 text-red-400"
-                        )}
-                      >
-                        {memory.affinityChange > 0 ? (
-                          <ThumbsUp className="w-3 h-3 flex-shrink-0" />
-                        ) : (
-                          <ThumbsDown className="w-3 h-3 flex-shrink-0" />
-                        )}
-                        <span className="truncate flex-1">{memory.description}</span>
-                        <span className="font-mono text-xs shrink-0">
-                          {memory.affinityChange > 0 ? '+' : ''}{memory.affinityChange}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CollapsibleSection>
-              )}
+              {/* Reaction Log Section - Enhanced with full stat breakdown */}
+              <CollapsibleSection
+                title="Reaction Log"
+                icon={<History className="w-4 h-4" />}
+                isExpanded={expandedSection === 'reactions'}
+                onToggle={() => toggleSection('reactions')}
+              >
+                <div className="p-3">
+                  <CompanionReactionLog 
+                    companion={companion} 
+                    maxEntries={15}
+                    compact={false}
+                  />
+                </div>
+              </CollapsibleSection>
 
               {/* Internal Thoughts (if high trust) */}
               {companion.trust > 60 && (
