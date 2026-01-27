@@ -11,6 +11,9 @@ export * from './companionTemplates';
 // Dialogue generation
 export * from './companionDialogue';
 
+// Personality-based dialogue (rich trait variations)
+export * from './personalityDialogue';
+
 // Memory and topic tracking
 export * from './companionMemory';
 

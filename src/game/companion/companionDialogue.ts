@@ -9,57 +9,39 @@ import type {
   SituationType
 } from './companionTypes';
 
+import {
+  generateTraitBasedApproval,
+  generateTraitBasedDisapproval,
+  generateTraitBasedNeutral,
+  generateHybridTraitDialogue,
+} from './personalityDialogue';
+
 // ============================================================================
-// BASIC DIALOGUE GENERATION
+// BASIC DIALOGUE GENERATION - Now uses trait-based system
 // ============================================================================
 
 export function generateApprovalDialogue(companion: CompanionState, action: PlayerActionType): string {
-  const phrases = [
-    `Now that's what I like to see!`,
-    `I knew I was right about you.`,
-    `This is why I follow you.`,
-    `Finally, someone who understands.`,
-    `*nods approvingly* Well done.`,
-  ];
+  // Try hybrid trait dialogue first for richer responses
+  if (companion.personality.traits.length >= 2 && Math.random() < 0.4) {
+    return generateHybridTraitDialogue(companion, action, 'approve');
+  }
   
-  const catchphrase = companion.personality.catchphrases[
-    Math.floor(Math.random() * companion.personality.catchphrases.length)
-  ] || '';
-  
-  return Math.random() > 0.3 ? 
-    phrases[Math.floor(Math.random() * phrases.length)] : 
-    catchphrase;
+  // Use trait-based approval
+  return generateTraitBasedApproval(companion, action);
 }
 
 export function generateDisapprovalDialogue(companion: CompanionState, action: PlayerActionType): string {
-  const intensity = Math.abs(companion.affinity);
-  
-  if (intensity > 60) {
-    return [
-      `This is exactly what I feared you'd become.`,
-      `I don't know if I can follow someone who does this.`,
-      `You've changed... and not for the better.`,
-      `*shakes head in disgust* Is this really who you are?`,
-    ][Math.floor(Math.random() * 4)];
+  // Try hybrid trait dialogue first for richer responses
+  if (companion.personality.traits.length >= 2 && Math.random() < 0.4) {
+    return generateHybridTraitDialogue(companion, action, 'disapprove');
   }
   
-  return [
-    `I... don't agree with this.`,
-    `Was that really necessary?`,
-    `*frowns* I would have done it differently.`,
-    `You and I see things very differently.`,
-    `I hope you know what you're doing.`,
-  ][Math.floor(Math.random() * 5)];
+  // Use trait-based disapproval
+  return generateTraitBasedDisapproval(companion, action);
 }
 
 export function generateNeutralDialogue(companion: CompanionState, action: PlayerActionType): string {
-  return [
-    `Hmm.`,
-    `*observes silently*`,
-    `Interesting choice.`,
-    `I see.`,
-    `...`,
-  ][Math.floor(Math.random() * 5)];
+  return generateTraitBasedNeutral(companion, action);
 }
 
 export function generateJoinReaction(companion: CompanionState): string {

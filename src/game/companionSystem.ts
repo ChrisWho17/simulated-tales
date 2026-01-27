@@ -257,7 +257,13 @@ class CompanionSystemManager {
       companion.fear = Math.max(0, Math.min(100, companion.fear + reaction.fearChange));
       companion.romanticInterest = Math.max(0, Math.min(100, companion.romanticInterest + reaction.romanceChange));
       
-      this.addMemory(companionId, 'action', reaction.description, reaction.affinityChange, actionType);
+      this.addMemory(companionId, 'action', reaction.description, reaction.affinityChange, actionType, {
+        trustChange: reaction.trustChange,
+        respectChange: reaction.respectChange,
+        fearChange: reaction.fearChange,
+        romanceChange: reaction.romanceChange,
+        dialogue: reaction.dialogue,
+      });
       this.updateMood(companion, reaction.affinityChange);
       
       if (Math.abs(reaction.affinityChange) >= 5 || Math.abs(reaction.trustChange) >= 5) {
@@ -658,11 +664,36 @@ class CompanionSystemManager {
 
   // ========== MEMORY MANAGEMENT ==========
   
-  private addMemory(companionId: string, type: 'action' | 'dialogue' | 'event' | 'gift' | 'betrayal', description: string, affinityChange: number, playerAction?: PlayerActionType): void {
+  private addMemory(
+    companionId: string, 
+    type: 'action' | 'dialogue' | 'event' | 'gift' | 'betrayal', 
+    description: string, 
+    affinityChange: number, 
+    playerAction?: PlayerActionType,
+    extendedChanges?: {
+      trustChange?: number;
+      respectChange?: number;
+      fearChange?: number;
+      romanceChange?: number;
+      dialogue?: string;
+    }
+  ): void {
     const companion = this.companions.get(companionId);
     if (!companion) return;
     
-    companion.memories.push({ timestamp: Date.now(), type, description, affinityChange, playerAction, forgotten: false });
+    // Create enhanced memory with full stat breakdown
+    const memory: any = {
+      timestamp: Date.now(),
+      type,
+      description,
+      affinityChange,
+      playerAction,
+      forgotten: false,
+      // Extended stat changes for reaction log
+      ...extendedChanges,
+    };
+    
+    companion.memories.push(memory);
     if (companion.memories.length > this.maxMemoriesPerCompanion) companion.memories.shift();
   }
 
