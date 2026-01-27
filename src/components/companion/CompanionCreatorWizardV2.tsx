@@ -286,7 +286,8 @@ export function CompanionCreatorWizardV2({
 
   // Full randomization
   const handleFullRandomize = useCallback(() => {
-    const genderOptions: Gender[] = ['male', 'female', 'other'];
+    // Only randomize male/female - non-binary available through manual customization
+    const genderOptions: Gender[] = ['male', 'female'];
     const randomGender = genderOptions[Math.floor(Math.random() * genderOptions.length)];
     const randomName = generateRandomName(genre, randomGender);
     
