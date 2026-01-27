@@ -5,6 +5,7 @@
 export { CompanionCreatorWizardV2 } from './CompanionCreatorWizardV2';
 export { CompanionJournal } from './CompanionJournal';
 export { CompanionComparisonView } from './CompanionComparisonView';
+export { RelationshipTimelineHorizontal } from './RelationshipTimelineHorizontal';
 export { GrievanceResolutionDialog } from './GrievanceResolutionDialog';
 export { CompanionQuickView } from './CompanionQuickView';
 export { CompanionWarningToast } from './CompanionWarningToast';
