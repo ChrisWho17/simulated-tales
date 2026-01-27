@@ -103,10 +103,31 @@ export function CompanionRelationshipSummary({
   existingCompanions = [],
 }: CompanionRelationshipSummaryProps) {
   // Stable random values for player reputation - using ref to persist across renders
-  const stableRandomsRef = useRef({
-    honor: 30 + Math.floor(Math.random() * 40),
-    kindness: 20 + Math.floor(Math.random() * 30),
+  // This prevents the constant re-calculation that was causing 5x/sec refreshes
+  const stableRandomsRef = useRef<{
+    honor: number;
+    kindness: number;
+    initialized: boolean;
+  }>({
+    honor: 0,
+    kindness: 0,
+    initialized: false,
   });
+
+  // Initialize stable randoms only once
+  if (!stableRandomsRef.current.initialized) {
+    stableRandomsRef.current = {
+      honor: 30 + Math.floor(Math.random() * 40),
+      kindness: 20 + Math.floor(Math.random() * 30),
+      initialized: true,
+    };
+  }
+
+  // Memoize companion IDs to prevent re-renders from new array references
+  const companionIds = useMemo(() => 
+    existingCompanions.map(c => c.id).join(','),
+    [existingCompanions]
+  );
 
   // Calculate beliefs and first impression
   const { beliefs, impression, decision, partyDynamics } = useMemo(() => {
@@ -202,7 +223,8 @@ export function CompanionRelationshipSummary({
       decision: joiningDecision,
       partyDynamics: dynamics,
     };
-  }, [name, traits, worldview, playerCharacter, existingCompanions]);
+  // Use companionIds string instead of existingCompanions array to prevent re-renders
+  }, [name, traits, worldview, playerCharacter, companionIds]);
 
   const style = IMPRESSION_STYLES[impression.level];
   const impressionPercentage = ((impression.score + 100) / 200) * 100;

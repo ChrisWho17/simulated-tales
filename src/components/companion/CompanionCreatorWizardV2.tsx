@@ -255,7 +255,7 @@ function getDefaultState(): CompanionCreatorStateV2 {
     voiceStyle: 'casual',
     speechQuirks: [],
     catchphrases: [],
-    autonomyLevel: 'reactive',
+    autonomyLevel: 'independent', // Default to fully sentient - they act without asking
     appearanceTiming: 'contextual',
     originStory: 'stranger',
   };
@@ -278,6 +278,9 @@ export function CompanionCreatorWizardV2({
   const [voicePreview, setVoicePreview] = useState<string>('');
   const [generatedPortrait, setGeneratedPortrait] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+
+  // Memoize existing companions to prevent constant re-renders in preview step
+  const existingCompanions = useMemo(() => companionSystem.getActiveCompanions(), [isOpen]);
 
   const currentStepIndex = WIZARD_STEPS.findIndex(s => s.id === currentStep);
 
@@ -1394,7 +1397,7 @@ export function CompanionCreatorWizardV2({
                     traits={state.traits}
                     worldview={state.deepPersonality.worldview}
                     playerCharacter={character}
-                    existingCompanions={companionSystem.getActiveCompanions()}
+                    existingCompanions={existingCompanions}
                   />
                 </div>
               )}
