@@ -63,9 +63,21 @@ import { getContextualSupport, getSupportCapabilities } from './companion/compan
 class CompanionSystemManager {
   private companions: Map<string, CompanionState> = new Map();
   private activeCompanions: string[] = [];
+  private activeCampaignId: string | null = null; // Current campaign for filtering
   private maxPartySize = 3;
   private maxTotalCompanions = 20;
   private maxMemoriesPerCompanion = 100; // Increased from 50 for better memory persistence
+
+  // ========== CAMPAIGN ISOLATION ==========
+  
+  setActiveCampaign(campaignId: string | null): void {
+    this.activeCampaignId = campaignId;
+    console.log(`[Companion] Active campaign set to: ${campaignId || 'none'}`);
+  }
+  
+  getActiveCampaignId(): string | null {
+    return this.activeCampaignId;
+  }
 
   // ========== COMPANION MANAGEMENT ==========
   
@@ -105,6 +117,7 @@ class CompanionSystemManager {
     const companion: CompanionState = {
       id,
       name,
+      campaignId: this.activeCampaignId || undefined, // Lock to current campaign
       status: 'waiting',
       mood: 'neutral',
       moodIntensity: 50,
@@ -143,12 +156,19 @@ class CompanionSystemManager {
       ...customizations,
     };
     
+    // Ensure campaignId from customizations is preserved
+    if (customizations?.campaignId) {
+      companion.campaignId = customizations.campaignId;
+    } else if (!companion.campaignId && this.activeCampaignId) {
+      companion.campaignId = this.activeCampaignId;
+    }
+    
     if (companion.personality.romanticInterest.attractedToPlayer) {
       companion.romanticInterest = 20 + Math.floor(Math.random() * 20);
     }
     
     this.companions.set(id, companion);
-    console.log(`[Companion] Created: ${name} (${template})`);
+    console.log(`[Companion] Created: ${name} (${template}) for campaign: ${companion.campaignId || 'none'}`);
     
     return companion;
   }
@@ -442,8 +462,27 @@ class CompanionSystemManager {
   // ========== GETTERS ==========
   
   getCompanion(id: string) { return this.companions.get(id); }
-  getActiveCompanions() { return this.activeCompanions.map(id => this.companions.get(id)).filter((c): c is CompanionState => c !== undefined); }
-  getAllCompanions() { return Array.from(this.companions.values()); }
+  
+  getActiveCompanions() { 
+    return this.activeCompanions
+      .map(id => this.companions.get(id))
+      .filter((c): c is CompanionState => c !== undefined);
+  }
+  
+  getAllCompanions() { 
+    const all = Array.from(this.companions.values());
+    // Filter by active campaign if set
+    if (this.activeCampaignId) {
+      return all.filter(c => c.campaignId === this.activeCampaignId || !c.campaignId);
+    }
+    return all;
+  }
+  
+  // Get companions for a specific campaign (for loading/saving)
+  getCompanionsForCampaign(campaignId: string) {
+    return Array.from(this.companions.values()).filter(c => c.campaignId === campaignId);
+  }
+  
   getPartySize() { return { current: this.activeCompanions.length, max: this.maxPartySize }; }
   getDiscoveredQuirks(companionId: string) { return this.companions.get(companionId)?.quirkDiscovery.discoveredQuirks ?? []; }
   getBondingEventTypes() { return Object.keys(BONDING_MOMENT_TRIGGERS); }

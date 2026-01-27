@@ -13,6 +13,7 @@ export { CompanionCheatPanel } from './CompanionCheatPanel';
 export { MoodIndicator, MoodBadge } from './MoodIndicator';
 export { CompanionGoalTracker } from './CompanionGoalTracker';
 export { CompanionGoalsPanel } from './CompanionGoalsPanel';
+export { CompanionDetailSplash } from './CompanionDetailSplash';
 export { 
   AutonomousActionDisplay, 
   AutonomousActionFeed, 
