@@ -44,6 +44,10 @@ export interface PlayerResponseOption {
   affinityChange: number;
   trustChange: number;
   outcome: string;
+  /** If true, this response triggers full AI story continuation. 
+   * Only use for major story-altering responses (betrayal acceptance, departure, etc).
+   * Most companion moments should be self-contained and NOT continue the story. */
+  continuesNarrative?: boolean;
 }
 
 export interface CompanionGoal {
@@ -218,12 +222,18 @@ export function evaluateAutonomousActions(
     }
   }
   
-  // Opinion voicing on recent player actions
-  for (const action of recentPlayerActions) {
+  // Opinion voicing on recent player actions (RARE - only ~15% chance to voice opinions)
+  // Companions should react sparingly, not comment on every action
+  if (recentPlayerActions.length > 0 && Math.random() < 0.15) {
+    // Only react to the most recent action, not all of them
+    const action = recentPlayerActions[recentPlayerActions.length - 1];
     if (companion.personality.disapproves.includes(action)) {
       actions.push(generateOpinionVoice(companion, action, 'disapprove', beliefs));
     } else if (companion.personality.approves.includes(action)) {
-      actions.push(generateOpinionVoice(companion, action, 'approve', beliefs));
+      // Approval is even rarer - companions don't need to praise constantly
+      if (Math.random() < 0.5) {
+        actions.push(generateOpinionVoice(companion, action, 'approve', beliefs));
+      }
     }
   }
   
@@ -256,10 +266,10 @@ function generateDepartureWarning(companion: CompanionState, beliefs: CompanionB
     internalReason: `Affinity (${companion.affinity}) approaching departure threshold (${companion.personality.departureThreshold})`,
     consequences: ['Companion will leave if issues not addressed within 3 turns'],
     playerOptions: [
-      { label: 'Apologize sincerely', type: 'comfort', affinityChange: 15, trustChange: 5, outcome: 'They seem willing to give you another chance' },
-      { label: 'Promise to change', type: 'negotiate', affinityChange: 10, trustChange: -5, outcome: 'They nod skeptically but agree to wait and see' },
-      { label: 'Dismiss their concerns', type: 'dismiss', affinityChange: -20, trustChange: -15, outcome: 'Their expression hardens. You may have sealed their decision' },
-      { label: 'Let them go', type: 'agree', affinityChange: 0, trustChange: 0, outcome: 'They look hurt but nod. "Maybe that is for the best."' },
+      { label: 'Apologize sincerely', type: 'comfort', affinityChange: 15, trustChange: 5, outcome: 'They seem willing to give you another chance', continuesNarrative: false },
+      { label: 'Promise to change', type: 'negotiate', affinityChange: 10, trustChange: -5, outcome: 'They nod skeptically but agree to wait and see', continuesNarrative: false },
+      { label: 'Dismiss their concerns', type: 'dismiss', affinityChange: -20, trustChange: -15, outcome: 'Their expression hardens. You may have sealed their decision', continuesNarrative: false },
+      { label: 'Let them go', type: 'agree', affinityChange: 0, trustChange: 0, outcome: 'They look hurt but nod. "Maybe that is for the best."', continuesNarrative: true },
     ],
     expiresAfterTurns: 3,
     blocksPlayerAction: false,
@@ -286,10 +296,10 @@ function generateConfrontation(companion: CompanionState, grievances: CompanionG
     dialogue: `*${companion.name} blocks your path, their expression serious* "We need to talk. Now. ${grievanceList}... These things have been weighing on me. I need to know where you stand."`,
     internalReason: `${grievances.length} unresolved grievances`,
     playerOptions: [
-      { label: 'Acknowledge and apologize', type: 'comfort', affinityChange: 20, trustChange: 10, outcome: 'They seem relieved that you listened' },
-      { label: 'Explain your reasoning', type: 'negotiate', affinityChange: 5, trustChange: 5, outcome: 'They consider your words carefully' },
-      { label: 'Tell them to deal with it', type: 'dismiss', affinityChange: -25, trustChange: -20, outcome: 'Their jaw tightens. "I see how it is."' },
-      { label: 'Threaten consequences', type: 'threaten', affinityChange: -40, trustChange: -30, outcome: 'Fear flickers in their eyes, but so does anger' },
+      { label: 'Acknowledge and apologize', type: 'comfort', affinityChange: 20, trustChange: 10, outcome: 'They seem relieved that you listened', continuesNarrative: false },
+      { label: 'Explain your reasoning', type: 'negotiate', affinityChange: 5, trustChange: 5, outcome: 'They consider your words carefully', continuesNarrative: false },
+      { label: 'Tell them to deal with it', type: 'dismiss', affinityChange: -25, trustChange: -20, outcome: 'Their jaw tightens. "I see how it is."', continuesNarrative: false },
+      { label: 'Threaten consequences', type: 'threaten', affinityChange: -40, trustChange: -30, outcome: 'Fear flickers in their eyes, but so does anger', continuesNarrative: false },
     ],
     blocksPlayerAction: false,
   };
@@ -302,9 +312,9 @@ function generateGoalCompletionRequest(companion: CompanionState, goal: Companio
     dialogue: `*${companion.name} approaches you with determination* "I've been working toward something for a long time now. ${goal.description}. I'm so close. Will you help me finish this?"`,
     internalReason: `Goal "${goal.description}" at ${goal.progress}% completion`,
     playerOptions: [
-      { label: 'Of course, I\'ll help', type: 'agree', affinityChange: 25, trustChange: 20, outcome: 'Their face lights up with gratitude' },
-      { label: 'What\'s in it for me?', type: 'negotiate', affinityChange: -5, trustChange: -10, outcome: 'They hide their disappointment but nod' },
-      { label: 'We have other priorities', type: 'disagree', affinityChange: -15, trustChange: -5, outcome: 'They look crestfallen but accept' },
+      { label: 'Of course, I\'ll help', type: 'agree', affinityChange: 25, trustChange: 20, outcome: 'Their face lights up with gratitude', continuesNarrative: true },
+      { label: 'What\'s in it for me?', type: 'negotiate', affinityChange: -5, trustChange: -10, outcome: 'They hide their disappointment but nod', continuesNarrative: false },
+      { label: 'We have other priorities', type: 'disagree', affinityChange: -15, trustChange: -5, outcome: 'They look crestfallen but accept', continuesNarrative: false },
     ],
     blocksPlayerAction: false,
   };
@@ -328,9 +338,9 @@ function generateRomanceAdvance(companion: CompanionState): AutonomousAction {
     dialogue: `*${companion.name} seems unusually nervous, finding you alone* "I... there's something I need to say. These moments we've shared, the way you look at me... I can't pretend anymore. I have feelings for you."`,
     internalReason: `Romance interest (${companion.romanticInterest}) exceeded threshold with high trust (${companion.trust})`,
     playerOptions: [
-      { label: 'I feel the same way', type: 'agree', affinityChange: 40, trustChange: 30, outcome: 'They smile, reaching for your hand' },
-      { label: 'I need time to think', type: 'negotiate', affinityChange: 5, trustChange: -5, outcome: 'They nod, trying to hide their anxiety' },
-      { label: 'I don\'t feel that way', type: 'disagree', affinityChange: -30, trustChange: 5, outcome: 'Pain flashes across their face, but they compose themselves' },
+      { label: 'I feel the same way', type: 'agree', affinityChange: 40, trustChange: 30, outcome: 'They smile, reaching for your hand', continuesNarrative: false },
+      { label: 'I need time to think', type: 'negotiate', affinityChange: 5, trustChange: -5, outcome: 'They nod, trying to hide their anxiety', continuesNarrative: false },
+      { label: 'I don\'t feel that way', type: 'disagree', affinityChange: -30, trustChange: 5, outcome: 'Pain flashes across their face, but they compose themselves', continuesNarrative: false },
     ],
     blocksPlayerAction: false,
   };

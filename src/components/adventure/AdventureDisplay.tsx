@@ -1483,12 +1483,14 @@ export function AdventureDisplay({
       companionSystem.registerCompanion(updatedCompanion);
     }
     
-    // Show toast with outcome
-    toast({
-      title: `${companion?.name || 'Companion'} responds`,
-      description: response.outcome,
-      duration: 4000,
-    });
+    // Show toast with outcome - this is the only feedback for self-contained moments
+    sonnerToast(
+      `${companion?.name || 'Companion'} responds`,
+      { 
+        description: response.outcome,
+        duration: 4000,
+      }
+    );
     
     // If response resolves a grievance, handle it
     if (response.type === 'comfort' || response.type === 'agree') {
@@ -1498,11 +1500,13 @@ export function AdventureDisplay({
       });
     }
     
-    // Inject the outcome into the narrative
-    if (response.outcome) {
+    // ONLY continue the narrative if this is a story-altering response
+    // Most companion moments are self-contained and don't need AI continuation
+    if (response.continuesNarrative && response.outcome) {
       onPlayerAction(`[COMPANION: ${companion?.name}] ${response.outcome}`);
     }
-  }, [companionAutonomy, activeCompanions, toast, onPlayerAction]);
+    // Otherwise, the moment is complete - no story continuation needed
+  }, [companionAutonomy, activeCompanions, onPlayerAction]);
 
   const handleAutonomyDismiss = useCallback((companionId: string, action: AutonomousAction) => {
     companionAutonomy.consumeAction(companionId);
