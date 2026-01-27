@@ -4,7 +4,7 @@ import {
   Users, Heart, Shield, Sword, Zap, Brain, 
   ChevronDown, ChevronUp, X, UserPlus, UserMinus,
   MessageCircle, Star, AlertTriangle, Wand2, Sparkles,
-  ThumbsUp, ThumbsDown, Flame, Skull, Eye, Scale
+  ThumbsUp, ThumbsDown, Flame, Skull, Eye, Scale, HandHeart
 } from 'lucide-react';
 import { 
   companionSystem, 
@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
 import { CompanionCreatorWizardV2 } from '@/components/companion';
+import { GrievanceResolutionDialog } from '@/components/companion/GrievanceResolutionDialog';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -167,7 +168,13 @@ function ActionPreferences({ companion, compact = false }: { companion: Companio
 }
 
 // Recent memory display showing positive/negative reactions
-function RecentReactions({ companion }: { companion: CompanionState }) {
+function RecentReactions({ 
+  companion,
+  onResolveGrievance 
+}: { 
+  companion: CompanionState;
+  onResolveGrievance?: (grievance: { id: string; description: string; severity: number }) => void;
+}) {
   // Get recent memories (last 5 with affinity changes)
   const recentMemories = useMemo(() => {
     return companion.memories
@@ -190,19 +197,40 @@ function RecentReactions({ companion }: { companion: CompanionState }) {
       {/* Grievances (serious negative feelings) */}
       {grievances.length > 0 && (
         <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
-          <div className="flex items-center gap-1 text-xs text-red-400 font-medium mb-1">
-            <Flame className="w-3 h-3" />
-            <span>Grievances ({grievances.length})</span>
-          </div>
-          <div className="space-y-1">
-            {grievances.slice(0, 2).map(g => (
-              <p key={g.id} className="text-xs text-red-300/80 truncate">
-                {g.description}
-              </p>
-            ))}
-            {grievances.length > 2 && (
-              <p className="text-xs text-red-400/60">+{grievances.length - 2} more...</p>
+          <div className="flex items-center justify-between text-xs text-red-400 font-medium mb-2">
+            <span className="flex items-center gap-1">
+              <Flame className="w-3 h-3" />
+              Grievances ({grievances.length})
+            </span>
+            {onResolveGrievance && (
+              <span className="text-red-400/60 text-[10px]">Click to address</span>
             )}
+          </div>
+          <div className="space-y-1.5">
+            {grievances.map(g => (
+              <button
+                key={g.id}
+                onClick={() => onResolveGrievance?.(g)}
+                disabled={!onResolveGrievance}
+                className={cn(
+                  "w-full text-left flex items-center gap-2 p-1.5 rounded transition-colors",
+                  onResolveGrievance 
+                    ? "hover:bg-red-500/20 cursor-pointer group"
+                    : "cursor-default"
+                )}
+              >
+                <AlertTriangle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                <span className="text-xs text-red-300/80 flex-1 truncate">
+                  {g.description}
+                </span>
+                {onResolveGrievance && (
+                  <span className="flex items-center gap-1 text-[10px] text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <HandHeart className="w-3 h-3" />
+                    Resolve
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -251,6 +279,13 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
   const [showRecruitMenu, setShowRecruitMenu] = useState(false);
   const [selectedCompanion, setSelectedCompanion] = useState<CompanionState | null>(null);
   const [showCreatorWizard, setShowCreatorWizard] = useState(false);
+  
+  // Grievance resolution state
+  const [grievanceDialogOpen, setGrievanceDialogOpen] = useState(false);
+  const [grievanceToResolve, setGrievanceToResolve] = useState<{
+    companion: CompanionState;
+    grievance: { id: string; description: string; severity: number };
+  } | null>(null);
 
   // Refresh companion list
   const refreshCompanions = () => {
@@ -340,6 +375,20 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
           companion={selectedCompanion}
           isOpen={!!selectedCompanion}
           onClose={() => setSelectedCompanion(null)}
+        />
+      )}
+
+      {/* Grievance Resolution Dialog */}
+      {grievanceToResolve && (
+        <GrievanceResolutionDialog
+          open={grievanceDialogOpen}
+          onOpenChange={setGrievanceDialogOpen}
+          companion={grievanceToResolve.companion}
+          grievance={grievanceToResolve.grievance}
+          onResolved={() => {
+            setGrievanceToResolve(null);
+            refreshCompanions();
+          }}
         />
       )}
       
@@ -460,6 +509,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
                   onSpeak={onCompanionSpeak}
                   onEnterScene={onEnterScene}
                   onOpenSheet={() => setSelectedCompanion(companion)}
+                  onResolveGrievance={(grievance) => {
+                    setGrievanceToResolve({ companion, grievance });
+                    setGrievanceDialogOpen(true);
+                  }}
                   genre={genre}
                   currentScene={currentScene}
                 />
@@ -529,11 +582,12 @@ interface CompanionCardProps {
   onSpeak?: (companion: CompanionState, dialogue: string) => void;
   onEnterScene?: (companion: CompanionState, introNarrative: string) => void;
   onOpenSheet: () => void;
+  onResolveGrievance?: (grievance: { id: string; description: string; severity: number }) => void;
   genre?: string;
   currentScene?: string;
 }
 
-function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onEnterScene, onOpenSheet, genre = 'fantasy', currentScene = '' }: CompanionCardProps) {
+function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onEnterScene, onOpenSheet, onResolveGrievance, genre = 'fantasy', currentScene = '' }: CompanionCardProps) {
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
   const [isGeneratingEntry, setIsGeneratingEntry] = useState(false);
@@ -753,7 +807,10 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
               </div>
 
               {/* Recent Reactions & Grievances */}
-              <RecentReactions companion={companion} />
+              <RecentReactions 
+                companion={companion} 
+                onResolveGrievance={onResolveGrievance}
+              />
 
               {/* Personality Traits */}
               <div>
