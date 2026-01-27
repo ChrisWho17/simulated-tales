@@ -404,6 +404,7 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
             setJournalCompanion(null);
           }}
           companion={journalCompanion}
+          allCompanions={companions}
         />
       )}
       
