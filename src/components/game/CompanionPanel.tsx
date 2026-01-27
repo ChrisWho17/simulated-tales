@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Heart, Shield, Sword, Zap, Brain, 
   ChevronDown, ChevronUp, X, UserPlus, UserMinus,
-  MessageCircle, Star, AlertTriangle, Wand2, Sparkles
+  MessageCircle, Star, AlertTriangle, Wand2, Sparkles,
+  ThumbsUp, ThumbsDown, Flame, Skull, Eye, Scale
 } from 'lucide-react';
 import { 
   companionSystem, 
   CompanionState, 
   CompanionMood,
-  COMPANION_TEMPLATES 
+  COMPANION_TEMPLATES,
+  PlayerActionType
 } from '@/game/companionSystem';
 import { companionCombatManager } from '@/game/companionCombatSystem';
+import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -49,6 +52,30 @@ const moodColors: Record<CompanionMood, string> = {
   betrayed: 'bg-red-700',
 };
 
+// Action labels for display
+const ACTION_LABELS: Partial<Record<PlayerActionType, { label: string; icon: React.ElementType }>> = {
+  combat_kill: { label: 'Kill', icon: Skull },
+  combat_spare: { label: 'Spare', icon: Heart },
+  theft: { label: 'Theft', icon: Eye },
+  charity: { label: 'Charity', icon: Heart },
+  lie: { label: 'Lie', icon: Eye },
+  truth: { label: 'Truth', icon: Scale },
+  violence: { label: 'Violence', icon: Flame },
+  diplomacy: { label: 'Diplomacy', icon: Scale },
+  betrayal: { label: 'Betrayal', icon: Skull },
+  loyalty: { label: 'Loyalty', icon: Shield },
+  cowardice: { label: 'Cowardice', icon: AlertTriangle },
+  bravery: { label: 'Bravery', icon: Shield },
+  romance_flirt: { label: 'Flirt', icon: Heart },
+  romance_reject: { label: 'Reject', icon: X },
+  insult: { label: 'Insult', icon: Flame },
+  compliment: { label: 'Praise', icon: Star },
+  greed: { label: 'Greed', icon: Eye },
+  sacrifice: { label: 'Sacrifice', icon: Heart },
+  mercy: { label: 'Mercy', icon: Heart },
+  cruelty: { label: 'Cruelty', icon: Skull },
+};
+
 // Compact health display component
 function CompanionHealthBadge({ companion, onClick }: { companion: CompanionState; onClick: () => void }) {
   const combatStats = companionCombatManager.getCombatStats(companion.id);
@@ -70,6 +97,150 @@ function CompanionHealthBadge({ companion, onClick }: { companion: CompanionStat
     >
       {combatStats.currentHealth}/{combatStats.maxHealth}
     </button>
+  );
+}
+
+// Component showing what actions this companion likes/dislikes
+function ActionPreferences({ companion, compact = false }: { companion: CompanionState; compact?: boolean }) {
+  const approves = companion.personality.approves.slice(0, compact ? 3 : 5);
+  const disapproves = companion.personality.disapproves.slice(0, compact ? 3 : 5);
+  
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1 text-xs">
+        <span className="flex items-center gap-0.5 text-emerald-400">
+          <ThumbsUp className="w-3 h-3" />
+          <span>{approves.length}</span>
+        </span>
+        <span className="text-muted-foreground">/</span>
+        <span className="flex items-center gap-0.5 text-red-400">
+          <ThumbsDown className="w-3 h-3" />
+          <span>{disapproves.length}</span>
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-2">
+      {/* Approves */}
+      <div>
+        <div className="flex items-center gap-1 text-xs text-emerald-400 mb-1">
+          <ThumbsUp className="w-3 h-3" />
+          <span className="font-medium">Approves</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {approves.map(action => {
+            const config = ACTION_LABELS[action];
+            const Icon = config?.icon || Star;
+            return (
+              <span key={action} className="px-1.5 py-0.5 text-xs rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <Icon className="w-2.5 h-2.5" />
+                {config?.label || action.replace(/_/g, ' ')}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Disapproves */}
+      <div>
+        <div className="flex items-center gap-1 text-xs text-red-400 mb-1">
+          <ThumbsDown className="w-3 h-3" />
+          <span className="font-medium">Dislikes</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {disapproves.map(action => {
+            const config = ACTION_LABELS[action];
+            const Icon = config?.icon || AlertTriangle;
+            return (
+              <span key={action} className="px-1.5 py-0.5 text-xs rounded bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1">
+                <Icon className="w-2.5 h-2.5" />
+                {config?.label || action.replace(/_/g, ' ')}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Recent memory display showing positive/negative reactions
+function RecentReactions({ companion }: { companion: CompanionState }) {
+  // Get recent memories (last 5 with affinity changes)
+  const recentMemories = useMemo(() => {
+    return companion.memories
+      .filter(m => m.affinityChange !== 0 && !m.forgotten)
+      .slice(-5)
+      .reverse();
+  }, [companion.memories]);
+  
+  // Get grievances from autonomy manager
+  const grievances = useMemo(() => {
+    return companionAutonomyManager.getUnresolvedGrievances(companion.id);
+  }, [companion.id]);
+  
+  if (recentMemories.length === 0 && grievances.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="space-y-2">
+      {/* Grievances (serious negative feelings) */}
+      {grievances.length > 0 && (
+        <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-1 text-xs text-red-400 font-medium mb-1">
+            <Flame className="w-3 h-3" />
+            <span>Grievances ({grievances.length})</span>
+          </div>
+          <div className="space-y-1">
+            {grievances.slice(0, 2).map(g => (
+              <p key={g.id} className="text-xs text-red-300/80 truncate">
+                {g.description}
+              </p>
+            ))}
+            {grievances.length > 2 && (
+              <p className="text-xs text-red-400/60">+{grievances.length - 2} more...</p>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Recent reactions */}
+      <div>
+        <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+          <Brain className="w-3 h-3" />
+          Recent Reactions
+        </p>
+        <div className="space-y-1">
+          {recentMemories.map((memory, i) => (
+            <div 
+              key={`${memory.timestamp}-${i}`}
+              className={cn(
+                "flex items-center gap-2 text-xs px-2 py-1 rounded",
+                memory.affinityChange > 0 
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : "bg-red-500/10 text-red-400"
+              )}
+            >
+              {memory.affinityChange > 0 ? (
+                <ThumbsUp className="w-3 h-3 flex-shrink-0" />
+              ) : (
+                <ThumbsDown className="w-3 h-3 flex-shrink-0" />
+              )}
+              <span className="truncate flex-1">{memory.description}</span>
+              <span className={cn(
+                "font-mono text-xs",
+                memory.affinityChange > 0 ? "text-emerald-300" : "text-red-300"
+              )}>
+                {memory.affinityChange > 0 ? '+' : ''}{memory.affinityChange}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -453,68 +624,107 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
     }
   };
 
+  // Calculate relationship health indicator
+  const relationshipHealth = useMemo(() => {
+    const avg = (companion.trust + companion.respect + Math.max(0, companion.affinity + 100) / 2) / 3;
+    if (avg >= 70) return { status: 'strong', color: 'border-emerald-500/50', glow: 'shadow-emerald-500/20' };
+    if (avg >= 40) return { status: 'stable', color: 'border-primary/50', glow: 'shadow-primary/20' };
+    if (avg >= 20) return { status: 'strained', color: 'border-amber-500/50', glow: 'shadow-amber-500/20' };
+    return { status: 'critical', color: 'border-red-500/50', glow: 'shadow-red-500/20' };
+  }, [companion.trust, companion.respect, companion.affinity]);
+
+  // Get grievance count
+  const grievanceCount = useMemo(() => {
+    return companionAutonomyManager.getUnresolvedGrievances(companion.id).length;
+  }, [companion.id]);
+
   return (
     <motion.div
       layout
       className={cn(
-        "rounded-lg border transition-colors",
-        "bg-card/50 border-border/50",
-        isExpanded && "border-primary/30"
+        "rounded-xl border-2 transition-all duration-300",
+        "bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm",
+        relationshipHealth.color,
+        isExpanded && relationshipHealth.glow,
+        isExpanded && "shadow-lg"
       )}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between p-3 cursor-pointer"
+        className="flex items-center justify-between p-3 cursor-pointer group"
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
-          {/* Avatar with mood indicator */}
+          {/* Avatar with mood indicator and relationship ring */}
           <div className="relative">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold overflow-hidden",
-              "bg-background border-2 border-border"
+              "w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold overflow-hidden",
+              "bg-background border-2 transition-all duration-300",
+              relationshipHealth.color,
+              "group-hover:scale-105"
             )}>
               {companion.portrait ? (
                 <img src={companion.portrait} alt={companion.name} className="w-full h-full object-cover" />
               ) : (
-                companion.name.charAt(0)
+                <span className="text-xl font-display">{companion.name.charAt(0)}</span>
               )}
             </div>
+            {/* Mood indicator */}
             <div className={cn(
-              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card",
+              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card",
               moodColors[companion.mood]
-            )} />
+            )} title={`Mood: ${companion.mood}`} />
+            
+            {/* Grievance indicator */}
+            {grievanceCount > 0 && (
+              <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-red-500 border-2 border-card flex items-center justify-center">
+                <span className="text-[10px] font-bold text-white">{grievanceCount}</span>
+              </div>
+            )}
           </div>
 
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{companion.name}</span>
-              <RoleIcon className="w-3 h-3 text-muted-foreground" />
+              <span className="font-display font-medium text-base">{companion.name}</span>
+              <RoleIcon className="w-4 h-4 text-muted-foreground" />
               <CompanionHealthBadge companion={companion} onClick={onOpenSheet} />
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="capitalize">{companion.mood}</span>
-              <span>•</span>
-              <span>Affinity: {companion.affinity}</span>
+              <span className={cn(
+                "capitalize px-1.5 py-0.5 rounded",
+                moodColors[companion.mood]?.replace('bg-', 'bg-opacity-20 text-').replace('-400', '-300').replace('-500', '-300')
+              )}>{companion.mood}</span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className={cn(
+                companion.affinity > 30 && "text-emerald-400",
+                companion.affinity < -30 && "text-red-400"
+              )}>
+                {companion.affinity > 0 ? '+' : ''}{companion.affinity}
+              </span>
               {companion.romanticInterest > 50 && (
-                <>
-                  <span>•</span>
-                  <Heart className="w-3 h-3 text-pink-400" />
-                </>
+                <Heart className="w-3 h-3 text-pink-400 fill-pink-400/50" />
               )}
+              {/* Compact action preferences */}
+              <ActionPreferences companion={companion} compact />
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {companion.wantsToSpeak && (
-            <MessageCircle className="w-4 h-4 text-primary animate-pulse" />
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+              <MessageCircle className="w-5 h-5 text-primary" />
+            </motion.div>
           )}
-          {isExpanded ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          )}
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          </motion.div>
         </div>
       </div>
 
@@ -525,25 +735,37 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-3 pt-0 space-y-4">
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <StatBar label="Trust" value={companion.trust} color="bg-blue-400" />
-                <StatBar label="Respect" value={companion.respect} color="bg-amber-400" />
-                <StatBar label="Fear" value={companion.fear} color="bg-purple-400" />
-                <StatBar label="Romance" value={companion.romanticInterest} color="bg-pink-400" />
+            <div className="p-4 pt-0 space-y-4 border-t border-border/30">
+              {/* Stats Grid - Enhanced */}
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <EnhancedStatBar label="Trust" value={companion.trust} color="from-blue-500 to-cyan-400" icon={Shield} />
+                <EnhancedStatBar label="Respect" value={companion.respect} color="from-amber-500 to-yellow-400" icon={Star} />
+                <EnhancedStatBar label="Fear" value={companion.fear} color="from-purple-500 to-violet-400" icon={AlertTriangle} />
+                <EnhancedStatBar label="Romance" value={companion.romanticInterest} color="from-pink-500 to-rose-400" icon={Heart} />
               </div>
+
+              {/* Action Preferences - What they like/dislike */}
+              <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                <ActionPreferences companion={companion} />
+              </div>
+
+              {/* Recent Reactions & Grievances */}
+              <RecentReactions companion={companion} />
 
               {/* Personality Traits */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Personality</p>
-                <div className="flex flex-wrap gap-1">
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                  <Brain className="w-3 h-3" />
+                  Personality
+                </p>
+                <div className="flex flex-wrap gap-1.5">
                   {companion.personality.traits.map((trait) => (
                     <span
                       key={trait}
-                      className="px-2 py-0.5 text-xs rounded-full bg-muted/50 capitalize"
+                      className="px-2.5 py-1 text-xs rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 capitalize font-medium"
                     >
                       {trait}
                     </span>
@@ -553,18 +775,29 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
 
               {/* Internal Thoughts (if high trust) */}
               {companion.trust > 60 && (
-                <div className="p-2 rounded bg-muted/30 text-xs italic">
-                  <Brain className="w-3 h-3 inline mr-1" />
-                  <span className="opacity-70">Thinking:</span> {companion.internalThoughts}
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm italic"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Brain className="w-4 h-4 text-primary" />
+                    <span className="text-primary text-xs font-medium not-italic">Thinking...</span>
+                  </div>
+                  <p className="text-muted-foreground">{companion.internalThoughts}</p>
+                </motion.div>
               )}
 
               {/* Warnings */}
               {companion.affinity < companion.personality.departureThreshold + 20 && (
-                <div className="flex items-center gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span>Relationship strained - may leave soon</span>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400"
+                >
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">Relationship critically strained - may leave soon</span>
+                </motion.div>
               )}
 
               {/* Actions */}
@@ -572,31 +805,32 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className="flex-1 bg-background/50 hover:bg-background/80"
                   onClick={handleTalk}
                   disabled={isGeneratingDialogue || isGeneratingEntry}
                 >
-                  <MessageCircle className="w-4 h-4 mr-1" />
+                  <MessageCircle className="w-4 h-4 mr-1.5" />
                   {isGeneratingDialogue ? 'Thinking...' : 'Talk'}
                 </Button>
                 {onEnterScene && (
                   <Button
                     variant="default"
                     size="sm"
-                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                    className="flex-1 bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/20"
                     onClick={handleEnterScene}
                     disabled={isGeneratingEntry || isGeneratingDialogue}
                     title="Have this companion dramatically enter the current scene"
                   >
-                    <Sparkles className="w-4 h-4 mr-1" />
+                    <Sparkles className="w-4 h-4 mr-1.5" />
                     {isGeneratingEntry ? 'Entering...' : 'Enter Scene'}
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-red-400 hover:text-red-300 hover:border-red-400/50"
+                  className="text-red-400 hover:text-red-300 hover:border-red-400/50 hover:bg-red-500/10"
                   onClick={onDismiss}
+                  title="Dismiss from party"
                 >
                   <UserMinus className="w-4 h-4" />
                 </Button>
@@ -617,6 +851,46 @@ function StatBar({ label, value, color }: { label: string; value: number; color:
         <span>{value}</span>
       </div>
       <Progress value={value} className="h-1.5" indicatorClassName={color} />
+    </div>
+  );
+}
+
+// Enhanced stat bar with gradient and icon
+function EnhancedStatBar({ 
+  label, 
+  value, 
+  color, 
+  icon: Icon 
+}: { 
+  label: string; 
+  value: number; 
+  color: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="group">
+      <div className="flex justify-between text-xs mb-1.5">
+        <span className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
+          <Icon className="w-3 h-3" />
+          {label}
+        </span>
+        <span className={cn(
+          "font-mono font-medium",
+          value >= 70 && "text-emerald-400",
+          value < 30 && "text-red-400"
+        )}>{value}</span>
+      </div>
+      <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className={cn(
+            "h-full rounded-full bg-gradient-to-r",
+            color
+          )}
+        />
+      </div>
     </div>
   );
 }
