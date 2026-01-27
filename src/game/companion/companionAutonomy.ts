@@ -277,13 +277,15 @@ function generateDepartureWarning(companion: CompanionState, beliefs: CompanionB
 }
 
 function generateDepartureAction(companion: CompanionState, beliefs: CompanionBeliefs): AutonomousAction {
+  // Sentient companions depart on their own terms - no blocking needed
+  // They simply act and the player observes the consequence
   return {
     type: 'departure',
     priority: 'critical',
     dialogue: `*${companion.name} gathers their belongings* "I've made my decision. Our journey together ends here. Perhaps in another life, we could have been great allies. But not like this."`,
     internalReason: 'Departure countdown expired without resolution',
     consequences: ['Companion leaves the party permanently', 'May become hostile or neutral NPC'],
-    blocksPlayerAction: true,
+    blocksPlayerAction: false, // Sentient = they act without needing confirmation
   };
 }
 
@@ -391,8 +393,10 @@ function generateOpinionVoice(
 // ============================================================================
 
 export function createDefaultAutonomyState(traits: PersonalityTrait[]): AutonomyState {
+  // Default to 'independent' (fully sentient) - companions act on their own
+  // without waiting for player confirmation. This is the core sentience design.
   return {
-    level: 'reactive',
+    level: 'independent',
     currentGoals: generateCompanionGoals(traits),
     pendingActions: [],
     lastAutonomousAction: Date.now(),
