@@ -4,7 +4,7 @@ import {
   Users, Heart, Shield, Sword, Zap, Brain, 
   ChevronDown, ChevronUp, X, UserPlus, UserMinus,
   MessageCircle, Star, AlertTriangle, Wand2, Sparkles,
-  ThumbsUp, ThumbsDown, Flame, Skull, Eye, Scale, HandHeart
+  ThumbsUp, ThumbsDown, Flame, Skull, Eye, Scale, HandHeart, Book
 } from 'lucide-react';
 import { 
   companionSystem, 
@@ -21,8 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CompanionCharacterSheet } from './CompanionCharacterSheet';
-import { CompanionCreatorWizardV2 } from '@/components/companion';
-import { GrievanceResolutionDialog } from '@/components/companion/GrievanceResolutionDialog';
+import { CompanionCreatorWizardV2, CompanionJournal, GrievanceResolutionDialog } from '@/components/companion';
 
 interface CompanionPanelProps {
   isOpen: boolean;
@@ -286,6 +285,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
     companion: CompanionState;
     grievance: { id: string; description: string; severity: number };
   } | null>(null);
+  
+  // Journal state
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalCompanion, setJournalCompanion] = useState<CompanionState | null>(null);
 
   // Refresh companion list
   const refreshCompanions = () => {
@@ -389,6 +392,18 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
             setGrievanceToResolve(null);
             refreshCompanions();
           }}
+        />
+      )}
+      
+      {/* Companion Journal */}
+      {journalCompanion && (
+        <CompanionJournal
+          isOpen={journalOpen}
+          onClose={() => {
+            setJournalOpen(false);
+            setJournalCompanion(null);
+          }}
+          companion={journalCompanion}
         />
       )}
       
@@ -509,6 +524,10 @@ export function CompanionPanel({ isOpen, onClose, onCompanionSpeak, onEnterScene
                   onSpeak={onCompanionSpeak}
                   onEnterScene={onEnterScene}
                   onOpenSheet={() => setSelectedCompanion(companion)}
+                  onOpenJournal={() => {
+                    setJournalCompanion(companion);
+                    setJournalOpen(true);
+                  }}
                   onResolveGrievance={(grievance) => {
                     setGrievanceToResolve({ companion, grievance });
                     setGrievanceDialogOpen(true);
@@ -582,12 +601,13 @@ interface CompanionCardProps {
   onSpeak?: (companion: CompanionState, dialogue: string) => void;
   onEnterScene?: (companion: CompanionState, introNarrative: string) => void;
   onOpenSheet: () => void;
+  onOpenJournal: () => void;
   onResolveGrievance?: (grievance: { id: string; description: string; severity: number }) => void;
   genre?: string;
   currentScene?: string;
 }
 
-function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onEnterScene, onOpenSheet, onResolveGrievance, genre = 'fantasy', currentScene = '' }: CompanionCardProps) {
+function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, onEnterScene, onOpenSheet, onOpenJournal, onResolveGrievance, genre = 'fantasy', currentScene = '' }: CompanionCardProps) {
   const RoleIcon = roleIcons[companion.combatRole as keyof typeof roleIcons] || Users;
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState(false);
   const [isGeneratingEntry, setIsGeneratingEntry] = useState(false);
@@ -882,6 +902,15 @@ function CompanionCard({ companion, isExpanded, onToggle, onDismiss, onSpeak, on
                     {isGeneratingEntry ? 'Entering...' : 'Enter Scene'}
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-primary hover:text-primary/80 hover:border-primary/50 hover:bg-primary/10"
+                  onClick={onOpenJournal}
+                  title="View relationship journal"
+                >
+                  <Book className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
