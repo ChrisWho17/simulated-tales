@@ -7,10 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Book, Heart, Shield, Star, Eye, Clock, ChevronLeft,
   Flame, Skull, Brain, MessageCircle, Sparkles, Lock,
-  ThumbsUp, ThumbsDown, Trophy, Swords, HandHeart, X, Users
+  ThumbsUp, ThumbsDown, Trophy, Swords, HandHeart, X, Users, GitBranch
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { CompanionComparisonView } from './CompanionComparisonView';
+import { RelationshipTimelineHorizontal } from './RelationshipTimelineHorizontal';
 import { CompanionState, CompanionMemory } from '@/game/companion/companionTypes';
 import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
 import { Button } from '@/components/ui/button';
@@ -583,7 +584,7 @@ function RelationshipStats({ companion }: { companion: CompanionState }) {
 // MAIN JOURNAL COMPONENT
 // ============================================================================
 
-type JournalTab = 'overview' | 'timeline' | 'secrets' | 'conversations';
+type JournalTab = 'overview' | 'timeline' | 'journey' | 'secrets' | 'conversations';
 
 export function CompanionJournal({ isOpen, onClose, companion, allCompanions = [] }: CompanionJournalProps) {
   const [activeTab, setActiveTab] = useState<JournalTab>('overview');
@@ -598,6 +599,7 @@ export function CompanionJournal({ isOpen, onClose, companion, allCompanions = [
   
   const tabs: { id: JournalTab; label: string; icon: React.ElementType }[] = [
     { id: 'overview', label: 'Overview', icon: Book },
+    { id: 'journey', label: 'Journey', icon: GitBranch },
     { id: 'timeline', label: 'History', icon: Clock },
     { id: 'secrets', label: 'Secrets', icon: Eye },
     { id: 'conversations', label: 'Topics', icon: MessageCircle },
@@ -736,6 +738,18 @@ export function CompanionJournal({ isOpen, onClose, companion, allCompanions = [
                           transition={{ duration: 0.2 }}
                         >
                           <RelationshipStats companion={companion} />
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'journey' && (
+                        <motion.div
+                          key="journey"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <RelationshipTimelineHorizontal companion={companion} />
                         </motion.div>
                       )}
                       
