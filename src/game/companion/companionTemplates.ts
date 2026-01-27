@@ -80,6 +80,60 @@ export const COMPANION_TEMPLATES: Record<string, Partial<CompanionState>> = {
     combatRole: 'ranged',
     skills: ['precise_shot', 'track', 'animal_companion'],
   },
+  
+  jaded_mercenary: {
+    personality: {
+      traits: ['pragmatic', 'ruthless', 'skeptical', 'loyal'],
+      values: { honor: 25, wealth: 75, power: 60, love: 30, freedom: 70, justice: 15, knowledge: 35, family: 20 },
+      approves: ['combat_kill', 'theft', 'greed', 'diplomacy', 'truth'],
+      disapproves: ['charity', 'sacrifice', 'mercy'],
+      romanticInterest: { enabled: true, preferredGender: 'any', attractedToPlayer: false, romanceThreshold: 80 },
+      betrayalThreshold: -45,
+      departureThreshold: -30,
+      speechPattern: 'blunt, cynical, dark humor',
+      catchphrases: ['Gold talks. Everything else walks.', 'Morals are expensive. I work cheap.', 'Dead men don\'t pay.'],
+      quirks: ['sharpens blade during conversations', 'never drinks anything they didn\'t pour'],
+      hiddenQuirks: ['sends money to an orphanage anonymously', 'keeps a worn family portrait', 'once refused a contract they regret taking'],
+    },
+    combatRole: 'damage',
+    skills: ['execution_strike', 'dirty_fighting', 'intimidate'],
+  },
+  
+  haunted_scholar: {
+    personality: {
+      traits: ['spiritual', 'kind', 'cowardly', 'forgiving'],
+      values: { honor: 50, wealth: 15, power: 20, love: 65, freedom: 40, justice: 80, knowledge: 90, family: 55 },
+      approves: ['mercy', 'charity', 'truth', 'diplomacy', 'combat_spare'],
+      disapproves: ['violence', 'cruelty', 'betrayal', 'lie'],
+      romanticInterest: { enabled: true, preferredGender: 'any', attractedToPlayer: true, romanceThreshold: 60 },
+      betrayalThreshold: -55,
+      departureThreshold: -40,
+      speechPattern: 'academic, hesitant, prone to rambling',
+      catchphrases: ['The texts speak of this, actually...', 'Violence is rarely the answer.', 'Knowledge is the only true power.'],
+      quirks: ['adjusts spectacles constantly', 'quotes obscure texts'],
+      hiddenQuirks: ['sees ghosts of those they couldn\'t save', 'wrote a controversial thesis that ruined their career', 'terrified of their own magical potential'],
+    },
+    combatRole: 'support',
+    skills: ['ancient_ward', 'dispel', 'lore_insight'],
+  },
+  
+  scarred_berserker: {
+    personality: {
+      traits: ['brave', 'vengeful', 'honorable', 'cruel'],
+      values: { honor: 70, wealth: 10, power: 85, love: 25, freedom: 55, justice: 60, knowledge: 15, family: 45 },
+      approves: ['combat_kill', 'bravery', 'violence', 'loyalty', 'truth'],
+      disapproves: ['cowardice', 'lie', 'betrayal', 'diplomacy'],
+      romanticInterest: { enabled: true, preferredGender: 'any', attractedToPlayer: false, romanceThreshold: 90 },
+      betrayalThreshold: -40,
+      departureThreshold: -25,
+      speechPattern: 'terse, aggressive, battle metaphors',
+      catchphrases: ['Blood answers blood.', 'Talk is for the weak.', 'Stand and fight or die kneeling.'],
+      quirks: ['traces scars when thinking', 'never backs down from a challenge'],
+      hiddenQuirks: ['has nightmares every night', 'carves wooden figures of fallen enemies', 'secretly wishes for a peaceful death'],
+    },
+    combatRole: 'tank',
+    skills: ['rage', 'cleave', 'war_cry'],
+  },
 };
 
 // Base reaction values for player actions
