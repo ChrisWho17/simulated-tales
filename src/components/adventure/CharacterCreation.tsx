@@ -1072,23 +1072,25 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   const modifier = getStatModifier(total);
 
                   return (
-                    <div key={stat} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
-                      <div>
-                        <span className="font-medium capitalize">{stat}</span>
-                        {classBonus > 0 && (
-                          <span className="text-xs text-primary ml-2">(+{classBonus})</span>
-                        )}
-                        {bgBonus > 0 && (
-                          <span className="text-xs text-accent ml-1">(+{bgBonus})</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, -1)} disabled={allocated <= 0} className="h-8 w-8">-</Button>
-                        <div className="w-16 text-center">
-                          <span className="text-lg font-bold">{total}</span>
-                          <span className="text-sm text-muted-foreground ml-1">({modifier >= 0 ? '+' : ''}{modifier})</span>
+                    <div key={stat} className="p-3 bg-background/50 rounded-lg border border-border/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-medium capitalize">{stat}</span>
+                          {classBonus > 0 && (
+                            <span className="text-xs text-primary">(+{classBonus})</span>
+                          )}
+                          {bgBonus > 0 && (
+                            <span className="text-xs text-accent">(+{bgBonus})</span>
+                          )}
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, 1)} disabled={allocated >= 7 || pointsRemaining <= 0} className="h-8 w-8">+</Button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, -1)} disabled={allocated <= 0} className="h-8 w-8 shrink-0">-</Button>
+                          <div className="w-14 text-center shrink-0">
+                            <span className="text-lg font-bold">{total}</span>
+                            <span className="text-xs text-muted-foreground ml-0.5">({modifier >= 0 ? '+' : ''}{modifier})</span>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, 1)} disabled={allocated >= 7 || pointsRemaining <= 0} className="h-8 w-8 shrink-0">+</Button>
+                        </div>
                       </div>
                     </div>
                   );
