@@ -1,10 +1,11 @@
 // AdventureInputArea - Extracted input handling component from AdventureDisplay
 // Handles command input, autocomplete, and submission
+// Includes triple-tap redo functionality
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, RotateCcw } from 'lucide-react';
 import { CommandAutocomplete, useCommandAutocomplete } from '@/components/game/CommandAutocomplete';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,6 +36,9 @@ interface AdventureInputAreaProps {
   commandAutocomplete: ReturnType<typeof useCommandAutocomplete>;
 }
 
+// Store last sent messages for redo functionality
+const MAX_HISTORY = 5;
+
 export function AdventureInputArea({
   input,
   onInputChange,
@@ -47,6 +51,14 @@ export function AdventureInputArea({
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
+  // Triple tap detection
+  const tapCountRef = useRef(0);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Message history for redo
+  const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
   // Focus input on mount
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -57,6 +69,59 @@ export function AdventureInputArea({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Handle triple tap for redo
+  const handleTripleTap = useCallback(() => {
+    if (messageHistory.length === 0) {
+      toast({
+        title: '📝 No message history',
+        description: 'Send some messages first to use redo.',
+        duration: 2000,
+      });
+      return;
+    }
+    
+    // Cycle through history
+    const nextIndex = (historyIndex + 1) % messageHistory.length;
+    const restoredMessage = messageHistory[nextIndex];
+    
+    onInputChange(restoredMessage);
+    setHistoryIndex(nextIndex);
+    
+    toast({
+      title: '↩️ Message restored',
+      description: `"${restoredMessage.slice(0, 40)}${restoredMessage.length > 40 ? '...' : ''}"`,
+      duration: 2000,
+    });
+  }, [messageHistory, historyIndex, onInputChange, toast]);
+  
+  // Detect triple tap on input container
+  const handleTap = useCallback(() => {
+    tapCountRef.current += 1;
+    
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+    
+    tapTimeoutRef.current = setTimeout(() => {
+      if (tapCountRef.current >= 3) {
+        handleTripleTap();
+      }
+      tapCountRef.current = 0;
+    }, 400); // 400ms window for triple tap
+  }, [handleTripleTap]);
+  
+  // Store message when submitting
+  const handleSubmitWithHistory = useCallback(() => {
+    if (input.trim()) {
+      setMessageHistory(prev => {
+        const newHistory = [input.trim(), ...prev.filter(m => m !== input.trim())];
+        return newHistory.slice(0, MAX_HISTORY);
+      });
+      setHistoryIndex(-1);
+    }
+    onSubmit();
+  }, [input, onSubmit]);
 
   const handleCommandSelect = (cmd: string) => {
     onInputChange(cmd);
@@ -132,7 +197,10 @@ export function AdventureInputArea({
   };
 
   return (
-    <div className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6">
+    <div 
+      className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6"
+      onClick={handleTap}
+    >
       <div className="max-w-3xl mx-auto">
         <div className="flex gap-3 relative">
           {/* Command Autocomplete Dropdown */}
@@ -145,6 +213,23 @@ export function AdventureInputArea({
             onSelectedIndexChange={commandAutocomplete.setSelectedIndex}
           />
           
+          {/* Redo button - shows when there's history */}
+          {messageHistory.length > 0 && !isLoading && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTripleTap();
+              }}
+              variant="ghost"
+              size="sm"
+              className="absolute -top-10 right-0 text-xs text-muted-foreground hover:text-primary gap-1"
+              title="Restore last message (or triple-tap)"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Redo
+            </Button>
+          )}
+          
           <Input
             ref={inputRef}
             value={input}
@@ -152,14 +237,17 @@ export function AdventureInputArea({
               onInputChange(e.target.value);
               commandAutocomplete.handleInputChange(e.target.value);
             }}
-            placeholder="What do you do? (try /help for commands)"
+            placeholder="What do you do? (triple-tap to redo)"
             className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
             style={{ fontSize: '16px' }}
             onKeyDown={handleKeyDown}
             disabled={isLoading || showDiceRoll}
           />
           <Button
-            onClick={onSubmit}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSubmitWithHistory();
+            }}
             disabled={!input.trim() || isLoading || showDiceRoll}
             size="lg"
             className="px-6"
