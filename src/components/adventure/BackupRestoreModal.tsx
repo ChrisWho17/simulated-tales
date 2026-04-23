@@ -95,7 +95,7 @@ function restoreGameData(backup: BackupData): { success: boolean; errors: string
     
     // Restore campaigns
     if (backup.campaigns && backup.campaigns.length > 0) {
-      const { saveCampaign, saveCampaignIndex } = require('@/lib/campaignStorage');
+      const { saveCampaign, saveCampaignIndex } = await import('@/lib/campaignStorage');
       
       // Restore each campaign
       for (const campaign of backup.campaigns) {

@@ -277,7 +277,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // CRITICAL: Restore companion autonomy state (grievances, goals, recent actions)
     if (campaign.companionAutonomyState) {
       try {
-        const { companionAutonomyManager } = require('@/game/companion/companionAutonomyIntegration');
+        const { companionAutonomyManager } = await import('@/game/companion/companionAutonomyIntegration');
         companionAutonomyManager.deserialize(campaign.companionAutonomyState as any);
         console.log('[Campaign] Restored companion autonomy state (grievances, goals)');
       } catch (e) {
@@ -368,8 +368,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     let companionAutonomyState: Record<string, unknown> = {};
     try {
       // Import dynamically to avoid circular dependencies
-      const { companionAutonomyManager } = require('@/game/companion/companionAutonomyIntegration');
-      companionAutonomyState = companionAutonomyManager.serialize();
+      // Use top-level import (companionAutonomyManager is exported as singleton)
+      const mod = await import('@/game/companion/companionAutonomyIntegration');
+      companionAutonomyState = mod.companionAutonomyManager.serialize();
     } catch (e) {
       console.warn('[Campaign] Failed to capture companion autonomy state:', e);
     }
