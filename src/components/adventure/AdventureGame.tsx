@@ -946,6 +946,16 @@ export function AdventureGame() {
           campaignContext.addNarrativeEntry(transitionEntry);
         }
         
+        // FIX: Run the same post-processing pipeline that handlePlayerAction uses
+        // (previously zone transitions skipped NPC registration & ripple effects)
+        try {
+          const turnNow = campaignMemory?.campaign.currentTick || 0;
+          processNarrativeForNPCs(data.narrative, turnNow, character.name);
+          processActionForRipples(`travel to ${newZone.name}`, false, 3);
+        } catch (e) {
+          console.warn('[Zone Transition] Post-processing failed:', e);
+        }
+        
         // Advance turn
         advanceTurn(travelTime || 15);
         
