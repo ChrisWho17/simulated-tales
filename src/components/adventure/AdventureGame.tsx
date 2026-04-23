@@ -787,6 +787,7 @@ export function AdventureGame() {
     isLoading,
     lastFailedAction,
     pendingMechanics,
+    latestMechanicsRef, // Synchronous mirror — fixes inventory race condition
     generateNarrative,
     setLastFailedAction,
     setPendingMechanics,
@@ -1475,6 +1476,11 @@ export function AdventureGame() {
             }
             
             if (Object.keys(enhancedMechanics).length > 0) {
+              // Update synchronous ref FIRST so handlePlayerAction can read it immediately
+              latestMechanicsRef.current = {
+                ...(latestMechanicsRef.current || {}),
+                ...(enhancedMechanics as GameMechanics),
+              };
               setPendingMechanics(prev => ({ ...prev, ...enhancedMechanics }));
             }
           },
@@ -1529,22 +1535,26 @@ export function AdventureGame() {
       }
       
 // === STORY-INVENTORY SYNC: Parse narrative for item pickups/drops ===
-      // Build mechanics tags from pending mechanics (includes new itemsUsed from Phase 2)
+      // FIX: Read from synchronous ref (latestMechanicsRef.current) instead of state
+      // (pendingMechanics). React state setters are batched, so the state value here
+      // is stale on the same render. The ref is updated synchronously inside the
+      // hook and inside the streaming onComplete callback above.
+      const liveMechanics = latestMechanicsRef.current;
       const mechanicsTags: MechanicsTags = {
-        loot: pendingMechanics?.lootGained 
-          ? (Array.isArray(pendingMechanics.lootGained) ? pendingMechanics.lootGained : [pendingMechanics.lootGained])
+        loot: liveMechanics?.lootGained 
+          ? (Array.isArray(liveMechanics.lootGained) ? liveMechanics.lootGained : [liveMechanics.lootGained])
           : [],
-        drop: pendingMechanics?.itemsDropped
-          ? (Array.isArray(pendingMechanics.itemsDropped) ? pendingMechanics.itemsDropped : [pendingMechanics.itemsDropped])
+        drop: liveMechanics?.itemsDropped
+          ? (Array.isArray(liveMechanics.itemsDropped) ? liveMechanics.itemsDropped : [liveMechanics.itemsDropped])
           : [],
         // Phase 2: Include consumed items from [USE:] tags
-        use: pendingMechanics?.itemsUsed
-          ? (Array.isArray(pendingMechanics.itemsUsed) ? pendingMechanics.itemsUsed : [pendingMechanics.itemsUsed])
+        use: liveMechanics?.itemsUsed
+          ? (Array.isArray(liveMechanics.itemsUsed) ? liveMechanics.itemsUsed : [liveMechanics.itemsUsed])
           : [],
         // Also pass the edge function format for compatibility
-        lootGained: pendingMechanics?.lootGained as string[] | undefined,
-        itemsDropped: pendingMechanics?.itemsDropped as string[] | undefined,
-        itemsUsed: pendingMechanics?.itemsUsed as string[] | undefined,
+        lootGained: liveMechanics?.lootGained as string[] | undefined,
+        itemsDropped: liveMechanics?.itemsDropped as string[] | undefined,
+        itemsUsed: liveMechanics?.itemsUsed as string[] | undefined,
       };
       
       // Use the enhanced sync system that actually adds AND removes items
@@ -1912,7 +1922,16 @@ export function AdventureGame() {
     localStorage.removeItem(CHARACTER_KEY);
     localStorage.removeItem(SCENARIO_KEY);
     localStorage.removeItem(GENRE_KEY);
-  }, []);
+    // FIX: Also clear active campaign so we don't leave orphaned campaigns
+    if (campaignContext?.activeCampaign) {
+      campaignContext.deleteCampaign(campaignContext.activeCampaign.id).catch(err => {
+        console.warn('[handleRestart] Failed to delete active campaign:', err);
+      });
+    }
+    // Clear pending mechanics to avoid bleed-through
+    setPendingMechanics(undefined);
+    latestMechanicsRef.current = undefined;
+  }, [campaignContext, setPendingMechanics, latestMechanicsRef]);
 
   // === REGENERATE WORLD: Generate a new opening narrative ===
   // Only available before the world is locked (before 2nd player action)
@@ -2081,6 +2100,10 @@ export function AdventureGame() {
     // Keep story up to and including the target entry
     const rolledBackStory = story.slice(0, entryIndex + 1);
     setStory(rolledBackStory);
+    // FIX: Clear stale mechanics from the rolled-back turn so the next action
+    // doesn't accidentally consume/drop items that were in the discarded future.
+    setPendingMechanics(undefined);
+    latestMechanicsRef.current = undefined;
     saveData(rolledBackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
     
     // Also sync to campaign immediately
@@ -2089,7 +2112,7 @@ export function AdventureGame() {
     }
     
     console.log(`[Story Rollback] Reverted to entry ${entryIndex}, discarded ${story.length - entryIndex - 1} entries`);
-  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext]);
+  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext, setPendingMechanics, latestMechanicsRef]);
 
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {
@@ -2103,6 +2126,18 @@ export function AdventureGame() {
       
       setStory(gameData.story);
       setCharacter(migratedCharacter);
+      
+      // FIX: Restore world state that legacy saves silently dropped
+      const saveAny = save as any;
+      if (saveAny.weatherState) {
+        try { setWeatherState(saveAny.weatherState); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
+      }
+      if (saveAny.timeState) {
+        try { setTimeState(saveAny.timeState); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
+      }
+      if (saveAny.directorSettings) {
+        try { setDirectorSettings(saveAny.directorSettings); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
+      }
       
       // Restore campaign memory if available
       if (save.campaignMemory) {
