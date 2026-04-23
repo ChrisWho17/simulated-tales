@@ -206,7 +206,7 @@ export function useGameLoop(options: GameLoopOptions = {}): [GameLoopState, Game
   const [currentTurn, setCurrentTurn] = useState(initialTurn);
   
   // Track for debounced saves
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Calculate active consequences for current location
   const activeConsequences = getActiveConsequencesForLocation(

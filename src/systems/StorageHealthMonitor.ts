@@ -52,8 +52,8 @@ const LAST_BACKUP_KEY = 'lwe_last_backup_time';
 // ============================================================================
 
 class StorageHealthMonitorClass {
-  private backupInterval: NodeJS.Timeout | null = null;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private backupInterval: ReturnType<typeof setTimeout> | null = null;
+  private healthCheckInterval: ReturnType<typeof setTimeout> | null = null;
   private healthCallbacks: Set<(health: StorageHealth) => void> = new Set();
   private currentHealth: StorageHealth | null = null;
   private initialized = false;

@@ -47,7 +47,7 @@ export function usePortraitManager({
     isGenerating: false
   });
   
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEmotionRef = useRef<EmotionType>('neutral');
 
   // Load portrait for a specific emotion

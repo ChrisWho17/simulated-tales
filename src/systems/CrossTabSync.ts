@@ -60,7 +60,7 @@ class CrossTabSyncClass {
   private activeCampaignId: string | null = null;
   private activeCampaignName: string | null = null;
   private knownTabs: Map<string, TabInfo> = new Map();
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatInterval: ReturnType<typeof setTimeout> | null = null;
   private initialized = false;
 
   // Callbacks

@@ -145,6 +145,13 @@ export interface NarrativeGenerationResult {
   isLoading: boolean;
   lastFailedAction: { action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null;
   pendingMechanics: GameMechanics | undefined;
+  /**
+   * Synchronously-readable ref to the latest mechanics. Use this instead of
+   * `pendingMechanics` when you need to read mechanics immediately after
+   * generateNarrative resolves (avoids React state-batching race condition
+   * that previously caused inventory loss in the streaming path).
+   */
+  latestMechanicsRef: React.MutableRefObject<GameMechanics | undefined>;
   generateNarrative: (
     scenario: string,
     playerAction?: string,
@@ -251,6 +258,9 @@ function getGameTimeOfDay(hour: number): TimeOfDayPeriod {
 export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): NarrativeGenerationResult {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingMechanics, setPendingMechanics] = useState<GameMechanics | undefined>();
+  // Synchronous ref mirror of pendingMechanics — readable immediately after generation
+  // (state setter is batched, ref is not). Fixes inventory race condition.
+  const latestMechanicsRef = useRef<GameMechanics | undefined>(undefined);
   const [lastFailedAction, setLastFailedAction] = useState<{
     action: string;
     diceRoll?: any;
@@ -783,6 +793,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       }
       
       if (Object.keys(finalMechanics).length > 0) {
+        latestMechanicsRef.current = finalMechanics; // Sync update — readable immediately
         setPendingMechanics(finalMechanics);
         
         if (finalMechanics.languagesLearned && finalMechanics.languagesLearned.length > 0) {
@@ -931,6 +942,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     isLoading,
     lastFailedAction,
     pendingMechanics,
+    latestMechanicsRef,
     generateNarrative,
     setLastFailedAction,
     setPendingMechanics,

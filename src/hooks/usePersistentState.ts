@@ -69,7 +69,7 @@ export function usePersistentState<T>(
   const keyRef = useRef(key);
   const isMountedRef = useRef(false);
   const isFirstMountRef = useRef(true);
-  const pendingSaveRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedValueRef = useRef<T | null>(null);
   
   // Load on mount

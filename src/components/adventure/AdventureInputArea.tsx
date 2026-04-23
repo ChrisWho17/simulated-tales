@@ -53,7 +53,7 @@ export function AdventureInputArea({
   
   // Triple tap detection
   const tapCountRef = useRef(0);
-  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Message history for redo
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
