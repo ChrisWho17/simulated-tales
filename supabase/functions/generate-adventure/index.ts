@@ -1549,6 +1549,16 @@ Use this character information to personalize the narrative and make mechanics r
   return context;
 }
 
+// Module-scope helper (hoisted out of serve() for Deno strict mode safety)
+function calculateSimilarity(str1: string, str2: string): number {
+  if (!str1 || !str2) return 0;
+  const words1 = new Set(str1.split(/\s+/));
+  const words2 = new Set(str2.split(/\s+/));
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
