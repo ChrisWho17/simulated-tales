@@ -27,7 +27,7 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
   
   const lastCampaignIdRef = useRef<string | null>(null);
   const isSyncingRef = useRef(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasInitializedGearRef = useRef<Set<string>>(new Set());
   
   const activeCampaignId = campaign?.activeCampaignId ?? null;

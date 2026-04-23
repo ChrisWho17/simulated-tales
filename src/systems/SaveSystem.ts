@@ -64,7 +64,7 @@ class SaveSystemClass {
   private operationLog: SaveOperation[] = [];
   private sessionId: string;
   private saveQueue: Map<string, { data: unknown; resolve: (v: boolean) => void; reject: (e: Error) => void }> = new Map();
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private lastSaveTime: Map<string, number> = new Map();
   
   // Callbacks

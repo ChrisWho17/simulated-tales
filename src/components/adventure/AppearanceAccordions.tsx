@@ -240,7 +240,7 @@ export function AppearanceAccordions({ appearance, onUpdateAppearance, genre }: 
   const [slashFilter, setSlashFilter] = useState('');
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [favorites, setFavorites] = useState<string[]>(() => getFavorites());
-  const [holdTimeout, setHoldTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [holdTimeout, setHoldTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [holdingCommand, setHoldingCommand] = useState<string | null>(null);
   const [editingCommand, setEditingCommand] = useState<string | null>(null);
   const [editedKeywords, setEditedKeywords] = useState<string>('');

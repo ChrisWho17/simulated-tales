@@ -22,7 +22,7 @@ class AutoSaveManagerClass {
   private currentSlot = 0;
   private lastSaveTime = 0;
   private lastManualSaveTime = 0;
-  private intervalId: NodeJS.Timeout | null = null;
+  private intervalId: ReturnType<typeof setTimeout> | null = null;
   private campaignId: string | null = null;
   private getStateCallback: (() => CampaignData | null) | null = null;
   private hasUnsavedChanges = false;
