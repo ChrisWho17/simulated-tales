@@ -13,6 +13,8 @@ import {
   DifficultyLevel,
   SuccessDegree
 } from './skillCheckSystem';
+import { wardrobeManager } from './wardrobeSystem';
+import { fashionReputationManager } from './fashionReputationSystem';
 
 // ============= COMBAT TYPES =============
 
@@ -102,8 +104,7 @@ function getClothingCombatStats(): {
   dodgeBonus: number;
 } {
   try {
-    const { wardrobeManager } = require('./wardrobeSystem');
-    const { fashionReputationManager } = require('./fashionReputationSystem');
+    // wardrobeManager and fashionReputationManager are imported at top of file
     
     const clothingStats = wardrobeManager.getCurrentStats();
     const fashionBonuses = fashionReputationManager.getStatBonuses();

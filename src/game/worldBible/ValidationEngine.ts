@@ -5,6 +5,7 @@ import {
   ExtractedEntity,
   ValidationLogEntry,
 } from './types';
+import { getGenreDefinition } from './genreDefinitions';
 
 // Entity patterns for extraction
 const ENTITY_PATTERNS: Record<string, { category: ExtractedEntity['category']; patterns: RegExp[] }> = {
@@ -303,8 +304,7 @@ export class ValidationEngine {
   static isAllowedBySelectedGenres(entity: ExtractedEntity, worldBible: WorldBible): boolean {
     const text = entity.text.toLowerCase();
     
-    // Import genre definitions lazily to avoid circular imports
-    const { getGenreDefinition } = require('./genreDefinitions');
+    // getGenreDefinition imported statically at top
     
     // Check primary genre
     const primaryDef = getGenreDefinition(worldBible.primaryGenre);

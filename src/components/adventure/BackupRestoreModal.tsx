@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import LZString from 'lz-string';
-import { loadCampaignIndex, loadCampaign } from '@/lib/campaignStorage';
+import { loadCampaignIndex, loadCampaign, saveCampaign, saveCampaignIndex } from '@/lib/campaignStorage';
 import { loadLifetimeStats, saveLifetimeStats, LifetimeStatistics } from '@/lib/lifetimeStats';
 import { loadLifetimeAchievementState, saveLifetimeAchievementState } from '@/lib/lifetimeAchievements';
 import { CampaignData, CampaignMetadata } from '@/types/campaign';
@@ -95,7 +95,7 @@ function restoreGameData(backup: BackupData): { success: boolean; errors: string
     
     // Restore campaigns
     if (backup.campaigns && backup.campaigns.length > 0) {
-      const { saveCampaign, saveCampaignIndex } = await import('@/lib/campaignStorage');
+      // saveCampaign and saveCampaignIndex are imported statically at top of file
       
       // Restore each campaign
       for (const campaign of backup.campaigns) {

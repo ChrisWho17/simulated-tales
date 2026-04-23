@@ -2,6 +2,7 @@
 // Supports modifiers, degrees of success, contested checks, and skill progression
 
 import { LifeSimPlayerState, PlayerSkills } from '@/types/lifeSim';
+import { getClothingSkillModifiers } from './clothingGameplayIntegration';
 
 // ============= SKILL CHECK TYPES =============
 
@@ -464,8 +465,7 @@ export function getActionSkillRequirement(action: string): ActionSkillRequiremen
  */
 function getClothingModifiers(category: SkillCategory, skill: string): SkillModifier[] {
   try {
-    // Dynamically import to avoid circular dependency
-    const { getClothingSkillModifiers } = require('./clothingGameplayIntegration');
+    // Statically imported at top of file
     if (typeof getClothingSkillModifiers === 'function') {
       return getClothingSkillModifiers(category, skill);
     }
