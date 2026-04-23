@@ -2686,7 +2686,11 @@ ANTI-STALL DIRECTIVES:
 - If NPCs feel wooden, give them a PHYSICAL HABIT or MOOD SHIFT
 
 VARIANCE SEEDS (rotate through these for freshness):
-Turn ${Date.now() % 7}: Focus on ${['sound details and what silence means', 'visual contrasts and shadows', 'physical sensations and body language', 'emotional undercurrents and unspoken tension', 'NPC micro-expressions and tells', 'environmental changes and atmosphere shifts', 'foreshadowing elements and ominous hints'][Date.now() % 7]}`;
+${(() => {
+  const varianceSeed = Math.floor(Date.now() / 1000) % 7;
+  const focuses = ['sound details and what silence means', 'visual contrasts and shadows', 'physical sensations and body language', 'emotional undercurrents and unspoken tension', 'NPC micro-expressions and tells', 'environmental changes and atmosphere shifts', 'foreshadowing elements and ominous hints'];
+  return `Turn ${varianceSeed}: Focus on ${focuses[varianceSeed]}`;
+})()}`;
 
 
     // Add content rating instructions based on adult content setting
@@ -2795,14 +2799,14 @@ This is a family-friendly mode. Keep content appropriate for all audiences while
         const olderEntries = historyToAdd.slice(0, -MAX_HISTORY_ENTRIES);
         const recentEntries = historyToAdd.slice(-MAX_HISTORY_ENTRIES);
         
-        // Create a compressed summary of older events (just narrator beats)
+        // Create a compressed summary of older events INCLUDING player actions
+        // (previously only kept narrator beats — losing what the player actually did)
         const olderSummary = olderEntries
-          .filter(e => e.role === 'narrator')
-          .slice(-3)
+          .slice(-6) // Keep last 6 entries (mix of player + narrator)
           .map(e => {
-            // Extract key action from each narrator beat (first ~100 chars)
             const content = typeof e.content === 'string' ? e.content : '';
-            return content.slice(0, 100).replace(/\n/g, ' ');
+            const snippet = content.slice(0, 100).replace(/\n/g, ' ');
+            return e.role === 'user' ? `[PLAYER]: ${snippet}` : `[GM]: ${snippet}`;
           })
           .join(' → ');
         
@@ -3260,16 +3264,17 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         mechanics.lootGained = lootMatches.map(m => m[1]);
       }
       
-      const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
-      if (damageMatch) {
-        mechanics.damage = parseInt(damageMatch[1]);
-        console.log('[parseNarrativeMechanics] Parsed damage:', mechanics.damage);
+      // FIX: Sum ALL damage/heal tags (was only first match)
+      const damageMatches = [...narrative.matchAll(/\[DAMAGE:(\d+)\]/g)];
+      if (damageMatches.length > 0) {
+        mechanics.damage = damageMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+        console.log(`[parseNarrativeMechanics] Parsed ${damageMatches.length} damage tag(s), total:`, mechanics.damage);
       }
       
-      const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
-      if (healMatch) {
-        mechanics.heal = parseInt(healMatch[1]);
-        console.log('[parseNarrativeMechanics] Parsed heal:', mechanics.heal);
+      const healMatches = [...narrative.matchAll(/\[HEAL:(\d+)\]/g)];
+      if (healMatches.length > 0) {
+        mechanics.heal = healMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+        console.log(`[parseNarrativeMechanics] Parsed ${healMatches.length} heal tag(s), total:`, mechanics.heal);
       }
       
       return mechanics;
@@ -3579,8 +3584,11 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       });
     }
     
-    const damageMatch = narrative.match(/\[DAMAGE:(\d+)\]/);
-    const healMatch = narrative.match(/\[HEAL:(\d+)\]/);
+    // FIX: Sum ALL damage/heal tags (was only first match)
+    const damageMatches = [...narrative.matchAll(/\[DAMAGE:(\d+)\]/g)];
+    const healMatches = [...narrative.matchAll(/\[HEAL:(\d+)\]/g)];
+    const totalDamage = damageMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+    const totalHeal = healMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
     
     // Parse relationship moments (for 18+ romance tracking)
     const relationshipMatches = [...narrative.matchAll(/\[RELATIONSHIP:([^:]+):([^:]+):([^\]]+)\]/g)];
@@ -3706,13 +3714,13 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     if (skillImprovements.length > 0) {
       mechanics.skillImprovements = skillImprovements;
     }
-    if (damageMatch) {
-      mechanics.damage = parseInt(damageMatch[1]);
-      console.log('[generate-adventure] Mechanics damage:', mechanics.damage);
+    if (totalDamage > 0) {
+      mechanics.damage = totalDamage;
+      console.log(`[generate-adventure] Mechanics damage (${damageMatches.length} tag(s)):`, mechanics.damage);
     }
-    if (healMatch) {
-      mechanics.heal = parseInt(healMatch[1]);
-      console.log('[generate-adventure] Mechanics heal:', mechanics.heal);
+    if (totalHeal > 0) {
+      mechanics.heal = totalHeal;
+      console.log(`[generate-adventure] Mechanics heal (${healMatches.length} tag(s)):`, mechanics.heal);
     }
     if (relationshipMoments.length > 0) {
       mechanics.relationshipMoments = relationshipMoments;
