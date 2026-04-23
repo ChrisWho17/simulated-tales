@@ -36,6 +36,7 @@ import { clearPersonalityAssignments, exportPersonalityMap, importPersonalityMap
 import { setNPCAutoRegistrationGenre } from '@/game/npcAutoRegistration';
 import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { companionSystem } from '@/game/companionSystem';
+import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
 import { checkAndCleanupStorage } from '@/lib/storageCleanup';
 
 // ============================================================================
@@ -277,7 +278,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // CRITICAL: Restore companion autonomy state (grievances, goals, recent actions)
     if (campaign.companionAutonomyState) {
       try {
-        const { companionAutonomyManager } = await import('@/game/companion/companionAutonomyIntegration');
+        // Statically imported at top of file
         companionAutonomyManager.deserialize(campaign.companionAutonomyState as any);
         console.log('[Campaign] Restored companion autonomy state (grievances, goals)');
       } catch (e) {
@@ -367,10 +368,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // Capture companion autonomy state (grievances, goals, recent actions)
     let companionAutonomyState: Record<string, unknown> = {};
     try {
-      // Import dynamically to avoid circular dependencies
-      // Use top-level import (companionAutonomyManager is exported as singleton)
-      const mod = await import('@/game/companion/companionAutonomyIntegration');
-      companionAutonomyState = mod.companionAutonomyManager.serialize();
+      // Statically imported at top of file
+      companionAutonomyState = companionAutonomyManager.serialize();
     } catch (e) {
       console.warn('[Campaign] Failed to capture companion autonomy state:', e);
     }
