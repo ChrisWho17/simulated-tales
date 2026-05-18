@@ -578,6 +578,11 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         characterAppearance: (sanitizedCharacter as any).appearanceDescription,
         narratorConfig: settings.narratorConfig,
         diceMode: diceMode,
+        // Testing: allow forcing a deterministic variance seed so the same
+        // request reproduces the same narrative focus on the server side.
+        ...(settings.forceVarianceSeedEnabled && settings.forceVarianceSeed
+          ? { varianceSeed: settings.forceVarianceSeed }
+          : {}),
         narrativeContractContext: (() => {
           const isOpening = history.length === 0;
           const characterClass = activeChar.classId || 'default';
