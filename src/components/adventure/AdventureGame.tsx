@@ -2117,6 +2117,33 @@ export function AdventureGame() {
     // doesn't accidentally consume/drop items that were in the discarded future.
     setPendingMechanics(undefined);
     latestMechanicsRef.current = undefined;
+
+    // ROLLBACK SAFETY: revert loot/drop/use ledger entries that happened
+    // after the target entry. Inventory mutations are inverted exactly once
+    // (ledger marks each entry applied=false so re-running is a no-op).
+    const targetEntry = rolledBackStory[rolledBackStory.length - 1];
+    if (targetEntry?.id && inventory) {
+      const revert = inventoryRollbackLedger.revertAfter(targetEntry.id);
+      if (revert.reverted.length > 0) {
+        console.log('[Rollback] Reverting inventory ledger entries:', revert);
+        try {
+          for (const name of revert.itemsToRemove) {
+            inventory.dispatch({ type: 'REMOVE_ITEM' as any, payload: { name } as any });
+          }
+          for (const name of revert.itemsToReAdd) {
+            inventory.dispatch({ type: 'ADD_ITEM' as any, payload: { name, quantity: 1 } as any });
+          }
+        } catch (e) {
+          console.warn('[Rollback] Inventory revert dispatch failed (non-fatal):', e);
+        }
+      }
+    }
+
+    // DEBUG: notify debug panel that a rollback cleared stale mechanics
+    window.dispatchEvent(new CustomEvent('rollback-cleared-mechanics', {
+      detail: { entryIndex, entryId: targetEntry?.id, ts: Date.now() }
+    }));
+
     saveData(rolledBackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
     
     // Also sync to campaign immediately
@@ -2125,7 +2152,7 @@ export function AdventureGame() {
     }
     
     console.log(`[Story Rollback] Reverted to entry ${entryIndex}, discarded ${story.length - entryIndex - 1} entries`);
-  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext, setPendingMechanics, latestMechanicsRef]);
+  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext, setPendingMechanics, latestMechanicsRef, inventory]);
 
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {
