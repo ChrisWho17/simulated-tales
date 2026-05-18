@@ -2697,9 +2697,23 @@ ANTI-STALL DIRECTIVES:
 
 VARIANCE SEEDS (rotate through these for freshness):
 ${(() => {
-  const varianceSeed = Math.floor(Date.now() / 1000) % 7;
+  const overrideSeed = (requestData as any).varianceSeed;
   const focuses = ['sound details and what silence means', 'visual contrasts and shadows', 'physical sensations and body language', 'emotional undercurrents and unspoken tension', 'NPC micro-expressions and tells', 'environmental changes and atmosphere shifts', 'foreshadowing elements and ominous hints'];
-  return `Turn ${varianceSeed}: Focus on ${focuses[varianceSeed]}`;
+  let idx: number;
+  if (overrideSeed !== undefined && overrideSeed !== null && overrideSeed !== '') {
+    if (typeof overrideSeed === 'number') {
+      idx = Math.abs(Math.floor(overrideSeed)) % focuses.length;
+    } else {
+      let n = 0;
+      const s = String(overrideSeed);
+      for (let i = 0; i < s.length; i++) n = (n * 31 + s.charCodeAt(i)) >>> 0;
+      idx = n % focuses.length;
+    }
+    console.log(`[generate-adventure] [SEED:override] using deterministic seed=${overrideSeed} idx=${idx}`);
+  } else {
+    idx = Math.floor(Date.now() / 1000) % focuses.length;
+  }
+  return `Turn ${idx}: Focus on ${focuses[idx]}`;
 })()}`;
 
 
