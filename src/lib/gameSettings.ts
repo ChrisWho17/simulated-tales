@@ -127,6 +127,10 @@ export interface GameSettings {
   
   // System highlighting in narrative
   enableSystemHighlight?: boolean;
+
+  // Testing — force deterministic variance seed for reproducible narratives
+  forceVarianceSeedEnabled?: boolean;
+  forceVarianceSeed?: string;
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -230,6 +234,10 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // System highlighting
   enableSystemHighlight: false,
+
+  // Testing
+  forceVarianceSeedEnabled: false,
+  forceVarianceSeed: '',
 };
 
 // Get current settings (alias for loadSettings)

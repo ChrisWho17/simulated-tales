@@ -210,6 +210,32 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               onCheckedChange={(checked) => updateSettings({ enableSystemHighlight: checked })}
             />
           </div>
+
+          {/* Testing — deterministic variance seed */}
+          <div className="p-2.5 rounded-lg border border-border/30 bg-background/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Highlighter className="w-3.5 h-3.5 text-accent" />
+                <div className="flex flex-col">
+                  <span className="text-xs">Force Variance Seed</span>
+                  <span className="text-[10px] text-muted-foreground">Reproduce the same narrative variance for testing</span>
+                </div>
+              </div>
+              <Switch
+                checked={!!(settings as any).forceVarianceSeedEnabled}
+                onCheckedChange={(checked) => updateSettings({ forceVarianceSeedEnabled: checked } as any)}
+              />
+            </div>
+            {(settings as any).forceVarianceSeedEnabled && (
+              <input
+                type="text"
+                value={(settings as any).forceVarianceSeed || ''}
+                onChange={(e) => updateSettings({ forceVarianceSeed: e.target.value } as any)}
+                placeholder="seed (e.g. test-001)"
+                className="mt-2 w-full rounded border border-border/40 bg-background/50 px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            )}
+          </div>
           
           {/* Weather Effects Toggle */}
           <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">

@@ -27,6 +27,9 @@ import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
+import { MechanicsSyncDebugPanel } from '@/components/debug/MechanicsSyncDebugPanel';
+import { validateRestoredState } from '@/lib/saveConsistencyCheck';
+import { inventoryRollbackLedger } from '@/lib/inventoryRollbackLedger';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { setActiveCampaignId } from '@/lib/campaignStorage';
 import { checkAndCleanupStorage, performCleanup, compressAndStore } from '@/lib/storageCleanup';
@@ -1573,6 +1576,23 @@ export function AdventureGame() {
         minConfidence: 'high', // Only high confidence to avoid false positives
       });
       
+      // ROLLBACK SAFETY: record this turn's inventory delta in the ledger,
+      // keyed by the narrator entry id so a future rollback can revert it.
+      try {
+        const addedNames = (inventoryResult.itemsAdded || []).map((i: any) => i.name).filter(Boolean);
+        const removedNames = (inventoryResult.itemsRemoved || []).map((i: any) => i.name).filter(Boolean);
+        if (addedNames.length > 0 || removedNames.length > 0) {
+          inventoryRollbackLedger.record({
+            storyEntryId: narratorEntry.id,
+            turn: currentTurn,
+            added: addedNames,
+            removed: removedNames,
+          });
+        }
+      } catch (e) {
+        console.warn('[RollbackLedger] Failed to record entry (non-fatal):', e);
+      }
+
       // Show toasts for added items
       if (inventoryResult.itemsAdded.length > 0) {
         console.log(`[StoryInv] Items added: ${inventoryResult.itemsAdded.length}`);
@@ -2114,6 +2134,33 @@ export function AdventureGame() {
     // doesn't accidentally consume/drop items that were in the discarded future.
     setPendingMechanics(undefined);
     latestMechanicsRef.current = undefined;
+
+    // ROLLBACK SAFETY: revert loot/drop/use ledger entries that happened
+    // after the target entry. Inventory mutations are inverted exactly once
+    // (ledger marks each entry applied=false so re-running is a no-op).
+    const targetEntry = rolledBackStory[rolledBackStory.length - 1];
+    if (targetEntry?.id && inventory) {
+      const revert = inventoryRollbackLedger.revertAfter(targetEntry.id);
+      if (revert.reverted.length > 0) {
+        console.log('[Rollback] Reverting inventory ledger entries:', revert);
+        try {
+          for (const name of revert.itemsToRemove) {
+            inventory.dispatch({ type: 'REMOVE_ITEM' as any, payload: { name } as any });
+          }
+          for (const name of revert.itemsToReAdd) {
+            inventory.dispatch({ type: 'ADD_ITEM' as any, payload: { name, quantity: 1 } as any });
+          }
+        } catch (e) {
+          console.warn('[Rollback] Inventory revert dispatch failed (non-fatal):', e);
+        }
+      }
+    }
+
+    // DEBUG: notify debug panel that a rollback cleared stale mechanics
+    window.dispatchEvent(new CustomEvent('rollback-cleared-mechanics', {
+      detail: { entryIndex, entryId: targetEntry?.id, ts: Date.now() }
+    }));
+
     saveData(rolledBackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
     
     // Also sync to campaign immediately
@@ -2122,7 +2169,7 @@ export function AdventureGame() {
     }
     
     console.log(`[Story Rollback] Reverted to entry ${entryIndex}, discarded ${story.length - entryIndex - 1} entries`);
-  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext, setPendingMechanics, latestMechanicsRef]);
+  }, [story, character, scenarioSelection, saveData, isLoading, campaignContext, setPendingMechanics, latestMechanicsRef, inventory]);
 
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {
@@ -2137,17 +2184,32 @@ export function AdventureGame() {
       setStory(gameData.story);
       setCharacter(migratedCharacter);
       
-      // FIX: Restore world state that legacy saves silently dropped
+      // FIX: Restore world state that legacy saves silently dropped, and
+      // validate the shape against the current schema before applying.
       const saveAny = save as any;
+      const consistency = validateRestoredState({
+        weatherState: saveAny.weatherState,
+        timeState: saveAny.timeState,
+        directorSettings: saveAny.directorSettings,
+      });
+      if (!consistency.ok) {
+        toast.warning(`Save schema drift: ${consistency.mismatches.length} field(s) defaulted`, {
+          description: consistency.mismatches.slice(0, 3).join(' · '),
+          duration: 5000,
+        });
+      }
       if (saveAny.weatherState) {
-        try { setWeatherState(saveAny.weatherState); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
+        try { setWeatherState(consistency.weatherState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
       }
       if (saveAny.timeState) {
-        try { setTimeState(saveAny.timeState); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
+        try { setTimeState(consistency.timeState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
       }
       if (saveAny.directorSettings) {
-        try { setDirectorSettings(saveAny.directorSettings); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
+        try { setDirectorSettings(consistency.directorSettings as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
       }
+
+      // Clear ledger — loaded save starts a fresh inventory journal
+      inventoryRollbackLedger.clear();
       
       // Restore campaign memory if available
       if (save.campaignMemory) {
@@ -2294,6 +2356,7 @@ export function AdventureGame() {
   // Phase 3: Playing
   if (phase === 'playing' && character) {
     return (
+      <>
       <AdventureDisplay
         story={story}
         onPlayerAction={handlePlayerAction}
@@ -2339,6 +2402,11 @@ export function AdventureGame() {
           error: streamingNarrative.error,
         } : null}
       />
+      <MechanicsSyncDebugPanel
+        pendingMechanics={pendingMechanics}
+        latestMechanicsRef={latestMechanicsRef}
+      />
+      </>
     );
   }
 
