@@ -2342,6 +2342,11 @@ export function AdventureGame() {
           error: streamingNarrative.error,
         } : null}
       />
+      <MechanicsSyncDebugPanel
+        pendingMechanics={pendingMechanics}
+        latestMechanicsRef={latestMechanicsRef}
+      />
+      </>
     );
   }
 
