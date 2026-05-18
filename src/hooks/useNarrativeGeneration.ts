@@ -580,8 +580,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         diceMode: diceMode,
         // Testing: allow forcing a deterministic variance seed so the same
         // request reproduces the same narrative focus on the server side.
-        ...(settings.forceVarianceSeedEnabled && settings.forceVarianceSeed
-          ? { varianceSeed: settings.forceVarianceSeed }
+        ...((settings as any).forceVarianceSeedEnabled && (settings as any).forceVarianceSeed
+          ? { varianceSeed: (settings as any).forceVarianceSeed }
           : {}),
         narrativeContractContext: (() => {
           const isOpening = history.length === 0;
