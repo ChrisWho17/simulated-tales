@@ -234,6 +234,10 @@ export const DEFAULT_SETTINGS: GameSettings = {
   
   // System highlighting
   enableSystemHighlight: false,
+
+  // Testing
+  forceVarianceSeedEnabled: false,
+  forceVarianceSeed: '',
 };
 
 // Get current settings (alias for loadSettings)
