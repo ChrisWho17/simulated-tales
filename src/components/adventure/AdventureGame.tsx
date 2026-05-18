@@ -1576,6 +1576,23 @@ export function AdventureGame() {
         minConfidence: 'high', // Only high confidence to avoid false positives
       });
       
+      // ROLLBACK SAFETY: record this turn's inventory delta in the ledger,
+      // keyed by the narrator entry id so a future rollback can revert it.
+      try {
+        const addedNames = (inventoryResult.itemsAdded || []).map((i: any) => i.name).filter(Boolean);
+        const removedNames = (inventoryResult.itemsRemoved || []).map((i: any) => i.name).filter(Boolean);
+        if (addedNames.length > 0 || removedNames.length > 0) {
+          inventoryRollbackLedger.record({
+            storyEntryId: narratorEntry.id,
+            turn: currentTurn,
+            added: addedNames,
+            removed: removedNames,
+          });
+        }
+      } catch (e) {
+        console.warn('[RollbackLedger] Failed to record entry (non-fatal):', e);
+      }
+
       // Show toasts for added items
       if (inventoryResult.itemsAdded.length > 0) {
         console.log(`[StoryInv] Items added: ${inventoryResult.itemsAdded.length}`);
