@@ -2297,6 +2297,7 @@ export function AdventureGame() {
   // Phase 3: Playing
   if (phase === 'playing' && character) {
     return (
+      <>
       <AdventureDisplay
         story={story}
         onPlayerAction={handlePlayerAction}
