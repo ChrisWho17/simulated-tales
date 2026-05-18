@@ -2184,17 +2184,32 @@ export function AdventureGame() {
       setStory(gameData.story);
       setCharacter(migratedCharacter);
       
-      // FIX: Restore world state that legacy saves silently dropped
+      // FIX: Restore world state that legacy saves silently dropped, and
+      // validate the shape against the current schema before applying.
       const saveAny = save as any;
+      const consistency = validateRestoredState({
+        weatherState: saveAny.weatherState,
+        timeState: saveAny.timeState,
+        directorSettings: saveAny.directorSettings,
+      });
+      if (!consistency.ok) {
+        toast.warning(`Save schema drift: ${consistency.mismatches.length} field(s) defaulted`, {
+          description: consistency.mismatches.slice(0, 3).join(' · '),
+          duration: 5000,
+        });
+      }
       if (saveAny.weatherState) {
-        try { setWeatherState(saveAny.weatherState); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
+        try { setWeatherState(consistency.weatherState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
       }
       if (saveAny.timeState) {
-        try { setTimeState(saveAny.timeState); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
+        try { setTimeState(consistency.timeState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
       }
       if (saveAny.directorSettings) {
-        try { setDirectorSettings(saveAny.directorSettings); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
+        try { setDirectorSettings(consistency.directorSettings as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
       }
+
+      // Clear ledger — loaded save starts a fresh inventory journal
+      inventoryRollbackLedger.clear();
       
       // Restore campaign memory if available
       if (save.campaignMemory) {
