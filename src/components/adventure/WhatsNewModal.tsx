@@ -422,8 +422,9 @@ export function WhatsNewModal() {
               <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
             </div>
 
-            {/* Content */}
-            <ScrollArea className="max-h-[50vh]">
+            {/* Content — keyed on refreshKey so a SW soft-activation
+                remounts this section in place instead of forcing a reload. */}
+            <ScrollArea key={refreshKey} className="max-h-[50vh]">
               <div className="p-6 space-y-5">
                 {/* Highlights */}
                 {currentChangelog.highlights.length > 0 && (
