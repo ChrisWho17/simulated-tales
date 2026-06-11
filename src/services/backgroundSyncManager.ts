@@ -237,11 +237,19 @@ class BackgroundSyncManagerClass {
     // Trigger processing if online
     if (navigator.onLine && !this.isPaused) {
       this.processQueue();
+    } else {
+      // Offline — ask the SW to flush as soon as connectivity returns.
+      // Lazy-imported to avoid circular deps and to keep this service
+      // usable in non-browser contexts.
+      void import('@/pwa/registerSW')
+        .then((m) => m.requestBackgroundSync())
+        .catch(() => {});
     }
-    
+
     console.log('[BackgroundSync] Enqueued operation:', type, 'for', campaignId);
     return operationId;
   }
+
 
   private getPriorityValue(priority: SyncPriority): number {
     switch (priority) {

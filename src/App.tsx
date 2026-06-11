@@ -25,6 +25,8 @@ import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
 import AchievementGallery from "./pages/AchievementGallery";
+import DebugPwa from "./pages/DebugPwa";
+
 import "@/styles/untold-story-engine.css";
 
 // CRITICAL: Run storage repair BEFORE React renders to prevent crashes
