@@ -44,6 +44,17 @@ export default function DebugPwa() {
   const bg = useBackgroundSync();
   const [results, setResults] = useState<CheckResult[]>([]);
   const [lastFlush, setLastFlush] = useState<number | null>(null);
+  const [policy, setPolicyState] = useState<ConflictPolicy>(getConflictPolicy());
+
+  const handlePolicyChange = (next: ConflictPolicy) => {
+    setConflictPolicy(next);
+    setPolicyState(next);
+    pushResult({
+      name: 'Set conflict policy',
+      pass: true,
+      detail: `Server-merge policy is now "${next}"`,
+    });
+  };
 
   useEffect(() => {
     const onFlush = (e: Event) => {
