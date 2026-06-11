@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
@@ -376,6 +376,21 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <span className="text-sm">Data Integrity Check</span>
           </Button>
           
+          {/* PWA install banner visibility */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
+            <div className="flex items-center gap-2">
+              <Download className="w-3.5 h-3.5 text-primary" />
+              <div className="flex flex-col">
+                <span className="text-xs">Hide Install App banner</span>
+                <span className="text-[10px] text-muted-foreground">Removes the PWA install prompt on the main menu</span>
+              </div>
+            </div>
+            <Switch
+              checked={!!settings.hidePwaInstall}
+              onCheckedChange={(checked) => updateSettings({ hidePwaInstall: checked })}
+            />
+          </div>
+
           {/* PWA install debug */}
           <PwaDebugControls />
 

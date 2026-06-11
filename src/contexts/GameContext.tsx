@@ -184,6 +184,9 @@ export interface GameSettings {
   
   // Director settings
   directorSettings: DirectorSettings;
+
+  // PWA — hide install banner/button on the main menu
+  hidePwaInstall?: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -284,6 +287,9 @@ const defaultSettings: GameSettings = {
   
   // Director settings
   directorSettings: DEFAULT_DIRECTOR_SETTINGS,
+
+  // PWA install banner visible by default
+  hidePwaInstall: false,
 };
 
 // ============================================================================
