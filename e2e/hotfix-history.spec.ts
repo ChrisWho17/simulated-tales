@@ -38,17 +38,12 @@ test.describe('Hotfix history dialog', () => {
     expect(versions).toContain('0.1.0');
     expect(versions.length).toBeGreaterThanOrEqual(2);
 
-    // Ordered: newest major.minor group first; within each group the major
-    // (x.y.0) comes first, then its patches ascending (x.y.1, x.y.2 ...).
-    const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10) || 0);
-    const expected = [...versions].sort((a, b) => {
-      const [aM, aN, aP] = parse(a);
-      const [bM, bN, bP] = parse(b);
-      if (aM !== bM) return bM - aM;
-      if (aN !== bN) return bN - aN;
-      return aP - bP;
-    });
+    // Ordered chronologically: origin (0.1.0) → now, every patch included.
+    const expected = [...versions].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
     expect(versions).toEqual(expected);
-    expect(versions[0]).toBe(expected[0]);
+    expect(versions[0]).toBe('0.1.0');
+    expect(versions[versions.length - 1]).toBe(expected[expected.length - 1]);
   });
 });
