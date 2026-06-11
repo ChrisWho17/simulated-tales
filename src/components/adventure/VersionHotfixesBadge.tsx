@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { CHANGELOG, type ChangelogEntry } from './WhatsNewModal';
+import { ORDERED_CHANGELOG } from './changelogOrder';
 
 /**
  * Top-right floating badge:
@@ -171,11 +172,8 @@ export function VersionHotfixesBadge() {
               />
 
               {(() => {
-                // Chronological order: origin (oldest patch) → now.
-                // Every patch is included with no skipping.
-                const ordered = [...CHANGELOG].sort((a, b) =>
-                  a.version.localeCompare(b.version, undefined, { numeric: true })
-                );
+                // Shared source of truth — keeps timeline + side panel in sync.
+                const ordered = ORDERED_CHANGELOG;
                 return ordered.map((entry, idx) => {
                   const isMajor = /\.\d+\.0$/.test(entry.version);
                   const dotColor = isMajor
