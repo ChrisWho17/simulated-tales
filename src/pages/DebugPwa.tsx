@@ -24,6 +24,11 @@ import {
 import { usePwaStatus } from '@/hooks/usePwaStatus';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { PwaStatusIndicator } from '@/components/PwaStatusIndicator';
+import {
+  getConflictPolicy,
+  setConflictPolicy,
+  type ConflictPolicy,
+} from '@/services/conflictResolution';
 
 interface CheckResult {
   name: string;
