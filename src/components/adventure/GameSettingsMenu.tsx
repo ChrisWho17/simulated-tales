@@ -28,6 +28,7 @@ import { PreMigrationBackupModal } from './PreMigrationBackupModal';
 import { DataIntegrityPanel } from './DataIntegrityPanel';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
 import { PwaDebugControls } from './PwaDebugControls';
+import { InstallAppPromoBanner } from './InstallAppPromoBanner';
 import { GameGenre } from '@/types/genreData';
 
 export interface GameSettingsMenuProps {
