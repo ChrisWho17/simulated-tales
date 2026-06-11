@@ -24,12 +24,27 @@ export default defineConfig(({ mode }) => ({
       filename: "sw.js",
       // Manifest is hand-authored at public/manifest.webmanifest; don't double-emit.
       manifest: false,
+      // Make sure our extra precache helper ships alongside the generated SW.
+      includeAssets: [
+        "sw-bg-sync.js",
+        "manifest.webmanifest",
+        "icons/icon-192.png",
+        "icons/icon-512.png",
+        "icons/icon-maskable-512.png",
+        "icons/apple-touch-icon.png",
+        "icons/favicon-32.png",
+        "icons/favicon-16.png",
+        "images/untold-logo.png",
+        "images/og-thumbnail.png",
+      ],
       workbox: {
         // Skip waiting is controlled from the client wrapper via SKIP_WAITING message.
         skipWaiting: false,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         navigationPreload: true,
+        // Background Sync API hook lives in this script — imported into the SW.
+        importScripts: ["/sw-bg-sync.js"],
         // Don't intercept OAuth callbacks or the dev/asset infra paths.
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [
@@ -37,7 +52,14 @@ export default defineConfig(({ mode }) => ({
           /^\/__l5e\//,
           /^\/api\//,
         ],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff2}"],
+        // Precache: build output + critical Main Menu assets (icons, logo, og).
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,webmanifest,woff2}",
+          "images/**/*.{png,jpg,jpeg,webp,svg}",
+          "icons/**/*.{png,svg}",
+          "audio/**/*.{mp3,ogg,wav}",
+        ],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             // HTML navigations: always try network first so updates land fast.
