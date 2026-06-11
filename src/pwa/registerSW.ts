@@ -142,13 +142,26 @@ export async function registerPwa(): Promise<void> {
 }
 
 export async function activatePendingUpdate(): Promise<void> {
+  // Explicit user action — they want the new build, so wipe any prior
+  // "Later" dismissal and hard-reload to fetch the fresh bundle.
+  clearDismissal();
   const reg = await navigator.serviceWorker.getRegistration();
   const waiting = reg?.waiting;
   if (!waiting) {
     window.location.reload();
     return;
   }
+  // Reload once the new worker takes control. controllerchange no longer
+  // auto-reloads (so mid-session users aren't blown away), so we schedule
+  // the reload here in response to the user's explicit Reload click.
+  const onControllerChange = () => {
+    navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
   waiting.postMessage({ type: "SKIP_WAITING" });
+  // Safety net in case controllerchange doesn't fire promptly.
+  setTimeout(() => window.location.reload(), 2000);
 }
 
 /**
