@@ -166,6 +166,70 @@ export default function DebugPwa() {
 
   const handleReload = () => window.location.reload();
 
+  const handleExportQueue = async () => {
+    try {
+      const ops: StoredOperation[] = await listOperations();
+      const stats = await getQueueStats();
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        pwa: {
+          online: status.online,
+          swSupported: status.swSupported,
+          swState: status.swState,
+          swControlled: status.swControlled,
+          updateAvailable: status.updateAvailable,
+          lastUpdateAppliedAt: status.lastUpdateAppliedAt,
+          cachedEntryCount: status.cachedEntryCount,
+          cacheNames: status.cacheNames,
+        },
+        backgroundSync: {
+          policy: getConflictPolicy(),
+          pendingCount: bg.pendingCount,
+          isSyncing: bg.isSyncing,
+          lastSyncTime: bg.status.lastSyncTime,
+        },
+        queueStats: stats,
+        operations: ops.map((op) => ({
+          id: op.id,
+          seq: op.seq,
+          campaignId: op.campaignId,
+          type: op.type,
+          priority: op.priority,
+          tick: op.tick ?? null,
+          checksum: op.checksum ?? null,
+          retryCount: op.retryCount,
+          lastError: op.lastError ?? null,
+          createdAt: op.createdAt,
+          metadata: op.metadata ?? null,
+        })),
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `untold-queue-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      pushResult({
+        name: 'Export queue + merge timeline',
+        pass: true,
+        detail: `Exported ${ops.length} ops, seq=${stats.seq}, policy=${getConflictPolicy()}`,
+      });
+    } catch (err) {
+      pushResult({
+        name: 'Export queue + merge timeline',
+        pass: false,
+        detail: String(err),
+      });
+    }
+  };
+
   const cacheList = useMemo(() => status.cacheNames.slice(0, 8), [status.cacheNames]);
 
   return (
