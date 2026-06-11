@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, Mail, History, Bug } from 'lucide-react';
+import { Star, Mail, History, Bug, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog,
@@ -7,10 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
-import { CHANGELOG } from './WhatsNewModal';
+import { CHANGELOG, type ChangelogEntry } from './WhatsNewModal';
 
 /**
  * Top-right floating badge:
@@ -23,6 +29,8 @@ export function VersionHotfixesBadge() {
   const highlights = latest?.highlights ?? [];
   const fixes = latest?.fixes ?? [];
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [selected, setSelected] = useState<ChangelogEntry | null>(null);
+
 
   return (
     <div
