@@ -6,6 +6,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { IndexedDBCache } from '@/lib/indexedDBCache';
 import type { CampaignData } from '@/types/campaign';
 import LZString from 'lz-string';
+import {
+  initOfflineQueue,
+  listOperations,
+  enqueueOperation,
+  removeOperationById,
+  clearOperations,
+  type StoredOperation,
+} from './offlineQueueStore';
+import { resolveConflict, getConflictPolicy } from './conflictResolution';
 
 // ============================================================================
 // Types
