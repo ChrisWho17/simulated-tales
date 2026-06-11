@@ -90,17 +90,17 @@ export async function registerPwa(): Promise<void> {
     trackUpdates(reg);
     wireSwMessages();
 
-    let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloading) return;
-      reloading = true;
       try {
         localStorage.setItem(LAST_UPDATE_KEY, String(Date.now()));
       } catch {
         /* ignore */
       }
+      // Soft activation: let listeners (WhatsNew modal, patch notes badge)
+      // refresh themselves in-place. They decide whether a full reload is
+      // necessary — we no longer force window.location.reload() so users
+      // mid-session don't lose unsaved work.
       window.dispatchEvent(new Event(ACTIVATED_EVENT));
-      window.location.reload();
     });
 
     setInterval(() => {
