@@ -78,6 +78,7 @@ const App = () => (
                             <Route path="/loadout-test" element={<LoadoutTest />} />
                             <Route path="/inventory-test" element={<InventoryTest />} />
                             <Route path="/achievements" element={<AchievementGallery />} />
+                            <Route path="/debug/pwa" element={<DebugPwa />} />
                             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                             <Route path="*" element={<NotFound />} />
                           </Routes>

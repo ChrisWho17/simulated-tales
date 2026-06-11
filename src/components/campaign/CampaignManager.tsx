@@ -736,7 +736,9 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               onChange={handleImportFile}
             />
             
+            <PwaStatusIndicator />
             <InstallAppButton />
+
 
             <Button
               onClick={onCreateNew}
