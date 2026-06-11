@@ -107,3 +107,33 @@ test.describe('PWA install + update + offline sync', () => {
     await context.setOffline(false);
   });
 });
+
+test.describe('Install button visibility on campaign chooser', () => {
+  test('renders in a normal top-level browsing context', async ({ page }) => {
+    await page.goto('/campaigns');
+    await expect(page.getByTestId('install-app-button')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('renders inside an iframe (preview-style embed)', async ({ page, baseURL }) => {
+    // Serve a tiny same-origin host page that embeds /campaigns in an iframe.
+    // Same-origin is required so the inner app can reach localStorage/IDB and
+    // so Playwright's frameLocator can pierce into it.
+    const host = new URL('/__iframe-host__', baseURL).toString();
+    await page.route(host, (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<!doctype html>
+<html><body style="margin:0">
+  <iframe id="app" src="/campaigns"
+    style="width:100vw;height:100vh;border:0"
+    allow="clipboard-write"></iframe>
+</body></html>`,
+      }),
+    );
+
+    await page.goto(host);
+    const inner = page.frameLocator('#app');
+    await expect(inner.getByTestId('install-app-button')).toBeVisible({ timeout: 20_000 });
+  });
+});
+
