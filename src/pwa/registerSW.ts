@@ -9,6 +9,7 @@ const ACTIVATED_EVENT = "pwa:activated";
 const SYNC_FLUSH_EVENT = "pwa:sync-flush";
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly
 const LAST_UPDATE_KEY = "pwa.lastUpdateAppliedAt";
+const UPDATE_DISMISSED_KEY = "pwa.updateDismissed";
 const SYNC_TAG = "untold-flush-saves";
 
 type UpdateDetail = {
