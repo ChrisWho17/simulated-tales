@@ -9,6 +9,7 @@ const ACTIVATED_EVENT = "pwa:activated";
 const SYNC_FLUSH_EVENT = "pwa:sync-flush";
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly
 const LAST_UPDATE_KEY = "pwa.lastUpdateAppliedAt";
+const UPDATE_DISMISSED_KEY = "pwa.updateDismissed";
 const SYNC_TAG = "untold-flush-saves";
 
 type UpdateDetail = {
@@ -52,7 +53,17 @@ function emitUpdate(detail: UpdateDetail): void {
   window.dispatchEvent(new CustomEvent<UpdateDetail>(UPDATE_EVENT, { detail }));
 }
 
+function clearDismissal(): void {
+  try {
+    localStorage.removeItem(UPDATE_DISMISSED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function trackUpdates(reg: ServiceWorkerRegistration): void {
+  // Re-emit existing waiting on page load — do NOT clear dismissal here so a
+  // user's "Later" choice survives refreshes for the same pending update.
   if (reg.waiting && navigator.serviceWorker.controller) {
     emitUpdate({ registration: reg, waiting: reg.waiting });
   }
@@ -61,10 +72,29 @@ function trackUpdates(reg: ServiceWorkerRegistration): void {
     if (!installing) return;
     installing.addEventListener("statechange", () => {
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
+        // A genuinely new build just finished installing — reset any prior
+        // dismissal so the user is prompted about this fresh update.
+        clearDismissal();
         emitUpdate({ registration: reg, waiting: installing });
       }
     });
   });
+}
+
+export function isUpdateDismissed(): boolean {
+  try {
+    return localStorage.getItem(UPDATE_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissPendingUpdate(): void {
+  try {
+    localStorage.setItem(UPDATE_DISMISSED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
 function wireSwMessages(): void {
@@ -90,17 +120,17 @@ export async function registerPwa(): Promise<void> {
     trackUpdates(reg);
     wireSwMessages();
 
-    let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloading) return;
-      reloading = true;
       try {
         localStorage.setItem(LAST_UPDATE_KEY, String(Date.now()));
       } catch {
         /* ignore */
       }
+      // Soft activation: let listeners (WhatsNew modal, patch notes badge)
+      // refresh themselves in-place. They decide whether a full reload is
+      // necessary — we no longer force window.location.reload() so users
+      // mid-session don't lose unsaved work.
       window.dispatchEvent(new Event(ACTIVATED_EVENT));
-      window.location.reload();
     });
 
     setInterval(() => {
@@ -112,13 +142,26 @@ export async function registerPwa(): Promise<void> {
 }
 
 export async function activatePendingUpdate(): Promise<void> {
+  // Explicit user action — they want the new build, so wipe any prior
+  // "Later" dismissal and hard-reload to fetch the fresh bundle.
+  clearDismissal();
   const reg = await navigator.serviceWorker.getRegistration();
   const waiting = reg?.waiting;
   if (!waiting) {
     window.location.reload();
     return;
   }
+  // Reload once the new worker takes control. controllerchange no longer
+  // auto-reloads (so mid-session users aren't blown away), so we schedule
+  // the reload here in response to the user's explicit Reload click.
+  const onControllerChange = () => {
+    navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
   waiting.postMessage({ type: "SKIP_WAITING" });
+  // Safety net in case controllerchange doesn't fire promptly.
+  setTimeout(() => window.location.reload(), 2000);
 }
 
 /**

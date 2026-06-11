@@ -327,6 +327,7 @@ export const CHANGELOG: ChangelogEntry[] = [
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     // Only check once per component mount
@@ -349,6 +350,23 @@ export function WhatsNewModal() {
       return () => clearTimeout(timer);
     }
   }, [hasChecked]);
+
+  // Auto-refresh the patch notes section when the SW soft-activates a new
+  // version (controllerchange without a forced reload). We remount the
+  // changelog body and re-evaluate against the latest stored version so the
+  // user can see updated highlights without losing their in-progress state.
+  useEffect(() => {
+    const onRefresh = () => {
+      const lastSeenVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+      if (lastSeenVersion !== APP_VERSION) {
+        localStorage.setItem(LAST_SEEN_VERSION_KEY, APP_VERSION);
+        setIsOpen(true);
+      }
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('patchnotes:update-available', onRefresh);
+    return () => window.removeEventListener('patchnotes:update-available', onRefresh);
+  }, []);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -404,8 +422,9 @@ export function WhatsNewModal() {
               <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
             </div>
 
-            {/* Content */}
-            <ScrollArea className="max-h-[50vh]">
+            {/* Content — keyed on refreshKey so a SW soft-activation
+                remounts this section in place instead of forcing a reload. */}
+            <ScrollArea key={refreshKey} className="max-h-[50vh]">
               <div className="p-6 space-y-5">
                 {/* Highlights */}
                 {currentChangelog.highlights.length > 0 && (
