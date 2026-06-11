@@ -61,6 +61,7 @@ type StatusCallback = (status: BackgroundSyncStatus) => void;
 // Constants
 // ============================================================================
 
+// Legacy localStorage key — kept here only so old data is migrated once.
 const QUEUE_STORAGE_KEY = 'untold_offline_queue';
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 5000, 15000]; // Exponential backoff
@@ -170,10 +171,23 @@ class BackgroundSyncManagerClass {
 
   private async loadQueue(): Promise<void> {
     try {
-      const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-      if (stored) {
-        this.queue = JSON.parse(stored);
-      }
+      await initOfflineQueue(); // migrates legacy localStorage payloads once
+      this.queue = await listOperations();
+      // Belt-and-suspenders: if the migration helper missed (e.g. it ran in a
+      // session before this code shipped), drain anything still in LS now.
+      try {
+        const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
+        if (stored) {
+          const legacy = JSON.parse(stored) as QueuedOperation[];
+          if (Array.isArray(legacy) && legacy.length > 0) {
+            for (const op of legacy) {
+              await enqueueOperation({ ...(op as StoredOperation), seq: 0 });
+            }
+            localStorage.removeItem(QUEUE_STORAGE_KEY);
+            this.queue = await listOperations();
+          }
+        }
+      } catch { /* ignore */ }
     } catch (e) {
       console.error('[BackgroundSync] Failed to load queue:', e);
       this.queue = [];
@@ -181,11 +195,9 @@ class BackgroundSyncManagerClass {
   }
 
   private async saveQueue(): Promise<void> {
-    try {
-      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(this.queue));
-    } catch (e) {
-      console.error('[BackgroundSync] Failed to save queue:', e);
-    }
+    // No-op: every mutation goes straight through the IndexedDB store so the
+    // queue is always durable. We keep this method to minimise churn in
+    // callers and to make future batched writes easy to introduce.
   }
 
   async enqueue(
@@ -195,22 +207,18 @@ class BackgroundSyncManagerClass {
     priority: SyncPriority = 'normal'
   ): Promise<string> {
     const operationId = `op_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    
-    // Remove any existing operations for this campaign (latest wins)
-    this.queue = this.queue.filter(op => 
-      !(op.campaignId === campaignId && op.type === type)
-    );
-    
+
     let compressed: string | undefined;
     let checksum: string | undefined;
-    
+
     if (campaign) {
       compressed = compressCampaign(campaign);
       checksum = await generateChecksum(compressed);
     }
-    
-    const operation: QueuedOperation = {
+
+    const operation: StoredOperation = {
       id: operationId,
+      seq: 0, // assigned by the store
       campaignId,
       type,
       priority,
@@ -218,44 +226,35 @@ class BackgroundSyncManagerClass {
       checksum,
       createdAt: Date.now(),
       retryCount: 0,
+      tick: campaign?.currentTick,
       metadata: campaign ? {
         campaignName: campaign.meta?.name,
         characterName: campaign.player?.name,
       } : undefined,
     };
-    
-    // Insert based on priority
-    const insertIndex = this.queue.findIndex(op => 
-      this.getPriorityValue(op.priority) < this.getPriorityValue(priority)
-    );
-    
-    if (insertIndex === -1) {
-      this.queue.push(operation);
-    } else {
-      this.queue.splice(insertIndex, 0, operation);
-    }
-    
-    await this.saveQueue();
+
+    // Persist + dedup atomically in IndexedDB.
+    const stored = await enqueueOperation(operation);
+    // Refresh the in-memory mirror from the source of truth so dedup and
+    // priority ordering stay perfectly consistent across reloads / sync ticks.
+    this.queue = await listOperations();
     this.notifyStatusChange();
-    
-    // Cache in IndexedDB
+
+    // Cache in IndexedDB for offline reads.
     if (compressed && checksum) {
       await IndexedDBCache.cacheSave(campaignId, compressed, checksum, 'local');
     }
-    
-    // Trigger processing if online
+
+    // Trigger processing if online, otherwise schedule a Background Sync.
     if (navigator.onLine && !this.isPaused) {
       this.processQueue();
     } else {
-      // Offline — ask the SW to flush as soon as connectivity returns.
-      // Lazy-imported to avoid circular deps and to keep this service
-      // usable in non-browser contexts.
       void import('@/pwa/registerSW')
         .then((m) => m.requestBackgroundSync())
         .catch(() => {});
     }
 
-    console.log('[BackgroundSync] Enqueued operation:', type, 'for', campaignId);
+    console.log('[BackgroundSync] Enqueued operation:', type, 'for', campaignId, 'seq=', stored.seq);
     return operationId;
   }
 
