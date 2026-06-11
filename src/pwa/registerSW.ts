@@ -53,7 +53,17 @@ function emitUpdate(detail: UpdateDetail): void {
   window.dispatchEvent(new CustomEvent<UpdateDetail>(UPDATE_EVENT, { detail }));
 }
 
+function clearDismissal(): void {
+  try {
+    localStorage.removeItem(UPDATE_DISMISSED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function trackUpdates(reg: ServiceWorkerRegistration): void {
+  // Re-emit existing waiting on page load — do NOT clear dismissal here so a
+  // user's "Later" choice survives refreshes for the same pending update.
   if (reg.waiting && navigator.serviceWorker.controller) {
     emitUpdate({ registration: reg, waiting: reg.waiting });
   }
@@ -62,10 +72,29 @@ function trackUpdates(reg: ServiceWorkerRegistration): void {
     if (!installing) return;
     installing.addEventListener("statechange", () => {
       if (installing.state === "installed" && navigator.serviceWorker.controller) {
+        // A genuinely new build just finished installing — reset any prior
+        // dismissal so the user is prompted about this fresh update.
+        clearDismissal();
         emitUpdate({ registration: reg, waiting: installing });
       }
     });
   });
+}
+
+export function isUpdateDismissed(): boolean {
+  try {
+    return localStorage.getItem(UPDATE_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissPendingUpdate(): void {
+  try {
+    localStorage.setItem(UPDATE_DISMISSED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
 function wireSwMessages(): void {
