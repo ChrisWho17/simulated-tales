@@ -171,9 +171,16 @@ export function VersionHotfixesBadge() {
               />
 
               {(() => {
-                const ordered = [...CHANGELOG].sort((a, b) =>
-                  a.version.localeCompare(b.version, undefined, { numeric: true })
-                );
+                // Order: newest major.minor groups first; within each group the
+                // major (x.y.0) comes first, then its patches ascending.
+                const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10) || 0);
+                const ordered = [...CHANGELOG].sort((a, b) => {
+                  const [aM, aN, aP] = parse(a.version);
+                  const [bM, bN, bP] = parse(b.version);
+                  if (aM !== bM) return bM - aM;
+                  if (aN !== bN) return bN - aN;
+                  return aP - bP;
+                });
                 return ordered.map((entry, idx) => {
                   const isMajor = /\.\d+\.0$/.test(entry.version);
                   const dotColor = isMajor
