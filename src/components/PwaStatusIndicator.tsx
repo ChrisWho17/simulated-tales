@@ -1,4 +1,6 @@
 import { Wifi, WifiOff, CloudCheck, CloudAlert, Loader2 } from 'lucide-react';
+// Note: CloudCheck/CloudAlert -> fall back if missing
+
 import {
   Tooltip,
   TooltipContent,
