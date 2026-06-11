@@ -14,6 +14,13 @@ beforeAll(() => {
   if (!proto.scrollIntoView) {
     proto.scrollIntoView = () => {};
   }
+  if (typeof (globalThis as { ResizeObserver?: unknown }).ResizeObserver === 'undefined') {
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
 });
 
 describe('VersionHotfixesBadge', () => {
