@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { PATCHNOTES_UPDATE_EVENT } from '@/components/PwaUpdatePrompt';
 import { Star, Mail, History, Bug, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -31,19 +32,36 @@ export function VersionHotfixesBadge() {
   const fixes = latest?.fixes ?? [];
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState<ChangelogEntry | null>(null);
+  const [updateReady, setUpdateReady] = useState(false);
+  // Bumped when a PWA update is detected so cached patch-note popovers remount.
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    const onUpdate = () => {
+      setUpdateReady(true);
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener(PATCHNOTES_UPDATE_EVENT, onUpdate);
+    return () => window.removeEventListener(PATCHNOTES_UPDATE_EVENT, onUpdate);
+  }, []);
 
   return (
     <div
+      key={refreshKey}
       data-testid="version-hotfixes-badge"
+      data-update-ready={updateReady || undefined}
       className="fixed top-2 right-2 z-40 flex flex-col items-end gap-1 pointer-events-none"
     >
       <span
         data-testid="version-string"
-        className="text-[10px] font-mono text-muted-foreground/70 bg-black/40 px-2 py-0.5 rounded border border-border/30 backdrop-blur-sm pointer-events-auto"
-        title={`Build: ${BUILD_NUMBER}`}
+        className={`text-[10px] font-mono px-2 py-0.5 rounded border backdrop-blur-sm pointer-events-auto transition-colors ${
+          updateReady
+            ? 'text-primary border-primary/60 bg-primary/15 animate-pulse'
+            : 'text-muted-foreground/70 border-border/30 bg-black/40'
+        }`}
+        title={updateReady ? 'New version ready — reload to apply' : `Build: ${BUILD_NUMBER}`}
       >
-        {VERSION_STRING}
+        {updateReady ? `${VERSION_STRING} • update ready` : VERSION_STRING}
       </span>
 
       <div className="flex items-center gap-1 pointer-events-auto">
