@@ -56,6 +56,7 @@ import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
 import { Progress } from '@/components/ui/progress';
 import { FailureSnapshot } from '@/lib/saveRecovery/types';
+import { InstallAppButton } from '@/components/adventure/InstallAppButton';
 
 // Genre badge colors
 const GENRE_COLORS: Record<string, string> = {
