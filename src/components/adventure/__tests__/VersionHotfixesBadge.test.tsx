@@ -1,23 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { VersionHotfixesBadge } from '../VersionHotfixesBadge';
 import { CHANGELOG } from '../WhatsNewModal';
 
-// Radix Popover/Dialog use pointer events + portals; jsdom needs these shims.
+// Radix Popover/Dialog use pointer events; jsdom needs shims.
 beforeAll(() => {
-  // pointer events are not implemented in jsdom
-  // @ts-expect-error - shim
-  if (!Element.prototype.hasPointerCapture) {
-    // @ts-expect-error - shim
-    Element.prototype.hasPointerCapture = () => false;
-    // @ts-expect-error - shim
-    Element.prototype.setPointerCapture = () => {};
-    // @ts-expect-error - shim
-    Element.prototype.releasePointerCapture = () => {};
+  const proto = Element.prototype as unknown as Record<string, unknown>;
+  if (!proto.hasPointerCapture) {
+    proto.hasPointerCapture = () => false;
+    proto.setPointerCapture = () => {};
+    proto.releasePointerCapture = () => {};
   }
-  // scrollIntoView not in jsdom
-  // @ts-expect-error - shim
-  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {});
+  if (!proto.scrollIntoView) {
+    proto.scrollIntoView = () => {};
+  }
 });
 
 describe('VersionHotfixesBadge', () => {
@@ -26,7 +22,7 @@ describe('VersionHotfixesBadge', () => {
   it('shows the hotfix count badge matching latest changelog fixes length', () => {
     render(<VersionHotfixesBadge />);
     const badge = screen.getByTestId('hotfixes-count-badge');
-    expect(badge).toHaveTextContent(String(latest.fixes.length));
+    expect(badge.textContent).toBe(String(latest.fixes.length));
   });
 
   it('renders highlights popover with latest version entries', async () => {
@@ -34,13 +30,13 @@ describe('VersionHotfixesBadge', () => {
     fireEvent.click(screen.getByTestId('highlights-trigger'));
 
     const popover = await screen.findByTestId('highlights-popover');
-    expect(popover).toHaveTextContent(`v${latest.version}`);
+    expect(popover.textContent).toContain(`v${latest.version}`);
 
     const list = within(popover).getByTestId('highlights-list');
     const items = within(list).getAllByRole('listitem');
     expect(items).toHaveLength(latest.highlights.length);
     latest.highlights.forEach((h, i) => {
-      expect(items[i]).toHaveTextContent(h);
+      expect(items[i].textContent).toContain(h);
     });
   });
 
@@ -49,13 +45,13 @@ describe('VersionHotfixesBadge', () => {
     fireEvent.click(screen.getByTestId('hotfixes-trigger'));
 
     const popover = await screen.findByTestId('hotfixes-popover');
-    expect(popover).toHaveTextContent(`v${latest.version}`);
+    expect(popover.textContent).toContain(`v${latest.version}`);
 
     const list = within(popover).getByTestId('hotfixes-list');
     const items = within(list).getAllByRole('listitem');
     expect(items).toHaveLength(latest.fixes.length);
     latest.fixes.forEach((f, i) => {
-      expect(items[i]).toHaveTextContent(f);
+      expect(items[i].textContent).toContain(f);
     });
   });
 
@@ -69,10 +65,11 @@ describe('VersionHotfixesBadge', () => {
 
     CHANGELOG.forEach((entry) => {
       const card = within(list).getByTestId(`history-entry-${entry.version}`);
-      expect(card).toHaveTextContent(`v${entry.version}`);
-      expect(card).toHaveTextContent(entry.title);
+      const text = card.textContent ?? '';
+      expect(text).toContain(`v${entry.version}`);
+      expect(text).toContain(entry.title);
       entry.fixes.forEach((f) => {
-        expect(card).toHaveTextContent(f);
+        expect(text).toContain(f);
       });
     });
   });
