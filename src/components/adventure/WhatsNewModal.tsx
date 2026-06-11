@@ -9,7 +9,7 @@ import { VERSION_STRING, APP_VERSION, BUILD_NUMBER } from '@/lib/version';
 const LAST_SEEN_VERSION_KEY = 'untold-last-seen-version';
 
 // Changelog entries - add new entries at the top
-interface ChangelogEntry {
+export interface ChangelogEntry {
   version: string;
   date: string;
   title: string;
@@ -19,7 +19,7 @@ interface ChangelogEntry {
   fixes: string[];
 }
 
-const CHANGELOG: ChangelogEntry[] = [
+export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "0.4.2",
     date: "January 2026",
