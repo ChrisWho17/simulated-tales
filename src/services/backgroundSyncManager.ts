@@ -110,7 +110,9 @@ async function generateChecksum(data: string): Promise<string> {
 // ============================================================================
 
 class BackgroundSyncManagerClass {
-  private queue: QueuedOperation[] = [];
+  private queue: StoredOperation[] = [];
+  /** Operation IDs currently being processed — prevents double-flush across overlapping ticks/SW pings. */
+  private inFlight: Set<string> = new Set();
   private isProcessing = false;
   private isPaused = false;
   private syncInterval: ReturnType<typeof setInterval> | null = null;
@@ -268,8 +270,9 @@ class BackgroundSyncManagerClass {
   }
 
   async dequeue(operationId: string): Promise<void> {
-    this.queue = this.queue.filter(op => op.id !== operationId);
-    await this.saveQueue();
+    await removeOperationById(operationId);
+    this.queue = await listOperations();
+    this.inFlight.delete(operationId);
     this.notifyStatusChange();
   }
 
@@ -278,7 +281,7 @@ class BackgroundSyncManagerClass {
   }
 
   getQueuedOperations(): QueuedOperation[] {
-    return [...this.queue];
+    return [...this.queue] as QueuedOperation[];
   }
 
   // ============================================================================
