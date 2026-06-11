@@ -29,6 +29,8 @@ import {
   setConflictPolicy,
   type ConflictPolicy,
 } from '@/services/conflictResolution';
+import { listOperations, getQueueStats } from '@/services/offlineQueueStore';
+import type { StoredOperation } from '@/services/offlineQueueStore';
 
 interface CheckResult {
   name: string;
@@ -306,6 +308,9 @@ export default function DebugPwa() {
             </Button>
             <Button size="sm" variant="outline" onClick={handleForceFlush}>
               Force flush queue
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleExportQueue}>
+              Export queue + merge timeline
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
