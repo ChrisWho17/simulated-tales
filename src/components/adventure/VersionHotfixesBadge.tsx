@@ -148,24 +148,26 @@ export function VersionHotfixesBadge() {
 
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
         <DialogContent
-          className="max-w-2xl max-h-[85vh] p-0 overflow-hidden border-none bg-gradient-to-b from-background via-background to-primary/5"
+          className="w-[calc(100vw-1rem)] sm:w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] p-0 overflow-hidden border-none bg-gradient-to-b from-background via-background to-primary/5"
           data-testid="hotfixes-history-dialog"
         >
-          <DialogHeader className="p-5 bg-gradient-to-r from-primary/15 via-amber-500/10 to-orange-500/10">
-            <DialogTitle className="flex items-center gap-2 text-foreground">
+          <DialogHeader className="p-3 sm:p-5 bg-gradient-to-r from-primary/15 via-amber-500/10 to-orange-500/10">
+            <DialogTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
               <History className="w-4 h-4 text-primary" />
               Game Timeline · Origin → Now
             </DialogTitle>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Every major milestone across all Alpha releases
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1">
+              Tap a node for that release's full event & fixes history
             </p>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh]">
-            <div className="relative px-6 py-6" data-testid="hotfixes-history-list">
-              {/* Vertical timeline rail — themed gradient, no borders */}
+          <ScrollArea className="max-h-[75vh] sm:max-h-[70vh]">
+            <div
+              className="relative px-3 sm:px-6 py-4 sm:py-6"
+              data-testid="hotfixes-history-list"
+            >
               <div
                 aria-hidden
-                className="absolute left-[26px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary/70 via-amber-400/50 to-orange-500/60 rounded-full"
+                className="absolute left-[18px] sm:left-[26px] top-3 bottom-3 w-[2px] bg-gradient-to-b from-primary/70 via-amber-400/50 to-orange-500/60 rounded-full"
               />
 
               {(() => {
@@ -173,7 +175,6 @@ export function VersionHotfixesBadge() {
                   a.version.localeCompare(b.version, undefined, { numeric: true })
                 );
                 return ordered.map((entry, idx) => {
-                  // Major = x.y.0, Minor = x.y.z (z>0)
                   const isMajor = /\.\d+\.0$/.test(entry.version);
                   const dotColor = isMajor
                     ? 'bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.8)]'
@@ -183,54 +184,62 @@ export function VersionHotfixesBadge() {
                     ...(entry.highlights ?? []).map((h) => ({ kind: 'highlight' as const, text: h })),
                     ...entry.fixes.map((f) => ({ kind: 'fix' as const, text: f })),
                   ];
+                  const preview = events.slice(0, 2);
+                  const remaining = events.length - preview.length;
 
                   return (
-                    <div
+                    <button
                       key={entry.version}
+                      type="button"
+                      onClick={() => setSelected(entry)}
                       data-testid={`history-entry-${entry.version}`}
-                      className="relative pl-12 pb-6 last:pb-0"
                       style={{ animationDelay: `${idx * 40}ms` }}
+                      className="group relative w-full text-left pl-9 sm:pl-12 pb-5 sm:pb-6 last:pb-0 focus:outline-none"
                     >
-                      {/* Node dot */}
                       <span
                         aria-hidden
-                        className={`absolute left-[18px] top-1.5 w-[18px] h-[18px] rounded-full ${dotColor} ring-4 ring-background`}
+                        className={`absolute left-[10px] sm:left-[18px] top-1 w-[18px] h-[18px] rounded-full ${dotColor} ring-4 ring-background transition-transform group-hover:scale-125 group-focus-visible:scale-125`}
                       />
 
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className={`text-sm font-bold ${accent}`}>
+                        <span className={`text-sm font-bold ${accent} group-hover:underline underline-offset-2`}>
                           v{entry.version}
                         </span>
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                           {isMajor ? 'Major' : 'Patch'} · {entry.date}
                         </span>
                       </div>
-                      <p className="text-xs font-medium text-foreground/90 mt-0.5 mb-2">
+                      <p className="text-xs font-medium text-foreground/90 mt-0.5 mb-1.5 break-words">
                         {entry.title}
                       </p>
 
-                      {events.length ? (
+                      {preview.length ? (
                         <ul className="space-y-1">
-                          {events.map((ev, i) => (
+                          {preview.map((ev, i) => (
                             <li
                               key={i}
-                              className="text-[11px] text-foreground/75 flex items-start gap-1.5 leading-relaxed"
+                              className="text-[11px] text-foreground/75 flex items-start gap-1.5 leading-snug break-words"
                             >
                               {ev.kind === 'highlight' ? (
                                 <Star className="w-3 h-3 mt-0.5 text-amber-400 shrink-0" />
                               ) : (
                                 <Bug className="w-3 h-3 mt-0.5 text-orange-400/70 shrink-0" />
                               )}
-                              <span>{ev.text}</span>
+                              <span className="min-w-0">{ev.text}</span>
                             </li>
                           ))}
+                          {remaining > 0 && (
+                            <li className="text-[10px] text-primary/80 pl-[18px]">
+                              +{remaining} more · tap to expand
+                            </li>
+                          )}
                         </ul>
                       ) : (
                         <p className="text-[11px] text-muted-foreground/60 italic">
                           Foundational release.
                         </p>
                       )}
-                    </div>
+                    </button>
                   );
                 });
               })()}
@@ -238,6 +247,80 @@ export function VersionHotfixesBadge() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent
+          side="right"
+          data-testid="release-detail-panel"
+          className="w-[92vw] sm:w-[440px] sm:max-w-[440px] p-0 border-none bg-gradient-to-b from-background via-background to-primary/5"
+        >
+          {selected && (() => {
+            const isMajor = /\.\d+\.0$/.test(selected.version);
+            const accent = isMajor ? 'text-primary' : 'text-amber-400';
+            const highlights = selected.highlights ?? [];
+            return (
+              <>
+                <SheetHeader className="p-4 bg-gradient-to-r from-primary/15 via-amber-500/10 to-orange-500/10">
+                  <SheetTitle className="flex items-center gap-2 text-foreground text-sm">
+                    <span className={`font-bold ${accent}`}>v{selected.version}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                      {isMajor ? 'Major' : 'Patch'} · {selected.date}
+                    </span>
+                  </SheetTitle>
+                  <p className="text-xs text-foreground/85 mt-1 break-words">
+                    {selected.title}
+                  </p>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-7rem)]">
+                  <div className="p-4 space-y-5">
+                    <section>
+                      <h4 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-400 mb-2">
+                        <Star className="w-3 h-3" /> Highlights ({highlights.length})
+                      </h4>
+                      {highlights.length ? (
+                        <ul className="space-y-1.5">
+                          {highlights.map((h, i) => (
+                            <li
+                              key={i}
+                              className="text-xs text-foreground/85 flex items-start gap-1.5 leading-snug break-words"
+                            >
+                              <Star className="w-3 h-3 mt-0.5 text-amber-400 shrink-0" />
+                              <span className="min-w-0">{h}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground/60 italic">No highlights recorded.</p>
+                      )}
+                    </section>
+
+                    <section>
+                      <h4 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-orange-400 mb-2">
+                        <Bug className="w-3 h-3" /> Fixes ({selected.fixes.length})
+                      </h4>
+                      {selected.fixes.length ? (
+                        <ul className="space-y-1.5">
+                          {selected.fixes.map((f, i) => (
+                            <li
+                              key={i}
+                              className="text-xs text-foreground/80 flex items-start gap-1.5 leading-snug break-words"
+                            >
+                              <Bug className="w-3 h-3 mt-0.5 text-orange-400/80 shrink-0" />
+                              <span className="min-w-0">{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground/60 italic">No fixes in this release.</p>
+                      )}
+                    </section>
+                  </div>
+                </ScrollArea>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
