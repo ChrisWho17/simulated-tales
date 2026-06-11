@@ -596,8 +596,9 @@ class BackgroundSyncManagerClass {
   // ============================================================================
 
   async clearQueue(): Promise<void> {
+    await clearOperations();
     this.queue = [];
-    await this.saveQueue();
+    this.inFlight.clear();
     this.notifyStatusChange();
     console.log('[BackgroundSync] Queue cleared');
   }
