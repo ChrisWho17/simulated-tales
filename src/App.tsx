@@ -15,6 +15,7 @@ import { SessionAchievementBridge } from "@/components/game/SessionAchievementBr
 import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
 import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
+import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { RecoveryBoundary } from "@/components/error/RecoveryBoundary";
 import { repairCorruptedStorage } from "@/lib/storageRepair";
 import Index from "./pages/Index";
@@ -62,6 +63,7 @@ const App = () => (
                     <CampaignInventorySync>
                       <TooltipProvider>
                         <StartupIntegrityMonitor />
+                        <PwaUpdatePrompt />
                         <Toaster />
                         <Sonner />
                         <BrowserRouter>
