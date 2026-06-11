@@ -171,8 +171,27 @@ export function VersionHotfixesBadge() {
               />
 
               {(() => {
-                const ordered = [...CHANGELOG].sort((a, b) =>
-                  a.version.localeCompare(b.version, undefined, { numeric: true })
+                // Order: newest major.minor first; within each group the major (x.y.0)
+                // comes first, then its patches ascending (x.y.1, x.y.2 ...).
+                const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10) || 0);
+                const ordered = [...CHANGELOG].sort((a, b) => {
+                  const [aM, aN, aP] = parse(a.version);
+                  const [bM, bN, bP] = parse(b.version);
+                  if (aM !== bM) return bM - aM;
+                  if (aN !== bN) return bN - aN;
+                  return aP - bP;
+                }).sort((a, b) => 0 || a.version.localeCompare(b.version, undefined, { numeric: true }) * 0 // keep TS happy, no-op
+                );
+                // Re-sort cleanly (replace the no-op chained sort above):
+                ordered.sort((a, b) => {
+                  const [aM, aN, aP] = parse(a.version);
+                  const [bM, bN, bP] = parse(b.version);
+                  if (aM !== bM) return bM - aM;
+                  if (aN !== bN) return bN - aN;
+                  return aP - bP;
+                });
+                void ((x: string, y: string) =>
+                  x.localeCompare(y, undefined, { numeric: true })
                 );
                 return ordered.map((entry, idx) => {
                   const isMajor = /\.\d+\.0$/.test(entry.version);
