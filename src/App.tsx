@@ -25,6 +25,8 @@ import NotFound from "./pages/NotFound";
 import LoadoutTest from "./pages/LoadoutTest";
 import InventoryTest from "./pages/InventoryTest";
 import AchievementGallery from "./pages/AchievementGallery";
+import DebugPwa from "./pages/DebugPwa";
+
 import "@/styles/untold-story-engine.css";
 
 // CRITICAL: Run storage repair BEFORE React renders to prevent crashes
@@ -76,6 +78,7 @@ const App = () => (
                             <Route path="/loadout-test" element={<LoadoutTest />} />
                             <Route path="/inventory-test" element={<InventoryTest />} />
                             <Route path="/achievements" element={<AchievementGallery />} />
+                            <Route path="/debug/pwa" element={<DebugPwa />} />
                             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                             <Route path="*" element={<NotFound />} />
                           </Routes>
