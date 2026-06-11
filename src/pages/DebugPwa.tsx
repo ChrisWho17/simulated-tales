@@ -24,6 +24,11 @@ import {
 import { usePwaStatus } from '@/hooks/usePwaStatus';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { PwaStatusIndicator } from '@/components/PwaStatusIndicator';
+import {
+  getConflictPolicy,
+  setConflictPolicy,
+  type ConflictPolicy,
+} from '@/services/conflictResolution';
 
 interface CheckResult {
   name: string;
@@ -39,6 +44,17 @@ export default function DebugPwa() {
   const bg = useBackgroundSync();
   const [results, setResults] = useState<CheckResult[]>([]);
   const [lastFlush, setLastFlush] = useState<number | null>(null);
+  const [policy, setPolicyState] = useState<ConflictPolicy>(getConflictPolicy());
+
+  const handlePolicyChange = (next: ConflictPolicy) => {
+    setConflictPolicy(next);
+    setPolicyState(next);
+    pushResult({
+      name: 'Set conflict policy',
+      pass: true,
+      detail: `Server-merge policy is now "${next}"`,
+    });
+  };
 
   useEffect(() => {
     const onFlush = (e: Event) => {
@@ -297,6 +313,33 @@ export default function DebugPwa() {
             network — the queue should drain automatically. Where supported (Chrome/Edge), the SW
             also fires PWA_SYNC_FLUSH when the OS triggers the sync tag.
           </p>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Conflict-resolution policy</h2>
+          <p className="text-xs text-muted-foreground">
+            Controls how queued offline saves merge with the server when both
+            sides have changes. Applied on the next flush.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={policy === 'merge-by-tick' ? 'default' : 'outline'}
+              onClick={() => handlePolicyChange('merge-by-tick')}
+            >
+              Merge by tick
+            </Button>
+            <Button
+              size="sm"
+              variant={policy === 'last-write-wins' ? 'default' : 'outline'}
+              onClick={() => handlePolicyChange('last-write-wins')}
+            >
+              Last-write-wins
+            </Button>
+            <Badge variant="secondary" className="self-center">
+              active: {policy}
+            </Badge>
+          </div>
         </Card>
 
         <Card className="p-4 space-y-2">
