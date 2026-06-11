@@ -21,6 +21,56 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.4.4",
+    date: "June 2026",
+    title: "PWA Polish & Patch Visibility",
+    highlights: [
+      "Top-right version badge with patch highlights and hotfix popovers",
+      "Full hotfix history dialog browsable from the main menu",
+      "PWA install moved into Game Settings for a cleaner main menu"
+    ],
+    features: [
+      "Star popover surfaces the latest patch highlights at a glance",
+      "Envelope popover shows hotfix count plus full history dialog",
+      "Install App card lives in Game Settings with confirmation animation"
+    ],
+    improvements: [
+      "Cleaner main menu layout — no banner above the title",
+      "Patch history ordered chronologically from origin to current alpha"
+    ],
+    fixes: [
+      "Fixed PWA install banner being inconsistent across browsers",
+      "Resolved duplicate version display in the title block",
+      "Hardened storage bucket policies (service-role writes only)",
+      "Sanitized portrait custom prompt input against injection",
+      "Enabled HIBP leaked-password protection on auth"
+    ]
+  },
+  {
+    version: "0.4.3",
+    date: "March 2026",
+    title: "Offline Queue & Debug Tooling",
+    highlights: [
+      "Export offline queue + server merge timeline as JSON",
+      "Install button visible on the campaign chooser (incl. iframe preview)",
+      "Installed/running status indicator next to Install"
+    ],
+    features: [
+      "DebugPwa: one-click export of queued items, ticks and hashes",
+      "Install button fallback dialog with iOS/Android instructions",
+      "Standalone-mode detection with status pill"
+    ],
+    improvements: [
+      "More robust service-worker registration guards for previews",
+      "Better diagnostics for merge conflicts and offline replays"
+    ],
+    fixes: [
+      "Fixed Install button not appearing inside the Lovable preview iframe",
+      "Resolved missing download affordance on the campaign chooser",
+      "Fixed offline queue items lost on quick reconnect"
+    ]
+  },
+  {
     version: "0.4.2",
     date: "January 2026",
     title: "Companion Loyalty & Relationship Events",
@@ -67,6 +117,94 @@ export const CHANGELOG: ChangelogEntry[] = [
     fixes: [
       "Fixed companion stat calculations",
       "Resolved dialogue duplication issues"
+    ]
+  },
+  {
+    version: "0.4.0",
+    date: "December 2025",
+    title: "Companion Framework",
+    highlights: [
+      "Introduced the companion party system",
+      "Voice archetypes for distinct companion speech",
+      "Sentient autonomy engine for independent reactions"
+    ],
+    features: [
+      "Up to 3 active companions in the party",
+      "15 voice archetypes defining speech tempo and traits",
+      "Autonomous companion narrative feed"
+    ],
+    improvements: [
+      "Unified companion data structure across systems"
+    ],
+    fixes: [
+      "Fixed party slot leaks when dismissing companions",
+      "Resolved companion portrait caching errors"
+    ]
+  },
+  {
+    version: "0.3.0",
+    date: "October 2025",
+    title: "Living World Simulation",
+    highlights: [
+      "NPC schedules and autonomous actions",
+      "Three-tier NPC memory system",
+      "Ambient background events feed"
+    ],
+    features: [
+      "World ticks advance NPCs even when player is idle",
+      "Perception filtering for altered states",
+      "Grudge and forgiveness modeling for NPCs"
+    ],
+    improvements: [
+      "Faster simulation tick performance",
+      "More plausible NPC routines"
+    ],
+    fixes: [
+      "Fixed NPCs forgetting recent interactions",
+      "Resolved schedule overlap deadlocks"
+    ]
+  },
+  {
+    version: "0.2.0",
+    date: "August 2025",
+    title: "Narrator Contract & Genre Blending",
+    highlights: [
+      "Strict narrator contract (no guaranteed success, no echoing)",
+      "Multi-genre blending with hard-lock option",
+      "Tone adaptation system"
+    ],
+    features: [
+      "Genre tag parsing and detection from prose",
+      "Player correction meta-commands",
+      "Difficulty presets (Casual / Story / Simulation / Hardcore)"
+    ],
+    improvements: [
+      "Cleaner mechanic-tag filtering from displayed prose"
+    ],
+    fixes: [
+      "Fixed narrator echoing player input verbatim",
+      "Resolved tone drift across long sessions"
+    ]
+  },
+  {
+    version: "0.1.0",
+    date: "June 2025",
+    title: "Origin — Untold Stories Alpha",
+    highlights: [
+      "First playable alpha of the text RPG engine",
+      "Core dice and inventory systems",
+      "Initial dark fantasy + cyberpunk visual identity"
+    ],
+    features: [
+      "Adventure creator with genre selection",
+      "Dice modes: Normal Dice and Diced Out",
+      "Loot via [LOOT:item] AI tags"
+    ],
+    improvements: [
+      "Baseline glassmorphism UI and dynamic theme variables"
+    ],
+    fixes: [
+      "Initial release — no prior hotfixes"
     ]
   }
 ];
