@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
-import { InstallAppPromoBanner } from './InstallAppPromoBanner';
+import { VersionHotfixesBadge } from './VersionHotfixesBadge';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
 import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
@@ -772,10 +772,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-        {/* PWA Install Promo — sits above everything on the main menu */}
-        <div className="w-full max-w-3xl">
-          <InstallAppPromoBanner />
-        </div>
+        {/* Top-right version + patch highlights/hotfixes */}
+        <VersionHotfixesBadge />
 
         {/* Logo/Title */}
         <div className="text-center mb-8 animate-fade-in">
@@ -783,12 +781,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
             <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
               UNTOLD
             </h1>
-            <span 
-              className="text-[10px] md:text-xs font-mono text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded border border-border/30 self-end mb-2 cursor-default"
-              title={`Build: ${BUILD_NUMBER}`}
-            >
-              {VERSION_STRING}
-            </span>
           </div>
           <p className="text-muted-foreground uppercase tracking-[0.4em] text-sm">
             Begin Your Unique Adventure
