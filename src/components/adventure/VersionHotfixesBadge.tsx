@@ -151,7 +151,12 @@ export function VersionHotfixesBadge() {
           </DialogHeader>
           <ScrollArea className="max-h-[65vh]">
             <div className="p-4 space-y-5" data-testid="hotfixes-history-list">
-              {CHANGELOG.map((entry) => (
+              {/* Ordered ascending: origin (oldest) → current alpha */}
+              {[...CHANGELOG]
+                .sort((a, b) =>
+                  a.version.localeCompare(b.version, undefined, { numeric: true })
+                )
+                .map((entry) => (
                 <div
                   key={entry.version}
                   data-testid={`history-entry-${entry.version}`}
