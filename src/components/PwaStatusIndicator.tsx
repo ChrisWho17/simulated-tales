@@ -1,5 +1,7 @@
-import { Wifi, WifiOff, CloudCheck, CloudAlert, Loader2 } from 'lucide-react';
-// Note: CloudCheck/CloudAlert -> fall back if missing
+import { Wifi, WifiOff, CloudCheck as CloudCheckRaw, CloudAlert as CloudAlertRaw, Cloud, CloudOff, Loader2 } from 'lucide-react';
+const CloudCheck = (CloudCheckRaw ?? Cloud) as typeof Cloud;
+const CloudAlert = (CloudAlertRaw ?? CloudOff) as typeof Cloud;
+
 
 import {
   Tooltip,
