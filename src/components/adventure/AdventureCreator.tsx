@@ -16,7 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
-import { InstallAppPromoBanner } from './InstallAppPromoBanner';
+import { VersionHotfixesBadge } from './VersionHotfixesBadge';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
 import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
