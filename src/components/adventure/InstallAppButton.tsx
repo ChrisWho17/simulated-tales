@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Share, Plus as PlusIcon } from 'lucide-react';
+import { Download, Share, Plus as PlusIcon, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,17 +12,18 @@ import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export function InstallAppButton() {
   const { canInstall, isHidden, isIOS, promptInstall } = usePwaInstall();
-  const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const [helpMode, setHelpMode] = useState<null | 'ios' | 'generic'>(null);
 
+  // Hide only when the app is actually installed / running standalone.
   if (isHidden) return null;
-  if (!canInstall && !isIOS) return null;
 
   const handleClick = async () => {
     if (canInstall) {
-      await promptInstall();
-    } else if (isIOS) {
-      setShowIOSHelp(true);
+      const outcome = await promptInstall();
+      if (outcome === 'unavailable') setHelpMode(isIOS ? 'ios' : 'generic');
+      return;
     }
+    setHelpMode(isIOS ? 'ios' : 'generic');
   };
 
   return (
@@ -37,7 +38,7 @@ export function InstallAppButton() {
         Install App
       </Button>
 
-      <Dialog open={showIOSHelp} onOpenChange={setShowIOSHelp}>
+      <Dialog open={helpMode === 'ios'} onOpenChange={(o) => !o && setHelpMode(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Install on iPhone or iPad</DialogTitle>
@@ -47,30 +48,56 @@ export function InstallAppButton() {
           </DialogHeader>
           <ol className="space-y-3 text-sm text-foreground/90">
             <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">
-                1
-              </span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">1</span>
               <span className="flex items-center gap-2 flex-wrap">
                 Tap the <Share className="h-4 w-4 inline" /> <strong>Share</strong> button in Safari's toolbar.
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">
-                2
-              </span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">2</span>
               <span className="flex items-center gap-2 flex-wrap">
                 Scroll and choose <PlusIcon className="h-4 w-4 inline" /> <strong>Add to Home Screen</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">
-                3
-              </span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">3</span>
               <span>Tap <strong>Add</strong> in the top-right corner. The app icon will appear on your home screen.</span>
             </li>
           </ol>
           <p className="text-xs text-muted-foreground">
             Note: install only works from Safari on iOS, not from in-app browsers.
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={helpMode === 'generic'} onOpenChange={(o) => !o && setHelpMode(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Install The Untold Stories</DialogTitle>
+            <DialogDescription>
+              Your browser didn't expose a one-tap install prompt yet. You can still add the app
+              from the browser menu.
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="space-y-3 text-sm text-foreground/90">
+            <li className="flex items-start gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">1</span>
+              <span className="flex items-center gap-2 flex-wrap">
+                Open your browser menu (<MoreVertical className="h-4 w-4 inline" /> on Chrome / Edge / Brave).
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">2</span>
+              <span>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold">3</span>
+              <span>Confirm — the app icon will appear like a native app.</span>
+            </li>
+          </ol>
+          <p className="text-xs text-muted-foreground">
+            Tip: this preview runs inside an iframe, which blocks the native install prompt. Open
+            the published URL in a normal browser tab to get the one-tap install.
           </p>
         </DialogContent>
       </Dialog>
