@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Share, Plus as PlusIcon, MoreVertical } from 'lucide-react';
+import { Download, Share, Plus as PlusIcon, MoreVertical, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,11 +11,25 @@ import {
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export function InstallAppButton() {
-  const { canInstall, isHidden, isIOS, promptInstall } = usePwaInstall();
+  const { canInstall, isHidden, isIOS, isStandalone, installedFlag, promptInstall } =
+    usePwaInstall();
   const [helpMode, setHelpMode] = useState<null | 'ios' | 'generic'>(null);
 
-  // Hide only when the app is actually installed / running standalone.
-  if (isHidden) return null;
+  // When the app is actually installed / running standalone, swap the install
+  // CTA for a non-interactive status pill so the user gets explicit feedback.
+  if (isHidden) {
+    const label = isStandalone ? 'Running as app' : 'App installed';
+    return (
+      <span
+        data-testid="install-app-installed"
+        aria-label={label}
+        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-400 backdrop-blur"
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        {label}
+      </span>
+    );
+  }
 
   const handleClick = async () => {
     if (canInstall) {
@@ -29,11 +43,13 @@ export function InstallAppButton() {
   return (
     <>
       <Button
+        data-testid="install-app-button"
         variant="outline"
         size="sm"
         onClick={handleClick}
         className="gap-2 border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary backdrop-blur"
       >
+
         <Download className="h-4 w-4" />
         Install App
       </Button>
