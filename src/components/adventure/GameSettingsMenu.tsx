@@ -27,6 +27,7 @@ import { BackupRestoreModal } from './BackupRestoreModal';
 import { PreMigrationBackupModal } from './PreMigrationBackupModal';
 import { DataIntegrityPanel } from './DataIntegrityPanel';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
+import { PwaDebugControls } from './PwaDebugControls';
 import { GameGenre } from '@/types/genreData';
 
 export interface GameSettingsMenuProps {
@@ -375,6 +376,9 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <span className="text-sm">Data Integrity Check</span>
           </Button>
           
+          {/* PWA install debug */}
+          <PwaDebugControls />
+
           {/* Data Wipe Button */}
           <Button
             variant="outline"

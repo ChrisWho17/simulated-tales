@@ -11,11 +11,10 @@ import {
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 
 export function InstallAppButton() {
-  const { canInstall, isStandalone, isIOS, promptInstall } = usePwaInstall();
+  const { canInstall, isHidden, isIOS, promptInstall } = usePwaInstall();
   const [showIOSHelp, setShowIOSHelp] = useState(false);
 
-  if (isStandalone) return null;
-  // Hide entirely if neither Chromium prompt is available nor iOS instructions apply.
+  if (isHidden) return null;
   if (!canInstall && !isIOS) return null;
 
   const handleClick = async () => {
