@@ -1,14 +1,22 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { activatePendingUpdate, PWA_UPDATE_EVENT } from "@/pwa/registerSW";
+import {
+  activatePendingUpdate,
+  dismissPendingUpdate,
+  isUpdateDismissed,
+  PWA_UPDATE_EVENT,
+  PWA_ACTIVATED_EVENT,
+} from "@/pwa/registerSW";
 
 /**
  * Listens for service-worker updates and surfaces a sonner toast with a
  * "Reload" action so the user can soft-download the latest patch on demand.
  *
- * Also broadcasts a `patchnotes:update-available` window event so the version
- * badge / What's New modal can self-refresh (pulse + remount) instead of
- * silently serving the cached patch notes.
+ * - Persists "Later" dismissals across refreshes so the same pending update
+ *   doesn't re-prompt mid-session. The dismissal is automatically cleared
+ *   when a genuinely new build finishes installing (see registerSW).
+ * - Broadcasts a `patchnotes:update-available` window event so the version
+ *   badge / What's New modal can self-refresh.
  */
 export const PATCHNOTES_UPDATE_EVENT = "patchnotes:update-available";
 
@@ -17,10 +25,12 @@ export function PwaUpdatePrompt() {
 
   useEffect(() => {
     const onUpdate = () => {
-      // Tell the patch notes UI to refresh itself (pulse + remount)
+      // Always let the patch notes UI know — pulse the badge even if the
+      // user previously dismissed the toast.
       window.dispatchEvent(new Event(PATCHNOTES_UPDATE_EVENT));
 
       if (shownRef.current) return;
+      if (isUpdateDismissed()) return; // persisted "Later" choice
       shownRef.current = true;
 
       const id = toast("A new version is ready", {
@@ -30,7 +40,6 @@ export function PwaUpdatePrompt() {
         action: {
           label: "Reload",
           onClick: () => {
-            // Fire-and-forget; the SW controllerchange handler reloads the page.
             void activatePendingUpdate().catch(() => {
               window.location.reload();
             });
@@ -39,22 +48,26 @@ export function PwaUpdatePrompt() {
         cancel: {
           label: "Later",
           onClick: () => {
+            dismissPendingUpdate();
             shownRef.current = false;
             toast.dismiss(id);
           },
         },
-        onDismiss: () => {
-          shownRef.current = false;
-        },
-        onAutoClose: () => {
-          shownRef.current = false;
-        },
       });
     };
 
+    const onActivated = () => {
+      // Soft refresh — controllerchange fired without a forced reload.
+      // Bump the patch notes UI so it can re-render in place.
+      window.dispatchEvent(new Event(PATCHNOTES_UPDATE_EVENT));
+    };
+
     window.addEventListener(PWA_UPDATE_EVENT, onUpdate as EventListener);
-    return () =>
+    window.addEventListener(PWA_ACTIVATED_EVENT, onActivated as EventListener);
+    return () => {
       window.removeEventListener(PWA_UPDATE_EVENT, onUpdate as EventListener);
+      window.removeEventListener(PWA_ACTIVATED_EVENT, onActivated as EventListener);
+    };
   }, []);
 
   return null;
