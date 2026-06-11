@@ -8,7 +8,7 @@ import {
   setForceShowInstall,
   usePwaInstall,
 } from '@/hooks/usePwaInstall';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 export function PwaDebugControls() {
   const { isStandalone, installedFlag, canInstall, isIOS } = usePwaInstall();
