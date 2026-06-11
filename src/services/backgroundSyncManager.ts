@@ -378,47 +378,61 @@ class BackgroundSyncManagerClass {
     }
   }
 
-  private async processSaveOperation(operation: QueuedOperation, userId: string): Promise<boolean> {
+  private async processSaveOperation(operation: StoredOperation, userId: string): Promise<boolean> {
     if (!operation.data || !operation.checksum) {
       console.warn('[BackgroundSync] Save operation missing data');
-      return true; // Remove invalid operations
+      return true;
     }
-    
-    const campaign = decompressCampaign(operation.data);
-    if (!campaign) {
+
+    const localCampaign = decompressCampaign(operation.data);
+    if (!localCampaign) {
       console.warn('[BackgroundSync] Failed to decompress campaign data');
       return true;
     }
-    
-    // Check for existing save
+
+    // Pull full server row so we can run the configured conflict policy.
     const { data: existing } = await supabase
       .from('cloud_saves')
-      .select('id, version, checksum')
+      .select('id, version, checksum, save_data')
       .eq('campaign_id', operation.campaignId)
       .eq('user_id', userId)
       .maybeSingle();
-    
-    // Skip if checksum matches (no changes)
+
     if (existing?.checksum === operation.checksum) {
       console.log('[BackgroundSync] No changes detected, skipping upload');
       return true;
     }
-    
+
+    const serverCampaign = existing?.save_data
+      ? (existing.save_data as unknown as CampaignData)
+      : null;
+    const policy = getConflictPolicy();
+    const merge = resolveConflict(localCampaign, serverCampaign, policy);
+    const merged = merge.merged;
+
+    console.log(
+      `[BackgroundSync] Conflict resolved policy=${policy} winner=${merge.winner} ` +
+      `localTick=${merge.localTick} serverTick=${merge.serverTick}`,
+    );
+
+    const mergedSerialized = compressCampaign(merged);
+    const mergedChecksum = await generateChecksum(mergedSerialized);
+
     const saveData = {
       campaign_id: operation.campaignId,
       user_id: userId,
-      campaign_name: campaign.meta?.name || 'Untitled Campaign',
-      character_name: campaign.player?.name || 'Unknown',
-      primary_genre: campaign.meta?.primaryGenre || 'Fantasy',
-      chapter_count: campaign.chapters?.length || 0,
-      character_level: campaign.player?.level || 1,
-      play_time: campaign.meta?.playTime || 0,
-      save_data: JSON.parse(JSON.stringify(campaign)),
-      checksum: operation.checksum,
+      campaign_name: merged.meta?.name || 'Untitled Campaign',
+      character_name: merged.player?.name || 'Unknown',
+      primary_genre: merged.meta?.primaryGenre || 'Fantasy',
+      chapter_count: merged.chapters?.length || 0,
+      character_level: merged.player?.level || 1,
+      play_time: merged.meta?.playTime || 0,
+      save_data: JSON.parse(JSON.stringify(merged)),
+      checksum: mergedChecksum,
       version: (existing?.version || 0) + 1,
       last_synced_at: new Date().toISOString(),
     };
-    
+
     const { error } = existing
       ? await supabase
           .from('cloud_saves')
@@ -427,70 +441,70 @@ class BackgroundSyncManagerClass {
       : await supabase
           .from('cloud_saves')
           .insert(saveData);
-    
+
     if (error) {
       console.error('[BackgroundSync] Cloud save error:', error);
       return false;
     }
-    
-    console.log('[BackgroundSync] Successfully synced campaign to cloud:', operation.campaignId);
+
+    // Reflect the merged result back into the local cache so subsequent
+    // reads see the canonical post-merge state.
+    await IndexedDBCache.cacheSave(operation.campaignId, mergedSerialized, mergedChecksum, 'cloud');
+
+    console.log('[BackgroundSync] Synced campaign to cloud:', operation.campaignId);
     return true;
   }
 
-  private async processDeleteOperation(operation: QueuedOperation, userId: string): Promise<boolean> {
+  private async processDeleteOperation(operation: StoredOperation, userId: string): Promise<boolean> {
     const { error } = await supabase
       .from('cloud_saves')
       .delete()
       .eq('campaign_id', operation.campaignId)
       .eq('user_id', userId);
-    
+
     if (error) {
       console.error('[BackgroundSync] Cloud delete error:', error);
       return false;
     }
-    
-    console.log('[BackgroundSync] Successfully deleted from cloud:', operation.campaignId);
+
+    console.log('[BackgroundSync] Deleted from cloud:', operation.campaignId);
     return true;
   }
 
-  private async processSyncOperation(operation: QueuedOperation, userId: string): Promise<boolean> {
-    // For sync operations, we pull from cloud and merge
+  private async processSyncOperation(operation: StoredOperation, userId: string): Promise<boolean> {
     const { data: cloudSave, error } = await supabase
       .from('cloud_saves')
       .select('*')
       .eq('campaign_id', operation.campaignId)
       .eq('user_id', userId)
       .maybeSingle();
-    
+
     if (error) {
       console.error('[BackgroundSync] Cloud fetch error:', error);
       return false;
     }
-    
+
     if (cloudSave) {
-      // Cache the cloud version
       const compressed = compressCampaign(cloudSave.save_data as unknown as CampaignData);
       await IndexedDBCache.cacheSave(operation.campaignId, compressed, cloudSave.checksum, 'cloud');
     }
-    
+
     return true;
   }
 
-  private async handleOperationFailure(operation: QueuedOperation): Promise<void> {
+  private async handleOperationFailure(operation: StoredOperation): Promise<void> {
     operation.retryCount++;
-    
+
     if (operation.retryCount >= MAX_RETRIES) {
       console.warn('[BackgroundSync] Max retries reached, removing operation:', operation.id);
       await this.dequeue(operation.id);
       return;
     }
-    
-    // Move to end of queue with same priority
-    this.queue = this.queue.filter(op => op.id !== operation.id);
-    this.queue.push(operation);
-    await this.saveQueue();
-    
-    // Schedule retry with backoff
+
+    // Re-enqueue updates retry count in the durable store; dedup keeps it unique.
+    await enqueueOperation({ ...operation, seq: 0 });
+    this.queue = await listOperations();
+
     const delay = RETRY_DELAYS[operation.retryCount - 1] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
     console.log('[BackgroundSync] Retrying in', delay, 'ms');
   }
