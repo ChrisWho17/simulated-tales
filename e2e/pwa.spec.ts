@@ -59,4 +59,51 @@ test.describe('PWA install + update + offline sync', () => {
     await page.getByRole('button', { name: /force flush queue/i }).click();
     await expect(page.getByText(/Pending sync ops:\s*0/)).toBeVisible({ timeout: 15_000 });
   });
+
+  test('export queue button downloads a parseable JSON with queued items while offline', async ({
+    page,
+    context,
+  }) => {
+    await page.goto('/debug/pwa');
+
+    // Queue at least one operation while offline so the export has something to include.
+    await context.setOffline(true);
+    await page.getByRole('button', { name: /queue offline save probe/i }).click();
+    await expect(page.getByText(/Queue size now: [1-9]/)).toBeVisible();
+
+    // Trigger the export and capture the download.
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: /export queue \+ merge timeline/i }).click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toMatch(/^untold-queue-\d+\.json$/);
+
+    const path = await download.path();
+    expect(path, 'download saved to disk').toBeTruthy();
+
+    const fs = await import('node:fs/promises');
+    const raw = await fs.readFile(path!, 'utf8');
+
+    // Must parse as JSON and carry the documented top-level fields.
+    let payload: any;
+    expect(() => {
+      payload = JSON.parse(raw);
+    }).not.toThrow();
+
+    expect(payload).toMatchObject({
+      exportedAt: expect.any(String),
+      pwa: expect.any(Object),
+      backgroundSync: expect.any(Object),
+      queueStats: expect.any(Object),
+      operations: expect.any(Array),
+    });
+
+    // The whole point: while offline the queue is non-empty and each op has a seq.
+    expect(payload.operations.length).toBeGreaterThan(0);
+    for (const op of payload.operations) {
+      expect(typeof op.seq).toBe('number');
+    }
+
+    await context.setOffline(false);
+  });
 });
