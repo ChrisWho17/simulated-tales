@@ -48,7 +48,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     version: "0.4.3",
-    date: "March 2026",
+    date: "May 2026",
     title: "Offline Queue & Debug Tooling",
     highlights: [
       "Export offline queue + server merge timeline as JSON",
@@ -72,7 +72,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     version: "0.4.2",
-    date: "January 2026",
+    date: "April 2026",
     title: "Companion Loyalty & Relationship Events",
     highlights: [
       "New companion loyalty quest system with 4 tiers",
@@ -80,15 +80,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Version tracking with auto-increment build numbers"
     ],
     features: [
-      "Loyalty quests unlock when companions reach trust thresholds (60/75/85/95)",
+      "Loyalty quests unlock at trust thresholds (60/75/85/95)",
       "Relationship milestone events with meaningful choices",
-      "Visual loyalty quest progress tracker in companion sheet",
-      "Quest notifications with accept/defer options",
-      "Build version display for easier testing coordination"
+      "Visual loyalty quest progress tracker in companion sheet"
     ],
     improvements: [
       "Better companion interaction feedback",
-      "Enhanced quest tracking UI",
       "Improved mobile layout for companion panels"
     ],
     fixes: [
@@ -98,7 +95,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     version: "0.4.1",
-    date: "January 2026",
+    date: "March 2026",
     title: "Companion System Enhancements",
     highlights: [
       "Dynamic companion commentary during gameplay",
@@ -121,7 +118,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     version: "0.4.0",
-    date: "December 2025",
+    date: "February 2026",
     title: "Companion Framework",
     highlights: [
       "Introduced the companion party system",
@@ -142,8 +139,48 @@ export const CHANGELOG: ChangelogEntry[] = [
     ]
   },
   {
+    version: "0.3.2",
+    date: "January 2026",
+    title: "Memory Decay Tuning",
+    highlights: [
+      "Refined three-tier memory capacities and decay curves",
+      "Rumor truth-value calculation more resistant to noise"
+    ],
+    features: [
+      "Ebbinghaus-style decay applied per-memory-tier",
+      "NPCs now consolidate short-term into long-term overnight"
+    ],
+    improvements: [
+      "Lower memory footprint for long sessions"
+    ],
+    fixes: [
+      "Fixed NPCs dropping critical memories too early",
+      "Resolved rumor truth values getting stuck at 0"
+    ]
+  },
+  {
+    version: "0.3.1",
+    date: "December 2025",
+    title: "Schedule & Grudge Fixes",
+    highlights: [
+      "Smoother NPC schedule transitions across day boundaries",
+      "Grudge decay now follows McCullough's forgiveness research"
+    ],
+    features: [
+      "Per-NPC forgiveness rate based on personality",
+      "Schedule conflict resolver for overlapping appointments"
+    ],
+    improvements: [
+      "Faster world tick when many NPCs are co-located"
+    ],
+    fixes: [
+      "Fixed NPCs stuck mid-schedule after a save/load cycle",
+      "Resolved grudges never decaying for high-trust NPCs"
+    ]
+  },
+  {
     version: "0.3.0",
-    date: "October 2025",
+    date: "November 2025",
     title: "Living World Simulation",
     highlights: [
       "NPC schedules and autonomous actions",
@@ -162,6 +199,46 @@ export const CHANGELOG: ChangelogEntry[] = [
     fixes: [
       "Fixed NPCs forgetting recent interactions",
       "Resolved schedule overlap deadlocks"
+    ]
+  },
+  {
+    version: "0.2.2",
+    date: "October 2025",
+    title: "Difficulty & Correction Polish",
+    highlights: [
+      "Difficulty presets fully wired into narrator prompts",
+      "Player correction commands recognized inline"
+    ],
+    features: [
+      "Hardcore preset enforces strict failure consequences",
+      "/retcon, /soften, /harden meta-commands"
+    ],
+    improvements: [
+      "More consistent tone across long sessions"
+    ],
+    fixes: [
+      "Fixed difficulty preset not persisting across saves",
+      "Resolved correction commands echoing into prose"
+    ]
+  },
+  {
+    version: "0.2.1",
+    date: "September 2025",
+    title: "Genre Blending Hotfix",
+    highlights: [
+      "Hard-lock genre option stops unwanted multi-genre blending",
+      "Cleaner secondary-genre weight enforcement"
+    ],
+    features: [
+      "Secondary genres capped at 50% total weight",
+      "Hard-lock toggle disables multi-select UI"
+    ],
+    improvements: [
+      "Genre tag parser more tolerant of casing"
+    ],
+    fixes: [
+      "Fixed sci-fi bleeding into pure fantasy sessions",
+      "Resolved hard-lock being silently ignored"
     ]
   },
   {
@@ -184,6 +261,44 @@ export const CHANGELOG: ChangelogEntry[] = [
     fixes: [
       "Fixed narrator echoing player input verbatim",
       "Resolved tone drift across long sessions"
+    ]
+  },
+  {
+    version: "0.1.2",
+    date: "July 2025",
+    title: "Dice & Loot Hotfix",
+    highlights: [
+      "Diced Out mode probability curves rebalanced",
+      "[LOOT:item] tags now stripped from displayed prose"
+    ],
+    features: [
+      "Per-attribute dice modifiers surface in roll preview"
+    ],
+    improvements: [
+      "Inventory tooltips show source roll on hover"
+    ],
+    fixes: [
+      "Fixed loot tags leaking into narrative text",
+      "Resolved double-rolling on quick action repeats"
+    ]
+  },
+  {
+    version: "0.1.1",
+    date: "June 2025",
+    title: "Alpha Launch Hotfix",
+    highlights: [
+      "Stability pass on first-time wizard",
+      "Adventure creator no longer loses state on refresh"
+    ],
+    features: [
+      "Onboarding preferences persist to local storage"
+    ],
+    improvements: [
+      "Smoother splash screen transition"
+    ],
+    fixes: [
+      "Fixed wizard crash when selecting custom genre",
+      "Resolved theme reset on hard reload"
     ]
   },
   {
