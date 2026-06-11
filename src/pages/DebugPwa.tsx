@@ -315,6 +315,33 @@ export default function DebugPwa() {
           </p>
         </Card>
 
+        <Card className="p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Conflict-resolution policy</h2>
+          <p className="text-xs text-muted-foreground">
+            Controls how queued offline saves merge with the server when both
+            sides have changes. Applied on the next flush.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={policy === 'merge-by-tick' ? 'default' : 'outline'}
+              onClick={() => handlePolicyChange('merge-by-tick')}
+            >
+              Merge by tick
+            </Button>
+            <Button
+              size="sm"
+              variant={policy === 'last-write-wins' ? 'default' : 'outline'}
+              onClick={() => handlePolicyChange('last-write-wins')}
+            >
+              Last-write-wins
+            </Button>
+            <Badge variant="secondary" className="self-center">
+              active: {policy}
+            </Badge>
+          </div>
+        </Card>
+
         <Card className="p-4 space-y-2">
           <h2 className="text-sm font-semibold text-foreground">Results</h2>
           {results.length === 0 ? (
