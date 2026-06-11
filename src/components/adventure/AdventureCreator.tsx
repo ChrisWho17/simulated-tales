@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
+import { InstallAppPromoBanner } from './InstallAppPromoBanner';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
 import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
@@ -771,6 +772,11 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+        {/* PWA Install Promo — sits above everything on the main menu */}
+        <div className="w-full max-w-3xl">
+          <InstallAppPromoBanner />
+        </div>
+
         {/* Logo/Title */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-3">
