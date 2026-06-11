@@ -2328,13 +2328,39 @@ serve(async (req) => {
   try {
     const body = await req.json();
     
-    // Custom prompt mode
+    // Custom prompt mode — clamp length and append safety negatives so the
+    // raw client string can't bypass the standard buildPrompt safety rails or
+    // amplify cost via unbounded token counts.
     if (body.customPrompt && !body.gender) {
-      const imageUrl = await generateImage(body.customPrompt, '');
+      const raw = typeof body.customPrompt === 'string' ? body.customPrompt : '';
+      if (raw.trim().length === 0) {
+        return new Response(JSON.stringify({ error: 'customPrompt is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const MAX_CUSTOM_PROMPT = 500;
+      if (raw.length > MAX_CUSTOM_PROMPT) {
+        return new Response(
+          JSON.stringify({
+            error: `customPrompt must be ${MAX_CUSTOM_PROMPT} characters or fewer`,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      // Strip control characters and collapse whitespace.
+      const sanitized = raw.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim();
+      const SAFETY_NEGATIVE =
+        'nsfw, nude, nudity, explicit, sexual, gore, blood, violence, minors, child, underage, watermark, text, logo, low quality, deformed';
+      console.log(
+        `[generate-portrait] customPrompt user=${auth.userId ?? 'anon'} len=${sanitized.length}`,
+      );
+      const imageUrl = await generateImage(sanitized, SAFETY_NEGATIVE);
       return new Response(JSON.stringify({ imageUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     const { prompt, negative, detectedKeywords } = buildPrompt(body);
     const imageUrl = await generateImage(prompt, negative);
