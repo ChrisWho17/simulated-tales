@@ -1,6 +1,7 @@
-import { Wifi, WifiOff, CloudCheck as CloudCheckRaw, CloudAlert as CloudAlertRaw, Cloud, CloudOff, Loader2 } from 'lucide-react';
-const CloudCheck = (CloudCheckRaw ?? Cloud) as typeof Cloud;
-const CloudAlert = (CloudAlertRaw ?? CloudOff) as typeof Cloud;
+import { Wifi, WifiOff, Cloud, CloudOff, Loader2 } from 'lucide-react';
+const CloudCheck = Cloud;
+const CloudAlert = CloudOff;
+
 
 
 import {
