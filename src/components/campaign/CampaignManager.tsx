@@ -735,6 +735,8 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               onChange={handleImportFile}
             />
             
+            <InstallAppButton />
+
             <Button
               onClick={onCreateNew}
               disabled={!canCreate}
