@@ -309,15 +309,22 @@ class BackgroundSyncManagerClass {
     console.log('[BackgroundSync] Processing queue:', this.queue.length, 'operations');
     
     try {
-      // Process in batches
-      const batch = this.queue.slice(0, BATCH_SIZE);
-      
+      // Process in batches. inFlight guards against the same op being picked
+      // up by two overlapping processQueue ticks (e.g. SW sync ping + interval).
+      const batch = this.queue.slice(0, BATCH_SIZE).filter((op) => !this.inFlight.has(op.id));
+
       for (const operation of batch) {
+        this.inFlight.add(operation.id);
         this.progress.currentOperation = operation.metadata?.campaignName || operation.campaignId;
         this.notifyStatusChange();
-        
-        const success = await this.processOperation(operation);
-        
+
+        let success = false;
+        try {
+          success = await this.processOperation(operation);
+        } finally {
+          this.inFlight.delete(operation.id);
+        }
+
         if (success) {
           this.progress.completed++;
           await this.dequeue(operation.id);
@@ -326,7 +333,7 @@ class BackgroundSyncManagerClass {
           await this.handleOperationFailure(operation);
         }
       }
-      
+
       this.lastSyncTime = Date.now();
     } catch (e) {
       console.error('[BackgroundSync] Queue processing error:', e);
@@ -335,15 +342,16 @@ class BackgroundSyncManagerClass {
       this.progress.inProgress = false;
       this.progress.currentOperation = undefined;
       this.notifyStatusChange();
-      
-      // Continue processing if more items
+
+      // Refresh in-memory queue from durable store before deciding to continue.
+      this.queue = await listOperations();
       if (this.queue.length > 0 && navigator.onLine) {
         setTimeout(() => this.processQueue(), 1000);
       }
     }
   }
 
-  private async processOperation(operation: QueuedOperation): Promise<boolean> {
+  private async processOperation(operation: StoredOperation): Promise<boolean> {
     try {
       // Check authentication
       const { data: { user } } = await supabase.auth.getUser();
