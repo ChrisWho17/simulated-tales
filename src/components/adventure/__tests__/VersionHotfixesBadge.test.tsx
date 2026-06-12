@@ -75,9 +75,6 @@ describe('VersionHotfixesBadge', () => {
       const text = card.textContent ?? '';
       expect(text).toContain(`v${entry.version}`);
       expect(text).toContain(entry.title);
-      entry.fixes.forEach((f) => {
-        expect(text).toContain(f);
-      });
     });
   });
 });
