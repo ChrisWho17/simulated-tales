@@ -158,7 +158,8 @@ export interface NarrativeGenerationResult {
     history?: StoryEntry[],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean
+    skipLoadingState?: boolean,
+    directorOverride?: DirectorSettings
   ) => Promise<string | null>;
   setLastFailedAction: React.Dispatch<React.SetStateAction<{ action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null>>;
   setPendingMechanics: React.Dispatch<React.SetStateAction<GameMechanics | undefined>>;
