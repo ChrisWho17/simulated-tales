@@ -20,6 +20,7 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
+import { formatHeight, formatWeight, heightBandLabel, suggestedWeightRangeKg, kgToLb, lbToKg, type MeasurementUnit } from '@/lib/measurementUnits';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
