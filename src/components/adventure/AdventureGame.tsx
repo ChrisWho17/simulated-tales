@@ -66,7 +66,8 @@ import {
   buildLanguageContext,
   postProcessLanguageInResponse,
   learnLanguage,
-  getLanguageDisplayName
+  getLanguageDisplayName,
+  applyPlayerLanguageProfile
 } from '@/game/languageSystem';
 import {
   NPCGrudgeContext,
