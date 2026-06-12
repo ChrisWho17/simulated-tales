@@ -266,20 +266,51 @@ export function formatNPCDialogue(
  */
 export function buildLanguageContext(
   languageState: LanguageSystemState,
-  activeNPCs?: Array<{ name: string; languageProfile?: LanguageProfile; nationality?: string }>
+  activeNPCs?: Array<{ name: string; languageProfile?: LanguageProfile; nationality?: string }>,
+  narrativeLanguage: string = 'en'
 ): string {
   const nat = getNationality(languageState.playerNationality);
   const playerLangs = (languageState.playerKnownLanguages || []).map(code => {
     const prof = languageState.playerProficiency?.[code];
-    return prof ? `${code} (${prof})` : code;
+    return prof ? `${getLanguageDisplayName(code)} (${prof})` : getLanguageDisplayName(code);
   });
 
-  let context = `\n=== LANGUAGE & ACCENT SYSTEM ===\n`;
-  context += `Player primary language: ${languageState.playerPrimaryLanguage || languageState.playerLanguage}\n`;
-  context += `Player understands: ${playerLangs.join(', ')}\n`;
+  const playerPrimary = languageState.playerPrimaryLanguage || languageState.playerLanguage || 'en';
+  const playerProfInNarrative: LanguageProficiency | undefined =
+    languageState.playerProficiency?.[narrativeLanguage];
+  // If narrative tongue isn't the player's native/primary, what is their proficiency in it?
+  const speaksNarrativeNatively =
+    playerPrimary === narrativeLanguage ||
+    playerProfInNarrative === 'native' ||
+    playerProfInNarrative === 'perfected';
+
+  let context = `\n=== LANGUAGE & ACCENT SYSTEM (MANDATORY) ===\n`;
+  context += `Narrative tongue (what everyone is presumed to be speaking unless tagged): ${getLanguageDisplayName(narrativeLanguage)}\n`;
+  context += `Player primary language: ${getLanguageDisplayName(playerPrimary)}\n`;
+  context += `Player understands: ${playerLangs.join(', ') || 'none specified'}\n`;
   if (nat) {
     context += `Player nationality: ${formatNationalityForAI(nat.id)}\n`;
-    context += `→ Render the player's own spoken dialogue with this accent (light phonetic + cadence cues), unless they are speaking a foreign language to them.\n`;
+  }
+
+  // ----- PLAYER-SIDE BROKEN SPEECH RULES (THIS IS WHAT WAS MISSING) -----
+  if (!speaksNarrativeNatively) {
+    const prof = playerProfInNarrative || 'rough';
+    context += `\n### PLAYER SPEAKS ${getLanguageDisplayName(narrativeLanguage).toUpperCase()} AT PROFICIENCY: ${prof.toUpperCase()}\n`;
+    if (prof === 'rough') {
+      context += `→ The player's own spoken dialogue in ${getLanguageDisplayName(narrativeLanguage)} MUST be rendered as BROKEN, halting, heavily accented speech.\n`;
+      context += `  - Drop articles ("the", "a"), drop auxiliary verbs ("is", "are", "do"), wrong tense, wrong word order.\n`;
+      context += `  - Sprinkle native-tongue interjections in *italics* with translation in parens, e.g. *Da* (Yes), *Nyet* (No), *Suka* (damn it).\n`;
+      context += `  - Search for simple words, sometimes substitute with the wrong one. NPCs visibly react: confusion, slowing down, repeating themselves, mockery, sympathy, suspicion.\n`;
+      context += `  - Player thoughts/internal narration remain fluent — only spoken dialogue is broken.\n`;
+      context += `  - Example for a Russian native: "I... how you say... I look for man. Big man. He owe money, *da*?"\n`;
+    } else if (prof === 'moderate') {
+      context += `→ The player's spoken ${getLanguageDisplayName(narrativeLanguage)} is functional but clearly non-native.\n`;
+      context += `  - Grammar mostly correct, occasional dropped article or wrong preposition.\n`;
+      context += `  - Reach for words sometimes ("the... how you say... document"). Occasional native-tongue word in *italics* (translation).\n`;
+      context += `  - Accent stays present per nationality rules below. NPCs may comment on the accent but understand fine.\n`;
+    }
+  } else if (nat) {
+    context += `\n→ Player speaks ${getLanguageDisplayName(narrativeLanguage)} natively/fluently, but with their ${nat.accentLabel || nat.id} accent. Render the accent in cadence + sparse phonetic tells, not broken grammar.\n`;
   }
 
   if (activeNPCs && activeNPCs.length > 0) {
@@ -301,7 +332,7 @@ ACCENT RENDERING RULES (intensity-scaled):
 - The further the listener's nationality is from the speaker's, the heavier the perceived accent. Same nationality = no accent rendering.
 - Never replace entire words with phonetic spelling. Keep accents flavorful, not garbled.
 
-LANGUAGE BARRIER RULES:
+LANGUAGE BARRIER RULES (NPC -> Player):
 - If an NPC speaks a language the player does NOT know, prefix the dialogue with [LANGUAGE: <code>] and write the line in plain English. Example: [LANGUAGE: fr] "Hello, my friend"
 - The post-processor will render unknown speech as *foreign text* (English translation in parens) in italics — DO NOT do this yourself.
 - If the player has 'rough' proficiency in the speaker's language, render the dialogue with occasional [...] gaps to simulate gist-only comprehension.
@@ -309,6 +340,8 @@ LANGUAGE BARRIER RULES:
 - If the player has 'perfected' or 'native' proficiency, dialogue reads cleanly with no markers.
 - NPCs speaking a language the PLAYER doesn't know should react to misunderstandings, gesture, or seek a translator. The player character must visibly struggle (confusion, raised brows, asking "what?") when language fails.
 - Translators, shared secondary languages, or a companion who knows the tongue can bridge the gap mid-scene.
+
+CRITICAL: These are not flavor. A Russian character with 'rough' English MUST sound broken every time they open their mouth in English. Do not "forget" this rule after the opening scene. Do not let the player suddenly become eloquent. The barrier is permanent until they learn the language in-game.
 `;
 
   return context;
