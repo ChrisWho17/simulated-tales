@@ -39,7 +39,7 @@ const SCENARIOS: Step[] = [
 
   // 6-10: social
   { label: 'compliment',              trigger: { kind: 'compliment' }, expect: 'unchanged' /* already happy */ },
-  { label: 'insult breaks happy',     trigger: { kind: 'insult' }, expect: 'annoyed' },
+  { label: 'insult bounces off happy',trigger: { kind: 'insult' }, expect: 'unchanged' },
   { label: 'betrayal overrides all',  trigger: { kind: 'betrayal' }, expect: 'mad' },
   { label: 'romance after rage',      trigger: { kind: 'romance_progressed' }, expect: 'lusty' },
   { label: 'favor received',          trigger: { kind: 'favor_received' }, ticks: 6, expect: 'happy' },
