@@ -66,6 +66,7 @@ export function savePlayerPortraitReference(
     gender?: string;
     build?: string;
     height?: string;
+    weightKg?: number;
     skinTone?: string;
     hairColor?: string;
     hairStyle?: string;
