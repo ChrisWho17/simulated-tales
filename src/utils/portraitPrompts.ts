@@ -143,6 +143,8 @@ export interface CharacterAppearance {
   gender?: string;
   build?: string;
   height?: string;
+  /** Optional approximate weight in kg — drives body-mass framing in imagery. */
+  weightKg?: number;
   hairColor?: string;
   hairStyle?: string;
   hairLength?: string;
