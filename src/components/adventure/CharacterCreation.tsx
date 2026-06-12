@@ -409,10 +409,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     (character as any).fullAppearance = appearance.full;
     (character as any).tieredAppearance = appearance;
 
-    // Nationality & language profile
-    (character as any).nationality = nationality || undefined;
-    (character as any).primaryLanguage = primaryLanguage;
-    (character as any).additionalLanguages = additionalLanguages;
+    // Nationality & language profile (only when player opts in)
+    (character as any).nationality = useNationality ? (nationality || undefined) : undefined;
+    (character as any).primaryLanguage = useNationality ? primaryLanguage : undefined;
+    (character as any).additionalLanguages = useNationality ? additionalLanguages : [];
+    (character as any).languageBarriersEnabled = useNationality;
     
     // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
