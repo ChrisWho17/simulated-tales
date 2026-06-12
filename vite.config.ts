@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       injectRegister: null,
       devOptions: { enabled: false },
       filename: "sw.js",
@@ -38,7 +38,8 @@ export default defineConfig(({ mode }) => ({
         "images/og-thumbnail.png",
       ],
       workbox: {
-        // Skip waiting is controlled from the client wrapper via SKIP_WAITING message.
+        // Skip waiting is controlled from the client wrapper via SKIP_WAITING message
+        // so returning players can save before reloading into a hotfix.
         skipWaiting: false,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
