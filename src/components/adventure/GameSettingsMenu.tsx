@@ -229,6 +229,9 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
                 try { window.dispatchEvent(new CustomEvent('settings:updated')); } catch { /* ignore */ }
               }}
             />
+          </div>
+
+
 
 
           {/* Testing — deterministic variance seed */}
