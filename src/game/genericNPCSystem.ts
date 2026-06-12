@@ -145,7 +145,7 @@ const hairColors = ['black', 'brown', 'blonde', 'red', 'gray', 'white', 'dyed bl
 const hairStyles = ['short', 'long', 'curly', 'straight', 'wavy', 'buzz cut', 'ponytail', 'bun', 'messy', 'slicked back', 'braided', 'mohawk'];
 const eyeColors = ['brown', 'blue', 'green', 'hazel', 'gray'];
 const buildTypes = ['slim', 'athletic', 'average', 'heavyset', 'muscular', 'petite', 'curvy', 'stocky', 'lanky'];
-const heightBands = ['short', 'average', 'average', 'tall', 'very tall']; // weighted toward average
+const heightBands = ['very short', 'short', 'average', 'average', 'average', 'tall', 'tall', 'very tall']; // weighted toward average; very short is rare but possible
 const clothingStyles = ['casual', 'business casual', 'professional', 'streetwear', 'hipster', 'sporty', 'bohemian', 'goth', 'preppy', 'rugged'];
 
 export interface GeneratedAppearance {
