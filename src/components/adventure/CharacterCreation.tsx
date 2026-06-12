@@ -885,8 +885,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           <div className="space-y-2">
                             <input
                               type="range"
-                              min={Math.max(35, minKg - 20)}
-                              max={maxKg + 40}
+                              min={18}
+                              max={181}
                               step={1}
                               value={currentKg}
                               onChange={(e) => updateAppearance('simple', 'weightKg', Number(e.target.value))}
