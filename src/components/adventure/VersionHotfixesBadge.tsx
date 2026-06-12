@@ -17,8 +17,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
-import { CHANGELOG, type ChangelogEntry } from './WhatsNewModal';
-import { ORDERED_CHANGELOG } from './changelogOrder';
+import { CHANGELOG, fetchLatestChangelog, type ChangelogEntry } from './changelog';
+import { orderChangelog } from './changelog';
 
 /**
  * Top-right floating badge:
@@ -27,7 +27,8 @@ import { ORDERED_CHANGELOG } from './changelogOrder';
  *  - Mail  -> hotfixes of the latest patch; secondary action opens full history
  */
 export function VersionHotfixesBadge() {
-  const latest = CHANGELOG[0];
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>(CHANGELOG);
+  const latest = changelog[0];
   const highlights = latest?.highlights ?? [];
   const fixes = latest?.fixes ?? [];
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -38,11 +39,20 @@ export function VersionHotfixesBadge() {
 
   useEffect(() => {
     const onUpdate = () => {
+      void fetchLatestChangelog(true)
+        .then(setChangelog)
+        .catch(() => {});
       setUpdateReady(true);
       setRefreshKey((k) => k + 1);
     };
     window.addEventListener(PATCHNOTES_UPDATE_EVENT, onUpdate);
     return () => window.removeEventListener(PATCHNOTES_UPDATE_EVENT, onUpdate);
+  }, []);
+
+  useEffect(() => {
+    void fetchLatestChangelog(true)
+      .then(setChangelog)
+      .catch(() => {});
   }, []);
 
   return (
@@ -191,7 +201,7 @@ export function VersionHotfixesBadge() {
 
               {(() => {
                 // Shared source of truth — keeps timeline + side panel in sync.
-                const ordered = ORDERED_CHANGELOG;
+                const ordered = orderChangelog(changelog);
                 return ordered.map((entry, idx) => {
                   const isMajor = /\.\d+\.0$/.test(entry.version);
                   const dotColor = isMajor
