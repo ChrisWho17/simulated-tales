@@ -182,71 +182,80 @@ export function WhatsNewModal() {
             </div>
 
             <ScrollArea key={refreshKey} className="max-h-[50vh]">
-              <div className="p-6 space-y-5">
-                {currentChangelog.highlights.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="w-4 h-4 text-amber-400" />
-                      <span className="text-sm font-semibold text-amber-400">Highlights</span>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentChangelog.version}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-6 space-y-5"
+                >
+                  {currentChangelog.highlights.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 text-amber-400" />
+                        <span className="text-sm font-semibold text-amber-400">Highlights</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.highlights.map((item, i) => (
+                          <li key={i} className="text-sm text-foreground/90 pl-4 border-l-2 border-amber-400/50">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.highlights.map((item, i) => (
-                        <li key={i} className="text-sm text-foreground/90 pl-4 border-l-2 border-amber-400/50">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.features.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-4 h-4 text-green-400" />
-                      <span className="text-sm font-semibold text-green-400">New Features</span>
+                  {currentChangelog.features.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Gift className="w-4 h-4 text-green-400" />
+                        <span className="text-sm font-semibold text-green-400">New Features</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.features.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-green-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.features.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-green-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.improvements.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm font-semibold text-blue-400">Improvements</span>
+                  {currentChangelog.improvements.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Zap className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-semibold text-blue-400">Improvements</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.improvements.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.improvements.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.fixes.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bug className="w-4 h-4 text-orange-400" />
-                      <span className="text-sm font-semibold text-orange-400">Bug Fixes</span>
+                  {currentChangelog.fixes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bug className="w-4 h-4 text-orange-400" />
+                        <span className="text-sm font-semibold text-orange-400">Bug Fixes</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.fixes.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.fixes.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </ScrollArea>
 
             <div className="p-4 border-t border-border/50 bg-muted/20">
