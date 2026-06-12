@@ -457,6 +457,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
+          ...(appearance.detailed?.hairColorSecondary && appearance.detailed.hairColorSecondary !== appearance.detailed.hairColor
+            ? [`two-tone hair: primary ${appearance.detailed.hairColor}, secondary ${appearance.detailed.hairColorSecondary} streaks/tips/underlayer`]
+            : []),
         ],
         tieredAppearance: appearance,
         appearanceDescription: formatAppearanceForAI(appearance, genre),
