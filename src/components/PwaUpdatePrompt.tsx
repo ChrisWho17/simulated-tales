@@ -24,7 +24,7 @@ export function PwaUpdatePrompt() {
   const shownRef = useRef(false);
 
   useEffect(() => {
-    const onUpdate = () => {
+    const showReloadToast = (description: string) => {
       // Always let the patch notes UI know — pulse the badge even if the
       // user previously dismissed the toast.
       window.dispatchEvent(new Event(PATCHNOTES_UPDATE_EVENT));
@@ -34,8 +34,7 @@ export function PwaUpdatePrompt() {
       shownRef.current = true;
 
       const id = toast("A new version is ready", {
-        description:
-          "Save your progress, then reload to load the latest patch notes.",
+        description,
         duration: Infinity,
         action: {
           label: "Reload",
@@ -56,10 +55,15 @@ export function PwaUpdatePrompt() {
       });
     };
 
+    const onUpdate = () => {
+      showReloadToast("Save your progress, then reload to load the latest patch notes.");
+    };
+
     const onActivated = () => {
-      // Soft refresh — controllerchange fired without a forced reload.
-      // Bump the patch notes UI so it can re-render in place.
-      window.dispatchEvent(new Event(PATCHNOTES_UPDATE_EVENT));
+      // Some generated SW builds activate immediately. The old JS bundle is
+      // still running until the user reloads, so surface the same save-first
+      // prompt from controllerchange as a fallback.
+      showReloadToast("The hotfix downloaded in the background. Save your progress, then reload to finish updating.");
     };
 
     window.addEventListener(PWA_UPDATE_EVENT, onUpdate as EventListener);
