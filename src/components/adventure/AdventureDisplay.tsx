@@ -343,6 +343,11 @@ export function AdventureDisplay({
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
+
+  // === DEATH OUTCOME MODAL ===
+  // Fires when player HP drops to 0. Three paths: roll, cheat, flatline.
+  const [deathState, setDeathState] = useState<{ open: boolean; cause: string }>({ open: false, cause: '' });
+  const deathHandledRef = useRef(false);
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
   const [showTimeDisplay, setShowTimeDisplay] = useState(false);
