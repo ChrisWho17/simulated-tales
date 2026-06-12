@@ -36,6 +36,7 @@ export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [changelog, setChangelog] = useState<ChangelogEntry[]>(CHANGELOG);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,10 +98,16 @@ export function WhatsNewModal() {
 
   const handleClose = () => {
     setIsOpen(false);
+    setCurrentIndex(0);
   };
 
-  const currentChangelog = changelog[0] ?? CHANGELOG[0];
+  const goNext = () => setCurrentIndex((i) => Math.max(0, i - 1));
+  const goPrev = () => setCurrentIndex((i) => Math.min(changelog.length - 1, i + 1));
+
+  const currentChangelog = changelog[currentIndex] ?? CHANGELOG[0];
   const displayVersion = `v${currentChangelog.version}-${APP_STAGE}`;
+  const canGoPrev = currentIndex < changelog.length - 1;
+  const canGoNext = currentIndex > 0;
 
   return (
     <AnimatePresence>
