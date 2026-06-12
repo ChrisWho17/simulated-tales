@@ -8,6 +8,10 @@ export interface SimpleAppearance {
   gender: Gender;
   height: 'short' | 'average' | 'tall' | 'very tall';
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
+  /** Optional approximate weight in kg (stored canonically as kg). */
+  weightKg?: number;
+  /** Preferred display unit for height/weight. Defaults to 'imperial'. */
+  measurementUnit?: 'imperial' | 'metric';
 }
 
 export interface DetailedAppearance {
