@@ -84,7 +84,7 @@ export const GENDER_OPTIONS = [
 ];
 
 export const SKIN_TONES = ['Porcelain', 'Ivory', 'Fair', 'Light', 'Medium', 'Olive', 'Tan', 'Caramel', 'Brown', 'Dark Brown', 'Ebony', 'Pale Blue', 'Green', 'Purple', 'Gray', 'Silver'];
-export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Short', 'Medium', 'Long', 'Very Long', 'Ponytail', 'Braided', 'Dreadlocks', 'Mohawk', 'Undercut', 'Curly', 'Wavy', 'Afro', 'Bun', 'Spiky', 'Messy'];
+export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Crew Cut', 'Fade', 'Undercut', 'Side Shave', 'Pixie', 'Short', 'Bob', 'Lob', 'Medium', 'Shoulder Length', 'Long', 'Very Long', 'Ponytail', 'High Ponytail', 'Twin Tails', 'Braided', 'Box Braids', 'Cornrows', 'Dreadlocks', 'Mohawk', 'Faux Hawk', 'Curly', 'Wavy', 'Afro', 'Bun', 'Top Knot', 'Half-Up', 'Spiky', 'Slicked Back', 'Pompadour', 'Quiff', 'Messy', 'Hime Cut', 'Bowl Cut'];
 export const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Auburn', 'Red', 'Blonde', 'Platinum Blonde', 'White', 'Gray', 'Blue', 'Purple', 'Pink', 'Green', 'Silver'];
 export const EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray', 'Violet', 'Heterochromia', 'Red', 'Golden', 'Silver'];
 export const FACE_SHAPES = [{ value: 'oval', label: 'Oval' }, { value: 'round', label: 'Round' }, { value: 'square', label: 'Square' }, { value: 'heart', label: 'Heart' }, { value: 'oblong', label: 'Oblong' }, { value: 'diamond', label: 'Diamond' }];
