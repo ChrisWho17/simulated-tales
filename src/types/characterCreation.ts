@@ -7,6 +7,8 @@ export type Gender = 'male' | 'female' | 'other';
 export interface SimpleAppearance {
   gender: Gender;
   height: 'very short' | 'short' | 'average' | 'tall' | 'very tall';
+  /** Optional exact height in centimeters. When set, overrides the bracket for display, imagery, and narration. */
+  customHeightCm?: number;
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
   /** Optional approximate weight in kg (stored canonically as kg). */
   weightKg?: number;
@@ -425,10 +427,20 @@ export const CLOTHING_DETAIL_OPTIONS = [
   { value: 'briefs', label: 'Briefs', category: 'male', gender: 'male' },
 ];
 
+import { classifyHeightCm, formatHeight } from '@/lib/measurementUnits';
+
 export function formatAppearanceForAI(appearance: TieredAppearance, genre: string): string {
   const { simple, detailed, full, detailLevel } = appearance;
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
-  let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
+  // Resolve effective height — custom cm value overrides the bracket but still maps back to a band.
+  const effectiveBand: SimpleAppearance['height'] = simple.customHeightCm
+    ? (classifyHeightCm(simple.customHeightCm) as SimpleAppearance['height'])
+    : simple.height;
+  const unit = simple.measurementUnit || 'imperial';
+  const heightDisplay = simple.customHeightCm
+    ? `exactly ${formatHeight(simple.customHeightCm, unit)} (${simple.customHeightCm}cm, custom)`
+    : `${simple.height} height`;
+  let description = `${genderDesc}, ${heightDisplay}, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
     const hairTwoTone = detailed.hairColorSecondary && detailed.hairColorSecondary !== detailed.hairColor
       ? `${detailed.hairStyle} two-tone hair (primary ${detailed.hairColor}, secondary ${detailed.hairColorSecondary} streaks/tips/underlayer)`
@@ -512,7 +524,7 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   // and how NPCs perceive and react to them. Applied at every detail level.
   const physicality: string[] = [];
 
-  switch (simple.height) {
+  switch (effectiveBand) {
     case 'very short':
       physicality.push(
         "Very short stature (~4'2\"–5'0\"): exceptionally diminutive, often mistaken for a child or adolescent at a glance; slips through ducts, crawlspaces, dog doors, and child-sized passages with ease; cannot reach standard counters, light switches, or overhead shelves without climbing or stools; horseback, tall ladders, adult-sized armor, and standard car pedals require accommodation; NPCs frequently bend down to speak, condescend, mistake them for a minor, or refuse adult services until proven otherwise."
