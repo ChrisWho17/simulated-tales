@@ -258,6 +258,16 @@ export function AdventureGame() {
 
   // Load saved state - also check campaign system
   const [phase, setPhase] = useState<GamePhase>('loading');
+
+  // Broadcast phase so chrome (e.g. hotfix badge) can hide once we leave the main menu.
+  useEffect(() => {
+    try {
+      document.body.dataset.gamePhase = phase;
+      window.dispatchEvent(new CustomEvent('game:phase', { detail: phase }));
+    } catch { /* ignore */ }
+  }, [phase]);
+  
+
   
   const [selectedColorId, setSelectedColorId] = useState<string | null>(() => getSavedColorId());
   const [scenarioSelection, setScenarioSelection] = useState<ScenarioSelection | null>(null);
