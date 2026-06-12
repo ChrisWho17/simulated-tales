@@ -642,7 +642,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           },
         };
         
-        const activeDirectorSettings = directorSettings || settings.directorSettings;
+        const activeDirectorSettings = directorOverride || directorSettings || settings.directorSettings;
         if (activeDirectorSettings) {
           requestBody.directorContext = {
             enabled: activeDirectorSettings.enabled,
