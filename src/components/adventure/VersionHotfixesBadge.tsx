@@ -60,7 +60,7 @@ export function VersionHotfixesBadge() {
       key={refreshKey}
       data-testid="version-hotfixes-badge"
       data-update-ready={updateReady || undefined}
-      className="fixed top-2 right-2 z-40 flex flex-col items-end gap-1 pointer-events-none"
+      className="fixed top-14 sm:top-2 right-2 z-[240] flex flex-col items-end gap-1 pointer-events-none"
     >
       <span
         data-testid="version-string"
