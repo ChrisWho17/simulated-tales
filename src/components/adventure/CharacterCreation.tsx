@@ -109,6 +109,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
+
+  // Nationality & language profile
+  const [nationality, setNationality] = useState<string>('');
+  const [primaryLanguage, setPrimaryLanguage] = useState<string>('en');
+  const [additionalLanguages, setAdditionalLanguages] = useState<Array<{ code: string; proficiency: 'rough' | 'moderate' | 'perfected' }>>([]);
   
   // Appearance state
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('simple');
