@@ -559,6 +559,9 @@ export function buildPortraitPrompt(
         // Below ~90kg: NO downscaling — base cup size description is preserved as-is.
       }
     }
+  }
+
+
   
   if (character.hipWidth && character.hipWidth !== 'average') {
     const hipDescriptions: Record<string, string> = {
