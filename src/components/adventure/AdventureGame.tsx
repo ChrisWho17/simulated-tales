@@ -66,7 +66,8 @@ import {
   buildLanguageContext,
   postProcessLanguageInResponse,
   learnLanguage,
-  getLanguageDisplayName
+  getLanguageDisplayName,
+  applyPlayerLanguageProfile
 } from '@/game/languageSystem';
 import {
   NPCGrudgeContext,
@@ -705,6 +706,18 @@ export function AdventureGame() {
       }));
     }
   }, [settings.languageSettings]);
+
+  // Sync player nationality/language profile from character (set in character creation)
+  useEffect(() => {
+    if (!character) return;
+    const c = character as any;
+    if (!c.nationality && !c.primaryLanguage && !c.additionalLanguages) return;
+    setLanguageState(prev => applyPlayerLanguageProfile(prev, {
+      nationality: c.nationality,
+      primaryLanguage: c.primaryLanguage,
+      additionalLanguages: c.additionalLanguages,
+    }));
+  }, [character]);
   
   // === PERIODIC VALIDATION: Run every 5 turns to catch drift ===
   // Note: Object registry validation removed - using campaign-isolated inventory system
