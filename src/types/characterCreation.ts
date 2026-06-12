@@ -61,7 +61,8 @@ export interface TieredAppearance {
 }
 
 export const HEIGHT_OPTIONS = [
-  { value: 'short', label: 'Short', description: 'Under 5\'4"' },
+  { value: 'very short', label: 'Very Short', description: '4\'2" - 5\'0"' },
+  { value: 'short', label: 'Short', description: '5\'0" - 5\'4"' },
   { value: 'average', label: 'Average', description: '5\'4" - 5\'9"' },
   { value: 'tall', label: 'Tall', description: '5\'10" - 6\'2"' },
   { value: 'very tall', label: 'Very Tall', description: 'Over 6\'2"' },
