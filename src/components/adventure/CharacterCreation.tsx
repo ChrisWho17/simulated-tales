@@ -922,7 +922,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   {/* Optional weight — drives imagery silhouette + NPC reactivity */}
                   {(() => {
                     const unit = appearance.simple.measurementUnit || 'imperial';
-                    const [minKg, maxKg] = suggestedWeightRangeKg(appearance.simple.height, appearance.simple.build);
+                    const heightKeyForWeight = appearance.simple.customHeightCm
+                      ? classifyHeightCm(appearance.simple.customHeightCm)
+                      : appearance.simple.height;
+                    const [minKg, maxKg] = suggestedWeightRangeKg(heightKeyForWeight, appearance.simple.build);
                     const hasWeight = typeof appearance.simple.weightKg === 'number';
                     const currentKg = appearance.simple.weightKg ?? Math.round((minKg + maxKg) / 2);
                     const display = unit === 'imperial' ? `${kgToLb(currentKg)} lb` : `${currentKg} kg`;
