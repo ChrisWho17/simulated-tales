@@ -693,6 +693,7 @@ export function buildPortraitPrompt(
     gender,
     buildDesc,
     heightDesc,
+    weightDesc,
     faceShapeDesc,
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,
