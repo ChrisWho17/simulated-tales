@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "version": "0.4.7",
+      "date": "June 2026",
+      "title": "Heights, Weights & Two-Tone Hair",
+      "highlights": [
+        "New Very Short height tier (down to 4'2\") joins the lineup",
+        "Weight range expanded to 40–400 lb (imperial) / ~18–181 kg (metric)",
+        "Two-tone hair: pick a primary color and an optional secondary streak / tip / underlayer"
+      ],
+      "features": [
+        "More hair styles: Pixie, Bob, Lob, Fade, Crew Cut, Top Knot, Box Braids, Cornrows, Pompadour, Quiff, Twin Tails, Hime Cut, and more",
+        "Very short stature now drives imagery framing (low eye-line, oversized environments) and NPC reactions (bending down, condescension, child mistakes)"
+      ],
+      "improvements": [
+        "NPC generation can now roll Very Short builds for more realistic diversity",
+        "Two-tone hair flows into portrait prompts and in-game narration"
+      ],
+      "fixes": []
+    },
+    {
       "version": "0.4.6",
       "date": "June 2026",
       "title": "Accent Toggle & Director Sync",
