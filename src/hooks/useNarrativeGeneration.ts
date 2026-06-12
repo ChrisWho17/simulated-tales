@@ -381,10 +381,20 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         setToneState(prev => updateToneState(prev, playerTone));
       }
       
-      const languageInstructions = deps.languageState ? buildLanguageContext(deps.languageState) : '';
+      const npcLanguageList = (sceneNPCs || []).map((n: any) => ({
+        name: n?.name || n?.npcId || 'NPC',
+        languageProfile: n?.languageProfile,
+        nationality: n?.nationality,
+      }));
+      const languageInstructions = deps.languageState
+        ? buildLanguageContext(deps.languageState, npcLanguageList)
+        : '';
       const languageContextPayload = {
         playerKnownLanguages: languageState.playerKnownLanguages,
         translateEnabled: languageState.translateEnabled,
+        playerNationality: languageState.playerNationality,
+        playerPrimaryLanguage: languageState.playerPrimaryLanguage,
+        playerProficiency: languageState.playerProficiency,
         languageInstructions,
       };
       
