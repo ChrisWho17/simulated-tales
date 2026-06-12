@@ -1,4 +1,4 @@
-import { CHANGELOG, type ChangelogEntry } from './WhatsNewModal';
+import { CHANGELOG, orderChangelog, type ChangelogEntry } from './changelog';
 
 /**
  * Single shared source of truth for the patch ordering used by:
@@ -8,9 +8,7 @@ import { CHANGELOG, type ChangelogEntry } from './WhatsNewModal';
  * Ascending chronological order (origin → now), numerically by version.
  * Importing this guarantees both views stay in sync.
  */
-export const ORDERED_CHANGELOG: ChangelogEntry[] = [...CHANGELOG].sort(
-  (a, b) => a.version.localeCompare(b.version, undefined, { numeric: true })
-);
+export const ORDERED_CHANGELOG: ChangelogEntry[] = orderChangelog(CHANGELOG);
 
 export const ORDERED_VERSIONS: string[] = ORDERED_CHANGELOG.map((e) => e.version);
 
