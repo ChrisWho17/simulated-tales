@@ -285,6 +285,33 @@ function NPCProfileModal({ npc, onClose }: NPCProfileModalProps) {
               </div>
             )}
 
+            {/* Physicality (build / height) — kept light for NPCs */}
+            {npc.permanent.characterStats?.appearance && (
+              <div className="space-y-1.5 text-sm">
+                <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                  <UserCircle2 className="w-4 h-4" />
+                  Physicality
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {npc.permanent.characterStats.appearance.height && (
+                    <div><span className="text-muted-foreground">Height:</span> <span className="capitalize">{npc.permanent.characterStats.appearance.height}</span></div>
+                  )}
+                  {npc.permanent.characterStats.appearance.bodyType && (
+                    <div><span className="text-muted-foreground">Build:</span> <span className="capitalize">{npc.permanent.characterStats.appearance.bodyType}</span></div>
+                  )}
+                  {npc.permanent.characterStats.appearance.hairColor && (
+                    <div><span className="text-muted-foreground">Hair:</span> <span className="capitalize">{npc.permanent.characterStats.appearance.hairColor} {npc.permanent.characterStats.appearance.hairLength || ''}</span></div>
+                  )}
+                  {npc.permanent.characterStats.appearance.eyeColor && (
+                    <div><span className="text-muted-foreground">Eyes:</span> <span className="capitalize">{npc.permanent.characterStats.appearance.eyeColor}</span></div>
+                  )}
+                  {npc.permanent.characterStats.appearance.skinTone && (
+                    <div><span className="text-muted-foreground">Skin:</span> <span className="capitalize">{npc.permanent.characterStats.appearance.skinTone}</span></div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Clothing/Appearance Reaction */}
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-primary flex items-center gap-2">

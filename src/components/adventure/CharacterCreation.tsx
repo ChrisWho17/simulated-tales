@@ -20,6 +20,7 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
+import { formatWeight, heightBandLabel, suggestedWeightRangeKg, kgToLb, type MeasurementUnit } from '@/lib/measurementUnits';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
@@ -305,6 +306,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
         height: appearance.simple?.height || 'average',
+        weightKg: appearance.simple?.weightKg,
         hairColor: appearance.detailed?.hairColor || 'brown',
         hairStyle: appearance.detailed?.hairStyle || 'short',
         eyeColor: appearance.detailed?.eyeColor || 'brown',
@@ -395,6 +397,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     (character as any).gender = appearance.simple?.gender || 'male';
     (character as any).build = appearance.simple?.build || 'average';
     (character as any).height = appearance.simple?.height || 'average';
+    (character as any).weightKg = appearance.simple?.weightKg;
+    (character as any).measurementUnit = appearance.simple?.measurementUnit || 'imperial';
     (character as any).hairColor = appearance.detailed?.hairColor || 'brown';
     (character as any).hairStyle = appearance.detailed?.hairStyle || 'short';
     (character as any).eyeColor = appearance.detailed?.eyeColor || 'brown';
@@ -438,6 +442,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
         height: appearance.simple?.height || 'average',
+        weightKg: appearance.simple?.weightKg,
         skinTone: appearance.detailed?.skinTone || 'medium',
         hairColor: appearance.detailed?.hairColor || 'brown',
         hairStyle: appearance.detailed?.hairStyle || 'short',
@@ -792,7 +797,26 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Height</h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium">Height</h3>
+                      {/* Measurement unit toggle (imperial default) */}
+                      <div className="flex items-center gap-1 text-xs">
+                        {(['imperial', 'metric'] as MeasurementUnit[]).map(u => (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() => updateAppearance('simple', 'measurementUnit', u)}
+                            className={`px-2 py-1 rounded border transition-all ${
+                              (appearance.simple.measurementUnit || 'imperial') === u
+                                ? 'bg-primary/20 border-primary text-primary'
+                                : 'bg-background/50 border-border/30 text-muted-foreground hover:border-primary/40'
+                            }`}
+                          >
+                            {u === 'imperial' ? 'ft / lb' : 'cm / kg'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {HEIGHT_OPTIONS.map(opt => (
                         <button
@@ -803,8 +827,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                               ? 'bg-primary/20 border-primary'
                               : 'bg-background/50 border-border/30 hover:border-primary/50'
                           }`}
+                          title={heightBandLabel(opt.value, appearance.simple.measurementUnit || 'imperial')}
                         >
                           {opt.label}
+                          <span className="block text-[10px] text-muted-foreground mt-0.5">
+                            {heightBandLabel(opt.value, appearance.simple.measurementUnit || 'imperial')}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -828,7 +856,53 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       ))}
                     </div>
                   </div>
+
+                  {/* Optional weight — drives imagery silhouette + NPC reactivity */}
+                  {(() => {
+                    const unit = appearance.simple.measurementUnit || 'imperial';
+                    const [minKg, maxKg] = suggestedWeightRangeKg(appearance.simple.height, appearance.simple.build);
+                    const hasWeight = typeof appearance.simple.weightKg === 'number';
+                    const currentKg = appearance.simple.weightKg ?? Math.round((minKg + maxKg) / 2);
+                    const display = unit === 'imperial' ? `${kgToLb(currentKg)} lb` : `${currentKg} kg`;
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-sm font-medium flex items-center gap-2">
+                            Weight
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Optional</span>
+                          </h3>
+                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={hasWeight}
+                              onChange={(e) => updateAppearance('simple', 'weightKg', e.target.checked ? Math.round((minKg + maxKg) / 2) : undefined)}
+                              className="rounded"
+                            />
+                            Define weight
+                          </label>
+                        </div>
+                        {hasWeight && (
+                          <div className="space-y-2">
+                            <input
+                              type="range"
+                              min={Math.max(35, minKg - 20)}
+                              max={maxKg + 40}
+                              step={1}
+                              value={currentKg}
+                              onChange={(e) => updateAppearance('simple', 'weightKg', Number(e.target.value))}
+                              className="w-full accent-primary"
+                            />
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Suggested for {appearance.simple.height} / {appearance.simple.build}: {formatWeight(minKg, unit)} – {formatWeight(maxKg, unit)}</span>
+                              <span className="font-medium text-foreground">{display}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
+
 
                 {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (

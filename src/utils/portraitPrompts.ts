@@ -143,6 +143,8 @@ export interface CharacterAppearance {
   gender?: string;
   build?: string;
   height?: string;
+  /** Optional approximate weight in kg — drives body-mass framing in imagery. */
+  weightKg?: number;
   hairColor?: string;
   hairStyle?: string;
   hairLength?: string;
@@ -367,6 +369,18 @@ export function buildPortraitPrompt(
     } else {
       heightDesc = `${character.height} height stature`;
     }
+  }
+
+  // Weight descriptor — affects body mass, silhouette thickness, and clothing drape in imagery
+  let weightDesc = '';
+  if (typeof character.weightKg === 'number' && character.weightKg > 0) {
+    const w = character.weightKg;
+    if (w < 50)        weightDesc = `very light slender body mass (~${w}kg), thin silhouette, narrow shoulders and limbs`;
+    else if (w < 65)   weightDesc = `light body mass (~${w}kg), trim silhouette, lean proportions`;
+    else if (w < 85)   weightDesc = `average body mass (~${w}kg), proportional silhouette`;
+    else if (w < 105)  weightDesc = `heavier body mass (~${w}kg), solid thickset silhouette, broader torso, fuller limbs`;
+    else if (w < 130)  weightDesc = `large body mass (~${w}kg), broad heavy silhouette, thick torso and limbs, fuller cheeks and neck`;
+    else               weightDesc = `very large heavy body mass (~${w}kg), wide imposing silhouette, very thick torso and limbs, pronounced size in clothing drape`;
   }
   
   const hairColor = character.hairColor || 'brown';
@@ -679,6 +693,7 @@ export function buildPortraitPrompt(
     gender,
     buildDesc,
     heightDesc,
+    weightDesc,
     faceShapeDesc,
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,
