@@ -135,6 +135,10 @@ export interface GameSettings {
   // PWA — hide the install banner / button on the main menu for users
   // who don't want to install the app.
   hidePwaInstall?: boolean;
+
+  // Hide the floating version/hotfix badge entirely (main menu top-right).
+  hideHotfixBadge?: boolean;
+
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -245,6 +249,10 @@ export const DEFAULT_SETTINGS: GameSettings = {
 
   // PWA install banner visible by default
   hidePwaInstall: false,
+
+  // Hotfix badge visible by default
+  hideHotfixBadge: false,
+
 };
 
 // Get current settings (alias for loadSettings)
