@@ -158,7 +158,8 @@ export interface NarrativeGenerationResult {
     history?: StoryEntry[],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean
+    skipLoadingState?: boolean,
+    directorOverride?: DirectorSettings
   ) => Promise<string | null>;
   setLastFailedAction: React.Dispatch<React.SetStateAction<{ action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null>>;
   setPendingMechanics: React.Dispatch<React.SetStateAction<GameMechanics | undefined>>;
@@ -313,7 +314,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     diceRoll?: any,
     char?: RPGCharacter,
     skipLoadingState?: boolean,
-    retryLevel: number = 0
+    retryLevel: number = 0,
+    directorOverride?: DirectorSettings
   ): Promise<string | null> => {
     const activeChar = char || character;
     if (!activeChar) return null;
@@ -640,7 +642,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           },
         };
         
-        const activeDirectorSettings = directorSettings || settings.directorSettings;
+        const activeDirectorSettings = directorOverride || directorSettings || settings.directorSettings;
         if (activeDirectorSettings) {
           requestBody.directorContext = {
             enabled: activeDirectorSettings.enabled,
@@ -914,7 +916,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     history: StoryEntry[] = [],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean
+    skipLoadingState?: boolean,
+    directorOverride?: DirectorSettings
   ): Promise<string | null> => {
     const MAX_RETRIES = 3;
     
@@ -927,7 +930,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           diceRoll,
           char,
           skipLoadingState,
-          retryLevel
+          retryLevel,
+          directorOverride
         );
         
         if (result && !result.includes('The moment stretches') && !result.includes('You pause')) {

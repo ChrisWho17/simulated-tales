@@ -1265,8 +1265,10 @@ export function AdventureGame() {
       return;
     }
     
-    // Store the director settings
+    // Store the director settings (both local state and shared gameSettings so subsequent
+    // turns pick them up via settings.directorSettings even if local closures are stale)
     setDirectorSettings(settings);
+    try { updateSettings({ directorSettings: settings } as any); } catch (e) { console.warn('[AdventureGame] updateSettings(director) failed', e); }
     
     // Clear pending character
     setPendingCharacter(null);
@@ -1335,7 +1337,7 @@ export function AdventureGame() {
           setTimeout(() => reject(new Error('Narrative generation timeout')), 30000)
         );
         narrative = await Promise.race([
-          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true),
+          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true, settings),
           timeoutPromise
         ]);
       } catch (genError) {

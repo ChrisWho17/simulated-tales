@@ -21,7 +21,7 @@ export const NATIONALITIES: Nationality[] = [
   // North America
   { id: 'american_general',   label: 'American (General)',  region: 'north_america',  defaultLanguage: 'en', accentLabel: 'General American', accentDescriptor: 'flat vowels, rhotic Rs, casual contractions', signatureMarkers: ['gonna', 'y\'all', 'kinda'] },
   { id: 'american_southern',  label: 'American (Southern)', region: 'north_america',  defaultLanguage: 'en', accentLabel: 'Southern drawl', accentDescriptor: 'slow drawl, dropped Gs, soft vowels', signatureMarkers: ['darlin\'', 'fixin\' to', 'y\'all', 'reckon'] },
-  { id: 'american_newyork',   label: 'American (New York)', region: 'north_america',  defaultLanguage: 'en', accentLabel: 'New York', accentDescriptor: 'hard Rs, fast cadence, blunt phrasing', signatureMarkers: ['fuhgeddaboudit', 'youse', 'dawg'] },
+  { id: 'american_newengland', label: 'American (New England)', region: 'north_america',  defaultLanguage: 'en', accentLabel: 'New England', accentDescriptor: 'non-rhotic Rs (\"pahk the cah\"), broad As, clipped cadence', signatureMarkers: ['wicked', 'pissah', 'down the cape', 'bubblah'] },
   { id: 'canadian',           label: 'Canadian',            region: 'north_america',  defaultLanguage: 'en', accentLabel: 'Canadian', accentDescriptor: 'rounded Os, polite tags, soft consonants', signatureMarkers: ['eh', 'sorry', 'aboot'] },
   // British isles
   { id: 'british_rp',         label: 'British (RP)',        region: 'western_europe', defaultLanguage: 'en', accentLabel: 'Received Pronunciation', accentDescriptor: 'crisp consonants, non-rhotic Rs, formal register', signatureMarkers: ['rather', 'quite', 'I daresay'] },

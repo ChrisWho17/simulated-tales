@@ -115,7 +115,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
 
-  // Nationality & language profile
+  // Nationality & language profile (opt-in for player freedom)
+  const [useNationality, setUseNationality] = useState<boolean>(false);
   const [nationality, setNationality] = useState<string>('');
   const [primaryLanguage, setPrimaryLanguage] = useState<string>('en');
   const [additionalLanguages, setAdditionalLanguages] = useState<Array<{ code: string; proficiency: 'rough' | 'moderate' | 'perfected' }>>([]);
@@ -408,10 +409,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     (character as any).fullAppearance = appearance.full;
     (character as any).tieredAppearance = appearance;
 
-    // Nationality & language profile
-    (character as any).nationality = nationality || undefined;
-    (character as any).primaryLanguage = primaryLanguage;
-    (character as any).additionalLanguages = additionalLanguages;
+    // Nationality & language profile (only when player opts in)
+    (character as any).nationality = useNationality ? (nationality || undefined) : undefined;
+    (character as any).primaryLanguage = useNationality ? primaryLanguage : undefined;
+    (character as any).additionalLanguages = useNationality ? additionalLanguages : [];
+    (character as any).languageBarriersEnabled = useNationality;
     
     // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
@@ -596,114 +598,156 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 />
               </div>
 
-              {/* Nationality */}
+              {/* Optional: Nationality & Languages */}
               <div className="space-y-2 pt-2 border-t border-border/30">
-                <label className="text-sm font-medium">Nationality <span className="text-muted-foreground font-normal">(drives your accent)</span></label>
-                <UiSelect
-                  value={nationality}
-                  onValueChange={(v) => {
-                    setNationality(v);
-                    const def = getDefaultLanguageForNationality(v);
-                    if (def && !additionalLanguages.find(l => l.code === def)) {
-                      setPrimaryLanguage(def);
-                    }
-                  }}
-                >
-                  <UiSelectTrigger className="bg-background/50">
-                    <UiSelectValue placeholder="Select nationality" />
-                  </UiSelectTrigger>
-                  <UiSelectContent className="max-h-72">
-                    {NATIONALITIES.map(n => (
-                      <UiSelectItem key={n.id} value={n.id}>{n.label}</UiSelectItem>
-                    ))}
-                  </UiSelectContent>
-                </UiSelect>
+                <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <span className="text-sm font-medium">
+                    Nationality & Languages
+                    <span className="block text-xs text-muted-foreground font-normal">
+                      Optional. Adds accents and language barriers to the story.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={useNationality}
+                    onChange={(e) => setUseNationality(e.target.checked)}
+                    className="w-5 h-5 rounded accent-primary cursor-pointer"
+                    aria-label="Enable nationality and languages"
+                  />
+                </label>
               </div>
 
-              {/* Primary language */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Primary Language <span className="text-muted-foreground font-normal">(spoken natively)</span></label>
-                <UiSelect value={primaryLanguage} onValueChange={setPrimaryLanguage}>
-                  <UiSelectTrigger className="bg-background/50">
-                    <UiSelectValue />
-                  </UiSelectTrigger>
-                  <UiSelectContent className="max-h-72">
-                    {SELECTABLE_LANGUAGES.map(l => (
-                      <UiSelectItem key={l.code} value={l.code}>{l.label}</UiSelectItem>
-                    ))}
-                  </UiSelectContent>
-                </UiSelect>
-              </div>
+              {useNationality && (
+                <>
+                  {/* Nationality */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nationality <span className="text-muted-foreground font-normal">(drives your accent)</span></label>
+                    <UiSelect
+                      value={nationality}
+                      onValueChange={(v) => {
+                        setNationality(v);
+                        const def = getDefaultLanguageForNationality(v);
+                        if (def && !additionalLanguages.find(l => l.code === def)) {
+                          setPrimaryLanguage(def);
+                        }
+                      }}
+                    >
+                      <UiSelectTrigger className="bg-background/50">
+                        <UiSelectValue placeholder="Select nationality" />
+                      </UiSelectTrigger>
+                      <UiSelectContent className="max-h-72">
+                        {NATIONALITIES.map(n => (
+                          <UiSelectItem key={n.id} value={n.id}>{n.label}</UiSelectItem>
+                        ))}
+                      </UiSelectContent>
+                    </UiSelect>
+                  </div>
 
-              {/* Additional languages */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Additional Languages</label>
-                  <UiSelect
-                    value=""
-                    onValueChange={(code) => {
-                      if (!code) return;
-                      if (code === primaryLanguage) return;
-                      if (additionalLanguages.find(l => l.code === code)) return;
-                      setAdditionalLanguages(prev => [...prev, { code, proficiency: 'moderate' }]);
-                    }}
-                  >
-                    <UiSelectTrigger className="w-44 bg-background/50 h-8 text-xs">
-                      <UiSelectValue placeholder="+ Add language" />
-                    </UiSelectTrigger>
-                    <UiSelectContent className="max-h-72">
-                      {SELECTABLE_LANGUAGES
-                        .filter(l => l.code !== primaryLanguage && !additionalLanguages.find(a => a.code === l.code))
-                        .map(l => (
+                  {/* Primary language */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Primary Language <span className="text-muted-foreground font-normal">(spoken natively)</span></label>
+                    <UiSelect value={primaryLanguage} onValueChange={setPrimaryLanguage}>
+                      <UiSelectTrigger className="bg-background/50">
+                        <UiSelectValue />
+                      </UiSelectTrigger>
+                      <UiSelectContent className="max-h-72">
+                        {SELECTABLE_LANGUAGES.map(l => (
                           <UiSelectItem key={l.code} value={l.code}>{l.label}</UiSelectItem>
                         ))}
-                    </UiSelectContent>
-                  </UiSelect>
-                </div>
+                      </UiSelectContent>
+                    </UiSelect>
+                  </div>
 
-                {additionalLanguages.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic">No secondary languages. NPCs speaking other tongues will sound foreign and be translated in parentheses.</p>
-                )}
-
-                {additionalLanguages.map((lang, idx) => {
-                  const profIndex = lang.proficiency === 'rough' ? 0 : lang.proficiency === 'moderate' ? 1 : 2;
-                  return (
-                    <div key={lang.code} className="rounded-md border border-border/30 bg-background/30 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          {SELECTABLE_LANGUAGES.find(l => l.code === lang.code)?.label || lang.code}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setAdditionalLanguages(prev => prev.filter((_, i) => i !== idx))}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                          aria-label="Remove language"
-                        >
-                          <XIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Rough</span><span>Moderate</span><span>Perfected</span>
-                      </div>
-                      <UiSlider
-                        value={[profIndex]}
-                        min={0}
-                        max={2}
-                        step={1}
-                        onValueChange={([v]) => {
-                          const next: LanguageProficiency = v === 0 ? 'rough' : v === 1 ? 'moderate' : 'perfected';
-                          setAdditionalLanguages(prev => prev.map((l, i) => i === idx ? { ...l, proficiency: next as 'rough'|'moderate'|'perfected' } : l));
+                  {/* Additional languages */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Additional Languages</label>
+                      <UiSelect
+                        value=""
+                        onValueChange={(code) => {
+                          if (!code) return;
+                          if (code === '__all__') {
+                            // Scholar mode: fluent in every selectable tongue except the primary
+                            const all = SELECTABLE_LANGUAGES
+                              .filter(l => l.code !== primaryLanguage)
+                              .map(l => ({ code: l.code, proficiency: 'perfected' as const }));
+                            setAdditionalLanguages(all);
+                            return;
+                          }
+                          if (code === primaryLanguage) return;
+                          if (additionalLanguages.find(l => l.code === code)) return;
+                          setAdditionalLanguages(prev => [...prev, { code, proficiency: 'moderate' }]);
                         }}
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        {lang.proficiency === 'rough' && 'Gist only — gaps shown as [...] in dialogue.'}
-                        {lang.proficiency === 'moderate' && 'Readable, but idioms may slip past you.'}
-                        {lang.proficiency === 'perfected' && 'Near-fluent — reads cleanly.'}
-                      </p>
+                      >
+                        <UiSelectTrigger className="w-44 bg-background/50 h-8 text-xs">
+                          <UiSelectValue placeholder="+ Add language" />
+                        </UiSelectTrigger>
+                        <UiSelectContent className="max-h-72">
+                          <UiSelectItem value="__all__">⭐ All (Scholar)</UiSelectItem>
+                          {SELECTABLE_LANGUAGES
+                            .filter(l => l.code !== primaryLanguage && !additionalLanguages.find(a => a.code === l.code))
+                            .map(l => (
+                              <UiSelectItem key={l.code} value={l.code}>{l.label}</UiSelectItem>
+                            ))}
+                        </UiSelectContent>
+                      </UiSelect>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {additionalLanguages.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic">No secondary languages. NPCs speaking other tongues will sound foreign and be translated in parentheses.</p>
+                    )}
+
+                    {additionalLanguages.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setAdditionalLanguages([])}
+                        className="text-[11px] text-muted-foreground hover:text-destructive transition-colors underline"
+                      >
+                        Clear all ({additionalLanguages.length})
+                      </button>
+                    )}
+
+                    {additionalLanguages.map((lang, idx) => {
+                      const profIndex = lang.proficiency === 'rough' ? 0 : lang.proficiency === 'moderate' ? 1 : 2;
+                      return (
+                        <div key={lang.code} className="rounded-md border border-border/30 bg-background/30 p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {SELECTABLE_LANGUAGES.find(l => l.code === lang.code)?.label || lang.code}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setAdditionalLanguages(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label="Remove language"
+                            >
+                              <XIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Rough</span><span>Moderate</span><span>Perfected</span>
+                          </div>
+                          <UiSlider
+                            value={[profIndex]}
+                            min={0}
+                            max={2}
+                            step={1}
+                            onValueChange={([v]) => {
+                              const next: LanguageProficiency = v === 0 ? 'rough' : v === 1 ? 'moderate' : 'perfected';
+                              setAdditionalLanguages(prev => prev.map((l, i) => i === idx ? { ...l, proficiency: next as 'rough'|'moderate'|'perfected' } : l));
+                            }}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            {lang.proficiency === 'rough' && 'Gist only — gaps shown as [...] in dialogue.'}
+                            {lang.proficiency === 'moderate' && 'Readable, but idioms may slip past you.'}
+                            {lang.proficiency === 'perfected' && 'Near-fluent — reads cleanly.'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

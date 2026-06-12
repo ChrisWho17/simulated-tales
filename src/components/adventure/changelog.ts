@@ -10,6 +10,27 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    "version": "0.4.6",
+    "date": "June 2026",
+    "title": "Accent Toggle & Director Sync",
+    "highlights": [
+      "Nationality & languages are now opt-in for full narrative freedom",
+      "New England accent replaces New York in the nationality list",
+      "Director choice now syncs into your very first scene"
+    ],
+    "features": [
+      "New \"All (Scholar)\" option instantly grants fluency in every language",
+      "Toggle hides nationality, primary language, and additional languages when unused"
+    ],
+    "improvements": [
+      "Accent descriptors refined for clearer regional voice"
+    ],
+    "fixes": [
+      "Fixed Choose Your Director settings not reaching the opening narrative",
+      "Director tightness, cruelty, and weirdness now influence the very first turn"
+    ]
+  },
+  {
     "version": "0.4.5",
     "date": "June 2026",
     "title": "Hotfix Update Delivery",
