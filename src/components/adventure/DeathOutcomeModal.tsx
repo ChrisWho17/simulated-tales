@@ -37,6 +37,14 @@ export function DeathOutcomeModal({
   const [stage, setStage] = useState<Stage>('death');
   const [rollResult, setRollResult] = useState<{ raw: number; mod: number; total: number; success: boolean } | null>(null);
 
+  // Reset stage whenever the modal reopens for a new death
+  useEffect(() => {
+    if (open) {
+      setStage('death');
+      setRollResult(null);
+    }
+  }, [open]);
+
   const conMod = getStatModifier(character.stats.constitution);
 
   const stats = useMemo(() => {
