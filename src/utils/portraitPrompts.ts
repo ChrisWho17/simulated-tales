@@ -678,6 +678,7 @@ export function buildPortraitPrompt(
     STYLE_BASE,
     gender,
     buildDesc,
+    heightDesc,
     faceShapeDesc,
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,
