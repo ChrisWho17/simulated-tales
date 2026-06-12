@@ -941,12 +941,26 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </select>
                       </div>
                       <div>
-                        <label className="text-sm text-muted-foreground">Hair Color</label>
+                        <label className="text-sm text-muted-foreground">Hair Color (Primary)</label>
                         <select
                           value={appearance.detailed?.hairColor || 'Brown'}
                           onChange={(e) => updateAppearance('detailed', 'hairColor', e.target.value)}
                           className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
                         >
+                          {HAIR_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground flex items-center justify-between">
+                          <span>Hair Color (Secondary)</span>
+                          <span className="text-[10px] uppercase tracking-wide">Two-tone</span>
+                        </label>
+                        <select
+                          value={appearance.detailed?.hairColorSecondary || ''}
+                          onChange={(e) => updateAppearance('detailed', 'hairColorSecondary', e.target.value || undefined)}
+                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
+                        >
+                          <option value="">None (single color)</option>
                           {HAIR_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
                         </select>
                       </div>
