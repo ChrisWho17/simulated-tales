@@ -430,7 +430,10 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
   let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
-    description += `, ${detailed.skinTone} skin, ${detailed.hairStyle} ${detailed.hairColor} hair, ${detailed.eyeColor} eyes`;
+    const hairTwoTone = detailed.hairColorSecondary && detailed.hairColorSecondary !== detailed.hairColor
+      ? `${detailed.hairStyle} two-tone hair (primary ${detailed.hairColor}, secondary ${detailed.hairColorSecondary} streaks/tips/underlayer)`
+      : `${detailed.hairStyle} ${detailed.hairColor} hair`;
+    description += `, ${detailed.skinTone} skin, ${hairTwoTone}, ${detailed.eyeColor} eyes`;
     if (detailed.distinguishingFeatures?.length) description += `, with ${detailed.distinguishingFeatures.join(', ')}`;
     if (detailed.accessories?.length) description += `, wearing ${detailed.accessories.join(', ')}`;
   }
