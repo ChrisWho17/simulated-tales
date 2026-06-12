@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Gift, Zap, Bug, Star } from 'lucide-react';
+import { X, Sparkles, Gift, Zap, Bug, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { APP_STAGE, APP_VERSION, BUILD_NUMBER } from '@/lib/version';
