@@ -482,7 +482,7 @@ export function generateHostileNPC(
   const weapon = randomFrom(hostileAppearance.weapons);
   
   const age = randomInRange(18, 45);
-  const description = `A ${build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} with ${feature}, wearing ${clothing}. They carry what looks like a ${weapon}.`;
+  const description = `A ${appearance.height} ${build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} (~${appearance.weightKg}kg) with ${feature}, wearing ${clothing}. They carry what looks like a ${weapon}.`;
   
   const id = `npc_hostile_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
   
