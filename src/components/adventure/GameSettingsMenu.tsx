@@ -213,6 +213,24 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             />
           </div>
 
+          {/* Hide Hotfix Badge */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="text-xs">Hide Hotfix Badge</span>
+                <span className="text-[10px] text-muted-foreground">Hide the floating version & patch-notes badge on the main menu</span>
+              </div>
+            </div>
+            <Switch
+              checked={!!(settings as any).hideHotfixBadge}
+              onCheckedChange={(checked) => {
+                updateSettings({ hideHotfixBadge: checked } as any);
+                try { window.dispatchEvent(new CustomEvent('settings:updated')); } catch { /* ignore */ }
+              }}
+            />
+
+
           {/* Testing — deterministic variance seed */}
           <div className="p-2.5 rounded-lg border border-border/30 bg-background/30">
             <div className="flex items-center justify-between">
