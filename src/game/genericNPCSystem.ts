@@ -258,7 +258,7 @@ export function generateGenericNPC(
     id = `${baseId}_${counter}`;
   }
 
-  const description = `A ${age}-year-old ${appearance.build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} with ${appearance.hair} and ${appearance.eyes}. Dressed in ${appearance.clothing} style, ${appearance.distinguishing}.`;
+  const description = `A ${age}-year-old ${appearance.height} ${appearance.build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} (~${appearance.weightKg}kg) with ${appearance.hair} and ${appearance.eyes}. Dressed in ${appearance.clothing} style, ${appearance.distinguishing}.`;
 
   const emotionalStates: EmotionalState[] = ['calm', 'anxious', 'happy', 'sad', 'vigilant', 'content'];
   const conflictStyles: ConflictStyle[] = ['AVOIDANT', 'PASSIVE_AGGRESSIVE', 'NEGOTIATIVE', 'DOMINANT', 'MORALISTIC', 'RESIGNED'];
