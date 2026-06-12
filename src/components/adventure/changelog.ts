@@ -14,6 +14,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     "date": "June 2026",
     "title": "Heights, Weights & Two-Tone Hair",
     "highlights": [
+      "Custom height slider (4'2\" – ~7'6\") for characters outside the standard brackets",
       "New Very Short height tier (down to 4'2\") joins the lineup",
       "Weight range expanded to 40–400 lb (imperial) / ~18–181 kg (metric)",
       "Two-tone hair: pick a primary color and an optional secondary streak / tip / underlayer"
