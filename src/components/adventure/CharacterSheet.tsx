@@ -474,6 +474,10 @@ export function CharacterSheet({
                 }}
               />
 
+              {/* Physicality (Inspect Character) — height, build, weight in chosen units */}
+              <PhysicalitySection character={character} />
+
+
               {/* Weather & Temperature Section */}
               {settings.enableWeatherEffects && (
                 <div>
