@@ -305,6 +305,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
         height: appearance.simple?.height || 'average',
+        weightKg: appearance.simple?.weightKg,
         hairColor: appearance.detailed?.hairColor || 'brown',
         hairStyle: appearance.detailed?.hairStyle || 'short',
         eyeColor: appearance.detailed?.eyeColor || 'brown',
