@@ -400,7 +400,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     // Add appearance data for consistent scene illustrations
     (character as any).gender = appearance.simple?.gender || 'male';
     (character as any).build = appearance.simple?.build || 'average';
-    (character as any).height = appearance.simple?.height || 'average';
+    (character as any).height = appearance.simple?.customHeightCm
+      ? `${appearance.simple.customHeightCm}cm`
+      : (appearance.simple?.height || 'average');
+    (character as any).customHeightCm = appearance.simple?.customHeightCm;
     (character as any).weightKg = appearance.simple?.weightKg;
     (character as any).measurementUnit = appearance.simple?.measurementUnit || 'imperial';
     (character as any).hairColor = appearance.detailed?.hairColor || 'brown';
