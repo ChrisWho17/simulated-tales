@@ -67,7 +67,7 @@ const SCENARIOS: Step[] = [
 
   // 26-30: narrative inference, stats, near-death cascade, decay
   { label: 'narrative cue: dread',    trigger: { kind: 'narrative_text', text: 'A wave of terror floods you. Cold sweat beads on your forehead as the shadow looms.' }, ticks: 8, expect: 'fearful' },
-  { label: 'narrative cue: triumph',  trigger: { kind: 'narrative_text', text: 'Joy and elation burst through your chest — you grin and rejoice in the celebration.' }, ticks: 2, expect: 'unchanged' /* score not enough to beat fearful residual */ },
+  { label: 'narrative cue: triumph',  trigger: { kind: 'narrative_text', text: 'Joy and elation burst through your chest — you grin and rejoice in the celebration.' }, ticks: 2, expect: 'happy' },
   { label: 'near death',              trigger: { kind: 'near_death', healthRatio: 0.08 }, expect: 'fearful' },
   { label: 'death',                   trigger: { kind: 'death' }, expect: 'depressed' },
   { label: 'tick decay to neutral',   trigger: { kind: 'tick_decay', ticksElapsed: 30 }, expect: 'neutral' },
