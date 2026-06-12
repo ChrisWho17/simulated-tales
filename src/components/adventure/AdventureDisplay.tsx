@@ -2528,6 +2528,31 @@ export function AdventureDisplay({
         characterName={character.name}
         onSelectChoice={handleLevelUpChoice}
       />
+
+      {/* Death Outcome Modal — fires when HP hits 0 */}
+      <DeathOutcomeModal
+        open={deathState.open}
+        character={character}
+        causeOfDeath={deathState.cause}
+        story={story}
+        cheatEnabled={cheatMode}
+        onRevive={(newHealth, narrative) => {
+          onUpdateCharacter({ ...character, currentHealth: newHealth });
+          setDeathState({ open: false, cause: '' });
+          deathHandledRef.current = false;
+          toast({
+            title: 'Revived',
+            description: narrative.replace(/^\*|\*$/g, ''),
+            duration: 6000,
+          });
+        }}
+        onFlatlineConfirmed={() => {
+          setDeathState({ open: false, cause: '' });
+          deathHandledRef.current = false;
+          onRestart();
+        }}
+      />
+      
       
       {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       
