@@ -564,6 +564,19 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
       break;
   }
 
+  // Weight-based reactivity (optional — only when player set a weight)
+  if (typeof simple.weightKg === 'number' && simple.weightKg > 0) {
+    const w = simple.weightKg;
+    const lb = Math.round(w * 2.20462);
+    let weightCue = '';
+    if (w < 50) weightCue = `Very light frame (~${w}kg / ${lb}lb): easily lifted, carried, or knocked aside; struggles with heavy gear, recoil, and grappling stronger foes; NPCs may pick them up, shove past, or doubt their physical credibility.`;
+    else if (w < 65) weightCue = `Light frame (~${w}kg / ${lb}lb): quick on their feet, low presence in melee impact; standard armor and packs feel heavier on this frame.`;
+    else if (w < 85) weightCue = `Average weight (~${w}kg / ${lb}lb): unremarkable physical inertia in NPC perception.`;
+    else if (w < 105) weightCue = `Heavier frame (~${w}kg / ${lb}lb): hard to shove off-balance, hits with more momentum; faster fatigue on long climbs and sprints; chairs creak, narrow seating may be tight.`;
+    else weightCue = `Very heavy frame (~${w}kg / ${lb}lb): immovable in grapples, intimidating mass, breaks fragile furniture; CANNOT fit into tight crawlspaces, small vehicles, or low-weight rope/ledge scenarios without consequence; NPCs visibly notice and may make assumptions (kind or cruel) based on size.`;
+    physicality.push(weightCue);
+  }
+
   description += `\n\nPHYSICALITY AWARENESS (apply continuously in narration and NPC reactions): ${physicality.join(' ')} The narrator MUST respect these physical realities when describing environments, action outcomes, stealth, combat reach, and first impressions, and NPCs MUST react to the character's size and build in a way consistent with their own personality and culture.`;
 
   return description;
