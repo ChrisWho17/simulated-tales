@@ -916,7 +916,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     history: StoryEntry[] = [],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean
+    skipLoadingState?: boolean,
+    directorOverride?: DirectorSettings
   ): Promise<string | null> => {
     const MAX_RETRIES = 3;
     
@@ -929,7 +930,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           diceRoll,
           char,
           skipLoadingState,
-          retryLevel
+          retryLevel,
+          directorOverride
         );
         
         if (result && !result.includes('The moment stretches') && !result.includes('You pause')) {
