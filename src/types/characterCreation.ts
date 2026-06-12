@@ -18,6 +18,8 @@ export interface DetailedAppearance {
   skinTone: string;
   hairStyle: string;
   hairColor: string;
+  /** Optional secondary hair color for two-tone / dyed-streak looks. Primary remains hairColor. */
+  hairColorSecondary?: string;
   eyeColor: string;
   faceShape: 'oval' | 'round' | 'square' | 'heart' | 'oblong' | 'diamond';
   distinguishingFeatures: string[];
