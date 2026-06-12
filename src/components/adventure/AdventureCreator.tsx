@@ -16,9 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyInventoryBridge';
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
-import { VersionHotfixesBadge } from './VersionHotfixesBadge';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
-import { WhatsNewModal } from './WhatsNewModal';
 import { AuthModal } from '@/components/cloud/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSyncStatus } from '@/hooks/useCloudSyncStatus';
@@ -748,9 +746,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* What's New Modal - shows on version update */}
-      <WhatsNewModal />
-      
       {/* Color Splash Screen */}
       <ColorSplashScreen open={showColorSplash} onClose={() => setShowColorSplash(false)} />
       
@@ -772,9 +767,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       <AtmosphericBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
-        {/* Top-right version + patch highlights/hotfixes */}
-        <VersionHotfixesBadge />
-
         {/* Logo/Title */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-3">
