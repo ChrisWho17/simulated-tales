@@ -410,6 +410,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     (character as any).details = [
       ...(appearance.detailed?.distinguishingFeatures || []),
       ...(appearance.detailed?.accessories || []),
+      ...(appearance.detailed?.hairColorSecondary && appearance.detailed.hairColorSecondary !== appearance.detailed.hairColor
+        ? [`two-tone hair: primary ${appearance.detailed.hairColor}, secondary ${appearance.detailed.hairColorSecondary} streaks/tips/underlayer`]
+        : []),
     ];
     
     // Add full appearance data for adult content (18+) - stored separately for AI context
