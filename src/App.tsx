@@ -17,8 +17,9 @@ import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBrid
 import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { RecoveryBoundary } from "@/components/error/RecoveryBoundary";
-import { VersionHotfixesBadge } from "@/components/adventure/VersionHotfixesBadge";
+import { VersionHotfixesBadgeGate } from "@/components/adventure/VersionHotfixesBadgeGate";
 import { WhatsNewModal } from "@/components/adventure/WhatsNewModal";
+
 import { repairCorruptedStorage } from "@/lib/storageRepair";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
@@ -69,10 +70,10 @@ const App = () => (
                         <StartupIntegrityMonitor />
                         <PwaUpdatePrompt />
                         <WhatsNewModal />
-                        <VersionHotfixesBadge />
                         <Toaster />
                         <Sonner />
                         <BrowserRouter>
+                          <VersionHotfixesBadgeGate />
                           <Routes>
                             <Route path="/" element={<Index />} />
                             <Route path="/campaigns" element={<Campaigns />} />
@@ -87,6 +88,7 @@ const App = () => (
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </BrowserRouter>
+
                       </TooltipProvider>
                     </CampaignInventorySync>
                   </InventoryProvider>
