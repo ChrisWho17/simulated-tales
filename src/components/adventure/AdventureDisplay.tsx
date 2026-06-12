@@ -19,6 +19,7 @@ import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
 import { NarrativeLoadingIndicator } from './NarrativeLoadingIndicator';
 import { SavesDropdown } from '@/components/campaign';
+import { DeathOutcomeModal } from './DeathOutcomeModal';
 
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
@@ -342,6 +343,11 @@ export function AdventureDisplay({
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
+
+  // === DEATH OUTCOME MODAL ===
+  // Fires when player HP drops to 0. Three paths: roll, cheat, flatline.
+  const [deathState, setDeathState] = useState<{ open: boolean; cause: string }>({ open: false, cause: '' });
+  const deathHandledRef = useRef(false);
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
   const [showTimeDisplay, setShowTimeDisplay] = useState(false);
@@ -797,6 +803,16 @@ export function AdventureDisplay({
         variant: "destructive",
         duration: 3000,
       });
+
+      // === DEATH CHECK: HP hit 0 → open Death Outcome modal (one-shot) ===
+      if (updatedCharacter.currentHealth <= 0 && !deathHandledRef.current) {
+        deathHandledRef.current = true;
+        const lastNarrator = [...story].reverse().find(e => e.role === 'narrator')?.content || '';
+        // Take the last 1-2 sentences of the narrator's prose as "cause of death"
+        const sentences = lastNarrator.replace(/\[[A-Z_]+:[^\]]+\]/g, '').trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+        const cause = sentences.slice(-2).join(' ').slice(0, 280) || `Slain — ${pendingMechanics.damage} damage taken with no health remaining.`;
+        setDeathState({ open: true, cause });
+      }
     }
 
     // Apply healing
@@ -2512,6 +2528,31 @@ export function AdventureDisplay({
         characterName={character.name}
         onSelectChoice={handleLevelUpChoice}
       />
+
+      {/* Death Outcome Modal — fires when HP hits 0 */}
+      <DeathOutcomeModal
+        open={deathState.open}
+        character={character}
+        causeOfDeath={deathState.cause}
+        story={story}
+        cheatEnabled={cheatMode}
+        onRevive={(newHealth, narrative) => {
+          onUpdateCharacter({ ...character, currentHealth: newHealth });
+          setDeathState({ open: false, cause: '' });
+          deathHandledRef.current = false;
+          toast({
+            title: 'Revived',
+            description: narrative.replace(/^\*|\*$/g, ''),
+            duration: 6000,
+          });
+        }}
+        onFlatlineConfirmed={() => {
+          setDeathState({ open: false, cause: '' });
+          deathHandledRef.current = false;
+          onRestart();
+        }}
+      />
+      
       
       {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       
