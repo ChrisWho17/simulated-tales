@@ -38,7 +38,7 @@ import { StartingGearEditor } from './StartingGearEditor';
 import { StartingGearItem } from '@/game/storyInventoryBridge';
 import { AppearanceAccordions } from './AppearanceAccordions';
 import { NATIONALITIES, getDefaultLanguageForNationality } from '@/game/nationalitySystem';
-import { SELECTABLE_LANGUAGES, PROFICIENCY_LABELS, type LanguageProficiency } from '@/game/languageSystem';
+import { SELECTABLE_LANGUAGES, type LanguageProficiency } from '@/game/languageSystem';
 import { Slider as UiSlider } from '@/components/ui/slider';
 import { Select as UiSelect, SelectContent as UiSelectContent, SelectItem as UiSelectItem, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue } from '@/components/ui/select';
 import { X as XIcon } from 'lucide-react';
