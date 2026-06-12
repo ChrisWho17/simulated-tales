@@ -314,7 +314,8 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     diceRoll?: any,
     char?: RPGCharacter,
     skipLoadingState?: boolean,
-    retryLevel: number = 0
+    retryLevel: number = 0,
+    directorOverride?: DirectorSettings
   ): Promise<string | null> => {
     const activeChar = char || character;
     if (!activeChar) return null;
