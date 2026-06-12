@@ -2403,17 +2403,44 @@ export function AdventureGame() {
     );
   }
 
-  // Phase 2.5: Narrator settings selection
+  // Phase 2.5: World is loading — show world-load screen with director picker overlaid.
+  // Once director is confirmed it starts narrating the opening from there.
   if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
+    const genreLabel = scenarioSelection.genreTitle || scenarioSelection.genre || 'your world';
     return (
-      <NarratorSettingsModal
-        open={true}
-        onClose={handleNarratorSkip}
-        onConfirm={handleNarratorConfirm}
-        initialSettings={directorSettings}
-      />
+      <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-background via-background to-primary/10">
+        {/* Subtle animated backdrop suggesting the world is being assembled */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.15),transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--accent)/0.12),transparent_60%)]" />
+        </div>
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
+          <div className="mb-4 text-xs uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
+            Loading World
+          </div>
+          <h1 className="text-2xl md:text-4xl font-semibold text-foreground/90 max-w-2xl">
+            {genreLabel}
+          </h1>
+          <p className="mt-3 text-sm md:text-base text-muted-foreground max-w-xl">
+            Stitching landscapes, peopling streets, calibrating fate for {pendingCharacter.name}…
+          </p>
+          <div className="mt-8 flex items-center gap-2 text-muted-foreground/70">
+            <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+            <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+            <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+          </div>
+        </div>
+        {/* Director picker overlay — once confirmed, the director begins narrating */}
+        <NarratorSettingsModal
+          open={true}
+          onClose={handleNarratorSkip}
+          onConfirm={handleNarratorConfirm}
+          initialSettings={directorSettings}
+        />
+      </div>
     );
   }
+
 
   // Phase 3: Playing
   if (phase === 'playing' && character) {
