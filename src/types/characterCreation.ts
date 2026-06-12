@@ -427,10 +427,20 @@ export const CLOTHING_DETAIL_OPTIONS = [
   { value: 'briefs', label: 'Briefs', category: 'male', gender: 'male' },
 ];
 
+import { classifyHeightCm, formatHeight } from '@/lib/measurementUnits';
+
 export function formatAppearanceForAI(appearance: TieredAppearance, genre: string): string {
   const { simple, detailed, full, detailLevel } = appearance;
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
-  let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
+  // Resolve effective height — custom cm value overrides the bracket but still maps back to a band.
+  const effectiveBand: SimpleAppearance['height'] = simple.customHeightCm
+    ? (classifyHeightCm(simple.customHeightCm) as SimpleAppearance['height'])
+    : simple.height;
+  const unit = simple.measurementUnit || 'imperial';
+  const heightDisplay = simple.customHeightCm
+    ? `exactly ${formatHeight(simple.customHeightCm, unit)} (${simple.customHeightCm}cm, custom)`
+    : `${simple.height} height`;
+  let description = `${genderDesc}, ${heightDisplay}, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
     const hairTwoTone = detailed.hairColorSecondary && detailed.hairColorSecondary !== detailed.hairColor
       ? `${detailed.hairStyle} two-tone hair (primary ${detailed.hairColor}, secondary ${detailed.hairColorSecondary} streaks/tips/underlayer)`
