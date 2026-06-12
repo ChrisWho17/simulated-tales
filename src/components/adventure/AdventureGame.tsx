@@ -1265,8 +1265,10 @@ export function AdventureGame() {
       return;
     }
     
-    // Store the director settings
+    // Store the director settings (both local state and shared gameSettings so subsequent
+    // turns pick them up via settings.directorSettings even if local closures are stale)
     setDirectorSettings(settings);
+    try { updateSettings({ directorSettings: settings } as any); } catch (e) { console.warn('[AdventureGame] updateSettings(director) failed', e); }
     
     // Clear pending character
     setPendingCharacter(null);
