@@ -171,7 +171,7 @@ function randomInRange(min: number, max: number): number {
 // Reasonable per-build BMI midpoint, paired with height band to roll a plausible weight.
 function rollWeightKg(heightBand: string, build: string): number {
   const heights: Record<string, [number, number]> = {
-    short: [152, 162], average: [163, 178], tall: [178, 188], 'very tall': [188, 200],
+    'very short': [127, 152], short: [152, 162], average: [163, 178], tall: [178, 188], 'very tall': [188, 200],
   };
   const bmi: Record<string, [number, number]> = {
     slim: [17, 21], athletic: [21, 26], average: [20, 25], heavyset: [28, 38],
