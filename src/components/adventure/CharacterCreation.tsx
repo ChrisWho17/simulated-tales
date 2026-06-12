@@ -115,7 +115,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
 
-  // Nationality & language profile
+  // Nationality & language profile (opt-in for player freedom)
+  const [useNationality, setUseNationality] = useState<boolean>(false);
   const [nationality, setNationality] = useState<string>('');
   const [primaryLanguage, setPrimaryLanguage] = useState<string>('en');
   const [additionalLanguages, setAdditionalLanguages] = useState<Array<{ code: string; proficiency: 'rough' | 'moderate' | 'perfected' }>>([]);
