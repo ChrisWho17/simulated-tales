@@ -44,6 +44,21 @@ export function heightBandLabel(band: string, unit: MeasurementUnit = DEFAULT_UN
     : `${formatHeight(r[0], 'imperial')} – ${formatHeight(r[1], 'imperial')}`;
 }
 
+/** Classify an arbitrary cm value back into the closest preset band so the rest of the
+ *  systems (physicality, NPC reactions, weight suggestion) keep working with custom heights. */
+export function classifyHeightCm(cm: number): keyof typeof HEIGHT_BAND_CM {
+  if (cm < 152) return 'very short';
+  if (cm < 163) return 'short';
+  if (cm < 178) return 'average';
+  if (cm < 188) return 'tall';
+  if (cm < 200) return 'very tall';
+  return 'giant';
+}
+
+// Min / max allowed for the custom height input (matches the very-short floor and giant ceiling).
+export const CUSTOM_HEIGHT_MIN_CM = 127; // 4'2"
+export const CUSTOM_HEIGHT_MAX_CM = 230; // ~7'6"
+
 // Suggested weight range (kg) by combined height-band × build, used as slider default + NPC roll.
 export function suggestedWeightRangeKg(heightBand: string, build: string): [number, number] {
   const [hMin, hMax] = HEIGHT_BAND_CM[heightBand] || HEIGHT_BAND_CM.average;
