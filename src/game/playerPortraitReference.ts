@@ -89,6 +89,7 @@ export function savePlayerPortraitReference(
     gender: characterData.gender || 'male',
     build: characterData.build || 'average',
     height: characterData.height || 'average',
+    weightKg: characterData.weightKg,
     skinTone: characterData.skinTone || 'medium',
     hairColor: characterData.hairColor || 'brown',
     hairStyle: characterData.hairStyle || 'short',
