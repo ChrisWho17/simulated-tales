@@ -1335,7 +1335,7 @@ export function AdventureGame() {
           setTimeout(() => reject(new Error('Narrative generation timeout')), 30000)
         );
         narrative = await Promise.race([
-          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true),
+          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true, settings),
           timeoutPromise
         ]);
       } catch (genError) {
