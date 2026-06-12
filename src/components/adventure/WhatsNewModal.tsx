@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Gift, Zap, Bug, Star } from 'lucide-react';
+import { X, Sparkles, Gift, Zap, Bug, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { APP_STAGE, APP_VERSION, BUILD_NUMBER } from '@/lib/version';
@@ -36,6 +36,7 @@ export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [changelog, setChangelog] = useState<ChangelogEntry[]>(CHANGELOG);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,10 +98,16 @@ export function WhatsNewModal() {
 
   const handleClose = () => {
     setIsOpen(false);
+    setCurrentIndex(0);
   };
 
-  const currentChangelog = changelog[0] ?? CHANGELOG[0];
+  const goNext = () => setCurrentIndex((i) => Math.max(0, i - 1));
+  const goPrev = () => setCurrentIndex((i) => Math.min(changelog.length - 1, i + 1));
+
+  const currentChangelog = changelog[currentIndex] ?? CHANGELOG[0];
   const displayVersion = `v${currentChangelog.version}-${APP_STAGE}`;
+  const canGoPrev = currentIndex < changelog.length - 1;
+  const canGoNext = currentIndex > 0;
 
   return (
     <AnimatePresence>
@@ -143,78 +150,112 @@ export function WhatsNewModal() {
                 </div>
               </div>
 
-              <h3 className="text-lg font-semibold text-primary mt-3">
-                {currentChangelog.title}
-              </h3>
-              <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
+              <div className="flex items-center justify-between mt-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-primary">
+                    {currentChangelog.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                    className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Newer patch notes"
+                  >
+                    <ChevronUp className="w-5 h-5 text-primary" />
+                  </button>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {currentIndex + 1} / {changelog.length}
+                  </span>
+                  <button
+                    onClick={goPrev}
+                    disabled={!canGoPrev}
+                    className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Older patch notes"
+                  >
+                    <ChevronDown className="w-5 h-5 text-primary" />
+                  </button>
+                </div>
+              </div>
             </div>
 
             <ScrollArea key={refreshKey} className="max-h-[50vh]">
-              <div className="p-6 space-y-5">
-                {currentChangelog.highlights.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="w-4 h-4 text-amber-400" />
-                      <span className="text-sm font-semibold text-amber-400">Highlights</span>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentChangelog.version}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-6 space-y-5"
+                >
+                  {currentChangelog.highlights.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 text-amber-400" />
+                        <span className="text-sm font-semibold text-amber-400">Highlights</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.highlights.map((item, i) => (
+                          <li key={i} className="text-sm text-foreground/90 pl-4 border-l-2 border-amber-400/50">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.highlights.map((item, i) => (
-                        <li key={i} className="text-sm text-foreground/90 pl-4 border-l-2 border-amber-400/50">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.features.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-4 h-4 text-green-400" />
-                      <span className="text-sm font-semibold text-green-400">New Features</span>
+                  {currentChangelog.features.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Gift className="w-4 h-4 text-green-400" />
+                        <span className="text-sm font-semibold text-green-400">New Features</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.features.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-green-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.features.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-green-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.improvements.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm font-semibold text-blue-400">Improvements</span>
+                  {currentChangelog.improvements.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Zap className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-semibold text-blue-400">Improvements</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.improvements.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.improvements.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-blue-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  )}
 
-                {currentChangelog.fixes.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bug className="w-4 h-4 text-orange-400" />
-                      <span className="text-sm font-semibold text-orange-400">Bug Fixes</span>
+                  {currentChangelog.fixes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bug className="w-4 h-4 text-orange-400" />
+                        <span className="text-sm font-semibold text-orange-400">Bug Fixes</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {currentChangelog.fixes.map((item, i) => (
+                          <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-400/30">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-1.5">
-                      {currentChangelog.fixes.map((item, i) => (
-                        <li key={i} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-400/30">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </ScrollArea>
 
             <div className="p-4 border-t border-border/50 bg-muted/20">
