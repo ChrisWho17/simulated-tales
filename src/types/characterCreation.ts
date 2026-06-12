@@ -7,6 +7,8 @@ export type Gender = 'male' | 'female' | 'other';
 export interface SimpleAppearance {
   gender: Gender;
   height: 'very short' | 'short' | 'average' | 'tall' | 'very tall';
+  /** Optional exact height in centimeters. When set, overrides the bracket for display, imagery, and narration. */
+  customHeightCm?: number;
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
   /** Optional approximate weight in kg (stored canonically as kg). */
   weightKg?: number;
