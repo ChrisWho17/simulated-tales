@@ -451,7 +451,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         name,
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
-        height: appearance.simple?.height || 'average',
+        height: appearance.simple?.customHeightCm ? `${appearance.simple.customHeightCm}cm` : (appearance.simple?.height || 'average'),
         weightKg: appearance.simple?.weightKg,
         skinTone: appearance.detailed?.skinTone || 'medium',
         hairColor: appearance.detailed?.hairColor || 'brown',
