@@ -545,8 +545,23 @@ export function buildPortraitPrompt(
     const bustDesc = cupSizeDescriptions[character.bustSize];
     if (bustDesc) {
       details.push(bustDesc);
+      // Bust scales with WEIGHT only (not height) — and only upward, never smaller.
+      // Heavier characters carry additional bust mass on top of their cup size.
+      if (typeof character.weightKg === 'number' && character.weightKg > 0) {
+        const w = character.weightKg;
+        if (w >= 130) {
+          details.push('bust mass visibly amplified by very heavy body weight — extra soft tissue fullness, fuller side-boob spillover, deeper natural cleavage on top of base cup size (height does NOT affect bust scale)');
+        } else if (w >= 105) {
+          details.push('bust mass amplified by heavy body weight — noticeably fuller and softer than base cup alone, additional cleavage volume (height does NOT affect bust scale)');
+        } else if (w >= 90) {
+          details.push('bust mass slightly amplified by above-average body weight — modestly fuller than base cup, softer fullness (height does NOT affect bust scale)');
+        }
+        // Below ~90kg: NO downscaling — base cup size description is preserved as-is.
+      }
     }
   }
+
+
   
   if (character.hipWidth && character.hipWidth !== 'average') {
     const hipDescriptions: Record<string, string> = {

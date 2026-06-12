@@ -145,7 +145,7 @@ const hairColors = ['black', 'brown', 'blonde', 'red', 'gray', 'white', 'dyed bl
 const hairStyles = ['short', 'long', 'curly', 'straight', 'wavy', 'buzz cut', 'ponytail', 'bun', 'messy', 'slicked back', 'braided', 'mohawk'];
 const eyeColors = ['brown', 'blue', 'green', 'hazel', 'gray'];
 const buildTypes = ['slim', 'athletic', 'average', 'heavyset', 'muscular', 'petite', 'curvy', 'stocky', 'lanky'];
-const heightBands = ['short', 'average', 'average', 'tall', 'very tall']; // weighted toward average
+const heightBands = ['very short', 'short', 'average', 'average', 'average', 'tall', 'tall', 'very tall']; // weighted toward average; very short is rare but possible
 const clothingStyles = ['casual', 'business casual', 'professional', 'streetwear', 'hipster', 'sporty', 'bohemian', 'goth', 'preppy', 'rugged'];
 
 export interface GeneratedAppearance {
@@ -171,7 +171,7 @@ function randomInRange(min: number, max: number): number {
 // Reasonable per-build BMI midpoint, paired with height band to roll a plausible weight.
 function rollWeightKg(heightBand: string, build: string): number {
   const heights: Record<string, [number, number]> = {
-    short: [152, 162], average: [163, 178], tall: [178, 188], 'very tall': [188, 200],
+    'very short': [127, 152], short: [152, 162], average: [163, 178], tall: [178, 188], 'very tall': [188, 200],
   };
   const bmi: Record<string, [number, number]> = {
     slim: [17, 21], athletic: [21, 26], average: [20, 25], heavyset: [28, 38],

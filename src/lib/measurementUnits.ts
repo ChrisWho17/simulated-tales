@@ -19,8 +19,8 @@ export function formatWeight(kg: number, unit: MeasurementUnit = DEFAULT_UNIT): 
 // ---- HEIGHT ----
 // Approximate height bands in cm for each preset (player + NPC).
 export const HEIGHT_BAND_CM: Record<string, [number, number]> = {
-  'very short': [140, 155],
-  short:        [152, 162],
+  'very short': [127, 152],   // 4'2" – 5'0"
+  short:        [152, 162],   // 5'0" – 5'4"
   average:      [163, 178],
   tall:         [178, 188],
   'very tall':  [188, 200],

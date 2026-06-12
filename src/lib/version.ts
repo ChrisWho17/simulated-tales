@@ -5,7 +5,7 @@
 // Declare the build-time constant injected by Vite
 declare const __BUILD_TIME__: string;
 
-export const APP_VERSION = "0.4.6";
+export const APP_VERSION = "0.4.7";
 export const APP_STAGE = "alpha";
 
 // Build timestamp - auto-generated at build/publish time

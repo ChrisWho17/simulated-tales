@@ -6,7 +6,7 @@ export type Gender = 'male' | 'female' | 'other';
 
 export interface SimpleAppearance {
   gender: Gender;
-  height: 'short' | 'average' | 'tall' | 'very tall';
+  height: 'very short' | 'short' | 'average' | 'tall' | 'very tall';
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
   /** Optional approximate weight in kg (stored canonically as kg). */
   weightKg?: number;
@@ -18,6 +18,8 @@ export interface DetailedAppearance {
   skinTone: string;
   hairStyle: string;
   hairColor: string;
+  /** Optional secondary hair color for two-tone / dyed-streak looks. Primary remains hairColor. */
+  hairColorSecondary?: string;
   eyeColor: string;
   faceShape: 'oval' | 'round' | 'square' | 'heart' | 'oblong' | 'diamond';
   distinguishingFeatures: string[];
@@ -59,7 +61,8 @@ export interface TieredAppearance {
 }
 
 export const HEIGHT_OPTIONS = [
-  { value: 'short', label: 'Short', description: 'Under 5\'4"' },
+  { value: 'very short', label: 'Very Short', description: '4\'2" - 5\'0"' },
+  { value: 'short', label: 'Short', description: '5\'0" - 5\'4"' },
   { value: 'average', label: 'Average', description: '5\'4" - 5\'9"' },
   { value: 'tall', label: 'Tall', description: '5\'10" - 6\'2"' },
   { value: 'very tall', label: 'Very Tall', description: 'Over 6\'2"' },
@@ -81,7 +84,7 @@ export const GENDER_OPTIONS = [
 ];
 
 export const SKIN_TONES = ['Porcelain', 'Ivory', 'Fair', 'Light', 'Medium', 'Olive', 'Tan', 'Caramel', 'Brown', 'Dark Brown', 'Ebony', 'Pale Blue', 'Green', 'Purple', 'Gray', 'Silver'];
-export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Short', 'Medium', 'Long', 'Very Long', 'Ponytail', 'Braided', 'Dreadlocks', 'Mohawk', 'Undercut', 'Curly', 'Wavy', 'Afro', 'Bun', 'Spiky', 'Messy'];
+export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Crew Cut', 'Fade', 'Undercut', 'Side Shave', 'Pixie', 'Short', 'Bob', 'Lob', 'Medium', 'Shoulder Length', 'Long', 'Very Long', 'Ponytail', 'High Ponytail', 'Twin Tails', 'Braided', 'Box Braids', 'Cornrows', 'Dreadlocks', 'Mohawk', 'Faux Hawk', 'Curly', 'Wavy', 'Afro', 'Bun', 'Top Knot', 'Half-Up', 'Spiky', 'Slicked Back', 'Pompadour', 'Quiff', 'Messy', 'Hime Cut', 'Bowl Cut'];
 export const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Auburn', 'Red', 'Blonde', 'Platinum Blonde', 'White', 'Gray', 'Blue', 'Purple', 'Pink', 'Green', 'Silver'];
 export const EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray', 'Violet', 'Heterochromia', 'Red', 'Golden', 'Silver'];
 export const FACE_SHAPES = [{ value: 'oval', label: 'Oval' }, { value: 'round', label: 'Round' }, { value: 'square', label: 'Square' }, { value: 'heart', label: 'Heart' }, { value: 'oblong', label: 'Oblong' }, { value: 'diamond', label: 'Diamond' }];
@@ -427,7 +430,10 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
   let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
-    description += `, ${detailed.skinTone} skin, ${detailed.hairStyle} ${detailed.hairColor} hair, ${detailed.eyeColor} eyes`;
+    const hairTwoTone = detailed.hairColorSecondary && detailed.hairColorSecondary !== detailed.hairColor
+      ? `${detailed.hairStyle} two-tone hair (primary ${detailed.hairColor}, secondary ${detailed.hairColorSecondary} streaks/tips/underlayer)`
+      : `${detailed.hairStyle} ${detailed.hairColor} hair`;
+    description += `, ${detailed.skinTone} skin, ${hairTwoTone}, ${detailed.eyeColor} eyes`;
     if (detailed.distinguishingFeatures?.length) description += `, with ${detailed.distinguishingFeatures.join(', ')}`;
     if (detailed.accessories?.length) description += `, wearing ${detailed.accessories.join(', ')}`;
   }
@@ -507,6 +513,11 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   const physicality: string[] = [];
 
   switch (simple.height) {
+    case 'very short':
+      physicality.push(
+        "Very short stature (~4'2\"–5'0\"): exceptionally diminutive, often mistaken for a child or adolescent at a glance; slips through ducts, crawlspaces, dog doors, and child-sized passages with ease; cannot reach standard counters, light switches, or overhead shelves without climbing or stools; horseback, tall ladders, adult-sized armor, and standard car pedals require accommodation; NPCs frequently bend down to speak, condescend, mistake them for a minor, or refuse adult services until proven otherwise."
+      );
+      break;
     case 'short':
       physicality.push(
         "Short stature (under ~5'4\"): fits easily through low tunnels, crawlspaces, vents, child-sized doors, and cramped hideouts that taller people must duck or squeeze through; often overlooked in crowds; struggles to reach high shelves, see over counters, or grapple taller foes head-on; NPCs may underestimate, condescend, mistake them for younger, or move objects out of reach."
