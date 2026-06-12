@@ -341,6 +341,33 @@ export function buildPortraitPrompt(
     petite: 'petite small frame, delicate build',
   };
   const buildDesc = BUILD_DESCRIPTIONS[build] || BUILD_DESCRIPTIONS.athletic;
+
+  // Height descriptor — affects framing, proportions, and full-body silhouette in imagery
+  let heightDesc = '';
+  if (character.height) {
+    const h = String(character.height).toLowerCase().trim();
+    const HEIGHT_DESCRIPTIONS: Record<string, string> = {
+      'very short':  'very short stature, petite small-statured frame, noticeably shorter than average, compact proportions, low eye-line in frame',
+      'very_short':  'very short stature, petite small-statured frame, noticeably shorter than average, compact proportions, low eye-line in frame',
+      'short':       'short stature, below-average height, smaller compact frame, slightly low eye-line',
+      'below average': 'slightly below-average height, modestly short frame',
+      'average':     'average height, normal proportional frame',
+      'medium':      'average height, normal proportional frame',
+      'tall':        'tall stature, above-average height, long limbs, elongated proportions, higher eye-line in frame',
+      'above average': 'above-average height, taller-than-average frame, long limbs',
+      'very tall':   'very tall imposing stature, towering height, very long limbs, dramatically elongated proportions, dominating high eye-line, head near top of frame',
+      'very_tall':   'very tall imposing stature, towering height, very long limbs, dramatically elongated proportions, dominating high eye-line, head near top of frame',
+      'giant':       'gigantic towering height, massive imposing stature, extreme elongated proportions, head dominating top of frame',
+    };
+    if (HEIGHT_DESCRIPTIONS[h]) {
+      heightDesc = HEIGHT_DESCRIPTIONS[h];
+    } else if (/\d/.test(h)) {
+      // Numeric height (e.g. "5'2\"", "180cm") — pass through with framing hint
+      heightDesc = `character height ${character.height}, scale proportions and framing should reflect this stature`;
+    } else {
+      heightDesc = `${character.height} height stature`;
+    }
+  }
   
   const hairColor = character.hairColor || 'brown';
   const hairStyle = character.hairStyle || character.hairLength || 'short';
