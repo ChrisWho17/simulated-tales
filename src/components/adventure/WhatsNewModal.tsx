@@ -150,10 +150,35 @@ export function WhatsNewModal() {
                 </div>
               </div>
 
-              <h3 className="text-lg font-semibold text-primary mt-3">
-                {currentChangelog.title}
-              </h3>
-              <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
+              <div className="flex items-center justify-between mt-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-primary">
+                    {currentChangelog.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">{currentChangelog.date}</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                    className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Newer patch notes"
+                  >
+                    <ChevronUp className="w-5 h-5 text-primary" />
+                  </button>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    {currentIndex + 1} / {changelog.length}
+                  </span>
+                  <button
+                    onClick={goPrev}
+                    disabled={!canGoPrev}
+                    className="p-1 rounded hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Older patch notes"
+                  >
+                    <ChevronDown className="w-5 h-5 text-primary" />
+                  </button>
+                </div>
+              </div>
             </div>
 
             <ScrollArea key={refreshKey} className="max-h-[50vh]">
