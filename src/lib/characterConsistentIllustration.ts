@@ -137,11 +137,26 @@ const ROLE_APPEARANCES: Record<string, string> = {
   mercenary: 'wearing mixed military equipment with no identifying insignia',
 };
 
+const HEIGHT_DESCRIPTIONS: Record<string, string> = {
+  'very short':  'very short petite stature, noticeably shorter than average, compact frame, low eye-line in frame',
+  'very_short':  'very short petite stature, noticeably shorter than average, compact frame, low eye-line in frame',
+  short:         'short below-average stature, smaller compact frame',
+  'below average': 'slightly below-average height',
+  average:       'average height with normal proportions',
+  medium:        'average height with normal proportions',
+  tall:          'tall above-average stature, long limbs, elongated proportions, higher eye-line',
+  'above average': 'above-average height, long limbs',
+  'very tall':   'very tall imposing towering stature, dramatically elongated proportions, head near top of frame',
+  'very_tall':   'very tall imposing towering stature, dramatically elongated proportions, head near top of frame',
+  giant:         'gigantic towering stature, massive imposing height',
+};
+
 export function buildCharacterVisualProfile(characterData: {
   name: string;
   gender: string;
   role: string;
   build?: string;
+  height?: string;
   skinTone?: string;
   hairColor?: string;
   hairStyle?: string;
@@ -167,6 +182,12 @@ export function buildCharacterVisualProfile(characterData: {
   if (details.includes('eyepatch')) modifications.other = 'eye patch over one eye';
   
   const buildDesc = BUILD_DESCRIPTIONS[characterData.build || 'athletic'] || 'athletic build';
+  const heightKey = (characterData.height || '').toLowerCase().trim();
+  const heightDesc = heightKey
+    ? (HEIGHT_DESCRIPTIONS[heightKey] || (/\d/.test(heightKey)
+        ? `character height ${characterData.height}, scale framing to this stature`
+        : `${characterData.height} stature`))
+    : '';
   const skinDesc = SKIN_TONE_DESCRIPTIONS[characterData.skinTone || 'medium'] || 'medium skin tone';
   const hairColorDesc = HAIR_COLOR_DESCRIPTIONS[characterData.hairColor || 'brown'] || 'brown hair';
   const hairStyleDesc = HAIR_STYLE_DESCRIPTIONS[characterData.hairStyle || 'short'] || 'short hair';
@@ -185,6 +206,7 @@ export function buildCharacterVisualProfile(characterData: {
   const fullVisualDescription = [
     genderDesc,
     buildDesc,
+    heightDesc,
     skinDesc,
     `${hairColorDesc} in ${hairStyleDesc}`,
     eyeColorDesc,
@@ -197,7 +219,7 @@ export function buildCharacterVisualProfile(characterData: {
   return {
     name: characterData.name,
     gender: characterData.gender as 'male' | 'female' | 'nonbinary',
-    physicalDescription: { build: buildDesc, skinTone: skinDesc },
+    physicalDescription: { build: buildDesc, height: heightDesc || undefined, skinTone: skinDesc },
     hair: { color: hairColorDesc, style: hairStyleDesc, length: characterData.hairStyle?.includes('long') ? 'long' : 'short' },
     eyes: { color: eyeColorDesc },
     facialFeatures,
