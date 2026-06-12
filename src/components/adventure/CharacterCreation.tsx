@@ -834,9 +834,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       {HEIGHT_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
-                          onClick={() => updateAppearance('simple', 'height', opt.value)}
+                          onClick={() => {
+                            updateAppearance('simple', 'height', opt.value);
+                            // Choosing a bracket clears any custom override
+                            if (appearance.simple.customHeightCm) updateAppearance('simple', 'customHeightCm', undefined);
+                          }}
                           className={`px-3 py-2 rounded-lg text-sm transition-all border ${
-                            appearance.simple.height === opt.value
+                            appearance.simple.height === opt.value && !appearance.simple.customHeightCm
                               ? 'bg-primary/20 border-primary'
                               : 'bg-background/50 border-border/30 hover:border-primary/50'
                           }`}
@@ -849,6 +853,51 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </button>
                       ))}
                     </div>
+
+                    {/* Custom height — overrides the bracket and feeds imagery + narration */}
+                    {(() => {
+                      const unit = appearance.simple.measurementUnit || 'imperial';
+                      const hasCustom = typeof appearance.simple.customHeightCm === 'number';
+                      const currentCm = appearance.simple.customHeightCm ?? 170;
+                      const display = formatHeight(currentCm, unit);
+                      const band = classifyHeightCm(currentCm);
+                      return (
+                        <div className="mt-3 pt-3 border-t border-border/20 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={hasCustom}
+                                onChange={(e) => updateAppearance('simple', 'customHeightCm', e.target.checked ? currentCm : undefined)}
+                                className="rounded"
+                              />
+                              Use custom height (outside the brackets)
+                            </label>
+                            {hasCustom && (
+                              <span className="text-xs font-medium text-foreground">{display}</span>
+                            )}
+                          </div>
+                          {hasCustom && (
+                            <>
+                              <input
+                                type="range"
+                                min={CUSTOM_HEIGHT_MIN_CM}
+                                max={CUSTOM_HEIGHT_MAX_CM}
+                                step={1}
+                                value={currentCm}
+                                onChange={(e) => updateAppearance('simple', 'customHeightCm', Number(e.target.value))}
+                                className="w-full accent-primary"
+                              />
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span>{formatHeight(CUSTOM_HEIGHT_MIN_CM, unit)}</span>
+                                <span>Treated as <strong className="text-foreground">{band}</strong> for physicality &amp; NPC reactions</span>
+                                <span>{formatHeight(CUSTOM_HEIGHT_MAX_CM, unit)}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div>
