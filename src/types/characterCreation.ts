@@ -496,6 +496,72 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
     }
     if (full.intimateDetails) description += `. ${full.intimateDetails}`;
   }
+
+  // ===== PHYSICALITY AWARENESS (for AI + NPC reactivity) =====
+  // Tell the narrator how the character's size/build should affect the world
+  // and how NPCs perceive and react to them. Applied at every detail level.
+  const physicality: string[] = [];
+
+  switch (simple.height) {
+    case 'short':
+      physicality.push(
+        "Short stature (under ~5'4\"): fits easily through low tunnels, crawlspaces, vents, child-sized doors, and cramped hideouts that taller people must duck or squeeze through; often overlooked in crowds; struggles to reach high shelves, see over counters, or grapple taller foes head-on; NPCs may underestimate, condescend, mistake them for younger, or move objects out of reach."
+      );
+      break;
+    case 'tall':
+      physicality.push(
+        "Tall stature (~5'10\"–6'2\"): commanding presence, easy line of sight over crowds, longer reach in melee; must duck through low doorways, awkward in compact vehicles and cramped quarters; NPCs read them as authoritative or intimidating on first glance."
+      );
+      break;
+    case 'very tall':
+      physicality.push(
+        "Very tall stature (over 6'2\"): physically dominates a room, intimidating without trying; CANNOT comfortably enter cramped tunnels, low attics, child-sized passages, small vehicles, or coffin-sized hiding spots without stooping, crawling, or getting stuck; bumps head on standard fixtures; immediately memorable to witnesses and hard to disguise; NPCs stare, give wider berth, or feel threatened."
+      );
+      break;
+    case 'average':
+    default:
+      physicality.push(
+        "Average stature: fits standard human-built spaces without special accommodation; blends into crowds; NPCs treat them as unremarkable in size."
+      );
+      break;
+  }
+
+  switch (simple.build) {
+    case 'slim':
+      physicality.push(
+        "Slim build: nimble and quick, slips through narrow gaps, climbs and balances well, fast on their feet; tires faster in raw strength contests and hits lighter in melee; NPCs may read as fragile, non-threatening, or easy to push around."
+      );
+      break;
+    case 'athletic':
+      physicality.push(
+        "Athletic build: balanced stamina, strength, and agility; NPCs read as capable and healthy without being intimidating."
+      );
+      break;
+    case 'muscular':
+      physicality.push(
+        "Muscular build: visibly strong, hits hard, can force doors and carry heavy loads; doesn't fit through tight gaps as cleanly as slimmer builds; NPCs treat them as a physical threat and defer in confrontations."
+      );
+      break;
+    case 'heavyset':
+      physicality.push(
+        "Heavyset build: heavy and solidly grounded — hard to knock down or shove, strong grappler, can absorb hits; SLOWER in sprints and long chases, struggles with narrow alleys, tight squeezes, ladders, climbing, and prolonged stealth; NPCs may underestimate stamina or unfairly judge based on size."
+      );
+      break;
+    case 'curvy':
+      physicality.push(
+        "Curvy build: pronounced silhouette draws attention in any room; NPCs notice immediately, react with attraction, jealousy, or judgment depending on culture; harder to move unnoticed; certain fitted clothing and tight passages don't accommodate the figure cleanly."
+      );
+      break;
+    case 'average':
+    default:
+      physicality.push(
+        "Average build: unremarkable physical presence; no special advantages or limitations in tight spaces or physical contests."
+      );
+      break;
+  }
+
+  description += `\n\nPHYSICALITY AWARENESS (apply continuously in narration and NPC reactions): ${physicality.join(' ')} The narrator MUST respect these physical realities when describing environments, action outcomes, stealth, combat reach, and first impressions, and NPCs MUST react to the character's size and build in a way consistent with their own personality and culture.`;
+
   return description;
 }
 
