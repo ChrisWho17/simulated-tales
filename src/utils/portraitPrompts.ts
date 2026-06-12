@@ -480,27 +480,27 @@ export function buildPortraitPrompt(
   // Cup size to realistic portrait description mapping
   if (character.bustSize) {
     const cupSizeDescriptions: Record<string, string> = {
-      // Scale amplified ~1.15x per tier so A→H+ reads as a visible silhouette change in portraits
-      'AA':         'completely flat chest, no breast tissue, totally androgynous torso silhouette',
-      'A':          'very small A-cup breasts, barely-there mounds, narrow upper-body silhouette, almost flat',
-      'B':          'small but clearly defined B-cup breasts, soft palm-sized mounds, gentle slope, modest curve in profile',
-      'C':          'noticeably rounded C-cup breasts, full handful, balanced feminine curve, visible cleavage in fitted tops',
-      'D':          'full D-cup breasts, prominent rounded mounds, obvious cleavage and side-swell, curvy silhouette',
-      'DD':         'large DD/E-cup breasts, heavy weight visible, deep cleavage line, pronounced bust projection forward',
-      'E':          'very large E-cup breasts, heavy and rounded, deep cleavage canyon, strong forward bust projection, voluptuous',
-      'F':          'huge F-cup breasts, dramatic heaviness, breasts visibly rest on ribcage, deep cleavage, very voluptuous figure',
-      'G':          'enormous G-cup breasts, massive rounded volume dominating the upper body, dramatic cleavage, ultra-curvy silhouette',
-      'H':          'gigantic H-cup breasts, exaggerated bombshell volume, breasts spill outward and downward, extremely voluptuous, deep heavy cleavage',
-      'I':          'colossal I-cup breasts, exaggerated cartoon-bombshell scale, breasts visibly strain any clothing, towering forward projection',
-      'J':          'titanic J-cup breasts, extreme fantasy bust scale, breasts wider than ribcage, dramatic gravity-defying weight',
-      'K':          'maximum K+ cup breasts, hyper-exaggerated bust, breasts engulf the chest area, extreme dramatic volume dominating the silhouette',
-      // Legacy mappings for backwards compatibility (kept in sync with new scaling)
+      // Rebalanced: A→C reads small→normal, D-E big, F+ massive
+      'AA':         'completely flat chest, no breast tissue, androgynous torso silhouette',
+      'A':          'very small A-cup breasts, barely-there mounds, almost flat profile',
+      'B':          'small B-cup breasts, soft palm-sized mounds, subtle gentle curve',
+      'C':          'modest C-cup breasts, normal everyday handful, soft natural curve, light cleavage in fitted tops',
+      'D':          'big D-cup breasts, full rounded mounds, clear obvious cleavage, distinctly curvy silhouette',
+      'DD':         'big DD-cup breasts, heavy rounded weight, deep cleavage line, strong forward bust projection',
+      'E':          'big E-cup breasts, heavy and voluptuous, deep cleavage canyon, pronounced forward bust',
+      'F':          'massive F-cup breasts, dramatic heaviness, breasts visibly rest on ribcage, very deep cleavage, hugely voluptuous figure',
+      'G':          'massive G-cup breasts, enormous rounded volume dominating the upper body, dramatic cleavage, ultra-curvy silhouette',
+      'H':          'massive H-cup breasts, gigantic bombshell volume spilling outward and downward, extremely voluptuous, deep heavy cleavage',
+      'I':          'massive I-cup breasts, colossal cartoon-bombshell scale, breasts visibly strain any clothing, towering forward projection',
+      'J':          'massive J-cup breasts, titanic fantasy bust scale, breasts wider than ribcage, dramatic gravity-defying weight',
+      'K':          'massive K+ cup breasts, hyper-exaggerated bust engulfing the chest area, extreme dramatic volume dominating the silhouette',
+      // Legacy mappings for backwards compatibility
       'flat':        'completely flat chest, no breast tissue, androgynous silhouette',
-      'small':       'small but clearly defined breasts, palm-sized soft mounds, modest curve',
-      'medium':      'noticeably rounded average breasts, full handful, visible cleavage in fitted tops',
-      'large':       'large heavy breasts, prominent rounded mounds, deep cleavage, curvy silhouette',
-      'very large':  'huge breasts, dramatic heaviness, breasts visibly rest on ribcage, deep cleavage, voluptuous',
-      'very_large':  'huge breasts, dramatic heaviness, breasts visibly rest on ribcage, deep cleavage, voluptuous',
+      'small':       'small breasts, soft palm-sized mounds, subtle curve',
+      'medium':      'modest average breasts, normal handful, light cleavage in fitted tops',
+      'large':       'big breasts, full rounded mounds, deep cleavage, curvy silhouette',
+      'very large':  'massive breasts, dramatic heaviness, breasts visibly rest on ribcage, very deep cleavage, hugely voluptuous',
+      'very_large':  'massive breasts, dramatic heaviness, breasts visibly rest on ribcage, very deep cleavage, hugely voluptuous',
     };
     const bustDesc = cupSizeDescriptions[character.bustSize];
     if (bustDesc) {
