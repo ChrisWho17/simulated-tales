@@ -513,6 +513,11 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   const physicality: string[] = [];
 
   switch (simple.height) {
+    case 'very short':
+      physicality.push(
+        "Very short stature (~4'2\"–5'0\"): exceptionally diminutive, often mistaken for a child or adolescent at a glance; slips through ducts, crawlspaces, dog doors, and child-sized passages with ease; cannot reach standard counters, light switches, or overhead shelves without climbing or stools; horseback, tall ladders, adult-sized armor, and standard car pedals require accommodation; NPCs frequently bend down to speak, condescend, mistake them for a minor, or refuse adult services until proven otherwise."
+      );
+      break;
     case 'short':
       physicality.push(
         "Short stature (under ~5'4\"): fits easily through low tunnels, crawlspaces, vents, child-sized doors, and cramped hideouts that taller people must duck or squeeze through; often overlooked in crowds; struggles to reach high shelves, see over counters, or grapple taller foes head-on; NPCs may underestimate, condescend, mistake them for younger, or move objects out of reach."
