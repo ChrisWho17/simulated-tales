@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatHeight, formatWeight, HEIGHT_BAND_CM, type MeasurementUnit } from '@/lib/measurementUnits';
 import { 
   loadPlayerPortraitReference, 
   buildGameplayPortraitPrompt,
