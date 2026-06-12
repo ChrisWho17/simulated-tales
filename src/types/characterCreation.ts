@@ -6,7 +6,7 @@ export type Gender = 'male' | 'female' | 'other';
 
 export interface SimpleAppearance {
   gender: Gender;
-  height: 'short' | 'average' | 'tall' | 'very tall';
+  height: 'very short' | 'short' | 'average' | 'tall' | 'very tall';
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
   /** Optional approximate weight in kg (stored canonically as kg). */
   weightKg?: number;
