@@ -60,7 +60,7 @@ const SCENARIOS: Step[] = [
 
   // 21-25: knowledge / reputation / relationships
   { label: 'revelation -> suspicious', trigger: { kind: 'revelation' }, expect: 'suspicious' },
-  { label: 'trust dropped sharply',    trigger: { kind: 'trust_changed', delta: -50 }, expect: 'unchanged' /* same mood, refresh */ },
+  { label: 'trust dropped sharply',    trigger: { kind: 'trust_changed', delta: -50 }, expect: 'suspicious' /* refresh */ },
   { label: 'relationship damaged',     trigger: { kind: 'relationship_changed', delta: -30 }, ticks: 8, expect: 'sad' },
   { label: 'reputation rose',          trigger: { kind: 'reputation_changed', delta: 15 }, ticks: 8, expect: 'determined' },
   { label: 'compliment after grind',   trigger: { kind: 'compliment' }, ticks: 8, expect: 'happy' },
