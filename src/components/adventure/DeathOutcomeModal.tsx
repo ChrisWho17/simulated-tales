@@ -1,7 +1,7 @@
 // Death Outcome Modal — fires when player HP hits 0.
 // Offers: roll for revival, cheat resurrection, or flatline (campaign ends with a life overview).
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
