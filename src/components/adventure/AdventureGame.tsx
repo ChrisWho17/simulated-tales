@@ -7,6 +7,8 @@ import { useCampaignSync } from '@/hooks/useCampaignSync';
 import { usePlayerStateSync } from '@/hooks/usePlayerStateSync';
 import { useSceneIllustration } from '@/hooks/useSceneIllustration';
 import { useNarrativeGeneration } from '@/hooks/useNarrativeGeneration';
+import { useAutoMood } from '@/hooks/useAutoMood';
+
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
 import { AdventureDisplay } from './AdventureDisplay';
@@ -742,6 +744,41 @@ export function AdventureGame() {
       toast.success(`Mood changed to ${mood}`);
     }
   }, [currentMood, campaignMemory]);
+
+  // === AUTO-MOOD ENGINE ===
+  // When manualMoodControl is OFF and the mood system is enabled, listen to
+  // EventBus events + new narrative text and adjust mood automatically.
+  const moodIntensityRef = useRef<number>(0.5);
+  const applyAutoMood = useCallback((snap: { mood: CoreMoodType; intensity: number; reason: string; trigger: string }) => {
+    moodIntensityRef.current = snap.intensity;
+    setCurrentMood((prev) => {
+      if (prev === snap.mood) return prev;
+      setMoodHistory((h) => [...h.slice(-19), {
+        mood: snap.mood,
+        timestamp: Date.now(),
+        chapter: campaignMemory?.campaign.currentTick || 1,
+        trigger: `auto:${snap.trigger}`,
+      }]);
+      return snap.mood;
+    });
+  }, [campaignMemory]);
+
+  const storyTail = useMemo(() => {
+    if (!story || story.length === 0) return null;
+    const last = story[story.length - 1];
+    return { id: last.id, role: last.role, content: last.content };
+  }, [story]);
+
+  useAutoMood({
+    enabled: !!settings.enableMoodSystem,
+    manual: !!settings.manualMoodControl,
+    currentMood,
+    currentIntensity: moodIntensityRef.current,
+    currentTick: campaignMemory?.campaign.currentTick ?? 0,
+    storyTail,
+    apply: applyAutoMood,
+  });
+
 
   // Quick initial loading - just apply color theme
   useEffect(() => {
