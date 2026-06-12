@@ -16,6 +16,8 @@ export interface PlayerPortraitReference {
   gender: string;
   build: string;
   height: string;
+  /** Optional exact height (cm) when player used the custom-height override. */
+  customHeightCm?: number;
   /** Optional approximate weight in kg, used for body-mass framing in imagery. */
   weightKg?: number;
   skinTone: string;
