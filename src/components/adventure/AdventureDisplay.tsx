@@ -803,6 +803,16 @@ export function AdventureDisplay({
         variant: "destructive",
         duration: 3000,
       });
+
+      // === DEATH CHECK: HP hit 0 → open Death Outcome modal (one-shot) ===
+      if (updatedCharacter.currentHealth <= 0 && !deathHandledRef.current) {
+        deathHandledRef.current = true;
+        const lastNarrator = [...story].reverse().find(e => e.role === 'narrator')?.content || '';
+        // Take the last 1-2 sentences of the narrator's prose as "cause of death"
+        const sentences = lastNarrator.replace(/\[[A-Z_]+:[^\]]+\]/g, '').trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+        const cause = sentences.slice(-2).join(' ').slice(0, 280) || `Slain — ${pendingMechanics.damage} damage taken with no health remaining.`;
+        setDeathState({ open: true, cause });
+      }
     }
 
     // Apply healing
