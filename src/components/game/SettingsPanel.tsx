@@ -12,6 +12,7 @@ import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { SettingsPresetSelector } from './SettingsPresetSelector';
 import { AccessibilitySettingsPanel, useAccessibilityOptional } from '@/components/game/AccessibilitySettings';
 import { StorageManagerPanel } from '@/components/game/StorageManagerPanel';
+import { StoragePipelinePanel } from '@/components/game/StoragePipelinePanel';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
@@ -1221,7 +1222,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           
           {/* Storage Tab */}
           {activeTab === 'storage' && (
-            <StorageManagerPanel />
+            <div className="space-y-6">
+              <StoragePipelinePanel />
+              <StorageManagerPanel />
+            </div>
           )}
           
           {/* Tutorial Tab - Commands & Tips */}
