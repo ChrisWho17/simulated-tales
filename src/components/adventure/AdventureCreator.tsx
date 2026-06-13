@@ -3,7 +3,7 @@ import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload, Crosshair } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload, Crosshair, ArrowRight } from 'lucide-react';
 import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
 import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
