@@ -88,7 +88,7 @@ export function getStorageStats(): StorageStats {
     
     // Estimate quota (most browsers are 5-10MB)
     // We'll use a conservative 5MB estimate
-    const estimatedQuota = 5 * 1024 * 1024; // 5MB in bytes
+    const estimatedQuota = 10 * 1024 * 1024; // 10MB - realistic browser quota
     const usedBytes = totalSize * 2; // UTF-16 encoding
     const percentage = usedBytes / estimatedQuota;
     
