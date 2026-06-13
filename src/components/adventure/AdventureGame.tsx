@@ -186,7 +186,7 @@ import {
 
 import { GameMechanics } from './types';
 
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'narrator' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'ruleset' | 'narrator' | 'playing';
 
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
