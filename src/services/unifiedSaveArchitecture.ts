@@ -10,6 +10,7 @@ import { normalizeCampaign } from '@/lib/saveSchemaManager';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { toast } from 'sonner';
 import LZString from 'lz-string';
+import { initBigKV, getBig, setBig, delBig } from '@/lib/bigKVStore';
 
 // ============================================================================
 // TYPES
@@ -189,6 +190,10 @@ class UnifiedSaveArchitectureClass {
     if (this.initialized) return;
     
     console.log('[UnifiedSave] Initializing...');
+    
+    // Initialize IndexedDB-backed BigKV store and migrate any legacy
+    // large localStorage entries (campaigns, WAL) into IDB to free quota.
+    await initBigKV();
     
     // Recover any uncommitted transactions from WAL
     const recovery = await TransactionManager.recoverFromWAL();
@@ -585,7 +590,7 @@ class UnifiedSaveArchitectureClass {
   
   private loadLocalCampaign(campaignId: string): CampaignData | null {
     try {
-      const raw = localStorage.getItem(`lwe_campaign_${campaignId}`);
+      const raw = getBig(`lwe_campaign_${campaignId}`);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       
@@ -600,9 +605,9 @@ class UnifiedSaveArchitectureClass {
   async deleteCampaign(campaignId: string): Promise<boolean> {
     try {
       // Delete locally
-      localStorage.removeItem(`lwe_campaign_${campaignId}`);
-      localStorage.removeItem(`lwe_inventory_${campaignId}`);
-      localStorage.removeItem(`lwe_gamestate_${campaignId}`);
+      delBig(`lwe_campaign_${campaignId}`);
+      delBig(`lwe_inventory_${campaignId}`);
+      delBig(`lwe_gamestate_${campaignId}`);
       
       // Update index
       const index = this.loadCampaignIndex();
