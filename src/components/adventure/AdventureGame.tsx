@@ -1274,20 +1274,27 @@ export function AdventureGame() {
 
 
   // Step 3: Narrator settings confirmed -> start game
-  const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
+  const handleNarratorConfirm = useCallback(async (incomingSettings: DirectorSettings) => {
     const char = pendingCharacter;
     if (!char || !scenarioSelection) {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
       return;
     }
-    
+
+    // Merge player-authored Story Ruleset into director settings so every narrator turn honors it
+    const settings: DirectorSettings = {
+      ...incomingSettings,
+      storyRuleset: pendingStoryRuleset || incomingSettings.storyRuleset || '',
+    };
+
     // Store the director settings (both local state and shared gameSettings so subsequent
     // turns pick them up via settings.directorSettings even if local closures are stale)
     setDirectorSettings(settings);
     try { updateSettings({ directorSettings: settings } as any); } catch (e) { console.warn('[AdventureGame] updateSettings(director) failed', e); }
-    
-    // Clear pending character
+
+    // Clear pending character + ruleset
     setPendingCharacter(null);
+    setPendingStoryRuleset('');
     
     // CRITICAL: Set character and transition to playing phase immediately
     setCharacter(char);
