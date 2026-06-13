@@ -824,6 +824,14 @@ export function CharacterSheet({
           onClose={() => setShowStats(false)} 
         />
       )}
+
+      {/* Narrator Settings Modal — opened on-demand from the Character Sheet */}
+      <NarratorSettingsModal
+        open={showNarratorSettings}
+        onClose={() => setShowNarratorSettings(false)}
+        onConfirm={handleNarratorConfirm}
+        initialSettings={currentDirector}
+      />
     </>
   );
 }
