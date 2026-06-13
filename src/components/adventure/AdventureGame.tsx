@@ -1420,7 +1420,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+  }, [pendingCharacter, pendingStoryRuleset, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
 
   // Handler for skipping narrator settings
   const handleNarratorSkip = useCallback(() => {
