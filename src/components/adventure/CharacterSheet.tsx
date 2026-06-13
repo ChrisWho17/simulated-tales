@@ -517,9 +517,21 @@ export function CharacterSheet({
                 Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNarratorSettings(true)}
+                className="gap-1.5 text-xs"
+                title={`Narrator: ${directorLabel}`}
+              >
+                <Clapperboard className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Narrator</span>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Scrollable Content */}
