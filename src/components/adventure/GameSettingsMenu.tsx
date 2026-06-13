@@ -95,7 +95,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("w-full max-w-full min-w-0", className)}>
       <CollapsibleTrigger asChild>
         <Button
           variant="outline"
