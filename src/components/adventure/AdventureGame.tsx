@@ -1418,6 +1418,21 @@ export function AdventureGame() {
     handleNarratorConfirm(DEFAULT_DIRECTOR_SETTINGS);
   }, [handleNarratorConfirm]);
 
+  // Step 2.5: Story Ruleset confirmed -> start game with current/default narrator settings.
+  // Narrator settings are now opened on-demand from the Character Sheet (no forced step).
+  const handleRulesetConfirm = useCallback((ruleset: string) => {
+    setPendingStoryRuleset(ruleset || '');
+    const existing = (settings.directorSettings as DirectorSettings | undefined) || directorSettings || DEFAULT_DIRECTOR_SETTINGS;
+    const merged: DirectorSettings = { ...existing, storyRuleset: (ruleset || '').trim() || existing.storyRuleset || '' };
+    console.log(`[AdventureGame] Story Ruleset confirmed (${(ruleset || '').length} chars), starting story with current narrator settings`);
+    handleNarratorConfirm(merged);
+  }, [settings.directorSettings, directorSettings, handleNarratorConfirm]);
+
+  const handleRulesetBack = useCallback(() => {
+    setPendingStoryRuleset('');
+    setPhase('character');
+  }, []);
+
 
 
   // Back to scenario selection
