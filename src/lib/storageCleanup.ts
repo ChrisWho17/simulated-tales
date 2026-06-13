@@ -104,7 +104,7 @@ export function getStorageStats(): StorageStats {
     console.error('[StorageCleanup] Failed to get stats:', e);
     return {
       used: 0,
-      quota: 5 * 1024 * 1024,
+      quota: 10 * 1024 * 1024,
       percentage: 0,
       itemCount: 0,
       isWarning: false,
