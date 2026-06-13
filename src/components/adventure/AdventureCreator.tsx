@@ -609,11 +609,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     return allGenres.filter(g => !selectedIds.includes(g.id));
   }, [allGenres, primaryGenre, secondaryGenres]);
 
-  // Parse genre tags from custom scenario text
-  const parsedGenreTags = useMemo(() => {
-    if (!customScenario.trim() || hardLock) return [];
-    return parseGenreTagsFromText(customScenario, primaryGenre);
-  }, [customScenario, primaryGenre, hardLock]);
 
   // Secondary genres are manually selected only
   const effectiveSecondaryGenres = useMemo(() => {
@@ -1012,47 +1007,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
             </div>
           </div>
 
-          {/* Custom Scenario - Glass Panel */}
-          <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-            <h2 className="text-primary font-display text-xl tracking-wide mb-4">Create Your Own Story</h2>
-            
-            <div className="flex gap-3">
-              <Input
-                value={customScenario}
-                onChange={(e) => setCustomScenario(e.target.value)}
-                placeholder="Describe your scenario... (try '+horror 25%' or '+war 20% +mystery 15%' - up to 50% across 3 genres)"
-                className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
-                onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
-                disabled={isLoading}
-              />
-              <Button 
-                onClick={handleCustomStart}
-                disabled={!customScenario.trim() || isLoading}
-                variant="default"
-                size="lg"
-              >
-                Begin
-              </Button>
-            </div>
-
-            {/* Parsed genre tags indicator */}
-            {parsedGenreTags.length > 0 && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Detected genres:</span>
-                {parsedGenreTags.map((tag) => (
-                  <span 
-                    key={tag.genre} 
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30"
-                  >
-                    <span>{GENRE_ICONS[tag.genre]}</span>
-                    <span>{tag.name}</span>
-                    <span className="text-muted-foreground">({tag.blendStrength}%)</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {/* Quick Start - use genre contract without custom scenario */}
             <div className="mt-4 flex items-center gap-3">
               <div className="flex-1 h-px bg-border/30" />
               <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
@@ -1083,31 +1037,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
               Quick Start as {availableClasses.find(c => c.id === selectedClass)?.name || 'Adventurer'}
               {secondaryGenres.length > 0 && ` + ${secondaryGenres.length} blend${secondaryGenres.length > 1 ? 's' : ''}`}
             </Button>
-
-            {/* Role Preview */}
-            {customScenario.trim() && (
-              <div className="mt-3 p-3 rounded-lg bg-background/30 border border-border/30">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Available roles for {activeGenreData.name}
-                  {primaryGenre === 'war' && ` (${detectedWarEra} era detected)`}:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {activeGenreData.classes.slice(0, 6).map((cls) => (
-                    <span 
-                      key={cls.id}
-                      className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary border border-primary/20"
-                    >
-                      {cls.name}
-                    </span>
-                  ))}
-                  {activeGenreData.classes.length > 6 && (
-                    <span className="px-2 py-0.5 text-xs text-muted-foreground">
-                      +{activeGenreData.classes.length - 6} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Divider */}
