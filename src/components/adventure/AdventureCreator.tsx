@@ -3,7 +3,7 @@ import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload, Crosshair } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload, Crosshair, ArrowRight } from 'lucide-react';
 import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
 import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
@@ -706,6 +706,23 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     });
   };
 
+  const handleContinueWithGenre = () => {
+    saveDiceMode(selectedDiceMode);
+    const title = getGenreTitle(primaryGenre);
+    onSelect({
+      scenario: '',
+      genre: primaryGenre,
+      genreTitle: title,
+      diceMode: selectedDiceMode,
+      genreContract: {
+        primaryGenre,
+        secondaryGenres: effectiveSecondaryGenres,
+        hardLock,
+      },
+      characterClass: selectedClass,
+    });
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Color Splash Screen */}
@@ -1005,6 +1022,17 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 </div>
               )}
             </div>
+
+            {/* Continue button — proceed to character creation with selected genre */}
+            <Button
+              onClick={handleContinueWithGenre}
+              disabled={isLoading}
+              className="w-full mt-6"
+              size="lg"
+            >
+              Continue with {allGenres.find(g => g.id === primaryGenre)?.name || 'Selected Genre'}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
 
           {/* Divider */}
