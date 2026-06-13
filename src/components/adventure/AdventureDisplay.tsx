@@ -717,41 +717,46 @@ export function AdventureDisplay({
     });
   }, [onLoadSave, toast]);
 
-  // Auto-save every 5 minutes when enabled
+  // Auto-save every 5 minutes when enabled.
+  // PERF: refs let the interval read the latest story/character/campaignMemory
+  // without re-subscribing every turn (previously caused multi-second hitches
+  // after long sessions because setInterval was torn down and rebuilt on each
+  // narrative entry, accumulating GC pressure and main-thread blocks).
+  const autoSaveStoryRef = useRef(story);
+  const autoSaveCharacterRef = useRef(character);
+  const autoSaveCampaignMemRef = useRef(gameContext?.campaignMemory);
+  useEffect(() => { autoSaveStoryRef.current = story; }, [story]);
+  useEffect(() => { autoSaveCharacterRef.current = character; }, [character]);
+  useEffect(() => { autoSaveCampaignMemRef.current = gameContext?.campaignMemory; }, [gameContext?.campaignMemory]);
+
   useEffect(() => {
     const autoSaveEnabled = gameContext?.settings?.autoSave ?? true;
-    
     if (!autoSaveEnabled || !character?.name) return;
-    
+
     const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-    
+
     const performAutoSave = () => {
+      const charSnap = autoSaveCharacterRef.current;
+      if (!charSnap?.name) return;
       const gameState = {
-        story,
-        character,
-        timestamp: Date.now()
+        story: autoSaveStoryRef.current,
+        character: charSnap,
+        timestamp: Date.now(),
       };
-      
-      // Include campaign memory in auto-save
-      const campaignMem = gameContext?.campaignMemory ?? undefined;
-      saveGame(character.name, gameState, true, campaignMem);
-      
-      // Subtle toast notification for auto-save
-      toast({
-        title: "Progress saved",
-        description: `${character.name}'s adventure auto-saved`,
-        duration: 2000,
-      });
-      
-      console.log(`[Auto-Save] ${character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
+      try {
+        saveGame(charSnap.name, gameState, true, autoSaveCampaignMemRef.current ?? undefined);
+        console.log(`[Auto-Save] ${charSnap.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
+      } catch (e) {
+        console.error('[Auto-Save] Failed:', e);
+      }
     };
-    
-    // Set up interval
+
     const intervalId = setInterval(performAutoSave, AUTO_SAVE_INTERVAL);
-    
-    // Cleanup on unmount or when settings change
     return () => clearInterval(intervalId);
-  }, [gameContext?.settings?.autoSave, gameContext?.campaignMemory, character, story, toast]);
+    // Intentionally only depend on the toggle + character identity — story
+    // and campaignMemory are read via refs above to avoid interval churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameContext?.settings?.autoSave, character?.name]);
 
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
