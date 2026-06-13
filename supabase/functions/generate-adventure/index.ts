@@ -286,6 +286,7 @@ interface DirectorContext {
   cruelty: 'soft' | 'honest' | 'brutal';
   weirdness: 'grounded' | 'spicy' | 'unhinged';
   guidance: 'none' | 'light' | 'coach';
+  storyRuleset?: string;
 }
 
 interface AdventureRequest {
