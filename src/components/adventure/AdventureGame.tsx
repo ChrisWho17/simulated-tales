@@ -11,6 +11,7 @@ import { useAutoMood } from '@/hooks/useAutoMood';
 
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
+import { StoryRulesetScreen } from './StoryRulesetScreen';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { NarratorSettingsModal } from './NarratorSettingsModal';
@@ -186,7 +187,7 @@ import {
 
 import { GameMechanics } from './types';
 
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'narrator' | 'playing';
+type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'ruleset' | 'narrator' | 'playing';
 
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
@@ -303,6 +304,7 @@ export function AdventureGame() {
   const playerActionCount = useRef<number>(0);
   // Pending character awaiting narrator settings confirmation
   const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
+  const [pendingStoryRuleset, setPendingStoryRuleset] = useState<string>('');
   
   // First-time wizard state
   const { shouldShow: shouldShowWizard } = useFirstTimeWizard();
@@ -1250,28 +1252,49 @@ export function AdventureGame() {
       console.error('[AdventureGame] handleCharacterComplete called without scenarioSelection');
       return;
     }
-    
-    // Store character temporarily and show narrator settings modal
+
+    // Store character temporarily and show the optional Story Ruleset step
     setPendingCharacter(char);
-    setPhase('narrator');
-    console.log('[AdventureGame] Character created, showing narrator settings');
+    setPendingStoryRuleset('');
+    setPhase('ruleset');
+    console.log('[AdventureGame] Character created, showing Story Ruleset step');
   }, [scenarioSelection]);
 
+  // Step 2.5: Story Ruleset confirmed -> show narrator settings
+  const handleRulesetConfirm = useCallback((ruleset: string) => {
+    setPendingStoryRuleset(ruleset || '');
+    setPhase('narrator');
+    console.log(`[AdventureGame] Story Ruleset confirmed (${ruleset.length} chars), showing narrator settings`);
+  }, []);
+
+  const handleRulesetBack = useCallback(() => {
+    setPendingStoryRuleset('');
+    setPhase('character');
+  }, []);
+
+
   // Step 3: Narrator settings confirmed -> start game
-  const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
+  const handleNarratorConfirm = useCallback(async (incomingSettings: DirectorSettings) => {
     const char = pendingCharacter;
     if (!char || !scenarioSelection) {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
       return;
     }
-    
+
+    // Merge player-authored Story Ruleset into director settings so every narrator turn honors it
+    const settings: DirectorSettings = {
+      ...incomingSettings,
+      storyRuleset: pendingStoryRuleset || incomingSettings.storyRuleset || '',
+    };
+
     // Store the director settings (both local state and shared gameSettings so subsequent
     // turns pick them up via settings.directorSettings even if local closures are stale)
     setDirectorSettings(settings);
     try { updateSettings({ directorSettings: settings } as any); } catch (e) { console.warn('[AdventureGame] updateSettings(director) failed', e); }
-    
-    // Clear pending character
+
+    // Clear pending character + ruleset
     setPendingCharacter(null);
+    setPendingStoryRuleset('');
     
     // CRITICAL: Set character and transition to playing phase immediately
     setCharacter(char);
@@ -1397,7 +1420,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+  }, [pendingCharacter, pendingStoryRuleset, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
 
   // Handler for skipping narrator settings
   const handleNarratorSkip = useCallback(() => {
@@ -2405,6 +2428,18 @@ export function AdventureGame() {
 
   // Phase 2.5: World is loading — show world-load screen with director picker overlaid.
   // Once director is confirmed it starts narrating the opening from there.
+  // Phase 2.25: Optional Story Ruleset — player-authored narrator rules
+  if (phase === 'ruleset' && pendingCharacter && scenarioSelection) {
+    return (
+      <StoryRulesetScreen
+        characterName={pendingCharacter.name}
+        genreLabel={scenarioSelection.genreTitle || scenarioSelection.genre || 'adventure'}
+        onConfirm={handleRulesetConfirm}
+        onBack={handleRulesetBack}
+      />
+    );
+  }
+
   if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
     const genreLabel = scenarioSelection.genreTitle || scenarioSelection.genre || 'your world';
     return (
