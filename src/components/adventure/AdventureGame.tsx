@@ -1252,12 +1252,26 @@ export function AdventureGame() {
       console.error('[AdventureGame] handleCharacterComplete called without scenarioSelection');
       return;
     }
-    
-    // Store character temporarily and show narrator settings modal
+
+    // Store character temporarily and show the optional Story Ruleset step
     setPendingCharacter(char);
-    setPhase('narrator');
-    console.log('[AdventureGame] Character created, showing narrator settings');
+    setPendingStoryRuleset('');
+    setPhase('ruleset');
+    console.log('[AdventureGame] Character created, showing Story Ruleset step');
   }, [scenarioSelection]);
+
+  // Step 2.5: Story Ruleset confirmed -> show narrator settings
+  const handleRulesetConfirm = useCallback((ruleset: string) => {
+    setPendingStoryRuleset(ruleset || '');
+    setPhase('narrator');
+    console.log(`[AdventureGame] Story Ruleset confirmed (${ruleset.length} chars), showing narrator settings`);
+  }, []);
+
+  const handleRulesetBack = useCallback(() => {
+    setPendingStoryRuleset('');
+    setPhase('character');
+  }, []);
+
 
   // Step 3: Narrator settings confirmed -> start game
   const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
