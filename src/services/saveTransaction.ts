@@ -7,6 +7,8 @@ import { CampaignData } from '@/types/campaign';
 import { STORAGE_KEYS, getCampaignKey, getWALKey } from '@/lib/storageKeys';
 import { StateSyncBus } from './stateSyncBus';
 import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
+import { getBig, setBig, delBig } from '@/lib/bigKVStore';
+
 
 // Transaction states
 export type TransactionState = 'pending' | 'committed' | 'rolled_back' | 'failed' | 'verified';
@@ -102,7 +104,7 @@ class SaveTransactionManager {
     };
     
     // Get previous checksum for rollback
-    const existingData = localStorage.getItem(`lwe_campaign_${campaignId}`);
+    const existingData = getBig(`lwe_campaign_${campaignId}`);
     if (existingData) {
       transaction.previousChecksum = await generateChecksum(existingData);
     }
@@ -144,25 +146,21 @@ class SaveTransactionManager {
         throw new Error('Data corruption detected - checksum mismatch');
       }
       
-      // Write to localStorage (atomic) with retry on quota error
+      // Write campaign blob via BigKV (IndexedDB-backed, no quota)
       const key = getCampaignKey(transaction.campaignId);
-      
-      const attemptCommit = () => {
-        localStorage.setItem(key, walEntry.data!);
-      };
-      
+
       try {
-        attemptCommit();
+        setBig(key, walEntry.data!);
       } catch (commitError: any) {
         if (commitError?.name === 'QuotaExceededError') {
           console.warn('[Transaction] Quota exceeded during commit, cleaning up...');
           performCleanup(0.4);
-          attemptCommit(); // Retry after cleanup
+          setBig(key, walEntry.data!); // Retry after cleanup
         } else {
           throw commitError;
         }
       }
-      
+
       // Verify write with full verification
       const verification = await this.verifyWrite(key, transaction.checksum, walEntry.data.length);
       if (!verification.success) {
@@ -219,7 +217,7 @@ class SaveTransactionManager {
     expectedSize: number
   ): Promise<TransactionVerificationResult> {
     try {
-      const written = localStorage.getItem(key);
+      const written = getBig(key);
       
       if (!written) {
         return {
@@ -297,7 +295,7 @@ class SaveTransactionManager {
     checkAndCleanupStorage();
     
     const attemptWrite = () => {
-      const walRaw = localStorage.getItem(WAL_KEY);
+      const walRaw = getBig(WAL_KEY);
       const wal: WriteAheadLogEntry[] = walRaw ? JSON.parse(walRaw) : [];
       
       wal.push(entry);
@@ -307,7 +305,7 @@ class SaveTransactionManager {
         wal.shift();
       }
       
-      localStorage.setItem(WAL_KEY, JSON.stringify(wal));
+      setBig(WAL_KEY, JSON.stringify(wal));
     };
     
     try {
@@ -333,7 +331,7 @@ class SaveTransactionManager {
   
   private async getWALEntry(transactionId: string): Promise<WriteAheadLogEntry | null> {
     try {
-      const walRaw = localStorage.getItem(WAL_KEY);
+      const walRaw = getBig(WAL_KEY);
       if (!walRaw) return null;
       
       const wal: WriteAheadLogEntry[] = JSON.parse(walRaw);
@@ -345,13 +343,13 @@ class SaveTransactionManager {
   
   private async removeFromWAL(transactionId: string): Promise<void> {
     try {
-      const walRaw = localStorage.getItem(WAL_KEY);
+      const walRaw = getBig(WAL_KEY);
       if (!walRaw) return;
       
       const wal: WriteAheadLogEntry[] = JSON.parse(walRaw);
       const filtered = wal.filter(e => e.transactionId !== transactionId);
       
-      localStorage.setItem(WAL_KEY, JSON.stringify(filtered));
+      setBig(WAL_KEY, JSON.stringify(filtered));
     } catch (error) {
       console.error('[WAL] Remove failed:', error);
     }
@@ -365,14 +363,14 @@ class SaveTransactionManager {
     const result = { recovered: 0, failed: 0 };
     
     try {
-      const walRaw = localStorage.getItem(WAL_KEY);
+      const walRaw = getBig(WAL_KEY);
       if (!walRaw) return result;
       
       const wal: WriteAheadLogEntry[] = JSON.parse(walRaw);
       
       for (const entry of wal) {
         // Check if already committed
-        const existingData = localStorage.getItem(`lwe_campaign_${entry.campaignId}`);
+        const existingData = getBig(`lwe_campaign_${entry.campaignId}`);
         if (existingData) {
           const existingChecksum = await generateChecksum(existingData);
           if (existingChecksum === entry.checksum) {
@@ -385,7 +383,7 @@ class SaveTransactionManager {
         // Try to recover uncommitted transaction
         if (entry.data) {
           try {
-            localStorage.setItem(`lwe_campaign_${entry.campaignId}`, entry.data);
+            setBig(`lwe_campaign_${entry.campaignId}`, entry.data);
             await this.removeFromWAL(entry.transactionId);
             result.recovered++;
             console.log(`[WAL] Recovered transaction: ${entry.transactionId}`);

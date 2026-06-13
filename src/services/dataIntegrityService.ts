@@ -6,6 +6,7 @@
 import { CampaignData } from '@/types/campaign';
 import { ComprehensiveBackup, decompressBackup, verifyBackup } from './comprehensiveBackupService';
 import LZString from 'lz-string';
+import { getBig, setBig } from '@/lib/bigKVStore';
 
 // ============================================================================
 // TYPES
@@ -110,7 +111,7 @@ interface BackupCacheEntry {
 
 function loadBackupCache(): Map<string, BackupCacheEntry[]> {
   try {
-    const raw = localStorage.getItem(BACKUP_CACHE_KEY);
+    const raw = getBig(BACKUP_CACHE_KEY);
     if (!raw) return new Map();
     const parsed = JSON.parse(raw) as Array<[string, BackupCacheEntry[]]>;
     return new Map(parsed);
@@ -122,7 +123,7 @@ function loadBackupCache(): Map<string, BackupCacheEntry[]> {
 function saveBackupCache(cache: Map<string, BackupCacheEntry[]>): void {
   try {
     const array = Array.from(cache.entries());
-    localStorage.setItem(BACKUP_CACHE_KEY, JSON.stringify(array));
+    setBig(BACKUP_CACHE_KEY, JSON.stringify(array));
   } catch (error) {
     console.error('[Integrity] Failed to save backup cache:', error);
   }
