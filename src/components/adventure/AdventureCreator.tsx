@@ -1007,38 +1007,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
             </div>
           </div>
 
-            <div className="mt-4 flex items-center gap-3">
-              <div className="flex-1 h-px bg-border/30" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
-              <div className="flex-1 h-px bg-border/30" />
-            </div>
-            <Button
-              onClick={() => {
-                const genreName = allGenres.find(g => g.id === primaryGenre)?.name || primaryGenre;
-                const className = availableClasses.find(c => c.id === selectedClass)?.name || '';
-                const defaultScenario = className && selectedClass !== 'default'
-                  ? `Begin a ${genreName.toLowerCase()} adventure as a ${className.toLowerCase()}.`
-                  : `Begin a ${genreName.toLowerCase()} adventure.`;
-                saveDiceMode(selectedDiceMode);
-                onSelect({
-                  scenario: defaultScenario,
-                  genre: primaryGenre,
-                  genreTitle: getGenreTitle(primaryGenre),
-                  diceMode: selectedDiceMode,
-                  genreContract,
-                  characterClass: selectedClass
-                });
-              }}
-              disabled={isLoading}
-              variant="outline"
-              className="w-full mt-3 bg-background/30 border-primary/30 hover:bg-primary/10"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Quick Start as {availableClasses.find(c => c.id === selectedClass)?.name || 'Adventurer'}
-              {secondaryGenres.length > 0 && ` + ${secondaryGenres.length} blend${secondaryGenres.length > 1 ? 's' : ''}`}
-            </Button>
-          </div>
-
           {/* Divider */}
           <div className="flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
