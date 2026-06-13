@@ -5,8 +5,11 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3, Clapperboard
 } from 'lucide-react';
+import { NarratorSettingsModal } from './NarratorSettingsModal';
+import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings, DIRECTOR_TYPES } from '@/game/directorModeSystem';
+import { StateSyncBus } from '@/services/stateSyncBus';
 import { AchievementPerksToggle, useAchievementStatPerks } from '@/components/game/AchievementStatPerks';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { cn } from '@/lib/utils';
@@ -401,13 +404,27 @@ export function CharacterSheet({
   activeConditions = [],
   hasBloodLoss = false
 }: CharacterSheetProps) {
-  const { settings } = useGame();
+  const { settings, updateSettings } = useGame();
   const campaign = useCampaignOptional();
   const sessionStats = useSessionStatsOptional();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showNarratorSettings, setShowNarratorSettings] = useState(false);
+
+  const currentDirector: DirectorSettings = (settings.directorSettings as DirectorSettings | undefined) || DEFAULT_DIRECTOR_SETTINGS;
+  const directorLabel = !currentDirector.enabled || currentDirector.rawGame
+    ? 'Raw Game'
+    : (DIRECTOR_TYPES[currentDirector.directorType]?.name || 'Director');
+
+  const handleNarratorConfirm = (next: DirectorSettings) => {
+    try { updateSettings({ directorSettings: next } as any); } catch (e) { console.warn('[CharacterSheet] updateSettings(director) failed', e); }
+    try {
+      StateSyncBus.emit('settings:director-updated', { directorSettings: next, source: 'user' });
+    } catch { /* ignore */ }
+    setShowNarratorSettings(false);
+  };
   
   // Achievement stat perks
   const { enabled: perksEnabled, statBonuses: perkBonuses } = useAchievementStatPerks(campaign?.activeCampaign?.id);
@@ -500,9 +517,21 @@ export function CharacterSheet({
                 Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNarratorSettings(true)}
+                className="gap-1.5 text-xs"
+                title={`Narrator: ${directorLabel}`}
+              >
+                <Clapperboard className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Narrator</span>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Scrollable Content */}
@@ -795,6 +824,14 @@ export function CharacterSheet({
           onClose={() => setShowStats(false)} 
         />
       )}
+
+      {/* Narrator Settings Modal — opened on-demand from the Character Sheet */}
+      <NarratorSettingsModal
+        open={showNarratorSettings}
+        onClose={() => setShowNarratorSettings(false)}
+        onConfirm={handleNarratorConfirm}
+        initialSettings={currentDirector}
+      />
     </>
   );
 }
