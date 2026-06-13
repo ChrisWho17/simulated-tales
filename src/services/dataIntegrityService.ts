@@ -110,7 +110,9 @@ interface BackupCacheEntry {
 
 function loadBackupCache(): Map<string, BackupCacheEntry[]> {
   try {
-    const raw = localStorage.getItem(BACKUP_CACHE_KEY);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getBig } = require('@/lib/bigKVStore') as typeof import('@/lib/bigKVStore');
+    const raw = getBig(BACKUP_CACHE_KEY);
     if (!raw) return new Map();
     const parsed = JSON.parse(raw) as Array<[string, BackupCacheEntry[]]>;
     return new Map(parsed);
@@ -121,8 +123,10 @@ function loadBackupCache(): Map<string, BackupCacheEntry[]> {
 
 function saveBackupCache(cache: Map<string, BackupCacheEntry[]>): void {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { setBig } = require('@/lib/bigKVStore') as typeof import('@/lib/bigKVStore');
     const array = Array.from(cache.entries());
-    localStorage.setItem(BACKUP_CACHE_KEY, JSON.stringify(array));
+    setBig(BACKUP_CACHE_KEY, JSON.stringify(array));
   } catch (error) {
     console.error('[Integrity] Failed to save backup cache:', error);
   }
