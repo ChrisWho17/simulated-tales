@@ -6,6 +6,7 @@
 import { CampaignData } from '@/types/campaign';
 import { ComprehensiveBackup, decompressBackup, verifyBackup } from './comprehensiveBackupService';
 import LZString from 'lz-string';
+import { getBig, setBig } from '@/lib/bigKVStore';
 
 // ============================================================================
 // TYPES
@@ -110,8 +111,6 @@ interface BackupCacheEntry {
 
 function loadBackupCache(): Map<string, BackupCacheEntry[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getBig } = require('@/lib/bigKVStore') as typeof import('@/lib/bigKVStore');
     const raw = getBig(BACKUP_CACHE_KEY);
     if (!raw) return new Map();
     const parsed = JSON.parse(raw) as Array<[string, BackupCacheEntry[]]>;
@@ -123,8 +122,6 @@ function loadBackupCache(): Map<string, BackupCacheEntry[]> {
 
 function saveBackupCache(cache: Map<string, BackupCacheEntry[]>): void {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { setBig } = require('@/lib/bigKVStore') as typeof import('@/lib/bigKVStore');
     const array = Array.from(cache.entries());
     setBig(BACKUP_CACHE_KEY, JSON.stringify(array));
   } catch (error) {
