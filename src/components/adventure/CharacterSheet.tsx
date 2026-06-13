@@ -5,8 +5,11 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3, Clapperboard
 } from 'lucide-react';
+import { NarratorSettingsModal } from './NarratorSettingsModal';
+import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings, DIRECTOR_TYPES } from '@/game/directorModeSystem';
+import { StateSyncBus } from '@/services/stateSyncBus';
 import { AchievementPerksToggle, useAchievementStatPerks } from '@/components/game/AchievementStatPerks';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { cn } from '@/lib/utils';
