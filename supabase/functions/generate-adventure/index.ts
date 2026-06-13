@@ -1432,7 +1432,7 @@ CRITICAL DIRECTOR COMMANDS:
 - No retcons - respect established facts and narrative state
 - Every player action creates change, reaction, or pressure
 - Match your narrative voice to: ${narratorProfile.voice}
-- Use the opening style as a template: "${narratorProfile.openingStyle.slice(0, 80)}..."`;
+- Use the opening style as a template: "${narratorProfile.openingStyle.slice(0, 80)}..."${rulesetBlock}`;
 }
 
 function formatCharacterContext(character: CharacterData, characterAppearance?: string, adultContent?: boolean): string {
