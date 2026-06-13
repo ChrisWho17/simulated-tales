@@ -654,6 +654,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
             cruelty: activeDirectorSettings.cruelty,
             weirdness: activeDirectorSettings.weirdness,
             guidance: activeDirectorSettings.guidance,
+            storyRuleset: activeDirectorSettings.storyRuleset || '',
           };
         }
       }
