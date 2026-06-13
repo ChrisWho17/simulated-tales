@@ -404,13 +404,27 @@ export function CharacterSheet({
   activeConditions = [],
   hasBloodLoss = false
 }: CharacterSheetProps) {
-  const { settings } = useGame();
+  const { settings, updateSettings } = useGame();
   const campaign = useCampaignOptional();
   const sessionStats = useSessionStatsOptional();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showNarratorSettings, setShowNarratorSettings] = useState(false);
+
+  const currentDirector: DirectorSettings = (settings.directorSettings as DirectorSettings | undefined) || DEFAULT_DIRECTOR_SETTINGS;
+  const directorLabel = !currentDirector.enabled || currentDirector.rawGame
+    ? 'Raw Game'
+    : (DIRECTOR_TYPES[currentDirector.directorType]?.name || 'Director');
+
+  const handleNarratorConfirm = (next: DirectorSettings) => {
+    try { updateSettings({ directorSettings: next } as any); } catch (e) { console.warn('[CharacterSheet] updateSettings(director) failed', e); }
+    try {
+      StateSyncBus.getInstance().emit('settings:director-updated', { directorSettings: next, source: 'user' });
+    } catch { /* ignore */ }
+    setShowNarratorSettings(false);
+  };
   
   // Achievement stat perks
   const { enabled: perksEnabled, statBonuses: perkBonuses } = useAchievementStatPerks(campaign?.activeCampaign?.id);
