@@ -615,30 +615,20 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     return parseGenreTagsFromText(customScenario, primaryGenre);
   }, [customScenario, primaryGenre, hardLock]);
 
-  // Combine manually selected secondary genres with parsed tags
+  // Secondary genres are manually selected only
   const effectiveSecondaryGenres = useMemo(() => {
-    const combined: SecondaryGenre[] = [...secondaryGenres];
-    
-    // Add parsed tags that aren't already manually selected
-    for (const tag of parsedGenreTags) {
-      if (!combined.some(s => s.genreId === tag.genre)) {
-        combined.push({ genreId: tag.genre, blendStrength: tag.blendStrength });
-      }
-    }
-    
     // Enforce max total of 50% across all secondaries
     let totalBlend = 0;
     const capped: SecondaryGenre[] = [];
-    for (const sg of combined.slice(0, MAX_SECONDARY_GENRES)) {
+    for (const sg of secondaryGenres.slice(0, MAX_SECONDARY_GENRES)) {
       const remaining = MAX_SECONDARY_TOTAL - totalBlend;
       if (remaining <= 0) break;
       const cappedStrength = Math.min(sg.blendStrength, remaining);
       capped.push({ ...sg, blendStrength: cappedStrength });
       totalBlend += cappedStrength;
     }
-    
     return capped;
-  }, [secondaryGenres, parsedGenreTags]);
+  }, [secondaryGenres]);
 
   // Build genre contract config for display (uses effective secondary genres)
   const genreContract: GenreContractConfig = useMemo(() => ({
@@ -647,10 +637,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     hardLock
   }), [primaryGenre, effectiveSecondaryGenres, hardLock]);
 
-  // Detect war era from text when war genre is active
-  const detectedWarEra = useMemo(() => {
-    return detectWarEra(customScenario);
-  }, [customScenario]);
+  // Default to modern war era since custom scenario input was removed
+  const detectedWarEra = useMemo(() => 'modern' as const, []);
 
   // Get genre data - for war, use era-specific data
   const activeGenreData = useMemo(() => {
@@ -721,27 +709,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
       genreContract: { primaryGenre: preset.genre, secondaryGenres: [], hardLock: false },
       characterClass: selectedClass
     });
-  };
-
-  const handleCustomStart = () => {
-    if (customScenario.trim()) {
-      saveDiceMode(selectedDiceMode);
-      // Strip genre tags from the scenario text for cleaner narrative
-      const cleanScenario = stripGenreTagsFromText(customScenario.trim());
-      const finalContract: GenreContractConfig = {
-        primaryGenre,
-        secondaryGenres: effectiveSecondaryGenres,
-        hardLock
-      };
-      onSelect({ 
-        scenario: cleanScenario || customScenario.trim(), 
-        genre: primaryGenre, 
-        genreTitle: getGenreTitle(primaryGenre),
-        diceMode: selectedDiceMode,
-        genreContract: finalContract,
-        characterClass: selectedClass
-      });
-    }
   };
 
   return (
