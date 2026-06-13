@@ -1268,7 +1268,7 @@ export function AdventureGame() {
     const merged: DirectorSettings = { ...existing, storyRuleset: (ruleset || '').trim() || existing.storyRuleset || '' };
     console.log(`[AdventureGame] Story Ruleset confirmed (${(ruleset || '').length} chars), starting story with current narrator settings`);
     handleNarratorConfirm(merged);
-  }, [settings.directorSettings, directorSettings]);
+  }, [settings.directorSettings, directorSettings, handleNarratorConfirm]);
 
 
   const handleRulesetBack = useCallback(() => {
