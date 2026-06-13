@@ -706,6 +706,23 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     });
   };
 
+  const handleContinueWithGenre = () => {
+    saveDiceMode(selectedDiceMode);
+    const title = getGenreTitle(primaryGenre);
+    onSelect({
+      scenario: '',
+      genre: primaryGenre,
+      genreTitle: title,
+      diceMode: selectedDiceMode,
+      genreContract: {
+        primaryGenre,
+        secondaryGenres: effectiveSecondaryGenres,
+        hardLock,
+      },
+      characterClass: selectedClass,
+    });
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Color Splash Screen */}
