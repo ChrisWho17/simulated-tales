@@ -544,7 +544,6 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
 }
 
 export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: AdventureCreatorProps) {
-  const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
   const [showColorSplash, setShowColorSplash] = useState(false);
