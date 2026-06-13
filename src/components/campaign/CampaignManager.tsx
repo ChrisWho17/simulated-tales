@@ -52,6 +52,7 @@ import {
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 import { supabase } from '@/integrations/supabase/client';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
+import { setBig } from '@/lib/bigKVStore';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
 import { Progress } from '@/components/ui/progress';
@@ -511,7 +512,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
           } else {
             // Save to local storage
             const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
-            localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+            setBig(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
             
             // Update local index
             const indexRaw = localStorage.getItem('lwe_campaign_index');
@@ -592,7 +593,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       }
       
       const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
-      localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+      setBig(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
       
       const indexRaw = localStorage.getItem('lwe_campaign_index');
       const index = indexRaw ? JSON.parse(indexRaw) : [];
