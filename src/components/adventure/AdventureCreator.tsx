@@ -842,16 +842,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
               </div>
             </div>
 
-            {/* Continue button (top) — always visible without scrolling */}
-            <Button
-              onClick={handleContinueWithGenre}
-              disabled={isLoading}
-              className="w-full mb-5"
-              size="lg"
-            >
-              Continue with {allGenres.find(g => g.id === primaryGenre)?.name || 'Selected Genre'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
 
 
             {/* Primary Genre Section */}
