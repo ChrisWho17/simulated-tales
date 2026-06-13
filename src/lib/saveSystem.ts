@@ -405,28 +405,23 @@ export function getLastBackup(): unknown | null {
 // Atomic write: write to temp key, then swap
 export function atomicWrite(key: string, data: unknown): boolean {
   const tempKey = `${key}_tmp`;
-  
-  // Proactive cleanup before attempting write
-  checkAndCleanupStorage();
-  
+
   const attemptWrite = (): boolean => {
     const serialized = JSON.stringify(data);
-    
+
     // Size check - warn if save is getting large
     const sizeKB = serialized.length / 1024;
     if (sizeKB > 1000) {
       console.warn(`[SaveSystem] Save size is ${sizeKB.toFixed(1)}KB - consider compacting`);
     }
-    
-    // Write to temp
-    localStorage.setItem(tempKey, serialized);
-    
-    // Swap to real key
+
+    // Single write to real key (removed duplicate temp-key write that was
+    // doubling main-thread blocking time on every save).
     localStorage.setItem(key, serialized);
-    
-    // Clean up temp
-    localStorage.removeItem(tempKey);
-    
+
+    // Clean up any stale temp key from prior failed writes
+    try { localStorage.removeItem(tempKey); } catch {}
+
     return true;
   };
   
