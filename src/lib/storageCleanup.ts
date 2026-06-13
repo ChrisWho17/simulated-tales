@@ -6,7 +6,7 @@ import LZString from 'lz-string';
 const STORAGE_WARNING_THRESHOLD = 0.7; // 70% of quota (lowered for earlier cleanup)
 const STORAGE_CRITICAL_THRESHOLD = 0.9; // 90% of quota (lowered for earlier intervention)
 
-// Keys that should never be deleted
+// Keys that should never be deleted (live save data + settings)
 const PROTECTED_KEYS = [
   'untold-game-settings',
   'living-world-settings',
@@ -14,6 +14,11 @@ const PROTECTED_KEYS = [
   'supabase.auth.token',
   'lwe_campaign_index',
   'lwe_active_campaign_id',
+  'untold-game-saves', // LIVE save key — never delete
+  'untold-save-backup', // Backup rotation for live saves
+  'lwe_campaign_', // Per-campaign saves (prefix match below)
+  'lwe_inventory_',
+  'lwe_gamestate_',
 ];
 
 // Keys that can be safely cleaned up (ordered by priority - lower index = delete first)
@@ -44,8 +49,6 @@ const CLEANUP_PRIORITY = [
   // Transaction logs (can be rebuilt)
   { pattern: /^lwe_transaction_log/, priority: 4 },
   { pattern: /^lwe_wal/, priority: 4 },
-  // Legacy game saves (older format)
-  { pattern: /^untold-game-saves/, priority: 5 },
   // Backup saves (keep main saves)
   { pattern: /^backup_/, priority: 5 },
   // Auto-save slots beyond the first 3
@@ -85,7 +88,7 @@ export function getStorageStats(): StorageStats {
     
     // Estimate quota (most browsers are 5-10MB)
     // We'll use a conservative 5MB estimate
-    const estimatedQuota = 5 * 1024 * 1024; // 5MB in bytes
+    const estimatedQuota = 10 * 1024 * 1024; // 10MB - realistic browser quota
     const usedBytes = totalSize * 2; // UTF-16 encoding
     const percentage = usedBytes / estimatedQuota;
     
@@ -101,7 +104,7 @@ export function getStorageStats(): StorageStats {
     console.error('[StorageCleanup] Failed to get stats:', e);
     return {
       used: 0,
-      quota: 5 * 1024 * 1024,
+      quota: 10 * 1024 * 1024,
       percentage: 0,
       itemCount: 0,
       isWarning: false,

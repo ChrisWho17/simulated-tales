@@ -405,28 +405,23 @@ export function getLastBackup(): unknown | null {
 // Atomic write: write to temp key, then swap
 export function atomicWrite(key: string, data: unknown): boolean {
   const tempKey = `${key}_tmp`;
-  
-  // Proactive cleanup before attempting write
-  checkAndCleanupStorage();
-  
+
   const attemptWrite = (): boolean => {
     const serialized = JSON.stringify(data);
-    
+
     // Size check - warn if save is getting large
     const sizeKB = serialized.length / 1024;
     if (sizeKB > 1000) {
       console.warn(`[SaveSystem] Save size is ${sizeKB.toFixed(1)}KB - consider compacting`);
     }
-    
-    // Write to temp
-    localStorage.setItem(tempKey, serialized);
-    
-    // Swap to real key
+
+    // Single write to real key (removed duplicate temp-key write that was
+    // doubling main-thread blocking time on every save).
     localStorage.setItem(key, serialized);
-    
-    // Clean up temp
-    localStorage.removeItem(tempKey);
-    
+
+    // Clean up any stale temp key from prior failed writes
+    try { localStorage.removeItem(tempKey); } catch {}
+
     return true;
   };
   
@@ -458,13 +453,13 @@ export function atomicWrite(key: string, data: unknown): boolean {
   }
 }
 
-// Size cap for narrative history and event ledger - reduced to prevent save bloat
+// Size caps - tuned aggressively to keep saves under ~1MB even for long sessions
 export const SIZE_CAPS = {
-  narrativeHistory: 150, // Reduced from 200
-  eventHistory: 300,     // Reduced from 500
-  storyEntries: 75,      // Reduced from 100
-  npcMemories: 100,      // New: cap for NPC memory storage
-  questJournalEntries: 50, // New: cap for quest journal
+  narrativeHistory: 100,   // was 150
+  eventHistory: 200,       // was 300
+  storyEntries: 60,        // was 75
+  npcMemories: 75,         // was 100
+  questJournalEntries: 40, // was 50
 } as const;
 
 export function applyDataSizeCaps(gameData: Record<string, unknown>): Record<string, unknown> {
