@@ -421,7 +421,7 @@ export function CharacterSheet({
   const handleNarratorConfirm = (next: DirectorSettings) => {
     try { updateSettings({ directorSettings: next } as any); } catch (e) { console.warn('[CharacterSheet] updateSettings(director) failed', e); }
     try {
-      StateSyncBus.getInstance().emit('settings:director-updated', { directorSettings: next, source: 'user' });
+      StateSyncBus.emit('settings:director-updated', { directorSettings: next, source: 'user' });
     } catch { /* ignore */ }
     setShowNarratorSettings(false);
   };
