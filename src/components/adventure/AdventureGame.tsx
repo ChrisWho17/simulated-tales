@@ -304,6 +304,7 @@ export function AdventureGame() {
   const playerActionCount = useRef<number>(0);
   // Pending character awaiting narrator settings confirmation
   const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
+  const [pendingStoryRuleset, setPendingStoryRuleset] = useState<string>('');
   
   // First-time wizard state
   const { shouldShow: shouldShowWizard } = useFirstTimeWizard();
