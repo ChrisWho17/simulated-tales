@@ -139,6 +139,12 @@ export interface GameSettings {
   // Hide the floating version/hotfix badge entirely (main menu top-right).
   hideHotfixBadge?: boolean;
 
+  // Storage pipeline — where saves are persisted.
+  //   'mirror' (default): write to device IndexedDB + cloud (when signed in)
+  //   'local':  device-only (no cloud writes even when signed in)
+  //   'cloud':  cloud-primary, local cache only used offline / on quota
+  storagePipeline?: 'mirror' | 'local' | 'cloud';
+
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -252,6 +258,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
 
   // Hotfix badge visible by default
   hideHotfixBadge: false,
+
+  // Default storage pipeline: mirror device + cloud
+  storagePipeline: 'mirror',
 
 };
 
