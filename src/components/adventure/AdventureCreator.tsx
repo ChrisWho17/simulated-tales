@@ -84,6 +84,7 @@ const PRESET_SCENARIOS = [
   { id: 'pirate', genre: 'pirate' as GameGenre, title: 'High Seas Adventure', description: 'Captain your own ship across treacherous waters in search of legendary treasure.', icon: Compass, gradient: 'genre-pirate' },
   { id: 'cyberpunk', genre: 'cyberpunk' as GameGenre, title: 'Neon Dystopia', description: 'Navigate the neon-lit streets of a corporate-controlled megacity as a skilled hacker or street samurai.', icon: Zap, gradient: 'genre-cyberpunk' },
   { id: 'war', genre: 'war' as GameGenre, title: 'Theater of War', description: 'Experience the chaos and heroism of warfare across any era - ancient battles, modern conflicts, or future wars.', icon: Shield, gradient: 'genre-western' },
+  { id: 'military', genre: 'war' as GameGenre, title: 'Soldier on Tour', description: 'An average soldier deployed on active duty. Classic armor and camo, standard-issue gear, and the weight of orders over your shoulders.', icon: Crosshair, gradient: 'genre-western' },
   { id: 'western', genre: 'western' as GameGenre, title: 'Frontier Justice', description: 'Ride into a dusty frontier town where outlaws rule and justice needs a champion.', icon: Sun, gradient: 'genre-western' },
   { id: 'modern_life', genre: 'modern_life' as GameGenre, title: 'Modern Life', description: 'Start fresh in a bustling city. Build your career, nurture relationships, and chase your dreams in everyday life.', icon: Sparkles, gradient: 'genre-mystery' },
 ];
