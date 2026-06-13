@@ -1313,6 +1313,15 @@ const DIRECTOR_NARRATOR_PROFILES: Record<string, { voice: string; detailLevel: s
 };
 
 function formatDirectorContext(director: DirectorContext): string {
+  // Player-authored story ruleset — must be honored regardless of director mode.
+  const rulesetBlock = director.storyRuleset && director.storyRuleset.trim()
+    ? `\n\n=== PLAYER STORY RULESET (MANDATORY) ===
+The player set explicit narrator rules for this story. Honor them in every response unless they violate core safety.
+"""
+${director.storyRuleset.trim()}
+"""`
+    : '';
+
   if (director.rawGame || !director.enabled) {
     return `\n\n=== DIRECTOR MODE: RAW GAME ===
 No narrative steering beyond core rules.
@@ -1320,7 +1329,7 @@ No narrative steering beyond core rules.
 - No pacing nudges or artificial DM pressure
 - Core simulation runs, DM stays hands-off
 - Consequences emerge organically from player choices
-- No guiding hand pushing toward specific outcomes`;
+- No guiding hand pushing toward specific outcomes${rulesetBlock}`;
   }
   
   const typeProfile = DIRECTOR_TYPES[director.directorType];
