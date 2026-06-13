@@ -104,7 +104,7 @@ class SaveTransactionManager {
     };
     
     // Get previous checksum for rollback
-    const existingData = localStorage.getItem(`lwe_campaign_${campaignId}`);
+    const existingData = getBig(`lwe_campaign_${campaignId}`);
     if (existingData) {
       transaction.previousChecksum = await generateChecksum(existingData);
     }
