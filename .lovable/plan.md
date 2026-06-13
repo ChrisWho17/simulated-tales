@@ -1,94 +1,69 @@
+# Storage Pipeline Overhaul
+
+## Problem
+- `localStorage` is hitting `QuotaExceededError` on `lwe_wal` and campaign blobs (~5–10 MB cap).
+- Saves silently fail and fall out of sync with cloud.
+- No user-visible control over local vs cloud pipeline.
+
 ## Goal
+Mirror every save to **both** device cache (IndexedDB, keyed by save name + version) **and** cloud, with a Storage Settings panel exposing the pipeline state.
 
-Make "The Untold Stories" installable as an app on Android and iOS with a proper launcher icon, and surface an install button inside the Main Menu (CampaignManager) where world/campaign creation lives.
+## Architecture
 
-This is manifest-only PWA per Lovable PWA skill — no service worker, no offline support (not requested).
-
-## 1. Generate icon set
-
-Use the existing `public/images/untold-logo.png` as the source and generate a full PWA icon set into `public/icons/`:
-
-- `icon-192.png` (192×192, maskable + any)
-- `icon-512.png` (512×512, maskable + any)
-- `apple-touch-icon.png` (180×180, opaque background — iOS does not honor transparency)
-- `icon-maskable-512.png` (512×512 with safe-zone padding for Android adaptive icons)
-- `favicon-32.png`, `favicon-16.png`
-
-Generated via ImageMagick (`nix run nixpkgs#imagemagick`) from the existing logo. Background uses the app theme color `#1a1a2e` for opaque variants.
-
-## 2. Web app manifest
-
-Create `public/manifest.webmanifest`:
-
-```json
-{
-  "name": "The Untold Stories",
-  "short_name": "Untold Stories",
-  "description": "AI-powered text adventure RPG with a living world.",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
-  "categories": ["games", "entertainment"],
-  "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
-}
+```text
+        ┌──────────────────────────────┐
+        │     UnifiedSaveArchitecture   │
+        └──────────────┬───────────────┘
+                       │
+         ┌─────────────┴─────────────┐
+         ▼                           ▼
+  ┌─────────────┐            ┌──────────────┐
+  │ LocalCache  │  mirror →  │ Cloud (sync) │
+  │ IndexedDB   │  ← mirror  │ Supabase     │
+  └──────┬──────┘            └──────┬───────┘
+         │                          │
+         ▼                          ▼
+  key: {name}@{version}      campaigns table
 ```
 
-## 3. Wire manifest + icon tags in `index.html`
+`localStorage` keeps **only** small flags: campaign index, active id, settings. All campaign blobs, WAL, inventory, gamestate move to IndexedDB.
 
-Add to `<head>`:
+## Changes
 
-- `<link rel="manifest" href="/manifest.webmanifest" />`
-- `<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />`
-- `<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />`
-- `<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />`
+### 1. New: `src/lib/idbCampaignStore.ts`
+Tiny IndexedDB wrapper (no extra deps). Stores:
+- `campaigns` object store, key = `{saveName}@{schemaVersion}` plus `campaignId` index
+- `wal` object store
+- `inventory`, `gamestate` object stores
 
-Keep existing `apple-mobile-web-app-*` tags and `theme-color`. Delete `public/favicon.ico` so the new PNG favicon takes over.
+Exposes `get/put/delete/list/clear` with quota-aware error mapping.
 
-No service worker registration. No `vite-plugin-pwa`. No reload loops.
+### 2. Refactor `src/services/unifiedSaveArchitecture.ts`
+- `saveLocal()` writes to IndexedDB instead of localStorage; keeps tiny index in localStorage.
+- `saveCampaign()` always writes local first, then enqueues cloud mirror (best-effort).
+- On load: try local → fall back to cloud → re-hydrate local.
 
-## 4. Install prompt hook
+### 3. Refactor `src/services/saveTransaction.ts`
+WAL moves to IndexedDB `wal` store — removes the `lwe_wal` quota crash.
 
-New file `src/hooks/usePwaInstall.ts`:
+### 4. Migration: `src/lib/campaignStorageMigration.ts`
+On boot, copy any existing `lwe_campaign_*`, `lwe_inventory_*`, `lwe_gamestate_*`, `lwe_wal` entries into IndexedDB then delete the localStorage copies. Idempotent, runs once per session.
 
-- Listens for `beforeinstallprompt`, stashes the event, exposes `{ canInstall, isInstalled, promptInstall, isIOS, isStandalone }`.
-- `isStandalone` detects `display-mode: standalone` or iOS `navigator.standalone` to hide the button once installed.
-- iOS path: `canInstall` is false but `isIOS` is true → component shows manual "Add to Home Screen" instructions.
+### 5. New: `src/components/settings/StoragePipelinePanel.tsx`
+Storage Settings panel showing:
+- Pipeline mode: **Local + Cloud (mirror)** [default] / Local-only / Cloud-only
+- IndexedDB usage (via `navigator.storage.estimate()`)
+- Cloud sync status + last synced
+- Per-save list keyed by `name@version` with Local ✅ / Cloud ✅ chips and a Re-sync button
 
-## 5. Install UI in Main Menu
+Wired into existing settings UI (DevOptionsPanel area).
 
-New component `src/components/adventure/InstallAppButton.tsx`:
+### 6. `src/lib/gameSettings.ts`
+Add `storagePipeline: 'mirror' | 'local' | 'cloud'` setting, default `'mirror'`.
 
-- Renders nothing when `isStandalone` is true.
-- On Android/desktop Chromium with `canInstall`: shows a glassmorphism button "Install App" that calls `promptInstall()`.
-- On iOS Safari: shows the same button which opens a small modal with the Share → Add to Home Screen instructions and a screenshot-free, text-only walkthrough.
-- Uses existing design tokens (primary `#8B5CF6`, glass surfaces) — no hardcoded colors beyond what's already standard.
+## Out of scope (this pass)
+- Conflict UI rework (existing `CloudConflictModal` stays as-is)
+- Schema changes to the cloud `campaigns` table — already exists
 
-Mount it in `src/components/campaign/CampaignManager.tsx` near the "New Campaign" header area so it sits with world-creation actions. Not added anywhere else (per request: Main Menu only).
-
-## 6. Files
-
-**New:**
-- `public/manifest.webmanifest`
-- `public/icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, `favicon-32.png`, `favicon-16.png`
-- `src/hooks/usePwaInstall.ts`
-- `src/components/adventure/InstallAppButton.tsx`
-
-**Edited:**
-- `index.html` (manifest + icon links)
-- `src/components/campaign/CampaignManager.tsx` (mount InstallAppButton)
-
-**Deleted:**
-- `public/favicon.ico`
-
-## Notes
-
-- Manifest-only — no offline support, no service worker, no cache-busting. Matches Lovable PWA guidance.
-- The browser install prompt only appears on Chromium browsers after a user-engagement heuristic; iOS users always see the manual instructions modal.
-- Once installed, the button hides itself via `isStandalone` check.
+## Risk
+One-time migration touches every existing save. Migration is wrapped in try/per-key so a single corrupt entry doesn't block the rest, and old localStorage keys are only deleted after a successful IndexedDB write.
