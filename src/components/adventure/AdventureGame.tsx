@@ -2428,6 +2428,18 @@ export function AdventureGame() {
 
   // Phase 2.5: World is loading — show world-load screen with director picker overlaid.
   // Once director is confirmed it starts narrating the opening from there.
+  // Phase 2.25: Optional Story Ruleset — player-authored narrator rules
+  if (phase === 'ruleset' && pendingCharacter && scenarioSelection) {
+    return (
+      <StoryRulesetScreen
+        characterName={pendingCharacter.name}
+        genreLabel={scenarioSelection.genreTitle || scenarioSelection.genre || 'adventure'}
+        onConfirm={handleRulesetConfirm}
+        onBack={handleRulesetBack}
+      />
+    );
+  }
+
   if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
     const genreLabel = scenarioSelection.genreTitle || scenarioSelection.genre || 'your world';
     return (
