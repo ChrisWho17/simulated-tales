@@ -1022,6 +1022,17 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 </div>
               )}
             </div>
+
+            {/* Continue button — proceed to character creation with selected genre */}
+            <Button
+              onClick={handleContinueWithGenre}
+              disabled={isLoading}
+              className="w-full mt-6"
+              size="lg"
+            >
+              Continue with {allGenres.find(g => g.id === primaryGenre)?.name || 'Selected Genre'}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
 
           {/* Divider */}
