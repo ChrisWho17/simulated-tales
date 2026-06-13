@@ -11,6 +11,7 @@ import { useAutoMood } from '@/hooks/useAutoMood';
 
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
+import { StoryRulesetScreen } from './StoryRulesetScreen';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { NarratorSettingsModal } from './NarratorSettingsModal';
