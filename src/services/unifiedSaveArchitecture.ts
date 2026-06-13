@@ -516,8 +516,20 @@ class UnifiedSaveArchitectureClass {
       return localResult;
     }
     
-    // If cloud mode, sync to cloud
-    if (this.account.mode === 'cloud') {
+    // Honor user's storage pipeline preference: 'local' skips cloud entirely.
+    let pipeline: 'mirror' | 'local' | 'cloud' = 'mirror';
+    try {
+      const settingsRaw = localStorage.getItem('living-world-settings');
+      if (settingsRaw) {
+        const s = JSON.parse(settingsRaw);
+        if (s?.storagePipeline === 'local' || s?.storagePipeline === 'cloud' || s?.storagePipeline === 'mirror') {
+          pipeline = s.storagePipeline;
+        }
+      }
+    } catch { /* ignore */ }
+
+    // If cloud mode AND pipeline allows cloud writes, sync to cloud
+    if (this.account.mode === 'cloud' && pipeline !== 'local') {
       console.log('[UnifiedSave] Cloud mode active, syncing to cloud...');
       const cloudResult = await this.saveToCloud(campaign);
       console.log('[UnifiedSave] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
@@ -534,7 +546,7 @@ class UnifiedSaveArchitectureClass {
       };
     }
     
-    console.log('[UnifiedSave] Local-only mode, skipping cloud sync');
+    console.log('[UnifiedSave] Local-only mode (account or pipeline), skipping cloud sync');
     return localResult;
   }
   
