@@ -1,10 +1,15 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { registerPwa, PWA_SYNC_FLUSH_EVENT } from "./pwa/registerSW";
 import { BackgroundSyncManager } from "./services/backgroundSyncManager";
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
+    <App />
+  </HelmetProvider>
+);
 
 // Register service worker after the app boots. Wrapper handles dev/preview/iframe refusal.
 registerPwa();
@@ -14,5 +19,3 @@ registerPwa();
 window.addEventListener(PWA_SYNC_FLUSH_EVENT, () => {
   BackgroundSyncManager.forceSyncNow().catch(() => {});
 });
-
-

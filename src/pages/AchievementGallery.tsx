@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAchievements, Achievement, ACHIEVEMENT_CATEGORIES } from '@/components/game/Achievements';
 import { AchievementExport } from '@/components/game/AchievementExport';
 import { format } from 'date-fns';
+import { SeoHead } from '@/components/seo/SeoHead';
 
 const rarityColors = {
   common: 'from-slate-400 to-slate-500 border-slate-400',
@@ -226,6 +227,11 @@ export default function AchievementGallery() {
   
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
+      <SeoHead
+        title="Trophy Room — The Untold Stories"
+        description="Browse your unlocked achievements, lifetime stats, and legendary feats earned across all campaigns."
+        path="/achievements"
+      />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -233,6 +239,7 @@ export default function AchievementGallery() {
             <Button 
               variant="ghost" 
               size="icon" 
+              aria-label="Go back"
               onClick={() => navigate(-1)}
               className="shrink-0"
             >

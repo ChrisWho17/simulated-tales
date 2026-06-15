@@ -9,8 +9,45 @@
     <meta name="keywords" content="RPG, text adventure, AI storytelling, interactive fiction, role-playing game" />
     <meta name="theme-color" content="#1a1a2e" />
     
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://theuntoldstories.lovable.app" />
+    <!-- Per-route canonical is set via react-helmet-async (see src/components/seo/SeoHead.tsx). -->
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "The Untold Stories",
+        "url": "https://theuntoldstories.lovable.app",
+        "description": "AI-powered text adventure engine with simulation-first storytelling, dynamic genres, and a living world.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://theuntoldstories.lovable.app/campaigns?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "The Untold Stories",
+        "url": "https://theuntoldstories.lovable.app",
+        "logo": "https://theuntoldstories.lovable.app/icons/apple-touch-icon.png"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "The Untold Stories",
+        "url": "https://theuntoldstories.lovable.app",
+        "description": "AI-powered text adventure RPG with dynamic storytelling, character creation, and a simulation-driven living world.",
+        "applicationCategory": "Game",
+        "operatingSystem": "Web",
+        "genre": ["Role-playing", "Text Adventure", "Interactive Fiction"],
+        "gamePlatform": "Web Browser"
+      }
+    </script>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />

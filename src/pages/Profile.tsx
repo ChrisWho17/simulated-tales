@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CampaignSaveSkeletonList } from '@/components/ui/SkeletonLoader';
+import { SeoHead } from '@/components/seo/SeoHead';
 import { 
   User, 
   Cloud, 
@@ -216,6 +217,11 @@ export default function Profile() {
 
   return (
     <PageTransition>
+      <SeoHead
+        title="Profile & Cloud Sync — The Untold Stories"
+        description="Manage your account, sync campaigns to the cloud, and review your saved adventures."
+        path="/profile"
+      />
       <div className="min-h-screen bg-background">
         {/* Header */}
         <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">

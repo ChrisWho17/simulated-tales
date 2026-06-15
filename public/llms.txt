@@ -1,0 +1,17 @@
+# The Untold Stories
+
+> An AI-powered text adventure engine. Players create characters, pick genres, and play simulation-driven RPG campaigns where the world and NPCs run independently of the player.
+
+The Untold Stories is a browser-based, simulation-first text RPG. Adventures are generated and narrated by AI, with persistent campaigns, companion NPCs, dynamic genres, and a living world that reacts to player choices.
+
+## Pages
+
+- [Home](/): Create a new adventure — pick a genre, character, and scenario.
+- [Campaigns](/campaigns): Browse, load, and manage saved campaigns.
+- [New Campaign](/campaigns/new): Start a fresh campaign with the adventure creator.
+- [Play](/play): Resume the active campaign.
+- [Achievements](/achievements): View unlocked achievements and lifetime stats.
+
+## Optional
+
+- [Profile](/profile): User account, cloud sync, and synced campaigns (requires sign-in).
