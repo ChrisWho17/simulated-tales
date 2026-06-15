@@ -224,6 +224,7 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={`Delete campaign ${campaign.name}`}
                 className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={(e) => handleDelete(e, campaign.id, campaign.name)}
               >
@@ -750,7 +751,8 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-3">
             <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
-              UNTOLD
+              <span>UNTOLD</span>
+              <span className="sr-only"> — AI Text Adventure RPG</span>
             </h1>
           </div>
           <p className="text-muted-foreground uppercase tracking-[0.4em] text-sm">
@@ -774,6 +776,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setShowColorSplash(true)}
+                    aria-label="Open color theme picker"
                     className="flex items-center justify-center w-10 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
                   >
                     <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -992,6 +995,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label="Remove secondary genre"
                           className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleRemoveSecondaryGenre(index)}
                         >
