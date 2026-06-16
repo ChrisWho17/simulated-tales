@@ -1595,7 +1595,12 @@ serve(async (req) => {
 
     // Build system prompt with character context and memory
     let systemContent = SYSTEM_PROMPT;
-    
+
+    // === LANGUAGE BARRIER (HOISTED TO TOP — must dominate dialogue rendering) ===
+    if (languageContext?.languageInstructions) {
+      systemContent += '\n\n' + languageContext.languageInstructions;
+    }
+
     // Add narrator configuration (voice, detail level, etc.)
     if (narratorConfig) {
       systemContent += formatNarratorStyle(narratorConfig);
@@ -2059,11 +2064,9 @@ CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
       systemContent += '\n\n' + toneContext.toneInstructions;
     }
     
-    // Add language barrier context
+    // Add language barrier context (already hoisted to top; only append the
+    // LEARN_LANGUAGE trigger guidance here so the main rules stay dominant.)
     if (languageContext?.languageInstructions) {
-      systemContent += '\n\n' + languageContext.languageInstructions;
-      
-      // Add language learning trigger instructions
       systemContent += `
 
 LANGUAGE LEARNING (use sparingly - most players don't think about languages):

@@ -284,31 +284,40 @@ export function buildLanguageContext(
     playerProfInNarrative === 'native' ||
     playerProfInNarrative === 'perfected';
 
-  let context = `\n=== LANGUAGE & ACCENT SYSTEM (MANDATORY) ===\n`;
+  let context = `\n=== LANGUAGE & ACCENT SYSTEM (MANDATORY — TOP PRIORITY, OVERRIDES ALL OTHER STYLE RULES) ===\n`;
   context += `Narrative tongue (what everyone is presumed to be speaking unless tagged): ${getLanguageDisplayName(narrativeLanguage)}\n`;
-  context += `Player primary language: ${getLanguageDisplayName(playerPrimary)}\n`;
+  context += `Player primary (native) language: ${getLanguageDisplayName(playerPrimary)}\n`;
   context += `Player understands: ${playerLangs.join(', ') || 'none specified'}\n`;
   if (nat) {
     context += `Player nationality: ${formatNationalityForAI(nat.id)}\n`;
   }
 
-  // ----- PLAYER-SIDE BROKEN SPEECH RULES (THIS IS WHAT WAS MISSING) -----
+  // ----- PLAYER-SIDE BROKEN SPEECH RULES (NON-NEGOTIABLE) -----
   if (!speaksNarrativeNatively) {
     const prof = playerProfInNarrative || 'rough';
-    context += `\n### PLAYER SPEAKS ${getLanguageDisplayName(narrativeLanguage).toUpperCase()} AT PROFICIENCY: ${prof.toUpperCase()}\n`;
+    const playerLangName = getLanguageDisplayName(playerPrimary);
+    const narrName = getLanguageDisplayName(narrativeLanguage);
+    context += `\n### ⚠️ HARD RULE — PLAYER SPEAKS ${narrName.toUpperCase()} AT PROFICIENCY: ${prof.toUpperCase()}\n`;
+    context += `The player is a NATIVE ${playerLangName} speaker. ${narrName} is a FOREIGN language to them.\n`;
+    context += `The player's typed input is the META INTENT of what they want their character to say. It is NOT the literal dialogue. You MUST translate that intent into broken, accented ${narrName} BEFORE quoting the character.\n`;
+    context += `If the player types "I greet them politely and ask where the market is" — that is intent. Their character's actual spoken line must be rendered in broken ${narrName}.\n`;
     if (prof === 'rough') {
-      context += `→ The player's own spoken dialogue in ${getLanguageDisplayName(narrativeLanguage)} MUST be rendered as BROKEN, halting, heavily accented speech.\n`;
+      context += `→ The player's spoken dialogue in ${narrName} MUST always be rendered as BROKEN, halting, heavily accented speech. NO EXCEPTIONS, not even once.\n`;
       context += `  - Drop articles ("the", "a"), drop auxiliary verbs ("is", "are", "do"), wrong tense, wrong word order.\n`;
       context += `  - Sprinkle native-tongue interjections in *italics* with translation in parens, e.g. *Da* (Yes), *Nyet* (No), *Suka* (damn it).\n`;
       context += `  - Search for simple words, sometimes substitute with the wrong one. NPCs visibly react: confusion, slowing down, repeating themselves, mockery, sympathy, suspicion.\n`;
-      context += `  - Player thoughts/internal narration remain fluent — only spoken dialogue is broken.\n`;
-      context += `  - Example for a Russian native: "I... how you say... I look for man. Big man. He owe money, *da*?"\n`;
+      context += `  - Player thoughts/internal narration remain fluent — only SPOKEN dialogue between quotes is broken.\n`;
+      context += `  - Example for a Russian native attempting English: "I... how you say... I look for man. Big man. He owe money, *da*?"\n`;
+      context += `  - FORBIDDEN: rendering the player's spoken ${narrName} as grammatical, smooth, or native-sounding. If you find yourself writing a clean English sentence between the player's quote marks, STOP and rewrite it broken.\n`;
+      context += `  - FORBIDDEN: letting NPCs treat the player as a fluent speaker. They MUST notice the foreigner accent and broken grammar every single time.\n`;
     } else if (prof === 'moderate') {
-      context += `→ The player's spoken ${getLanguageDisplayName(narrativeLanguage)} is functional but clearly non-native.\n`;
-      context += `  - Grammar mostly correct, occasional dropped article or wrong preposition.\n`;
+      context += `→ The player's spoken ${narrName} is functional but clearly non-native. Every single line.\n`;
+      context += `  - Grammar mostly correct, occasional dropped article or wrong preposition, the odd missing connective.\n`;
       context += `  - Reach for words sometimes ("the... how you say... document"). Occasional native-tongue word in *italics* (translation).\n`;
       context += `  - Accent stays present per nationality rules below. NPCs may comment on the accent but understand fine.\n`;
+      context += `  - FORBIDDEN: rendering the player's spoken ${narrName} as flawless native speech.\n`;
     }
+    context += `\nThis rule is PERMANENT for the entire campaign until the player explicitly LEARNS ${narrName} in-game via [LEARN_LANGUAGE]. Do not "forget" the barrier after the opening scene. Do not let the player become eloquent over time without an in-fiction reason.\n`;
   } else if (nat) {
     context += `\n→ Player speaks ${getLanguageDisplayName(narrativeLanguage)} natively/fluently, but with their ${nat.accentLabel || nat.id} accent. Render the accent in cadence + sparse phonetic tells, not broken grammar.\n`;
   }
