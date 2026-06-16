@@ -1595,7 +1595,12 @@ serve(async (req) => {
 
     // Build system prompt with character context and memory
     let systemContent = SYSTEM_PROMPT;
-    
+
+    // === LANGUAGE BARRIER (HOISTED TO TOP — must dominate dialogue rendering) ===
+    if (languageContext?.languageInstructions) {
+      systemContent += '\n\n' + languageContext.languageInstructions;
+    }
+
     // Add narrator configuration (voice, detail level, etc.)
     if (narratorConfig) {
       systemContent += formatNarratorStyle(narratorConfig);
