@@ -336,6 +336,16 @@ interface AdventureRequest {
       wantsToSpeak?: boolean;
     }>;
     speakingCue?: string;
+    socialGuidance?: string;
+    emotionalRange?: string;
+    speechRegister?: string;
+  };
+  socialPresenceContext?: {
+    npcCompanionGuidance?: string;
+    emotionalRange?: string;
+    speechRegister?: string;
+    agencyLevel?: string;
+    directives?: string[];
   };
   // World consistency systems
   consistencyContext?: {
@@ -1818,7 +1828,7 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as AdventureRequest;
-    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext } = requestData;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext, socialPresenceContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
@@ -1840,6 +1850,12 @@ serve(async (req) => {
     // This affects pacing, difficulty, and narrative style
     if (directorContext) {
       systemContent += formatDirectorContext(directorContext);
+    }
+
+    if (socialPresenceContext?.npcCompanionGuidance) {
+      systemContent += `\n\n${socialPresenceContext.npcCompanionGuidance}`;
+    } else if (socialPresenceContext?.directives?.length) {
+      systemContent += `\n\n=== SOCIAL PRESENCE (NPCs & COMPANIONS) ===\n${socialPresenceContext.directives.map((d: string) => `- ${d}`).join('\n')}`;
     }
     
     // === QUALITY ENFORCEMENT SYSTEM - AAA Narrative Quality for Marathon Sessions ===
@@ -2875,7 +2891,12 @@ ${companionPartyContext.members.map(m => {
 RULES:
 - Never silently drop a companion from the scene. If they are present, they are present.
 - Give at least one companion a reaction, line, or beat when the moment warrants it.
-- Their mood and bonds shape how they respond—low trust reads as guarded, high affinity as warm.`;
+- Their mood and bonds shape how they respond—low trust reads as guarded, high affinity as warm.
+- Companions are people with agendas: they may disagree, hesitate, or care in inconvenient ways.`;
+
+      if (companionPartyContext.socialGuidance) {
+        systemContent += `\n\n${companionPartyContext.socialGuidance}`;
+      }
 
       if (companionPartyContext.speakingCue) {
         systemContent += `\n\nCOMPANIONS WAITING TO SPEAK (honour these THIS turn):

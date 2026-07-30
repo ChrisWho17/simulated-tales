@@ -797,6 +797,7 @@ export function AdventureGame() {
       enableAdrenalineSystem: settings.enableAdrenalineSystem,
       enableWoundSystem: settings.enableWoundSystem,
       enableInventoryWeight: settings.enableInventoryWeight,
+      enableLanguageBarrier: (settings.languageSettings?.playerKnownLanguages?.length ?? 2) <= 3,
     },
     diceMode,
     directorSettings,

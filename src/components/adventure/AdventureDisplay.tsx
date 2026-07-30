@@ -22,6 +22,16 @@ import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { SessionRecapSplash } from '@/components/game/SessionRecapSplash';
+import { WhileYouWereAwaySplash } from '@/components/game/WhileYouWereAwaySplash';
+import { CompanionSpotlight } from '@/components/game/CompanionSpotlight';
+import { ConsequenceChips, chipsFromMechanics, type ConsequenceChip } from '@/components/game/ConsequenceChips';
+import { downloadTaleCard } from '@/components/game/TaleCardExport';
+import {
+  buildWhileYouWereAwayRecap,
+  shouldShowAwayRecap,
+  writeLastSeenAway,
+  type AwayRecapResult,
+} from '@/lib/whileYouWereAway';
 import { OnboardingOverlay, useOnboarding } from '@/components/game/OnboardingOverlay';
 import { AdventureInputArea, type CommandHandlers } from './AdventureInputArea';
 import { QuickDiceRoll } from '@/components/game/QuickDiceRoll';
@@ -42,7 +52,8 @@ import {
   advanceTime,
   skipTime,
   formatGameTime,
-  hoursToWeatherTicks
+  hoursToWeatherTicks,
+  getTimeOfDay,
 } from '@/game/timeProgressionSystem';
 import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
@@ -352,6 +363,11 @@ export function AdventureDisplay({
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
+  const [awayRecap, setAwayRecap] = useState<AwayRecapResult | null>(null);
+  const [showAwayRecap, setShowAwayRecap] = useState(false);
+  const [spotlightCompanionId, setSpotlightCompanionId] = useState<string | null>(null);
+  const [consequenceChips, setConsequenceChips] = useState<ConsequenceChip[]>([]);
+  const lastSpotlightAtRef = useRef(0);
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
   const [showTimeDisplay, setShowTimeDisplay] = useState(false);
@@ -1523,6 +1539,117 @@ export function AdventureDisplay({
     companionAutonomy.consumeAction(companionId);
   }, [companionAutonomy]);
 
+  // While-you-were-away: surface living-world drift without an AI call.
+  useEffect(() => {
+    if (!character?.name) return;
+    if (!shouldShowAwayRecap()) return;
+
+    const lastSeen = (() => {
+      try {
+        const raw = localStorage.getItem('untold-last-seen-away');
+        return raw ? Number(raw) || 0 : 0;
+      } catch {
+        return 0;
+      }
+    })();
+    const hoursAway = lastSeen ? (Date.now() - lastSeen) / (1000 * 60 * 60) : 0;
+    const companions = companionSystem.getActiveCompanions();
+    const locationGuess =
+      story.filter(e => e.role === 'narrator').slice(-1)[0]?.content.match(/\*\*([^*]+)\*\*/)?.[1] ||
+      'the road';
+    const recap = buildWhileYouWereAwayRecap({
+      characterName: character.name,
+      locationName: locationGuess,
+      weatherName: WEATHER_CONFIGS[weatherState.current]?.name,
+      weatherChanged: hoursAway >= 0.5,
+      timeLabel: getTimeOfDay(timeState.hour),
+      hoursAway,
+      companionBeats: companions.slice(0, 2).map(c => ({
+        name: c.name,
+        mood: typeof c.mood === 'string' ? c.mood : undefined,
+        note: c.pendingReaction
+          ? `has been waiting to speak — ${String(c.pendingReaction).slice(0, 80)}`
+          : c.wantsToSpeak
+            ? 'has something unspoken on their mind'
+            : undefined,
+      })),
+      ambientHints: ambientFeed.entries.slice(0, 2).map(e => e.text).filter(Boolean),
+      lastNarratorSnippet: story.filter(e => e.role === 'narrator').slice(-1)[0]?.content,
+    });
+    setAwayRecap(recap);
+    setShowAwayRecap(true);
+  // Only on mount / character ready — not every story tick
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?.name]);
+
+  // Companion spotlight: one high-priority interrupt, cooled down.
+  useEffect(() => {
+    if (showAwayRecap) return;
+    const now = Date.now();
+    if (now - lastSpotlightAtRef.current < 8 * 60 * 1000) return;
+    if (spotlightCompanionId) return;
+
+    const rank = (p: AutonomousAction['priority']) =>
+      p === 'critical' ? 4 : p === 'high' ? 3 : p === 'medium' ? 2 : 1;
+
+    let best: { id: string; action: AutonomousAction } | null = null;
+    companionAutonomy.pendingActions.forEach((actions, id) => {
+      for (const action of actions) {
+        if (action.priority === 'critical' || action.priority === 'high' || action.priority === 'medium') {
+          if (!best || rank(action.priority) > rank(best.action.priority)) {
+            best = { id, action };
+          }
+        }
+      }
+    });
+    if (best) {
+      setSpotlightCompanionId(best.id);
+      lastSpotlightAtRef.current = now;
+    }
+  }, [companionAutonomy.pendingActions, showAwayRecap, spotlightCompanionId]);
+
+  // Consequence chips from the latest mechanics pulse
+  useEffect(() => {
+    if (!pendingMechanics) return;
+    const next = chipsFromMechanics(pendingMechanics as Parameters<typeof chipsFromMechanics>[0]);
+    if (next.length) setConsequenceChips(next);
+  }, [pendingMechanics]);
+
+  const handleCloseAwayRecap = useCallback(() => {
+    writeLastSeenAway();
+    setShowAwayRecap(false);
+  }, []);
+
+  const handleExportTaleCard = useCallback(async () => {
+    const paragraph =
+      story.filter(e => e.role === 'narrator').slice(-1)[0]?.content ||
+      'The tale continues…';
+    const locationGuess =
+      story.filter(e => e.role === 'narrator').slice(-1)[0]?.content.match(/\*\*([^*]+)\*\*/)?.[1];
+    try {
+      await downloadTaleCard({
+        characterName: character.name,
+        genre: genre || 'fantasy',
+        mood: currentMood,
+        location: locationGuess,
+        paragraph: paragraph.replace(/\[[^\]]+\]/g, '').slice(0, 600),
+        accent: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() || '#d0a05f',
+        portraitUrl: (character as { portraitUrl?: string }).portraitUrl,
+      });
+      sonnerToast.success('Tale card saved');
+    } catch (e) {
+      console.error(e);
+      sonnerToast.error('Could not export tale card');
+    }
+  }, [story, character, genre, currentMood]);
+
+  const spotlightAction = spotlightCompanionId
+    ? companionAutonomy.pendingActions.get(spotlightCompanionId)?.[0] || null
+    : null;
+  const spotlightCompanion = spotlightCompanionId
+    ? activeCompanions.find(c => c.id === spotlightCompanionId) || null
+    : null;
+
   const handleDiceRollComplete = (roll: any) => {
     // Tick modifiers by 1 turn for dice roll actions too
     if (modifierManagerRef.current) {
@@ -1845,6 +1972,7 @@ export function AdventureDisplay({
         onOpenBookmarks={() => setShowBookmarks(true)}
         onOpenSettings={() => setShowSettings(true)}
         onRestart={onRestart}
+        onExportTaleCard={handleExportTaleCard}
       />
 
 
@@ -2009,6 +2137,14 @@ export function AdventureDisplay({
                       formatNarrativeContent(entry.content, actualIndex)
                     )}
                   </div>
+
+                  {actualIndex === story.length - 1 && consequenceChips.length > 0 && (
+                    <ConsequenceChips
+                      chips={consequenceChips}
+                      onDismiss={(id) => setConsequenceChips(prev => prev.filter(c => c.id !== id))}
+                      onDismissAll={() => setConsequenceChips([])}
+                    />
+                  )}
                   
                   {/* Action Buttons Row - Bookmark, Generate Image & Regenerate World */}
                   <div className="mt-4 flex justify-between items-center flex-wrap gap-2">
@@ -2531,7 +2667,30 @@ export function AdventureDisplay({
         }
         genre={genre}
       />
-      
+
+      <WhileYouWereAwaySplash
+        open={showAwayRecap}
+        recap={awayRecap}
+        onContinue={handleCloseAwayRecap}
+      />
+
+      <CompanionSpotlight
+        open={!!spotlightCompanionId && !!spotlightAction && !!spotlightCompanion}
+        companion={spotlightCompanion}
+        action={spotlightAction}
+        onRespond={(response) => {
+          if (spotlightCompanionId && spotlightAction) {
+            handleAutonomyResponse(spotlightCompanionId, spotlightAction, response);
+          }
+          setSpotlightCompanionId(null);
+        }}
+        onDismiss={() => {
+          if (spotlightCompanionId && spotlightAction) {
+            handleAutonomyDismiss(spotlightCompanionId, spotlightAction);
+          }
+          setSpotlightCompanionId(null);
+        }}
+      />      
       {/* Quick Dice Roll - triggered by /roll command */}
       <QuickDiceRoll
         open={showQuickDiceRoll}

@@ -60,6 +60,7 @@ export interface AdventureHeaderProps {
   onOpenBookmarks: () => void;
   onOpenSettings: () => void;
   onRestart: () => void;
+  onExportTaleCard?: () => void;
 }
 
 const HUD_BUTTON_CLASS =
@@ -121,6 +122,7 @@ export function AdventureHeader({
   onOpenBookmarks,
   onOpenSettings,
   onRestart,
+  onExportTaleCard,
 }: AdventureHeaderProps) {
   const weatherName = WEATHER_CONFIGS[weatherState.current].name;
   
@@ -250,6 +252,12 @@ export function AdventureHeader({
                 Bookmarks
                 <span className="ml-auto text-[10px] text-muted-foreground">Ctrl+B</span>
               </DropdownMenuItem>
+              {onExportTaleCard && (
+                <DropdownMenuItem onClick={onExportTaleCard} className="gap-2">
+                  <ScrollText className="w-4 h-4" />
+                  Share tale card
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={onRestart}

@@ -45,6 +45,7 @@ import { DirectorSettings } from '@/game/directorModeSystem';
 import { WorldBible } from '@/game/worldBible/types';
 import { PressureState, getPressureAtmosphere } from '@/game/pressureClockSystem';
 import { companionSystem } from '@/game/companionSystem';
+import { buildSocialPresenceDirectives } from '@/lib/socialPresenceDirectives';
 
 /**
  * Depth/realism toggles the player configures in Settings. These used to live
@@ -80,6 +81,7 @@ export interface NarrativeRequestSettings {
   enableAdrenalineSystem?: boolean;
   enableWoundSystem?: boolean;
   enableInventoryWeight?: boolean;
+  enableLanguageBarrier?: boolean;
 }
 
 export interface BuildNarrativeRequestBodyInput {
@@ -585,6 +587,28 @@ export function buildNarrativeRequestBody(
         guidance: activeDirectorSettings.guidance,
       };
     }
+
+    // Director + settings shape how people around the player behave.
+    const social = buildSocialPresenceDirectives(settings, activeDirectorSettings);
+    requestBody.socialPresenceContext = {
+      npcCompanionGuidance: social.npcCompanionGuidance,
+      emotionalRange: social.emotionalRange,
+      speechRegister: social.speechRegister,
+      agencyLevel: social.agencyLevel,
+      directives: social.directives,
+    };
+    if (requestBody.gameplaySystemsContext?.directives) {
+      requestBody.gameplaySystemsContext.directives = [
+        ...requestBody.gameplaySystemsContext.directives,
+        ...social.directives.slice(0, 6),
+      ];
+    }
+    if (requestBody.qualityEnforcement?.antiDriftDirectives) {
+      requestBody.qualityEnforcement.antiDriftDirectives = [
+        ...requestBody.qualityEnforcement.antiDriftDirectives,
+        ...social.directives.slice(0, 4),
+      ];
+    }
   }
 
   if (includeIntermediateContext) {
@@ -601,7 +625,13 @@ export function buildNarrativeRequestBody(
 
     const partyContext = buildActivePartyContext();
     if (partyContext) {
-      requestBody.companionPartyContext = partyContext;
+      const social = buildSocialPresenceDirectives(settings, settings.directorSettings || directorSettings);
+      requestBody.companionPartyContext = {
+        ...partyContext,
+        socialGuidance: social.npcCompanionGuidance,
+        emotionalRange: social.emotionalRange,
+        speechRegister: social.speechRegister,
+      };
     }
 
     if (settings.enableWeatherEffects) {
