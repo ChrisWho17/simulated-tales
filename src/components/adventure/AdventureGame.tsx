@@ -756,6 +756,7 @@ export function AdventureGame() {
     latestMechanicsRef, // Synchronous mirror — fixes inventory race condition
     generateNarrative,
     buildRequestBody,
+    applyPendingSettings,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,
@@ -774,6 +775,10 @@ export function AdventureGame() {
       directorSettings: settings.directorSettings,
       forceVarianceSeedEnabled: (settings as any).forceVarianceSeedEnabled,
       forceVarianceSeed: (settings as any).forceVarianceSeed,
+      inDepthSettings: settings.inDepthSettings,
+      enableAdrenalineSystem: settings.enableAdrenalineSystem,
+      enableWoundSystem: settings.enableWoundSystem,
+      enableInventoryWeight: settings.enableInventoryWeight,
     },
     diceMode,
     directorSettings,
@@ -1211,7 +1216,7 @@ export function AdventureGame() {
   }, [scenarioSelection]);
 
   // Step 3: Narrator settings confirmed -> start game
-  const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
+  const handleNarratorConfirm = useCallback(async (directorChoice: DirectorSettings) => {
     const char = pendingCharacter;
     if (!char || !scenarioSelection) {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
@@ -1220,8 +1225,11 @@ export function AdventureGame() {
     
     // Single write path: updateSettings owns the GameContext write and emits the
     // StateSyncBus event that feeds useDirectorSettings and the generation path.
-    setDirectorSettings(settings);
-    updateSettings({ directorSettings: settings });
+    setDirectorSettings(directorChoice);
+    updateSettings({ directorSettings: directorChoice });
+    // The opening narrative is generated below in this same tick, before React
+    // re-renders with the new context value, so seed the generator directly.
+    applyPendingSettings({ directorSettings: directorChoice });
     
     // Clear pending character
     setPendingCharacter(null);
@@ -1268,19 +1276,21 @@ export function AdventureGame() {
       // Set relationship journal context for this new campaign + character
       setJournalContext(campaignId, char.name);
       
-      // Create campaign in new campaign system if available
+      // Create campaign in new campaign system if available.
+      // The pre-play choices are passed in at creation time — patching them in
+      // afterwards left the first persisted copy holding engine defaults.
       if (campaignContext && worldBible) {
-        const newCampaign = await campaignContext.createCampaign(worldBible, char, scenarioSelection.scenario);
-        console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name}`);
-        
-        // Save director settings to the campaign
-        campaignContext.updateCampaign({
-          settings: {
-            ...newCampaign.settings,
-            directorSettings: settings,
-          },
-        });
-        console.log(`[Campaign System] Saved director settings: ${settings.directorType}`);
+        const newCampaign = await campaignContext.createCampaign(
+          worldBible,
+          char,
+          scenarioSelection.scenario,
+          {
+            adultContent: settings.adultContent,
+            cheatMode,
+            directorSettings: directorChoice,
+          }
+        );
+        console.log(`[Campaign System] Created campaign: ${newCampaign.meta.name} (director: ${directorChoice.directorType})`);
       }
 
       // Generate narrative with timeout protection
@@ -1299,8 +1309,8 @@ export function AdventureGame() {
       
       // Create story entry (use blended fallback if narrative generation failed)
       // Use director-specific opening style if available
-      const directorOpening = settings.enabled && !settings.rawGame 
-        ? getDirectorOpeningStyle(settings.directorType)
+      const directorOpening = directorChoice.enabled && !directorChoice.rawGame 
+        ? getDirectorOpeningStyle(directorChoice.directorType)
         : undefined;
       // If AI narrative failed and we have a director opening, use that as the opening
       const narrativeContent = narrative || (directorOpening 
@@ -1350,12 +1360,18 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+  }, [
+    pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign,
+    campaignContext, worldBible, settings.adultContent, cheatMode, applyPendingSettings,
+    setDirectorSettings, updateSettings,
+  ]);
 
-  // Handler for skipping narrator settings
+  // Skipping the narrator screen keeps whatever the player already configured.
+  // It used to hand back DEFAULT_DIRECTOR_SETTINGS, silently discarding choices
+  // made in the first-time wizard or a previous session.
   const handleNarratorSkip = useCallback(() => {
-    handleNarratorConfirm(DEFAULT_DIRECTOR_SETTINGS);
-  }, [handleNarratorConfirm]);
+    handleNarratorConfirm(settings.directorSettings || directorSettings || DEFAULT_DIRECTOR_SETTINGS);
+  }, [handleNarratorConfirm, settings.directorSettings, directorSettings]);
 
 
 
@@ -2444,12 +2460,14 @@ export function AdventureGame() {
     return (
       <FirstTimeWizard
         onComplete={(selections) => {
-          // Apply the selected preset
+          // Adult content is the player's own choice, not part of the preset —
+          // apply it even when no preset matches.
+          updateSettings({ adultContent: selections.adultContent });
+
           const selectedPreset = SETTINGS_PRESETS.find(p => p.id === selections.preset);
           if (selectedPreset) {
             // Update game settings with preset values
             updateSettings({
-              adultContent: selections.adultContent,
               enableWoundSystem: selectedPreset.settings.enableWoundSystem,
               enableInventoryWeight: selectedPreset.settings.enableInventoryWeight,
               inDepthSettings: {

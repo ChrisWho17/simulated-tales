@@ -54,6 +54,8 @@ RULES:
 - Include textural details: weathered, gleaming, rusted, worn, pristine
 - Suggest color palette: warm/cool dominant, accent colors, contrast
 - Describe the most visually striking moment from the narrative
+- When PLAYER_APPEARANCE is present and the narrative shows the player in frame, describe that figure using those exact physical traits (build, skin tone, hair, eyes, distinguishing marks, worn gear). Consistency across illustrations matters more than variety — the same person must be recognisable every time.
+- If the moment is purely environmental and the player is not present, omit the figure entirely rather than inventing a different-looking one
 - Never include character names, only evocative descriptors (the weary traveler, the shadowed figure)
 - Never include text/signs in prompts
 - Prefer establishing shots and dynamic compositions over static poses
@@ -223,6 +225,46 @@ const DEFAULT_NEGATIVE = 'blurry, deformed, extra limbs, mutated, text, watermar
 /**
  * Call Haiku via Lovable AI Gateway to extract an optimized image prompt
  */
+/**
+ * Flatten a visual profile into a stable one-line description. Every trait the
+ * profile carries is included so the same character reads the same way across
+ * illustrations; the prompt model previously only ever saw gender and hair.
+ */
+function summariseAppearance(profile?: CharacterVisualProfile | null): string | null {
+  if (!profile) return null;
+
+  const traits: string[] = [profile.gender];
+
+  const { build, skinTone } = profile.physicalDescription ?? {};
+  if (build) traits.push(`${build} build`);
+  if (skinTone) traits.push(`${skinTone} skin`);
+
+  const hair = [profile.hair?.length, profile.hair?.color, profile.hair?.style, 'hair']
+    .filter(Boolean)
+    .join(' ');
+  if (profile.hair?.color || profile.hair?.style) traits.push(hair);
+
+  if (profile.eyes?.color) traits.push(`${profile.eyes.color} eyes`);
+
+  const face = profile.facialFeatures ?? {};
+  for (const feature of [face.beard, face.scars, face.tattoos, face.other]) {
+    if (feature) traits.push(feature);
+  }
+
+  const mods = profile.modifications ?? {};
+  for (const mod of [mods.cybernetics, mods.other]) {
+    if (mod) traits.push(mod);
+  }
+
+  if (profile.roleAppearance) traits.push(profile.roleAppearance);
+  else if (profile.role) traits.push(profile.role);
+
+  const summary = traits.filter(Boolean).join(', ');
+
+  // fullVisualDescription is author-written and often richer than the parts.
+  return (summary || profile.fullVisualDescription || '').slice(0, 400) || null;
+}
+
 async function extractPromptWithHaiku(
   genre: string,
   action: string | null,
@@ -230,7 +272,8 @@ async function extractPromptWithHaiku(
   era?: string,
   timeOfDay?: string,
   weather?: string,
-  worldLore?: string
+  worldLore?: string,
+  characterProfile?: CharacterVisualProfile | null
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
@@ -249,6 +292,8 @@ async function extractPromptWithHaiku(
     if (timeOfDay) contextParts.push(`TIME_OF_DAY: ${timeOfDay}`);
     if (weather) contextParts.push(`WEATHER: ${weather}`);
     if (worldLore) contextParts.push(`WORLD_LORE:\n${worldLore.slice(0, 900)}`);
+    const appearance = summariseAppearance(characterProfile);
+    if (appearance) contextParts.push(`PLAYER_APPEARANCE: ${appearance}`);
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
     
@@ -2123,7 +2168,8 @@ serve(async (req) => {
       era,
       timeOfDay,
       weather,
-      worldLore
+      worldLore,
+      requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter)
     );
     
     if (haikuResult.extractedPrompt) {

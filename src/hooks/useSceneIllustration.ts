@@ -24,6 +24,15 @@ interface UseSceneIllustrationOptions {
   sceneIllustrationsEnabled: boolean;
 }
 
+/**
+ * Illustration pacing. The previous throttle passed `5` as "ticks" while
+ * comparing two `Date.now()` values, so the gate opened 5ms after the last
+ * image and effectively every eligible turn produced one.
+ */
+const URGENT_COOLDOWN_MS = 45_000;
+const ROUTINE_COOLDOWN_MS = 3 * 60_000;
+const MIN_TURNS_BETWEEN = 3;
+
 interface SceneIllustrationReturn {
   sceneImageUrl: string | null;
   isGeneratingScene: boolean;
@@ -51,9 +60,15 @@ export function useSceneIllustration({
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
   const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
   const lastIllustrationTick = useRef<number>(0);
+  const turnsSinceIllustration = useRef<number>(Number.MAX_SAFE_INTEGER);
 
   const generateSceneIllustration = useCallback(async (description: string, trigger: SceneTrigger) => {
     if (isGeneratingScene) return;
+
+    // Claim the cooldown up front. Booking it on success only meant a run of
+    // failures could re-fire on every single turn.
+    lastIllustrationTick.current = Date.now();
+    turnsSinceIllustration.current = 0;
 
     setIsGeneratingScene(true);
     console.log('[SceneIllustration] Starting generation for trigger:', trigger.type);
@@ -126,7 +141,6 @@ export function useSceneIllustration({
       
       if (data.imageUrl) {
         setSceneImageUrl(data.imageUrl);
-        lastIllustrationTick.current = Date.now();
       } else if (data.error) {
         console.error('[SceneIllustration] Generation error:', data.error);
       }
@@ -145,22 +159,32 @@ export function useSceneIllustration({
     // Respect the scene illustrations setting
     if (!sceneIllustrationsEnabled) return;
 
+    turnsSinceIllustration.current += 1;
+
     const trigger = shouldIllustrateScene(
       eventType,
       content,
       lastIllustrationTick.current,
       Date.now(),
-      5 // 5 ticks minimum between illustrations
+      URGENT_COOLDOWN_MS
     );
 
-    if (trigger) {
-      // Defer off the critical play path so narrative paint isn't hitching on image work
-      const schedule =
-        typeof requestIdleCallback !== 'undefined'
-          ? (cb: () => void) => requestIdleCallback(() => cb(), { timeout: 1500 })
-          : (cb: () => void) => setTimeout(cb, 250);
-      schedule(() => generateSceneIllustration(content, trigger));
-    }
+    if (!trigger) return;
+
+    // shouldIllustrateScene only enforces the short fuse, which is reserved for
+    // high-priority beats (combat, dramatic turns). Everything else waits for
+    // the full cooldown so ordinary turns stop generating an image apiece.
+    const elapsed = Date.now() - lastIllustrationTick.current;
+    const isUrgent = trigger.priority <= 1;
+    if (!isUrgent && elapsed < ROUTINE_COOLDOWN_MS) return;
+    if (turnsSinceIllustration.current < MIN_TURNS_BETWEEN) return;
+
+    // Defer off the critical play path so narrative paint isn't hitching on image work
+    const schedule =
+      typeof requestIdleCallback !== 'undefined'
+        ? (cb: () => void) => requestIdleCallback(() => cb(), { timeout: 1500 })
+        : (cb: () => void) => setTimeout(cb, 250);
+    schedule(() => generateSceneIllustration(content, trigger));
   }, [generateSceneIllustration, sceneIllustrationsEnabled]);
 
   const closeSceneImage = useCallback(() => {

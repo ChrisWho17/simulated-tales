@@ -19,6 +19,8 @@ export interface SaveTransaction {
   completedAt?: number;
   checksum: string;
   previousChecksum?: string;
+  /** In-memory only, so a failed write can be undone. Never persisted. */
+  previousData?: string;
   dataSize: number;
   error?: string;
   verificationPassed?: boolean;
@@ -101,10 +103,11 @@ class SaveTransactionManager {
       dataSize: dataString.length,
     };
     
-    // Get previous checksum for rollback
-    const existingData = localStorage.getItem(`lwe_campaign_${campaignId}`);
+    // Keep the previous copy so a failed/unverifiable write can be undone
+    const existingData = localStorage.getItem(getCampaignKey(campaignId));
     if (existingData) {
       transaction.previousChecksum = await generateChecksum(existingData);
+      transaction.previousData = existingData;
     }
     
     this.activeTransactions.set(transaction.id, transaction);
@@ -163,9 +166,19 @@ class SaveTransactionManager {
         }
       }
       
-      // Verify write with full verification
+      // Verify write with full verification. If the bytes that landed are not
+      // the bytes we intended, put the previous good save back rather than
+      // leaving a half-written campaign on disk.
       const verification = await this.verifyWrite(key, transaction.checksum, walEntry.data.length);
       if (!verification.success) {
+        if (transaction.previousData) {
+          try {
+            localStorage.setItem(key, transaction.previousData);
+            console.warn(`[Transaction] Restored previous save after failed verification: ${transactionId}`);
+          } catch (restoreError) {
+            console.error('[Transaction] Failed to restore previous save:', restoreError);
+          }
+        }
         throw new Error(`Write verification failed: ${verification.error}`);
       }
       
@@ -361,8 +374,17 @@ class SaveTransactionManager {
   // RECOVERY - Replay uncommitted WAL entries
   // ============================================================================
   
-  async recoverFromWAL(): Promise<{ recovered: number; failed: number }> {
-    const result = { recovered: 0, failed: 0 };
+  /**
+   * Replays WAL entries that never reached a commit.
+   *
+   * A WAL entry is written *before* the commit, so a stale entry left behind by
+   * a failed commit describes an OLDER world than what is on disk. Replaying it
+   * blindly rolled live campaigns backwards — the "my save reverted" class of
+   * bug. An entry is now only applied when it parses, matches its own checksum,
+   * and is strictly newer than the stored campaign.
+   */
+  async recoverFromWAL(): Promise<{ recovered: number; failed: number; discarded: number }> {
+    const result = { recovered: 0, failed: 0, discarded: 0 };
     
     try {
       const walRaw = localStorage.getItem(WAL_KEY);
@@ -371,8 +393,9 @@ class SaveTransactionManager {
       const wal: WriteAheadLogEntry[] = JSON.parse(walRaw);
       
       for (const entry of wal) {
-        // Check if already committed
-        const existingData = localStorage.getItem(`lwe_campaign_${entry.campaignId}`);
+        const key = getCampaignKey(entry.campaignId);
+        const existingData = localStorage.getItem(key);
+
         if (existingData) {
           const existingChecksum = await generateChecksum(existingData);
           if (existingChecksum === entry.checksum) {
@@ -382,16 +405,58 @@ class SaveTransactionManager {
           }
         }
         
-        // Try to recover uncommitted transaction
-        if (entry.data) {
+        if (!entry.data) {
+          await this.removeFromWAL(entry.transactionId);
+          continue;
+        }
+
+        // Never apply a payload we cannot verify.
+        const entryChecksum = await generateChecksum(entry.data);
+        if (entryChecksum !== entry.checksum) {
+          console.warn(`[WAL] Discarding corrupt entry ${entry.transactionId} (checksum mismatch)`);
+          await this.removeFromWAL(entry.transactionId);
+          result.discarded++;
+          continue;
+        }
+
+        let pending: CampaignData;
+        try {
+          pending = JSON.parse(entry.data);
+        } catch {
+          console.warn(`[WAL] Discarding unparseable entry ${entry.transactionId}`);
+          await this.removeFromWAL(entry.transactionId);
+          result.discarded++;
+          continue;
+        }
+
+        // Only move a campaign forward, never backwards.
+        if (existingData) {
+          let storedUpdatedAt = 0;
           try {
-            localStorage.setItem(`lwe_campaign_${entry.campaignId}`, entry.data);
-            await this.removeFromWAL(entry.transactionId);
-            result.recovered++;
-            console.log(`[WAL] Recovered transaction: ${entry.transactionId}`);
+            storedUpdatedAt = (JSON.parse(existingData) as CampaignData)?.meta?.updatedAt ?? 0;
           } catch {
-            result.failed++;
+            // Stored copy is unreadable — the verified WAL payload is better.
+            storedUpdatedAt = -1;
           }
+
+          if (storedUpdatedAt >= 0 && (pending.meta?.updatedAt ?? 0) <= storedUpdatedAt) {
+            console.log(
+              `[WAL] Skipping stale entry ${entry.transactionId} for ${entry.campaignId} ` +
+              `(entry ${pending.meta?.updatedAt ?? 0} <= stored ${storedUpdatedAt})`
+            );
+            await this.removeFromWAL(entry.transactionId);
+            result.discarded++;
+            continue;
+          }
+        }
+
+        try {
+          localStorage.setItem(key, entry.data);
+          await this.removeFromWAL(entry.transactionId);
+          result.recovered++;
+          console.log(`[WAL] Recovered transaction: ${entry.transactionId}`);
+        } catch {
+          result.failed++;
         }
       }
       

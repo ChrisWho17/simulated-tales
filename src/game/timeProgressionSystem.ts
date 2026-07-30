@@ -87,8 +87,20 @@ export function createInitialTimeState(startingHour: number = 9, startingYear: n
   };
 }
 
+export const DEFAULT_TIME_MULTIPLIER: TimeMultiplier = 'fifteen_minutes';
+
+/**
+ * Saves written by older builds (or hand-edited ones) can carry a multiplier
+ * that no longer exists. An unguarded lookup threw on `.minutes`, which stalled
+ * time for the rest of the session, so fall back instead of failing.
+ */
+export function resolveTimeMultiplier(multiplier: TimeMultiplier | undefined) {
+  return TIME_MULTIPLIER_CONFIG[multiplier as TimeMultiplier]
+    ?? TIME_MULTIPLIER_CONFIG[DEFAULT_TIME_MULTIPLIER];
+}
+
 export function advanceTime(state: GameTimeState, turns: number = 1): GameTimeState {
-  const minutesPerTurn = TIME_MULTIPLIER_CONFIG[state.multiplier].minutes;
+  const minutesPerTurn = resolveTimeMultiplier(state.multiplier).minutes;
   const totalMinutesToAdd = minutesPerTurn * turns;
   
   return addMinutesToTime(state, totalMinutesToAdd, turns);
@@ -345,7 +357,7 @@ export function buildTimeContext(state: GameTimeState): TimeContext {
   }
   
   // Get the elapsed minutes from the current multiplier
-  const elapsedMinutes = TIME_MULTIPLIER_CONFIG[state.multiplier].minutes;
+  const elapsedMinutes = resolveTimeMultiplier(state.multiplier).minutes;
   
   return {
     hour: state.hour,

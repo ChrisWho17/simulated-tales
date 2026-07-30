@@ -46,7 +46,7 @@ import {
   validateGenreCompliance,
   getGenreMicroEvents,
 } from '@/lib/narrativeGenreEnforcement';
-import { buildNarrativeRequestBody } from '@/lib/buildNarrativeRequestBody';
+import { buildNarrativeRequestBody, NarrativeRequestSettings } from '@/lib/buildNarrativeRequestBody';
 import {
   getNextReadyCompanion,
   buildCompanionIntroductionContext,
@@ -92,18 +92,7 @@ export interface NarrativeGenerationDependencies {
   cheatMode: boolean;
   
   // Settings
-  settings: {
-    adultContent: boolean;
-    enableMoodSystem: boolean;
-    enableWeatherEffects: boolean;
-    enableNPCSchedules?: boolean;
-    enableNPCAccents?: boolean;
-    enableMoodDialogue?: boolean;
-    narratorConfig?: any;
-    directorSettings?: DirectorSettings;
-    forceVarianceSeedEnabled?: boolean;
-    forceVarianceSeed?: string;
-  };
+  settings: NarrativeRequestSettings;
   diceMode: string;
   directorSettings: DirectorSettings | null;
   
@@ -190,6 +179,14 @@ export interface NarrativeGenerationResult {
       pendingCompanionId?: string;
     }
   ) => Record<string, any> | null;
+  /**
+   * Seed the settings used by the very next generation. Needed when play starts
+   * in the same tick that the pre-play settings are written.
+   */
+  applyPendingSettings: (pending: {
+    settings?: Partial<NarrativeRequestSettings>;
+    directorSettings?: DirectorSettings;
+  }) => void;
   setLastFailedAction: React.Dispatch<React.SetStateAction<{ action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null>>;
   setPendingMechanics: React.Dispatch<React.SetStateAction<GameMechanics | undefined>>;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -327,6 +324,28 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     validateContent,
   } = deps;
 
+  // The pre-play flow writes settings (director, adult content, depth toggles)
+  // and starts the opening generation in the same tick, so a render closure
+  // would still hold the previous values. Mirror them into refs and let
+  // `applyPendingSettings` seed the refs before that first generation runs.
+  const settingsRef = useRef<NarrativeRequestSettings>(settings);
+  const directorSettingsRef = useRef<DirectorSettings | null>(directorSettings);
+  settingsRef.current = settings;
+  directorSettingsRef.current = directorSettings;
+
+  const applyPendingSettings = useCallback((pending: {
+    settings?: Partial<NarrativeRequestSettings>;
+    directorSettings?: DirectorSettings;
+  }) => {
+    if (pending.settings) {
+      settingsRef.current = { ...settingsRef.current, ...pending.settings };
+    }
+    if (pending.directorSettings) {
+      directorSettingsRef.current = pending.directorSettings;
+      settingsRef.current = { ...settingsRef.current, directorSettings: pending.directorSettings };
+    }
+  }, []);
+
   const buildRequestBody = useCallback((
     scenario: string,
     playerAction: string | undefined,
@@ -367,9 +386,9 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       extraDirectives: options?.extraDirectives ?? [],
       stream: options?.stream ?? false,
       cheatMode,
-      settings,
+      settings: settingsRef.current,
       diceMode,
-      directorSettings,
+      directorSettings: directorSettingsRef.current,
       worldBible,
       scenarioSelection,
       campaignMemory,
@@ -407,7 +426,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
 
     return result.requestBody;
   }, [
-    cheatMode, settings, diceMode, directorSettings, worldBible, scenarioSelection,
+    cheatMode, diceMode, worldBible, scenarioSelection,
     campaignMemory, getCampaignContext, currentMood, toneState, setToneState,
     languageState, weatherState, timeState, sceneNPCs, worldState, narrativeQueue,
     activeRumors, playerLocation, activeConsequences, pressureState, getPressureContext,
@@ -778,6 +797,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     latestMechanicsRef,
     generateNarrative,
     buildRequestBody,
+    applyPendingSettings,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,

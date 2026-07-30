@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, forwardRef } from 'react';
 import { CoreMoodType } from '@/game/moodSystem';
-import { WeatherParticles } from './weather-particles';
 
 interface Particle {
   x: number;
@@ -175,13 +174,19 @@ export const AmbientGlow = forwardRef<HTMLDivElement>(function AmbientGlow(_, re
   );
 });
 
-// Combined atmospheric background
+/**
+ * Combined atmospheric background.
+ *
+ * Weather is deliberately NOT rendered here. This component used to mount its
+ * own mood-driven WeatherParticles canvas, which ran alongside the play screen's
+ * real weather canvas — two full-screen animations at once, and one of them
+ * ignored the "weather graphics" setting entirely.
+ */
 export function AtmosphericBackground({ mood = 'neutral' }: { mood?: CoreMoodType }) {
   return (
     <>
       <ParticleBackground />
       <AmbientGlow />
-      <WeatherParticles mood={mood} />
     </>
   );
 }

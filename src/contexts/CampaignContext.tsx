@@ -38,6 +38,7 @@ import { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
 import { companionSystem } from '@/game/companionSystem';
 import { companionAutonomyManager } from '@/game/companion/companionAutonomyIntegration';
 import { checkAndCleanupStorage } from '@/lib/storageCleanup';
+import { toast } from 'sonner';
 
 // ============================================================================
 // EXTENDED CONTEXT TYPE
@@ -106,6 +107,29 @@ function createCheckpointData(campaign: CampaignData, label: string): CampaignCh
 // HELPER: Convert account types
 // ============================================================================
 
+/**
+ * Corruption used to be console-only, so a player whose save had been rebuilt
+ * from a checkpoint had no idea anything had happened.
+ */
+function reportIntegrityResult(
+  integrityResult: { status: string; repairedFrom?: string; issues?: unknown[] },
+  campaignName?: string
+): void {
+  const label = campaignName ? `"${campaignName}"` : 'Your campaign';
+
+  if (integrityResult.status === 'repaired') {
+    toast.warning(`${label} was recovered from a backup`, {
+      description: `The save file was damaged, so the last good ${integrityResult.repairedFrom || 'checkpoint'} was restored. You may have lost the most recent turn or two.`,
+      duration: 12000,
+    });
+  } else if (integrityResult.status === 'corrupted') {
+    toast.warning(`${label} loaded with problems`, {
+      description: 'Some data was missing or inconsistent. Make a manual save now, and export a backup if anything looks wrong.',
+      duration: 12000,
+    });
+  }
+}
+
 function convertAccount(unified: UnifiedAccount): SaveAccount {
   return {
     mode: unified.mode === 'cloud' ? 'cloud' : 'guest-local',
@@ -156,6 +180,9 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Dirty state for auto-save
   const [isDirty, setIsDirty] = useState(false);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
+  // Monotonic counter of edits. saveNow snapshots it so it can tell whether the
+  // campaign changed while the (async) save was in flight.
+  const dirtySeqRef = useRef(0);
   
   // Play time tracking
   const playTimeRef = useRef<number>(0);
@@ -194,11 +221,14 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
         // Use integrity-validated load
         const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(activeId);
         if (campaign) {
-          if (integrityResult.status === 'repaired') {
-            console.log(`[Campaign] Loaded campaign was auto-repaired: ${integrityResult.repairedFrom}`);
-          }
+          reportIntegrityResult(integrityResult, campaign.meta?.name);
           setupCampaignForLoad(campaign);
           setActiveCampaign(campaign);
+        } else if (integrityResult.status === 'unrecoverable') {
+          toast.error('Could not load your last campaign', {
+            description: 'The save file is unreadable and no backup was available. Your other campaigns are unaffected.',
+            duration: 12000,
+          });
         }
       }
       
@@ -449,6 +479,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     // CRITICAL: Check and cleanup storage BEFORE saving to prevent quota errors
     checkAndCleanupStorage();
     
+    const seqAtStart = dirtySeqRef.current;
     const updatedCampaign = prepareCampaignForSave({
       ...activeCampaign,
       meta: {
@@ -471,8 +502,17 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       const cloudResult = await UnifiedSaveArchitecture.saveCampaign(updatedCampaign);
       console.log('[Campaign] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
       
-      setActiveCampaign(updatedCampaign);
-      setIsDirty(false);
+      // Anything the player did while the save was in flight must survive.
+      // Replacing state with the pre-save snapshot used to silently drop the
+      // narrative entries added during a slow cloud round-trip.
+      const changedDuringSave = dirtySeqRef.current !== seqAtStart;
+      setActiveCampaign(prev => {
+        if (!prev || prev.id !== updatedCampaign.id) return updatedCampaign;
+        return changedDuringSave
+          ? { ...prev, meta: { ...prev.meta, playTime: updatedCampaign.meta.playTime, updatedAt: updatedCampaign.meta.updatedAt } }
+          : updatedCampaign;
+      });
+      setIsDirty(changedDuringSave);
       setLastSaved(Date.now());
       playTimeRef.current = 0;
       setSyncStatus(cloudResult.syncedToCloud ? 'synced' : 'idle');
@@ -485,6 +525,12 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     } else {
       console.error('[Campaign] Save failed:', result.error);
       setSyncStatus('error');
+      // Leave isDirty set so the next autosave tick retries instead of dropping
+      // the unsaved turn on the floor.
+      toast.error('Save failed — your progress is still in memory', {
+        description: result.error || 'Retrying on the next autosave. Avoid closing the tab.',
+        duration: 8000,
+      });
     }
   }, [activeCampaign, prepareCampaignForSave]);
   
@@ -492,16 +538,19 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     saveNowRef.current = saveNow;
   }, [saveNow]);
   
-  // Auto-save
+  // Auto-save.
+  // Depends on the campaign *id*, not the campaign object: every edit produced a
+  // new object, which re-ran this effect and restarted the timer, so an actively
+  // played session could go indefinitely without ever reaching an autosave.
   useEffect(() => {
-    if (!activeCampaign || !isDirty) return;
+    if (!activeCampaign?.id || !isDirty) return;
     
     const timer = setTimeout(() => {
       saveNowRef.current();
     }, AUTO_SAVE_INTERVAL);
     
     return () => clearTimeout(timer);
-  }, [activeCampaign, isDirty]);
+  }, [activeCampaign?.id, isDirty]);
   
   // Save on visibility change / beforeunload
   useEffect(() => {
@@ -528,6 +577,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   
   // Mark dirty
   const markDirty = useCallback(() => {
+    dirtySeqRef.current += 1;
     setIsDirty(true);
   }, []);
   
@@ -541,7 +591,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   const createCampaign = useCallback(async (
     worldBible: WorldBible,
     player: RPGCharacter,
-    scenario: string
+    scenario: string,
+    initialSettings?: CampaignData['settings']
   ): Promise<CampaignData> => {
     const now = Date.now();
     const campaignId = `campaign_${now}_${Math.random().toString(36).substr(2, 9)}`;
@@ -591,11 +642,15 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
       weatherState: createInitialWeatherState(),
       timeState: createInitialTimeState(),
       livingWorldState,
+      // Seeded from the player's pre-play choices. Defaults are only a floor —
+      // hardcoding them here used to reset director mode and adult content the
+      // moment a campaign was created.
       settings: {
         adultContent: false,
         cheatMode: false,
         directorSettings: { ...DEFAULT_DIRECTOR_SETTINGS },
         timeMultiplier: 'fifteen_minutes',
+        ...(initialSettings || {}),
       },
     };
     
@@ -637,11 +692,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(campaignId);
     
     if (campaign) {
-      if (integrityResult.status === 'repaired') {
-        console.log(`[Campaign] Campaign auto-repaired from ${integrityResult.repairedFrom}`);
-      } else if (integrityResult.status === 'corrupted' || integrityResult.status === 'unrecoverable') {
-        console.warn('[Campaign] Campaign has integrity issues:', integrityResult.issues);
-      }
+      reportIntegrityResult(integrityResult, campaign.meta?.name);
       
       setupCampaignForLoad(campaign);
       UnifiedSaveArchitecture.setActiveCampaignId(campaignId);

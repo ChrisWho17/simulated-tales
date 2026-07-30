@@ -46,6 +46,25 @@ import { WorldBible } from '@/game/worldBible/types';
 import { PressureState, getPressureAtmosphere } from '@/game/pressureClockSystem';
 import { companionSystem } from '@/game/companionSystem';
 
+/**
+ * Depth/realism toggles the player configures in Settings. These used to live
+ * only in the UI, so turning on Gun Nut or Hunger changed nothing the narrator
+ * could see.
+ */
+export interface NarrativeInDepthSettings {
+  worldTone?: 'cozy' | 'balanced' | 'brutal';
+  enableHunger?: boolean;
+  enableFatigue?: boolean;
+  enableInjuryDetail?: boolean;
+  enableEquipmentWear?: boolean;
+  gunNutDepth?: 'standard' | 'gunnut' | 'gunnut_plus';
+  socialWeight?: 'light' | 'balanced' | 'heavy';
+  combatWeight?: 'light' | 'balanced' | 'heavy';
+  mysteryDensity?: 'low' | 'medium' | 'high';
+  microEventFrequency?: 'rare' | 'occasional' | 'frequent';
+  consequenceIntensity?: 'forgiving' | 'balanced' | 'harsh';
+}
+
 export interface NarrativeRequestSettings {
   adultContent: boolean;
   enableMoodSystem: boolean;
@@ -57,6 +76,10 @@ export interface NarrativeRequestSettings {
   directorSettings?: DirectorSettings;
   forceVarianceSeedEnabled?: boolean;
   forceVarianceSeed?: string;
+  inDepthSettings?: NarrativeInDepthSettings;
+  enableAdrenalineSystem?: boolean;
+  enableWoundSystem?: boolean;
+  enableInventoryWeight?: boolean;
 }
 
 export interface BuildNarrativeRequestBodyInput {
@@ -127,6 +150,66 @@ function formatEmotionalContext(
     physicalDescription: descriptor.physicalSigns.join(', '),
     dialogueTone: descriptor.dialogueTone,
     actionFlavor: descriptor.actionFlavor,
+  };
+}
+
+/**
+ * Turns the depth toggles into an explicit contract for the narrator. Only the
+ * systems the player actually enabled are described, so a disabled system stays
+ * silent instead of leaking survival/weapon chatter into a cosy story.
+ */
+function buildGameplaySystemsContext(settings: NarrativeRequestSettings) {
+  const depth = settings.inDepthSettings || {};
+  const activeSystems: string[] = [];
+  const disabledSystems: string[] = [];
+
+  const record = (enabled: boolean | undefined, onLabel: string, offLabel: string) => {
+    if (enabled) activeSystems.push(onLabel);
+    else disabledSystems.push(offLabel);
+  };
+
+  record(depth.enableHunger, 'HUNGER & THIRST: track and reference the character growing hungry/thirsty; meals, rations and water matter.', 'hunger/thirst');
+  record(depth.enableFatigue, 'FATIGUE & SLEEP: track tiredness; long exertion without rest degrades performance and shows in the prose.', 'fatigue/sleep');
+  record(depth.enableInjuryDetail, 'DETAILED INJURIES: describe wounds specifically (location, severity, bleeding, lingering pain) rather than abstract damage.', 'detailed injuries');
+  record(depth.enableEquipmentWear, 'EQUIPMENT WEAR: gear degrades with use — note fouling, dulled edges, frayed straps, jams and the need for maintenance.', 'equipment wear');
+  record(settings.enableAdrenalineSystem, 'ADRENALINE: under stress the character may not feel injuries; hide the true cost until the adrenaline drops, then land it hard.', 'adrenaline masking');
+  record(settings.enableWoundSystem, 'WOUND TRACKING: persistent wounds carry between scenes until treated.', 'wound tracking');
+  record(settings.enableInventoryWeight, 'ENCUMBRANCE: carrying capacity is finite; heavy loads slow the character and are worth mentioning.', 'encumbrance');
+
+  const gunNut = depth.gunNutDepth && depth.gunNutDepth !== 'standard';
+  if (gunNut) {
+    activeSystems.push(
+      depth.gunNutDepth === 'gunnut_plus'
+        ? 'GUN NUT+ : use precise firearms terminology — specific calibers, actions, optics, muzzle devices, magazines, triggers, handling characteristics, recoil impulse and malfunction types. The character is an expert; write like one.'
+        : 'GUN NUT: use accurate firearms detail — correct caliber, action type, optic and attachment names, realistic handling, recoil and reloading.'
+    );
+  } else {
+    disabledSystems.push('firearms detail (keep weapon description general)');
+  }
+
+  const toneDirective = depth.worldTone === 'brutal'
+    ? 'WORLD TONE — BRUTAL: the world is genuinely dangerous. Mistakes cost blood, resources and relationships. Do not soften outcomes.'
+    : depth.worldTone === 'cozy'
+      ? 'WORLD TONE — COZY: keep threat low and warmth high. Setbacks are inconvenient, not devastating.'
+      : 'WORLD TONE — BALANCED: real stakes, fair outcomes.';
+
+  const consequenceDirective = depth.consequenceIntensity === 'harsh'
+    ? 'CONSEQUENCES — HARSH: failure bites, and it compounds.'
+    : depth.consequenceIntensity === 'forgiving'
+      ? 'CONSEQUENCES — FORGIVING: failure redirects rather than punishes.'
+      : 'CONSEQUENCES — BALANCED: failure costs something proportionate.';
+
+  return {
+    worldTone: depth.worldTone || 'balanced',
+    consequenceIntensity: depth.consequenceIntensity || 'balanced',
+    socialWeight: depth.socialWeight || 'balanced',
+    combatWeight: depth.combatWeight || 'balanced',
+    mysteryDensity: depth.mysteryDensity || 'medium',
+    microEventFrequency: depth.microEventFrequency || 'occasional',
+    gunNutDepth: depth.gunNutDepth || 'standard',
+    activeSystems,
+    disabledSystems,
+    directives: [toneDirective, consequenceDirective, ...activeSystems],
   };
 }
 
@@ -485,6 +568,8 @@ export function buildNarrativeRequestBody(
         historyCompressed: compressedHistoryResult.truncatedCount > 0,
       },
     };
+
+    requestBody.gameplaySystemsContext = buildGameplaySystemsContext(settings);
 
     const activeDirectorSettings = settings.directorSettings || directorSettings;
     if (activeDirectorSettings) {

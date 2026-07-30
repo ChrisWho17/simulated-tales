@@ -399,6 +399,21 @@ interface AdventureRequest {
   };
   // NEW: DIRECTOR MODE - DM manipulation and narrative steering
   directorContext?: DirectorContext;
+  // GAMEPLAY SYSTEMS - the player's depth/realism toggles (hunger, fatigue,
+  // equipment wear, gun-nut depth, adrenaline, world tone, consequences).
+  // Without this the toggles were UI-only and never reached generation.
+  gameplaySystemsContext?: {
+    worldTone: string;
+    consequenceIntensity: string;
+    socialWeight: string;
+    combatWeight: string;
+    mysteryDensity: string;
+    microEventFrequency: string;
+    gunNutDepth: string;
+    activeSystems: string[];
+    disabledSystems: string[];
+    directives: string[];
+  };
   // NEW: CLOTHING/ARMOR CONTEXT - Affects player stats and NPC reactions
   clothingArmorContext?: {
     currentOutfit: string;           // Description of current outfit
@@ -1803,7 +1818,7 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as AdventureRequest;
-    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext } = requestData;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
@@ -1971,6 +1986,20 @@ If NOTHING changed, you must still output the structure with "(none)" entries.
 This is MANDATORY. No exceptions. No empty sections.`;
     }
     
+    // === GAMEPLAY SYSTEMS - PLAYER-CONFIGURED DEPTH TOGGLES ===
+    if (gameplaySystemsContext) {
+      const g = gameplaySystemsContext;
+      systemContent += `\n\n=== ACTIVE GAMEPLAY SYSTEMS (PLAYER-CONFIGURED) ===
+These are the simulation rules THIS player turned on. Honour them in the prose —
+they are the difference between the game they configured and a generic story.
+
+${g.directives.map(d => `- ${d}`).join('\n')}
+
+SCENE MIX: social ${g.socialWeight} / combat ${g.combatWeight} / mystery ${g.mysteryDensity}
+WORLD INTERRUPTIONS: ${g.microEventFrequency}
+${g.disabledSystems.length > 0 ? `\nDISABLED — do NOT narrate or track these: ${g.disabledSystems.join(', ')}.` : ''}`;
+    }
+
     // === WEATHER CONTEXT - CRITICAL FOR UI SYNC ===
     if (weatherContext) {
       systemContent += `\n\n=== CURRENT WEATHER (MUST MATCH UI DISPLAY) ===

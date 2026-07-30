@@ -204,7 +204,12 @@ export interface CampaignContextType {
   activeCampaignId: string | null;
   
   // Campaign management
-  createCampaign: (worldBible: WorldBible, player: RPGCharacter, scenario: string) => Promise<CampaignData>;
+  createCampaign: (
+    worldBible: WorldBible,
+    player: RPGCharacter,
+    scenario: string,
+    initialSettings?: CampaignData['settings']
+  ) => Promise<CampaignData>;
   loadCampaign: (campaignId: string) => Promise<boolean>;
   unloadCampaign: () => Promise<void>;
   deleteCampaign: (campaignId: string) => Promise<void>;

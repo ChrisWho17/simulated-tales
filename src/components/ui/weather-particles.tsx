@@ -1,5 +1,13 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { CoreMoodType } from '@/game/moodSystem';
+import { useEffect, useMemo, useRef } from 'react';
+import type { WeatherType } from '@/game/weatherSystem';
+
+/**
+ * Weather visuals used to be derived from the player's *mood* — clear skies
+ * rendered green "happy" motes and a heat wave rendered rising fire. The layer
+ * now reads the actual weather state, uses restrained atmospheric palettes that
+ * sit behind the theme instead of fighting it, and draws nothing at all when the
+ * sky is clear.
+ */
 
 interface WeatherParticle {
   x: number;
@@ -8,411 +16,361 @@ interface WeatherParticle {
   speedX: number;
   speedY: number;
   opacity: number;
-  color: string;
-  rotation?: number;
-  rotationSpeed?: number;
-  length?: number; // For rain
-  wobble?: number; // For snow/fog
+  length?: number;
+  wobble?: number;
   wobbleSpeed?: number;
-  life?: number; // For lightning
-  maxLife?: number;
+  drift?: number;
 }
 
-interface WeatherParticlesProps {
-  mood: CoreMoodType;
-  intensity?: number; // 0-1
-  transitionOpacity?: number; // 0-1, for smooth weather transitions
-  className?: string;
-}
+type ParticleShape = 'streak' | 'flake' | 'haze' | 'mote' | 'gust';
 
-// Weather configuration based on mood
-const WEATHER_CONFIG: Record<CoreMoodType, {
-  particleCount: number;
-  colors: string[];
-  type: 'dust' | 'rain' | 'snow' | 'fog' | 'fire' | 'lightning' | 'wind';
+interface WeatherVisual {
+  shape: ParticleShape;
+  /** Particle budget at intensity 1. Scaled by intensity and clamped. */
+  count: number;
   speed: number;
   size: { min: number; max: number };
-}> = {
-  neutral: {
-    particleCount: 30,
-    colors: ['#4ade80', '#86efac', '#a7f3d0'],
-    type: 'dust',
-    speed: 0.3,
-    size: { min: 1, max: 3 },
+  /** rgb triplet — alpha is applied per particle so it stays subtle. */
+  rgb: [number, number, number];
+  /** Full-canvas wash that sells the condition more cheaply than particles. */
+  tint?: string;
+  lightning?: boolean;
+  /** Overall layer opacity ceiling. */
+  maxOpacity: number;
+}
+
+const WEATHER_VISUALS: Record<WeatherType, WeatherVisual | null> = {
+  // Clear skies get no overlay at all — the cleanest possible read.
+  clear: null,
+  cloudy: {
+    shape: 'haze',
+    count: 10,
+    speed: 0.12,
+    size: { min: 90, max: 190 },
+    rgb: [188, 196, 208],
+    tint: 'rgba(140, 152, 170, 0.05)',
+    maxOpacity: 0.5,
   },
-  happy: {
-    particleCount: 40,
-    colors: ['#4ade80', '#fde047', '#a7f3d0'],
-    type: 'dust',
+  rain: {
+    shape: 'streak',
+    count: 90,
+    speed: 9,
+    size: { min: 0.8, max: 1.4 },
+    rgb: [170, 198, 226],
+    tint: 'rgba(96, 124, 158, 0.08)',
+    maxOpacity: 0.62,
+  },
+  storm: {
+    shape: 'streak',
+    count: 150,
+    speed: 14,
+    size: { min: 1, max: 1.9 },
+    rgb: [196, 214, 238],
+    tint: 'rgba(58, 72, 100, 0.14)',
+    lightning: true,
+    maxOpacity: 0.72,
+  },
+  snow: {
+    shape: 'flake',
+    count: 70,
+    speed: 0.9,
+    size: { min: 1.2, max: 3 },
+    rgb: [236, 244, 255],
+    tint: 'rgba(180, 202, 226, 0.07)',
+    maxOpacity: 0.7,
+  },
+  fog: {
+    shape: 'haze',
+    count: 16,
+    speed: 0.16,
+    size: { min: 120, max: 240 },
+    rgb: [214, 218, 226],
+    tint: 'rgba(198, 204, 214, 0.12)',
+    maxOpacity: 0.55,
+  },
+  heat_wave: {
+    // Shimmer rising off hot ground, not flames.
+    shape: 'mote',
+    count: 34,
     speed: 0.5,
-    size: { min: 1, max: 4 },
+    size: { min: 1, max: 2.6 },
+    rgb: [246, 220, 176],
+    tint: 'rgba(226, 170, 96, 0.07)',
+    maxOpacity: 0.4,
   },
-  lusty: {
-    particleCount: 35,
-    colors: ['#f472b6', '#ec4899', '#fb7185'],
-    type: 'dust',
-    speed: 0.4,
-    size: { min: 1, max: 3 },
-  },
-  determined: {
-    particleCount: 25,
-    colors: ['#f1f5f9', '#e2e8f0', '#cbd5e1'],
-    type: 'wind',
-    speed: 1.5,
-    size: { min: 1, max: 2 },
-  },
-  sad: {
-    particleCount: 80,
-    colors: ['#60a5fa', '#93c5fd', '#bfdbfe'],
-    type: 'rain',
-    speed: 8,
-    size: { min: 1, max: 2 },
-  },
-  depressed: {
-    particleCount: 20,
-    colors: ['#a78bfa', '#8b5cf6', '#7c3aed'],
-    type: 'fog',
-    speed: 0.15,
-    size: { min: 30, max: 50 },
-  },
-  fearful: {
-    particleCount: 60,
-    colors: ['#fde047', '#facc15', '#fbbf24'],
-    type: 'lightning',
-    speed: 0.1,
-    size: { min: 1, max: 3 },
-  },
-  mad: {
-    particleCount: 45,
-    colors: ['#ef4444', '#f97316', '#fbbf24'],
-    type: 'fire',
-    speed: 2,
-    size: { min: 2, max: 5 },
-  },
-  annoyed: {
-    particleCount: 40,
-    colors: ['#fb923c', '#fdba74', '#fed7aa'],
-    type: 'wind',
-    speed: 2,
-    size: { min: 1, max: 3 },
-  },
-  suspicious: {
-    particleCount: 50,
-    colors: ['#67e8f9', '#a5f3fc', '#cffafe'],
-    type: 'snow',
-    speed: 1,
-    size: { min: 2, max: 4 },
+  wind: {
+    shape: 'gust',
+    count: 42,
+    speed: 6,
+    size: { min: 1, max: 2.2 },
+    rgb: [214, 214, 206],
+    tint: 'rgba(168, 164, 150, 0.05)',
+    maxOpacity: 0.45,
   },
 };
 
-export function WeatherParticles({ mood, intensity = 1, transitionOpacity = 1, className = '' }: WeatherParticlesProps) {
+const MAX_PARTICLES = 190;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+interface WeatherParticlesProps {
+  weather: WeatherType;
+  /** weatherState.intensity, roughly 0.5–1.5. */
+  intensity?: number;
+  /** 0–1, drives cross-fades between conditions. */
+  transitionOpacity?: number;
+  className?: string;
+}
+
+export function WeatherParticles({
+  weather,
+  intensity = 1,
+  transitionOpacity = 1,
+  className = '',
+}: WeatherParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<WeatherParticle[]>([]);
   const animationRef = useRef<number>();
-  const lightningFlashRef = useRef<number>(0);
-  const opacityRef = useRef<number>(transitionOpacity);
+  const flashRef = useRef<number>(0);
 
-  // Smooth opacity animation
-  useEffect(() => {
-    opacityRef.current = transitionOpacity;
-  }, [transitionOpacity]);
+  const visual = WEATHER_VISUALS[weather] ?? null;
+  const reducedMotion = useMemo(prefersReducedMotion, []);
 
-  const createParticle = useCallback((canvas: HTMLCanvasElement, config: typeof WEATHER_CONFIG[CoreMoodType]): WeatherParticle => {
-    const color = config.colors[Math.floor(Math.random() * config.colors.length)];
-    const size = Math.random() * (config.size.max - config.size.min) + config.size.min;
-
-    const baseParticle = {
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size,
-      opacity: Math.random() * 0.5 + 0.2,
-      color,
-      speedX: 0,
-      speedY: 0,
-    };
-
-    switch (config.type) {
-      case 'rain':
-        return {
-          ...baseParticle,
-          y: -20 - Math.random() * 100,
-          speedX: (Math.random() - 0.5) * 1,
-          speedY: config.speed + Math.random() * 4,
-          length: 10 + Math.random() * 15,
-          opacity: 0.3 + Math.random() * 0.3,
-        };
-      case 'snow':
-        return {
-          ...baseParticle,
-          y: -10,
-          speedX: (Math.random() - 0.5) * 0.5,
-          speedY: config.speed + Math.random() * 0.5,
-          wobble: Math.random() * Math.PI * 2,
-          wobbleSpeed: 0.02 + Math.random() * 0.02,
-          opacity: 0.4 + Math.random() * 0.4,
-        };
-      case 'fog':
-        return {
-          ...baseParticle,
-          speedX: (Math.random() - 0.5) * config.speed,
-          speedY: (Math.random() - 0.5) * config.speed * 0.5,
-          opacity: 0.02 + Math.random() * 0.03,
-          size: config.size.min + Math.random() * (config.size.max - config.size.min),
-        };
-      case 'fire':
-        return {
-          ...baseParticle,
-          x: Math.random() * canvas.width,
-          y: canvas.height + 10,
-          speedX: (Math.random() - 0.5) * 1.5,
-          speedY: -config.speed - Math.random() * 2,
-          opacity: 0.4 + Math.random() * 0.4,
-          life: 0,
-          maxLife: 60 + Math.random() * 40,
-        };
-      case 'lightning':
-        return {
-          ...baseParticle,
-          speedX: (Math.random() - 0.5) * 0.3,
-          speedY: (Math.random() - 0.5) * 0.3,
-          opacity: 0.2 + Math.random() * 0.2,
-        };
-      case 'wind':
-        return {
-          ...baseParticle,
-          x: -10,
-          speedX: config.speed + Math.random() * 2,
-          speedY: (Math.random() - 0.5) * 0.5,
-          rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.1,
-          opacity: 0.2 + Math.random() * 0.3,
-        };
-      default: // dust
-        return {
-          ...baseParticle,
-          speedX: (Math.random() - 0.5) * config.speed,
-          speedY: (Math.random() - 0.5) * config.speed,
-          opacity: 0.1 + Math.random() * 0.3,
-        };
-    }
-  }, []);
+  // Clamp so a stacked intensity spike can never flood the canvas.
+  const particleCount = useMemo(() => {
+    if (!visual) return 0;
+    const scaled = visual.count * Math.max(0.3, Math.min(intensity, 1.6));
+    return Math.min(MAX_PARTICLES, Math.round(reducedMotion ? scaled * 0.3 : scaled));
+  }, [visual, intensity, reducedMotion]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !visual || particleCount === 0) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const config = WEATHER_CONFIG[mood];
+    const speedScale = reducedMotion ? 0.35 : 1;
+    const [r, g, b] = visual.rgb;
 
-    const resizeCanvas = () => {
+    const spawn = (initial: boolean): WeatherParticle => {
+      const size = visual.size.min + Math.random() * (visual.size.max - visual.size.min);
+      const base = {
+        x: Math.random() * canvas.width,
+        y: initial ? Math.random() * canvas.height : -size * 2 - Math.random() * 120,
+        size,
+        speedX: 0,
+        speedY: 0,
+        opacity: 0.25 + Math.random() * 0.45,
+      };
+
+      switch (visual.shape) {
+        case 'streak':
+          return {
+            ...base,
+            speedX: (0.6 + Math.random() * 0.8) * speedScale,
+            speedY: (visual.speed + Math.random() * visual.speed * 0.5) * speedScale,
+            length: 12 + Math.random() * 20,
+            opacity: 0.22 + Math.random() * 0.3,
+          };
+        case 'flake':
+          return {
+            ...base,
+            speedX: (Math.random() - 0.5) * 0.4 * speedScale,
+            speedY: (visual.speed + Math.random() * 0.6) * speedScale,
+            wobble: Math.random() * Math.PI * 2,
+            wobbleSpeed: (0.012 + Math.random() * 0.018) * speedScale,
+            opacity: 0.35 + Math.random() * 0.4,
+          };
+        case 'haze':
+          return {
+            ...base,
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            speedX: (Math.random() - 0.5) * visual.speed * speedScale,
+            speedY: (Math.random() - 0.5) * visual.speed * 0.4 * speedScale,
+            opacity: 0.03 + Math.random() * 0.05,
+          };
+        case 'mote':
+          return {
+            ...base,
+            y: initial ? Math.random() * canvas.height : canvas.height + 10,
+            speedX: (Math.random() - 0.5) * 0.3 * speedScale,
+            speedY: -(visual.speed + Math.random() * 0.4) * speedScale,
+            wobble: Math.random() * Math.PI * 2,
+            wobbleSpeed: (0.015 + Math.random() * 0.02) * speedScale,
+            opacity: 0.12 + Math.random() * 0.22,
+          };
+        default: // gust
+          return {
+            ...base,
+            x: initial ? Math.random() * canvas.width : -30,
+            speedX: (visual.speed + Math.random() * 3) * speedScale,
+            speedY: (Math.random() - 0.5) * 0.6 * speedScale,
+            length: 16 + Math.random() * 26,
+            drift: Math.random() * Math.PI * 2,
+            opacity: 0.14 + Math.random() * 0.2,
+          };
+      }
+    };
+
+    // Backing store stays at CSS-pixel scale: particle bounds are compared
+    // against canvas.width/height directly, and a soft-focus atmospheric layer
+    // gains nothing from a devicePixelRatio-sized buffer that costs 4x fill.
+    const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
 
-    const createParticles = () => {
-      particlesRef.current = [];
-      const count = Math.floor(config.particleCount * intensity);
-      for (let i = 0; i < count; i++) {
-        particlesRef.current.push(createParticle(canvas, config));
-      }
+    const seed = () => {
+      particlesRef.current = Array.from({ length: particleCount }, () => spawn(true));
     };
 
-    const drawRain = (p: WeatherParticle) => {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.strokeStyle = p.color;
+    const rgba = (alpha: number) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+    const drawStreak = (p: WeatherParticle) => {
+      ctx.strokeStyle = rgba(p.opacity);
       ctx.lineWidth = p.size;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + p.speedX * 2, p.y + (p.length || 10));
+      ctx.lineTo(p.x - p.speedX * 1.6, p.y - (p.length || 14));
       ctx.stroke();
-      ctx.restore();
     };
 
-    const drawSnow = (p: WeatherParticle) => {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.fillStyle = p.color;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = p.color;
+    const drawFlake = (p: WeatherParticle) => {
+      ctx.fillStyle = rgba(p.opacity);
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     };
 
-    const drawFog = (p: WeatherParticle) => {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
+    const drawHaze = (p: WeatherParticle) => {
       const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-      gradient.addColorStop(0, p.color);
-      gradient.addColorStop(1, 'transparent');
+      gradient.addColorStop(0, rgba(p.opacity));
+      gradient.addColorStop(1, rgba(0));
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     };
 
-    const drawFire = (p: WeatherParticle) => {
-      const lifeRatio = (p.life || 0) / (p.maxLife || 100);
-      ctx.save();
-      ctx.globalAlpha = p.opacity * (1 - lifeRatio);
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = p.color;
-      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * (1 - lifeRatio * 0.5));
-      gradient.addColorStop(0, '#fef3c7');
-      gradient.addColorStop(0.4, p.color);
-      gradient.addColorStop(1, 'transparent');
+    const drawMote = (p: WeatherParticle) => {
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.5);
+      gradient.addColorStop(0, rgba(p.opacity));
+      gradient.addColorStop(1, rgba(0));
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (1 - lifeRatio * 0.5), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     };
 
-    const drawLightning = (p: WeatherParticle) => {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = p.color;
-      ctx.fillStyle = p.color;
+    const drawGust = (p: WeatherParticle) => {
+      ctx.strokeStyle = rgba(p.opacity);
+      ctx.lineWidth = p.size * 0.7;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    };
-
-    const drawWind = (p: WeatherParticle) => {
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rotation || 0);
-      ctx.strokeStyle = p.color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(-p.size * 2, 0);
-      ctx.lineTo(p.size * 2, 0);
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - (p.length || 20), p.y + Math.sin(p.drift || 0) * 3);
       ctx.stroke();
-      ctx.restore();
     };
 
-    const drawDust = (p: WeatherParticle) => {
+    // Kept well under photosensitivity thresholds: infrequent, dim, slow decay.
+    const drawFlash = () => {
+      if (flashRef.current <= 0) return;
       ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = p.color;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = flashRef.current * 0.05;
+      ctx.fillStyle = '#e8eeff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
-    };
-
-    // Epilepsy-safe lightning flash - gentler, slower, lower opacity
-    const drawLightningFlash = () => {
-      if (lightningFlashRef.current > 0) {
-        ctx.save();
-        // Reduced max opacity from 0.15 to 0.06 for safety
-        ctx.globalAlpha = lightningFlashRef.current * 0.06;
-        ctx.fillStyle = '#fef9c3'; // Softer yellow
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-        // Slower fade (was 0.05, now 0.015) for gentler transition
-        lightningFlashRef.current -= 0.015;
-      }
+      flashRef.current -= 0.012;
     };
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Epilepsy-safe lightning flash effect
-      if (config.type === 'lightning') {
-        drawLightningFlash();
-        // Reduced flash frequency from 0.005 to 0.002 (much less frequent)
-        if (Math.random() < 0.002) {
-          // Start at lower intensity (0.5 instead of 1.0)
-          lightningFlashRef.current = 0.5;
-        }
+      if (visual.lightning && !reducedMotion) {
+        drawFlash();
+        if (Math.random() < 0.0018) flashRef.current = 0.5;
       }
 
-      particlesRef.current.forEach((p, index) => {
-        // Update position
+      const particles = particlesRef.current;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.x += p.speedX;
         p.y += p.speedY;
 
-        // Type-specific updates
-        if (config.type === 'snow' && p.wobble !== undefined) {
+        if (p.wobble !== undefined) {
           p.wobble += p.wobbleSpeed || 0.02;
-          p.x += Math.sin(p.wobble) * 0.5;
+          p.x += Math.sin(p.wobble) * 0.45;
+        }
+        if (p.drift !== undefined) p.drift += 0.04;
+
+        const offscreen =
+          visual.shape === 'mote'
+            ? p.y < -40
+            : visual.shape === 'gust'
+              ? p.x > canvas.width + 40
+              : p.y > canvas.height + 40 || p.x > canvas.width + 60;
+
+        if (offscreen) {
+          particles[i] = spawn(false);
+          continue;
         }
 
-        if (config.type === 'wind' && p.rotation !== undefined) {
-          p.rotation += p.rotationSpeed || 0.05;
+        // Haze wraps rather than respawning so the layer never visibly pops.
+        if (visual.shape === 'haze') {
+          if (p.x < -p.size) p.x = canvas.width + p.size;
+          if (p.x > canvas.width + p.size) p.x = -p.size;
+          if (p.y < -p.size) p.y = canvas.height + p.size;
+          if (p.y > canvas.height + p.size) p.y = -p.size;
         }
 
-        if (config.type === 'fire' && p.life !== undefined) {
-          p.life++;
-          if (p.life >= (p.maxLife || 100)) {
-            particlesRef.current[index] = createParticle(canvas, config);
-          }
+        switch (visual.shape) {
+          case 'streak': drawStreak(p); break;
+          case 'flake': drawFlake(p); break;
+          case 'haze': drawHaze(p); break;
+          case 'mote': drawMote(p); break;
+          default: drawGust(p);
         }
-
-        // Respawn particles
-        if (config.type === 'rain' && p.y > canvas.height) {
-          particlesRef.current[index] = createParticle(canvas, config);
-        } else if (config.type === 'snow' && p.y > canvas.height) {
-          particlesRef.current[index] = createParticle(canvas, config);
-        } else if (config.type === 'wind' && p.x > canvas.width + 20) {
-          particlesRef.current[index] = createParticle(canvas, config);
-        } else if ((config.type === 'dust' || config.type === 'fog' || config.type === 'lightning') && 
-                   (p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50)) {
-          p.x = Math.random() * canvas.width;
-          p.y = Math.random() * canvas.height;
-        }
-
-        // Draw based on type
-        switch (config.type) {
-          case 'rain': drawRain(p); break;
-          case 'snow': drawSnow(p); break;
-          case 'fog': drawFog(p); break;
-          case 'fire': drawFire(p); break;
-          case 'lightning': drawLightning(p); break;
-          case 'wind': drawWind(p); break;
-          default: drawDust(p);
-        }
-      });
+      }
 
       animationRef.current = requestAnimationFrame(animate);
     };
 
-    resizeCanvas();
-    createParticles();
+    resize();
+    seed();
     animate();
 
     const handleResize = () => {
-      resizeCanvas();
-      createParticles();
+      resize();
+      seed();
     };
-
     window.addEventListener('resize', handleResize);
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', handleResize);
     };
-  }, [mood, intensity, createParticle]);
+  }, [visual, particleCount, reducedMotion]);
+
+  if (!visual) return null;
+
+  const layerOpacity = visual.maxOpacity * Math.max(0, Math.min(transitionOpacity, 1));
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
       className={`fixed inset-0 pointer-events-none z-[1] transition-opacity duration-700 ${className}`}
-      style={{ opacity: 0.7 * transitionOpacity }}
-    />
+      style={{ opacity: layerOpacity }}
+      aria-hidden="true"
+    >
+      {visual.tint && (
+        <div className="absolute inset-0" style={{ background: visual.tint }} />
+      )}
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+    </div>
   );
 }

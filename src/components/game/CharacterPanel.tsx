@@ -36,7 +36,6 @@ import {
 } from '@/lib/relationshipSystem';
 import { WoundDisplay } from './WoundDisplay';
 import { Wound } from '@/lib/woundSystem';
-import { getGameSettings } from '@/lib/gameSettings';
 import { PlayerMoodIndicator, derivePlayerMood } from './PlayerMoodIndicator';
 import { DraggableInventoryItem } from './DraggableInventoryItem';
 import { useGame } from '@/contexts/GameContext';
@@ -110,9 +109,8 @@ export function CharacterPanel({ gameState, isOpen, onToggle, onStartConversatio
   const { player, time, locations, lifeSim } = gameState;
   const currentLocation = locations[player.currentLocation];
   const npcsHere = getNPCsAtLocation(gameState, player.currentLocation);
-  const settings = getGameSettings();
-  const showTension = settings.adultContent;
   const { settings: gameSettings } = useGame();
+  const showTension = gameSettings.adultContent;
   const dragDropEnabled = gameSettings.enableInventoryDragDrop;
   
   // Derive player mood from current stats

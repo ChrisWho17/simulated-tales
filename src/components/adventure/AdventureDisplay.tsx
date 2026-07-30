@@ -1795,32 +1795,25 @@ export function AdventureDisplay({
           <AtmosphericBackground mood={currentMood} />
         </div>
 
-        {/* Weather particle effects on main background with transitions */}
+        {/* Weather visuals, driven by the actual weather state.
+            Turning this off keeps weather's mechanical and narrative effects —
+            only the drawing stops. */}
         {weatherEnabled && showWeatherParticles && (() => {
         const transitionOpacity = getWeatherTransitionOpacity(weatherState);
-        const weatherToMood = (w: WeatherType) => 
-          w === 'storm' ? 'fearful' :
-          w === 'rain' ? 'sad' :
-          w === 'fog' ? 'depressed' :
-          w === 'heat_wave' ? 'mad' :
-          w === 'wind' ? 'annoyed' :
-          w === 'snow' ? 'suspicious' :
-          w === 'cloudy' ? 'neutral' :
-          'happy';
-        
+
         return (
           <div className="absolute inset-0 z-[1] pointer-events-none">
             {/* Current weather (fading out during transition) */}
-            <WeatherParticles 
-              mood={weatherToMood(weatherState.current)} 
-              intensity={weatherState.intensity * 0.6}
+            <WeatherParticles
+              weather={weatherState.current}
+              intensity={weatherState.intensity}
               transitionOpacity={transitionOpacity.current}
             />
             {/* Next weather (fading in during transition) */}
             {weatherState.transitioningTo && transitionOpacity.next > 0 && (
-              <WeatherParticles 
-                mood={weatherToMood(weatherState.transitioningTo)} 
-                intensity={weatherState.intensity * 0.6}
+              <WeatherParticles
+                weather={weatherState.transitioningTo}
+                intensity={weatherState.intensity}
                 transitionOpacity={transitionOpacity.next}
               />
             )}

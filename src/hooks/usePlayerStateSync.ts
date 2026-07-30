@@ -67,4 +67,42 @@ export function usePlayerStateSync({
       unsubCurrency();
     };
   }, [character?.name, isPlaying, setCharacter]);
+
+  // Mirror the other direction.
+  //
+  // HP/XP/gold have two owners: playerStateManager (systems) and the React
+  // character (narrative mechanics applied in AdventureDisplay). The manager was
+  // only seeded once when play started, so damage or healing that came from the
+  // story left it holding a stale baseline — and the next system-driven HP event
+  // published that stale number, snapping the player's health back. Pushing
+  // character-side changes into the manager keeps the two owners agreeing.
+  // Manager-driven updates land on the character first, which makes this a
+  // no-op for that direction rather than a feedback loop.
+  useEffect(() => {
+    if (!character || !isPlaying) return;
+
+    const state = playerStateManager.getState();
+    const drifted =
+      state.hp.current !== character.currentHealth ||
+      state.hp.max !== character.maxHealth ||
+      state.xp.level !== character.level ||
+      state.xp.current !== character.experience ||
+      state.currency.amount !== character.gold;
+
+    if (!drifted) return;
+
+    console.log('[PlayerStateManager] Reconciling from character:', {
+      hp: `${state.hp.current}->${character.currentHealth}`,
+      gold: `${state.currency.amount}->${character.gold}`,
+    });
+    playerStateManager.syncFromCharacter(character);
+  }, [
+    character,
+    character?.currentHealth,
+    character?.maxHealth,
+    character?.level,
+    character?.experience,
+    character?.gold,
+    isPlaying,
+  ]);
 }

@@ -781,11 +781,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   
                   {settings.enableWeatherEffects && (
                     <>
-                      {/* Weather Particles Toggle */}
+                      {/* Weather Graphics Toggle — visuals only; mechanics and
+                          narrative weather keep running when this is off. */}
                       <div className="flex items-center justify-between py-2">
                         <div>
-                          <span className="text-sm">Weather Particles</span>
-                          <p className="text-xs text-muted-foreground">Show visual weather effects</p>
+                          <span className="text-sm">Weather Graphics</span>
+                          <p className="text-xs text-muted-foreground">
+                            Rain, snow and fog overlays. Weather still affects the story when off.
+                          </p>
                         </div>
                         <Switch 
                           checked={settings.showWeatherParticles ?? true}

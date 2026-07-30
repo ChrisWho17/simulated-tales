@@ -504,18 +504,54 @@ export async function saveCampaignWithIntegrity(campaign: CampaignData): Promise
     const dataString = JSON.stringify(campaign);
     const checksum = await sha256(dataString);
     
-    // Save to localStorage
+    // Save to localStorage. Keep the previous copy so a failed write can be
+    // rolled back instead of leaving a truncated campaign behind.
     const key = `lwe_campaign_${campaign.id}`;
-    localStorage.setItem(key, dataString);
+    const previous = localStorage.getItem(key);
+
+    const restorePrevious = () => {
+      if (previous === null) return;
+      try {
+        localStorage.setItem(key, previous);
+      } catch (restoreError) {
+        console.error('[Integrity] Failed to restore previous save:', restoreError);
+      }
+    };
+
+    try {
+      localStorage.setItem(key, dataString);
+    } catch (writeError) {
+      const isQuota = writeError instanceof DOMException &&
+        (writeError.name === 'QuotaExceededError' || writeError.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+      if (!isQuota) {
+        restorePrevious();
+        throw writeError;
+      }
+      console.warn('[Integrity] Quota exceeded, cleaning up and retrying save...');
+      const { performCleanup } = await import('@/lib/storageCleanup');
+      performCleanup(0.4);
+      try {
+        localStorage.setItem(key, dataString);
+      } catch (retryError) {
+        restorePrevious();
+        return {
+          success: false,
+          checksum: '',
+          error: 'Storage full — free up space to save. Previous save left intact.',
+        };
+      }
+    }
     
     // Verify write
     const written = localStorage.getItem(key);
     if (!written) {
+      restorePrevious();
       return { success: false, checksum: '', error: 'Write verification failed' };
     }
     
     const writtenChecksum = await sha256(written);
     if (writtenChecksum !== checksum) {
+      restorePrevious();
       return { success: false, checksum: '', error: 'Write checksum mismatch' };
     }
     

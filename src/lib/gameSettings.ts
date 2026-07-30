@@ -5,6 +5,7 @@ import {
   DEFAULT_DIRECTOR_SETTINGS 
 } from '@/game/directorModeSystem';
 import { DEFAULT_COLOR_ID } from '@/lib/colorTheme';
+import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 // Re-export director types for convenience
 export type { DirectorSettings } from '@/game/directorModeSystem';
@@ -134,7 +135,13 @@ export interface GameSettings {
   forceVarianceSeed?: string;
 }
 
-const SETTINGS_KEY = 'living-world-settings';
+// Single source of truth. This module used to read/write its own
+// 'living-world-settings' key that nothing in the app ever wrote, so every
+// non-React consumer (adult-content gating, gun-nut depth) silently saw
+// defaults no matter what the player had toggled. It now shares GameContext's
+// store, with the abandoned key kept as a read-only fallback.
+const SETTINGS_KEY = STORAGE_KEYS.GAME_SETTINGS;
+const LEGACY_SETTINGS_KEY = 'living-world-settings';
 
 export const DEFAULT_NARRATOR_CONFIG: NarratorConfig = {
   voice: 'LITERARY',
@@ -249,7 +256,7 @@ export function getGameSettings(): GameSettings {
 // Load settings from storage
 export function loadSettings(): GameSettings {
   try {
-    const saved = localStorage.getItem(SETTINGS_KEY);
+    const saved = localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       return { ...DEFAULT_SETTINGS, ...parsed };
