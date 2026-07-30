@@ -17,7 +17,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
-import { CHANGELOG, fetchLatestChangelog, type ChangelogEntry } from './changelog';
+import { CHANGELOG, entryList, fetchLatestChangelog, type ChangelogEntry } from './changelog';
 import { orderChangelog } from './changelog';
 
 /**
