@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { DirectorSettings, DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
-import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
+import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { StateSyncBus } from '@/services/stateSyncBus';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { 
@@ -229,7 +229,7 @@ const defaultSettings: GameSettings = {
   sceneIllustrations: true,
   textSpeed: 'normal',
   soundEnabled: true,
-  colorTheme: 'violet',
+  colorTheme: DEFAULT_COLOR_ID,
   autoSave: true,
   showRollDetails: true,
   
@@ -631,6 +631,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         try {
           StateSyncBus.emit('settings:director-updated', {
             directorSettings: partial.directorSettings,
+            source: 'user',
           });
         } catch (e) {
           console.warn('[GameContext] Failed to emit director settings sync:', e);

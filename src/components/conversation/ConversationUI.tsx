@@ -184,7 +184,7 @@ export function ConversationUI({
         className={cn(
           "w-full max-w-5xl h-[90vh] md:h-[85vh]",
           "flex flex-col md:flex-row gap-4 p-4",
-          "glass-panel border-[rgba(139,92,246,0.3)]",
+          "glass-panel border-[var(--accent-border)]",
           isEntering && "animate-scale-in",
           isExiting && "animate-scale-out"
         )}
@@ -321,7 +321,7 @@ export function ConversationUI({
           </ScrollArea>
 
           {/* Response options */}
-          <div className="mt-4 pt-4 border-t border-[rgba(139,92,246,0.2)]">
+          <div className="mt-4 pt-4 border-t border-[var(--accent-border)]">
             {!isLoading && responses.length > 0 && (
               <ResponseOptions
                 responses={responses}

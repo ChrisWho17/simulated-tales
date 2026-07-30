@@ -10,23 +10,23 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 
-          "bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] text-white shadow-[0_0_20px_rgba(139,92,246,0.4),0_4px_15px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6),0_6px_20px_rgba(0,0,0,0.4)] hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] active:shadow-[0_0_15px_rgba(139,92,246,0.4)]",
+          "bg-[image:var(--accent-gradient)] text-white shadow-[0_0_12px_var(--accent-glow),0_4px_15px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] hover:shadow-[0_0_18px_var(--accent-glow-intense),0_6px_20px_rgba(0,0,0,0.45)] hover:-translate-y-0.5 active:scale-[0.98]",
         destructive:
           "bg-gradient-to-r from-[#ef4444] to-[#f43f5e] text-white shadow-[0_0_20px_rgba(239,68,68,0.4),0_4px_15px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] hover:scale-[1.02] active:scale-[0.98]",
         outline:
-          "border border-[rgba(139,92,246,0.5)] bg-transparent text-foreground backdrop-blur-sm hover:bg-[rgba(139,92,246,0.1)] hover:border-[rgba(139,92,246,0.8)] hover:shadow-[0_0_15px_rgba(139,92,246,0.2)]",
+          "border border-[var(--accent-border)] bg-transparent text-foreground backdrop-blur-sm hover:bg-[var(--accent-bg)] hover:border-[var(--accent-primary)]",
         secondary:
           "bg-secondary/80 text-secondary-foreground backdrop-blur-sm border border-border/50 hover:bg-secondary hover:border-primary/30 hover:shadow-glow",
         ghost: 
-          "hover:bg-[rgba(139,92,246,0.1)] hover:text-primary",
+          "hover:bg-[var(--accent-bg)] hover:text-primary",
         link: 
-          "text-primary underline-offset-4 hover:underline hover:text-[#d946ef]",
+          "text-primary underline-offset-4 hover:underline hover:text-[var(--accent-secondary)]",
         glow:
-          "bg-gradient-to-r from-[#8b5cf6] to-[#d946ef] text-white shadow-[0_0_25px_rgba(139,92,246,0.5)] hover:shadow-[0_0_40px_rgba(139,92,246,0.7)] animate-glow-pulse hover:animate-none hover:scale-[1.02]",
+          "bg-[image:var(--accent-gradient)] text-white shadow-[0_0_16px_var(--accent-glow)] hover:shadow-[0_0_24px_var(--accent-glow-intense)] animate-glow-pulse hover:animate-none hover:scale-[1.01]",
         cyan:
           "bg-gradient-to-r from-[#22d3ee] to-[#06b6d4] text-background shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:shadow-[0_0_30px_rgba(34,211,238,0.6)] hover:scale-[1.02]",
         glass:
-          "bg-[rgba(15,15,25,0.7)] backdrop-blur-xl border border-[rgba(139,92,246,0.2)] text-foreground shadow-glass hover:border-[rgba(139,92,246,0.4)] hover:shadow-[0_0_20px_rgba(139,92,246,0.3)]",
+          "bg-[rgba(15,15,25,0.7)] backdrop-blur-xl border border-[var(--accent-border)] text-foreground shadow-glass hover:border-[var(--accent-primary)] hover:shadow-[0_0_14px_var(--accent-glow)]",
       },
       size: {
         default: "h-11 px-6 py-2",

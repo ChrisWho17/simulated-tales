@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Check } from 'lucide-react';
-import { COLOR_PRESETS, ColorPreset, applyColorTheme } from '@/lib/colorTheme';
+import { COLOR_PRESETS, ColorPreset, applyColorTheme, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
 
 interface ColorSelectionScreenProps {
@@ -9,7 +9,7 @@ interface ColorSelectionScreenProps {
 }
 
 export function ColorSelectionScreen({ onSelect, currentSelection }: ColorSelectionScreenProps) {
-  const [selected, setSelected] = useState(currentSelection || 'violet');
+  const [selected, setSelected] = useState(currentSelection || DEFAULT_COLOR_ID);
   const [previewColor, setPreviewColor] = useState<ColorPreset>(
     COLOR_PRESETS.find(c => c.id === selected) || COLOR_PRESETS[0]
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  X, Settings, Palette, Dices, Eye,
+  Settings, Palette, Dices, Eye,
   Save, Sparkles, AlertTriangle, Clock, Trash2, Download, User,
   Brain, Heart, Zap, Swords, Cloud, Users, Star, Backpack, Activity, Languages, Bug,
   Sun, CloudRain, CloudLightning, CloudFog, Snowflake, Wind, Flame, Clapperboard,
@@ -22,7 +22,7 @@ import { COLOR_PRESETS } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
 import { Button } from '@/components/ui/button';
 import { loadAllSaves, deleteSave, GameSave, getAutoSaves, getManualSaves } from '@/lib/saveSystem';
 import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings } from '@/game/directorModeSystem';
@@ -31,6 +31,59 @@ import { CampaignData } from '@/types/campaign';
 
 import { SystemsTestPanel, TestConfig, TestScenario } from '@/components/adventure/SystemsTestPanel';
 import { GameGenre } from '@/types/genreData';
+
+type SettingsTab =
+  | 'gameplay' | 'features' | 'display'
+  | 'director' | 'weather'
+  | 'saves' | 'cloud' | 'storage'
+  | 'accessibility' | 'tutorial';
+
+interface SettingsGroup {
+  id: string;
+  label: string;
+  tabs: Array<{ id: SettingsTab; label: string; icon?: React.ComponentType<{ className?: string }> }>;
+}
+
+/**
+ * Ten flat tabs overflowed the header on mobile. Grouping keeps every tab
+ * reachable while the top rail stays at four entries.
+ */
+const SETTINGS_GROUPS: SettingsGroup[] = [
+  {
+    id: 'play',
+    label: 'Play',
+    tabs: [
+      { id: 'gameplay', label: 'Gameplay', icon: Dices },
+      { id: 'features', label: 'Systems', icon: Sparkles },
+      { id: 'display', label: 'Display', icon: Palette },
+    ],
+  },
+  {
+    id: 'world',
+    label: 'World',
+    tabs: [
+      { id: 'director', label: 'Director', icon: Clapperboard },
+      { id: 'weather', label: 'Weather', icon: Cloud },
+    ],
+  },
+  {
+    id: 'data',
+    label: 'Data',
+    tabs: [
+      { id: 'saves', label: 'Saves', icon: Save },
+      { id: 'cloud', label: 'Cloud', icon: CloudUpload },
+      { id: 'storage', label: 'Storage', icon: HardDrive },
+    ],
+  },
+  {
+    id: 'more',
+    label: 'More',
+    tabs: [
+      { id: 'accessibility', label: 'Accessibility', icon: Accessibility },
+      { id: 'tutorial', label: 'Help', icon: HelpCircle },
+    ],
+  },
+];
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -61,7 +114,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'saves' | 'display' | 'features' | 'director' | 'weather' | 'cloud' | 'storage' | 'accessibility' | 'tutorial'>('gameplay');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('gameplay');
+  const activeGroup = useMemo(
+    () => SETTINGS_GROUPS.find(g => g.tabs.some(t => t.id === activeTab)) ?? SETTINGS_GROUPS[0],
+    [activeTab]
+  );
   const [saves, setSaves] = useState<GameSave[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
@@ -195,60 +252,64 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const autoSaves = saves.filter(s => s.id.startsWith('auto-')).sort((a, b) => b.timestamp - a.timestamp);
   const manualSaves = saves.filter(s => s.id.startsWith('manual-')).sort((a, b) => b.timestamp - a.timestamp);
   
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div 
-        className="glass-panel w-full max-w-lg max-h-[80vh] flex flex-col mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border/30">
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-[var(--accent-primary)]" />
-            <h2 className="font-display text-lg">Settings</h2>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+  const settingsToolbar = (
+    <div className="border-b border-[var(--surface-edge)]">
+      {/* Group rail — four entries so the header never overflows */}
+      <div className="flex items-center gap-1 px-2 sm:px-3">
+        {SETTINGS_GROUPS.map(group => (
+          <button
+            key={group.id}
+            type="button"
+            onClick={() => setActiveTab(group.tabs[0].id)}
+            data-active={group.id === activeGroup.id}
+            className="play-overlay-tab"
           >
-            <X size={20} />
+            {group.label}
           </button>
-        </div>
-        
-        {/* Tabs - horizontal scroll only, static row */}
-        <div className="flex-shrink-0 px-4 pt-3 pb-2 overflow-x-auto overflow-y-hidden scrollbar-none">
-          <div className="flex gap-1 min-w-max">
-            {(['gameplay', 'features', 'director', 'weather', 'saves', 'cloud', 'storage', 'display', 'accessibility', 'tutorial'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-md flex items-center gap-1.5",
-                  activeTab === tab 
-                    ? "text-[var(--accent-primary)] bg-[var(--accent-bg)]/40 border border-[var(--accent-primary)]/30"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/30"
-                )}
-              >
-                {tab === 'director' && <Clapperboard className="w-3 h-3" />}
-                {tab === 'weather' && <Cloud className="w-3 h-3" />}
-                {tab === 'cloud' && <CloudUpload className="w-3 h-3" />}
-                {tab === 'storage' && <HardDrive className="w-3 h-3" />}
-                {tab === 'accessibility' && <Accessibility className="w-3 h-3" />}
-                {tab === 'tutorial' && <HelpCircle className="w-3 h-3" />}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Subtle frosted divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border/20 to-transparent mx-4" />
-        
-        {/* Content - vertical scroll for settings */}
-        <ScrollArea className="flex-1 min-h-0 overflow-y-auto">
+        ))}
+      </div>
+
+      {/* Sections inside the active group */}
+      <div className="flex gap-1 overflow-x-auto scrollbar-none px-2 pb-2 sm:px-3">
+        {activeGroup.tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
+                activeTab === tab.id
+                  ? 'bg-[var(--accent-bg)] text-[var(--accent-primary)]'
+                  : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+              )}
+            >
+              {Icon && <Icon className="w-3 h-3" />}
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <PlayOverlayShell
+        open={isOpen}
+        onClose={onClose}
+        title="Settings"
+        subtitle={currentCharacterName}
+        icon={<Settings className="w-5 h-5" />}
+        size="md"
+        toolbar={settingsToolbar}
+        footer={
+          <button onClick={onClose} className="w-full glow-button py-2.5">
+            Done
+          </button>
+        }
+      >
           <div className="p-4">
           {/* Gameplay Tab */}
           {activeTab === 'gameplay' && (
@@ -1618,19 +1679,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           )}
           </div>
-        </ScrollArea>
-        
-        {/* Footer */}
-        <div className="p-4 border-t border-border/30">
-          <button 
-            onClick={onClose}
-            className="w-full glow-button py-2.5"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-      
+      </PlayOverlayShell>
+
       {/* Save Code Modal */}
       <SaveCodeModal
         open={showSaveCodeModal}
@@ -1645,7 +1695,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           setShowSaveCodeModal(false);
         }}
       />
-    </div>
+    </>
   );
 };
 

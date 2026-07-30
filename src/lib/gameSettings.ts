@@ -4,6 +4,7 @@ import {
   DirectorSettings, 
   DEFAULT_DIRECTOR_SETTINGS 
 } from '@/game/directorModeSystem';
+import { DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 
 // Re-export director types for convenience
 export type { DirectorSettings } from '@/game/directorModeSystem';
@@ -175,7 +176,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 50,
   textSpeed: 'normal',
   showTutorials: true,
-  colorTheme: 'violet',
+  colorTheme: DEFAULT_COLOR_ID,
   fontSize: 'medium',
   showRollDetails: true,
   sceneIllustrations: true,

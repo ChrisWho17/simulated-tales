@@ -198,7 +198,7 @@ export function AdventureInputArea({
 
   return (
     <div 
-      className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6"
+      className="relative z-20 glass-panel border-0 border-t border-[var(--accent-border)] rounded-none p-4 md:p-6"
       onClick={handleTap}
     >
       <div className="max-w-3xl mx-auto">
@@ -238,7 +238,7 @@ export function AdventureInputArea({
               commandAutocomplete.handleInputChange(e.target.value);
             }}
             placeholder="What do you do? (triple-tap to redo)"
-            className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
+            className="flex-1 bg-black/30 border-[var(--accent-border)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
             style={{ fontSize: '16px' }}
             onKeyDown={handleKeyDown}
             disabled={isLoading || showDiceRoll}

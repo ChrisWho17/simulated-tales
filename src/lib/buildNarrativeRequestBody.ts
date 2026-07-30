@@ -44,6 +44,7 @@ import { CoreMoodType, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 import { DirectorSettings } from '@/game/directorModeSystem';
 import { WorldBible } from '@/game/worldBible/types';
 import { PressureState, getPressureAtmosphere } from '@/game/pressureClockSystem';
+import { companionSystem } from '@/game/companionSystem';
 
 export interface NarrativeRequestSettings {
   adultContent: boolean;
@@ -163,6 +164,42 @@ function buildBackgroundNPCActionsContext(
     .filter((action, index, self) => index === self.findIndex(a => a.description === action.description))
     .slice(0, 10);
   return uniqueActions.length > 0 ? { actions: uniqueActions } : undefined;
+}
+
+/**
+ * Active party members were only reaching the AI through the pending-introduction
+ * hook, so recruited companions were invisible to the narrator once introduced.
+ */
+function buildActivePartyContext() {
+  let active: ReturnType<typeof companionSystem.getActiveCompanions>;
+  try {
+    active = companionSystem.getActiveCompanions();
+  } catch (e) {
+    console.warn('[buildNarrativeRequestBody] Failed to read companion party:', e);
+    return undefined;
+  }
+  if (!active || active.length === 0) return undefined;
+
+  return {
+    partySize: active.length,
+    members: active.map(companion => ({
+      name: companion.name,
+      mood: companion.mood,
+      affinity: companion.affinity,
+      trust: companion.trust,
+      respect: companion.respect,
+      combatRole: companion.combatRole || 'companion',
+      skills: (companion.skills || []).slice(0, 5),
+      internalThoughts: companion.internalThoughts || undefined,
+      pendingReaction: companion.pendingReaction || undefined,
+      wantsToSpeak: !!companion.wantsToSpeak,
+    })),
+    // Panel actions surface these; the narrator should honour them this turn.
+    speakingCue: active
+      .filter(c => c.wantsToSpeak || c.pendingReaction)
+      .map(c => `${c.name}: ${c.pendingReaction || 'has something to say'}`)
+      .join('\n') || undefined,
+  };
 }
 
 export function buildNarrativeRequestBody(
@@ -476,6 +513,11 @@ export function buildNarrativeRequestBody(
       moveSyncState: buildMoveSyncContextForAI(),
     };
     requestBody.npcPersonalityContext = npcPersonalityPayload;
+
+    const partyContext = buildActivePartyContext();
+    if (partyContext) {
+      requestBody.companionPartyContext = partyContext;
+    }
 
     if (settings.enableWeatherEffects) {
       requestBody.weatherContext = {

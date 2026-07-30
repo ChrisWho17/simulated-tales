@@ -1852,7 +1852,7 @@ export function AdventureDisplay({
       })()}
 
       {/* Header */}
-      <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
+      <header className="relative z-20 glass-panel border-0 border-b rounded-none" style={{ borderBottomColor: 'var(--accent-border)' }}>
         <div className="flex items-center justify-between px-2 py-1 gap-1">
           {/* Title - Tappable on mobile */}
           <div className="flex items-center gap-1">
@@ -2147,7 +2147,7 @@ export function AdventureDisplay({
                 <Card className="border-0 bg-transparent shadow-none rounded-lg p-2 -m-2 transition-all hover:bg-primary/5">
                   {/* Scene Image */}
                   {entry.imageUrl && (
-                    <div className="mb-6 rounded-xl overflow-hidden border border-[rgba(139,92,246,0.3)] shadow-glow">
+                    <div className="mb-6 rounded-xl overflow-hidden border border-[var(--accent-border)] shadow-glow">
                       <img 
                         src={entry.imageUrl} 
                         alt="Scene illustration" 
@@ -2336,7 +2336,7 @@ export function AdventureDisplay({
       )}
 
       {/* Input Area */}
-      <div className="relative z-20 glass-panel border-0 border-t border-[rgba(139,92,246,0.2)] rounded-none p-4 md:p-6">
+      <div className="relative z-20 glass-panel border-0 border-t border-[var(--accent-border)] rounded-none p-4 md:p-6">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3 relative">
             {/* Command Autocomplete Dropdown */}
@@ -2412,7 +2412,7 @@ export function AdventureDisplay({
                 commandAutocomplete.handleInputChange(e.target.value);
               }}
               placeholder="What do you do? (try /help for commands)"
-              className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
+              className="flex-1 bg-black/30 border-[var(--accent-border)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
               style={{ fontSize: '16px' }}
               onKeyDown={(e) => {
                 // Handle autocomplete keyboard navigation first

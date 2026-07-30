@@ -17,7 +17,7 @@ import { LoadingScreen } from '@/components/ui/loading-screen';
 import { ColorSelectionScreen } from '@/components/ui/ColorSelectionScreen';
 import { FirstTimeWizard, useFirstTimeWizard } from '@/components/game/FirstTimeWizard';
 import { SETTINGS_PRESETS } from '@/components/game/SettingsPresetSelector';
-import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
+import { loadColorPreference, getSavedColorId, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
 import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { buildCharacterVisualProfile, CharacterVisualProfile } from '@/lib/characterConsistentIllustration';
@@ -26,7 +26,6 @@ import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
-import { StateSyncBus } from '@/services/stateSyncBus';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { MechanicsSyncDebugPanel } from '@/components/debug/MechanicsSyncDebugPanel';
@@ -856,6 +855,23 @@ export function AdventureGame() {
     };
   }, [buildRequestBody, campaignMemory?.campaign.currentTick, settings.adultContent]);
 
+  /**
+   * Opening narratives (first scene, regenerate world) previously wrote straight
+   * to the story, skipping the world-bible gate every player action goes through.
+   */
+  const gateOpeningNarrative = useCallback((
+    raw: string | undefined | null,
+    buildFallback: () => string
+  ): string => {
+    if (!raw) return buildFallback();
+    const validation = validateContent(raw);
+    if (!validation.success) {
+      console.warn('[AdventureGame] Opening narrative adjusted by world bible:', validation.log);
+      return validation.content || buildFallback();
+    }
+    return validation.content || raw;
+  }, [validateContent]);
+
   // === ZONE TRANSITION HANDLER ===
   // Generates narrative description when player moves to a new zone
   const handleZoneTransition = useCallback(async (
@@ -944,11 +960,21 @@ export function AdventureGame() {
       const data = await response.json();
       
       if (data.narrative) {
-        // Add transition narrative to story
+        // Zone arrivals go through the same world-bible gate and language
+        // post-processing as player actions.
+        const validation = validateContent(data.narrative);
+        const gatedNarrative = postProcessLanguageInResponse(
+          validation.success ? validation.content : (validation.content || data.narrative),
+          languageState
+        );
+        if (!validation.success) {
+          console.warn('[Zone Transition] Narrative adjusted by world bible:', validation.log);
+        }
+
         const transitionEntry: StoryEntry = {
           id: `narrator_${Date.now()}`,
           role: 'narrator',
-          content: data.narrative,
+          content: gatedNarrative,
           timestamp: Date.now(),
         };
         
@@ -963,7 +989,7 @@ export function AdventureGame() {
         // (previously zone transitions skipped NPC registration & ripple effects)
         try {
           const turnNow = campaignMemory?.campaign.currentTick || 0;
-          processNarrativeForNPCs(data.narrative, turnNow, character.name);
+          processNarrativeForNPCs(gatedNarrative, turnNow, character.name);
           processActionForRipples(`travel to ${newZone.name}`, false, 3);
         } catch (e) {
           console.warn('[Zone Transition] Post-processing failed:', e);
@@ -990,7 +1016,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, scenarioSelection, playerLocation, moveToZone, activeConsequences, getLocationContext, story, settings.adultContent, worldBible, campaignContext, advanceTurn, buildRequestBody, getTimeOfDay, inventory, timeState]);
+  }, [character, scenarioSelection, playerLocation, moveToZone, activeConsequences, getLocationContext, story, settings.adultContent, worldBible, campaignContext, advanceTurn, buildRequestBody, getTimeOfDay, inventory, timeState, validateContent, languageState]);
 
   // Generate initial narrative for campaigns with empty history
   // Track the campaign ID we're generating for to prevent duplicate calls
@@ -1062,12 +1088,15 @@ export function AdventureGame() {
         const data = await response.json();
         console.log('[AdventureGame] Received narrative response:', !!data.narrative);
         
-        const narrativeContent = data.narrative || generateImmersiveOpening({
-          character,
-          genre: scenarioSelection.genre,
-          scenario: scenarioSelection.scenario,
-          secondaryGenres,
-        });
+        const narrativeContent = gateOpeningNarrative(
+          data.narrative,
+          () => generateImmersiveOpening({
+            character,
+            genre: scenarioSelection.genre,
+            scenario: scenarioSelection.scenario,
+            secondaryGenres,
+          })
+        );
         
         const newStory: StoryEntry[] = [{
           id: `narrator_${Date.now()}`,
@@ -1113,7 +1142,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     })();
-  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody]);
+  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody, gateOpeningNarrative]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
@@ -1184,10 +1213,10 @@ export function AdventureGame() {
       return;
     }
     
-    // Store the director settings in both hook state and GameContext (UI + AI share one truth)
+    // Single write path: updateSettings owns the GameContext write and emits the
+    // StateSyncBus event that feeds useDirectorSettings and the generation path.
     setDirectorSettings(settings);
     updateSettings({ directorSettings: settings });
-    StateSyncBus.emit('settings:director-updated', { directorSettings: settings });
     
     // Clear pending character
     setPendingCharacter(null);
@@ -2054,33 +2083,25 @@ export function AdventureGame() {
       
       const response = await Promise.race([fetchPromise, timeoutPromise]);
       
+      const buildFallback = () => generateImmersiveOpening({
+        character,
+        genre,
+        scenario: scenarioSelection.scenario,
+        secondaryGenres,
+      });
+
       let narrativeContent: string;
       
       if (!response.ok) {
         console.warn(`[RegenerateWorld] API returned ${response.status}, using fallback`);
-        narrativeContent = generateImmersiveOpening({
-          character,
-          genre,
-          scenario: scenarioSelection.scenario,
-          secondaryGenres,
-        });
+        narrativeContent = buildFallback();
       } else {
         try {
           const data = await response.json();
-          narrativeContent = data.narrative || generateImmersiveOpening({
-            character,
-            genre,
-            scenario: scenarioSelection.scenario,
-            secondaryGenres,
-          });
+          narrativeContent = gateOpeningNarrative(data.narrative, buildFallback);
         } catch (parseError) {
           console.warn('[RegenerateWorld] Failed to parse response, using fallback:', parseError);
-          narrativeContent = generateImmersiveOpening({
-            character,
-            genre,
-            scenario: scenarioSelection.scenario,
-            secondaryGenres,
-          });
+          narrativeContent = buildFallback();
         }
       }
       
@@ -2140,7 +2161,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, scenarioSelection, worldLocked, worldBible, settings.adultContent, settings.narratorConfig, saveData, campaignContext, buildRequestBody]);
+  }, [character, scenarioSelection, worldLocked, worldBible, settings.adultContent, settings.narratorConfig, saveData, campaignContext, buildRequestBody, gateOpeningNarrative]);
 
   // Rollback story to a specific entry (discard everything after)
   // IMPORTANT: Cancel pending generation and block during active generation
@@ -2424,7 +2445,7 @@ export function AdventureGame() {
     return (
       <ColorSelectionScreen
         onSelect={handleColorSelect}
-        currentSelection={selectedColorId || 'violet'}
+        currentSelection={selectedColorId || DEFAULT_COLOR_ID}
       />
     );
   }

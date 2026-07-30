@@ -13,7 +13,7 @@
 
     /* Glass Effect Colors */
     --glass-bg: rgba(15, 15, 25, 0.7);
-    --glass-border: rgba(139, 92, 246, 0.2);
+    --glass-border: rgba(208, 160, 95, 0.18);
     --glass-highlight: rgba(255, 255, 255, 0.05);
 
     /* Card & Surface */
@@ -52,15 +52,24 @@
 
     /* === CUSTOM DESIGN TOKENS === */
     
-    /* Accent Colors - Set dynamically by color picker */
-    --accent-primary: #8b5cf6;
-    --accent-secondary: #a78bfa;
-    --accent-tertiary: #c4b5fd;
-    --accent-glow: rgba(139, 92, 246, 0.4);
-    --accent-glow-intense: rgba(139, 92, 246, 0.6);
-    --accent-border: rgba(139, 92, 246, 0.2);
-    --accent-bg: rgba(139, 92, 246, 0.1);
-    --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+    /* Accent Colors - Set dynamically by color picker.
+       Defaults track the 'ink' preset (warm brass on deep ink) rather than the
+       stock violet-on-black so first paint matches the editorial atmosphere. */
+    --accent-primary: #d0a05f;
+    --accent-secondary: #e3c48d;
+    --accent-tertiary: #f2e2c4;
+    --accent-glow: rgba(208, 160, 95, 0.26);
+    --accent-glow-intense: rgba(208, 160, 95, 0.4);
+    --accent-border: rgba(208, 160, 95, 0.22);
+    --accent-bg: rgba(208, 160, 95, 0.09);
+    --accent-gradient: linear-gradient(135deg, #d0a05f 0%, #e3c48d 100%);
+
+    /* Overlay / raised surfaces (accent-independent so chrome stays legible
+       under every color preset). */
+    --surface-raised: rgba(20, 19, 26, 0.97);
+    --surface-sunken: rgba(12, 11, 17, 0.97);
+    --surface-edge: rgba(255, 255, 255, 0.09);
+    --overlay-wash: rgba(208, 160, 95, 0.07);
     
     /* Gradient Colors */
     --gradient-start: #8b5cf6;
@@ -80,9 +89,9 @@
     --text-muted: #64748b;
     
     /* Glow Effects */
-    --glow-primary: 0 0 20px rgba(139, 92, 246, 0.4);
-    --glow-hover: 0 0 30px rgba(139, 92, 246, 0.6);
-    --glow-intense: 0 0 40px rgba(139, 92, 246, 0.8);
+    --glow-primary: 0 0 14px rgba(208, 160, 95, 0.26);
+    --glow-hover: 0 0 20px rgba(208, 160, 95, 0.4);
+    --glow-intense: 0 0 28px rgba(208, 160, 95, 0.55);
     --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.4);
     --glow-magenta: 0 0 20px rgba(217, 70, 239, 0.4);
     
@@ -91,8 +100,8 @@
     --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     --shadow-deep: 0 20px 60px -15px rgba(0, 0, 0, 0.8);
     --shadow-glow: var(--glow-primary);
-    --shadow-accent: 0 0 20px var(--accent-glow), 0 4px 15px rgba(0, 0, 0, 0.3);
-    --shadow-accent-hover: 0 0 30px var(--accent-glow-intense), 0 6px 20px rgba(0, 0, 0, 0.4);
+    --shadow-accent: 0 0 12px var(--accent-glow), 0 4px 15px rgba(0, 0, 0, 0.35);
+    --shadow-accent-hover: 0 0 18px var(--accent-glow-intense), 0 6px 20px rgba(0, 0, 0, 0.45);
     
     /* Fixed Semantic Colors (don't change with theme) */
     --health-color: #ef4444;
@@ -291,6 +300,122 @@
     border-radius: 12px;
   }
 
+  /* === PLAY OVERLAY SHELL === */
+  /* Shared chrome for in-play overlays. One surface per overlay; the atmosphere
+     lives in the backdrop and surface gradient, not in per-section cards. */
+  .play-overlay-backdrop {
+    background:
+      radial-gradient(120% 80% at 50% 0%, var(--overlay-wash) 0%, transparent 60%),
+      rgba(6, 6, 11, 0.72);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  .play-overlay-surface {
+    background:
+      linear-gradient(180deg, var(--surface-raised) 0%, var(--surface-sunken) 100%);
+    border: 1px solid var(--surface-edge);
+    box-shadow: var(--shadow-deep);
+    color: hsl(var(--foreground));
+  }
+
+  /* Hairline of accent along the top edge instead of a full-panel halo. */
+  .play-overlay-surface::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--accent-border) 20%,
+      var(--accent-primary) 50%,
+      var(--accent-border) 80%,
+      transparent 100%
+    );
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .play-overlay-header {
+    border-bottom: 1px solid var(--surface-edge);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+  }
+
+  .play-overlay-title {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+  }
+
+  .play-overlay-body {
+    font-family: var(--font-body);
+  }
+
+  .play-overlay-footer {
+    border-top: 1px solid var(--surface-edge);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0%, transparent 100%);
+  }
+
+  .play-overlay-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: hsl(var(--muted-foreground));
+    border: 1px solid transparent;
+    transition: color var(--transition-fast), background var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  .play-overlay-close:hover {
+    color: hsl(var(--foreground));
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--surface-edge);
+  }
+
+  .play-overlay-close:focus-visible {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-bg);
+  }
+
+  /* Tab rail used by grouped overlay sections. */
+  .play-overlay-tab {
+    position: relative;
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: hsl(var(--muted-foreground));
+    transition: color var(--transition-fast);
+  }
+
+  .play-overlay-tab:hover {
+    color: hsl(var(--foreground));
+  }
+
+  .play-overlay-tab[data-active='true'] {
+    color: var(--accent-primary);
+  }
+
+  .play-overlay-tab[data-active='true']::after {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent-primary);
+  }
+
   /* === ANIMATED GRADIENT BORDER === */
   .gradient-border {
     position: relative;
@@ -426,9 +551,9 @@
     color: white;
     font-weight: 600;
     font-family: var(--font-body);
-    box-shadow: 0 0 20px var(--accent-glow),
-                0 4px 15px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 12px var(--accent-glow),
+                0 4px 15px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18);
     transition: all var(--transition-normal);
     cursor: pointer;
     position: relative;
@@ -445,10 +570,10 @@
   }
 
   .glow-button:hover {
-    box-shadow: 0 0 30px var(--accent-glow-intense),
-                0 6px 20px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 0 18px var(--accent-glow-intense),
+                0 6px 20px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
   }
 
   .glow-button:hover::before {

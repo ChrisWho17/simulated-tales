@@ -110,7 +110,7 @@ export function AdventureHeader({
   onRestart,
 }: AdventureHeaderProps) {
   return (
-    <header className="relative z-20 glass-panel border-0 border-b border-[rgba(139,92,246,0.2)] rounded-none">
+    <header className="relative z-20 glass-panel border-0 border-b border-[var(--accent-border)] rounded-none">
       <div className="flex items-center justify-between px-2 py-1 gap-1">
         {/* Title - Tappable on mobile */}
         <div className="flex items-center gap-1">

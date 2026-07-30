@@ -7,7 +7,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        "rounded-2xl border border-[rgba(139,92,246,0.2)] bg-[rgba(15,15,25,0.7)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300",
+        "rounded-2xl border border-[var(--accent-border)] bg-[rgba(15,15,25,0.7)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300",
         className
       )}
       {...props}
@@ -21,8 +21,8 @@ const CardInteractive = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
     <div
       ref={ref}
       className={cn(
-        "rounded-2xl border border-[rgba(139,92,246,0.2)] bg-[rgba(15,15,25,0.7)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300 cursor-pointer",
-        "hover:border-[rgba(139,92,246,0.4)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_20px_rgba(139,92,246,0.3)] hover:-translate-y-1",
+        "rounded-2xl border border-[var(--accent-border)] bg-[rgba(15,15,25,0.7)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300 cursor-pointer",
+        "hover:border-[var(--accent-primary)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_14px_var(--accent-glow)] hover:-translate-y-0.5",
         className
       )}
       {...props}
@@ -36,13 +36,13 @@ const CardGradientBorder = React.forwardRef<HTMLDivElement, React.HTMLAttributes
     <div className="relative group">
       <div
         className={cn(
-          "absolute -inset-[2px] rounded-[18px] bg-gradient-to-r from-[#8b5cf6] via-[#d946ef] to-[#22d3ee] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm",
+          "absolute -inset-[2px] rounded-[18px] bg-[image:var(--accent-gradient)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm",
         )}
       />
       <div
         ref={ref}
         className={cn(
-          "relative rounded-2xl border border-[rgba(139,92,246,0.2)] bg-[rgba(15,15,25,0.9)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300",
+          "relative rounded-2xl border border-[var(--accent-border)] bg-[rgba(15,15,25,0.9)] backdrop-blur-xl text-card-foreground shadow-glass transition-all duration-300",
           className
         )}
         {...props}

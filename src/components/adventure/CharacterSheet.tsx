@@ -46,6 +46,8 @@ import { TemperatureDisplay } from '@/components/game/TemperatureDisplay';
 import { WeatherState as TurnBasedWeatherState } from '@/game/weatherSystem';
 import { TemperatureState } from '@/game/temperatureSystem';
 import { SessionStatsDisplay, useSessionStatsOptional } from '@/components/game/SessionStats';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
+import { ScrollText } from 'lucide-react';
 
 interface CharacterSheetProps {
   character: RPGCharacter & { portraitUrl?: string };
@@ -118,16 +120,30 @@ function LevelUpModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className="bg-card border-2 border-primary/50 rounded-lg w-full max-w-md animate-fade-in">
-        <div className="p-6 border-b border-border text-center">
-          <Sparkles className="w-12 h-12 text-primary mx-auto mb-3 animate-pulse" />
-          <h2 className="text-2xl font-narrative font-bold text-gradient-gold">Level Up!</h2>
-          <p className="text-muted-foreground mt-1">
-            {character.name} has reached Level {character.level + 1}
-          </p>
+    <PlayOverlayShell
+      open
+      onClose={onCancel}
+      title="Level Up"
+      subtitle={`${character.name} has reached Level ${character.level + 1}`}
+      icon={<Sparkles className="w-5 h-5" />}
+      size="sm"
+      zIndex={70}
+      dismissOnBackdrop={false}
+      footer={
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onCancel}>
+            Later
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleConfirm}
+            disabled={pointsRemaining > 0}
+          >
+            Confirm Level Up
+          </Button>
         </div>
-
+      }
+    >
         <div className="p-6 space-y-4">
           <div className="text-center mb-4">
             <span className="text-lg font-semibold text-primary">{pointsRemaining}</span>
@@ -172,21 +188,7 @@ function LevelUpModal({
             ))}
           </div>
         </div>
-
-        <div className="p-4 border-t border-border flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onCancel}>
-            Later
-          </Button>
-          <Button 
-            className="flex-1" 
-            onClick={handleConfirm}
-            disabled={pointsRemaining > 0}
-          >
-            Confirm Level Up
-          </Button>
-        </div>
-      </div>
-    </div>
+    </PlayOverlayShell>
   );
 }
 
@@ -441,25 +443,14 @@ export function CharacterSheet({
 
   return (
     <>
-      <div className="fixed inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-card border border-border rounded-lg w-full max-w-2xl h-[85vh] flex flex-col animate-fade-in">
-          {/* Header */}
-          <div className="flex justify-between items-start p-4 md:p-6 border-b border-border flex-shrink-0">
-            <div className="flex-1 min-w-0 pr-4">
-              <h2 className="text-xl md:text-2xl font-narrative font-bold text-gradient-gold">
-                {character.name}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
-              </p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+      <PlayOverlayShell
+        open
+        onClose={onClose}
+        title={character.name}
+        subtitle={`Level ${character.level} ${charClass?.name || 'Adventurer'} • ${background?.name || 'Unknown Origin'}`}
+        icon={<ScrollText className="w-5 h-5" />}
+        size="lg"
+      >
             <div className="p-4 md:p-6 space-y-6">
               {/* Portrait */}
               <PortraitDisplay 
@@ -724,9 +715,7 @@ export function CharacterSheet({
               {/* Bottom padding for mobile safe area */}
               <div className="h-6 md:h-4" />
             </div>
-          </div>
-        </div>
-      </div>
+      </PlayOverlayShell>
 
       {/* Level Up Modal */}
       {showLevelUp && (
@@ -1043,25 +1032,18 @@ function JournalDetailModal({ journal: initialJournal, onClose }: { journal: NPC
   const notes = journal.personalNotes || [];
   
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <div className={`bg-card border-2 ${milestoneInfo.borderColor} rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col animate-fade-in overflow-hidden`}>
-        {/* Header */}
+    <PlayOverlayShell
+      open
+      onClose={onClose}
+      title={journal.npcName}
+      subtitle={milestoneInfo.label}
+      icon={<span className="text-2xl">{milestoneInfo.icon}</span>}
+      size="md"
+      zIndex={70}
+    >
+        {/* Stats */}
         <div className={`p-4 ${milestoneInfo.bgColor} border-b ${milestoneInfo.borderColor}`}>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{milestoneInfo.icon}</span>
-              <div>
-                <h3 className="text-xl font-narrative font-bold">{journal.npcName}</h3>
-                <p className={`text-sm ${milestoneInfo.color} font-medium`}>{milestoneInfo.label}</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          
-          {/* Stats */}
-          <div className="flex gap-4 mt-3 text-sm">
+          <div className="flex gap-4 text-sm">
             <span className="text-muted-foreground">
               📝 {journal.totalMoments} moments
             </span>
@@ -1222,8 +1204,7 @@ function JournalDetailModal({ journal: initialJournal, onClose }: { journal: NPC
             )}
           </div>
         )}
-      </div>
-    </div>
+    </PlayOverlayShell>
   );
 }
 

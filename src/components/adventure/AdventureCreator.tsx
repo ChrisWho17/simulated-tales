@@ -1066,7 +1066,7 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 value={customScenario}
                 onChange={(e) => setCustomScenario(e.target.value)}
                 placeholder="Describe your scenario... (try '+horror 25%' or '+war 20% +mystery 15%' - up to 50% across 3 genres)"
-                className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
+                className="flex-1 bg-black/30 border-[var(--accent-border)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
                 onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
                 disabled={isLoading}
               />

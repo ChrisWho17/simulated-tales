@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Check, X, Palette, Sparkles, Flame, Snowflake, Waves, Zap, Sun, Moon, Star } from 'lucide-react';
-import { COLOR_PRESETS, ColorPreset, applyColorTheme, getSavedColorId } from '@/lib/colorTheme';
+import { COLOR_PRESETS, ColorPreset, applyColorTheme, getSavedColorId, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -191,15 +191,15 @@ function ColorSwatch({
 }
 
 export function ColorSplashScreen({ open, onClose }: ColorSplashScreenProps) {
-  const [selected, setSelected] = useState(() => getSavedColorId() || 'violet');
+  const [selected, setSelected] = useState(() => getSavedColorId() || DEFAULT_COLOR_ID);
   const [originalColor, setOriginalColor] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   // Store original color when opening
   useEffect(() => {
     if (open) {
-      setOriginalColor(getSavedColorId() || 'violet');
-      setSelected(getSavedColorId() || 'violet');
+      setOriginalColor(getSavedColorId() || DEFAULT_COLOR_ID);
+      setSelected(getSavedColorId() || DEFAULT_COLOR_ID);
     }
   }, [open]);
   

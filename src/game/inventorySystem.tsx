@@ -1,5 +1,7 @@
 import React, { useState, useCallback, createContext, useContext, useReducer, useEffect } from 'react';
+import { Backpack, Wrench } from 'lucide-react';
 import { populateWeaponData, getCompatibleModsArray, ALL_MODS, WeaponMod as WMod } from './weaponModsSystem';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
 
 // ============================================================================
 // CONSTANTS & TYPES
@@ -1319,59 +1321,18 @@ function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onA
   };
   
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    }}>
-      <div style={{
-        background: `${s.bg}f0`,
-        border: `1px solid ${s.border}`,
-        borderRadius: '12px',
-        width: '90%',
-        maxWidth: '400px',
-        overflow: 'hidden',
-        boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px ${s.accent}20`,
-      }}>
-        {/* Header */}
-        <div style={{ padding: '20px', borderBottom: `1px solid ${s.border}`, background: s.bgSecondary }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '8px',
-                background: `linear-gradient(135deg, ${s.accent}30, ${s.accent}10)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-              }}>{item.icon || '📦'}</div>
-              <div>
-                <h3 style={{ color: s.text, fontSize: '18px', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center' }}>
-                  {item.name}{isEquipped && <EquippedBadge />}
-                </h3>
-                <span style={{ color: s.textMuted, fontSize: '12px', textTransform: 'uppercase' }}>{item.type || item.category}</span>
-              </div>
-            </div>
-            <button onClick={onClose} style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '6px',
-              border: 'none',
-              background: s.bgTertiary,
-              color: s.textMuted,
-              cursor: 'pointer',
-              fontSize: '18px',
-            }}>✕</button>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px' }}>
+    <PlayOverlayShell
+      open
+      onClose={onClose}
+      title={<span className="flex items-center">{item.name}{isEquipped && <EquippedBadge />}</span>}
+      subtitle={String(item.type || item.category).toUpperCase()}
+      icon={<span style={{ fontSize: '20px' }}>{item.icon || '📦'}</span>}
+      size="sm"
+      zIndex={1000}
+    >
+        {/* Header stats */}
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}` }}>
+          <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
             {(item.weight ?? 0) > 0 && <span style={{ color: s.textMuted }}>Weight: <span style={{ color: s.text }}>{item.weight} lbs</span></span>}
             {(item.value ?? 0) > 0 && <span style={{ color: s.textMuted }}>Value: <span style={{ color: s.warning }}>${item.value}</span></span>}
             {item.quantity > 1 && <span style={{ color: s.textMuted }}>Qty: <span style={{ color: s.text }}>{item.quantity}</span></span>}
@@ -1478,8 +1439,7 @@ function ItemActionModal({ item, onClose, onUse, onDrop, onEquip, onUnequip, onA
             cursor: 'pointer',
           }}>↓ Drop</button>
         </div>
-      </div>
-    </div>
+    </PlayOverlayShell>
   );
 }
 
@@ -1781,21 +1741,17 @@ function ArsenalScreen({ weapon, onClose, availableMods = [] }: ArsenalScreenPro
   }, [currentWeapon, weaponMods]);
   
   return (
-    <div style={{ position: 'fixed', inset: 0, background: s.bg, zIndex: 200, display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}`, background: s.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={onClose} style={{
-          display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
-          background: 'transparent', border: 'none', color: s.textMuted, fontSize: '14px', cursor: 'pointer',
-        }}>← Back to Inventory</button>
-        <h2 style={{ color: s.warning, fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          🔧 Arsenal
-        </h2>
-        <div style={{ width: '100px' }} />
-      </div>
-      
-      {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+    <PlayOverlayShell
+      open
+      onClose={onClose}
+      title="Arsenal"
+      subtitle={currentWeapon.name}
+      icon={<Wrench className="w-5 h-5" />}
+      size="lg"
+      zIndex={200}
+      dismissOnBackdrop={false}
+    >
+      <div style={{ padding: '16px' }}>
         {/* Weapon Header */}
         <div style={{ background: s.bgSecondary, borderRadius: '12px', padding: '20px', marginBottom: '16px', border: `1px solid ${s.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
@@ -1847,7 +1803,7 @@ function ArsenalScreen({ weapon, onClose, availableMods = [] }: ArsenalScreenPro
           <WeaponConditionPanel weapon={currentWeapon} detailLevel={detailLevel} onMaintain={handleMaintain} />
         )}
       </div>
-    </div>
+    </PlayOverlayShell>
   );
 }
 
@@ -1907,51 +1863,52 @@ export function InventoryScreen({ isOpen, onClose, availableMods = [] }: Invento
   }
   
   return (
-    <div style={{ position: 'fixed', inset: 0, background: s.bg, zIndex: 100, display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: s.bgSecondary }}>
-        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'transparent', border: 'none', color: s.textMuted, fontSize: '14px', cursor: 'pointer' }}>
-          ← Back
-        </button>
-        <h2 style={{ color: s.text, fontSize: '16px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', margin: 0 }}>Inventory</h2>
-        <div style={{ color: s.textMuted, fontSize: '12px' }}>{inv.state.items.length} items</div>
-      </div>
-      
-      {/* Search */}
-      <div style={{ padding: '12px 16px', background: s.bg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: s.bgSecondary, border: `1px solid ${s.border}`, borderRadius: '8px' }}>
-          <span style={{ color: s.textDim }}>🔍</span>
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search inventory..."
-            style={{ flex: 1, background: 'transparent', border: 'none', color: s.text, fontSize: '14px', outline: 'none' }} />
-          {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: s.textDim, cursor: 'pointer' }}>✕</button>}
+    <>
+      <PlayOverlayShell
+        open
+        onClose={onClose}
+        title="Inventory"
+        subtitle={`${inv.state.items.length} ${inv.state.items.length === 1 ? 'item' : 'items'}`}
+        icon={<Backpack className="w-5 h-5" />}
+        size="lg"
+        zIndex={100}
+        toolbar={
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: s.bgSecondary, border: `1px solid ${s.border}`, borderRadius: '8px' }}>
+              <span style={{ color: s.textDim }}>🔍</span>
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search inventory..."
+                style={{ flex: 1, background: 'transparent', border: 'none', color: s.text, fontSize: '14px', outline: 'none' }} />
+              {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', color: s.textDim, cursor: 'pointer' }}>✕</button>}
+            </div>
+          </div>
+        }
+        footer={
+          <WeightBar current={inv.state.settings.currentWeight} max={inv.state.settings.maxCapacity} enabled={inv.state.settings.weightSystemEnabled} />
+        }
+      >
+        <div style={{ padding: '0 16px 16px' }}>
+          <EquipSlotsPanel equipped={inv.state.equipped} items={inv.state.items} onSlotClick={(_, item) => item && setSelectedItem(item)} />
+          {Object.values(CATEGORIES).map(cat => (
+            <CategoryDropdown 
+              key={cat.id} 
+              category={cat} 
+              items={filteredItems} 
+              onItemClick={setSelectedItem} 
+              equippedItems={equippedIds} 
+              recentlyAddedItems={inv.state.recentlyAddedItems}
+              onDismissNew={(instanceId) => inv.dispatch({ type: ACTIONS.CLEAR_RECENTLY_ADDED, payload: { instanceId } })}
+            />
+          ))}
         </div>
-      </div>
-      
-      {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '0 16px 16px' }}>
-        <EquipSlotsPanel equipped={inv.state.equipped} items={inv.state.items} onSlotClick={(_, item) => item && setSelectedItem(item)} />
-{Object.values(CATEGORIES).map(cat => (
-          <CategoryDropdown 
-            key={cat.id} 
-            category={cat} 
-            items={filteredItems} 
-            onItemClick={setSelectedItem} 
-            equippedItems={equippedIds} 
-            recentlyAddedItems={inv.state.recentlyAddedItems}
-            onDismissNew={(instanceId) => inv.dispatch({ type: ACTIONS.CLEAR_RECENTLY_ADDED, payload: { instanceId } })}
-          />
-        ))}
-      </div>
-      
-      <WeightBar current={inv.state.settings.currentWeight} max={inv.state.settings.maxCapacity} enabled={inv.state.settings.weightSystemEnabled} />
-      
+      </PlayOverlayShell>
+
       {selectedItem && (
         <ItemActionModal item={selectedItem} onClose={() => setSelectedItem(null)}
           onUse={handleUse} onDrop={handleDrop} onEquip={handleEquip} onUnequip={handleUnequip} onArsenal={handleArsenal}
           isEquipped={inv.isEquipped(selectedItem.instanceId)} equippedSlot={inv.getEquippedSlot(selectedItem.instanceId)}
           equippedState={inv.state.equipped} />
       )}
-    </div>
+    </>
   );
 }

@@ -88,7 +88,7 @@ export function LoadingScreen({
         {/* Loading spinner with glow */}
         <div className="relative">
           <div className="absolute inset-0 animate-glow-pulse rounded-full" />
-          <div className="relative p-6 rounded-full glass-panel border-[rgba(139,92,246,0.3)]">
+          <div className="relative p-6 rounded-full glass-panel border-[var(--accent-border)]">
             <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden="true" />
           </div>
         </div>

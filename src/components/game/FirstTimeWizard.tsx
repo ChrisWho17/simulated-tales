@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { COLOR_PRESETS, ColorPreset, applyColorTheme, loadColorPreference } from '@/lib/colorTheme';
+import { COLOR_PRESETS, ColorPreset, applyColorTheme, loadColorPreference, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { StepTransition, useStepDirection, StaggerChildren, StaggerItem } from '@/components/ui/PageTransition';
 import { SETTINGS_PRESETS, PresetId } from './SettingsPresetSelector';
 
@@ -77,7 +77,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
   const stepDirection = useStepDirection(currentStep);
   
   // User selections
-  const [selectedTheme, setSelectedTheme] = useState<string>('violet');
+  const [selectedTheme, setSelectedTheme] = useState<string>(DEFAULT_COLOR_ID);
   const [selectedPreset, setSelectedPreset] = useState<PresetId>('story');
   const [adultContent, setAdultContent] = useState(false);
   const [rememberPreferences, setRememberPreferences] = useState(true);

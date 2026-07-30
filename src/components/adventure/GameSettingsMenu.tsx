@@ -1,7 +1,7 @@
 // Compact game settings menu for story first page
 // Filtered to game settings only - no world/character/life settings
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,8 +80,18 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
     }
   ];
 
-  const currentDirectorType = settings.directorSettings?.directorType || DEFAULT_DIRECTOR_SETTINGS.directorType;
-  const isDirectorEnabled = settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled;
+  // SettingsPanel reads campaign-scoped director settings first; this menu must
+  // agree or the two surfaces disagree about the active director mid-campaign.
+  const currentDirectorSettings = useMemo(
+    () =>
+      campaignContext?.activeCampaign?.settings?.directorSettings ||
+      settings.directorSettings ||
+      DEFAULT_DIRECTOR_SETTINGS,
+    [campaignContext?.activeCampaign?.settings?.directorSettings, settings.directorSettings]
+  );
+
+  const currentDirectorType = currentDirectorSettings.directorType;
+  const isDirectorEnabled = currentDirectorSettings.enabled;
 
   const applyDirectorSettings = useCallback((newDirectorSettings: DirectorSettings) => {
     updateSettings({ directorSettings: newDirectorSettings });
@@ -109,7 +119,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
 
   const handleDirectorTypeChange = (type: DirectorType) => {
     applyDirectorSettings({
-      ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+      ...currentDirectorSettings,
       directorType: type,
       enabled: true,  // Auto-enable when selecting a type
       rawGame: false, // Disable raw game when selecting a director
@@ -289,9 +299,9 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={isDirectorEnabled}
                 onCheckedChange={(checked) => applyDirectorSettings({ 
-                    ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+                    ...currentDirectorSettings,
                     enabled: checked,
-                    rawGame: !checked ? true : (settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame)
+                    rawGame: !checked ? true : (currentDirectorSettings.rawGame)
                 })}
               />
             </div>
@@ -338,10 +348,10 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
                 <span className="text-[10px] text-muted-foreground">Pure simulation, no steering</span>
               </div>
               <Switch 
-                checked={settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame}
+                checked={currentDirectorSettings.rawGame}
                 disabled={!isDirectorEnabled}
                 onCheckedChange={(checked) => applyDirectorSettings({ 
-                    ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+                    ...currentDirectorSettings,
                     rawGame: checked
                 })}
               />

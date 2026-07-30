@@ -16,6 +16,22 @@ export interface ColorPreset {
 
 export const COLOR_PRESETS: ColorPreset[] = [
   // === CLASSIC ===
+  // Default. Warm brass on deep ink — deliberately lower glow alphas than the
+  // other presets so the play chrome reads as editorial rather than neon.
+  {
+    id: 'ink',
+    name: 'Ink & Ember',
+    primary: '#d0a05f',
+    secondary: '#e3c48d',
+    tertiary: '#f2e2c4',
+    glow: 'rgba(208, 160, 95, 0.26)',
+    glowIntense: 'rgba(208, 160, 95, 0.4)',
+    border: 'rgba(208, 160, 95, 0.22)',
+    bg: 'rgba(208, 160, 95, 0.09)',
+    particles: ['#d0a05f', '#e3c48d', '#f2e2c4'],
+    category: 'classic',
+    effect: 'shimmer'
+  },
   { 
     id: 'violet', 
     name: 'Mystic Violet', 
@@ -362,6 +378,9 @@ export const COLOR_PRESETS: ColorPreset[] = [
   },
 ];
 
+/** Preset applied when the player has never picked a color. */
+export const DEFAULT_COLOR_ID = COLOR_PRESETS[0].id;
+
 // Helper to convert hex to HSL for CSS variables
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -448,9 +467,8 @@ export function loadColorPreference(): string {
       return savedId;
     }
   }
-  // Default to violet
   applyColorTheme(COLOR_PRESETS[0]);
-  return 'violet';
+  return COLOR_PRESETS[0].id;
 }
 
 export function getColorPreset(id: string): ColorPreset {

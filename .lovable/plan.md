@@ -1,71 +1,88 @@
-## Goal
+## Scope
 
-Reduce structural roughness without changing gameplay. Living world systems and Creators Mark tools stay exactly as they are. Zero new features. Every phase ends with the app behaving identically.
-
-Verified current state:
-- `src/components/debug/CheatModeSplash.tsx` — 3,906 lines
-- `src/components/adventure/AdventureDisplay.tsx` — 2,993 lines
-- `src/components/adventure/AdventureGame.tsx` — 2,559 lines
-- `src/components/game/GameUI.tsx` — 1,765 lines (same class of problem)
-- Save code lives in three parallel places: `src/lib/` (saveSystem, campaignStorage, saveRecovery, storageRepair…), `src/systems/` (SaveSystem, AutoSaveManager, CrossTabSync, StorageHealthMonitor), `src/services/` (unifiedSaveService, unifiedSaveArchitecture, saveTransaction, incrementalSaveService, comprehensiveBackupService…)
-- `src/App.tsx` mounts `/loadout-test`, `/inventory-test`, `/debug/pwa` unconditionally, plus `StartupIntegrityMonitor` on every boot
+Five coordinated additions across tests, save loading, debug UI, edge function, and rollback logic.
 
 ---
 
-## Phase 1 — Safest slice (1–2 days)
+### 1. Regression tests for edge function parsing
 
-**1a. Prod gating (small, high value)**
-- Wrap `/loadout-test`, `/inventory-test`, `/debug/pwa` in a `DevOnlyRoute` guard: rendered only when `import.meta.env.DEV` or the Creators Mark flag is active; otherwise they fall through to the 404 route. Pages stay in the codebase and get lazy-loaded so they leave the production bundle.
-- `/cheat` / Creators Mark stays public-reachable exactly as today.
-- `StartupIntegrityMonitor` and `StorageHealthMonitor` move from boot-blocking to on-demand: run in dev/Creators Mark always, in production only once via `requestIdleCallback` after first paint (or not at all if you prefer — call it out in review).
-- Introduce a tiny `devLog` helper and route the noisiest always-on `console.*` in the save/storage/monitor paths through it so production builds are quiet. Errors still log.
+**File:** `supabase/functions/generate-adventure/index_test.ts` (new)
 
-**1b. Patch pipeline hardening**
-- `VersionHotfixesBadge`: explicit empty state when `fixes[]` is empty or missing — badge does not render at all rather than rendering an empty popover; guard `undefined` fixes and non-array values.
-- Add unit tests covering: empty `fixes[]`, missing `fixes` key, single fix, many fixes, and version with only `highlights`.
-- Same guard applied where `WhatsNewModal` reads `fixes`.
+- Extract pure helpers (`parseDamageHeal`, `calculateSimilarity`) into `supabase/functions/generate-adventure/parsers.ts` so they're testable without booting the function.
+- Update `index.ts` to import from `parsers.ts` (no behavior change).
+- Tests cover:
+  - Single `[DAMAGE:X]` tag → correct sum
+  - Multiple `[DAMAGE:X]` + `[HEAL:Y]` tags in one narrative → summed correctly (streaming + non-streaming code paths share the helper)
+  - `calculateSimilarity` returns expected scores for identical, partial, and disjoint strings (hoisting regression — confirms module-scope availability)
+  - `[LOOT:item]`, `[USE:item]`, `[DROP:item]` parsing arrays
 
-**1c. First decomposition — the least entangled file**
-- `CheatModeSplash.tsx` (3.9k) is a self-contained creator tool, so it carries the lowest gameplay risk. Split by tab/section into `src/components/debug/cheat/` — one file per panel plus a `useCheatState` hook holding the shared mutation handlers. The exported component keeps its name, props, and behavior.
-- No logic edits during the move; a diff should be pure relocation.
-
-**Phase 1 exit check:** app boots, story runs, cheat panels all still function, `/loadout-test` 404s in a production build, tests green.
+**File:** `src/hooks/__tests__/useNarrativeGeneration.test.ts` (new)
+- Mocks supabase invoke. Verifies `latestMechanicsRef.current` matches `pendingMechanics` immediately after a generation completes (sync mirror invariant).
 
 ---
 
-## Phase 2 — AdventureDisplay + AdventureGame decomposition
+### 2. Save/load consistency check
 
-Done after Phase 1 lands and you've played a session against it.
+**File:** `src/lib/saveConsistencyCheck.ts` (new)
 
-- `AdventureGame.tsx` → extract the flow state machine (`creator → character creation → story ruleset → play`) into `useAdventureFlow`, save/load wiring into `useAdventurePersistence`, and modal orchestration into the existing `AdventureModals`. Component becomes a thin composition root.
-- `AdventureDisplay.tsx` → extract `useAutoSave`, `useTurnSubmission` (the AI call + tag filtering pipeline), and `useAmbientFeed`; move the header, narrative stream, and input bar into sibling components under `src/components/adventure/display/`.
-- Rule for both: hooks are moved verbatim, dependency arrays untouched. Any behavior change found mid-move gets reported, not silently fixed.
-- `GameUI.tsx` gets the same treatment if time allows; otherwise it rolls to Phase 4.
+- `validateRestoredState(save)` returns `{ ok, mismatches: string[] }`.
+- Checks `weatherState` has required fields (`current`, `intensity`, `transitionAt`), `timeState` (`hour`, `day`, `tick`), `directorSettings` (all keys present in current schema defaults).
+- On mismatch: `console.warn` with structured log, fills missing fields with defaults, returns repaired state.
 
----
-
-## Phase 3 — Save stack consolidation (deprecate + remove dead layers)
-
-1. Produce a call-graph audit: for each module in `lib/`, `systems/`, `services/`, list live callers.
-2. Write `docs/save-architecture.md` naming the single source of truth (expected: `services/unifiedSaveArchitecture` + `lib/bigKVStore` as the storage substrate, with `lib/saveRecovery` as the repair path). Everything else is either a caller or a migration-only read path.
-3. Mark superseded modules `@deprecated` with a pointer to the replacement.
-4. Delete modules with zero live callers — **but** anything that reads an old on-disk format stays, because existing player saves depend on it. Read-compat and migration code is explicitly out of scope for deletion.
-5. Add a regression test that loads each golden save fixture in `lib/saveRecovery/__tests__/goldenSaves.ts` after the deletions.
-
-Risk note: this is the only phase that can corrupt player data, so it lands alone, with a manual save/load/reload pass on a real campaign before it's called done.
+**Integration:** `AdventureGame.handleLoadSave` calls `validateRestoredState` before applying, surfaces toast if mismatches found.
 
 ---
 
-## Phase 4 — Follow-ups (optional)
+### 3. Mechanics sync debug panel
 
-- Changelog schema validation (zod parse of `changelog.ts` at build/test time).
-- `GameUI.tsx` decomposition if not covered in Phase 2.
-- Lint rule banning new files over ~600 lines in `components/`.
+**File:** `src/components/debug/MechanicsSyncDebugPanel.tsx` (new)
+
+- Floating bottom-right panel (only when `?debug=mechanics` or dev flag).
+- Shows side-by-side JSON of `pendingMechanics` vs `latestMechanicsRef.current`, highlights diffs red.
+- Subscribes to a `rollback-cleared-mechanics` window event and shows a flash banner ("Rollback cleared stale mechanics at turn N").
+- Add event dispatch in `handleRollbackToEntry` when mechanics are cleared.
+
+Exposed via `useNarrativeGeneration` returning the ref alongside state.
+
+---
+
+### 4. Deterministic variance seed
+
+**Edge function (`generate-adventure/index.ts`):**
+- Accept optional `varianceSeed: string` in request body.
+- When present, use it directly instead of generating one; log `[SEED:override]`.
+
+**Client:**
+- Add toggle + text input in `GameSettingsMenu` ("Testing → Force variance seed").
+- Persisted to localStorage via `gameSettings`.
+- `useNarrativeGeneration` reads setting and passes `varianceSeed` in payload when set.
+
+---
+
+### 5. Rollback safety for loot/drop/use
+
+**File:** `src/lib/inventoryRollbackLedger.ts` (new)
+
+- Append-only ledger keyed by `storyEntryId`: records `{ added: Item[], removed: Item[], used: Item[] }` whenever mechanics apply loot/drop/use.
+- `revertToEntry(entryId)`: walks ledger entries after `entryId`, inverts each (re-add removed/used, remove added), then trims ledger.
+- Idempotent: each ledger entry has a `applied` flag so re-running rollback can't double-revert.
+
+**Integration:** 
+- `CampaignInventorySync` (or wherever loot/use/drop is applied) writes ledger entries with the originating entry id.
+- `AdventureGame.handleRollbackToEntry` calls `revertToEntry(entryId)` before clearing mechanics.
+- Adds a regression test `src/lib/__tests__/inventoryRollbackLedger.test.ts` covering: revert single entry, revert multiple, idempotent re-run, no-op when entry not in ledger.
 
 ---
 
 ## Technical notes
 
-- No dependency changes, no schema changes, no edge function changes.
-- All extractions preserve export names so import sites elsewhere don't churn.
-- Each phase is independently revertible; nothing in Phase 1 depends on Phase 3.
+- No DB schema changes. Ledger persists in same campaign save blob under `inventoryLedger`.
+- Edge function tests run via `supabase--test_edge_functions`.
+- Debug panel is dev-only — gated on `import.meta.env.DEV || URL flag` so it never ships to end users.
+- Variance seed override is opt-in; default behavior unchanged.
+- All new colors/styles use existing semantic tokens.
+
+## Files touched
+
+New: 6 (parsers.ts, index_test.ts, useNarrativeGeneration.test.ts, saveConsistencyCheck.ts, MechanicsSyncDebugPanel.tsx, inventoryRollbackLedger.ts, inventoryRollbackLedger.test.ts)
+Edited: 5 (index.ts, AdventureGame.tsx, useNarrativeGeneration.ts, GameSettingsMenu.tsx, CampaignInventorySync.tsx)
