@@ -12,7 +12,6 @@ import { DirectorSettingsTab } from './DirectorSettingsTab';
 import { SettingsPresetSelector } from './SettingsPresetSelector';
 import { AccessibilitySettingsPanel, useAccessibilityOptional } from '@/components/game/AccessibilitySettings';
 import { StorageManagerPanel } from '@/components/game/StorageManagerPanel';
-import { StoragePipelinePanel } from '@/components/game/StoragePipelinePanel';
 import { WeatherType, WEATHER_CONFIGS } from '@/game/weatherSystem';
 import { ClimateZoneId, CLIMATE_ZONES } from '@/game/geographicClimateSystem';
 import { useGame } from '@/contexts/GameContext';
@@ -316,7 +315,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
                 <Switch 
                   checked={settings.adultContent}
-                  onCheckedChange={(checked) => updateSettings({ adultContent: checked })}
+                  onCheckedChange={(checked) => {
+                    updateSettings({ adultContent: checked });
+                    if (campaignContext?.activeCampaign) {
+                      campaignContext.updateCampaign({
+                        settings: {
+                          ...campaignContext.activeCampaign.settings,
+                          adultContent: checked,
+                        },
+                      });
+                    }
+                  }}
                 />
               </div>
               
@@ -1222,10 +1231,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           
           {/* Storage Tab */}
           {activeTab === 'storage' && (
-            <div className="space-y-6">
-              <StoragePipelinePanel />
-              <StorageManagerPanel />
-            </div>
+            <StorageManagerPanel />
           )}
           
           {/* Tutorial Tab - Commands & Tips */}

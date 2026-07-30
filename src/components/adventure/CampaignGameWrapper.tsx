@@ -5,12 +5,15 @@
 import { useState, useEffect } from 'react';
 import { AdventureGame } from './AdventureGame';
 import { SaveSystemDiagnostics } from '@/components/debug/SaveSystemDiagnostics';
+import { isDiagnosticsHotkeyEnabled } from '@/lib/devTools';
 
 export function CampaignGameWrapper() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   
-  // Register keyboard shortcut for diagnostics (Ctrl+Shift+D)
+  // Workshop / Creators Mark only — keeps Ctrl+Shift+D off the public play surface
   useEffect(() => {
+    if (!isDiagnosticsHotkeyEnabled()) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
@@ -26,11 +29,12 @@ export function CampaignGameWrapper() {
     <>
       <AdventureGame />
       
-      {/* Save system diagnostics (toggle with Ctrl+Shift+D) */}
-      <SaveSystemDiagnostics 
-        isOpen={showDiagnostics} 
-        onClose={() => setShowDiagnostics(false)} 
-      />
+      {isDiagnosticsHotkeyEnabled() && (
+        <SaveSystemDiagnostics 
+          isOpen={showDiagnostics} 
+          onClose={() => setShowDiagnostics(false)} 
+        />
+      )}
     </>
   );
 }

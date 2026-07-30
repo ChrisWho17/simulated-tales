@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,13 @@ import {
 import { Button } from './button';
 import { Keyboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isDiagnosticsHotkeyEnabled } from '@/lib/devTools';
 
 interface ShortcutItem {
   keys: string[];
   description: string;
   category: 'navigation' | 'actions' | 'panels';
+  workshopOnly?: boolean;
 }
 
 const SHORTCUTS: ShortcutItem[] = [
@@ -35,7 +37,7 @@ const SHORTCUTS: ShortcutItem[] = [
   { keys: ['Ctrl', 'J'], description: 'Quest journal', category: 'panels' },
   { keys: ['Ctrl', ','], description: 'Settings', category: 'panels' },
   { keys: ['Ctrl', 'B'], description: 'Bookmarks', category: 'panels' },
-  { keys: ['Ctrl', 'Shift', 'D'], description: 'Debug diagnostics', category: 'panels' },
+  { keys: ['Ctrl', 'Shift', 'D'], description: 'Debug diagnostics', category: 'panels', workshopOnly: true },
 ];
 
 const CATEGORY_LABELS = {
@@ -60,11 +62,14 @@ export function KeyboardShortcutsHelp({ trigger }: KeyboardShortcutsHelpProps) {
     return key;
   };
 
-  const groupedShortcuts = SHORTCUTS.reduce((acc, shortcut) => {
-    if (!acc[shortcut.category]) acc[shortcut.category] = [];
-    acc[shortcut.category].push(shortcut);
-    return acc;
-  }, {} as Record<string, ShortcutItem[]>);
+  const groupedShortcuts = useMemo(() => {
+    const workshop = isDiagnosticsHotkeyEnabled();
+    return SHORTCUTS.filter(s => !s.workshopOnly || workshop).reduce((acc, shortcut) => {
+      if (!acc[shortcut.category]) acc[shortcut.category] = [];
+      acc[shortcut.category].push(shortcut);
+      return acc;
+    }, {} as Record<string, ShortcutItem[]>);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

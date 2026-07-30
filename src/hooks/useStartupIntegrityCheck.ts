@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { DataIntegrityService, IntegrityReport } from '@/services/dataIntegrityService';
 import { toast } from 'sonner';
-import { devLog } from '@/lib/devLog';
 
 interface StartupIntegrityResult {
   hasRun: boolean;
@@ -47,7 +46,7 @@ export function useStartupIntegrityCheck(
       setIsScanning(true);
       
       try {
-        devLog.log('[StartupIntegrity] Running background integrity check...');
+        console.log('[StartupIntegrity] Running background integrity check...');
         const result = await DataIntegrityService.runFullScan();
         setReport(result);
         
@@ -68,12 +67,12 @@ export function useStartupIntegrityCheck(
             },
           });
           
-          devLog.log(`[StartupIntegrity] Found issues: ${result.corrupted} corrupted, ${result.unrecoverable} unrecoverable`);
+          console.log(`[StartupIntegrity] Found issues: ${result.corrupted} corrupted, ${result.unrecoverable} unrecoverable`);
         } else if (result.repaired > 0) {
           // Silent success for repairs
-          devLog.log(`[StartupIntegrity] Auto-repaired ${result.repaired} campaigns`);
+          console.log(`[StartupIntegrity] Auto-repaired ${result.repaired} campaigns`);
         } else {
-          devLog.log(`[StartupIntegrity] All ${result.valid} campaigns healthy`);
+          console.log(`[StartupIntegrity] All ${result.valid} campaigns healthy`);
         }
       } catch (error) {
         console.error('[StartupIntegrity] Check failed:', error);

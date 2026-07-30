@@ -12,5 +12,3 @@ Allow: /
 
 User-agent: *
 Allow: /
-
-Sitemap: https://theuntoldstories.lovable.app/sitemap.xml

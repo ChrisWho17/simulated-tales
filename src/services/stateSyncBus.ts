@@ -30,6 +30,7 @@ export interface SyncEventPayloads {
     campaignId: string;
     campaignName: string;
     directorSettings?: DirectorSettings;
+    adultContent?: boolean;
   };
   'campaign:saved': {
     campaignId: string;

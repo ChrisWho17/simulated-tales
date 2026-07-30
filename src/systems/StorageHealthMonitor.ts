@@ -4,7 +4,6 @@
 
 import { IndexedDBCache, CachedSave } from '@/lib/indexedDBCache';
 import LZString from 'lz-string';
-import { devLog } from '@/lib/devLog';
 
 // ============================================================================
 // TYPES
@@ -66,7 +65,7 @@ class StorageHealthMonitorClass {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    devLog.log('[StorageHealth] Initializing...');
+    console.log('[StorageHealth] Initializing...');
 
     // Initialize IndexedDB cache
     await IndexedDBCache.initialize();
@@ -82,7 +81,7 @@ class StorageHealthMonitorClass {
     await this.checkHealth();
 
     this.initialized = true;
-    devLog.log('[StorageHealth] Initialized successfully');
+    console.log('[StorageHealth] Initialized successfully');
   }
 
   shutdown(): void {
@@ -94,7 +93,7 @@ class StorageHealthMonitorClass {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
     }
-    devLog.log('[StorageHealth] Shutdown complete');
+    console.log('[StorageHealth] Shutdown complete');
   }
 
   // ============================================================================
@@ -115,11 +114,11 @@ class StorageHealthMonitorClass {
       this.performBackup();
     }, BACKUP_INTERVAL_MS);
 
-    devLog.log(`[StorageHealth] Background backups scheduled every ${BACKUP_INTERVAL_MS / 60000} minutes`);
+    console.log(`[StorageHealth] Background backups scheduled every ${BACKUP_INTERVAL_MS / 60000} minutes`);
   }
 
   private async performBackup(): Promise<boolean> {
-    devLog.log('[StorageHealth] Performing background backup...');
+    console.log('[StorageHealth] Performing background backup...');
 
     try {
       // First sync localStorage to cache
@@ -135,7 +134,7 @@ class StorageHealthMonitorClass {
         } catch {
           // Ignore localStorage errors
         }
-        devLog.log('[StorageHealth] Background backup completed');
+        console.log('[StorageHealth] Background backup completed');
         
         // Refresh health status
         await this.checkHealth();
@@ -164,7 +163,7 @@ class StorageHealthMonitorClass {
         }
       }
     } catch (e) {
-      devLog.warn('[StorageHealth] Sync to cache partially failed:', e);
+      console.warn('[StorageHealth] Sync to cache partially failed:', e);
     }
     return synced;
   }
@@ -332,12 +331,12 @@ class StorageHealthMonitorClass {
   // ============================================================================
 
   async attemptRecovery(campaignId: string): Promise<RecoveryResult> {
-    devLog.log(`[StorageHealth] Attempting recovery for: ${campaignId}`);
+    console.log(`[StorageHealth] Attempting recovery for: ${campaignId}`);
 
     // Step 1: Check IndexedDB cache
     const cached = await IndexedDBCache.getCachedSave(campaignId);
     if (cached) {
-      devLog.log('[StorageHealth] Found save in IndexedDB cache');
+      console.log('[StorageHealth] Found save in IndexedDB cache');
       
       // Restore to localStorage
       const restored = await this.restoreToLocalStorage(campaignId, cached);
@@ -351,7 +350,7 @@ class StorageHealthMonitorClass {
     if (backup) {
       const backupSave = backup.saves.find(s => s.id === campaignId);
       if (backupSave) {
-        devLog.log('[StorageHealth] Found save in backup snapshot');
+        console.log('[StorageHealth] Found save in backup snapshot');
         
         // Restore to localStorage
         const restored = await this.restoreToLocalStorage(campaignId, backupSave);
@@ -361,7 +360,7 @@ class StorageHealthMonitorClass {
       }
     }
 
-    devLog.log('[StorageHealth] No recovery source found');
+    console.log('[StorageHealth] No recovery source found');
     return { success: false, campaignId, source: 'none', error: 'No backup found' };
   }
 
@@ -373,7 +372,7 @@ class StorageHealthMonitorClass {
       // Verify
       const verify = localStorage.getItem(key);
       if (verify === cached.data) {
-        devLog.log(`[StorageHealth] Restored ${campaignId} to localStorage`);
+        console.log(`[StorageHealth] Restored ${campaignId} to localStorage`);
         return true;
       }
     } catch (e) {
@@ -466,7 +465,7 @@ class StorageHealthMonitorClass {
   // ============================================================================
 
   async triggerManualBackup(): Promise<boolean> {
-    devLog.log('[StorageHealth] Manual backup triggered');
+    console.log('[StorageHealth] Manual backup triggered');
     return this.performBackup();
   }
 
@@ -509,6 +508,6 @@ export const StorageHealthMonitor = new StorageHealthMonitorClass();
 // Auto-initialize when module loads (non-blocking)
 if (typeof window !== 'undefined') {
   StorageHealthMonitor.initialize().catch(e => {
-    devLog.warn('[StorageHealth] Background initialization failed:', e);
+    console.warn('[StorageHealth] Background initialization failed:', e);
   });
 }

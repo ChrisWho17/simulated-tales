@@ -1,21 +1,8 @@
 import { createRoot } from "react-dom/client";
-import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
+import { APP_TITLE } from "./lib/product";
 import "./index.css";
-import { registerPwa, PWA_SYNC_FLUSH_EVENT } from "./pwa/registerSW";
-import { BackgroundSyncManager } from "./services/backgroundSyncManager";
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>
-);
+document.title = APP_TITLE;
 
-// Register service worker after the app boots. Wrapper handles dev/preview/iframe refusal.
-registerPwa();
-
-// When the SW signals (via Background Sync API) that connectivity is back,
-// drain the offline save queue without waiting for the user.
-window.addEventListener(PWA_SYNC_FLUSH_EVENT, () => {
-  BackgroundSyncManager.forceSyncNow().catch(() => {});
-});
+createRoot(document.getElementById("root")!).render(<App />);

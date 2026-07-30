@@ -2,12 +2,11 @@
 // Automatic cleanup of localStorage when approaching quota limits
 
 import LZString from 'lz-string';
-import { devLog } from '@/lib/devLog';
 
 const STORAGE_WARNING_THRESHOLD = 0.7; // 70% of quota (lowered for earlier cleanup)
 const STORAGE_CRITICAL_THRESHOLD = 0.9; // 90% of quota (lowered for earlier intervention)
 
-// Keys that should never be deleted (live save data + settings)
+// Keys that should never be deleted
 const PROTECTED_KEYS = [
   'untold-game-settings',
   'living-world-settings',
@@ -15,11 +14,6 @@ const PROTECTED_KEYS = [
   'supabase.auth.token',
   'lwe_campaign_index',
   'lwe_active_campaign_id',
-  'untold-game-saves', // LIVE save key — never delete
-  'untold-save-backup', // Backup rotation for live saves
-  'lwe_campaign_', // Per-campaign saves (prefix match below)
-  'lwe_inventory_',
-  'lwe_gamestate_',
 ];
 
 // Keys that can be safely cleaned up (ordered by priority - lower index = delete first)
@@ -50,6 +44,8 @@ const CLEANUP_PRIORITY = [
   // Transaction logs (can be rebuilt)
   { pattern: /^lwe_transaction_log/, priority: 4 },
   { pattern: /^lwe_wal/, priority: 4 },
+  // Legacy game saves (older format)
+  { pattern: /^untold-game-saves/, priority: 5 },
   // Backup saves (keep main saves)
   { pattern: /^backup_/, priority: 5 },
   // Auto-save slots beyond the first 3
@@ -89,7 +85,7 @@ export function getStorageStats(): StorageStats {
     
     // Estimate quota (most browsers are 5-10MB)
     // We'll use a conservative 5MB estimate
-    const estimatedQuota = 10 * 1024 * 1024; // 10MB - realistic browser quota
+    const estimatedQuota = 5 * 1024 * 1024; // 5MB in bytes
     const usedBytes = totalSize * 2; // UTF-16 encoding
     const percentage = usedBytes / estimatedQuota;
     
@@ -105,7 +101,7 @@ export function getStorageStats(): StorageStats {
     console.error('[StorageCleanup] Failed to get stats:', e);
     return {
       used: 0,
-      quota: 10 * 1024 * 1024,
+      quota: 5 * 1024 * 1024,
       percentage: 0,
       itemCount: 0,
       isWarning: false,
@@ -121,7 +117,7 @@ export function formatStorageSize(bytes: number): string {
 }
 
 export function performCleanup(targetReduction: number = 0.2): number {
-  devLog.log('[StorageCleanup] Starting cleanup, target reduction:', targetReduction);
+  console.log('[StorageCleanup] Starting cleanup, target reduction:', targetReduction);
   
   const initialStats = getStorageStats();
   const targetUsage = initialStats.percentage - targetReduction;
@@ -181,13 +177,13 @@ export function performCleanup(targetReduction: number = 0.2): number {
       localStorage.removeItem(candidate.key);
       freedBytes += candidate.size;
       deletedCount++;
-      devLog.log(`[StorageCleanup] Deleted: ${candidate.key} (${formatStorageSize(candidate.size)})`);
+      console.log(`[StorageCleanup] Deleted: ${candidate.key} (${formatStorageSize(candidate.size)})`);
     } catch (e) {
       console.error(`[StorageCleanup] Failed to delete ${candidate.key}:`, e);
     }
   }
   
-  devLog.log(`[StorageCleanup] Complete. Deleted ${deletedCount} items, freed ${formatStorageSize(freedBytes)}`);
+  console.log(`[StorageCleanup] Complete. Deleted ${deletedCount} items, freed ${formatStorageSize(freedBytes)}`);
   
   return freedBytes;
 }
@@ -207,7 +203,7 @@ export function compressAndStore(key: string, data: any): boolean {
   } catch (e: any) {
     if (e.name === 'QuotaExceededError') {
       // Try cleanup and retry
-      devLog.warn('[StorageCleanup] Quota exceeded, attempting cleanup...');
+      console.warn('[StorageCleanup] Quota exceeded, attempting cleanup...');
       performCleanup(0.3);
       
       try {
@@ -248,10 +244,10 @@ export function checkAndCleanupStorage(): void {
   const stats = getStorageStats();
   
   if (stats.isCritical) {
-    devLog.warn('[StorageCleanup] Critical storage usage detected:', stats.percentage * 100, '%');
+    console.warn('[StorageCleanup] Critical storage usage detected:', stats.percentage * 100, '%');
     performCleanup(0.3); // Aggressive cleanup
   } else if (stats.isWarning) {
-    devLog.warn('[StorageCleanup] High storage usage detected:', stats.percentage * 100, '%');
+    console.warn('[StorageCleanup] High storage usage detected:', stats.percentage * 100, '%');
     performCleanup(0.15); // Moderate cleanup
   }
 }

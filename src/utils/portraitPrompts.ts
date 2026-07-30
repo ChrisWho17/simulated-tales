@@ -143,8 +143,6 @@ export interface CharacterAppearance {
   gender?: string;
   build?: string;
   height?: string;
-  /** Optional approximate weight in kg — drives body-mass framing in imagery. */
-  weightKg?: number;
   hairColor?: string;
   hairStyle?: string;
   hairLength?: string;
@@ -343,45 +341,6 @@ export function buildPortraitPrompt(
     petite: 'petite small frame, delicate build',
   };
   const buildDesc = BUILD_DESCRIPTIONS[build] || BUILD_DESCRIPTIONS.athletic;
-
-  // Height descriptor — affects framing, proportions, and full-body silhouette in imagery
-  let heightDesc = '';
-  if (character.height) {
-    const h = String(character.height).toLowerCase().trim();
-    const HEIGHT_DESCRIPTIONS: Record<string, string> = {
-      'very short':  'very short stature, petite small-statured frame, noticeably shorter than average, compact proportions, low eye-line in frame',
-      'very_short':  'very short stature, petite small-statured frame, noticeably shorter than average, compact proportions, low eye-line in frame',
-      'short':       'short stature, below-average height, smaller compact frame, slightly low eye-line',
-      'below average': 'slightly below-average height, modestly short frame',
-      'average':     'average height, normal proportional frame',
-      'medium':      'average height, normal proportional frame',
-      'tall':        'tall stature, above-average height, long limbs, elongated proportions, higher eye-line in frame',
-      'above average': 'above-average height, taller-than-average frame, long limbs',
-      'very tall':   'very tall imposing stature, towering height, very long limbs, dramatically elongated proportions, dominating high eye-line, head near top of frame',
-      'very_tall':   'very tall imposing stature, towering height, very long limbs, dramatically elongated proportions, dominating high eye-line, head near top of frame',
-      'giant':       'gigantic towering height, massive imposing stature, extreme elongated proportions, head dominating top of frame',
-    };
-    if (HEIGHT_DESCRIPTIONS[h]) {
-      heightDesc = HEIGHT_DESCRIPTIONS[h];
-    } else if (/\d/.test(h)) {
-      // Numeric height (e.g. "5'2\"", "180cm") — pass through with framing hint
-      heightDesc = `character height ${character.height}, scale proportions and framing should reflect this stature`;
-    } else {
-      heightDesc = `${character.height} height stature`;
-    }
-  }
-
-  // Weight descriptor — affects body mass, silhouette thickness, and clothing drape in imagery
-  let weightDesc = '';
-  if (typeof character.weightKg === 'number' && character.weightKg > 0) {
-    const w = character.weightKg;
-    if (w < 50)        weightDesc = `very light slender body mass (~${w}kg), thin silhouette, narrow shoulders and limbs`;
-    else if (w < 65)   weightDesc = `light body mass (~${w}kg), trim silhouette, lean proportions`;
-    else if (w < 85)   weightDesc = `average body mass (~${w}kg), proportional silhouette`;
-    else if (w < 105)  weightDesc = `heavier body mass (~${w}kg), solid thickset silhouette, broader torso, fuller limbs`;
-    else if (w < 130)  weightDesc = `large body mass (~${w}kg), broad heavy silhouette, thick torso and limbs, fuller cheeks and neck`;
-    else               weightDesc = `very large heavy body mass (~${w}kg), wide imposing silhouette, very thick torso and limbs, pronounced size in clothing drape`;
-  }
   
   const hairColor = character.hairColor || 'brown';
   const hairStyle = character.hairStyle || character.hairLength || 'short';
@@ -521,47 +480,37 @@ export function buildPortraitPrompt(
   // Cup size to realistic portrait description mapping
   if (character.bustSize) {
     const cupSizeDescriptions: Record<string, string> = {
-      // Per-cup escalation: AA flat → A bud → B noticeable → C normal → D-F bigger → G-I massive → J-K back-breaking
-      'AA': 'completely flat chest, no breast tissue, perfectly smooth androgynous torso, no bust silhouette at all',
-      'A':  'tiny A-cup breast buds, small budding mounds barely rising from the chest, nipple-prominent flat profile',
-      'B':  'noticeable B-cup breasts, clearly visible small rounded mounds, gentle but obvious feminine bust curve under clothing',
-      'C':  'normal everyday C-cup breasts, average natural handful, balanced rounded shape, soft natural cleavage in fitted tops',
-      'D':  'bigger D-cup breasts, full noticeably-larger rounded mounds, obvious cleavage, distinctly curvier than average silhouette',
-      'E':  'even bigger E-cup breasts, heavy full rounded weight, deep cleavage line, pronounced forward bust projection',
-      'F':  'really big F-cup breasts, dramatically heavy and voluptuous, deep canyon cleavage, breasts strongly project forward off the chest',
-      'G':  'massive G-cup breasts, enormous rounded volume dominating the upper body, dramatic heavy cleavage, ultra-curvy bombshell silhouette',
-      'H':  'huge H-cup breasts, gigantic bombshell volume spilling outward, extremely voluptuous, breasts visibly weigh on the ribcage with deep heavy cleavage',
-      'I':  'massive I-cup breasts, colossal bombshell scale, breasts visibly strain any clothing, towering forward projection wider than the shoulders feel',
-      'J':  'back-breaking J-cup breasts, titanic hyper-voluptuous bust, breasts wider than the ribcage, posture clearly affected by the dramatic gravity-defying weight',
-      'K':  'back-breaking K-cup breasts, even bigger than J, hyper-exaggerated bust engulfing the entire chest area, extreme dramatic volume forcing a leaned-back posture',
+      // Very small to small
+      'AA': 'very petite flat chest, minimal bust',
+      'A': 'petite small bust, modest chest',
+      'B': 'small bust, subtle feminine curves',
+      // Average
+      'C': 'average bust, natural feminine curves',
+      // Full to large
+      'D': 'full bust, noticeable cleavage, feminine curves',
+      'DD': 'large full bust, prominent cleavage, voluptuous',
+      'E': 'very full large bust, prominent cleavage, curvy',
+      // Very large
+      'F': 'very large bust, heavy breasts, prominent cleavage, voluptuous figure',
+      'G': 'extra large bust, huge breasts, very prominent cleavage, voluptuous',
+      // Huge+
+      'H': 'huge bust, massive breasts, extremely prominent, very voluptuous',
+      'I': 'massive bust, enormous breasts, extremely heavy, voluptuous figure',
+      'J': 'enormous bust, gigantic breasts, extremely prominent, very curvy',
+      'K': 'extremely large bust, gigantic heavy breasts, massively prominent',
       // Legacy mappings for backwards compatibility
-      'flat':        'completely flat chest, no breast tissue, androgynous silhouette',
-      'small':       'noticeable small breasts, gentle rounded mounds, subtle feminine curve',
-      'medium':      'normal average breasts, natural handful, soft cleavage in fitted tops',
-      'large':       'bigger breasts, full rounded mounds, obvious cleavage, curvy silhouette',
-      'very large':  'massive breasts, dramatic heaviness, deep cleavage, hugely voluptuous bombshell figure',
-      'very_large':  'massive breasts, dramatic heaviness, deep cleavage, hugely voluptuous bombshell figure',
+      'flat': 'flat chest, minimal bust',
+      'small': 'small bust, petite chest',
+      'medium': 'average bust, natural feminine curves',
+      'large': 'large bust, full chest, prominent cleavage',
+      'very large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
+      'very_large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
     };
     const bustDesc = cupSizeDescriptions[character.bustSize];
     if (bustDesc) {
       details.push(bustDesc);
-      // Bust scales with WEIGHT only (not height) — and only upward, never smaller.
-      // Heavier characters carry additional bust mass on top of their cup size.
-      if (typeof character.weightKg === 'number' && character.weightKg > 0) {
-        const w = character.weightKg;
-        if (w >= 130) {
-          details.push('bust mass visibly amplified by very heavy body weight — extra soft tissue fullness, fuller side-boob spillover, deeper natural cleavage on top of base cup size (height does NOT affect bust scale)');
-        } else if (w >= 105) {
-          details.push('bust mass amplified by heavy body weight — noticeably fuller and softer than base cup alone, additional cleavage volume (height does NOT affect bust scale)');
-        } else if (w >= 90) {
-          details.push('bust mass slightly amplified by above-average body weight — modestly fuller than base cup, softer fullness (height does NOT affect bust scale)');
-        }
-        // Below ~90kg: NO downscaling — base cup size description is preserved as-is.
-      }
     }
   }
-
-
   
   if (character.hipWidth && character.hipWidth !== 'average') {
     const hipDescriptions: Record<string, string> = {
@@ -707,8 +656,6 @@ export function buildPortraitPrompt(
     STYLE_BASE,
     gender,
     buildDesc,
-    heightDesc,
-    weightDesc,
     faceShapeDesc,
     skinTone,
     `${hairColor} ${hairStyle} hair with realistic detail`,

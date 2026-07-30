@@ -1,89 +1,91 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { VersionHotfixesBadge } from '../VersionHotfixesBadge';
-import { CHANGELOG } from '../WhatsNewModal';
+import type { ChangelogEntry } from '@/lib/changelog';
 
-// Radix Popover/Dialog use pointer events; jsdom needs shims.
-beforeAll(() => {
-  const proto = Element.prototype as unknown as Record<string, unknown>;
-  if (!proto.hasPointerCapture) {
-    proto.hasPointerCapture = () => false;
-    proto.setPointerCapture = () => {};
-    proto.releasePointerCapture = () => {};
-  }
-  if (!proto.scrollIntoView) {
-    proto.scrollIntoView = () => {};
-  }
-  if (typeof (globalThis as { ResizeObserver?: unknown }).ResizeObserver === 'undefined') {
-    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
-  }
+const entriesWithFixes: ChangelogEntry[] = [
+  {
+    version: '0.4.6',
+    date: 'June 2026',
+    title: 'Accent Toggle',
+    highlights: ['Accent opt-in'],
+    features: [],
+    improvements: [],
+    fixes: ['Director sync fixed', 'Accent descriptors refined'],
+  },
+];
+
+const entriesEmptyFixes: ChangelogEntry[] = [
+  {
+    version: '0.4.7',
+    date: 'June 2026',
+    title: 'Heights & Weights',
+    highlights: ['Custom height slider'],
+    features: [],
+    improvements: [],
+    fixes: [],
+  },
+];
+
+vi.mock('@/lib/changelog', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/changelog')>('@/lib/changelog');
+  return {
+    ...actual,
+    fetchChangelog: vi.fn(),
+  };
 });
 
+import { fetchChangelog } from '@/lib/changelog';
+
+const mockedFetch = vi.mocked(fetchChangelog);
+
 describe('VersionHotfixesBadge', () => {
-  const latest = CHANGELOG[0];
-
-  it('shows the hotfix count badge matching latest changelog fixes length', () => {
-    render(<VersionHotfixesBadge />);
-    if (latest.fixes.length > 0) {
-      const badge = screen.getByTestId('hotfixes-count-badge');
-      expect(badge.textContent).toBe(String(latest.fixes.length));
-    } else {
-      // No badge renders when the latest patch has zero fixes.
-      expect(screen.queryByTestId('hotfixes-count-badge')).toBeNull();
-    }
+  beforeEach(() => {
+    mockedFetch.mockReset();
   });
 
-  it('renders highlights popover with latest version entries', async () => {
+  it('shows the hotfix count badge when latest patch has fixes', async () => {
+    mockedFetch.mockResolvedValue(entriesWithFixes);
     render(<VersionHotfixesBadge />);
-    fireEvent.click(screen.getByTestId('highlights-trigger'));
 
-    const popover = await screen.findByTestId('highlights-popover');
-    expect(popover.textContent).toContain(`v${latest.version}`);
-
-    const list = within(popover).getByTestId('highlights-list');
-    const items = within(list).getAllByRole('listitem');
-    expect(items).toHaveLength(latest.highlights.length);
-    latest.highlights.forEach((h, i) => {
-      expect(items[i].textContent).toContain(h);
+    await waitFor(() => {
+      expect(screen.getByTestId('hotfixes-count-badge').textContent).toBe('2');
     });
   });
 
-  it('renders hotfixes popover with latest version fixes', async () => {
+  it('hides the hotfix count badge when latest patch has zero fixes', async () => {
+    mockedFetch.mockResolvedValue(entriesEmptyFixes);
     render(<VersionHotfixesBadge />);
-    fireEvent.click(screen.getByTestId('hotfixes-trigger'));
 
-    const popover = await screen.findByTestId('hotfixes-popover');
-    expect(popover.textContent).toContain(`v${latest.version}`);
-
-    if (latest.fixes.length > 0) {
-      const list = within(popover).getByTestId('hotfixes-list');
-      const items = within(list).getAllByRole('listitem');
-      expect(items).toHaveLength(latest.fixes.length);
-      latest.fixes.forEach((f, i) => {
-        expect(items[i].textContent).toContain(f);
-      });
-    } else {
-      expect(popover.textContent).toContain('No hotfixes in this patch.');
-    }
+    await waitFor(() => {
+      expect(screen.getByTestId('version-hotfixes-badge')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('hotfixes-count-badge')).toBeNull();
   });
 
-  it('opens full hotfix history dialog showing every changelog entry', async () => {
+  it('renders hotfixes popover with latest version fixes when present', async () => {
+    mockedFetch.mockResolvedValue(entriesWithFixes);
     render(<VersionHotfixesBadge />);
+
+    await waitFor(() => expect(screen.getByTestId('hotfixes-trigger')).toBeTruthy());
     fireEvent.click(screen.getByTestId('hotfixes-trigger'));
-    fireEvent.click(await screen.findByTestId('hotfixes-history-trigger'));
 
-    const dialog = await screen.findByTestId('hotfixes-history-dialog');
-    const list = within(dialog).getByTestId('hotfixes-history-list');
+    await waitFor(() => expect(screen.getByTestId('hotfixes-list')).toBeTruthy());
+    expect(screen.getByText('Director sync fixed')).toBeTruthy();
+  });
 
-    CHANGELOG.forEach((entry) => {
-      const card = within(list).getByTestId(`history-entry-${entry.version}`);
-      const text = card.textContent ?? '';
-      expect(text).toContain(`v${entry.version}`);
-      expect(text).toContain(entry.title);
+  it('renders empty hotfix message when latest patch has zero fixes', async () => {
+    mockedFetch.mockResolvedValue(entriesEmptyFixes);
+    render(<VersionHotfixesBadge />);
+
+    await waitFor(() => expect(screen.getByTestId('hotfixes-trigger')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('hotfixes-trigger'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('hotfixes-empty').textContent).toContain(
+        'No hotfixes in this patch.',
+      );
     });
+    expect(screen.queryByTestId('hotfixes-list')).toBeNull();
   });
 });

@@ -1,6 +1,10 @@
 // ============================================================================
 // GAME SAVES HOOK - High-level save slot management
 // ============================================================================
+/**
+ * @deprecated Prefer CampaignContext / unifiedSaveArchitecture for new save UX.
+ * See `docs/SAVE_STACK.md`. Wraps legacy `systems/SaveSystem` — Phase 2: deprecate only.
+ */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SaveSystem } from '@/systems/SaveSystem';

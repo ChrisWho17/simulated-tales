@@ -19,7 +19,6 @@ import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
 import { NarrativeLoadingIndicator } from './NarrativeLoadingIndicator';
 import { SavesDropdown } from '@/components/campaign';
-import { DeathOutcomeModal } from './DeathOutcomeModal';
 
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
@@ -136,6 +135,7 @@ interface StoryEntry {
   content: string;
   timestamp: number;
   imageUrl?: string;
+  skipTypewriter?: boolean;
 }
 
 interface PendingRoll {
@@ -263,6 +263,18 @@ interface AdventureDisplayProps {
   onCancelGeneration?: () => void;
   // Streaming narrative support
   streamingState?: StreamingState | null;
+  /** Parent supplies weather/director/mood/etc so legacy saves stay connected. */
+  getExtendedSaveState?: () => {
+    weatherState?: unknown;
+    timeState?: unknown;
+    directorSettings?: unknown;
+    languageState?: unknown;
+    toneState?: unknown;
+    currentMood?: unknown;
+    adultContent?: boolean;
+  };
+  /** Dual-write living-world fields into CampaignContext (canonical) without removing legacy GameSave. */
+  onPersistExtendedToCampaign?: () => void;
 }
 
 export function AdventureDisplay({
@@ -297,6 +309,8 @@ export function AdventureDisplay({
   onRunSystemsTest,
   onCancelGeneration,
   streamingState,
+  getExtendedSaveState,
+  onPersistExtendedToCampaign,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -343,11 +357,6 @@ export function AdventureDisplay({
   const [showWeatherModal, setShowWeatherModal] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSessionRecap, setShowSessionRecap] = useState(false);
-
-  // === DEATH OUTCOME MODAL ===
-  // Fires when player HP drops to 0. Three paths: roll, cheat, flatline.
-  const [deathState, setDeathState] = useState<{ open: boolean; cause: string }>({ open: false, cause: '' });
-  const deathHandledRef = useRef(false);
   const [showQuickDiceRoll, setShowQuickDiceRoll] = useState(false);
   const [showRelationshipsQuickView, setShowRelationshipsQuickView] = useState(false);
   const [showTimeDisplay, setShowTimeDisplay] = useState(false);
@@ -688,22 +697,32 @@ export function AdventureDisplay({
 
   // Manual save handler
   const handleManualSave = useCallback(() => {
+    const extended = getExtendedSaveState?.() || {};
     const gameState = {
       story,
       character,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      weatherState: extended.weatherState ?? weatherState,
+      timeState: extended.timeState ?? timeState,
+      directorSettings: extended.directorSettings,
+      languageState: extended.languageState,
+      toneState: extended.toneState,
+      currentMood: extended.currentMood ?? currentMood,
+      adultContent: extended.adultContent,
     };
     
     // Include campaign memory in save if available
     const campaignMem = gameContext?.campaignMemory ?? undefined;
     saveGame(character.name, gameState, false, campaignMem);
+    // Canonical campaign mirror (SAVE_STACK) — keep legacy GameSave for compat
+    onPersistExtendedToCampaign?.();
     
     toast({
       title: "Adventure Saved",
       description: `${character.name}'s progress has been saved.`,
       duration: 3000,
     });
-  }, [story, character, toast, gameContext?.campaignMemory]);
+  }, [story, character, toast, gameContext?.campaignMemory, getExtendedSaveState, weatherState, timeState, currentMood, onPersistExtendedToCampaign]);
 
   // Load save handler - delegates to parent for actual state restoration
   const handleLoadSave = useCallback((save: GameSave) => {
@@ -717,46 +736,50 @@ export function AdventureDisplay({
     });
   }, [onLoadSave, toast]);
 
-  // Auto-save every 5 minutes when enabled.
-  // PERF: refs let the interval read the latest story/character/campaignMemory
-  // without re-subscribing every turn (previously caused multi-second hitches
-  // after long sessions because setInterval was torn down and rebuilt on each
-  // narrative entry, accumulating GC pressure and main-thread blocks).
-  const autoSaveStoryRef = useRef(story);
-  const autoSaveCharacterRef = useRef(character);
-  const autoSaveCampaignMemRef = useRef(gameContext?.campaignMemory);
-  useEffect(() => { autoSaveStoryRef.current = story; }, [story]);
-  useEffect(() => { autoSaveCharacterRef.current = character; }, [character]);
-  useEffect(() => { autoSaveCampaignMemRef.current = gameContext?.campaignMemory; }, [gameContext?.campaignMemory]);
-
+  // Auto-save every 5 minutes when enabled
   useEffect(() => {
     const autoSaveEnabled = gameContext?.settings?.autoSave ?? true;
+    
     if (!autoSaveEnabled || !character?.name) return;
-
+    
     const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
+    
     const performAutoSave = () => {
-      const charSnap = autoSaveCharacterRef.current;
-      if (!charSnap?.name) return;
+      const extended = getExtendedSaveState?.() || {};
       const gameState = {
-        story: autoSaveStoryRef.current,
-        character: charSnap,
+        story,
+        character,
         timestamp: Date.now(),
+        weatherState: extended.weatherState ?? weatherState,
+        timeState: extended.timeState ?? timeState,
+        directorSettings: extended.directorSettings,
+        languageState: extended.languageState,
+        toneState: extended.toneState,
+        currentMood: extended.currentMood ?? currentMood,
+        adultContent: extended.adultContent,
       };
-      try {
-        saveGame(charSnap.name, gameState, true, autoSaveCampaignMemRef.current ?? undefined);
-        console.log(`[Auto-Save] ${charSnap.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
-      } catch (e) {
-        console.error('[Auto-Save] Failed:', e);
-      }
+      
+      // Include campaign memory in auto-save
+      const campaignMem = gameContext?.campaignMemory ?? undefined;
+      saveGame(character.name, gameState, true, campaignMem);
+      onPersistExtendedToCampaign?.();
+      
+      // Subtle toast notification for auto-save
+      toast({
+        title: "Progress saved",
+        description: `${character.name}'s adventure auto-saved`,
+        duration: 2000,
+      });
+      
+      console.log(`[Auto-Save] ${character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
     };
-
+    
+    // Set up interval
     const intervalId = setInterval(performAutoSave, AUTO_SAVE_INTERVAL);
+    
+    // Cleanup on unmount or when settings change
     return () => clearInterval(intervalId);
-    // Intentionally only depend on the toggle + character identity — story
-    // and campaignMemory are read via refs above to avoid interval churn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameContext?.settings?.autoSave, character?.name]);
+  }, [gameContext?.settings?.autoSave, gameContext?.campaignMemory, character, story, toast, getExtendedSaveState, weatherState, timeState, currentMood, onPersistExtendedToCampaign]);
 
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
@@ -808,16 +831,6 @@ export function AdventureDisplay({
         variant: "destructive",
         duration: 3000,
       });
-
-      // === DEATH CHECK: HP hit 0 → open Death Outcome modal (one-shot) ===
-      if (updatedCharacter.currentHealth <= 0 && !deathHandledRef.current) {
-        deathHandledRef.current = true;
-        const lastNarrator = [...story].reverse().find(e => e.role === 'narrator')?.content || '';
-        // Take the last 1-2 sentences of the narrator's prose as "cause of death"
-        const sentences = lastNarrator.replace(/\[[A-Z_]+:[^\]]+\]/g, '').trim().split(/(?<=[.!?])\s+/).filter(Boolean);
-        const cause = sentences.slice(-2).join(' ').slice(0, 280) || `Slain — ${pendingMechanics.damage} damage taken with no health remaining.`;
-        setDeathState({ open: true, cause });
-      }
     }
 
     // Apply healing
@@ -2150,7 +2163,7 @@ export function AdventureDisplay({
                     )}
                     
                     {/* Use typewriter effect for latest narrator entry when enabled */}
-                    {typewriterEnabled && actualIndex === story.length - 1 && textSpeed !== 'instant' ? (
+                    {typewriterEnabled && actualIndex === story.length - 1 && textSpeed !== 'instant' && !entry.skipTypewriter ? (
                       <TypewriterNarrative
                         content={cleanNarrativeForDisplay(entry.content)}
                         speed={textSpeed}
@@ -2533,31 +2546,6 @@ export function AdventureDisplay({
         characterName={character.name}
         onSelectChoice={handleLevelUpChoice}
       />
-
-      {/* Death Outcome Modal — fires when HP hits 0 */}
-      <DeathOutcomeModal
-        open={deathState.open}
-        character={character}
-        causeOfDeath={deathState.cause}
-        story={story}
-        cheatEnabled={cheatMode}
-        onRevive={(newHealth, narrative) => {
-          onUpdateCharacter({ ...character, currentHealth: newHealth });
-          setDeathState({ open: false, cause: '' });
-          deathHandledRef.current = false;
-          toast({
-            title: 'Revived',
-            description: narrative.replace(/^\*|\*$/g, ''),
-            duration: 6000,
-          });
-        }}
-        onFlatlineConfirmed={() => {
-          setDeathState({ open: false, cause: '' });
-          deathHandledRef.current = false;
-          onRestart();
-        }}
-      />
-      
       
       {/* Note: Inventory Command Palette will be added when new inventory system is provided */}
       

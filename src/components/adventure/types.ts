@@ -6,6 +6,8 @@ export interface StoryEntry {
   content: string;
   timestamp: number;
   imageUrl?: string;
+  /** When true, skip typewriter replay (e.g. content already streamed live). */
+  skipTypewriter?: boolean;
 }
 
 export interface GameMechanics {

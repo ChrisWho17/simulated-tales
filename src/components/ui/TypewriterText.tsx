@@ -12,9 +12,9 @@ interface TypewriterTextProps {
 }
 
 const SPEED_CONFIG = {
-  slow: { delay: 30, charsPerTick: 1 },
-  normal: { delay: 15, charsPerTick: 2 },
-  fast: { delay: 5, charsPerTick: 4 },
+  slow: { delay: 32, charsPerTick: 2 },
+  normal: { delay: 24, charsPerTick: 4 },
+  fast: { delay: 16, charsPerTick: 8 },
   instant: { delay: 0, charsPerTick: Infinity },
 };
 

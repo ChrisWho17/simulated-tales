@@ -8,6 +8,7 @@
 import { useCallback, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { RPGCharacter } from '@/types/rpgCharacter';
+import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { 
@@ -45,6 +46,11 @@ import {
   validateGenreCompliance,
   getGenreMicroEvents,
 } from '@/lib/narrativeGenreEnforcement';
+import { buildNarrativeRequestBody } from '@/lib/buildNarrativeRequestBody';
+import {
+  getNextReadyCompanion,
+  buildCompanionIntroductionContext,
+} from '@/game/companionTimingSystem';
 import { postProcessLanguageInResponse, learnLanguage, getLanguageDisplayName, LanguageSystemState, buildLanguageContext } from '@/game/languageSystem';
 import { ToneState, analyzePlayerTone, updateToneState, buildToneContext } from '@/game/toneSystem';
 import { WEATHER_CONFIGS, WeatherState, getWeatherNarrativeContext, formatWeatherEffectsForAI } from '@/game/weatherSystem';
@@ -90,8 +96,13 @@ export interface NarrativeGenerationDependencies {
     adultContent: boolean;
     enableMoodSystem: boolean;
     enableWeatherEffects: boolean;
+    enableNPCSchedules?: boolean;
+    enableNPCAccents?: boolean;
+    enableMoodDialogue?: boolean;
     narratorConfig?: any;
     directorSettings?: DirectorSettings;
+    forceVarianceSeedEnabled?: boolean;
+    forceVarianceSeed?: string;
   };
   diceMode: string;
   directorSettings: DirectorSettings | null;
@@ -158,24 +169,33 @@ export interface NarrativeGenerationResult {
     history?: StoryEntry[],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean,
-    directorOverride?: DirectorSettings
+    skipLoadingState?: boolean
   ) => Promise<string | null>;
+  /**
+   * Build the same rich request body used by non-streaming generation.
+   * Streaming should call this so director/mood/weather/memory/lore stay connected.
+   */
+  buildRequestBody: (
+    scenario: string,
+    playerAction: string | undefined,
+    history: StoryEntry[],
+    diceRoll: any,
+    char: RPGCharacter,
+    options?: {
+      stream?: boolean;
+      retryLevel?: number;
+      extraDirectives?: string[];
+      mutateTone?: boolean;
+      pendingCompanionIntroduction?: unknown;
+      pendingCompanionId?: string;
+    }
+  ) => Record<string, any> | null;
   setLastFailedAction: React.Dispatch<React.SetStateAction<{ action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null>>;
   setPendingMechanics: React.Dispatch<React.SetStateAction<GameMechanics | undefined>>;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // ============= HELPERS =============
-
-function sanitizeCharacterForAPI(char: RPGCharacter): RPGCharacter {
-  const charAny = char as any;
-  return {
-    ...char,
-    portraitUrl: charAny.portraitUrl && charAny.portraitUrl.length > 500 ? null : charAny.portraitUrl,
-    appearanceDescription: charAny.appearanceDescription?.slice(0, 2000) || null,
-  } as RPGCharacter;
-}
 
 function formatEmotionalContext(
   mood: CoreMoodType,
@@ -307,6 +327,94 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     validateContent,
   } = deps;
 
+  const buildRequestBody = useCallback((
+    scenario: string,
+    playerAction: string | undefined,
+    history: StoryEntry[],
+    diceRoll: any,
+    char: RPGCharacter,
+    options?: {
+      stream?: boolean;
+      retryLevel?: number;
+      extraDirectives?: string[];
+      mutateTone?: boolean;
+      pendingCompanionIntroduction?: unknown;
+      pendingCompanionId?: string;
+    }
+  ): Record<string, any> | null => {
+    let companionIntro = options?.pendingCompanionIntroduction;
+    let companionId = options?.pendingCompanionId;
+
+    // Keep companion introductions connected on non-streaming too
+    if (!companionIntro && !companionId) {
+      const pendingCompanion = getNextReadyCompanion({
+        turnNumber: campaignMemory?.campaign?.currentTick || 0,
+        narrativeContext: history.slice(-1)[0]?.content,
+      });
+      if (pendingCompanion) {
+        companionIntro = buildCompanionIntroductionContext(pendingCompanion);
+        companionId = pendingCompanion.companionId;
+      }
+    }
+
+    const result = buildNarrativeRequestBody({
+      scenario,
+      playerAction,
+      history,
+      diceRoll,
+      character: char,
+      retryLevel: options?.retryLevel ?? 0,
+      extraDirectives: options?.extraDirectives ?? [],
+      stream: options?.stream ?? false,
+      cheatMode,
+      settings,
+      diceMode,
+      directorSettings,
+      worldBible,
+      scenarioSelection,
+      campaignMemory,
+      getCampaignContext,
+      currentMood,
+      toneState,
+      mutateTone: options?.mutateTone ?? false,
+      languageState,
+      weatherState,
+      timeState,
+      sceneNPCs,
+      worldState,
+      narrativeQueue,
+      activeRumors,
+      playerLocation,
+      activeConsequences,
+      pressureState,
+      getPressureContext,
+      getNPCMotivation,
+      getNPCMotivationContext,
+      getUnsurfacedBitesForNPC,
+      getBiteContext,
+      getSurfaceNarrativeForBite,
+      inventory,
+      getEnhancedPromptWithContract,
+      sessionState: sessionStateRef.current,
+      sessionStartMs: sessionStartRef.current,
+      pendingCompanionIntroduction: companionIntro,
+      pendingCompanionId: companionId,
+    });
+
+    if (result.nextToneState) {
+      setToneState(result.nextToneState);
+    }
+
+    return result.requestBody;
+  }, [
+    cheatMode, settings, diceMode, directorSettings, worldBible, scenarioSelection,
+    campaignMemory, getCampaignContext, currentMood, toneState, setToneState,
+    languageState, weatherState, timeState, sceneNPCs, worldState, narrativeQueue,
+    activeRumors, playerLocation, activeConsequences, pressureState, getPressureContext,
+    getNPCMotivation, getNPCMotivationContext, getUnsurfacedBitesForNPC,
+    getBiteContext, getSurfaceNarrativeForBite, inventory, getEnhancedPromptWithContract,
+  ]);
+
   const generateNarrativeWithRetry = useCallback(async (
     scenario: string,
     playerAction?: string,
@@ -315,7 +423,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     char?: RPGCharacter,
     skipLoadingState?: boolean,
     retryLevel: number = 0,
-    directorOverride?: DirectorSettings
+    extraDirectives: string[] = []
   ): Promise<string | null> => {
     const activeChar = char || character;
     if (!activeChar) return null;
@@ -350,6 +458,9 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       console.log(`[generateNarrative] Retry attempt ${retryLevel} with reduced context`);
     }
 
+    // If set, finally releases the lock but keeps loading=true while we recurse once.
+    let pendingRetryDirectives: string[] | null = null;
+
     try {
       if (playerAction) {
         logGenerationDebug(playerAction, generationState, {
@@ -358,355 +469,22 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           hasMemoryContext: !!campaignMemory,
         });
       }
-      
-      const currentTick = campaignMemory?.campaign.currentTick ?? 0;
-      const memContext = getCampaignContext?.('current_scene', [], currentTick);
-      const formattedMemory = formatMemoryContextForAI(memContext, activeChar.name);
-      
-      const emotionalContext = settings.enableMoodSystem 
-        ? formatEmotionalContext(currentMood, 0.6, genre)
-        : null;
-      
-      const enhancedScenario = getEnhancedPromptWithContract(scenario);
-      const cleanedPlayerAction = playerAction ? cleanPlayerInputForPrompt(playerAction) : undefined;
-      
-      let toneContextPayload = undefined;
-      if (cleanedPlayerAction) {
-        const playerTone = analyzePlayerTone(cleanedPlayerAction);
-        const toneInstructions = buildToneContext(toneState, playerTone);
-        toneContextPayload = {
-          currentTone: playerTone.tone,
-          intensity: playerTone.intensity,
-          playerChaosLevel: toneState.playerChaosLevel,
-          toneInstructions,
-        };
-        setToneState(prev => updateToneState(prev, playerTone));
-      }
-      
-      const npcLanguageList = (sceneNPCs || []).map((n: any) => ({
-        name: n?.name || n?.npcId || 'NPC',
-        languageProfile: n?.languageProfile,
-        nationality: n?.nationality,
-      }));
-      const languageInstructions = deps.languageState
-        ? buildLanguageContext(deps.languageState, npcLanguageList)
-        : '';
-      const languageContextPayload = {
-        playerKnownLanguages: languageState.playerKnownLanguages,
-        translateEnabled: languageState.translateEnabled,
-        playerNationality: languageState.playerNationality,
-        playerPrimaryLanguage: languageState.playerPrimaryLanguage,
-        playerProficiency: languageState.playerProficiency,
-        languageInstructions,
-      };
-      
-      // Build NPC psychology context
-      let npcPsychologyPayload = undefined;
-      if (sceneNPCs.length > 0) {
-        npcPsychologyPayload = {
-          npcContexts: buildSceneNPCContext(sceneNPCs),
-        };
-      }
-      
-      // Build ripple effect context
-      let ripplePayload = undefined;
-      if (narrativeQueue.length > 0 || worldState.securityLevel !== 'normal' || worldState.guardAlertLevel > 20) {
-        ripplePayload = {
-          consequenceContext: buildConsequenceContext(narrativeQueue),
-          worldStateContext: buildWorldStateContext(worldState),
-        };
-      }
-      
-      // Unreliable information context
-      let unreliableInfoPayload = undefined;
-      if (activeRumors.length > 0) {
-        unreliableInfoPayload = {
-          rumorContext: buildRumorContext(activeRumors),
-        };
-      }
-      
-      const backgroundNPCActionsPayload = buildBackgroundNPCActionsContext(memContext, currentTick);
-      
-      // Pressure context
-      const pressureClockPayload = {
-        pressureContext: getPressureContext(),
-        atmosphereLines: getPressureAtmosphere(pressureState),
-        worldPressureLevel: pressureState.worldPressureLevel,
-        activeEffects: pressureState.activeEffects,
-      };
-      
-      // NPC Motivation context
-      const npcMotivationPayload = {
-        motivationContext: getNPCMotivationContext(),
-        presentNPCMotivations: sceneNPCs.map(npc => {
-          const npcName = npc.npcId.split('_').pop()?.replace(/^\w/, c => c.toUpperCase()) || npc.npcId;
-          const motivation = getNPCMotivation(npc.npcId, npcName);
-          return {
-            npcName: motivation.npcName,
-            desire: motivation.desire,
-            fear: motivation.fear,
-            leverage: motivation.leverage,
-            line: motivation.line,
-            trustLevel: motivation.trustLevel,
-            stance: motivation.currentStance,
-            behaviors: motivation.behaviors,
-          };
-        }),
-      };
-      
-      // Memory Bite context
-      const unsurfacedBites = getUnsurfacedBitesForNPC();
-      const memoryBitePayload = {
-        biteContext: sceneNPCs.length > 0 
-          ? sceneNPCs.map(npc => getBiteContext(npc.npcId)).filter(Boolean).join('\n\n')
-          : '',
-        unsurfacedBites: unsurfacedBites.map(bite => ({
-          npcName: bite.npcName,
-          type: bite.type,
-          context: bite.context,
-          surfaceNarrative: getSurfaceNarrativeForBite(bite),
-          emotionalWeight: bite.emotionalWeight,
-        })),
-      };
-      
-      // NPC Personality context
-      const npcPersonalityPayload = (() => {
-        const allNPCs = getAllRegisteredNPCs();
-        if (allNPCs.length === 0) return undefined;
-        
-        const npcProfiles: Array<{
-          npcName: string;
-          archetypeName: string;
-          mentalState: string;
-          experienceLevel: string;
-          disposition: string;
-          speechPattern: string;
-          quirk: string;
-          motivation: string;
-          fear: string;
-          backstory: string;
-        }> = [];
-        
-        for (const npc of allNPCs.slice(-10)) {
-          const stored = getNPCPersonality(npc.permanent.id);
-          if (stored) {
-            const template = getPersonalityById(stored.personalityId);
-            if (template) {
-              npcProfiles.push({
-                npcName: npc.permanent.name,
-                archetypeName: template.name,
-                mentalState: template.mentalState,
-                experienceLevel: template.experienceLevel,
-                disposition: template.socialDisposition,
-                speechPattern: template.speechPatterns[0] || 'measured speech',
-                quirk: stored.selectedQuirk,
-                motivation: stored.selectedMotivation,
-                fear: stored.selectedFear,
-                backstory: stored.selectedBackstory,
-              });
-            }
-          }
-        }
-        
-        if (npcProfiles.length === 0) return undefined;
-        
-        return {
-          fullContext: getAllNPCPersonalityContext(),
-          npcProfiles,
-        };
-      })();
-      
-      // Location context
-      const locationContextPayload = {
-        currentZone: {
-          name: playerLocation.zoneName,
-          type: playerLocation.zoneType,
-          description: `The ${playerLocation.zoneName} area`,
-          atmosphere: 'urban',
-          crowdDensity: 'moderate',
-          lighting: 'well_lit',
-          socialTone: 'neutral',
-          surveillanceLevel: 30,
-        },
-        timeOfDay: getGameTimeOfDay(timeState.hour) as 'morning' | 'afternoon' | 'evening' | 'night' | 'late_night',
-        isNewArrival: false,
-        activeConsequences: activeConsequences.map(c => c.description),
-      };
 
-      // Retry level context reduction
-      const includeAdvancedContext = retryLevel === 0;
-      const includeIntermediateContext = retryLevel <= 1;
-      const includeBasicContext = retryLevel <= 2;
-      
-      // ============= QUALITY SYSTEM INTEGRATION =============
-      
-      // Calculate session duration for long-session optimizations
-      const hoursPlayed = (Date.now() - sessionStartRef.current) / (1000 * 60 * 60);
-      const turnCount = sessionStateRef.current.turnCount;
-      
-      // Use advanced leakage prevention system for history compression
-      const compressedHistoryResult = compressConversationHistory(history as StoryEntry[], {
-        maxHistoryEntries: 16,
-        maxEntryLength: 1200,
-        summaryThreshold: 24,
-        dedupeSimilarityThreshold: 0.45,
-        maxContextTokens: 8000,
-      });
-      
-      // Build final history with summary injection
-      const finalHistory = compressedHistoryResult.summary
-        ? [{ role: 'system' as const, content: compressedHistoryResult.summary }, ...compressedHistoryResult.entries]
-        : compressedHistoryResult.entries;
-      
-      // Generate quality enforcement directives
-      const antiDriftDirectives = generateAntiDriftDirectives(sessionStateRef.current);
-      const longSessionDirectives = getLongSessionDirectives(turnCount, hoursPlayed);
-      const genreWritingInstructions = getGenreWritingInstructions(genre);
-      
-      // Combine all quality directives
-      const qualityDirectives = [
-        ...antiDriftDirectives,
-        ...longSessionDirectives,
-      ].filter(Boolean);
-      
-      // Get potential micro-events for freshness
-      const microEvents = turnCount > 10 ? getGenreMicroEvents(genre) : [];
-      const selectedMicroEvent = microEvents.length > 0 
-        ? microEvents[Math.floor(Math.random() * microEvents.length)]
-        : null;
-      
-      console.log(`[Quality] Session: ${turnCount} turns, ${hoursPlayed.toFixed(1)}h played, ${qualityDirectives.length} directives active`);
-      
-      const sanitizedCharacter = sanitizeCharacterForAPI(activeChar);
-      
-      const requestBody: Record<string, any> = {
-        scenario: enhancedScenario,
-        playerAction: cleanedPlayerAction,
-        conversationHistory: finalHistory,
-        cheatMode,
-        character: sanitizedCharacter,
+      const requestBody = buildRequestBody(
+        scenario,
+        playerAction,
+        history,
         diceRoll,
-        adultContent: settings.adultContent,
-        characterAppearance: (sanitizedCharacter as any).appearanceDescription,
-        narratorConfig: settings.narratorConfig,
-        diceMode: diceMode,
-        // Testing: allow forcing a deterministic variance seed so the same
-        // request reproduces the same narrative focus on the server side.
-        ...((settings as any).forceVarianceSeedEnabled && (settings as any).forceVarianceSeed
-          ? { varianceSeed: (settings as any).forceVarianceSeed }
-          : {}),
-        narrativeContractContext: (() => {
-          const isOpening = history.length === 0;
-          const characterClass = activeChar.classId || 'default';
-          const characterInventory = inventory.state.items.map(i => ({
-            name: i.name,
-            quantity: i.quantity || 1,
-          }));
-          
-          const spawnPacket = isOpening ? buildSpawnPacket(
-            scenarioSelection?.scenario || scenario,
-            genre,
-            characterClass,
-            activeChar.name,
-            characterInventory,
-            playerLocation.zoneName || 'Unknown Location'
-          ) : null;
-          
-          return {
-            universalRules: UNIVERSAL_NARRATIVE_RULES,
-            genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
-            spawnPacket: spawnPacket ? formatSpawnPacket(spawnPacket) : null,
-            isOpening,
-          };
-        })(),
-      };
-      
-      // Basic context
-      if (includeBasicContext) {
-        requestBody.memoryContext = formattedMemory.fullContext ? formattedMemory : undefined;
-        requestBody.emotionalContext = emotionalContext;
-        requestBody.genreContract = worldBible?.contractSummary || null;
-        requestBody.toneContext = toneContextPayload;
-        requestBody.languageContext = languageContextPayload;
-        requestBody.locationContext = locationContextPayload;
-        
-        // Quality system context injection
-        requestBody.qualityEnforcement = {
-          genreInstructions: genreWritingInstructions,
-          antiDriftDirectives: qualityDirectives,
-          suggestedMicroEvent: selectedMicroEvent,
-          sessionMetrics: {
-            turnCount,
-            hoursPlayed: Math.floor(hoursPlayed * 10) / 10,
-            historyCompressed: compressedHistoryResult.truncatedCount > 0,
-          },
-        };
-        
-        const activeDirectorSettings = directorOverride || directorSettings || settings.directorSettings;
-        if (activeDirectorSettings) {
-          requestBody.directorContext = {
-            enabled: activeDirectorSettings.enabled,
-            rawGame: activeDirectorSettings.rawGame,
-            mode: activeDirectorSettings.mode,
-            directorType: activeDirectorSettings.directorType,
-            tightness: activeDirectorSettings.tightness,
-            descriptionLevel: activeDirectorSettings.descriptionLevel,
-            cruelty: activeDirectorSettings.cruelty,
-            weirdness: activeDirectorSettings.weirdness,
-            guidance: activeDirectorSettings.guidance,
-            storyRuleset: activeDirectorSettings.storyRuleset || '',
-          };
+        activeChar,
+        {
+          retryLevel,
+          extraDirectives,
+          mutateTone: true,
         }
-      }
-      
-      // Intermediate context
-      if (includeIntermediateContext) {
-        requestBody.npcPsychologyContext = npcPsychologyPayload;
-        requestBody.rippleContext = ripplePayload;
-        requestBody.unreliableInfoContext = unreliableInfoPayload;
-        requestBody.consistencyContext = {
-          objectOwnership: buildInventoryContextForAI(inventory.state),
-          npcIdentity: buildNPCIdentityContext(),
-          playerCorrections: buildPlayerCorrectionsContext(),
-          moveSyncState: buildMoveSyncContextForAI(),
-        };
-        requestBody.npcPersonalityContext = npcPersonalityPayload;
-        
-        if (settings.enableWeatherEffects) {
-          requestBody.weatherContext = {
-            current: weatherState.current,
-            intensity: weatherState.intensity > 1.2 ? 'intense' : weatherState.intensity < 0.7 ? 'mild' : 'moderate',
-            name: WEATHER_CONFIGS[weatherState.current]?.name || weatherState.current,
-            narrativeContext: getWeatherNarrativeContext(weatherState),
-            effects: formatWeatherEffectsForAI(weatherState),
-          };
-        }
-        
-        requestBody.timeContext = buildTimeContext(timeState);
-        requestBody.npcScheduleContext = buildRegisteredNPCScheduleContext(
-          playerLocation.zoneName || 'Unknown Location',
-          timeState,
-          []
-        );
-        
-        const clothingArmorContext = buildClothingArmorContextForAI();
-        if (clothingArmorContext) {
-          requestBody.clothingArmorContext = clothingArmorContext;
-        }
-      }
-      
-      // Advanced context
-      if (includeAdvancedContext) {
-        requestBody.backgroundNPCActionsContext = backgroundNPCActionsPayload;
-        requestBody.pressureClockContext = pressureClockPayload;
-        requestBody.npcMotivationContext = npcMotivationPayload;
-        requestBody.memoryBiteContext = memoryBitePayload;
-        requestBody.livingWorldContext = {
-          propertyContext: PropertySystem.buildPropertyContext(),
-          rivalContext: RivalSystem.buildRivalContext(),
-          factionContext: FactionSystem.buildFactionContext(),
-          fullContext: buildLivingWorldContext(),
-        };
+      );
+
+      if (!requestBody) {
+        return getContextualFallback(genre);
       }
       
       console.log(`[generateNarrative] Request body size: ${JSON.stringify(requestBody).length} chars (retryLevel: ${retryLevel})`);
@@ -829,51 +607,73 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       
       if (data.narrative) {
         if (playerAction && isEchoResponse(data.narrative, playerAction)) {
-          console.error('[AI] Echo response detected, using contextual fallback');
-          return getContextualFallback(genre);
-        }
-        
-        // Quality validation
-        const qualityResult = validateNarrativeQuality(
-          data.narrative, 
-          genre, 
-          sessionStateRef.current.lastNarratives
-        );
-        
-        if (!qualityResult.passed) {
-          console.warn('[Quality] Narrative quality issues:', qualityResult.violations);
-          // Log but don't block - use content but warn
-          if (qualityResult.violations.some(v => v.includes('High similarity'))) {
-            console.error('[Quality] Repetition detected, narrative may feel stale');
+          console.error('[AI] Echo response detected — retrying once with anti-echo directive');
+          if (retryLevel < 1) {
+            pendingRetryDirectives = [
+              `ANTI-ECHO: Do NOT restate or paraphrase the player's action ("${playerAction.slice(0, 120)}"). Advance the scene with consequences, sensory detail, and NPC reaction. Never open with "You attempt/try/decide to…".`,
+            ];
+          } else {
+            return getContextualFallback(genre);
           }
         }
         
-        // Genre compliance check
-        const genreResult = validateGenreCompliance(data.narrative, genre);
-        if (!genreResult.compliant) {
-          console.warn('[Genre] Compliance issues:', genreResult.issues);
+        if (!pendingRetryDirectives) {
+          // Quality validation
+          const qualityResult = validateNarrativeQuality(
+            data.narrative, 
+            genre, 
+            sessionStateRef.current.lastNarratives
+          );
+          
+          if (!qualityResult.passed) {
+            console.warn('[Quality] Narrative quality issues:', qualityResult.violations);
+            if (qualityResult.violations.some(v => v.includes('High similarity')) && retryLevel < 1) {
+              console.error('[Quality] Repetition detected — retrying once');
+              pendingRetryDirectives = [
+                `ANTI-REPETITION: Your last draft was too similar to earlier narration. Write a fresh continuation. Change opening, focus, and sensory details. Suggestions: ${(qualityResult.suggestions || []).slice(0, 3).join('; ')}`,
+              ];
+            }
+          }
         }
         
-        // Repetition check against recent history
-        const repetitionCheck = checkForRepetition(data.narrative, history as StoryEntry[]);
-        if (repetitionCheck.isRepetitive) {
-          console.warn(`[Quality] High repetition (${(repetitionCheck.similarity * 100).toFixed(0)}%):`, repetitionCheck.matchedContent);
+        if (!pendingRetryDirectives) {
+          // Genre compliance check
+          const genreResult = validateGenreCompliance(data.narrative, genre);
+          if (!genreResult.compliant) {
+            console.warn('[Genre] Compliance issues:', genreResult.issues);
+          }
+          
+          // Repetition check against recent history
+          const repetitionCheck = checkForRepetition(data.narrative, history as StoryEntry[]);
+          if (repetitionCheck.isRepetitive) {
+            console.warn(`[Quality] High repetition (${(repetitionCheck.similarity * 100).toFixed(0)}%):`, repetitionCheck.matchedContent);
+            if (retryLevel < 1 && playerAction) {
+              console.error('[Quality] History repetition — retrying once');
+              pendingRetryDirectives = [
+                `ANTI-REPETITION: Avoid repeating recent beats. ${repetitionCheck.suggestions.join(' ')}`,
+              ];
+            }
+          }
         }
         
-        // Update session state for drift prevention
-        sessionStateRef.current = updateSessionState(sessionStateRef.current, data.narrative);
-        
-        const validation = validateContent(data.narrative);
-        if (!validation.success) {
-          console.warn('[World Bible] Narrative blocked, using fallback:', validation.log);
-          return validation.content || getContextualFallback(genre);
+        if (!pendingRetryDirectives) {
+          // Update session state for drift prevention
+          sessionStateRef.current = updateSessionState(sessionStateRef.current, data.narrative);
+          
+          const validation = validateContent(data.narrative);
+          if (!validation.success) {
+            console.warn('[World Bible] Narrative blocked, using fallback:', validation.log);
+            return validation.content || getContextualFallback(genre);
+          }
+          
+          const processedContent = postProcessLanguageInResponse(validation.content, languageState);
+          return processedContent;
         }
-        
-        const processedContent = postProcessLanguageInResponse(validation.content, languageState);
-        return processedContent;
       }
       
-      return getContextualFallback(genre);
+      if (!pendingRetryDirectives) {
+        return getContextualFallback(genre);
+      }
     } catch (error) {
       console.error('Error generating narrative:', error);
       
@@ -895,20 +695,35 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       return getContextualFallback(scenarioSelection?.genre);
     } finally {
       releaseGenerationLock(requestId);
-      if (!skipLoadingState) {
+      if (!skipLoadingState && !pendingRetryDirectives) {
         setIsLoading(false);
       }
     }
+
+    if (pendingRetryDirectives) {
+      try {
+        return await generateNarrativeWithRetry(
+          scenario,
+          playerAction,
+          history,
+          diceRoll,
+          activeChar,
+          true,
+          retryLevel + 1,
+          pendingRetryDirectives
+        );
+      } finally {
+        if (!skipLoadingState) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    return getContextualFallback(genre);
   }, [
-    character, cheatMode, campaignMemory, getCampaignContext, currentMood, 
-    settings, scenarioSelection?.genre, scenarioSelection?.scenario,
-    getEnhancedPromptWithContract, validateContent, worldBible, 
-    toneState, setToneState, languageState, setLanguageState,
-    sceneNPCs, worldState, narrativeQueue, activeRumors, 
-    playerLocation, activeConsequences, pressureState, getPressureContext,
-    getNPCMotivation, getNPCMotivationContext, getUnsurfacedBitesForNPC,
-    getBiteContext, getSurfaceNarrativeForBite, inventory, diceMode,
-    directorSettings, weatherState, timeState
+    character, scenarioSelection?.genre, scenarioSelection?.scenario, worldBible,
+    campaignMemory, buildRequestBody, validateContent, languageState, setLanguageState,
+    setLastFailedAction,
   ]);
 
   const generateNarrative = useCallback(async (
@@ -917,8 +732,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     history: StoryEntry[] = [],
     diceRoll?: any,
     char?: RPGCharacter,
-    skipLoadingState?: boolean,
-    directorOverride?: DirectorSettings
+    skipLoadingState?: boolean
   ): Promise<string | null> => {
     const MAX_RETRIES = 3;
     
@@ -931,8 +745,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           diceRoll,
           char,
           skipLoadingState,
-          retryLevel,
-          directorOverride
+          retryLevel
         );
         
         if (result && !result.includes('The moment stretches') && !result.includes('You pause')) {
@@ -964,6 +777,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     pendingMechanics,
     latestMechanicsRef,
     generateNarrative,
+    buildRequestBody,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,

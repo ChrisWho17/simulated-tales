@@ -10,8 +10,6 @@ import { normalizeCampaign } from '@/lib/saveSchemaManager';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { toast } from 'sonner';
 import LZString from 'lz-string';
-import { initBigKV, getBig, setBig, delBig } from '@/lib/bigKVStore';
-import { devLog } from '@/lib/devLog';
 
 // ============================================================================
 // TYPES
@@ -119,7 +117,7 @@ class UnifiedSaveArchitectureClass {
       // Try to decode the JWT and verify it has required claims
       const parts = session.access_token.split('.');
       if (parts.length !== 3) {
-        devLog.warn('[UnifiedSave] Invalid JWT format');
+        console.warn('[UnifiedSave] Invalid JWT format');
         return false;
       }
       
@@ -133,7 +131,7 @@ class UnifiedSaveArchitectureClass {
       
       // Check if token is expired
       if (payload.exp && payload.exp * 1000 < Date.now()) {
-        devLog.warn('[UnifiedSave] JWT is expired');
+        console.warn('[UnifiedSave] JWT is expired');
         return false;
       }
       
@@ -155,7 +153,7 @@ class UnifiedSaveArchitectureClass {
    * Clears corrupted auth state and resets to local-only mode.
    */
   private async clearCorruptedAuth(): Promise<void> {
-    devLog.warn('[UnifiedSave] Clearing corrupted auth state...');
+    console.warn('[UnifiedSave] Clearing corrupted auth state...');
     
     // Clear Supabase auth storage
     try {
@@ -173,7 +171,7 @@ class UnifiedSaveArchitectureClass {
       }
     }
     keysToRemove.forEach(key => {
-      devLog.log('[UnifiedSave] Removing stale key:', key);
+      console.log('[UnifiedSave] Removing stale key:', key);
       localStorage.removeItem(key);
     });
     
@@ -190,16 +188,12 @@ class UnifiedSaveArchitectureClass {
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
-    devLog.log('[UnifiedSave] Initializing...');
-    
-    // Initialize IndexedDB-backed BigKV store and migrate any legacy
-    // large localStorage entries (campaigns, WAL) into IDB to free quota.
-    await initBigKV();
+    console.log('[UnifiedSave] Initializing...');
     
     // Recover any uncommitted transactions from WAL
     const recovery = await TransactionManager.recoverFromWAL();
     if (recovery.recovered > 0) {
-      devLog.log(`[UnifiedSave] Recovered ${recovery.recovered} transactions from WAL`);
+      console.log(`[UnifiedSave] Recovered ${recovery.recovered} transactions from WAL`);
     }
     
     // Check auth state
@@ -229,7 +223,7 @@ class UnifiedSaveArchitectureClass {
     
     // Listen for auth changes
     supabase.auth.onAuthStateChange(async (event, session) => {
-      devLog.log('[UnifiedSave] Auth state change:', event);
+      console.log('[UnifiedSave] Auth state change:', event);
       
       if (event === 'SIGNED_IN' && session?.user) {
         // Validate new session before trusting it
@@ -255,7 +249,7 @@ class UnifiedSaveArchitectureClass {
           // Migrate local saves to cloud
           const migrated = await this.migrateLocalToCloud();
           if (migrated > 0) {
-            devLog.log(`[UnifiedSave] Auto-migrated ${migrated} local campaigns to cloud`);
+            console.log(`[UnifiedSave] Auto-migrated ${migrated} local campaigns to cloud`);
           }
           // Also sync cloud saves down to local
           await this.syncCloudToLocal();
@@ -276,7 +270,7 @@ class UnifiedSaveArchitectureClass {
     });
     
     this.initialized = true;
-    devLog.log('[UnifiedSave] Initialized, mode:', this.account.mode);
+    console.log('[UnifiedSave] Initialized, mode:', this.account.mode);
   }
   
   // ============================================================================
@@ -312,15 +306,15 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async saveLocal(campaign: CampaignData): Promise<SaveResult> {
-    devLog.log('[UnifiedSave] saveLocal starting for:', campaign.id);
+    console.log('[UnifiedSave] saveLocal starting for:', campaign.id);
     try {
       // Begin transaction
       const transaction = await TransactionManager.beginTransaction(campaign.id, campaign);
-      devLog.log('[UnifiedSave] Transaction started:', transaction.id);
+      console.log('[UnifiedSave] Transaction started:', transaction.id);
       
       // Commit transaction
       const committed = await TransactionManager.commit(transaction.id);
-      devLog.log('[UnifiedSave] Transaction commit result:', committed);
+      console.log('[UnifiedSave] Transaction commit result:', committed);
       
       if (!committed) {
         await TransactionManager.rollback(transaction.id);
@@ -329,7 +323,7 @@ class UnifiedSaveArchitectureClass {
       
       // Update index
       await this.updateCampaignIndex(campaign);
-      devLog.log('[UnifiedSave] Campaign index updated');
+      console.log('[UnifiedSave] Campaign index updated');
       
       // Update sync status
       const checksum = await generateChecksum(JSON.stringify(campaign));
@@ -339,7 +333,7 @@ class UnifiedSaveArchitectureClass {
         state: this.account.mode === 'cloud' ? 'pending' : 'synced',
       });
       
-      devLog.log('[UnifiedSave] saveLocal completed successfully');
+      console.log('[UnifiedSave] saveLocal completed successfully');
       return { success: true, transactionId: transaction.id };
     } catch (error) {
       console.error('[UnifiedSave] saveLocal failed:', error);
@@ -467,7 +461,7 @@ class UnifiedSaveArchitectureClass {
         const { campaign, wasModified, backfilledFields } = normalizeCampaign(rawCampaign);
         
         if (wasModified) {
-          devLog.log(`[UnifiedSave] Cloud campaign normalized, backfilled: ${backfilledFields.join(', ')}`);
+          console.log(`[UnifiedSave] Cloud campaign normalized, backfilled: ${backfilledFields.join(', ')}`);
         }
         
         // Update sync status
@@ -506,34 +500,22 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async saveCampaign(campaign: CampaignData): Promise<SaveResult> {
-    devLog.log('[UnifiedSave] saveCampaign starting for:', campaign.id, 'mode:', this.account.mode);
-    devLog.log('[UnifiedSave] Campaign settings:', campaign.settings);
+    console.log('[UnifiedSave] saveCampaign starting for:', campaign.id, 'mode:', this.account.mode);
+    console.log('[UnifiedSave] Campaign settings:', campaign.settings);
     
     // Always save locally first (transactional)
     const localResult = await this.saveLocal(campaign);
-    devLog.log('[UnifiedSave] Local save result:', localResult.success, localResult.error || '');
+    console.log('[UnifiedSave] Local save result:', localResult.success, localResult.error || '');
     
     if (!localResult.success) {
       return localResult;
     }
     
-    // Honor user's storage pipeline preference: 'local' skips cloud entirely.
-    let pipeline: 'mirror' | 'local' | 'cloud' = 'mirror';
-    try {
-      const settingsRaw = localStorage.getItem('living-world-settings');
-      if (settingsRaw) {
-        const s = JSON.parse(settingsRaw);
-        if (s?.storagePipeline === 'local' || s?.storagePipeline === 'cloud' || s?.storagePipeline === 'mirror') {
-          pipeline = s.storagePipeline;
-        }
-      }
-    } catch { /* ignore */ }
-
-    // If cloud mode AND pipeline allows cloud writes, sync to cloud
-    if (this.account.mode === 'cloud' && pipeline !== 'local') {
-      devLog.log('[UnifiedSave] Cloud mode active, syncing to cloud...');
+    // If cloud mode, sync to cloud
+    if (this.account.mode === 'cloud') {
+      console.log('[UnifiedSave] Cloud mode active, syncing to cloud...');
       const cloudResult = await this.saveToCloud(campaign);
-      devLog.log('[UnifiedSave] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
+      console.log('[UnifiedSave] Cloud save result:', cloudResult.success, cloudResult.syncedToCloud, cloudResult.error || '');
       
       if (!cloudResult.success && cloudResult.error !== 'Conflict detected') {
         // Cloud save failed but local succeeded - mark as pending
@@ -547,12 +529,12 @@ class UnifiedSaveArchitectureClass {
       };
     }
     
-    devLog.log('[UnifiedSave] Local-only mode (account or pipeline), skipping cloud sync');
+    console.log('[UnifiedSave] Local-only mode, skipping cloud sync');
     return localResult;
   }
   
   async loadCampaign(campaignId: string): Promise<CampaignData | null> {
-    devLog.log(`[UnifiedSave] Loading campaign: ${campaignId}, mode: ${this.account.mode}`);
+    console.log(`[UnifiedSave] Loading campaign: ${campaignId}, mode: ${this.account.mode}`);
     
     // Try local first (faster)
     const localData = this.loadLocalCampaign(campaignId);
@@ -566,16 +548,16 @@ class UnifiedSaveArchitectureClass {
           const localTime = localData.meta.updatedAt || 0;
           const cloudTime = cloudData.meta.updatedAt || 0;
           
-          devLog.log(`[UnifiedSave] Comparing versions - local: ${localTime}, cloud: ${cloudTime}`);
+          console.log(`[UnifiedSave] Comparing versions - local: ${localTime}, cloud: ${cloudTime}`);
           
           if (cloudTime > localTime) {
             // Cloud is newer - use cloud and update local cache
-            devLog.log('[UnifiedSave] Cloud version is newer, using cloud data');
+            console.log('[UnifiedSave] Cloud version is newer, using cloud data');
             await this.saveLocal(cloudData);
             return cloudData;
           } else if (localTime > cloudTime) {
             // Local is newer - sync to cloud
-            devLog.log('[UnifiedSave] Local version is newer, syncing to cloud');
+            console.log('[UnifiedSave] Local version is newer, syncing to cloud');
             this.updateSyncStatus(campaignId, { state: 'pending' });
             // Also trigger background sync
             this.saveToCloud(localData).catch(console.error);
@@ -584,12 +566,12 @@ class UnifiedSaveArchitectureClass {
           return localData;
         } else if (cloudData && !localData) {
           // Only in cloud - cache locally and return
-          devLog.log('[UnifiedSave] Campaign only exists in cloud, caching locally');
+          console.log('[UnifiedSave] Campaign only exists in cloud, caching locally');
           await this.saveLocal(cloudData);
           return cloudData;
         } else if (localData && !cloudData) {
           // Only local - sync to cloud
-          devLog.log('[UnifiedSave] Campaign only exists locally, syncing to cloud');
+          console.log('[UnifiedSave] Campaign only exists locally, syncing to cloud');
           this.updateSyncStatus(campaignId, { state: 'pending' });
           this.saveToCloud(localData).catch(console.error);
         }
@@ -603,7 +585,7 @@ class UnifiedSaveArchitectureClass {
   
   private loadLocalCampaign(campaignId: string): CampaignData | null {
     try {
-      const raw = getBig(`lwe_campaign_${campaignId}`);
+      const raw = localStorage.getItem(`lwe_campaign_${campaignId}`);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       
@@ -618,9 +600,9 @@ class UnifiedSaveArchitectureClass {
   async deleteCampaign(campaignId: string): Promise<boolean> {
     try {
       // Delete locally
-      delBig(`lwe_campaign_${campaignId}`);
-      delBig(`lwe_inventory_${campaignId}`);
-      delBig(`lwe_gamestate_${campaignId}`);
+      localStorage.removeItem(`lwe_campaign_${campaignId}`);
+      localStorage.removeItem(`lwe_inventory_${campaignId}`);
+      localStorage.removeItem(`lwe_gamestate_${campaignId}`);
       
       // Update index
       const index = this.loadCampaignIndex();
@@ -650,7 +632,7 @@ class UnifiedSaveArchitectureClass {
   // ============================================================================
   
   async listCampaigns(): Promise<CampaignMetadata[]> {
-    devLog.log('[UnifiedSave] Listing campaigns, mode:', this.account.mode);
+    console.log('[UnifiedSave] Listing campaigns, mode:', this.account.mode);
     const localIndex = this.loadCampaignIndex();
     
     if (this.account.mode === 'cloud' && this.account.userId) {
@@ -666,14 +648,14 @@ class UnifiedSaveArchitectureClass {
         }
         
         if (cloudSaves && cloudSaves.length > 0) {
-          devLog.log(`[UnifiedSave] Found ${cloudSaves.length} cloud campaigns`);
+          console.log(`[UnifiedSave] Found ${cloudSaves.length} cloud campaigns`);
           const cloudIds = new Set(cloudSaves.map(s => s.campaign_id));
           const localIds = new Set(localIndex.map(c => c.id));
           
           // Add cloud-only campaigns to index
           for (const cloud of cloudSaves) {
             if (!localIds.has(cloud.campaign_id)) {
-              devLog.log(`[UnifiedSave] Adding cloud-only campaign: ${cloud.campaign_name}`);
+              console.log(`[UnifiedSave] Adding cloud-only campaign: ${cloud.campaign_name}`);
               localIndex.push({
                 id: cloud.campaign_id,
                 name: cloud.campaign_name,
@@ -730,7 +712,7 @@ class UnifiedSaveArchitectureClass {
       // CRITICAL: Defensive check - ensure we always return an array
       // This prevents "t.sort is not a function" crashes when localStorage is corrupted
       if (!Array.isArray(parsed)) {
-        devLog.warn('[UnifiedSave] Campaign index was not an array, resetting to empty');
+        console.warn('[UnifiedSave] Campaign index was not an array, resetting to empty');
         localStorage.setItem(CAMPAIGN_INDEX_KEY, '[]');
         return [];
       }
@@ -813,7 +795,7 @@ class UnifiedSaveArchitectureClass {
     let migrated = 0;
     const localIndex = this.loadCampaignIndex();
     
-    devLog.log(`[UnifiedSave] Checking ${localIndex.length} local campaigns for migration...`);
+    console.log(`[UnifiedSave] Checking ${localIndex.length} local campaigns for migration...`);
     
     // First, get all cloud campaigns for this user
     const { data: cloudSaves } = await supabase
@@ -836,13 +818,13 @@ class UnifiedSaveArchitectureClass {
       // 1. Campaign doesn't exist in cloud, OR
       // 2. Local version is newer than cloud version
       if (!cloudUpdatedAt || localUpdatedAt > cloudUpdatedAt) {
-        devLog.log(`[UnifiedSave] Migrating campaign "${local.name}" to cloud (local: ${localUpdatedAt}, cloud: ${cloudUpdatedAt || 'none'})`);
+        console.log(`[UnifiedSave] Migrating campaign "${local.name}" to cloud (local: ${localUpdatedAt}, cloud: ${cloudUpdatedAt || 'none'})`);
         const result = await this.saveToCloud(localData);
         if (result.success) {
           migrated++;
           this.updateSyncStatus(local.id, { state: 'synced' });
         } else {
-          devLog.warn(`[UnifiedSave] Failed to migrate "${local.name}":`, result.error);
+          console.warn(`[UnifiedSave] Failed to migrate "${local.name}":`, result.error);
         }
       } else {
         // Cloud is same or newer, mark as synced
@@ -850,7 +832,7 @@ class UnifiedSaveArchitectureClass {
       }
     }
     
-    devLog.log(`[UnifiedSave] Migrated ${migrated} campaigns to cloud`);
+    console.log(`[UnifiedSave] Migrated ${migrated} campaigns to cloud`);
     return migrated;
   }
   
@@ -883,7 +865,7 @@ class UnifiedSaveArchitectureClass {
           if (saveData?.compressed) {
             const campaign = decompressCampaign(saveData.compressed);
             if (campaign) {
-              devLog.log(`[UnifiedSave] Syncing cloud campaign "${cloud.campaign_name}" to local`);
+              console.log(`[UnifiedSave] Syncing cloud campaign "${cloud.campaign_name}" to local`);
               await this.saveLocal(campaign);
               synced++;
               this.updateSyncStatus(cloud.campaign_id, { 
@@ -896,7 +878,7 @@ class UnifiedSaveArchitectureClass {
         }
       }
       
-      devLog.log(`[UnifiedSave] Synced ${synced} cloud campaigns to local`);
+      console.log(`[UnifiedSave] Synced ${synced} cloud campaigns to local`);
     } catch (error) {
       console.error('[UnifiedSave] Cloud-to-local sync failed:', error);
     }

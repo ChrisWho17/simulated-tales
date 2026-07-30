@@ -131,20 +131,6 @@ export interface GameSettings {
   // Testing — force deterministic variance seed for reproducible narratives
   forceVarianceSeedEnabled?: boolean;
   forceVarianceSeed?: string;
-
-  // PWA — hide the install banner / button on the main menu for users
-  // who don't want to install the app.
-  hidePwaInstall?: boolean;
-
-  // Hide the floating version/hotfix badge entirely (main menu top-right).
-  hideHotfixBadge?: boolean;
-
-  // Storage pipeline — where saves are persisted.
-  //   'mirror' (default): write to device IndexedDB + cloud (when signed in)
-  //   'local':  device-only (no cloud writes even when signed in)
-  //   'cloud':  cloud-primary, local cache only used offline / on quota
-  storagePipeline?: 'mirror' | 'local' | 'cloud';
-
 }
 
 const SETTINGS_KEY = 'living-world-settings';
@@ -252,16 +238,6 @@ export const DEFAULT_SETTINGS: GameSettings = {
   // Testing
   forceVarianceSeedEnabled: false,
   forceVarianceSeed: '',
-
-  // PWA install banner visible by default
-  hidePwaInstall: false,
-
-  // Hotfix badge visible by default
-  hideHotfixBadge: false,
-
-  // Default storage pipeline: mirror device + cloud
-  storagePipeline: 'mirror',
-
 };
 
 // Get current settings (alias for loadSettings)

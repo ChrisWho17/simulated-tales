@@ -6,22 +6,14 @@ export type Gender = 'male' | 'female' | 'other';
 
 export interface SimpleAppearance {
   gender: Gender;
-  height: 'very short' | 'short' | 'average' | 'tall' | 'very tall';
-  /** Optional exact height in centimeters. When set, overrides the bracket for display, imagery, and narration. */
-  customHeightCm?: number;
+  height: 'short' | 'average' | 'tall' | 'very tall';
   build: 'slim' | 'average' | 'athletic' | 'muscular' | 'heavyset' | 'curvy';
-  /** Optional approximate weight in kg (stored canonically as kg). */
-  weightKg?: number;
-  /** Preferred display unit for height/weight. Defaults to 'imperial'. */
-  measurementUnit?: 'imperial' | 'metric';
 }
 
 export interface DetailedAppearance {
   skinTone: string;
   hairStyle: string;
   hairColor: string;
-  /** Optional secondary hair color for two-tone / dyed-streak looks. Primary remains hairColor. */
-  hairColorSecondary?: string;
   eyeColor: string;
   faceShape: 'oval' | 'round' | 'square' | 'heart' | 'oblong' | 'diamond';
   distinguishingFeatures: string[];
@@ -63,8 +55,7 @@ export interface TieredAppearance {
 }
 
 export const HEIGHT_OPTIONS = [
-  { value: 'very short', label: 'Very Short', description: '4\'2" - 5\'0"' },
-  { value: 'short', label: 'Short', description: '5\'0" - 5\'4"' },
+  { value: 'short', label: 'Short', description: 'Under 5\'4"' },
   { value: 'average', label: 'Average', description: '5\'4" - 5\'9"' },
   { value: 'tall', label: 'Tall', description: '5\'10" - 6\'2"' },
   { value: 'very tall', label: 'Very Tall', description: 'Over 6\'2"' },
@@ -86,7 +77,7 @@ export const GENDER_OPTIONS = [
 ];
 
 export const SKIN_TONES = ['Porcelain', 'Ivory', 'Fair', 'Light', 'Medium', 'Olive', 'Tan', 'Caramel', 'Brown', 'Dark Brown', 'Ebony', 'Pale Blue', 'Green', 'Purple', 'Gray', 'Silver'];
-export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Crew Cut', 'Fade', 'Undercut', 'Side Shave', 'Pixie', 'Short', 'Bob', 'Lob', 'Medium', 'Shoulder Length', 'Long', 'Very Long', 'Ponytail', 'High Ponytail', 'Twin Tails', 'Braided', 'Box Braids', 'Cornrows', 'Dreadlocks', 'Mohawk', 'Faux Hawk', 'Curly', 'Wavy', 'Afro', 'Bun', 'Top Knot', 'Half-Up', 'Spiky', 'Slicked Back', 'Pompadour', 'Quiff', 'Messy', 'Hime Cut', 'Bowl Cut'];
+export const HAIR_STYLES = ['Bald', 'Buzz Cut', 'Short', 'Medium', 'Long', 'Very Long', 'Ponytail', 'Braided', 'Dreadlocks', 'Mohawk', 'Undercut', 'Curly', 'Wavy', 'Afro', 'Bun', 'Spiky', 'Messy'];
 export const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Auburn', 'Red', 'Blonde', 'Platinum Blonde', 'White', 'Gray', 'Blue', 'Purple', 'Pink', 'Green', 'Silver'];
 export const EYE_COLORS = ['Brown', 'Dark Brown', 'Hazel', 'Amber', 'Green', 'Blue', 'Gray', 'Violet', 'Heterochromia', 'Red', 'Golden', 'Silver'];
 export const FACE_SHAPES = [{ value: 'oval', label: 'Oval' }, { value: 'round', label: 'Round' }, { value: 'square', label: 'Square' }, { value: 'heart', label: 'Heart' }, { value: 'oblong', label: 'Oblong' }, { value: 'diamond', label: 'Diamond' }];
@@ -427,25 +418,12 @@ export const CLOTHING_DETAIL_OPTIONS = [
   { value: 'briefs', label: 'Briefs', category: 'male', gender: 'male' },
 ];
 
-import { classifyHeightCm, formatHeight } from '@/lib/measurementUnits';
-
 export function formatAppearanceForAI(appearance: TieredAppearance, genre: string): string {
   const { simple, detailed, full, detailLevel } = appearance;
   let genderDesc = simple.gender === 'other' && full?.isHermaphrodite ? 'intersex' : simple.gender === 'other' ? 'androgynous' : simple.gender;
-  // Resolve effective height — custom cm value overrides the bracket but still maps back to a band.
-  const effectiveBand: SimpleAppearance['height'] = simple.customHeightCm
-    ? (classifyHeightCm(simple.customHeightCm) as SimpleAppearance['height'])
-    : simple.height;
-  const unit = simple.measurementUnit || 'imperial';
-  const heightDisplay = simple.customHeightCm
-    ? `exactly ${formatHeight(simple.customHeightCm, unit)} (${simple.customHeightCm}cm, custom)`
-    : `${simple.height} height`;
-  let description = `${genderDesc}, ${heightDisplay}, ${simple.build} build`;
+  let description = `${genderDesc}, ${simple.height} height, ${simple.build} build`;
   if ((detailLevel === 'detailed' || detailLevel === 'all') && detailed) {
-    const hairTwoTone = detailed.hairColorSecondary && detailed.hairColorSecondary !== detailed.hairColor
-      ? `${detailed.hairStyle} two-tone hair (primary ${detailed.hairColor}, secondary ${detailed.hairColorSecondary} streaks/tips/underlayer)`
-      : `${detailed.hairStyle} ${detailed.hairColor} hair`;
-    description += `, ${detailed.skinTone} skin, ${hairTwoTone}, ${detailed.eyeColor} eyes`;
+    description += `, ${detailed.skinTone} skin, ${detailed.hairStyle} ${detailed.hairColor} hair, ${detailed.eyeColor} eyes`;
     if (detailed.distinguishingFeatures?.length) description += `, with ${detailed.distinguishingFeatures.join(', ')}`;
     if (detailed.accessories?.length) description += `, wearing ${detailed.accessories.join(', ')}`;
   }
@@ -518,90 +496,6 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
     }
     if (full.intimateDetails) description += `. ${full.intimateDetails}`;
   }
-
-  // ===== PHYSICALITY AWARENESS (for AI + NPC reactivity) =====
-  // Tell the narrator how the character's size/build should affect the world
-  // and how NPCs perceive and react to them. Applied at every detail level.
-  const physicality: string[] = [];
-
-  switch (effectiveBand) {
-    case 'very short':
-      physicality.push(
-        "Very short stature (~4'2\"–5'0\"): exceptionally diminutive, often mistaken for a child or adolescent at a glance; slips through ducts, crawlspaces, dog doors, and child-sized passages with ease; cannot reach standard counters, light switches, or overhead shelves without climbing or stools; horseback, tall ladders, adult-sized armor, and standard car pedals require accommodation; NPCs frequently bend down to speak, condescend, mistake them for a minor, or refuse adult services until proven otherwise."
-      );
-      break;
-    case 'short':
-      physicality.push(
-        "Short stature (under ~5'4\"): fits easily through low tunnels, crawlspaces, vents, child-sized doors, and cramped hideouts that taller people must duck or squeeze through; often overlooked in crowds; struggles to reach high shelves, see over counters, or grapple taller foes head-on; NPCs may underestimate, condescend, mistake them for younger, or move objects out of reach."
-      );
-      break;
-    case 'tall':
-      physicality.push(
-        "Tall stature (~5'10\"–6'2\"): commanding presence, easy line of sight over crowds, longer reach in melee; must duck through low doorways, awkward in compact vehicles and cramped quarters; NPCs read them as authoritative or intimidating on first glance."
-      );
-      break;
-    case 'very tall':
-      physicality.push(
-        "Very tall stature (over 6'2\"): physically dominates a room, intimidating without trying; CANNOT comfortably enter cramped tunnels, low attics, child-sized passages, small vehicles, or coffin-sized hiding spots without stooping, crawling, or getting stuck; bumps head on standard fixtures; immediately memorable to witnesses and hard to disguise; NPCs stare, give wider berth, or feel threatened."
-      );
-      break;
-    case 'average':
-    default:
-      physicality.push(
-        "Average stature: fits standard human-built spaces without special accommodation; blends into crowds; NPCs treat them as unremarkable in size."
-      );
-      break;
-  }
-
-  switch (simple.build) {
-    case 'slim':
-      physicality.push(
-        "Slim build: nimble and quick, slips through narrow gaps, climbs and balances well, fast on their feet; tires faster in raw strength contests and hits lighter in melee; NPCs may read as fragile, non-threatening, or easy to push around."
-      );
-      break;
-    case 'athletic':
-      physicality.push(
-        "Athletic build: balanced stamina, strength, and agility; NPCs read as capable and healthy without being intimidating."
-      );
-      break;
-    case 'muscular':
-      physicality.push(
-        "Muscular build: visibly strong, hits hard, can force doors and carry heavy loads; doesn't fit through tight gaps as cleanly as slimmer builds; NPCs treat them as a physical threat and defer in confrontations."
-      );
-      break;
-    case 'heavyset':
-      physicality.push(
-        "Heavyset build: heavy and solidly grounded — hard to knock down or shove, strong grappler, can absorb hits; SLOWER in sprints and long chases, struggles with narrow alleys, tight squeezes, ladders, climbing, and prolonged stealth; NPCs may underestimate stamina or unfairly judge based on size."
-      );
-      break;
-    case 'curvy':
-      physicality.push(
-        "Curvy build: pronounced silhouette draws attention in any room; NPCs notice immediately, react with attraction, jealousy, or judgment depending on culture; harder to move unnoticed; certain fitted clothing and tight passages don't accommodate the figure cleanly."
-      );
-      break;
-    case 'average':
-    default:
-      physicality.push(
-        "Average build: unremarkable physical presence; no special advantages or limitations in tight spaces or physical contests."
-      );
-      break;
-  }
-
-  // Weight-based reactivity (optional — only when player set a weight)
-  if (typeof simple.weightKg === 'number' && simple.weightKg > 0) {
-    const w = simple.weightKg;
-    const lb = Math.round(w * 2.20462);
-    let weightCue = '';
-    if (w < 50) weightCue = `Very light frame (~${w}kg / ${lb}lb): easily lifted, carried, or knocked aside; struggles with heavy gear, recoil, and grappling stronger foes; NPCs may pick them up, shove past, or doubt their physical credibility.`;
-    else if (w < 65) weightCue = `Light frame (~${w}kg / ${lb}lb): quick on their feet, low presence in melee impact; standard armor and packs feel heavier on this frame.`;
-    else if (w < 85) weightCue = `Average weight (~${w}kg / ${lb}lb): unremarkable physical inertia in NPC perception.`;
-    else if (w < 105) weightCue = `Heavier frame (~${w}kg / ${lb}lb): hard to shove off-balance, hits with more momentum; faster fatigue on long climbs and sprints; chairs creak, narrow seating may be tight.`;
-    else weightCue = `Very heavy frame (~${w}kg / ${lb}lb): immovable in grapples, intimidating mass, breaks fragile furniture; CANNOT fit into tight crawlspaces, small vehicles, or low-weight rope/ledge scenarios without consequence; NPCs visibly notice and may make assumptions (kind or cruel) based on size.`;
-    physicality.push(weightCue);
-  }
-
-  description += `\n\nPHYSICALITY AWARENESS (apply continuously in narration and NPC reactions): ${physicality.join(' ')} The narrator MUST respect these physical realities when describing environments, action outcomes, stealth, combat reach, and first impressions, and NPCs MUST react to the character's size and build in a way consistent with their own personality and culture.`;
-
   return description;
 }
 

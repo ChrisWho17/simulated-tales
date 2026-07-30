@@ -20,7 +20,6 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
-import { formatWeight, heightBandLabel, suggestedWeightRangeKg, kgToLb, formatHeight, classifyHeightCm, CUSTOM_HEIGHT_MIN_CM, CUSTOM_HEIGHT_MAX_CM, type MeasurementUnit } from '@/lib/measurementUnits';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
@@ -38,11 +37,6 @@ import { CustomClassBuilder, CustomClassData } from './CustomClassBuilder';
 import { StartingGearEditor } from './StartingGearEditor';
 import { StartingGearItem } from '@/game/storyInventoryBridge';
 import { AppearanceAccordions } from './AppearanceAccordions';
-import { NATIONALITIES, getDefaultLanguageForNationality } from '@/game/nationalitySystem';
-import { SELECTABLE_LANGUAGES, type LanguageProficiency } from '@/game/languageSystem';
-import { Slider as UiSlider } from '@/components/ui/slider';
-import { Select as UiSelect, SelectContent as UiSelectContent, SelectItem as UiSelectItem, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue } from '@/components/ui/select';
-import { X as XIcon } from 'lucide-react';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -115,12 +109,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
     strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
   });
-
-  // Nationality & language profile (opt-in for player freedom)
-  const [useNationality, setUseNationality] = useState<boolean>(false);
-  const [nationality, setNationality] = useState<string>('');
-  const [primaryLanguage, setPrimaryLanguage] = useState<string>('en');
-  const [additionalLanguages, setAdditionalLanguages] = useState<Array<{ code: string; proficiency: 'rough' | 'moderate' | 'perfected' }>>([]);
   
   // Appearance state
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('simple');
@@ -305,9 +293,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         name: name,
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
-        height: appearance.simple?.customHeightCm ? `${appearance.simple.customHeightCm}cm` : (appearance.simple?.height || 'average'),
-        customHeightCm: appearance.simple?.customHeightCm,
-        weightKg: appearance.simple?.weightKg,
+        height: appearance.simple?.height || 'average',
         hairColor: appearance.detailed?.hairColor || 'brown',
         hairStyle: appearance.detailed?.hairStyle || 'short',
         eyeColor: appearance.detailed?.eyeColor || 'brown',
@@ -319,9 +305,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
-          ...(appearance.detailed?.hairColorSecondary && appearance.detailed.hairColorSecondary !== appearance.detailed.hairColor
-            ? [`two-tone hair: primary ${appearance.detailed.hairColor}, secondary ${appearance.detailed.hairColorSecondary} streaks / tips / underlayer accents`]
-            : []),
         ],
         // Body shape details (bust, hips, muscle, shoulders)
         bustSize: appearance.full?.bustSize,
@@ -400,12 +383,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     // Add appearance data for consistent scene illustrations
     (character as any).gender = appearance.simple?.gender || 'male';
     (character as any).build = appearance.simple?.build || 'average';
-    (character as any).height = appearance.simple?.customHeightCm
-      ? `${appearance.simple.customHeightCm}cm`
-      : (appearance.simple?.height || 'average');
-    (character as any).customHeightCm = appearance.simple?.customHeightCm;
-    (character as any).weightKg = appearance.simple?.weightKg;
-    (character as any).measurementUnit = appearance.simple?.measurementUnit || 'imperial';
+    (character as any).height = appearance.simple?.height || 'average';
     (character as any).hairColor = appearance.detailed?.hairColor || 'brown';
     (character as any).hairStyle = appearance.detailed?.hairStyle || 'short';
     (character as any).eyeColor = appearance.detailed?.eyeColor || 'brown';
@@ -414,20 +392,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     (character as any).details = [
       ...(appearance.detailed?.distinguishingFeatures || []),
       ...(appearance.detailed?.accessories || []),
-      ...(appearance.detailed?.hairColorSecondary && appearance.detailed.hairColorSecondary !== appearance.detailed.hairColor
-        ? [`two-tone hair: primary ${appearance.detailed.hairColor}, secondary ${appearance.detailed.hairColorSecondary} streaks/tips/underlayer`]
-        : []),
     ];
     
     // Add full appearance data for adult content (18+) - stored separately for AI context
     (character as any).fullAppearance = appearance.full;
     (character as any).tieredAppearance = appearance;
-
-    // Nationality & language profile (only when player opts in)
-    (character as any).nationality = useNationality ? (nationality || undefined) : undefined;
-    (character as any).primaryLanguage = useNationality ? primaryLanguage : undefined;
-    (character as any).additionalLanguages = useNationality ? additionalLanguages : [];
-    (character as any).languageBarriersEnabled = useNationality;
     
     // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
@@ -451,9 +420,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         name,
         gender: appearance.simple?.gender || 'male',
         build: appearance.simple?.build || 'average',
-        height: appearance.simple?.customHeightCm ? `${appearance.simple.customHeightCm}cm` : (appearance.simple?.height || 'average'),
-        customHeightCm: appearance.simple?.customHeightCm,
-        weightKg: appearance.simple?.weightKg,
+        height: appearance.simple?.height || 'average',
         skinTone: appearance.detailed?.skinTone || 'medium',
         hairColor: appearance.detailed?.hairColor || 'brown',
         hairStyle: appearance.detailed?.hairStyle || 'short',
@@ -462,9 +429,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
-          ...(appearance.detailed?.hairColorSecondary && appearance.detailed.hairColorSecondary !== appearance.detailed.hairColor
-            ? [`two-tone hair: primary ${appearance.detailed.hairColor}, secondary ${appearance.detailed.hairColorSecondary} streaks/tips/underlayer`]
-            : []),
         ],
         tieredAppearance: appearance,
         appearanceDescription: formatAppearanceForAI(appearance, genre),
@@ -605,168 +569,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         <div className="bg-card/50 border border-border/30 rounded-lg p-6 mb-6 animate-fade-in">
           {/* Name Step */}
           {step === 'name' && (
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-primary">What is your name?</h2>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your character's name..."
-                  className="text-lg py-6 bg-background border-border/50"
-                  autoFocus
-                />
-              </div>
-
-              {/* Optional: Nationality & Languages */}
-              <div className="space-y-2 pt-2 border-t border-border/30">
-                <label className="flex items-center justify-between gap-3 cursor-pointer">
-                  <span className="text-sm font-medium">
-                    Nationality & Languages
-                    <span className="block text-xs text-muted-foreground font-normal">
-                      Optional. Adds accents and language barriers to the story.
-                    </span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={useNationality}
-                    onChange={(e) => setUseNationality(e.target.checked)}
-                    className="w-5 h-5 rounded accent-primary cursor-pointer"
-                    aria-label="Enable nationality and languages"
-                  />
-                </label>
-              </div>
-
-              {useNationality && (
-                <>
-                  {/* Nationality */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nationality <span className="text-muted-foreground font-normal">(drives your accent)</span></label>
-                    <UiSelect
-                      value={nationality}
-                      onValueChange={(v) => {
-                        setNationality(v);
-                        const def = getDefaultLanguageForNationality(v);
-                        if (def && !additionalLanguages.find(l => l.code === def)) {
-                          setPrimaryLanguage(def);
-                        }
-                      }}
-                    >
-                      <UiSelectTrigger className="bg-background/50">
-                        <UiSelectValue placeholder="Select nationality" />
-                      </UiSelectTrigger>
-                      <UiSelectContent className="max-h-72">
-                        {NATIONALITIES.map(n => (
-                          <UiSelectItem key={n.id} value={n.id}>{n.label}</UiSelectItem>
-                        ))}
-                      </UiSelectContent>
-                    </UiSelect>
-                  </div>
-
-                  {/* Primary language */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Primary Language <span className="text-muted-foreground font-normal">(spoken natively)</span></label>
-                    <UiSelect value={primaryLanguage} onValueChange={setPrimaryLanguage}>
-                      <UiSelectTrigger className="bg-background/50">
-                        <UiSelectValue />
-                      </UiSelectTrigger>
-                      <UiSelectContent className="max-h-72">
-                        {SELECTABLE_LANGUAGES.map(l => (
-                          <UiSelectItem key={l.code} value={l.code}>{l.label}</UiSelectItem>
-                        ))}
-                      </UiSelectContent>
-                    </UiSelect>
-                  </div>
-
-                  {/* Additional languages */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Additional Languages</label>
-                      <UiSelect
-                        value=""
-                        onValueChange={(code) => {
-                          if (!code) return;
-                          if (code === '__all__') {
-                            // Scholar mode: fluent in every selectable tongue except the primary
-                            const all = SELECTABLE_LANGUAGES
-                              .filter(l => l.code !== primaryLanguage)
-                              .map(l => ({ code: l.code, proficiency: 'perfected' as const }));
-                            setAdditionalLanguages(all);
-                            return;
-                          }
-                          if (code === primaryLanguage) return;
-                          if (additionalLanguages.find(l => l.code === code)) return;
-                          setAdditionalLanguages(prev => [...prev, { code, proficiency: 'moderate' }]);
-                        }}
-                      >
-                        <UiSelectTrigger className="w-44 bg-background/50 h-8 text-xs">
-                          <UiSelectValue placeholder="+ Add language" />
-                        </UiSelectTrigger>
-                        <UiSelectContent className="max-h-72">
-                          <UiSelectItem value="__all__">⭐ All (Scholar)</UiSelectItem>
-                          {SELECTABLE_LANGUAGES
-                            .filter(l => l.code !== primaryLanguage && !additionalLanguages.find(a => a.code === l.code))
-                            .map(l => (
-                              <UiSelectItem key={l.code} value={l.code}>{l.label}</UiSelectItem>
-                            ))}
-                        </UiSelectContent>
-                      </UiSelect>
-                    </div>
-
-                    {additionalLanguages.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic">No secondary languages. NPCs speaking other tongues will sound foreign and be translated in parentheses.</p>
-                    )}
-
-                    {additionalLanguages.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setAdditionalLanguages([])}
-                        className="text-[11px] text-muted-foreground hover:text-destructive transition-colors underline"
-                      >
-                        Clear all ({additionalLanguages.length})
-                      </button>
-                    )}
-
-                    {additionalLanguages.map((lang, idx) => {
-                      const profIndex = lang.proficiency === 'rough' ? 0 : lang.proficiency === 'moderate' ? 1 : 2;
-                      return (
-                        <div key={lang.code} className="rounded-md border border-border/30 bg-background/30 p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
-                              {SELECTABLE_LANGUAGES.find(l => l.code === lang.code)?.label || lang.code}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setAdditionalLanguages(prev => prev.filter((_, i) => i !== idx))}
-                              className="text-muted-foreground hover:text-destructive transition-colors"
-                              aria-label="Remove language"
-                            >
-                              <XIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Rough</span><span>Moderate</span><span>Perfected</span>
-                          </div>
-                          <UiSlider
-                            value={[profIndex]}
-                            min={0}
-                            max={2}
-                            step={1}
-                            onValueChange={([v]) => {
-                              const next: LanguageProficiency = v === 0 ? 'rough' : v === 1 ? 'moderate' : 'perfected';
-                              setAdditionalLanguages(prev => prev.map((l, i) => i === idx ? { ...l, proficiency: next as 'rough'|'moderate'|'perfected' } : l));
-                            }}
-                          />
-                          <p className="text-[11px] text-muted-foreground">
-                            {lang.proficiency === 'rough' && 'Gist only — gaps shown as [...] in dialogue.'}
-                            {lang.proficiency === 'moderate' && 'Readable, but idioms may slip past you.'}
-                            {lang.proficiency === 'perfected' && 'Near-fluent — reads cleanly.'}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-primary">What is your name?</h2>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your character's name..."
+                className="text-lg py-6 bg-background border-border/50"
+                autoFocus
+              />
             </div>
           )}
 
@@ -811,94 +622,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium">Height</h3>
-                      {/* Measurement unit toggle (imperial default) */}
-                      <div className="flex items-center gap-1 text-xs">
-                        {(['imperial', 'metric'] as MeasurementUnit[]).map(u => (
-                          <button
-                            key={u}
-                            type="button"
-                            onClick={() => updateAppearance('simple', 'measurementUnit', u)}
-                            className={`px-2 py-1 rounded border transition-all ${
-                              (appearance.simple.measurementUnit || 'imperial') === u
-                                ? 'bg-primary/20 border-primary text-primary'
-                                : 'bg-background/50 border-border/30 text-muted-foreground hover:border-primary/40'
-                            }`}
-                          >
-                            {u === 'imperial' ? 'ft / lb' : 'cm / kg'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <h3 className="text-sm font-medium mb-2">Height</h3>
                     <div className="flex flex-wrap gap-2">
                       {HEIGHT_OPTIONS.map(opt => (
                         <button
                           key={opt.value}
-                          onClick={() => {
-                            updateAppearance('simple', 'height', opt.value);
-                            // Choosing a bracket clears any custom override
-                            if (appearance.simple.customHeightCm) updateAppearance('simple', 'customHeightCm', undefined);
-                          }}
+                          onClick={() => updateAppearance('simple', 'height', opt.value)}
                           className={`px-3 py-2 rounded-lg text-sm transition-all border ${
-                            appearance.simple.height === opt.value && !appearance.simple.customHeightCm
+                            appearance.simple.height === opt.value
                               ? 'bg-primary/20 border-primary'
                               : 'bg-background/50 border-border/30 hover:border-primary/50'
                           }`}
-                          title={heightBandLabel(opt.value, appearance.simple.measurementUnit || 'imperial')}
                         >
                           {opt.label}
-                          <span className="block text-[10px] text-muted-foreground mt-0.5">
-                            {heightBandLabel(opt.value, appearance.simple.measurementUnit || 'imperial')}
-                          </span>
                         </button>
                       ))}
                     </div>
-
-                    {/* Custom height — overrides the bracket and feeds imagery + narration */}
-                    {(() => {
-                      const unit = appearance.simple.measurementUnit || 'imperial';
-                      const hasCustom = typeof appearance.simple.customHeightCm === 'number';
-                      const currentCm = appearance.simple.customHeightCm ?? 170;
-                      const display = formatHeight(currentCm, unit);
-                      const band = classifyHeightCm(currentCm);
-                      return (
-                        <div className="mt-3 pt-3 border-t border-border/20 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={hasCustom}
-                                onChange={(e) => updateAppearance('simple', 'customHeightCm', e.target.checked ? currentCm : undefined)}
-                                className="rounded"
-                              />
-                              Use custom height (outside the brackets)
-                            </label>
-                            {hasCustom && (
-                              <span className="text-xs font-medium text-foreground">{display}</span>
-                            )}
-                          </div>
-                          {hasCustom && (
-                            <>
-                              <input
-                                type="range"
-                                min={CUSTOM_HEIGHT_MIN_CM}
-                                max={CUSTOM_HEIGHT_MAX_CM}
-                                step={1}
-                                value={currentCm}
-                                onChange={(e) => updateAppearance('simple', 'customHeightCm', Number(e.target.value))}
-                                className="w-full accent-primary"
-                              />
-                              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                <span>{formatHeight(CUSTOM_HEIGHT_MIN_CM, unit)}</span>
-                                <span>Treated as <strong className="text-foreground">{band}</strong> for physicality &amp; NPC reactions</span>
-                                <span>{formatHeight(CUSTOM_HEIGHT_MAX_CM, unit)}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   <div>
@@ -919,56 +658,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       ))}
                     </div>
                   </div>
-
-                  {/* Optional weight — drives imagery silhouette + NPC reactivity */}
-                  {(() => {
-                    const unit = appearance.simple.measurementUnit || 'imperial';
-                    const heightKeyForWeight = appearance.simple.customHeightCm
-                      ? classifyHeightCm(appearance.simple.customHeightCm)
-                      : appearance.simple.height;
-                    const [minKg, maxKg] = suggestedWeightRangeKg(heightKeyForWeight, appearance.simple.build);
-                    const hasWeight = typeof appearance.simple.weightKg === 'number';
-                    const currentKg = appearance.simple.weightKg ?? Math.round((minKg + maxKg) / 2);
-                    const display = unit === 'imperial' ? `${kgToLb(currentKg)} lb` : `${currentKg} kg`;
-                    return (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-medium flex items-center gap-2">
-                            Weight
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Optional</span>
-                          </h3>
-                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={hasWeight}
-                              onChange={(e) => updateAppearance('simple', 'weightKg', e.target.checked ? Math.round((minKg + maxKg) / 2) : undefined)}
-                              className="rounded"
-                            />
-                            Define weight
-                          </label>
-                        </div>
-                        {hasWeight && (
-                          <div className="space-y-2">
-                            <input
-                              type="range"
-                              min={18}
-                              max={181}
-                              step={1}
-                              value={currentKg}
-                              onChange={(e) => updateAppearance('simple', 'weightKg', Number(e.target.value))}
-                              className="w-full accent-primary"
-                            />
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>Suggested for {appearance.simple.height} / {appearance.simple.build}: {formatWeight(minKg, unit)} – {formatWeight(maxKg, unit)}</span>
-                              <span className="font-medium text-foreground">{display}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
                 </div>
-
 
                 {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (
@@ -1007,26 +697,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </select>
                       </div>
                       <div>
-                        <label className="text-sm text-muted-foreground">Hair Color (Primary)</label>
+                        <label className="text-sm text-muted-foreground">Hair Color</label>
                         <select
                           value={appearance.detailed?.hairColor || 'Brown'}
                           onChange={(e) => updateAppearance('detailed', 'hairColor', e.target.value)}
                           className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
                         >
-                          {HAIR_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground flex items-center justify-between">
-                          <span>Hair Color (Secondary)</span>
-                          <span className="text-[10px] uppercase tracking-wide">Two-tone</span>
-                        </label>
-                        <select
-                          value={appearance.detailed?.hairColorSecondary || ''}
-                          onChange={(e) => updateAppearance('detailed', 'hairColorSecondary', e.target.value || undefined)}
-                          className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                        >
-                          <option value="">None (single color)</option>
                           {HAIR_COLORS.map(color => <option key={color} value={color}>{color}</option>)}
                         </select>
                       </div>

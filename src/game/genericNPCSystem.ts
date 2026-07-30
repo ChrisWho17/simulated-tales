@@ -144,8 +144,7 @@ const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', '
 const hairColors = ['black', 'brown', 'blonde', 'red', 'gray', 'white', 'dyed blue', 'dyed pink', 'dyed purple'];
 const hairStyles = ['short', 'long', 'curly', 'straight', 'wavy', 'buzz cut', 'ponytail', 'bun', 'messy', 'slicked back', 'braided', 'mohawk'];
 const eyeColors = ['brown', 'blue', 'green', 'hazel', 'gray'];
-const buildTypes = ['slim', 'athletic', 'average', 'heavyset', 'muscular', 'petite', 'curvy', 'stocky', 'lanky'];
-const heightBands = ['very short', 'short', 'average', 'average', 'average', 'tall', 'tall', 'very tall']; // weighted toward average; very short is rare but possible
+const buildTypes = ['slim', 'athletic', 'average', 'heavyset', 'muscular', 'petite', 'tall and lanky'];
 const clothingStyles = ['casual', 'business casual', 'professional', 'streetwear', 'hipster', 'sporty', 'bohemian', 'goth', 'preppy', 'rugged'];
 
 export interface GeneratedAppearance {
@@ -153,9 +152,6 @@ export interface GeneratedAppearance {
   hair: string;
   eyes: string;
   build: string;
-  height: string;
-  /** Approximate weight in kg, rolled from build+height for image/narration consistency. */
-  weightKg: number;
   clothing: string;
   distinguishing: string;
 }
@@ -166,23 +162,6 @@ function randomFrom<T>(arr: T[]): T {
 
 function randomInRange(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// Reasonable per-build BMI midpoint, paired with height band to roll a plausible weight.
-function rollWeightKg(heightBand: string, build: string): number {
-  const heights: Record<string, [number, number]> = {
-    'very short': [127, 152], short: [152, 162], average: [163, 178], tall: [178, 188], 'very tall': [188, 200],
-  };
-  const bmi: Record<string, [number, number]> = {
-    slim: [17, 21], athletic: [21, 26], average: [20, 25], heavyset: [28, 38],
-    muscular: [24, 30], petite: [17, 21], curvy: [23, 30], stocky: [25, 32], lanky: [17, 22],
-  };
-  const [hMin, hMax] = heights[heightBand] || heights.average;
-  const [bMin, bMax] = bmi[build] || bmi.average;
-  const cm = randomInRange(hMin, hMax);
-  const m = cm / 100;
-  const bmiRoll = bMin + Math.random() * (bMax - bMin);
-  return Math.round(bmiRoll * m * m);
 }
 
 export function generateAppearance(): GeneratedAppearance {
@@ -206,15 +185,11 @@ export function generateAppearance(): GeneratedAppearance {
     'holding a coffee cup',
   ];
 
-  const build = randomFrom(buildTypes);
-  const height = randomFrom(heightBands);
   return {
     gender,
     hair: `${randomFrom(hairColors)} ${randomFrom(hairStyles)} hair`,
     eyes: `${randomFrom(eyeColors)} eyes`,
-    build,
-    height,
-    weightKg: rollWeightKg(height, build),
+    build: randomFrom(buildTypes),
     clothing: randomFrom(clothingStyles),
     distinguishing: randomFrom(distinguishingFeatures),
   };
@@ -258,7 +233,7 @@ export function generateGenericNPC(
     id = `${baseId}_${counter}`;
   }
 
-  const description = `A ${age}-year-old ${appearance.height} ${appearance.build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} (~${appearance.weightKg}kg) with ${appearance.hair} and ${appearance.eyes}. Dressed in ${appearance.clothing} style, ${appearance.distinguishing}.`;
+  const description = `A ${age}-year-old ${appearance.build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} with ${appearance.hair} and ${appearance.eyes}. Dressed in ${appearance.clothing} style, ${appearance.distinguishing}.`;
 
   const emotionalStates: EmotionalState[] = ['calm', 'anxious', 'happy', 'sad', 'vigilant', 'content'];
   const conflictStyles: ConflictStyle[] = ['AVOIDANT', 'PASSIVE_AGGRESSIVE', 'NEGOTIATIVE', 'DOMINANT', 'MORALISTIC', 'RESIGNED'];
@@ -482,7 +457,7 @@ export function generateHostileNPC(
   const weapon = randomFrom(hostileAppearance.weapons);
   
   const age = randomInRange(18, 45);
-  const description = `A ${appearance.height} ${build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} (~${appearance.weightKg}kg) with ${feature}, wearing ${clothing}. They carry what looks like a ${weapon}.`;
+  const description = `A ${build} ${appearance.gender === 'non-binary' ? 'person' : appearance.gender === 'male' ? 'man' : 'woman'} with ${feature}, wearing ${clothing}. They carry what looks like a ${weapon}.`;
   
   const id = `npc_hostile_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
   

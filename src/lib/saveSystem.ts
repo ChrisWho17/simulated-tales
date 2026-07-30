@@ -1,11 +1,14 @@
 // ============================================================================
 // SAVE SYSTEM - Versioned saves with migration pipeline and corruption guards
 // ============================================================================
+/**
+ * @deprecated Prefer `src/services/unifiedSaveArchitecture.ts` / CampaignContext for new work.
+ * See `docs/SAVE_STACK.md`. Kept for migration/compat — do not add new callers (Phase 2: document only).
+ */
 
 import { CampaignMemoryStore } from '@/types/campaignMemory';
 import { serializeCampaignMemory, deserializeCampaignMemory } from '@/game/campaignMemorySystem';
 import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
-import { devLog } from '@/lib/devLog';
 
 // ============================================================================
 // VERSION CONSTANTS
@@ -55,12 +58,26 @@ export interface GameSave {
   schemaHash?: string;
   subsystemVersions?: Partial<SubsystemVersions>;
   
-  // Data
+  // Data — prefer ExtendedAdventureSaveData shape when writing from play
   gameData: unknown;
   campaignMemory?: string;
   
   // Legacy field (kept for backward compat during migration)
   version?: number;
+}
+
+/** Fields written into GameSave.gameData so load can restore play systems. */
+export interface ExtendedAdventureSaveData {
+  story: unknown;
+  character: unknown;
+  timestamp: number;
+  weatherState?: unknown;
+  timeState?: unknown;
+  directorSettings?: unknown;
+  languageState?: unknown;
+  toneState?: unknown;
+  currentMood?: unknown;
+  adultContent?: boolean;
 }
 
 // ============================================================================
@@ -344,7 +361,7 @@ export function processSaveForLoading(rawSave: unknown): LoadResult {
       try {
         save = migrator(save);
         migrated = true;
-        devLog.log(`[SaveSystem] Migrated save from v${save.saveVersion - 1} to v${save.saveVersion}`);
+        console.log(`[SaveSystem] Migrated save from v${save.saveVersion - 1} to v${save.saveVersion}`);
       } catch (err) {
         errors.push(`Migration v${save.saveVersion} failed: ${err}`);
         return {
@@ -388,7 +405,7 @@ export function backupBeforeMigrate(save: unknown): void {
     // Also store in localStorage for recovery
     localStorage.setItem(BACKUP_KEY, lastBackup);
   } catch (e) {
-    devLog.warn('[SaveSystem] Failed to create backup:', e);
+    console.warn('[SaveSystem] Failed to create backup:', e);
   }
 }
 
@@ -406,23 +423,28 @@ export function getLastBackup(): unknown | null {
 // Atomic write: write to temp key, then swap
 export function atomicWrite(key: string, data: unknown): boolean {
   const tempKey = `${key}_tmp`;
-
+  
+  // Proactive cleanup before attempting write
+  checkAndCleanupStorage();
+  
   const attemptWrite = (): boolean => {
     const serialized = JSON.stringify(data);
-
+    
     // Size check - warn if save is getting large
     const sizeKB = serialized.length / 1024;
     if (sizeKB > 1000) {
-      devLog.warn(`[SaveSystem] Save size is ${sizeKB.toFixed(1)}KB - consider compacting`);
+      console.warn(`[SaveSystem] Save size is ${sizeKB.toFixed(1)}KB - consider compacting`);
     }
-
-    // Single write to real key (removed duplicate temp-key write that was
-    // doubling main-thread blocking time on every save).
+    
+    // Write to temp
+    localStorage.setItem(tempKey, serialized);
+    
+    // Swap to real key
     localStorage.setItem(key, serialized);
-
-    // Clean up any stale temp key from prior failed writes
-    try { localStorage.removeItem(tempKey); } catch {}
-
+    
+    // Clean up temp
+    localStorage.removeItem(tempKey);
+    
     return true;
   };
   
@@ -431,12 +453,12 @@ export function atomicWrite(key: string, data: unknown): boolean {
   } catch (e: any) {
     // Handle quota exceeded with aggressive cleanup and retry
     if (e.name === 'QuotaExceededError') {
-      devLog.warn('[SaveSystem] Quota exceeded during atomic write, performing aggressive cleanup...');
+      console.warn('[SaveSystem] Quota exceeded during atomic write, performing aggressive cleanup...');
       performCleanup(0.4);
       
       try {
         const result = attemptWrite();
-        devLog.log('[SaveSystem] Atomic write succeeded after cleanup');
+        console.log('[SaveSystem] Atomic write succeeded after cleanup');
         return result;
       } catch (retryError) {
         console.error('[SaveSystem] Atomic write still failed after cleanup:', retryError);
@@ -454,13 +476,13 @@ export function atomicWrite(key: string, data: unknown): boolean {
   }
 }
 
-// Size caps - tuned aggressively to keep saves under ~1MB even for long sessions
+// Size cap for narrative history and event ledger - reduced to prevent save bloat
 export const SIZE_CAPS = {
-  narrativeHistory: 100,   // was 150
-  eventHistory: 200,       // was 300
-  storyEntries: 60,        // was 75
-  npcMemories: 75,         // was 100
-  questJournalEntries: 40, // was 50
+  narrativeHistory: 150, // Reduced from 200
+  eventHistory: 300,     // Reduced from 500
+  storyEntries: 75,      // Reduced from 100
+  npcMemories: 100,      // New: cap for NPC memory storage
+  questJournalEntries: 50, // New: cap for quest journal
 } as const;
 
 export function applyDataSizeCaps(gameData: Record<string, unknown>): Record<string, unknown> {
@@ -540,7 +562,7 @@ export function loadAllSaves(): GameSave[] {
           if (result.success && result.save) {
             return result.save;
           }
-          devLog.warn('[SaveSystem] Failed to load save:', result.errors);
+          console.warn('[SaveSystem] Failed to load save:', result.errors);
           return null;
         })
         .filter((s): s is GameSave => s !== null);
@@ -618,7 +640,7 @@ export function saveGame(
   backupBeforeMigrate(saves);
   if (!atomicWrite(SAVES_KEY, updatedSaves)) {
     // Fallback to direct write with error handling
-    devLog.warn('[SaveSystem] Atomic write failed, trying fallback...');
+    console.warn('[SaveSystem] Atomic write failed, trying fallback...');
     try {
       savesToStorage(updatedSaves);
     } catch (e: any) {
@@ -628,7 +650,7 @@ export function saveGame(
         performCleanup(0.5);
         try {
           savesToStorage(updatedSaves);
-          devLog.log('[SaveSystem] Save succeeded after aggressive cleanup');
+          console.log('[SaveSystem] Save succeeded after aggressive cleanup');
         } catch {
           console.error('[SaveSystem] All save attempts failed');
         }
@@ -768,7 +790,7 @@ function savesToStorage(saves: GameSave[]): void {
     localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
   } catch (e) {
     if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-      devLog.warn('[SaveSystem] Storage quota exceeded, trimming...');
+      console.warn('[SaveSystem] Storage quota exceeded, trimming...');
       
       const trimmedSaves = saves
         .sort((a, b) => b.timestamp - a.timestamp)

@@ -45,21 +45,9 @@ export function useDirectorSettings({
     return unsubscribe;
   }, []);
 
-  // Sync director settings FROM campaign when campaign changes
-  useEffect(() => {
-    if (!isPlaying || !campaignContext?.activeCampaign?.settings?.directorSettings) return;
-
-    const campaignSettings = campaignContext.activeCampaign.settings.directorSettings;
-    const campaignHash = JSON.stringify(campaignSettings);
-    const localHash = JSON.stringify(directorSettings);
-
-    if (campaignHash !== localHash) {
-      setDirectorSettings(campaignSettings);
-      console.log(`[Director Sync] Synced director settings from campaign: ${campaignSettings.directorType}`);
-    }
-  }, [isPlaying, campaignContext?.activeCampaign?.settings?.directorSettings]);
-
-  // Restore director settings when campaign ID changes
+  // Restore director settings only when the active campaign identity changes.
+  // Do NOT continuously overwrite local/UI updates from a stale campaign blob —
+  // that made in-play settings look saved in the UI but ignored by generation.
   useEffect(() => {
     if (!campaignContext?.activeCampaign?.settings?.directorSettings) return;
     setDirectorSettings(campaignContext.activeCampaign.settings.directorSettings);

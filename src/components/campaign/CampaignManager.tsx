@@ -52,13 +52,10 @@ import {
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
 import { supabase } from '@/integrations/supabase/client';
 import { SaveRecoveryModal, AskAIHelpModal } from '@/components/campaign';
-import { setBig } from '@/lib/bigKVStore';
 import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
 import { Progress } from '@/components/ui/progress';
 import { FailureSnapshot } from '@/lib/saveRecovery/types';
-import { InstallAppButton } from '@/components/adventure/InstallAppButton';
-import { PwaStatusIndicator } from '@/components/PwaStatusIndicator';
 
 // Genre badge colors
 const GENRE_COLORS: Record<string, string> = {
@@ -512,7 +509,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
           } else {
             // Save to local storage
             const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
-            setBig(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+            localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
             
             // Update local index
             const indexRaw = localStorage.getItem('lwe_campaign_index');
@@ -593,7 +590,7 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
       }
       
       const campaignData = fullSave.save_data as unknown as import('@/types/campaign').CampaignData;
-      setBig(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
+      localStorage.setItem(`lwe_campaign_${cloud.campaign_id}`, JSON.stringify(campaignData));
       
       const indexRaw = localStorage.getItem('lwe_campaign_index');
       const index = indexRaw ? JSON.parse(indexRaw) : [];
@@ -738,10 +735,6 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               onChange={handleImportFile}
             />
             
-            <PwaStatusIndicator />
-            <InstallAppButton />
-
-
             <Button
               onClick={onCreateNew}
               disabled={!canCreate}

@@ -337,6 +337,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
             campaignId: campaign.id,
             campaignName: campaign.meta.name,
             directorSettings: campaign.settings.directorSettings,
+            adultContent: campaign.settings.adultContent,
           }, 'CampaignContext');
           
           console.log('[Campaign] Emitted campaign:loaded and settings:director-updated via StateSyncBus');

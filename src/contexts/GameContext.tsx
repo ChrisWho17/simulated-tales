@@ -184,9 +184,6 @@ export interface GameSettings {
   
   // Director settings
   directorSettings: DirectorSettings;
-
-  // PWA — hide install banner/button on the main menu
-  hidePwaInstall?: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
@@ -287,9 +284,6 @@ const defaultSettings: GameSettings = {
   
   // Director settings
   directorSettings: DEFAULT_DIRECTOR_SETTINGS,
-
-  // PWA install banner visible by default
-  hidePwaInstall: false,
 };
 
 // ============================================================================
@@ -561,12 +555,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     // Subscribe to campaign loaded events
     const unsubCampaign = StateSyncBus.subscribe('campaign:loaded', (event) => {
       console.log('[GameContext] Received campaign:loaded via StateSyncBus:', event.payload);
-      if (event.payload.directorSettings) {
-        setSettings(prev => ({
-          ...prev,
-          directorSettings: event.payload.directorSettings!,
-        }));
-      }
+      setSettings(prev => ({
+        ...prev,
+        ...(event.payload.directorSettings
+          ? { directorSettings: event.payload.directorSettings }
+          : {}),
+        ...(typeof event.payload.adultContent === 'boolean'
+          ? { adultContent: event.payload.adultContent }
+          : {}),
+      }));
     });
     
     // Also listen for storage changes (cross-tab sync)
@@ -627,7 +624,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   }, [pressureState]);
   
   const updateSettings = useCallback((partial: Partial<GameSettings>) => {
-    setSettings(prev => ({ ...prev, ...partial }));
+    setSettings(prev => {
+      const next = { ...prev, ...partial };
+      // Keep director hook / generation path in sync with UI writes
+      if (partial.directorSettings) {
+        try {
+          StateSyncBus.emit('settings:director-updated', {
+            directorSettings: partial.directorSettings,
+          });
+        } catch (e) {
+          console.warn('[GameContext] Failed to emit director settings sync:', e);
+        }
+      }
+      return next;
+    });
   }, []);
   
   const setDiceMode = useCallback((mode: DiceMode) => {

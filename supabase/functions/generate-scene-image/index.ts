@@ -39,12 +39,14 @@ async function authenticateRequest(req: Request): Promise<{ userId: string | nul
 // HAIKU LLM PREPROCESSING SYSTEM
 // ============================================================================
 
-const HAIKU_SYSTEM_PROMPT = `You are a master visual scene director. Given GENRE, ERA, TIME_OF_DAY, WEATHER, ACTION, and NARRATOR text, craft a vivid, cinematic image generation prompt (50-80 words).
+const HAIKU_SYSTEM_PROMPT = `You are a master visual scene director. Given GENRE, ERA, TIME_OF_DAY, WEATHER, ACTION, NARRATOR text, and optional WORLD_LORE, craft a vivid, cinematic image generation prompt (50-80 words).
 
-YOUR MISSION: Create prompts that capture the SOUL of the genre, not just surface details.
+YOUR MISSION: Create prompts that capture the SOUL of the genre AND respect this campaign's lore contract — not generic stock genre imagery.
 
 RULES:
 - Open with the genre's signature visual language and artistic style
+- Obey WORLD_LORE when present: tech tier, magic rules, banned elements, and setting details override generic genre defaults
+- Never depict banned elements listed in WORLD_LORE
 - Describe the environment as if composing a film still or painting
 - Include dramatic lighting based on TIME_OF_DAY and WEATHER - light tells the story
 - Capture the emotional atmosphere: tension, wonder, dread, hope, melancholy
@@ -227,7 +229,8 @@ async function extractPromptWithHaiku(
   narratorText: string,
   era?: string,
   timeOfDay?: string,
-  weather?: string
+  weather?: string,
+  worldLore?: string
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
@@ -245,6 +248,7 @@ async function extractPromptWithHaiku(
     if (era) contextParts.push(`ERA: ${era}`);
     if (timeOfDay) contextParts.push(`TIME_OF_DAY: ${timeOfDay}`);
     if (weather) contextParts.push(`WEATHER: ${weather}`);
+    if (worldLore) contextParts.push(`WORLD_LORE:\n${worldLore.slice(0, 900)}`);
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
     
@@ -296,11 +300,20 @@ async function extractPromptWithHaiku(
  */
 function buildFinalPromptFromHaiku(
   extractedPrompt: string,
-  genre: string
+  genre: string,
+  bannedElements?: string[]
 ): { prompt: string; negativePrompt: string } {
   const normalizedGenre = genre.toLowerCase().replace(/[\s-]+/g, '-');
   const styleTokens = genreStyleTokens[normalizedGenre] || genreStyleTokens['fantasy'] || '';
-  const negativePrompt = genreNegativePrompts[normalizedGenre] || DEFAULT_NEGATIVE;
+  const loreNegatives = (bannedElements || [])
+    .map(b => String(b).trim())
+    .filter(Boolean)
+    .slice(0, 16)
+    .join(', ');
+  const negativePrompt = [
+    genreNegativePrompts[normalizedGenre] || DEFAULT_NEGATIVE,
+    loreNegatives,
+  ].filter(Boolean).join(', ');
   
   // Prepend genre style tokens to the extracted prompt
   const prompt = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
@@ -749,6 +762,8 @@ interface SceneImageRequest {
   currentLocation?: string;
   timeOfDay?: string;
   weather?: string;
+  worldLore?: string;
+  bannedElements?: string[];
   npcsPresent?: Array<{ name: string; description: string; currentActivity?: string }>;
   // Legacy
   playerCharacter?: {
@@ -2078,12 +2093,16 @@ serve(async (req) => {
     const era = requestData.era || undefined;
     const timeOfDay = requestData.timeOfDay || undefined;
     const weather = requestData.weather || undefined;
+    const worldLore = requestData.worldLore || undefined;
+    const bannedElements = requestData.bannedElements || undefined;
 
     console.log('Scene generation request:', {
       genre,
       era,
       timeOfDay,
       weather,
+      hasWorldLore: !!worldLore,
+      bannedCount: bannedElements?.length || 0,
       hasNarratorMessage: !!lastNarratorMessage,
       hasUserAction: !!lastUserAction,
       hasCharacterProfile: !!requestData.characterProfile,
@@ -2103,12 +2122,13 @@ serve(async (req) => {
       lastNarratorMessage,
       era,
       timeOfDay,
-      weather
+      weather,
+      worldLore
     );
     
     if (haikuResult.extractedPrompt) {
       // Use Haiku-extracted prompt with genre tokens
-      const haikuPrompt = buildFinalPromptFromHaiku(haikuResult.extractedPrompt, genre);
+      const haikuPrompt = buildFinalPromptFromHaiku(haikuResult.extractedPrompt, genre, bannedElements);
       prompt = haikuPrompt.prompt;
       negativePrompt = haikuPrompt.negativePrompt;
       usedHaiku = true;

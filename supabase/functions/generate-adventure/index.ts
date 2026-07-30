@@ -286,7 +286,6 @@ interface DirectorContext {
   cruelty: 'soft' | 'honest' | 'brutal';
   weirdness: 'grounded' | 'spicy' | 'unhinged';
   guidance: 'none' | 'light' | 'coach';
-  storyRuleset?: string;
 }
 
 interface AdventureRequest {
@@ -1313,15 +1312,6 @@ const DIRECTOR_NARRATOR_PROFILES: Record<string, { voice: string; detailLevel: s
 };
 
 function formatDirectorContext(director: DirectorContext): string {
-  // Player-authored story ruleset — must be honored regardless of director mode.
-  const rulesetBlock = director.storyRuleset && director.storyRuleset.trim()
-    ? `\n\n=== PLAYER STORY RULESET (MANDATORY) ===
-The player set explicit narrator rules for this story. Honor them in every response unless they violate core safety.
-"""
-${director.storyRuleset.trim()}
-"""`
-    : '';
-
   if (director.rawGame || !director.enabled) {
     return `\n\n=== DIRECTOR MODE: RAW GAME ===
 No narrative steering beyond core rules.
@@ -1329,7 +1319,7 @@ No narrative steering beyond core rules.
 - No pacing nudges or artificial DM pressure
 - Core simulation runs, DM stays hands-off
 - Consequences emerge organically from player choices
-- No guiding hand pushing toward specific outcomes${rulesetBlock}`;
+- No guiding hand pushing toward specific outcomes`;
   }
   
   const typeProfile = DIRECTOR_TYPES[director.directorType];
@@ -1432,7 +1422,7 @@ CRITICAL DIRECTOR COMMANDS:
 - No retcons - respect established facts and narrative state
 - Every player action creates change, reaction, or pressure
 - Match your narrative voice to: ${narratorProfile.voice}
-- Use the opening style as a template: "${narratorProfile.openingStyle.slice(0, 80)}..."${rulesetBlock}`;
+- Use the opening style as a template: "${narratorProfile.openingStyle.slice(0, 80)}..."`;
 }
 
 function formatCharacterContext(character: CharacterData, characterAppearance?: string, adultContent?: boolean): string {
@@ -1595,12 +1585,7 @@ serve(async (req) => {
 
     // Build system prompt with character context and memory
     let systemContent = SYSTEM_PROMPT;
-
-    // === LANGUAGE BARRIER (HOISTED TO TOP — must dominate dialogue rendering) ===
-    if (languageContext?.languageInstructions) {
-      systemContent += '\n\n' + languageContext.languageInstructions;
-    }
-
+    
     // Add narrator configuration (voice, detail level, etc.)
     if (narratorConfig) {
       systemContent += formatNarratorStyle(narratorConfig);
@@ -2064,9 +2049,11 @@ CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
       systemContent += '\n\n' + toneContext.toneInstructions;
     }
     
-    // Add language barrier context (already hoisted to top; only append the
-    // LEARN_LANGUAGE trigger guidance here so the main rules stay dominant.)
+    // Add language barrier context
     if (languageContext?.languageInstructions) {
+      systemContent += '\n\n' + languageContext.languageInstructions;
+      
+      // Add language learning trigger instructions
       systemContent += `
 
 LANGUAGE LEARNING (use sparingly - most players don't think about languages):

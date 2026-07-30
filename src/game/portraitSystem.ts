@@ -271,6 +271,8 @@ interface QueueItem {
   era: EraId;
   priority: number;
   baseDescription?: string;
+  npcMeta?: Partial<NPC['meta']> & { name?: string; description?: string };
+  worldLoreHints?: string;
 }
 
 const generationQueue: QueueItem[] = [];
@@ -302,7 +304,9 @@ export function queuePortraitGeneration(
   emotion: EmotionType,
   genre: string,
   era: EraId,
-  baseDescription?: string
+  baseDescription?: string,
+  npcMeta?: QueueItem['npcMeta'],
+  worldLoreHints?: string
 ) {
   const queueKey = `${npcId}-${emotion}`;
   if (generationQueue.some(item => item.key === queueKey)) return;
@@ -314,7 +318,9 @@ export function queuePortraitGeneration(
     genre,
     era,
     priority: EMOTION_PRIORITY[emotion],
-    baseDescription
+    baseDescription,
+    npcMeta,
+    worldLoreHints,
   });
   
   // Sort by priority (common emotions first)
@@ -337,7 +343,9 @@ async function processGenerationQueue() {
         item.emotion,
         item.genre,
         item.era,
-        item.baseDescription
+        item.baseDescription,
+        item.npcMeta,
+        item.worldLoreHints
       );
       
       if (url) {
@@ -362,23 +370,28 @@ async function generatePortraitVariantDirect(
   emotion: EmotionType,
   genre: string,
   era: EraId,
-  baseDescription?: string
+  baseDescription?: string,
+  npcMeta?: QueueItem['npcMeta'],
+  worldLoreHints?: string
 ): Promise<string | null> {
   try {
-    // Build a minimal NPC object for the edge function
+    // Prefer real NPC meta so variants match identity/appearance, not stubs
     const npcData = {
       id: npcId,
       meta: {
-        name: npcId,
-        age: 30,
-        occupation: 'adventurer',
-        description: baseDescription || 'A mysterious figure'
+        name: npcMeta?.name || npcId,
+        age: npcMeta?.age ?? 30,
+        occupation: npcMeta?.occupation || 'adventurer',
+        description: baseDescription || npcMeta?.description || 'A mysterious figure',
+        ...(npcMeta?.traits ? { traits: npcMeta.traits } : {}),
+        ...(npcMeta?.homeLocation ? { homeLocation: npcMeta.homeLocation } : {}),
       }
     };
     
-    const prompt = buildConsistentPrompt(npcData as NPC, emotion, genre, era, baseDescription);
+    const loreSuffix = worldLoreHints ? `\nWORLD LORE CONSTRAINTS: ${worldLoreHints}` : '';
+    const prompt = buildConsistentPrompt(npcData as NPC, emotion, genre, era, baseDescription) + loreSuffix;
     
-    console.log(`[Portrait] Generating ${emotion} portrait for NPC ${npcId} (genre: ${genre})`);
+    console.log(`[Portrait] Generating ${emotion} portrait for NPC ${npcData.meta.name} (genre: ${genre})`);
     
     // Add timeout to prevent hanging - 45 seconds max
     const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => {
@@ -389,7 +402,7 @@ async function generatePortraitVariantDirect(
       body: { 
         npc: npcData,
         prompt,
-        config: { genre, era, emotion }
+        config: { genre, era, emotion, worldLoreHints },
       }
     });
     
@@ -456,8 +469,15 @@ export async function getPortraitForEmotion(
     const baseUrl = neutralCached || npc.portrait || getCachedPortrait(npc.id, 'neutral');
     
     if (baseUrl) {
-      // Queue background generation
-      queuePortraitGeneration(npc.id, portraitKey, genre, era, npc.meta.description);
+      // Queue background generation with real NPC identity
+      queuePortraitGeneration(
+        npc.id,
+        portraitKey,
+        genre,
+        era,
+        npc.meta.description,
+        npc.meta
+      );
       
       return {
         url: baseUrl,
@@ -628,16 +648,16 @@ export async function initializeMainNPC(
     const commonEmotions: EmotionType[] = ['happy', 'angry', 'sad', 'suspicious'];
     
     for (const emotion of commonEmotions) {
-      queuePortraitGeneration(npc.id, emotion, genre, era, npc.meta.description);
+      queuePortraitGeneration(npc.id, emotion, genre, era, npc.meta.description, npc.meta);
     }
     
     // Additional emotions based on NPC type
     if (npc.meta.traits?.includes('lustful') || npc.meta.traits?.includes('friendly')) {
-      queuePortraitGeneration(npc.id, 'flirty', genre, era, npc.meta.description);
+      queuePortraitGeneration(npc.id, 'flirty', genre, era, npc.meta.description, npc.meta);
     }
     
     if (npc.meta.traits?.includes('ambitious') || npc.meta.traits?.includes('cunning')) {
-      queuePortraitGeneration(npc.id, 'smug', genre, era, npc.meta.description);
+      queuePortraitGeneration(npc.id, 'smug', genre, era, npc.meta.description, npc.meta);
     }
   }
 }

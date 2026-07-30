@@ -1,6 +1,10 @@
 // ============================================================================
 // ROBUST SAVE SYSTEM - Singleton with queue, verification, and fallback
 // ============================================================================
+/**
+ * @deprecated Prefer `src/services/unifiedSaveArchitecture.ts` / CampaignContext for new work.
+ * See `docs/SAVE_STACK.md`. Kept for read/compat only — do not add new callers.
+ */
 
 export type StorageBackend = 'localStorage' | 'sessionStorage' | 'memory';
 

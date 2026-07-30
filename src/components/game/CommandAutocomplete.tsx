@@ -186,16 +186,19 @@ export function CommandAutocomplete({
 }: CommandAutocompleteProps) {
   const listRef = useRef<HTMLDivElement>(null);
   
-  // Filter commands based on input
+  // Filter commands based on input — hide secret/workshop cmds from the bare "/" list
   const filteredCommands = React.useMemo(() => {
     if (!inputValue.startsWith('/')) return [];
     
     const query = inputValue.toLowerCase();
+    const publicCommands = SLASH_COMMANDS.filter(cmd => cmd.category !== 'secret');
     
-    // If just "/" show all commands
-    if (query === '/') return SLASH_COMMANDS;
+    // If just "/" show public commands only (secrets stay typed-from-memory)
+    if (query === '/') return publicCommands;
     
     return SLASH_COMMANDS.filter(cmd => {
+      // Secrets only appear after the player has typed a meaningful prefix
+      if (cmd.category === 'secret' && query.length < 3) return false;
       const matchesMain = cmd.command.toLowerCase().startsWith(query);
       const matchesAlias = cmd.aliases.some(a => a.toLowerCase().startsWith(query));
       return matchesMain || matchesAlias;

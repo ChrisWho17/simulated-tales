@@ -5,18 +5,14 @@ import { GENRE_DATA, GameGenre } from '@/types/genreData';
 import { 
   X, Heart, Coins, Shield, Sword, Wand2, Star, Backpack, 
   Plus, Minus, Sparkles, User, RefreshCw, Loader2, Activity,
-  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3, Clapperboard
+  BookHeart, ChevronDown, Search, Pencil, Check, Thermometer, Trophy, BarChart3
 } from 'lucide-react';
-import { NarratorSettingsModal } from './NarratorSettingsModal';
-import { DEFAULT_DIRECTOR_SETTINGS, DirectorSettings, DIRECTOR_TYPES } from '@/game/directorModeSystem';
-import { StateSyncBus } from '@/services/stateSyncBus';
 import { AchievementPerksToggle, useAchievementStatPerks } from '@/components/game/AchievementStatPerks';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { formatHeight, formatWeight, HEIGHT_BAND_CM, type MeasurementUnit } from '@/lib/measurementUnits';
 import { 
   loadPlayerPortraitReference, 
   buildGameplayPortraitPrompt,
@@ -343,52 +339,6 @@ function PortraitDisplay({
     </div>
   );
 }
-// Physicality summary — appears at top of Character Sheet (the "Inspect" view).
-// Lets the player flip between imperial/metric on the fly without changing canonical data.
-function PhysicalitySection({ character }: { character: any }) {
-  const initialUnit: MeasurementUnit = (character?.measurementUnit as MeasurementUnit) || 'imperial';
-  const [unit, setUnit] = useState<MeasurementUnit>(initialUnit);
-  const heightBand = character?.height || 'average';
-  const cmRange = HEIGHT_BAND_CM[heightBand] || HEIGHT_BAND_CM.average;
-  const midCm = Math.round((cmRange[0] + cmRange[1]) / 2);
-  const heightStr = `${formatHeight(midCm, unit)} (${heightBand})`;
-  const weightStr = typeof character?.weightKg === 'number'
-    ? formatWeight(character.weightKg, unit)
-    : 'Not specified';
-  const build = character?.build || 'average';
-  const gender = character?.gender || '—';
-
-  return (
-    <div className="rounded-lg border border-border bg-card/60 p-3 md:p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-primary text-sm md:text-base">Physicality</h3>
-        <div className="flex gap-1 text-[10px]">
-          {(['imperial', 'metric'] as MeasurementUnit[]).map(u => (
-            <button
-              key={u}
-              type="button"
-              onClick={() => setUnit(u)}
-              className={`px-2 py-0.5 rounded border transition-all ${
-                unit === u
-                  ? 'bg-primary/20 border-primary text-primary'
-                  : 'bg-background/50 border-border/40 text-muted-foreground hover:border-primary/40'
-              }`}
-            >
-              {u === 'imperial' ? 'ft / lb' : 'cm / kg'}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div><div className="text-xs text-muted-foreground">Height</div><div className="font-medium">{heightStr}</div></div>
-        <div><div className="text-xs text-muted-foreground">Weight</div><div className="font-medium">{weightStr}</div></div>
-        <div><div className="text-xs text-muted-foreground">Build</div><div className="font-medium capitalize">{build}</div></div>
-        <div><div className="text-xs text-muted-foreground">Gender</div><div className="font-medium capitalize">{gender}</div></div>
-      </div>
-    </div>
-  );
-}
-
 
 export function CharacterSheet({ 
   character, 
@@ -404,27 +354,13 @@ export function CharacterSheet({
   activeConditions = [],
   hasBloodLoss = false
 }: CharacterSheetProps) {
-  const { settings, updateSettings } = useGame();
+  const { settings } = useGame();
   const campaign = useCampaignOptional();
   const sessionStats = useSessionStatsOptional();
   const charClass = findClassAcrossGenres(character.classId);
   const background = findBackgroundAcrossGenres(character.backgroundId);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [showNarratorSettings, setShowNarratorSettings] = useState(false);
-
-  const currentDirector: DirectorSettings = (settings.directorSettings as DirectorSettings | undefined) || DEFAULT_DIRECTOR_SETTINGS;
-  const directorLabel = !currentDirector.enabled || currentDirector.rawGame
-    ? 'Raw Game'
-    : (DIRECTOR_TYPES[currentDirector.directorType]?.name || 'Director');
-
-  const handleNarratorConfirm = (next: DirectorSettings) => {
-    try { updateSettings({ directorSettings: next } as any); } catch (e) { console.warn('[CharacterSheet] updateSettings(director) failed', e); }
-    try {
-      StateSyncBus.emit('settings:director-updated', { directorSettings: next, source: 'user' });
-    } catch { /* ignore */ }
-    setShowNarratorSettings(false);
-  };
   
   // Achievement stat perks
   const { enabled: perksEnabled, statBonuses: perkBonuses } = useAchievementStatPerks(campaign?.activeCampaign?.id);
@@ -517,21 +453,9 @@ export function CharacterSheet({
                 Level {character.level} {charClass?.name || 'Adventurer'} • {background?.name || 'Unknown Origin'}
               </p>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowNarratorSettings(true)}
-                className="gap-1.5 text-xs"
-                title={`Narrator: ${directorLabel}`}
-              >
-                <Clapperboard className="w-4 h-4 text-primary" />
-                <span className="hidden sm:inline">Narrator</span>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
+              <X className="w-5 h-5" />
+            </Button>
           </div>
 
           {/* Scrollable Content */}
@@ -548,10 +472,6 @@ export function CharacterSheet({
                   isInCombat: false,
                 }}
               />
-
-              {/* Physicality (Inspect Character) — height, build, weight in chosen units */}
-              <PhysicalitySection character={character} />
-
 
               {/* Weather & Temperature Section */}
               {settings.enableWeatherEffects && (
@@ -824,14 +744,6 @@ export function CharacterSheet({
           onClose={() => setShowStats(false)} 
         />
       )}
-
-      {/* Narrator Settings Modal — opened on-demand from the Character Sheet */}
-      <NarratorSettingsModal
-        open={showNarratorSettings}
-        onClose={() => setShowNarratorSettings(false)}
-        onConfirm={handleNarratorConfirm}
-        initialSettings={currentDirector}
-      />
     </>
   );
 }

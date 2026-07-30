@@ -7,11 +7,8 @@ import { useCampaignSync } from '@/hooks/useCampaignSync';
 import { usePlayerStateSync } from '@/hooks/usePlayerStateSync';
 import { useSceneIllustration } from '@/hooks/useSceneIllustration';
 import { useNarrativeGeneration } from '@/hooks/useNarrativeGeneration';
-import { useAutoMood } from '@/hooks/useAutoMood';
-
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
-import { StoryRulesetScreen } from './StoryRulesetScreen';
 import { AdventureDisplay } from './AdventureDisplay';
 import { CrashRecoveryPrompt } from './CrashRecoveryPrompt';
 import { NarratorSettingsModal } from './NarratorSettingsModal';
@@ -22,12 +19,14 @@ import { FirstTimeWizard, useFirstTimeWizard } from '@/components/game/FirstTime
 import { SETTINGS_PRESETS } from '@/components/game/SettingsPresetSelector';
 import { loadColorPreference, getSavedColorId } from '@/lib/colorTheme';
 import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
+import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { buildCharacterVisualProfile, CharacterVisualProfile } from '@/lib/characterConsistentIllustration';
 import { playerStateManager } from '@/game/playerStateManager';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
+import { StateSyncBus } from '@/services/stateSyncBus';
 import { toast } from 'sonner';
 import { generateNeutralContinuation } from '@/lib/narrativeFilter';
 import { MechanicsSyncDebugPanel } from '@/components/debug/MechanicsSyncDebugPanel';
@@ -38,6 +37,33 @@ import { setActiveCampaignId } from '@/lib/campaignStorage';
 import { checkAndCleanupStorage, performCleanup, compressAndStore } from '@/lib/storageCleanup';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
+
+/** Map GameContext emotional moods onto the CoreMoodType used by narrative generation. */
+function mapEmotionalMoodToCore(mood?: string): CoreMoodType | null {
+  if (!mood) return null;
+  const map: Record<string, CoreMoodType> = {
+    neutral: 'neutral',
+    happy: 'happy',
+    confident: 'happy',
+    proud: 'happy',
+    loving: 'lusty',
+    determined: 'determined',
+    curious: 'suspicious',
+    calm: 'neutral',
+    anxious: 'fearful',
+    afraid: 'fearful',
+    terrified: 'fearful',
+    sad: 'sad',
+    desperate: 'depressed',
+    heartbroken: 'depressed',
+    angry: 'mad',
+    enraged: 'mad',
+    pained: 'annoyed',
+    exhausted: 'depressed',
+    suspicious: 'suspicious',
+  };
+  return map[mood] || null;
+}
 import { 
   WeatherState, 
   getWeatherNarrativeContext,
@@ -67,8 +93,7 @@ import {
   buildLanguageContext,
   postProcessLanguageInResponse,
   learnLanguage,
-  getLanguageDisplayName,
-  applyPlayerLanguageProfile
+  getLanguageDisplayName
 } from '@/game/languageSystem';
 import {
   NPCGrudgeContext,
@@ -186,9 +211,7 @@ import {
 // Helper functions (formatEmotionalContext, buildBackgroundNPCActionsContext) moved to useNarrativeGeneration hook
 
 import { GameMechanics } from './types';
-
-type GamePhase = 'loading' | 'recovery' | 'scenario' | 'color' | 'character' | 'ruleset' | 'narrator' | 'playing';
-
+import type { GamePhase } from '@/types/gamePhase';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 const STORY_KEY = STORAGE_KEYS.ADVENTURE_STORY;
@@ -196,18 +219,6 @@ const CHARACTER_KEY = STORAGE_KEYS.ADVENTURE_CHARACTER;
 const SCENARIO_KEY = STORAGE_KEYS.ADVENTURE_SCENARIO;
 const GENRE_KEY = STORAGE_KEYS.ADVENTURE_GENRE;
 const COLOR_KEY = STORAGE_KEYS.UI_COLOR_THEME;
-
-// Helper to sanitize character for API - strips large base64 data to reduce payload size
-function sanitizeCharacterForAPI(char: RPGCharacter): RPGCharacter {
-  const charAny = char as any;
-  return {
-    ...char,
-    // Strip large base64 portrait data (>500 chars typically means base64)
-    portraitUrl: charAny.portraitUrl && charAny.portraitUrl.length > 500 ? null : charAny.portraitUrl,
-    // Limit appearance description length
-    appearanceDescription: charAny.appearanceDescription?.slice(0, 2000) || null,
-  } as RPGCharacter;
-}
 
 export function AdventureGame() {
   const navigate = useNavigate();
@@ -262,16 +273,6 @@ export function AdventureGame() {
 
   // Load saved state - also check campaign system
   const [phase, setPhase] = useState<GamePhase>('loading');
-
-  // Broadcast phase so chrome (e.g. hotfix badge) can hide once we leave the main menu.
-  useEffect(() => {
-    try {
-      document.body.dataset.gamePhase = phase;
-      window.dispatchEvent(new CustomEvent('game:phase', { detail: phase }));
-    } catch { /* ignore */ }
-  }, [phase]);
-  
-
   
   const [selectedColorId, setSelectedColorId] = useState<string | null>(() => getSavedColorId());
   const [scenarioSelection, setScenarioSelection] = useState<ScenarioSelection | null>(null);
@@ -304,7 +305,6 @@ export function AdventureGame() {
   const playerActionCount = useRef<number>(0);
   // Pending character awaiting narrator settings confirmation
   const [pendingCharacter, setPendingCharacter] = useState<(RPGCharacter & { portraitUrl?: string }) | null>(null);
-  const [pendingStoryRuleset, setPendingStoryRuleset] = useState<string>('');
   
   // First-time wizard state
   const { shouldShow: shouldShowWizard } = useFirstTimeWizard();
@@ -579,62 +579,6 @@ export function AdventureGame() {
   
   // Streaming narrative hook for word-by-word AI response
   const streamingNarrative = useStreamingNarrative();
-  
-  // Helper to build streaming request body (simplified version for streaming)
-  const buildStreamingRequestBody = useCallback(async (
-    scenario: string,
-    playerAction: string,
-    history: StoryEntry[],
-    diceRoll: any,
-    char: RPGCharacter,
-    context?: { isNewScene?: boolean; justFinishedCombat?: boolean; justRested?: boolean; locationChanged?: boolean }
-  ): Promise<Record<string, any>> => {
-    // Build minimal but complete request for streaming
-    const conversationHistory = history.slice(-6).map(entry => ({
-      role: entry.role === 'user' ? 'user' : 'narrator',
-      content: entry.content.slice(0, 2000), // Truncate for speed
-    }));
-    
-    // Check for pending companion that should appear
-    const pendingCompanion = getNextReadyCompanion({
-      turnNumber: campaignMemory?.campaign.currentTick || 0,
-      isNewScene: context?.isNewScene,
-      justFinishedCombat: context?.justFinishedCombat,
-      justRested: context?.justRested,
-      locationChanged: context?.locationChanged,
-      narrativeContext: history.slice(-1)[0]?.content,
-    });
-    
-    const companionContext = pendingCompanion 
-      ? buildCompanionIntroductionContext(pendingCompanion)
-      : null;
-    
-    return {
-      scenario: scenario.slice(0, 1000),
-      playerAction: cleanPlayerInputForPrompt(playerAction),
-      conversationHistory,
-      character: {
-        name: char.name,
-        classId: char.classId,
-        backgroundId: char.backgroundId,
-        traits: char.traits?.slice(0, 3) || [],
-        stats: char.stats,
-        maxHealth: char.maxHealth,
-        currentHealth: char.currentHealth,
-        level: char.level,
-        inventory: char.inventory?.slice(0, 10).map(i => ({ name: i.name, quantity: i.quantity || 1 })) || [],
-        abilities: char.abilities?.slice(0, 5) || [],
-        skills: char.skills?.slice(0, 5) || [],
-        gold: char.gold || 0,
-      },
-      adultContent: settings.adultContent,
-      diceResult: diceRoll,
-      stream: true, // Request streaming response
-      // Include pending companion context if one should appear
-      ...(companionContext && { pendingCompanionIntroduction: companionContext }),
-      ...(pendingCompanion && { pendingCompanionId: pendingCompanion.companionId }),
-    };
-  }, [settings.adultContent, campaignMemory?.campaign.currentTick]);
 
   // lastFailedAction is now managed by useNarrativeGeneration hook
   const [retryRequested, setRetryRequested] = useState(false);
@@ -708,18 +652,6 @@ export function AdventureGame() {
       }));
     }
   }, [settings.languageSettings]);
-
-  // Sync player nationality/language profile from character (set in character creation)
-  useEffect(() => {
-    if (!character) return;
-    const c = character as any;
-    if (!c.nationality && !c.primaryLanguage && !c.additionalLanguages) return;
-    setLanguageState(prev => applyPlayerLanguageProfile(prev, {
-      nationality: c.nationality,
-      primaryLanguage: c.primaryLanguage,
-      additionalLanguages: c.additionalLanguages,
-    }));
-  }, [character]);
   
   // === PERIODIC VALIDATION: Run every 5 turns to catch drift ===
   // Note: Object registry validation removed - using campaign-isolated inventory system
@@ -759,41 +691,6 @@ export function AdventureGame() {
       toast.success(`Mood changed to ${mood}`);
     }
   }, [currentMood, campaignMemory]);
-
-  // === AUTO-MOOD ENGINE ===
-  // When manualMoodControl is OFF and the mood system is enabled, listen to
-  // EventBus events + new narrative text and adjust mood automatically.
-  const moodIntensityRef = useRef<number>(0.5);
-  const applyAutoMood = useCallback((snap: { mood: CoreMoodType; intensity: number; reason: string; trigger: string }) => {
-    moodIntensityRef.current = snap.intensity;
-    setCurrentMood((prev) => {
-      if (prev === snap.mood) return prev;
-      setMoodHistory((h) => [...h.slice(-19), {
-        mood: snap.mood,
-        timestamp: Date.now(),
-        chapter: campaignMemory?.campaign.currentTick || 1,
-        trigger: `auto:${snap.trigger}`,
-      }]);
-      return snap.mood;
-    });
-  }, [campaignMemory]);
-
-  const storyTail = useMemo(() => {
-    if (!story || story.length === 0) return null;
-    const last = story[story.length - 1];
-    return { id: last.id, role: last.role, content: last.content };
-  }, [story]);
-
-  useAutoMood({
-    enabled: !!settings.enableMoodSystem,
-    manual: !!settings.manualMoodControl,
-    currentMood,
-    currentIntensity: moodIntensityRef.current,
-    currentTick: campaignMemory?.campaign.currentTick ?? 0,
-    storyTail,
-    apply: applyAutoMood,
-  });
-
 
   // Quick initial loading - just apply color theme
   useEffect(() => {
@@ -854,6 +751,7 @@ export function AdventureGame() {
     pendingMechanics,
     latestMechanicsRef, // Synchronous mirror — fixes inventory race condition
     generateNarrative,
+    buildRequestBody,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,
@@ -865,8 +763,13 @@ export function AdventureGame() {
       adultContent: settings.adultContent,
       enableMoodSystem: settings.enableMoodSystem,
       enableWeatherEffects: settings.enableWeatherEffects,
+      enableNPCSchedules: settings.enableNPCSchedules,
+      enableNPCAccents: settings.enableNPCAccents,
+      enableMoodDialogue: settings.enableMoodDialogue,
       narratorConfig: settings.narratorConfig,
       directorSettings: settings.directorSettings,
+      forceVarianceSeedEnabled: (settings as any).forceVarianceSeedEnabled,
+      forceVarianceSeed: (settings as any).forceVarianceSeed,
     },
     diceMode,
     directorSettings,
@@ -897,6 +800,61 @@ export function AdventureGame() {
     getEnhancedPromptWithContract,
     validateContent,
   });
+
+  // Sync combat/event mood from GameContext into the narrative mood used by AI.
+  useEffect(() => {
+    if (settings.manualMoodControl) return;
+    const mapped = mapEmotionalMoodToCore(emotionalState?.currentMood);
+    if (mapped && mapped !== currentMood) {
+      setCurrentMood(mapped);
+    }
+  }, [emotionalState?.currentMood, settings.manualMoodControl]); // intentionally omit currentMood to avoid loops
+
+  // Helper: build streaming body via the SAME rich builder as non-streaming.
+  const buildStreamingRequestBody = useCallback(async (
+    scenario: string,
+    playerAction: string,
+    history: StoryEntry[],
+    diceRoll: any,
+    char: RPGCharacter,
+    context?: { isNewScene?: boolean; justFinishedCombat?: boolean; justRested?: boolean; locationChanged?: boolean; antiEcho?: string }
+  ): Promise<Record<string, any>> => {
+    const pendingCompanion = getNextReadyCompanion({
+      turnNumber: campaignMemory?.campaign.currentTick || 0,
+      isNewScene: context?.isNewScene,
+      justFinishedCombat: context?.justFinishedCombat,
+      justRested: context?.justRested,
+      locationChanged: context?.locationChanged,
+      narrativeContext: history.slice(-1)[0]?.content,
+    });
+
+    const companionContext = pendingCompanion
+      ? buildCompanionIntroductionContext(pendingCompanion)
+      : null;
+
+    const body = buildRequestBody(scenario, playerAction, history, diceRoll, char, {
+      stream: true,
+      mutateTone: true,
+      extraDirectives: [
+        'Do not restate or paraphrase the player action. Advance with consequences and sensory detail.',
+        ...(context?.antiEcho ? [context.antiEcho] : []),
+      ],
+      pendingCompanionIntroduction: companionContext || undefined,
+      pendingCompanionId: pendingCompanion?.companionId,
+    });
+
+    return body || {
+      scenario: scenario.slice(0, 1000),
+      playerAction: cleanPlayerInputForPrompt(playerAction),
+      conversationHistory: history.slice(-6).map(entry => ({
+        role: entry.role === 'user' ? 'user' : 'narrator',
+        content: entry.content.slice(0, 2000),
+      })),
+      character: { name: char.name, classId: char.classId },
+      adultContent: settings.adultContent,
+      stream: true,
+    };
+  }, [buildRequestBody, campaignMemory?.campaign.currentTick, settings.adultContent]);
 
   // === ZONE TRANSITION HANDLER ===
   // Generates narrative description when player moves to a new zone
@@ -940,7 +898,26 @@ export function AdventureGame() {
     setIsLoading(true);
     
     try {
-      // Call AI to describe the transition
+      // Call AI to describe the transition — same rich body as play actions
+      const requestBody = buildRequestBody(
+        scenarioSelection.scenario,
+        `travel to ${newZone.name}`,
+        story,
+        undefined,
+        character,
+        {
+          mutateTone: true,
+          extraDirectives: [
+            `ZONE TRANSITION: Narrate arrival at ${newZone.name}. Capture atmosphere, crowd, lighting, and immediate sensory detail.`,
+          ],
+        }
+      );
+
+      if (requestBody) {
+        // Preserve the rich location transition packet when available
+        requestBody.locationContext = locationTransitionContext;
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
         {
@@ -949,42 +926,13 @@ export function AdventureGame() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({
+          body: JSON.stringify(requestBody || {
             scenario: scenarioSelection.scenario,
             playerAction: `travel to ${newZone.name}`,
             conversationHistory: story.slice(-10).map(e => ({ role: e.role, content: e.content })),
             character: sanitizeCharacterForAPI(character),
             adultContent: settings.adultContent,
-            genreContract: worldBible?.contractSummary || null,
-            narratorConfig: settings.narratorConfig,
             locationContext: locationTransitionContext,
-            // Include consistency context for zone transitions too
-            consistencyContext: {
-              objectOwnership: buildInventoryContextForAI(inventory.state),
-              npcIdentity: buildNPCIdentityContext(),
-              playerCorrections: buildPlayerCorrectionsContext(),
-            },
-            // Narrative contract for immersive zone transitions
-            narrativeContractContext: {
-              universalRules: UNIVERSAL_NARRATIVE_RULES,
-              genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[scenarioSelection.genre] || GENRE_BIBLE['fantasy']}`,
-              spawnPacket: null,
-              isOpening: false,
-            },
-            // Time context for time-aware narrative
-            timeContext: buildTimeContext(timeState),
-            // Director context for zone transitions
-            directorContext: settings.directorSettings ? {
-              enabled: settings.directorSettings.enabled,
-              rawGame: settings.directorSettings.rawGame,
-              mode: settings.directorSettings.mode,
-              directorType: settings.directorSettings.directorType,
-              tightness: settings.directorSettings.tightness,
-              descriptionLevel: settings.directorSettings.descriptionLevel,
-              cruelty: settings.directorSettings.cruelty,
-              weirdness: settings.directorSettings.weirdness,
-              guidance: settings.directorSettings.guidance,
-            } : undefined,
           }),
         }
       );
@@ -1042,7 +990,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, scenarioSelection, playerLocation, moveToZone, activeConsequences, getLocationContext, story, settings.adultContent, worldBible, campaignContext, advanceTurn]);
+  }, [character, scenarioSelection, playerLocation, moveToZone, activeConsequences, getLocationContext, story, settings.adultContent, worldBible, campaignContext, advanceTurn, buildRequestBody, getTimeOfDay, inventory, timeState]);
 
   // Generate initial narrative for campaigns with empty history
   // Track the campaign ID we're generating for to prevent duplicate calls
@@ -1074,6 +1022,20 @@ export function AdventureGame() {
       const TIMEOUT_MS = 8000; // 8 second timeout
       
       try {
+        const requestBody = buildRequestBody(
+          scenarioSelection.scenario,
+          undefined,
+          [],
+          undefined,
+          character,
+          { mutateTone: false }
+        ) || {
+          scenario: scenarioSelection.scenario,
+          conversationHistory: [],
+          character: sanitizeCharacterForAPI(character),
+          adultContent: settings.adultContent,
+        };
+
         // Race between API call and timeout
         const fetchPromise = fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -1083,52 +1045,7 @@ export function AdventureGame() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
-            body: JSON.stringify({
-              scenario: scenarioSelection.scenario,
-              conversationHistory: [],
-              character: sanitizeCharacterForAPI(character),
-              adultContent: settings.adultContent,
-              genreContract: worldBible?.contractSummary || null,
-              narratorConfig: settings.narratorConfig,
-              // Narrative contract for immersive opening scene
-              narrativeContractContext: (() => {
-                const characterClass = character.classId || 'default';
-                const characterInventory = (character.inventory || []).map(i => ({
-                  name: i.name,
-                  quantity: i.quantity || 1,
-                }));
-                
-                const spawnPacket = buildSpawnPacket(
-                  scenarioSelection.scenario,
-                  scenarioSelection.genre,
-                  characterClass,
-                  character.name,
-                  characterInventory,
-                  'Starting Location'
-                );
-                
-                return {
-                  universalRules: UNIVERSAL_NARRATIVE_RULES,
-                  genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[scenarioSelection.genre] || GENRE_BIBLE['fantasy']}`,
-                  spawnPacket: formatSpawnPacket(spawnPacket),
-                  isOpening: true,
-                };
-              })(),
-              // Time context for time-aware opening narrative
-              timeContext: buildTimeContext(timeState),
-              // Director context for initial narrative
-              directorContext: settings.directorSettings ? {
-                enabled: settings.directorSettings.enabled,
-                rawGame: settings.directorSettings.rawGame,
-                mode: settings.directorSettings.mode,
-                directorType: settings.directorSettings.directorType,
-                tightness: settings.directorSettings.tightness,
-                descriptionLevel: settings.directorSettings.descriptionLevel,
-                cruelty: settings.directorSettings.cruelty,
-                weirdness: settings.directorSettings.weirdness,
-                guidance: settings.directorSettings.guidance,
-              } : undefined,
-            }),
+            body: JSON.stringify(requestBody),
           }
         );
         
@@ -1196,7 +1113,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     })();
-  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible]);
+  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
@@ -1252,40 +1169,28 @@ export function AdventureGame() {
       console.error('[AdventureGame] handleCharacterComplete called without scenarioSelection');
       return;
     }
-
-    // Store character temporarily and show the optional Story Ruleset step
+    
+    // Store character temporarily and show narrator settings modal
     setPendingCharacter(char);
-    setPendingStoryRuleset('');
-    setPhase('ruleset');
-    console.log('[AdventureGame] Character created, showing Story Ruleset step');
+    setPhase('narrator');
+    console.log('[AdventureGame] Character created, showing narrator settings');
   }, [scenarioSelection]);
 
-  // (handleRulesetConfirm/Back moved below handleNarratorConfirm to avoid TDZ)
-
-
-
   // Step 3: Narrator settings confirmed -> start game
-  const handleNarratorConfirm = useCallback(async (incomingSettings: DirectorSettings) => {
+  const handleNarratorConfirm = useCallback(async (settings: DirectorSettings) => {
     const char = pendingCharacter;
     if (!char || !scenarioSelection) {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
       return;
     }
-
-    // Merge player-authored Story Ruleset into director settings so every narrator turn honors it
-    const settings: DirectorSettings = {
-      ...incomingSettings,
-      storyRuleset: pendingStoryRuleset || incomingSettings.storyRuleset || '',
-    };
-
-    // Store the director settings (both local state and shared gameSettings so subsequent
-    // turns pick them up via settings.directorSettings even if local closures are stale)
+    
+    // Store the director settings in both hook state and GameContext (UI + AI share one truth)
     setDirectorSettings(settings);
-    try { updateSettings({ directorSettings: settings } as any); } catch (e) { console.warn('[AdventureGame] updateSettings(director) failed', e); }
-
-    // Clear pending character + ruleset
+    updateSettings({ directorSettings: settings });
+    StateSyncBus.emit('settings:director-updated', { directorSettings: settings });
+    
+    // Clear pending character
     setPendingCharacter(null);
-    setPendingStoryRuleset('');
     
     // CRITICAL: Set character and transition to playing phase immediately
     setCharacter(char);
@@ -1351,7 +1256,7 @@ export function AdventureGame() {
           setTimeout(() => reject(new Error('Narrative generation timeout')), 30000)
         );
         narrative = await Promise.race([
-          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true, settings),
+          generateNarrative(scenarioSelection.scenario, undefined, [], undefined, char, true),
           timeoutPromise
         ]);
       } catch (genError) {
@@ -1411,27 +1316,12 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [pendingCharacter, pendingStoryRuleset, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
+  }, [pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign, campaignContext, worldBible]);
 
   // Handler for skipping narrator settings
   const handleNarratorSkip = useCallback(() => {
     handleNarratorConfirm(DEFAULT_DIRECTOR_SETTINGS);
   }, [handleNarratorConfirm]);
-
-  // Step 2.5: Story Ruleset confirmed -> start game with current/default narrator settings.
-  // Narrator settings are now opened on-demand from the Character Sheet (no forced step).
-  const handleRulesetConfirm = useCallback((ruleset: string) => {
-    setPendingStoryRuleset(ruleset || '');
-    const existing = (settings.directorSettings as DirectorSettings | undefined) || directorSettings || DEFAULT_DIRECTOR_SETTINGS;
-    const merged: DirectorSettings = { ...existing, storyRuleset: (ruleset || '').trim() || existing.storyRuleset || '' };
-    console.log(`[AdventureGame] Story Ruleset confirmed (${(ruleset || '').length} chars), starting story with current narrator settings`);
-    handleNarratorConfirm(merged);
-  }, [settings.directorSettings, directorSettings, handleNarratorConfirm]);
-
-  const handleRulesetBack = useCallback(() => {
-    setPendingStoryRuleset('');
-    setPhase('character');
-  }, []);
 
 
 
@@ -1596,6 +1486,42 @@ export function AdventureGame() {
       );
       
       narrative = streamResult?.content || null;
+
+      // Streaming used to skip echo guards — catch action reiteration and retry once.
+      if (narrative && isEchoResponse(narrative, action)) {
+        console.error('[handlePlayerAction] Streaming echo detected — retrying once');
+        streamingNarrative.reset();
+        const retryResult = await streamingNarrative.streamNarrative(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+          await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character, {
+            antiEcho: `ANTI-ECHO: Do NOT restate or paraphrase ("${action.slice(0, 120)}"). Advance with consequences and sensory detail.`,
+          }),
+          { onComplete: () => {}, onError: () => {} }
+        );
+        if (retryResult?.content && !isEchoResponse(retryResult.content, action)) {
+          narrative = retryResult.content;
+        } else {
+          // Fall back to full non-streaming path (has stronger quality gates)
+          narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+        }
+      }
+
+      // Keep language post-processing connected on the streaming path too
+      if (narrative) {
+        narrative = postProcessLanguageInResponse(narrative, languageState);
+      }
+
+      // Genre contract / hard-lock must still gate streaming (simulation-first rule)
+      if (narrative) {
+        const validation = validateContent(narrative);
+        if (!validation.success) {
+          console.warn('[handlePlayerAction] Streaming narrative blocked by world bible:', validation.log);
+          narrative = validation.content || getContextualFallback(scenarioSelection.genre);
+        } else {
+          narrative = validation.content;
+        }
+      }
+
       setIsLoading(false);
       streamingNarrative.reset();
     } else {
@@ -1609,6 +1535,8 @@ export function AdventureGame() {
         role: 'narrator',
         content: narrative,
         timestamp: Date.now(),
+        // Avoid re-typing content the player already watched stream in.
+        skipTypewriter: useStreaming,
       };
       const finalStory = [...updatedStory, narratorEntry];
       setStory(finalStory);
@@ -1987,6 +1915,22 @@ export function AdventureGame() {
       
       // Derive time-of-day string from hour
       const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
+
+      const worldLore = worldBible
+        ? [
+            worldBible.campaignName ? `World: ${worldBible.campaignName}` : null,
+            worldBible.primaryGenre ? `Primary genre: ${worldBible.primaryGenre}` : null,
+            worldBible.techTier ? `Tech tier: ${worldBible.techTier}` : null,
+            worldBible.magicRule ? `Magic: ${worldBible.magicRule}` : null,
+            worldBible.warEra ? `Era: ${worldBible.warEra}` : null,
+            worldBible.bannedElements?.length
+              ? `Banned visuals: ${worldBible.bannedElements.slice(0, 12).join(', ')}`
+              : null,
+            worldBible.contractSummary
+              ? `Lore contract: ${worldBible.contractSummary.slice(0, 600)}`
+              : null,
+          ].filter(Boolean).join('\n')
+        : undefined;
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
@@ -1998,10 +1942,13 @@ export function AdventureGame() {
             lastUserAction: lastPlayerAction,
             messageHistory,
             characterProfile: characterVisualProfile,
-            genre: scenarioSelection?.genre || 'fantasy',
+            genre: scenarioSelection?.genre || worldBible?.primaryGenre || 'fantasy',
             era: worldBible?.warEra || worldBible?.techTier || undefined,
+            currentLocation: playerLocation?.zoneName || undefined,
             timeOfDay: timeOfDayPeriod,
             weather: weatherState?.current || undefined,
+            worldLore,
+            bannedElements: worldBible?.bannedElements?.slice(0, 16) || undefined,
           }),
         }
       );
@@ -2031,7 +1978,7 @@ export function AdventureGame() {
     } finally {
       setGeneratingImageFor(undefined);
     }
-  }, [story, scenarioSelection, characterVisualProfile, weatherState, timeState, worldBible]);
+  }, [story, scenarioSelection, characterVisualProfile, weatherState, timeState, worldBible, playerLocation]);
 
   // Restart game
   const handleRestart = useCallback(() => {
@@ -2081,28 +2028,23 @@ export function AdventureGame() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({
-            scenario: scenarioSelection.scenario,
-            conversationHistory: [],
-            character: sanitizeCharacterForAPI(character),
-            adultContent: settings.adultContent,
-            genreContract: worldBible?.contractSummary || null,
-            narratorConfig: settings.narratorConfig,
-            // Minimal context for regeneration (more likely to succeed)
-            narrativeContractContext: {
-              universalRules: UNIVERSAL_NARRATIVE_RULES,
-              genreBible: `===== GENRE BIBLE =====\n${GENRE_BIBLE[genre] || GENRE_BIBLE['fantasy']}`,
-              spawnPacket: formatSpawnPacket(buildSpawnPacket(
-                scenarioSelection.scenario,
-                genre,
-                character.classId || 'default',
-                character.name,
-                (character.inventory || []).map(i => ({ name: i.name, quantity: i.quantity || 1 })),
-                'Starting Location'
-              )),
-              isOpening: true,
-            },
-          }),
+          body: JSON.stringify(
+            buildRequestBody(
+              scenarioSelection.scenario,
+              undefined,
+              [],
+              undefined,
+              character,
+              { mutateTone: false }
+            ) || {
+              scenario: scenarioSelection.scenario,
+              conversationHistory: [],
+              character: sanitizeCharacterForAPI(character),
+              adultContent: settings.adultContent,
+              genreContract: worldBible?.contractSummary || null,
+              narratorConfig: settings.narratorConfig,
+            }
+          ),
         }
       );
       
@@ -2198,7 +2140,7 @@ export function AdventureGame() {
     } finally {
       setIsLoading(false);
     }
-  }, [character, scenarioSelection, worldLocked, worldBible, settings.adultContent, settings.narratorConfig, saveData, campaignContext]);
+  }, [character, scenarioSelection, worldLocked, worldBible, settings.adultContent, settings.narratorConfig, saveData, campaignContext, buildRequestBody]);
 
   // Rollback story to a specific entry (discard everything after)
   // IMPORTANT: Cancel pending generation and block during active generation
@@ -2264,7 +2206,17 @@ export function AdventureGame() {
 
   // Load save with campaign memory restoration
   const handleLoadSave = useCallback((save: GameSave) => {
-    const gameData = save.gameData as { story?: StoryEntry[]; character?: RPGCharacter };
+    const gameData = save.gameData as {
+      story?: StoryEntry[];
+      character?: RPGCharacter;
+      weatherState?: unknown;
+      timeState?: unknown;
+      directorSettings?: unknown;
+      languageState?: unknown;
+      toneState?: unknown;
+      currentMood?: CoreMoodType;
+      adultContent?: boolean;
+    };
     
     if (gameData.story && gameData.character) {
       // Migrate character health if needed (for old characters with low HP)
@@ -2275,13 +2227,13 @@ export function AdventureGame() {
       setStory(gameData.story);
       setCharacter(migratedCharacter);
       
-      // FIX: Restore world state that legacy saves silently dropped, and
-      // validate the shape against the current schema before applying.
+      // Prefer gameData fields (where we now write). Fall back to save root for
+      // any older experimental saves that put systems on the root object.
       const saveAny = save as any;
       const consistency = validateRestoredState({
-        weatherState: saveAny.weatherState,
-        timeState: saveAny.timeState,
-        directorSettings: saveAny.directorSettings,
+        weatherState: gameData.weatherState ?? saveAny.weatherState,
+        timeState: gameData.timeState ?? saveAny.timeState,
+        directorSettings: gameData.directorSettings ?? saveAny.directorSettings,
       });
       if (!consistency.ok) {
         toast.warning(`Save schema drift: ${consistency.mismatches.length} field(s) defaulted`, {
@@ -2289,14 +2241,38 @@ export function AdventureGame() {
           duration: 5000,
         });
       }
-      if (saveAny.weatherState) {
+      if (gameData.weatherState || saveAny.weatherState) {
         try { setWeatherState(consistency.weatherState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore weather:', e); }
       }
-      if (saveAny.timeState) {
+      if (gameData.timeState || saveAny.timeState) {
         try { setTimeState(consistency.timeState as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore time:', e); }
       }
-      if (saveAny.directorSettings) {
-        try { setDirectorSettings(consistency.directorSettings as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
+      if (gameData.directorSettings || saveAny.directorSettings) {
+        try {
+          const restoredDirector = consistency.directorSettings as any;
+          setDirectorSettings(restoredDirector);
+          updateSettings({ directorSettings: restoredDirector });
+        } catch (e) { console.warn('[handleLoadSave] Failed to restore director settings:', e); }
+      }
+      const restoredLanguage = gameData.languageState ?? saveAny.languageState;
+      const restoredTone = gameData.toneState ?? saveAny.toneState;
+      const restoredMood = gameData.currentMood ?? saveAny.currentMood;
+      const restoredAdult = typeof gameData.adultContent === 'boolean'
+        ? gameData.adultContent
+        : typeof saveAny.adultContent === 'boolean'
+          ? saveAny.adultContent
+          : undefined;
+      if (restoredLanguage) {
+        try { setLanguageState(restoredLanguage as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore language:', e); }
+      }
+      if (restoredTone) {
+        try { setToneState(restoredTone as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore tone:', e); }
+      }
+      if (restoredMood) {
+        try { setCurrentMood(restoredMood as CoreMoodType); } catch (e) { console.warn('[handleLoadSave] Failed to restore mood:', e); }
+      }
+      if (typeof restoredAdult === 'boolean') {
+        updateSettings({ adultContent: restoredAdult });
       }
 
       // Clear ledger — loaded save starts a fresh inventory journal
@@ -2320,20 +2296,23 @@ export function AdventureGame() {
         console.log(`[Campaign Memory] Initialized campaign for legacy save: ${campaignId}`);
       }
       
-      // World Bible is auto-loaded from localStorage by GameContext
-      // If it doesn't exist, we'll create a default one based on saved genre
+      // World Bible is auto-loaded from localStorage by GameContext.
+      // Only invent a default if missing — preserve hardLock from genre contract when known.
       if (!worldBible) {
         const savedGenre = localStorage.getItem(GENRE_KEY) as GameGenre | null;
         if (savedGenre) {
+          const hardLockFromContract =
+            scenarioSelection?.genreContract?.hardLock === true ||
+            campaignContext?.activeCampaign?.worldBible?.hardLock === true;
           initializeWorldBible({
             campaignName: `${save.characterName}'s Adventure`,
             primaryGenre: savedGenre,
             secondaryGenres: [],
-            hardLock: false,
+            hardLock: !!hardLockFromContract,
             tabooList: [],
             intrusionBudget: 2,
           });
-          console.log(`[World Bible] Initialized for restored save: ${savedGenre}`);
+          console.log(`[World Bible] Initialized for restored save: ${savedGenre} (hardLock=${!!hardLockFromContract})`);
         }
       } else {
         console.log(`[World Bible] Using existing: ${worldBible.primaryGenre}`);
@@ -2342,7 +2321,41 @@ export function AdventureGame() {
       setPhase('playing');
       toast.success(`Loaded ${save.characterName}'s adventure`);
     }
-  }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible]);
+  }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible, updateSettings, setDirectorSettings, setWeatherState, setTimeState, scenarioSelection, campaignContext]);
+
+  const getExtendedSaveState = useCallback(() => ({
+    weatherState,
+    timeState,
+    directorSettings: settings.directorSettings || directorSettings,
+    languageState,
+    toneState,
+    currentMood,
+    adultContent: settings.adultContent,
+  }), [weatherState, timeState, settings.directorSettings, settings.adultContent, directorSettings, languageState, toneState, currentMood]);
+
+  // SAVE_STACK ADR: legacy GameSave stays for compat, but also mirror into CampaignContext
+  // (canonical write path) so Opera/campaign continuity keeps living-world fields.
+  const persistExtendedToCampaign = useCallback(() => {
+    if (!campaignContext?.activeCampaign) return;
+    campaignContext.updateCampaign({
+      weatherState,
+      timeState,
+      currentMood,
+      settings: {
+        ...campaignContext.activeCampaign.settings,
+        directorSettings: settings.directorSettings || directorSettings,
+        adultContent: settings.adultContent,
+      },
+    });
+  }, [
+    campaignContext,
+    weatherState,
+    timeState,
+    currentMood,
+    settings.directorSettings,
+    settings.adultContent,
+    directorSettings,
+  ]);
 
   // Show loading screen on initial load or during initialization phase
   if (initialLoading || phase === 'loading') {
@@ -2432,56 +2445,17 @@ export function AdventureGame() {
     );
   }
 
-  // Phase 2.5: World is loading — show world-load screen with director picker overlaid.
-  // Once director is confirmed it starts narrating the opening from there.
-  // Phase 2.25: Optional Story Ruleset — player-authored narrator rules
-  if (phase === 'ruleset' && pendingCharacter && scenarioSelection) {
+  // Phase 2.5: Narrator settings selection
+  if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
     return (
-      <StoryRulesetScreen
-        characterName={pendingCharacter.name}
-        genreLabel={scenarioSelection.genreTitle || scenarioSelection.genre || 'adventure'}
-        onConfirm={handleRulesetConfirm}
-        onBack={handleRulesetBack}
+      <NarratorSettingsModal
+        open={true}
+        onClose={handleNarratorSkip}
+        onConfirm={handleNarratorConfirm}
+        initialSettings={directorSettings}
       />
     );
   }
-
-  if (phase === 'narrator' && pendingCharacter && scenarioSelection) {
-    const genreLabel = scenarioSelection.genreTitle || scenarioSelection.genre || 'your world';
-    return (
-      <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-background via-background to-primary/10">
-        {/* Subtle animated backdrop suggesting the world is being assembled */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.15),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--accent)/0.12),transparent_60%)]" />
-        </div>
-        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          <div className="mb-4 text-xs uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
-            Loading World
-          </div>
-          <h1 className="text-2xl md:text-4xl font-semibold text-foreground/90 max-w-2xl">
-            {genreLabel}
-          </h1>
-          <p className="mt-3 text-sm md:text-base text-muted-foreground max-w-xl">
-            Stitching landscapes, peopling streets, calibrating fate for {pendingCharacter.name}…
-          </p>
-          <div className="mt-8 flex items-center gap-2 text-muted-foreground/70">
-            <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-            <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-            <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
-          </div>
-        </div>
-        {/* Director picker overlay — once confirmed, the director begins narrating */}
-        <NarratorSettingsModal
-          open={true}
-          onClose={handleNarratorSkip}
-          onConfirm={handleNarratorConfirm}
-          initialSettings={directorSettings}
-        />
-      </div>
-    );
-  }
-
 
   // Phase 3: Playing
   if (phase === 'playing' && character) {
@@ -2531,6 +2505,8 @@ export function AdventureGame() {
           isComplete: streamingNarrative.isComplete,
           error: streamingNarrative.error,
         } : null}
+        getExtendedSaveState={getExtendedSaveState}
+        onPersistExtendedToCampaign={persistExtendedToCampaign}
       />
       <MechanicsSyncDebugPanel
         pendingMechanics={pendingMechanics}

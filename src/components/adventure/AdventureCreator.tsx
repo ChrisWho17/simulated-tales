@@ -3,7 +3,7 @@ import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardInteractive } from '@/components/ui/card';
-import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload, Crosshair, ArrowRight } from 'lucide-react';
+import { Sparkles, Shuffle, Sword, Rocket, Search, Skull, Castle, Compass, Zap, Sun, Loader2, ChevronDown, Shield, Lock, Plus, X, FolderOpen, Trash2, Palette, LogIn, Upload } from 'lucide-react';
 import { loadCampaignIndex, loadCampaign, deleteCampaignData, formatPlayTime, formatLastPlayed, setActiveCampaignId } from '@/lib/campaignStorage';
 import { CampaignMetadata } from '@/types/campaign';
 import { GameGenre, GENRE_DATA, WarEra, detectWarEra, getWarGenreData } from '@/types/genreData';
@@ -17,6 +17,8 @@ import { GENRE_CLASSES, getGenreClasses, GenreClassOption } from '@/game/storyIn
 import { Slider } from '@/components/ui/slider';
 import { GameSettingsMenu } from './GameSettingsMenu';
 import { LifetimeStatsModal } from './LifetimeStatsModal';
+import { WhatsNewModal } from './WhatsNewModal';
+import { VersionHotfixesBadge } from './VersionHotfixesBadge';
 import { AuthModal } from '@/components/cloud/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSyncStatus } from '@/hooks/useCloudSyncStatus';
@@ -84,7 +86,6 @@ const PRESET_SCENARIOS = [
   { id: 'pirate', genre: 'pirate' as GameGenre, title: 'High Seas Adventure', description: 'Captain your own ship across treacherous waters in search of legendary treasure.', icon: Compass, gradient: 'genre-pirate' },
   { id: 'cyberpunk', genre: 'cyberpunk' as GameGenre, title: 'Neon Dystopia', description: 'Navigate the neon-lit streets of a corporate-controlled megacity as a skilled hacker or street samurai.', icon: Zap, gradient: 'genre-cyberpunk' },
   { id: 'war', genre: 'war' as GameGenre, title: 'Theater of War', description: 'Experience the chaos and heroism of warfare across any era - ancient battles, modern conflicts, or future wars.', icon: Shield, gradient: 'genre-western' },
-  { id: 'military', genre: 'war' as GameGenre, title: 'Soldier on Tour', description: 'An average soldier deployed on active duty. Classic armor and camo, standard-issue gear, and the weight of orders over your shoulders.', icon: Crosshair, gradient: 'genre-western' },
   { id: 'western', genre: 'western' as GameGenre, title: 'Frontier Justice', description: 'Ride into a dusty frontier town where outlaws rule and justice needs a champion.', icon: Sun, gradient: 'genre-western' },
   { id: 'modern_life', genre: 'modern_life' as GameGenre, title: 'Modern Life', description: 'Start fresh in a bustling city. Build your career, nurture relationships, and chase your dreams in everyday life.', icon: Sparkles, gradient: 'genre-mystery' },
 ];
@@ -224,7 +225,6 @@ function LoadStoryDropdown({ onLoad }: { onLoad?: (campaignId: string) => void }
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Delete campaign ${campaign.name}`}
                 className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={(e) => handleDelete(e, campaign.id, campaign.name)}
               >
@@ -545,6 +545,7 @@ function ImportSaveButton({ onLoad }: { onLoad?: (campaignId: string) => void })
 }
 
 export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: AdventureCreatorProps) {
+  const [customScenario, setCustomScenario] = useState('');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [selectedDiceMode, setSelectedDiceMode] = useState<DiceMode>('story');
   const [showColorSplash, setShowColorSplash] = useState(false);
@@ -610,21 +611,36 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     return allGenres.filter(g => !selectedIds.includes(g.id));
   }, [allGenres, primaryGenre, secondaryGenres]);
 
+  // Parse genre tags from custom scenario text
+  const parsedGenreTags = useMemo(() => {
+    if (!customScenario.trim() || hardLock) return [];
+    return parseGenreTagsFromText(customScenario, primaryGenre);
+  }, [customScenario, primaryGenre, hardLock]);
 
-  // Secondary genres are manually selected only
+  // Combine manually selected secondary genres with parsed tags
   const effectiveSecondaryGenres = useMemo(() => {
+    const combined: SecondaryGenre[] = [...secondaryGenres];
+    
+    // Add parsed tags that aren't already manually selected
+    for (const tag of parsedGenreTags) {
+      if (!combined.some(s => s.genreId === tag.genre)) {
+        combined.push({ genreId: tag.genre, blendStrength: tag.blendStrength });
+      }
+    }
+    
     // Enforce max total of 50% across all secondaries
     let totalBlend = 0;
     const capped: SecondaryGenre[] = [];
-    for (const sg of secondaryGenres.slice(0, MAX_SECONDARY_GENRES)) {
+    for (const sg of combined.slice(0, MAX_SECONDARY_GENRES)) {
       const remaining = MAX_SECONDARY_TOTAL - totalBlend;
       if (remaining <= 0) break;
       const cappedStrength = Math.min(sg.blendStrength, remaining);
       capped.push({ ...sg, blendStrength: cappedStrength });
       totalBlend += cappedStrength;
     }
+    
     return capped;
-  }, [secondaryGenres]);
+  }, [secondaryGenres, parsedGenreTags]);
 
   // Build genre contract config for display (uses effective secondary genres)
   const genreContract: GenreContractConfig = useMemo(() => ({
@@ -633,8 +649,10 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     hardLock
   }), [primaryGenre, effectiveSecondaryGenres, hardLock]);
 
-  // Default to modern war era since custom scenario input was removed
-  const detectedWarEra = useMemo(() => 'modern' as const, []);
+  // Detect war era from text when war genre is active
+  const detectedWarEra = useMemo(() => {
+    return detectWarEra(customScenario);
+  }, [customScenario]);
 
   // Get genre data - for war, use era-specific data
   const activeGenreData = useMemo(() => {
@@ -707,25 +725,33 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
     });
   };
 
-  const handleContinueWithGenre = () => {
-    saveDiceMode(selectedDiceMode);
-    const title = getGenreTitle(primaryGenre);
-    onSelect({
-      scenario: '',
-      genre: primaryGenre,
-      genreTitle: title,
-      diceMode: selectedDiceMode,
-      genreContract: {
+  const handleCustomStart = () => {
+    if (customScenario.trim()) {
+      saveDiceMode(selectedDiceMode);
+      // Strip genre tags from the scenario text for cleaner narrative
+      const cleanScenario = stripGenreTagsFromText(customScenario.trim());
+      const finalContract: GenreContractConfig = {
         primaryGenre,
         secondaryGenres: effectiveSecondaryGenres,
-        hardLock,
-      },
-      characterClass: selectedClass,
-    });
+        hardLock
+      };
+      onSelect({ 
+        scenario: cleanScenario || customScenario.trim(), 
+        genre: primaryGenre, 
+        genreTitle: getGenreTitle(primaryGenre),
+        diceMode: selectedDiceMode,
+        genreContract: finalContract,
+        characterClass: selectedClass
+      });
+    }
   };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* What's New Modal - shows on version update */}
+      <WhatsNewModal />
+      <VersionHotfixesBadge />
+      
       {/* Color Splash Screen */}
       <ColorSplashScreen open={showColorSplash} onClose={() => setShowColorSplash(false)} />
       
@@ -751,9 +777,14 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center gap-3 mb-3">
             <h1 className="text-5xl md:text-7xl font-display font-bold text-gradient-primary tracking-wider">
-              <span>UNTOLD</span>
-              <span className="sr-only"> — AI Text Adventure RPG</span>
+              UNTOLD
             </h1>
+            <span 
+              className="text-[10px] md:text-xs font-mono text-muted-foreground/60 bg-muted/30 px-2 py-1 rounded border border-border/30 self-end mb-2 cursor-default"
+              title={`Build: ${BUILD_NUMBER}`}
+            >
+              {VERSION_STRING}
+            </span>
           </div>
           <p className="text-muted-foreground uppercase tracking-[0.4em] text-sm">
             Begin Your Unique Adventure
@@ -776,7 +807,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setShowColorSplash(true)}
-                    aria-label="Open color theme picker"
                     className="flex items-center justify-center w-10 h-10 rounded-lg bg-black/30 border border-[rgba(255,255,255,0.1)] hover:border-primary/50 transition-all duration-300 group"
                   >
                     <Palette className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -844,8 +874,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 <LoadStoryDropdown onLoad={onLoadCampaign} />
               </div>
             </div>
-
-
 
             {/* Primary Genre Section */}
             <div className="space-y-4">
@@ -995,7 +1023,6 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label="Remove secondary genre"
                           className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleRemoveSecondaryGenre(index)}
                         >
@@ -1028,17 +1055,104 @@ export function AdventureCreator({ onSelect, onLoadCampaign, isLoading }: Advent
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Continue button — proceed to character creation with selected genre */}
+          {/* Custom Scenario - Glass Panel */}
+          <div className="glass-panel p-6 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+            <h2 className="text-primary font-display text-xl tracking-wide mb-4">Create Your Own Story</h2>
+            
+            <div className="flex gap-3">
+              <Input
+                value={customScenario}
+                onChange={(e) => setCustomScenario(e.target.value)}
+                placeholder="Describe your scenario... (try '+horror 25%' or '+war 20% +mystery 15%' - up to 50% across 3 genres)"
+                className="flex-1 bg-black/30 border-[rgba(139,92,246,0.3)] text-foreground placeholder:text-muted-foreground focus:border-primary focus:shadow-glow h-12"
+                onKeyDown={(e) => e.key === 'Enter' && customScenario.trim() && handleCustomStart()}
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={handleCustomStart}
+                disabled={!customScenario.trim() || isLoading}
+                variant="default"
+                size="lg"
+              >
+                Begin
+              </Button>
+            </div>
+
+            {/* Parsed genre tags indicator */}
+            {parsedGenreTags.length > 0 && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Detected genres:</span>
+                {parsedGenreTags.map((tag) => (
+                  <span 
+                    key={tag.genre} 
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30"
+                  >
+                    <span>{GENRE_ICONS[tag.genre]}</span>
+                    <span>{tag.name}</span>
+                    <span className="text-muted-foreground">({tag.blendStrength}%)</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {/* Quick Start - use genre contract without custom scenario */}
+            <div className="mt-4 flex items-center gap-3">
+              <div className="flex-1 h-px bg-border/30" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+              <div className="flex-1 h-px bg-border/30" />
+            </div>
             <Button
-              onClick={handleContinueWithGenre}
+              onClick={() => {
+                const genreName = allGenres.find(g => g.id === primaryGenre)?.name || primaryGenre;
+                const className = availableClasses.find(c => c.id === selectedClass)?.name || '';
+                const defaultScenario = className && selectedClass !== 'default'
+                  ? `Begin a ${genreName.toLowerCase()} adventure as a ${className.toLowerCase()}.`
+                  : `Begin a ${genreName.toLowerCase()} adventure.`;
+                saveDiceMode(selectedDiceMode);
+                onSelect({
+                  scenario: defaultScenario,
+                  genre: primaryGenre,
+                  genreTitle: getGenreTitle(primaryGenre),
+                  diceMode: selectedDiceMode,
+                  genreContract,
+                  characterClass: selectedClass
+                });
+              }}
               disabled={isLoading}
-              className="w-full mt-6"
-              size="lg"
+              variant="outline"
+              className="w-full mt-3 bg-background/30 border-primary/30 hover:bg-primary/10"
             >
-              Continue with {allGenres.find(g => g.id === primaryGenre)?.name || 'Selected Genre'}
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <Sparkles className="w-4 h-4 mr-2" />
+              Quick Start as {availableClasses.find(c => c.id === selectedClass)?.name || 'Adventurer'}
+              {secondaryGenres.length > 0 && ` + ${secondaryGenres.length} blend${secondaryGenres.length > 1 ? 's' : ''}`}
             </Button>
+
+            {/* Role Preview */}
+            {customScenario.trim() && (
+              <div className="mt-3 p-3 rounded-lg bg-background/30 border border-border/30">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Available roles for {activeGenreData.name}
+                  {primaryGenre === 'war' && ` (${detectedWarEra} era detected)`}:
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {activeGenreData.classes.slice(0, 6).map((cls) => (
+                    <span 
+                      key={cls.id}
+                      className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary border border-primary/20"
+                    >
+                      {cls.name}
+                    </span>
+                  ))}
+                  {activeGenreData.classes.length > 6 && (
+                    <span className="px-2 py-0.5 text-xs text-muted-foreground">
+                      +{activeGenreData.classes.length - 6} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Divider */}

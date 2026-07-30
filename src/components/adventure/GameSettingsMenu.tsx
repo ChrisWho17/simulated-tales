@@ -1,14 +1,15 @@
 // Compact game settings menu for story first page
 // Filtered to game settings only - no world/character/life settings
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck, Download } from 'lucide-react';
+import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useGame } from '@/contexts/GameContext';
+import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
-import { DEFAULT_DIRECTOR_SETTINGS, DIRECTOR_TYPES, DirectorType } from '@/game/directorModeSystem';
+import { DEFAULT_DIRECTOR_SETTINGS, DIRECTOR_TYPES, DirectorType, DirectorSettings } from '@/game/directorModeSystem';
 import { cn } from '@/lib/utils';
 import {
   Collapsible,
@@ -27,8 +28,6 @@ import { BackupRestoreModal } from './BackupRestoreModal';
 import { PreMigrationBackupModal } from './PreMigrationBackupModal';
 import { DataIntegrityPanel } from './DataIntegrityPanel';
 import { SystemsTestPanel, TestConfig, TestScenario } from './SystemsTestPanel';
-import { PwaDebugControls } from './PwaDebugControls';
-import { InstallAppPromoBanner } from './InstallAppPromoBanner';
 import { GameGenre } from '@/types/genreData';
 
 export interface GameSettingsMenuProps {
@@ -54,6 +53,7 @@ const QUICK_DIRECTOR_TYPES: DirectorType[] = [
 export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, isLoading }: GameSettingsMenuProps) {
   const navigate = useNavigate();
   const { settings, updateSettings, diceMode, setDiceMode } = useGame();
+  const campaignContext = useCampaignOptional();
   const [isOpen, setIsOpen] = useState(false);
   const [showWipeModal, setShowWipeModal] = useState(false);
   const [showPreMigrationBackup, setShowPreMigrationBackup] = useState(false);
@@ -83,19 +83,41 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
   const currentDirectorType = settings.directorSettings?.directorType || DEFAULT_DIRECTOR_SETTINGS.directorType;
   const isDirectorEnabled = settings.directorSettings?.enabled ?? DEFAULT_DIRECTOR_SETTINGS.enabled;
 
+  const applyDirectorSettings = useCallback((newDirectorSettings: DirectorSettings) => {
+    updateSettings({ directorSettings: newDirectorSettings });
+    if (campaignContext?.activeCampaign) {
+      campaignContext.updateCampaign({
+        settings: {
+          ...campaignContext.activeCampaign.settings,
+          directorSettings: newDirectorSettings,
+        },
+      });
+    }
+  }, [updateSettings, campaignContext]);
+
+  const syncCampaignSetting = useCallback((partial: Partial<typeof settings>) => {
+    updateSettings(partial);
+    if (campaignContext?.activeCampaign && partial.adultContent !== undefined) {
+      campaignContext.updateCampaign({
+        settings: {
+          ...campaignContext.activeCampaign.settings,
+          adultContent: partial.adultContent,
+        },
+      });
+    }
+  }, [updateSettings, campaignContext, settings]);
+
   const handleDirectorTypeChange = (type: DirectorType) => {
-    updateSettings({
-      directorSettings: {
-        ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
-        directorType: type,
-        enabled: true,  // Auto-enable when selecting a type
-        rawGame: false, // Disable raw game when selecting a director
-      }
+    applyDirectorSettings({
+      ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
+      directorType: type,
+      enabled: true,  // Auto-enable when selecting a type
+      rawGame: false, // Disable raw game when selecting a director
     });
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("w-full max-w-full min-w-0", className)}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
       <CollapsibleTrigger asChild>
         <Button
           variant="outline"
@@ -179,7 +201,7 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               </div>
               <Switch 
                 checked={settings.adultContent}
-                onCheckedChange={(checked) => updateSettings({ adultContent: checked })}
+                onCheckedChange={(checked) => syncCampaignSetting({ adultContent: checked })}
                 className="flex-shrink-0"
               />
             </div>
@@ -212,27 +234,6 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               onCheckedChange={(checked) => updateSettings({ enableSystemHighlight: checked })}
             />
           </div>
-
-          {/* Hide Hotfix Badge */}
-          <div className="flex items-center justify-between p-2.5 rounded-lg border border-border/30 bg-background/30 hover:bg-muted/10 transition-colors">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="text-xs">Hide Hotfix Badge</span>
-                <span className="text-[10px] text-muted-foreground">Hide the floating version & patch-notes badge on the main menu</span>
-              </div>
-            </div>
-            <Switch
-              checked={!!(settings as any).hideHotfixBadge}
-              onCheckedChange={(checked) => {
-                updateSettings({ hideHotfixBadge: checked } as any);
-                try { window.dispatchEvent(new CustomEvent('settings:updated')); } catch { /* ignore */ }
-              }}
-            />
-          </div>
-
-
-
 
           {/* Testing — deterministic variance seed */}
           <div className="p-2.5 rounded-lg border border-border/30 bg-background/30">
@@ -287,12 +288,10 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               </div>
               <Switch 
                 checked={isDirectorEnabled}
-                onCheckedChange={(checked) => updateSettings({ 
-                  directorSettings: { 
+                onCheckedChange={(checked) => applyDirectorSettings({ 
                     ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
                     enabled: checked,
                     rawGame: !checked ? true : (settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame)
-                  }
                 })}
               />
             </div>
@@ -341,11 +340,9 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               <Switch 
                 checked={settings.directorSettings?.rawGame ?? DEFAULT_DIRECTOR_SETTINGS.rawGame}
                 disabled={!isDirectorEnabled}
-                onCheckedChange={(checked) => updateSettings({ 
-                  directorSettings: { 
+                onCheckedChange={(checked) => applyDirectorSettings({ 
                     ...(settings.directorSettings || DEFAULT_DIRECTOR_SETTINGS),
                     rawGame: checked
-                  }
                 })}
               />
             </div>
@@ -398,18 +395,6 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
             <span className="text-sm">Data Integrity Check</span>
           </Button>
           
-          {/* PWA install — lives in Game Settings only */}
-          <div className="p-2 rounded-lg border border-border/30 bg-background/30">
-            <div className="flex items-center gap-2 mb-2">
-              <Download className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-semibold">Install App</span>
-            </div>
-            <InstallAppPromoBanner />
-          </div>
-
-          {/* PWA install debug */}
-          <PwaDebugControls />
-
           {/* Data Wipe Button */}
           <Button
             variant="outline"

@@ -12,7 +12,15 @@ interface UseSceneIllustrationOptions {
   story: StoryEntry[];
   weatherState?: WeatherState;
   timeState?: GameTimeState;
-  worldBible?: { warEra?: string; techTier?: string } | null;
+  worldBible?: {
+    warEra?: string;
+    techTier?: string;
+    magicRule?: string;
+    primaryGenre?: string;
+    contractSummary?: string;
+    bannedElements?: string[];
+    campaignName?: string;
+  } | null;
   sceneIllustrationsEnabled: boolean;
 }
 
@@ -63,6 +71,23 @@ export function useSceneIllustration({
       // Derive time-of-day string from hour
       const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
 
+      // Compact lore contract so imagery respects world bible, not generic genre stock
+      const worldLore = worldBible
+        ? [
+            worldBible.campaignName ? `World: ${worldBible.campaignName}` : null,
+            worldBible.primaryGenre ? `Primary genre: ${worldBible.primaryGenre}` : null,
+            worldBible.techTier ? `Tech tier: ${worldBible.techTier}` : null,
+            worldBible.magicRule ? `Magic: ${worldBible.magicRule}` : null,
+            worldBible.warEra ? `Era: ${worldBible.warEra}` : null,
+            worldBible.bannedElements?.length
+              ? `Banned visuals: ${worldBible.bannedElements.slice(0, 12).join(', ')}`
+              : null,
+            worldBible.contractSummary
+              ? `Lore contract: ${worldBible.contractSummary.slice(0, 600)}`
+              : null,
+          ].filter(Boolean).join('\n')
+        : undefined;
+
       // Create AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
@@ -78,11 +103,13 @@ export function useSceneIllustration({
             lastUserAction: lastPlayerAction,
             messageHistory,
             characterProfile: characterVisualProfile,
-            genre: genre || 'fantasy',
+            genre: genre || worldBible?.primaryGenre || 'fantasy',
             era: worldBible?.warEra || worldBible?.techTier || undefined,
             currentLocation: trigger.location || undefined,
             timeOfDay: timeOfDayPeriod,
             weather: weatherState?.current || undefined,
+            worldLore,
+            bannedElements: worldBible?.bannedElements?.slice(0, 16) || undefined,
           }),
         }
       );
@@ -127,7 +154,12 @@ export function useSceneIllustration({
     );
 
     if (trigger) {
-      generateSceneIllustration(content, trigger);
+      // Defer off the critical play path so narrative paint isn't hitching on image work
+      const schedule =
+        typeof requestIdleCallback !== 'undefined'
+          ? (cb: () => void) => requestIdleCallback(() => cb(), { timeout: 1500 })
+          : (cb: () => void) => setTimeout(cb, 250);
+      schedule(() => generateSceneIllustration(content, trigger));
     }
   }, [generateSceneIllustration, sceneIllustrationsEnabled]);
 

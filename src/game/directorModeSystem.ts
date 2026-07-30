@@ -83,8 +83,6 @@ export interface DirectorSettings {
   cruelty: PersonalityLevel;
   weirdness: WeirdnessLevel;
   guidance: GuidanceLevel;
-  // Optional player-authored story ruleset (narrator must honor)
-  storyRuleset?: string;
 }
 
 // ============= DEFAULT SETTINGS =============
@@ -100,7 +98,6 @@ export const DEFAULT_DIRECTOR_SETTINGS: DirectorSettings = {
   cruelty: 'honest',
   weirdness: 'grounded',
   guidance: 'light',
-  storyRuleset: '',
 };
 
 // ============= MODE BASELINES =============

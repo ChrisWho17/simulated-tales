@@ -16,10 +16,6 @@ export interface PlayerPortraitReference {
   gender: string;
   build: string;
   height: string;
-  /** Optional exact height (cm) when player used the custom-height override. */
-  customHeightCm?: number;
-  /** Optional approximate weight in kg, used for body-mass framing in imagery. */
-  weightKg?: number;
   skinTone: string;
   hairColor: string;
   hairStyle: string;
@@ -68,8 +64,6 @@ export function savePlayerPortraitReference(
     gender?: string;
     build?: string;
     height?: string;
-    customHeightCm?: number;
-    weightKg?: number;
     skinTone?: string;
     hairColor?: string;
     hairStyle?: string;
@@ -92,8 +86,6 @@ export function savePlayerPortraitReference(
     gender: characterData.gender || 'male',
     build: characterData.build || 'average',
     height: characterData.height || 'average',
-    customHeightCm: characterData.customHeightCm ?? characterData.tieredAppearance?.simple?.customHeightCm,
-    weightKg: characterData.weightKg,
     skinTone: characterData.skinTone || 'medium',
     hairColor: characterData.hairColor || 'brown',
     hairStyle: characterData.hairStyle || 'short',
