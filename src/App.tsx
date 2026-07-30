@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,21 +15,26 @@ import { AccessibilityProvider } from "@/components/game/AccessibilitySettings";
 import { SessionAchievementBridge } from "@/components/game/SessionAchievementBridge";
 import { SessionStatsBridge } from "@/components/game/SessionStatsBridge";
 import { bridgePlayerStateToUnifiedInventory } from "@/game/unifiedInventoryBridge";
-import { StartupIntegrityMonitor } from "@/components/game/StartupIntegrityMonitor";
+import { DeferredStartupIntegrityMonitor } from "@/components/game/DeferredStartupIntegrityMonitor";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { RecoveryBoundary } from "@/components/error/RecoveryBoundary";
 import { VersionHotfixesBadgeGate } from "@/components/adventure/VersionHotfixesBadgeGate";
 import { WhatsNewModal } from "@/components/adventure/WhatsNewModal";
+import { DevOnlyRoute } from "@/components/routing/DevOnlyRoute";
+import { devLog } from "@/lib/devLog";
 
 import { repairCorruptedStorage } from "@/lib/storageRepair";
 import Index from "./pages/Index";
 import Campaigns from "./pages/Campaigns";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import LoadoutTest from "./pages/LoadoutTest";
-import InventoryTest from "./pages/InventoryTest";
 import AchievementGallery from "./pages/AchievementGallery";
-import DebugPwa from "./pages/DebugPwa";
+
+// Workshop / diagnostic harnesses: lazy so they stay out of the main bundle,
+// and gated by DevOnlyRoute so they are unreachable on the public play surface.
+const LoadoutTest = lazy(() => import("./pages/LoadoutTest"));
+const InventoryTest = lazy(() => import("./pages/InventoryTest"));
+const DebugPwa = lazy(() => import("./pages/DebugPwa"));
 
 import "@/styles/untold-story-engine.css";
 
@@ -46,10 +52,11 @@ bridgePlayerStateToUnifiedInventory();
 // Narrative action handler for inventory changes
 const handleInventoryNarrativeAction = (action: InventoryAction) => {
   if (action.narrativeHook) {
-    console.log('[INVENTORY→NARRATIVE]', action.narrativeHook);
+    devLog.log('[INVENTORY→NARRATIVE]', action.narrativeHook);
     // This will be picked up by the game's narrative system
   }
 };
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
