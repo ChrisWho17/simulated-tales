@@ -10,6 +10,31 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    "version": "0.4.801",
+    "date": "July 2026",
+    "title": "Creators Mark Consolidation",
+    "highlights": [
+      "Streaming and non-streaming play now share one rich narrative request — memory, mood, weather, time, language, NPCs, director and genre contract stay connected either way",
+      "Director settings, adult content and language now sync between settings, campaign and generation with no stale state",
+      "Save stack documented with a single source of truth; legacy saves still load"
+    ],
+    "features": [
+      "Local cache pipeline options (mirror / local-only / cloud-only) surfaced in storage settings"
+    ],
+    "improvements": [
+      "Streamed replies skip the typewriter replay, removing mid-scene hitching",
+      "Scene imagery receives world lore and banned elements for stronger consistency",
+      "Companion context attaches on both generation paths",
+      "Workshop and diagnostics tools stay off the public play surface"
+    ],
+    "fixes": [
+      "Anti-echo retry stops the narrator from parroting your input",
+      "Portrait variants use real character data instead of a placeholder",
+      "Restored missing runtime dependencies that could break the build",
+      "Cleaned up settings typing so storage, install banner and hotfix badge preferences persist correctly"
+    ]
+  },
+  {
     "version": "0.4.7",
     "date": "June 2026",
     "title": "Heights, Weights & Two-Tone Hair",
