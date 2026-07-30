@@ -34,6 +34,7 @@ import { inventoryRollbackLedger } from '@/lib/inventoryRollbackLedger';
 import { GameSave, getMostRecentSave } from '@/lib/saveSystem';
 import { setActiveCampaignId } from '@/lib/campaignStorage';
 import { checkAndCleanupStorage, performCleanup, compressAndStore } from '@/lib/storageCleanup';
+import { stripHeavyImagesFromStory, toDisplayImageUrl } from '@/lib/sceneImageUrl';
 import { formatMemoryContextForAI, processActionForIdentity } from '@/game/campaignMemorySystem';
 import { CoreMoodType, MOOD_COLORS, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
 
@@ -726,8 +727,10 @@ export function AdventureGame() {
     checkAndCleanupStorage();
     
     const attemptSave = () => {
-      // Use compressed storage for story (largest data structure)
-      compressAndStore(STORY_KEY, newStory);
+      // Use compressed storage for story (largest data structure).
+      // Never persist multi-MB data: URLs — they truncate and paint as empty boxes.
+      const storyForStorage = stripHeavyImagesFromStory(newStory);
+      compressAndStore(STORY_KEY, storyForStorage);
       localStorage.setItem(CHARACTER_KEY, JSON.stringify(newCharacter));
       localStorage.setItem(SCENARIO_KEY, scenario);
       localStorage.setItem(GENRE_KEY, genre);
@@ -2069,8 +2072,14 @@ export function AdventureGame() {
       console.log('[handleGenerateImage] Response data:', { hasImageUrl: !!data.imageUrl, error: data.error });
       
       if (data.imageUrl) {
+        const displayUrl = toDisplayImageUrl(data.imageUrl);
+        if (!displayUrl) {
+          throw new Error('Image payload was empty or truncated');
+        }
+        // Keep a blob: URL in memory for display — do not stash the ~2MB data URL
+        // on the story entry (saves corrupt it into a white empty panel).
         setStory(prev => prev.map(e => 
-          e.id === entryId ? { ...e, imageUrl: data.imageUrl } : e
+          e.id === entryId ? { ...e, imageUrl: displayUrl } : e
         ));
         toast.success('Scene illustrated!');
       } else if (data.error) {

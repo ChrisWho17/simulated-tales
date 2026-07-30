@@ -5,6 +5,7 @@ import { WeatherState } from '@/game/weatherSystem';
 import { GameTimeState, getTimeOfDay as getGameTimeOfDay } from '@/game/timeProgressionSystem';
 import { GameGenre } from '@/types/genreData';
 import { StoryEntry } from '@/components/adventure/types';
+import { revokeDisplayImageUrl, toDisplayImageUrl } from '@/lib/sceneImageUrl';
 
 interface UseSceneIllustrationOptions {
   genre: GameGenre;
@@ -61,6 +62,16 @@ export function useSceneIllustration({
   const [generatingImageFor, setGeneratingImageFor] = useState<string | undefined>();
   const lastIllustrationTick = useRef<number>(0);
   const turnsSinceIllustration = useRef<number>(Number.MAX_SAFE_INTEGER);
+  const displayUrlRef = useRef<string | null>(null);
+
+  const adoptDisplayUrl = useCallback((raw: string | null) => {
+    const next = raw ? toDisplayImageUrl(raw) : null;
+    if (displayUrlRef.current && displayUrlRef.current !== next) {
+      revokeDisplayImageUrl(displayUrlRef.current);
+    }
+    displayUrlRef.current = next;
+    setSceneImageUrl(next);
+  }, []);
 
   const generateSceneIllustration = useCallback(async (description: string, trigger: SceneTrigger) => {
     if (isGeneratingScene) return;
@@ -137,10 +148,19 @@ export function useSceneIllustration({
       }
       
       const data = await response.json();
-      console.log('[SceneIllustration] Response:', { hasImageUrl: !!data.imageUrl, error: data.error });
+      console.log('[SceneIllustration] Response:', {
+        hasImageUrl: !!data.imageUrl,
+        imageUrlLen: typeof data.imageUrl === 'string' ? data.imageUrl.length : 0,
+        error: data.error,
+      });
       
       if (data.imageUrl) {
-        setSceneImageUrl(data.imageUrl);
+        const display = toDisplayImageUrl(data.imageUrl);
+        if (display) {
+          adoptDisplayUrl(data.imageUrl);
+        } else {
+          console.error('[SceneIllustration] Image payload invalid or truncated');
+        }
       } else if (data.error) {
         console.error('[SceneIllustration] Generation error:', data.error);
       }
@@ -153,7 +173,7 @@ export function useSceneIllustration({
     } finally {
       setIsGeneratingScene(false);
     }
-  }, [isGeneratingScene, genre, characterVisualProfile, story, weatherState, timeState, worldBible]);
+  }, [isGeneratingScene, genre, characterVisualProfile, story, weatherState, timeState, worldBible, adoptDisplayUrl]);
 
   const checkSceneTriggers = useCallback((eventType: string, content: string) => {
     // Respect the scene illustrations setting
@@ -188,8 +208,8 @@ export function useSceneIllustration({
   }, [generateSceneIllustration, sceneIllustrationsEnabled]);
 
   const closeSceneImage = useCallback(() => {
-    setSceneImageUrl(null);
-  }, []);
+    adoptDisplayUrl(null);
+  }, [adoptDisplayUrl]);
 
   return {
     sceneImageUrl,

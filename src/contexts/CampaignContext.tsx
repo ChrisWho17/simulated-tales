@@ -5,6 +5,7 @@
 // ============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import { stripHeavyImagesFromStory } from '@/lib/sceneImageUrl';
 import {
   CampaignMetadata,
   CampaignData,
@@ -451,6 +452,8 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     
     return {
       ...campaign,
+      // Multi-MB data: URLs truncate in storage and paint as empty scene panels.
+      narrativeHistory: stripHeavyImagesFromStory(campaign.narrativeHistory || []),
       npcRegistryState: {
         npcs: npcRegistry.npcs,
         relationships: npcRegistry.relationships,

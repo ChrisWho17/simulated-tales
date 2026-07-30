@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Image as ImageIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { isValidSceneImageUrl } from '@/lib/sceneImageUrl';
 
 interface SceneIllustrationProps {
   imageUrl: string | null;
@@ -23,22 +24,34 @@ export function SceneIllustration({
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  const usableUrl = useMemo(() => {
+    if (!imageUrl) return null;
+    return isValidSceneImageUrl(imageUrl) ? imageUrl : null;
+  }, [imageUrl]);
+
   useEffect(() => {
     setHasError(false);
+    // Truncated/corrupt data URLs are truthy but never paint — treat as error
+    // so we never leave an empty bg-muted/50 box.
+    if (imageUrl && !isValidSceneImageUrl(imageUrl)) {
+      setHasError(true);
+    }
   }, [imageUrl]);
 
   if (!imageUrl && !isLoading) {
     return null;
   }
 
+  const showBroken = !isLoading && (hasError || !usableUrl);
+
   return (
     <>
       {/* Thumbnail/inline view */}
       <div 
         className={cn(
-          "scene-illustration-container relative rounded-lg overflow-hidden bg-muted/50 border border-border/50",
+          "scene-illustration-container relative rounded-lg overflow-hidden border border-border/50",
           "min-h-[200px] max-h-[300px]",
-          isLoading && "animate-pulse"
+          isLoading ? "bg-muted/50 animate-pulse" : showBroken ? "bg-muted/30" : "bg-transparent"
         )}
       >
         {isLoading ? (
@@ -53,20 +66,28 @@ export function SceneIllustration({
               </p>
             )}
           </div>
-        ) : hasError ? (
+        ) : showBroken ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 p-4 min-h-[200px]">
             <ImageIcon className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Failed to load scene</p>
+            <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
+              The image was missing or corrupted after save — regenerate it.
+            </p>
             {onGenerate && (
               <Button variant="outline" size="sm" onClick={onGenerate}>
                 Retry
               </Button>
             )}
+            {onClose && (
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                Dismiss
+              </Button>
+            )}
           </div>
-        ) : imageUrl && (
+        ) : usableUrl && (
           <>
             <img 
-              src={imageUrl} 
+              src={usableUrl} 
               alt="Scene illustration"
               className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => setIsExpanded(true)}
@@ -100,14 +121,14 @@ export function SceneIllustration({
       </div>
 
       {/* Fullscreen expanded view */}
-      {isExpanded && imageUrl && (
+      {isExpanded && usableUrl && !hasError && (
         <div 
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setIsExpanded(false)}
         >
           <div className="relative max-w-4xl max-h-full">
             <img 
-              src={imageUrl} 
+              src={usableUrl} 
               alt="Scene illustration"
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}

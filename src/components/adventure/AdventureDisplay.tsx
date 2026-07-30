@@ -1968,12 +1968,27 @@ export function AdventureDisplay({
                 <Card className="border-0 bg-transparent shadow-none rounded-lg p-2 -m-2 transition-all hover:bg-primary/5">
                   {/* Scene Image */}
                   {entry.imageUrl && (
-                    <div className="mb-6 rounded-xl overflow-hidden border border-[var(--accent-border)] shadow-glow">
-                      <img 
-                        src={entry.imageUrl} 
-                        alt="Scene illustration" 
-                        className="w-full h-auto"
-                      />
+                    <div className="mb-6 rounded-xl overflow-hidden border border-[var(--accent-border)] shadow-glow bg-muted/30 min-h-[120px]">
+                      {entry.imageUrl.startsWith('data:image/') && entry.imageUrl.length < 8000 ? (
+                        <div className="flex items-center justify-center p-6 text-sm text-muted-foreground">
+                          Scene image was lost after save — regenerate it.
+                        </div>
+                      ) : (
+                        <img 
+                          src={entry.imageUrl} 
+                          alt="Scene illustration" 
+                          className="w-full h-auto"
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            el.style.display = 'none';
+                            const fallback = el.parentElement?.querySelector('[data-scene-fallback]');
+                            if (fallback instanceof HTMLElement) fallback.hidden = false;
+                          }}
+                        />
+                      )}
+                      <div hidden data-scene-fallback className="flex items-center justify-center p-6 text-sm text-muted-foreground">
+                        Scene image failed to load — regenerate it.
+                      </div>
                     </div>
                   )}
                   
