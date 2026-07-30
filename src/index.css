@@ -78,21 +78,21 @@
     /* Coin / daylight gold. Accent-independent on purpose. */
     --gold: #d9a94f;
     
-    /* Gradient Colors */
-    --gradient-start: #8b5cf6;
-    --gradient-end: #d946ef;
-    --gradient-tertiary: #22d3ee;
+    /* Gradient Colors — defaults track ink until applyColorTheme runs */
+    --gradient-start: #d0a05f;
+    --gradient-end: #e3c48d;
+    --gradient-tertiary: #f2e2c4;
     
     /* Particle Colors - Set dynamically by color picker */
-    --particle-primary: #8b5cf6;
-    --particle-secondary: #a78bfa;
-    --particle-tertiary: #c4b5fd;
-    --ambient-primary: #8b5cf6;
-    --ambient-secondary: #d946ef;
+    --particle-primary: #d0a05f;
+    --particle-secondary: #e3c48d;
+    --particle-tertiary: #f2e2c4;
+    --ambient-primary: #d0a05f;
+    --ambient-secondary: #e3c48d;
     
     /* Text Hierarchy */
     --text-primary: #f1f5f9;
-    --text-secondary: #a5b4fc;
+    --text-secondary: #e3c48d;
     --text-muted: #64748b;
     
     /* Glow Effects */
@@ -319,7 +319,7 @@
     position: relative;
     background:
       radial-gradient(140% 220% at 50% 0%, var(--surface-tint) 0%, transparent 65%),
-      linear-gradient(180deg, var(--surface-raised) 0%, var(--surface-sunken) 100%);
+      linear-gradient(185deg, var(--surface-raised) 0%, var(--surface-sunken) 100%);
     border-bottom: 1px solid var(--surface-edge);
     backdrop-filter: blur(14px) saturate(130%);
     -webkit-backdrop-filter: blur(14px) saturate(130%);
@@ -334,12 +334,12 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      var(--accent-border) 25%,
+      var(--accent-border) 18%,
       var(--accent-primary) 50%,
-      var(--accent-border) 75%,
+      var(--accent-border) 82%,
       transparent 100%
     );
-    opacity: 0.5;
+    opacity: 0.62;
     pointer-events: none;
   }
 
@@ -348,12 +348,21 @@
     width: 1px;
     align-self: stretch;
     margin: 0.25rem 0.125rem;
-    background: var(--surface-edge);
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--surface-edge) 20%,
+      var(--accent-border) 50%,
+      var(--surface-edge) 80%,
+      transparent 100%
+    );
   }
 
   /* Secondary strip under the HUD: scene illustration, transient banners. */
   .play-hud-strip {
-    background: var(--surface-sunken);
+    background:
+      linear-gradient(180deg, var(--surface-tint) 0%, transparent 70%),
+      var(--surface-sunken);
     border-bottom: 1px solid var(--surface-edge);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
@@ -365,16 +374,17 @@
   .play-overlay-backdrop {
     background:
       radial-gradient(120% 80% at 50% 0%, var(--overlay-wash) 0%, transparent 60%),
-      rgba(6, 6, 11, 0.72);
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
+      rgba(6, 6, 11, 0.74);
+    backdrop-filter: blur(12px) saturate(125%);
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
   }
 
   .play-overlay-surface {
     background:
+      radial-gradient(90% 40% at 50% 0%, var(--surface-tint) 0%, transparent 55%),
       linear-gradient(180deg, var(--surface-raised) 0%, var(--surface-sunken) 100%);
     border: 1px solid var(--surface-edge);
-    box-shadow: var(--shadow-deep);
+    box-shadow: var(--shadow-deep), 0 0 40px -12px var(--accent-glow);
     color: hsl(var(--foreground));
   }
 
@@ -387,25 +397,25 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      var(--accent-border) 20%,
+      var(--accent-border) 16%,
       var(--accent-primary) 50%,
-      var(--accent-border) 80%,
+      var(--accent-border) 84%,
       transparent 100%
     );
-    opacity: 0.55;
+    opacity: 0.7;
     pointer-events: none;
   }
 
   .play-overlay-header {
     border-bottom: 1px solid var(--surface-edge);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, transparent 100%);
   }
 
   .play-overlay-title {
     font-family: var(--font-display);
     font-size: 1.0625rem;
     line-height: 1.3;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
     font-weight: 600;
   }
 
@@ -415,7 +425,7 @@
 
   .play-overlay-footer {
     border-top: 1px solid var(--surface-edge);
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0%, transparent 100%);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0%, transparent 100%);
   }
 
   .play-overlay-close {
@@ -428,7 +438,7 @@
     color: hsl(var(--muted-foreground));
     border: 1px solid transparent;
     transition: color var(--transition-fast), background var(--transition-fast),
-      border-color var(--transition-fast);
+      border-color var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .play-overlay-close:hover {
@@ -473,6 +483,7 @@
     height: 2px;
     border-radius: 2px;
     background: var(--accent-primary);
+    box-shadow: 0 0 10px var(--accent-glow);
   }
 
   /* === ANIMATED GRADIENT BORDER === */

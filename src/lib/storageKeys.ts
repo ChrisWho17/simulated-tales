@@ -22,6 +22,7 @@ export const STORAGE_KEYS = {
   // ============================================================================
   GAME_SETTINGS: 'untold-game-settings',
   COLOR_PREFERENCE: 'untold-color-id',
+  UI_CUSTOM_COLORS: 'untold-ui-custom-colors',
   DICE_MODE: 'untold-dice-mode',
   
   // ============================================================================
@@ -66,7 +67,11 @@ export const STORAGE_KEYS = {
   // ============================================================================
   LIFETIME_STATS: 'lwe_lifetime_stats',
   ACHIEVEMENTS: 'lwe_achievements',
+  /** Legacy flat key still written for backup compatibility */
+  ACHIEVEMENTS_LEGACY: 'untold-achievements',
   ACHIEVEMENT_PROGRESS: 'untold-achievement-progress',
+  /** Lifetime companion recruit count (global, never reset on new save) */
+  ACHIEVEMENT_LIFETIME_COMPANIONS: 'untold-achievement-lifetime-companions',
   
   // ============================================================================
   // UI STATE

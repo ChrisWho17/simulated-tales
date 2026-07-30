@@ -4,12 +4,13 @@ import {
   DirectorSettings, 
   DEFAULT_DIRECTOR_SETTINGS 
 } from '@/game/directorModeSystem';
-import { DEFAULT_COLOR_ID } from '@/lib/colorTheme';
+import { DEFAULT_COLOR_ID, DEFAULT_CUSTOM_UI_COLORS, type CustomUiColors } from '@/lib/colorTheme';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
 // Re-export director types for convenience
 export type { DirectorSettings } from '@/game/directorModeSystem';
 export { DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
+export type { CustomUiColors } from '@/lib/colorTheme';
 
 // Narrator style types
 export type NarratorVoice = 'OBJECTIVE' | 'LITERARY' | 'SARDONIC' | 'UNRELIABLE' | 'OMNISCIENT' | 'NOIR';
@@ -71,6 +72,8 @@ export interface GameSettings {
   textSpeed: 'slow' | 'normal' | 'fast' | 'instant';
   showTutorials: boolean;
   colorTheme: string;
+  /** Optional Accent / Panel / Text chrome overrides layered on the preset. */
+  customUiColors: CustomUiColors;
   fontSize: 'small' | 'medium' | 'large';
   showRollDetails: boolean;
   sceneIllustrations: boolean;
@@ -184,6 +187,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   textSpeed: 'normal',
   showTutorials: true,
   colorTheme: DEFAULT_COLOR_ID,
+  customUiColors: { ...DEFAULT_CUSTOM_UI_COLORS },
   fontSize: 'medium',
   showRollDetails: true,
   sceneIllustrations: true,
@@ -259,7 +263,13 @@ export function loadSettings(): GameSettings {
     const saved = localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      const merged: GameSettings = { ...DEFAULT_SETTINGS, ...parsed };
+      // Deep-merge custom chrome colours so partial saves still normalize.
+      merged.customUiColors = {
+        ...DEFAULT_CUSTOM_UI_COLORS,
+        ...(parsed.customUiColors ?? {}),
+      };
+      return merged;
     }
   } catch (e) {
     console.error('Failed to load settings:', e);

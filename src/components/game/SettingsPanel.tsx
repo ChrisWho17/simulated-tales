@@ -19,6 +19,7 @@ import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
 import { TimeMultiplier, TIME_MULTIPLIER_CONFIG } from '@/game/timeProgressionSystem';
 import { ThemeGrid } from '@/components/ui/ThemeGrid';
+import { CustomUiColorPicker } from '@/components/ui/CustomUiColorPicker';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -111,7 +112,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onRunSystemsTest,
   isRunningTest = false,
 }) => {
-  const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme } = useGame();
+  const { settings, updateSettings, diceMode, setDiceMode, colorTheme, setColorTheme, setCustomUiColors } = useGame();
   const campaignContext = useCampaignOptional();
   // Audio system removed - no sound in game
   const [activeTab, setActiveTab] = useState<SettingsTab>('gameplay');
@@ -1196,6 +1197,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <span className="ml-auto text-xs text-muted-foreground">{colorTheme.name}</span>
                 </div>
                 <ThemeGrid value={colorTheme.id} onSelect={setColorTheme} />
+              </div>
+
+              <div className="border-t border-[var(--surface-edge)] pt-5">
+                <CustomUiColorPicker
+                  value={settings.customUiColors ?? { accent: null, panel: null, text: null }}
+                  onChange={setCustomUiColors}
+                />
               </div>
               
               {/* Scene Illustrations */}

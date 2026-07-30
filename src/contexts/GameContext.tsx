@@ -1,7 +1,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { DirectorSettings, DEFAULT_DIRECTOR_SETTINGS } from '@/game/directorModeSystem';
-import { ColorPreset, COLOR_PRESETS, applyColorTheme, loadColorPreference, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
+import {
+  ColorPreset,
+  COLOR_PRESETS,
+  applyColorTheme,
+  applyThemeWithCustomColors,
+  loadColorPreference,
+  loadCustomUiColors,
+  saveCustomUiColors,
+  normalizeCustomUiColors,
+  hasCustomUiColors,
+  DEFAULT_COLOR_ID,
+  type CustomUiColors,
+} from '@/lib/colorTheme';
 import { StateSyncBus } from '@/services/stateSyncBus';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 import { 
@@ -302,6 +314,7 @@ interface GameContextType {
   // Color Theme
   colorTheme: ColorPreset;
   setColorTheme: (themeId: string) => void;
+  setCustomUiColors: (colors: CustomUiColors) => void;
   
   // Adult content
   adultContent: boolean;
@@ -504,10 +517,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const savedDiceMode = loadDiceMode();
     // Override color theme from its own storage
     const savedColorId = loadColorPreference();
+    // Settings win when they carry custom chrome; otherwise keep the dedicated key.
+    const fromSettings = normalizeCustomUiColors(loaded.customUiColors);
+    const customUiColors = hasCustomUiColors(fromSettings)
+      ? fromSettings
+      : loadCustomUiColors();
+    saveCustomUiColors(customUiColors);
     return {
       ...loaded,
       diceMode: savedDiceMode,
-      colorTheme: savedColorId
+      colorTheme: savedColorId,
+      customUiColors,
     };
   });
   
@@ -536,9 +556,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return loadPressureStateFromStorage();
   });
   
-  // Apply color theme on mount
+  // Apply catalog preset + any custom chrome overrides on mount
   useEffect(() => {
-    applyColorTheme(colorTheme);
+    applyThemeWithCustomColors(colorTheme, settings.customUiColors);
   }, []);
   
   // Listen for state sync events via StateSyncBus
@@ -651,8 +671,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (theme) {
       setColorThemeState(theme);
       setSettings(prev => ({ ...prev, colorTheme: themeId }));
+      // applyColorTheme re-layers saved custom chrome on top of the preset
       applyColorTheme(theme);
     }
+  }, []);
+
+  const setCustomUiColors = useCallback((colors: CustomUiColors) => {
+    const normalized = normalizeCustomUiColors(colors);
+    saveCustomUiColors(normalized);
+    setSettings(prev => ({ ...prev, customUiColors: normalized }));
+    setColorThemeState(current => {
+      applyThemeWithCustomColors(current, normalized);
+      return current;
+    });
   }, []);
   
   const setAdultContent = useCallback((enabled: boolean) => {
@@ -938,6 +969,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     setDiceMode,
     colorTheme,
     setColorTheme,
+    setCustomUiColors,
     adultContent: settings.adultContent,
     setAdultContent,
     // Emotional State

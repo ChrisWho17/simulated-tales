@@ -744,65 +744,252 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-const COLOR_STORAGE_KEY = 'untold-ui-color-theme';
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return null;
+  return {
+    r: parseInt(normalized.slice(1, 3), 16),
+    g: parseInt(normalized.slice(3, 5), 16),
+    b: parseInt(normalized.slice(5, 7), 16),
+  };
+}
 
-export function applyColorTheme(color: ColorPreset, isPreview = false): void {
+/** Accept #RGB / #RRGGBB (with or without #). Returns #rrggbb or null. */
+export function normalizeHex(input: string): string | null {
+  const raw = input.trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+    return `#${raw[0]}${raw[0]}${raw[1]}${raw[1]}${raw[2]}${raw[2]}`.toLowerCase();
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(raw)) {
+    return `#${raw.toLowerCase()}`;
+  }
+  return null;
+}
+
+function rgbaFromHex(hex: string, alpha: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return `rgba(208, 160, 95, ${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function lightenHex(hex: string, amount: number): string {
+  const hsl = hexToHsl(hex);
+  const l = Math.min(96, Math.max(0, hsl.l + amount));
+  return hslToHex(hsl.h, hsl.s, l);
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const sNorm = s / 100;
+  const lNorm = l / 100;
+  const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = lNorm - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) { r = c; g = x; }
+  else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; }
+  else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; }
+  else { r = c; b = x; }
+  const toByte = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+  return `#${toByte(r)}${toByte(g)}${toByte(b)}`;
+}
+
+/**
+ * Optional chrome overrides layered on top of a catalog preset.
+ * Null means “follow the active preset” for that slot.
+ */
+export interface CustomUiColors {
+  /** Hairlines, active tabs, primary chrome accent. */
+  accent: string | null;
+  /** Atmospheric wash over HUD / overlay surfaces. */
+  panel: string | null;
+  /** Secondary accent used for icons, labels, softer chrome text. */
+  text: string | null;
+}
+
+export const DEFAULT_CUSTOM_UI_COLORS: CustomUiColors = {
+  accent: null,
+  panel: null,
+  text: null,
+};
+
+export function hasCustomUiColors(colors: CustomUiColors | null | undefined): boolean {
+  if (!colors) return false;
+  return Boolean(colors.accent || colors.panel || colors.text);
+}
+
+export function normalizeCustomUiColors(
+  partial: Partial<CustomUiColors> | null | undefined
+): CustomUiColors {
+  return {
+    accent: partial?.accent ? normalizeHex(partial.accent) : null,
+    panel: partial?.panel ? normalizeHex(partial.panel) : null,
+    text: partial?.text ? normalizeHex(partial.text) : null,
+  };
+}
+
+const COLOR_STORAGE_KEY = 'untold-ui-color-theme';
+const CUSTOM_COLORS_STORAGE_KEY = 'untold-ui-custom-colors';
+
+function writePresetVars(color: ColorPreset): void {
   const root = document.documentElement;
   const hsl = hexToHsl(color.primary);
   const gradientEnd = color.gradientEnd ?? color.secondary;
   const surfaceTint = color.surfaceTint ?? color.bg;
   const narrativeGlow = color.narrativeGlow ?? color.glow;
-  
-  // Core accent colors (as hex for direct use)
+
   root.style.setProperty('--accent-primary', color.primary);
   root.style.setProperty('--accent-secondary', color.secondary);
   root.style.setProperty('--accent-tertiary', color.tertiary);
-  
-  // Update primary HSL for Tailwind integration
+
   root.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
   root.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
-  
-  // Glow effects
+
   root.style.setProperty('--accent-glow', color.glow);
   root.style.setProperty('--accent-glow-intense', color.glowIntense);
   root.style.setProperty('--glow-primary', `0 0 20px ${color.glow}`);
   root.style.setProperty('--glow-hover', `0 0 30px ${color.glowIntense}`);
   root.style.setProperty('--glow-intense', `0 0 40px ${color.glowIntense}`);
-  
-  // Borders and backgrounds
+
   root.style.setProperty('--accent-border', color.border);
   root.style.setProperty('--accent-bg', color.bg);
   root.style.setProperty('--glass-border', color.border);
 
-  // Surface tint and prose halo. Overlay chrome keeps its accent-independent
-  // surface colours; only the atmospheric wash over them follows the preset.
   root.style.setProperty('--surface-tint', surfaceTint);
   root.style.setProperty('--overlay-wash', surfaceTint);
   root.style.setProperty('--narrative-glow', narrativeGlow);
 
-  // Gradients. Presets that pair two hues (copper into verdigris, terracotta
-  // into dusk violet) supply their own far end.
   root.style.setProperty('--gradient-start', color.primary);
   root.style.setProperty('--gradient-end', gradientEnd);
   root.style.setProperty('--gradient-tertiary', color.tertiary);
   root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${color.primary} 0%, ${gradientEnd} 100%)`);
-  
-  // Particle colors
+
   root.style.setProperty('--particle-primary', color.particles[0]);
   root.style.setProperty('--particle-secondary', color.particles[1]);
   root.style.setProperty('--particle-tertiary', color.particles[2]);
-  
-  // Ambient glow colors
+
   root.style.setProperty('--ambient-primary', color.particles[0]);
   root.style.setProperty('--ambient-secondary', color.particles[1]);
-  
-  // Shadows
+
   root.style.setProperty('--shadow-accent', `0 0 20px ${color.glow}, 0 4px 15px rgba(0, 0, 0, 0.3)`);
   root.style.setProperty('--shadow-accent-hover', `0 0 30px ${color.glowIntense}, 0 6px 20px rgba(0, 0, 0, 0.4)`);
-  
-  // Store preference if not preview
+}
+
+/** Tint CSS vars after a preset write. Only non-null slots override. */
+function writeCustomUiColorOverrides(colors: CustomUiColors): void {
+  const root = document.documentElement;
+
+  if (colors.accent) {
+    const accent = colors.accent;
+    const hsl = hexToHsl(accent);
+    const glow = rgbaFromHex(accent, 0.28);
+    const glowIntense = rgbaFromHex(accent, 0.45);
+    const border = rgbaFromHex(accent, 0.24);
+    const bg = rgbaFromHex(accent, 0.1);
+    const secondary = colors.text ?? lightenHex(accent, 14);
+    const tertiary = lightenHex(accent, 28);
+    const gradientEnd = colors.text ?? secondary;
+
+    root.style.setProperty('--accent-primary', accent);
+    root.style.setProperty('--accent-secondary', secondary);
+    root.style.setProperty('--accent-tertiary', tertiary);
+    root.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+    root.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+    root.style.setProperty('--accent-glow', glow);
+    root.style.setProperty('--accent-glow-intense', glowIntense);
+    root.style.setProperty('--glow-primary', `0 0 20px ${glow}`);
+    root.style.setProperty('--glow-hover', `0 0 30px ${glowIntense}`);
+    root.style.setProperty('--glow-intense', `0 0 40px ${glowIntense}`);
+    root.style.setProperty('--accent-border', border);
+    root.style.setProperty('--accent-bg', bg);
+    root.style.setProperty('--glass-border', border);
+    root.style.setProperty('--narrative-glow', glow);
+    root.style.setProperty('--gradient-start', accent);
+    root.style.setProperty('--gradient-end', gradientEnd);
+    root.style.setProperty('--gradient-tertiary', tertiary);
+    root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${accent} 0%, ${gradientEnd} 100%)`);
+    root.style.setProperty('--particle-primary', accent);
+    root.style.setProperty('--particle-secondary', secondary);
+    root.style.setProperty('--particle-tertiary', tertiary);
+    root.style.setProperty('--ambient-primary', accent);
+    root.style.setProperty('--ambient-secondary', secondary);
+    root.style.setProperty('--shadow-accent', `0 0 20px ${glow}, 0 4px 15px rgba(0, 0, 0, 0.3)`);
+    root.style.setProperty('--shadow-accent-hover', `0 0 30px ${glowIntense}, 0 6px 20px rgba(0, 0, 0, 0.4)`);
+
+    if (!colors.panel) {
+      root.style.setProperty('--surface-tint', bg);
+      root.style.setProperty('--overlay-wash', rgbaFromHex(accent, 0.07));
+    }
+  }
+
+  if (colors.panel) {
+    const wash = rgbaFromHex(colors.panel, 0.1);
+    const overlay = rgbaFromHex(colors.panel, 0.08);
+    root.style.setProperty('--surface-tint', wash);
+    root.style.setProperty('--overlay-wash', overlay);
+  }
+
+  if (colors.text) {
+    const text = colors.text;
+    root.style.setProperty('--accent-secondary', text);
+    root.style.setProperty('--accent-tertiary', lightenHex(text, 16));
+    root.style.setProperty('--gradient-end', text);
+    root.style.setProperty('--particle-secondary', text);
+    root.style.setProperty('--ambient-secondary', text);
+    const primary = root.style.getPropertyValue('--accent-primary').trim() || text;
+    root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${primary} 0%, ${text} 100%)`);
+  }
+}
+
+export function loadCustomUiColors(): CustomUiColors {
+  try {
+    const raw = localStorage.getItem(CUSTOM_COLORS_STORAGE_KEY);
+    if (raw) {
+      return normalizeCustomUiColors(JSON.parse(raw));
+    }
+  } catch {
+    // fall through
+  }
+  return { ...DEFAULT_CUSTOM_UI_COLORS };
+}
+
+export function saveCustomUiColors(colors: CustomUiColors): void {
+  try {
+    localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(normalizeCustomUiColors(colors)));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+/**
+ * Apply a catalog preset. When not previewing, layers any saved custom chrome
+ * colours on top so ThemeGrid presets stay intact while Accent/Panel/Text can tint.
+ */
+export function applyColorTheme(color: ColorPreset, isPreview = false): void {
+  writePresetVars(color);
+
   if (!isPreview) {
     localStorage.setItem(COLOR_STORAGE_KEY, color.id);
+    writeCustomUiColorOverrides(loadCustomUiColors());
+  }
+}
+
+/** Re-write preset + custom overrides after the player edits Accent / Panel / Text. */
+export function applyThemeWithCustomColors(
+  color: ColorPreset,
+  custom: CustomUiColors,
+  isPreview = false
+): void {
+  const normalized = normalizeCustomUiColors(custom);
+  writePresetVars(color);
+  writeCustomUiColorOverrides(normalized);
+
+  if (!isPreview) {
+    localStorage.setItem(COLOR_STORAGE_KEY, color.id);
+    saveCustomUiColors(normalized);
   }
 }
 
