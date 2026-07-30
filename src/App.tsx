@@ -74,27 +74,31 @@ const App = () => (
                   <InventoryProvider onNarrativeAction={handleInventoryNarrativeAction}>
                     <CampaignInventorySync>
                       <TooltipProvider>
-                        <StartupIntegrityMonitor />
+                        <DeferredStartupIntegrityMonitor />
                         <PwaUpdatePrompt />
                         <WhatsNewModal />
                         <Toaster />
                         <Sonner />
                         <BrowserRouter>
                           <VersionHotfixesBadgeGate />
-                          <Routes>
-                            <Route path="/" element={<Index />} />
-                            <Route path="/campaigns" element={<Campaigns />} />
-                            <Route path="/campaigns/new" element={<Index />} />
-                            <Route path="/play" element={<Index />} />
-                            <Route path="/profile" element={<Profile />} />
-                            <Route path="/loadout-test" element={<LoadoutTest />} />
-                            <Route path="/inventory-test" element={<InventoryTest />} />
-                            <Route path="/achievements" element={<AchievementGallery />} />
-                            <Route path="/debug/pwa" element={<DebugPwa />} />
-                            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                            <Route path="*" element={<NotFound />} />
-                          </Routes>
+                          <Suspense fallback={null}>
+                            <Routes>
+                              <Route path="/" element={<Index />} />
+                              <Route path="/campaigns" element={<Campaigns />} />
+                              <Route path="/campaigns/new" element={<Index />} />
+                              <Route path="/play" element={<Index />} />
+                              <Route path="/profile" element={<Profile />} />
+                              <Route path="/achievements" element={<AchievementGallery />} />
+                              {/* Dev / workshop harnesses — hidden on the public play surface */}
+                              <Route path="/loadout-test" element={<DevOnlyRoute><LoadoutTest /></DevOnlyRoute>} />
+                              <Route path="/inventory-test" element={<DevOnlyRoute><InventoryTest /></DevOnlyRoute>} />
+                              <Route path="/debug/pwa" element={<DevOnlyRoute><DebugPwa /></DevOnlyRoute>} />
+                              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </Suspense>
                         </BrowserRouter>
+
 
                       </TooltipProvider>
                     </CampaignInventorySync>
