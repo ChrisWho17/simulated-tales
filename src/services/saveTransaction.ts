@@ -8,6 +8,7 @@ import { STORAGE_KEYS, getCampaignKey, getWALKey } from '@/lib/storageKeys';
 import { StateSyncBus } from './stateSyncBus';
 import { checkAndCleanupStorage, performCleanup } from '@/lib/storageCleanup';
 import { getBig, setBig, delBig } from '@/lib/bigKVStore';
+import { devLog } from '@/lib/devLog';
 
 
 // Transaction states
@@ -121,7 +122,7 @@ class SaveTransactionManager {
       checksum,
     });
     
-    console.log(`[Transaction] Started: ${transaction.id} for campaign ${campaignId}`);
+    devLog.log(`[Transaction] Started: ${transaction.id} for campaign ${campaignId}`);
     return transaction;
   }
   
@@ -153,7 +154,7 @@ class SaveTransactionManager {
         setBig(key, walEntry.data!);
       } catch (commitError: any) {
         if (commitError?.name === 'QuotaExceededError') {
-          console.warn('[Transaction] Quota exceeded during commit, cleaning up...');
+          devLog.warn('[Transaction] Quota exceeded during commit, cleaning up...');
           performCleanup(0.4);
           setBig(key, walEntry.data!); // Retry after cleanup
         } else {
@@ -187,7 +188,7 @@ class SaveTransactionManager {
         syncedToCloud: false, // Will be updated by cloud sync
       }, 'SaveTransaction');
       
-      console.log(`[Transaction] Committed and verified: ${transactionId}`);
+      devLog.log(`[Transaction] Committed and verified: ${transactionId}`);
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -264,7 +265,7 @@ class SaveTransactionManager {
   async rollback(transactionId: string): Promise<boolean> {
     const transaction = this.activeTransactions.get(transactionId);
     if (!transaction) {
-      console.warn(`[Transaction] Rollback requested for unknown tx: ${transactionId}`);
+      devLog.warn(`[Transaction] Rollback requested for unknown tx: ${transactionId}`);
       return false;
     }
     
@@ -278,7 +279,7 @@ class SaveTransactionManager {
       this.logTransaction(transaction);
       this.activeTransactions.delete(transactionId);
       
-      console.log(`[Transaction] Rolled back: ${transactionId}`);
+      devLog.log(`[Transaction] Rolled back: ${transactionId}`);
       return true;
     } catch (error) {
       console.error(`[Transaction] Rollback failed: ${transactionId}`, error);
@@ -312,12 +313,12 @@ class SaveTransactionManager {
       attemptWrite();
     } catch (error: any) {
       if (error?.name === 'QuotaExceededError') {
-        console.warn('[WAL] Quota exceeded, performing aggressive cleanup...');
+        devLog.warn('[WAL] Quota exceeded, performing aggressive cleanup...');
         performCleanup(0.4); // Aggressive cleanup - free 40%
         
         try {
           attemptWrite();
-          console.log('[WAL] Write succeeded after cleanup');
+          devLog.log('[WAL] Write succeeded after cleanup');
         } catch (retryError) {
           console.error('[WAL] Write failed even after cleanup:', retryError);
           throw retryError;
@@ -386,7 +387,7 @@ class SaveTransactionManager {
             setBig(`lwe_campaign_${entry.campaignId}`, entry.data);
             await this.removeFromWAL(entry.transactionId);
             result.recovered++;
-            console.log(`[WAL] Recovered transaction: ${entry.transactionId}`);
+            devLog.log(`[WAL] Recovered transaction: ${entry.transactionId}`);
           } catch {
             result.failed++;
           }

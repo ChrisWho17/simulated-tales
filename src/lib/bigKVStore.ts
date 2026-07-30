@@ -1,4 +1,5 @@
 // ============================================================================
+import { devLog } from '@/lib/devLog';
 // BIG KV STORE — IndexedDB-backed storage for large blobs (campaigns, WAL, etc.)
 //
 // localStorage is capped at ~5–10 MB and was overflowing on lwe_wal / lwe_campaign_*.
@@ -137,18 +138,18 @@ export function initBigKV(): Promise<void> {
           localStorage.removeItem(k);
           migrated++;
         } catch (e) {
-          console.warn('[BigKV] migration skipped for', k, e);
+          devLog.warn('[BigKV] migration skipped for', k, e);
         }
       }
 
       initialized = true;
       if (migrated > 0) {
-        console.log(`[BigKV] Migrated ${migrated} large entries from localStorage to IndexedDB`);
+        devLog.log(`[BigKV] Migrated ${migrated} large entries from localStorage to IndexedDB`);
       } else {
-        console.log('[BigKV] Initialized (no migration needed)');
+        devLog.log('[BigKV] Initialized (no migration needed)');
       }
     } catch (e) {
-      console.warn('[BigKV] Init failed, falling back to localStorage:', e);
+      devLog.warn('[BigKV] Init failed, falling back to localStorage:', e);
       // mirror stays empty; getBig/setBig will defer to localStorage.
     }
   })();
