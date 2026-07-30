@@ -11,6 +11,7 @@ import LZString from 'lz-string';
 import { IndexedDBCache } from '@/lib/indexedDBCache';
 import { StorageHealthMonitor } from '@/systems/StorageHealthMonitor';
 import { CrossTabSync } from '@/systems/CrossTabSync';
+import { devLog } from '@/lib/devLog';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -119,7 +120,7 @@ class UnifiedSaveServiceClass {
         email: session.user.email || null,
         displayName: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
       };
-      console.log('[UnifiedSave] Initialized with cloud account:', this.account.email);
+      devLog.log('[UnifiedSave] Initialized with cloud account:', this.account.email);
     } else {
       this.account = {
         mode: 'guest-local',
@@ -127,7 +128,7 @@ class UnifiedSaveServiceClass {
         email: null,
         displayName: 'Guest (Local Only)',
       };
-      console.log('[UnifiedSave] Initialized as GUEST-LOCAL');
+      devLog.log('[UnifiedSave] Initialized as GUEST-LOCAL');
     }
     
     // Listen for auth changes
@@ -408,7 +409,7 @@ class UnifiedSaveServiceClass {
       // Phase 4: Complete (100%)
       this.setProgress(100);
       this.setStatus('synced');
-      console.log(`[UnifiedSave] Cloud saved: ${campaign.meta.name}`);
+      devLog.log(`[UnifiedSave] Cloud saved: ${campaign.meta.name}`);
       
       // Reset progress after a short delay
       setTimeout(() => this.setProgress(0), 1000);
@@ -444,7 +445,7 @@ class UnifiedSaveServiceClass {
       if (!saveData.compressed) return null;
 
       const campaign = decompressCampaign(saveData.compressed);
-      console.log(`[UnifiedSave] Cloud loaded: ${campaign?.meta?.name}`);
+      devLog.log(`[UnifiedSave] Cloud loaded: ${campaign?.meta?.name}`);
       return campaign;
     } catch (e) {
       console.error('[UnifiedSave] Cloud load failed:', e);
@@ -477,7 +478,7 @@ class UnifiedSaveServiceClass {
       // CRITICAL: Also clean up ALL related localStorage keys for this campaign
       this.cleanupCampaignLocalStorage(campaignId);
 
-      console.log(`[UnifiedSave] Cloud deleted: ${campaignId}`);
+      devLog.log(`[UnifiedSave] Cloud deleted: ${campaignId}`);
       return { success: true };
     } catch (e) {
       console.error('[UnifiedSave] Cloud delete failed:', e);
@@ -499,7 +500,7 @@ class UnifiedSaveServiceClass {
       // CRITICAL: Defensive check - ensure we always return an array
       // This prevents "t.sort is not a function" crashes when localStorage is corrupted
       if (!Array.isArray(parsed)) {
-        console.warn('[UnifiedSave] Guest index was not an array, resetting to empty');
+        devLog.warn('[UnifiedSave] Guest index was not an array, resetting to empty');
         localStorage.setItem(GUEST_INDEX_KEY, '[]');
         return [];
       }
@@ -534,7 +535,7 @@ class UnifiedSaveServiceClass {
       // Also cache to IndexedDB for redundancy
       const checksum = generateChecksum(campaign);
       IndexedDBCache.cacheSave(campaign.id, compressed, checksum, 'local').catch(e => {
-        console.warn('[UnifiedSave] IndexedDB cache failed (non-critical):', e);
+        devLog.warn('[UnifiedSave] IndexedDB cache failed (non-critical):', e);
       });
 
       // Update index
@@ -562,7 +563,7 @@ class UnifiedSaveServiceClass {
       }
 
       this.saveGuestIndex(index);
-      console.log(`[UnifiedSave] Guest saved: ${campaign.meta.name}`);
+      devLog.log(`[UnifiedSave] Guest saved: ${campaign.meta.name}`);
       return { success: true };
     } catch (e) {
       console.error('[UnifiedSave] Guest save failed:', e);
@@ -578,13 +579,13 @@ class UnifiedSaveServiceClass {
       
       // Step 1: If not in localStorage, try IndexedDB cache recovery
       if (!compressed) {
-        console.log(`[UnifiedSave] Save not in localStorage, attempting recovery...`);
+        devLog.log(`[UnifiedSave] Save not in localStorage, attempting recovery...`);
         compressed = await IndexedDBCache.recoverMissingSave(campaignId);
         if (compressed) {
           // Restore to localStorage
           localStorage.setItem(key, compressed);
           recoverySource = 'IndexedDB cache';
-          console.log(`[UnifiedSave] Recovered save from ${recoverySource}: ${campaignId}`);
+          devLog.log(`[UnifiedSave] Recovered save from ${recoverySource}: ${campaignId}`);
         }
       }
       
@@ -595,7 +596,7 @@ class UnifiedSaveServiceClass {
       
       // Step 3: If decompression failed, try auto-recovery
       if (!campaign) {
-        console.warn(`[UnifiedSave] Decompression failed, attempting auto-repair...`);
+        devLog.warn(`[UnifiedSave] Decompression failed, attempting auto-repair...`);
         
         // Try to get from IndexedDB cache (might have different version)
         const cached = await IndexedDBCache.getCachedSave(campaignId);
@@ -605,7 +606,7 @@ class UnifiedSaveServiceClass {
             // Restore good data to localStorage
             localStorage.setItem(key, cached.data);
             recoverySource = 'IndexedDB cache (auto-repair)';
-            console.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
+            devLog.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
           }
         }
         
@@ -619,7 +620,7 @@ class UnifiedSaveServiceClass {
               if (campaign) {
                 localStorage.setItem(key, backupSave.data);
                 recoverySource = 'backup snapshot (auto-repair)';
-                console.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
+                devLog.log(`[UnifiedSave] Auto-repaired from ${recoverySource}`);
               }
             }
           }
@@ -627,9 +628,9 @@ class UnifiedSaveServiceClass {
       }
       
       if (campaign && recoverySource) {
-        console.log(`[UnifiedSave] Successfully recovered ${campaign.meta.name} from ${recoverySource}`);
+        devLog.log(`[UnifiedSave] Successfully recovered ${campaign.meta.name} from ${recoverySource}`);
       } else if (campaign) {
-        console.log(`[UnifiedSave] Guest loaded: ${campaign.meta.name}`);
+        devLog.log(`[UnifiedSave] Guest loaded: ${campaign.meta.name}`);
       }
       
       return campaign;
@@ -646,7 +647,7 @@ class UnifiedSaveServiceClass {
       if (!compressed) return null;
 
       const campaign = decompressCampaign(compressed);
-      console.log(`[UnifiedSave] Guest loaded: ${campaign?.meta?.name}`);
+      devLog.log(`[UnifiedSave] Guest loaded: ${campaign?.meta?.name}`);
       return campaign;
     } catch (e) {
       console.error('[UnifiedSave] Guest load failed:', e);
@@ -672,7 +673,7 @@ class UnifiedSaveServiceClass {
       // CRITICAL: Also clean up ALL related localStorage keys for this campaign
       this.cleanupCampaignLocalStorage(campaignId);
 
-      console.log(`[UnifiedSave] Guest deleted: ${campaignId}`);
+      devLog.log(`[UnifiedSave] Guest deleted: ${campaignId}`);
       return { success: true };
     } catch (e) {
       console.error('[UnifiedSave] Guest delete failed:', e);
@@ -717,7 +718,7 @@ class UnifiedSaveServiceClass {
       // Remove all found keys
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
-        console.log(`[UnifiedSave] Cleaned up key: ${key}`);
+        devLog.log(`[UnifiedSave] Cleaned up key: ${key}`);
       });
 
       // Also update the lwe_campaign_index to remove this campaign
@@ -744,7 +745,7 @@ class UnifiedSaveServiceClass {
         }
       } catch { /* ignore index update errors */ }
 
-      console.log(`[UnifiedSave] Cleaned up ${keysToRemove.length} localStorage keys for campaign: ${campaignId}`);
+      devLog.log(`[UnifiedSave] Cleaned up ${keysToRemove.length} localStorage keys for campaign: ${campaignId}`);
     } catch (e) {
       console.error('[UnifiedSave] Cleanup failed:', e);
     }
@@ -764,7 +765,7 @@ class UnifiedSaveServiceClass {
       return { migrated: 0, failed: 0 };
     }
 
-    console.log(`[UnifiedSave] Migrating ${guestCampaigns.length} guest saves to cloud...`);
+    devLog.log(`[UnifiedSave] Migrating ${guestCampaigns.length} guest saves to cloud...`);
     let migrated = 0;
     let failed = 0;
 
@@ -784,7 +785,7 @@ class UnifiedSaveServiceClass {
       }
     }
 
-    console.log(`[UnifiedSave] Migration complete: ${migrated} migrated, ${failed} failed`);
+    devLog.log(`[UnifiedSave] Migration complete: ${migrated} migrated, ${failed} failed`);
     return { migrated, failed };
   }
 
@@ -867,7 +868,7 @@ class UnifiedSaveServiceClass {
     }
 
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log(`[UnifiedSave] Wiped ${keysToRemove.length} local keys`);
+    devLog.log(`[UnifiedSave] Wiped ${keysToRemove.length} local keys`);
   }
 }
 

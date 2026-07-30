@@ -2,6 +2,7 @@
 // Automatic cleanup of localStorage when approaching quota limits
 
 import LZString from 'lz-string';
+import { devLog } from '@/lib/devLog';
 
 const STORAGE_WARNING_THRESHOLD = 0.7; // 70% of quota (lowered for earlier cleanup)
 const STORAGE_CRITICAL_THRESHOLD = 0.9; // 90% of quota (lowered for earlier intervention)
@@ -120,7 +121,7 @@ export function formatStorageSize(bytes: number): string {
 }
 
 export function performCleanup(targetReduction: number = 0.2): number {
-  console.log('[StorageCleanup] Starting cleanup, target reduction:', targetReduction);
+  devLog.log('[StorageCleanup] Starting cleanup, target reduction:', targetReduction);
   
   const initialStats = getStorageStats();
   const targetUsage = initialStats.percentage - targetReduction;
@@ -180,13 +181,13 @@ export function performCleanup(targetReduction: number = 0.2): number {
       localStorage.removeItem(candidate.key);
       freedBytes += candidate.size;
       deletedCount++;
-      console.log(`[StorageCleanup] Deleted: ${candidate.key} (${formatStorageSize(candidate.size)})`);
+      devLog.log(`[StorageCleanup] Deleted: ${candidate.key} (${formatStorageSize(candidate.size)})`);
     } catch (e) {
       console.error(`[StorageCleanup] Failed to delete ${candidate.key}:`, e);
     }
   }
   
-  console.log(`[StorageCleanup] Complete. Deleted ${deletedCount} items, freed ${formatStorageSize(freedBytes)}`);
+  devLog.log(`[StorageCleanup] Complete. Deleted ${deletedCount} items, freed ${formatStorageSize(freedBytes)}`);
   
   return freedBytes;
 }
@@ -206,7 +207,7 @@ export function compressAndStore(key: string, data: any): boolean {
   } catch (e: any) {
     if (e.name === 'QuotaExceededError') {
       // Try cleanup and retry
-      console.warn('[StorageCleanup] Quota exceeded, attempting cleanup...');
+      devLog.warn('[StorageCleanup] Quota exceeded, attempting cleanup...');
       performCleanup(0.3);
       
       try {
@@ -247,10 +248,10 @@ export function checkAndCleanupStorage(): void {
   const stats = getStorageStats();
   
   if (stats.isCritical) {
-    console.warn('[StorageCleanup] Critical storage usage detected:', stats.percentage * 100, '%');
+    devLog.warn('[StorageCleanup] Critical storage usage detected:', stats.percentage * 100, '%');
     performCleanup(0.3); // Aggressive cleanup
   } else if (stats.isWarning) {
-    console.warn('[StorageCleanup] High storage usage detected:', stats.percentage * 100, '%');
+    devLog.warn('[StorageCleanup] High storage usage detected:', stats.percentage * 100, '%');
     performCleanup(0.15); // Moderate cleanup
   }
 }

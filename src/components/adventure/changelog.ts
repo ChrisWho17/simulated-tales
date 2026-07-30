@@ -393,6 +393,22 @@ function isChangelogEntry(value: unknown): value is ChangelogEntry {
   );
 }
 
+/**
+ * Safe list accessor for changelog entries.
+ *
+ * Changelog data can arrive from the bundled constant OR a fetched JSON file,
+ * so a missing / malformed `fixes`, `highlights`, etc. must never crash the UI.
+ * Returns a filtered array of non-empty strings, always.
+ */
+export function entryList(
+  entry: Partial<ChangelogEntry> | null | undefined,
+  key: "highlights" | "features" | "improvements" | "fixes"
+): string[] {
+  const value = entry?.[key];
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+}
+
 export function orderChangelog(entries: ChangelogEntry[]): ChangelogEntry[] {
   return [...entries].sort((a, b) =>
     a.version.localeCompare(b.version, undefined, { numeric: true })

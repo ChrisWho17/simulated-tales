@@ -6,6 +6,7 @@
 import { SaveSystem } from './SaveSystem';
 import { CampaignData } from '@/types/campaign';
 import { UnifiedSaveArchitecture } from '@/services/unifiedSaveArchitecture';
+import { devLog } from '@/lib/devLog';
 
 const AUTO_SAVE_PREFIX = 'lwe_autosave_';
 const AUTO_SAVE_SLOTS = 3;
@@ -70,7 +71,7 @@ class AutoSaveManagerClass {
       this.triggerAutoSave('interval');
     }, interval);
     
-    console.log(`[AutoSave] Initialized for campaign ${campaignId}`);
+    devLog.log(`[AutoSave] Initialized for campaign ${campaignId}`);
   }
   
   shutdown(): void {
@@ -86,7 +87,7 @@ class AutoSaveManagerClass {
     
     this.campaignId = null;
     this.getStateCallback = null;
-    console.log('[AutoSave] Shutdown');
+    devLog.log('[AutoSave] Shutdown');
   }
   
   // ============================================================================
@@ -211,7 +212,7 @@ class AutoSaveManagerClass {
         this.currentSlot = (this.currentSlot + 1) % AUTO_SAVE_SLOTS;
         
         const cloudStatus = unifiedResult.syncedToCloud ? ' (synced to cloud)' : '';
-        console.log(`[AutoSave] Saved to slot ${this.currentSlot} (reason: ${reason})${cloudStatus}`);
+        devLog.log(`[AutoSave] Saved to slot ${this.currentSlot} (reason: ${reason})${cloudStatus}`);
         this.notifyCallbacks('saved');
       } else {
         console.error('[AutoSave] Save failed');
@@ -328,7 +329,7 @@ class AutoSaveManagerClass {
               savedAt: new Date().toISOString(),
               campaign: state,
             }));
-            console.log('[AutoSave] Emergency save completed');
+            devLog.log('[AutoSave] Emergency save completed');
           } catch (err) {
             console.error('[AutoSave] Emergency save failed:', err);
           }
@@ -364,7 +365,7 @@ class AutoSaveManagerClass {
   
   setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
-    console.log(`[AutoSave] ${enabled ? 'Enabled' : 'Disabled'}`);
+    devLog.log(`[AutoSave] ${enabled ? 'Enabled' : 'Disabled'}`);
   }
   
   isAutoSaveEnabled(): boolean {
