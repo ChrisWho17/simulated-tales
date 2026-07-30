@@ -1,10 +1,9 @@
 // Quest Quick View - Compact quest overview for /quest command
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, BookOpen, CheckCircle, Circle, Star, ChevronRight } from 'lucide-react';
+import { BookOpen, CheckCircle, Circle, Star, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
 import { Quest, QuestLog, QuestObjective } from '@/game/questSystem';
 
 interface QuestQuickViewProps {
@@ -44,25 +43,40 @@ export function QuestQuickView({ questLog, onClose, onOpenFullJournal }: QuestQu
   };
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg max-h-[80vh] flex flex-col">
-        <CardHeader className="flex-row items-center justify-between border-b pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            Active Quests
-            {activeQuests.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {activeQuests.length}
-              </Badge>
-            )}
-          </CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+    <PlayOverlayShell
+      open
+      onClose={onClose}
+      title="Active Quests"
+      subtitle={
+        activeQuests.length > 0
+          ? `${activeQuests.length} in progress`
+          : availableCount > 0
+            ? `${availableCount} available to start`
+            : undefined
+      }
+      icon={<BookOpen className="w-5 h-5" />}
+      size="md"
+      headerActions={
+        activeQuests.length > 0 ? (
+          <Badge variant="secondary">{activeQuests.length}</Badge>
+        ) : undefined
+      }
+      footer={
+        onOpenFullJournal ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              onClose();
+              onOpenFullJournal();
+            }}
+          >
+            <BookOpen className="w-4 h-4 mr-2" />
+            Open Full Journal
           </Button>
-        </CardHeader>
-        
-        <CardContent className="flex-1 overflow-hidden p-0">
-          <ScrollArea className="h-full max-h-[60vh]">
+        ) : undefined
+      }
+    >
             <div className="p-4 space-y-4">
               {activeQuests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -148,26 +162,6 @@ export function QuestQuickView({ questLog, onClose, onOpenFullJournal }: QuestQu
                 </p>
               )}
             </div>
-          </ScrollArea>
-        </CardContent>
-        
-        {/* Footer with full journal link */}
-        {onOpenFullJournal && (
-          <div className="border-t p-3">
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => {
-                onClose();
-                onOpenFullJournal();
-              }}
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              Open Full Journal
-            </Button>
-          </div>
-        )}
-      </Card>
-    </div>
+    </PlayOverlayShell>
   );
 }

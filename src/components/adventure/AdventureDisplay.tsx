@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { StatBar, CircularStat } from '@/components/ui/stat-bar';
 import { AtmosphericBackground } from '@/components/ui/particle-background';
@@ -9,7 +8,7 @@ import { BookmarkButton } from '@/components/ui/BookmarkButton';
 import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
 import { TypewriterNarrative } from '@/components/ui/TypewriterText';
 import { SystemBadgesSummary } from '@/components/game/SystemHighlight';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, ImageIcon, Zap, Brain, Shield, ChevronDown, Package, Sparkles, Swords, Key, Gem, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye } from 'lucide-react';
+import { RotateCcw, Settings, Loader2, Heart, Coins, ImageIcon, Zap, Brain, Shield, ChevronDown, Package, Sparkles, Swords, Key, Gem, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -24,7 +23,7 @@ import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
 import { SettingsPanel } from '@/components/game/SettingsPanel';
 import { SessionRecapSplash } from '@/components/game/SessionRecapSplash';
 import { OnboardingOverlay, useOnboarding } from '@/components/game/OnboardingOverlay';
-import { CommandAutocomplete, useCommandAutocomplete, SLASH_COMMANDS } from '@/components/game/CommandAutocomplete';
+import { AdventureInputArea, type CommandHandlers } from './AdventureInputArea';
 import { QuickDiceRoll } from '@/components/game/QuickDiceRoll';
 import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView';
 import { TimeDisplay } from '@/components/game/TimeDisplay';
@@ -320,7 +319,6 @@ export function AdventureDisplay({
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [hasNewContent, setHasNewContent] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const previousStoryLength = useRef(story.length);
   
   // Story virtualization - only show last N messages to reduce render load
@@ -392,9 +390,6 @@ export function AdventureDisplay({
   
   // Onboarding system
   const { showOnboarding, triggerOnboarding, completeOnboarding } = useOnboarding();
-  
-  // Command autocomplete
-  const commandAutocomplete = useCommandAutocomplete();
   
   // Weather state - use external if provided, otherwise manage locally
   const [localWeatherState, setLocalWeatherState] = useState<WeatherState>(() => createInitialWeatherState());
@@ -808,17 +803,6 @@ export function AdventureDisplay({
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
 
-  // Focus input only on initial mount, not on every loading change (prevents keyboard popup)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (inputRef.current && !isLoading) {
-        inputRef.current.focus();
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
-
   // Process mechanics and trigger emotional state changes AND update character stats
   useEffect(() => {
     if (!pendingMechanics) return;
@@ -1208,6 +1192,24 @@ export function AdventureDisplay({
       duration: 5000,
     });
   }, [levelingState, character, onUpdateCharacter, toast]);
+
+  // Slash commands picked from the autocomplete popup open panels directly;
+  // the same commands typed and submitted are handled by handleSubmit below.
+  const commandHandlers = useMemo<CommandHandlers>(() => ({
+    onOpenInventory: () => setShowInventory(true),
+    onOpenCharacterSheet: () => setShowCharacterSheet(true),
+    onOpenBookmarks: () => setShowBookmarks(true),
+    onOpenSettings: () => setShowSettings(true),
+    onOpenQuickDiceRoll: () => setShowQuickDiceRoll(true),
+    onOpenRelationships: () => setShowRelationshipsQuickView(true),
+    onOpenWeatherModal: () => setShowWeatherModal(true),
+    onOpenSessionRecap: () => setShowSessionRecap(true),
+    onToggleMapPanel: () => setShowMapPanel(prev => !prev),
+    onOpenCompanionPanel: () => setShowCompanionPanel(true),
+    onOpenTimeDisplay: () => setShowTimeDisplay(true),
+    onOpenQuestQuickView: () => setShowQuestQuickView(true),
+    onOpenTimeSkipModal: () => setShowTimeSkipModal(true),
+  }), []);
 
   const handleSubmit = () => {
     if (input.trim() && !isLoading) {
@@ -2155,114 +2157,14 @@ export function AdventureDisplay({
       )}
 
       {/* Input Area */}
-      <div className="relative z-20 glass-panel border-0 border-t border-[var(--accent-border)] rounded-none p-4 md:p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex gap-3 relative">
-            {/* Command Autocomplete Dropdown */}
-            <CommandAutocomplete
-              inputValue={input}
-              onSelectCommand={(cmd) => {
-                setInput(cmd);
-                commandAutocomplete.close();
-                // Auto-submit the command
-                setTimeout(() => {
-                  const trimmed = cmd.toLowerCase();
-                  // Execute command immediately
-                  if (trimmed === '/inventory' || trimmed === '/inv' || trimmed === '/i') {
-                    setShowInventory(true);
-                    setInput('');
-                  } else if (trimmed === '/stats' || trimmed === '/character' || trimmed === '/char' || trimmed === '/c') {
-                    setShowCharacterSheet(true);
-                    setInput('');
-                  } else if (trimmed === '/bookmarks' || trimmed === '/bm') {
-                    setShowBookmarks(true);
-                    setInput('');
-                  } else if (trimmed === '/settings' || trimmed === '/options') {
-                    setShowSettings(true);
-                    setInput('');
-                  } else if (trimmed === '/roll' || trimmed === '/dice' || trimmed === '/r') {
-                    setShowQuickDiceRoll(true);
-                    setInput('');
-                  } else if (trimmed === '/relationships' || trimmed === '/rel' || trimmed === '/npcs') {
-                    setShowRelationshipsQuickView(true);
-                    setInput('');
-                  } else if (trimmed === '/weather' || trimmed === '/w') {
-                    setShowWeatherModal(true);
-                    setInput('');
-                  } else if (trimmed === '/recap') {
-                    setShowSessionRecap(true);
-                    setInput('');
-                  } else if (trimmed === '/map' || trimmed === '/m' || trimmed === '/location') {
-                    setShowMapPanel(prev => !prev);
-                    setInput('');
-                  } else if (trimmed === '/companions' || trimmed === '/party' || trimmed === '/allies') {
-                    setShowCompanionPanel(true);
-                    setInput('');
-                  } else if (trimmed === '/time' || trimmed === '/t' || trimmed === '/clock') {
-                    setShowTimeDisplay(true);
-                    setInput('');
-                  } else if (trimmed === '/wait' || trimmed === '/skip') {
-                    setShowTimeSkipModal(true);
-                    setInput('');
-                  } else if (trimmed === '/quest' || trimmed === '/quests' || trimmed === '/journal' || trimmed === '/q') {
-                    setShowQuestQuickView(true);
-                    setInput('');
-                  } else if (trimmed === '/help' || trimmed === '/commands' || trimmed === '/?') {
-                    toast({
-                      title: '📖 Available Commands',
-                      description: '/recap • /inventory • /stats • /roll • /weather • /map • /time • /wait • /quest • /relationships • /companions • /bookmarks • /settings',
-                      duration: 5000,
-                    });
-                    setInput('');
-                  }
-                }, 10);
-              }}
-              visible={commandAutocomplete.visible}
-              onClose={commandAutocomplete.close}
-              selectedIndex={commandAutocomplete.selectedIndex}
-              onSelectedIndexChange={commandAutocomplete.setSelectedIndex}
-            />
-            
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                commandAutocomplete.handleInputChange(e.target.value);
-              }}
-              placeholder="What do you do? (try /help for commands)"
-              className="flex-1 bg-black/30 border-[var(--accent-border)] text-foreground placeholder:text-muted-foreground font-narrative text-base md:text-lg py-6 focus:border-primary focus:shadow-glow"
-              style={{ fontSize: '16px' }}
-              onKeyDown={(e) => {
-                // Handle autocomplete keyboard navigation first
-                const handled = commandAutocomplete.handleKeyDown(e, input, (cmd) => {
-                  setInput(cmd);
-                  commandAutocomplete.close();
-                });
-                if (handled) return;
-                
-                // Normal enter to submit
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  handleSubmit();
-                }
-              }}
-              disabled={isLoading || showDiceRoll}
-            />
-            <Button
-              onClick={handleSubmit}
-              disabled={!input.trim() || isLoading || showDiceRoll}
-              size="lg"
-              className="px-6"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <AdventureInputArea
+        input={input}
+        onInputChange={setInput}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+        showDiceRoll={showDiceRoll}
+        commandHandlers={commandHandlers}
+      />
 
       {/* New Dice Roll Display - for skill checks with animated modal */}
       {showDiceRoll && currentDiceRoll && (

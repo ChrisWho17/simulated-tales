@@ -1,11 +1,9 @@
 // Relationships Quick View - Shows NPC relationships in a modal
 import React, { useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Heart, Handshake, Shield, Skull, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Users, Heart, Handshake, Shield, Skull, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
 
 interface NPCRelationship {
   id: string;
@@ -72,61 +70,47 @@ export function RelationshipsQuickView({
     return { friends, enemies, romantic, total: relationships.length };
   }, [relationships]);
   
-  if (!open) return null;
-  
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[80vh] flex flex-col"
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="p-4 border-b border-border bg-gradient-to-r from-primary/10 to-transparent flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">Relationships</h2>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
+    <PlayOverlayShell
+      open={open}
+      onClose={onClose}
+      title="Relationships"
+      icon={<Users className="w-5 h-5" />}
+      size="md"
+      toolbar={
+        <div className="px-4 py-3 border-b border-[var(--surface-edge)] bg-black/10 flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <span>{stats.total} Known</span>
           </div>
-          
-          {/* Stats bar */}
-          <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <span>{stats.total} Known</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Handshake className="w-4 h-4 text-emerald-400" />
-              <span>{stats.friends} Friends</span>
-            </div>
-            {stats.romantic > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Heart className="w-4 h-4 text-pink-400" />
-                <span>{stats.romantic} Romance</span>
-              </div>
-            )}
-            {stats.enemies > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Skull className="w-4 h-4 text-red-400" />
-                <span>{stats.enemies} Hostile</span>
-              </div>
-            )}
+          <div className="flex items-center gap-1.5">
+            <Handshake className="w-4 h-4 text-emerald-400" />
+            <span>{stats.friends} Friends</span>
           </div>
-          
-          {/* Relationship list */}
-          <ScrollArea className="flex-1 p-4">
+          {stats.romantic > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Heart className="w-4 h-4 text-pink-400" />
+              <span>{stats.romantic} Romance</span>
+            </div>
+          )}
+          {stats.enemies > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Skull className="w-4 h-4 text-red-400" />
+              <span>{stats.enemies} Hostile</span>
+            </div>
+          )}
+        </div>
+      }
+      footer={
+        onViewFull ? (
+          <Button variant="outline" className="w-full" onClick={onViewFull}>
+            <Users className="w-4 h-4 mr-2" />
+            View Full Relationships Panel
+          </Button>
+        ) : undefined
+      }
+    >
+          <div className="p-4">
             {sortedRelationships.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -197,19 +181,7 @@ export function RelationshipsQuickView({
                 ))}
               </div>
             )}
-          </ScrollArea>
-          
-          {/* Footer */}
-          {onViewFull && (
-            <div className="p-3 border-t border-border bg-muted/20">
-              <Button variant="outline" className="w-full" onClick={onViewFull}>
-                <Users className="w-4 h-4 mr-2" />
-                View Full Relationships Panel
-              </Button>
-            </div>
-          )}
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+          </div>
+    </PlayOverlayShell>
   );
 }

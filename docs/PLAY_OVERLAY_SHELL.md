@@ -64,8 +64,12 @@ underline pick up `--accent-primary`.
 ## Migrated
 
 `SettingsPanel`, `CharacterSheet`, `LevelUpModal`, `RelationshipJournalDetail`,
-`InventoryScreen`, `ArsenalScreen`, `ItemActionModal`, `CompanionPanel`, and the
-weather overlay inside `AdventureDisplay`.
+`InventoryScreen`, `ArsenalScreen`, `ItemActionModal`, `CompanionPanel`,
+`QuestQuickView`, `RelationshipsQuickView`, `AmbientFeedModal`, and the weather
+overlay inside `AdventureDisplay`.
+
+`RelationshipsQuickView` puts its known/friends/romance/hostile counts in the
+`toolbar` slot so they stay pinned while the NPC list scrolls.
 
 ## Sibling: the HUD bar
 
@@ -92,3 +96,9 @@ panel with its own nested screen router. It is not an easy migration and it is
 gated behind cheat commands, so it keeps its own chrome for now.
 
 The companion sub-modals inside `CheatModeSplash` are in the same bucket.
+
+`DiceRollDisplay`, `DiceRollModal`, `MobileQuickMenu`, `RadialQuickMenu`,
+`OnboardingOverlay` and `ScreenEffects` are live but deliberately not shell
+candidates. None of them is a header/scroll-body panel — they are animation
+surfaces, radial menus and coach marks, so the shell's chrome would be the wrong
+shape rather than a consistency win.

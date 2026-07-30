@@ -56,4 +56,26 @@
  * [x] Weather overlay migrated to PlayOverlayShell (Escape, focus trap, mobile full-screen)
  * [ ] AdventureDisplay god-file slice — still deferred, but ~200 lines lighter
  * [ ] CheatModeSplash overlay migration — still deferred (3.9k-line dev panel)
+ *
+ * Pass 4 — Close-out (Cursor):
+ * [x] AdventureInputArea is live. AdventureDisplay rendered its own copy of the input row
+ *     and slash-command dispatch while the extracted component sat unreferenced; the
+ *     component now owns the input, the autocomplete hook and mount focus. ~110 duplicated
+ *     lines gone. The extract's triple-tap-to-redo was dropped rather than shipped —
+ *     the container tap handler would have hijacked triple-click-to-select-all in the
+ *     text field.
+ * [x] QuestQuickView, RelationshipsQuickView and AmbientFeedModal migrated to
+ *     PlayOverlayShell. All three are live player-facing overlays reached by slash
+ *     commands, and each hand-rolled its own backdrop/header/scroll body.
+ * [x] Play-trust spot-check — all four re-verified as closed, no new code needed:
+ *     language barrier (settings sync -> request body -> edge prompt -> post-process on
+ *     both the streaming and non-streaming paths, plus zone transitions), inventory
+ *     (portrait scan + class kit via resolvedGear, objectOwnership context to the AI),
+ *     HP/XP/gold dual-writer (usePlayerStateSync reconciles both directions and
+ *     syncFromCharacter emits no events, so there is no feedback loop), autosave
+ *     (ref-backed 5-minute interval, and the extended fields it writes are the ones
+ *     handleLoadSave restores).
+ * [ ] AdventureModals / SaveLoadMenu / WeaponInspectionModal — still unreferenced by
+ *     design; each is annotated in-file with why it was not wired or deleted.
+ * [ ] CheatModeSplash overlay migration — still deferred (3.9k-line dev panel)
  */
