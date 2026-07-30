@@ -299,12 +299,64 @@
     box-shadow: var(--shadow-glass);
   }
 
+  /* Reads from the surface tokens so nested content keeps its contrast under
+     every preset; the tint is the only part that follows the accent. */
   .glass-panel-subtle {
-    background: rgba(15, 15, 25, 0.5);
+    background:
+      linear-gradient(180deg, var(--surface-tint) 0%, transparent 100%),
+      var(--surface-sunken);
     backdrop-filter: blur(10px) saturate(150%);
     -webkit-backdrop-filter: blur(10px) saturate(150%);
-    border: 1px solid var(--accent-border);
+    border: 1px solid var(--surface-edge);
     border-radius: 12px;
+  }
+
+  /* === PLAY HUD === */
+  /* The bar pinned above the story, and the strips that sit directly under it.
+     Story text scrolls beneath, so these need real opacity rather than glass —
+     the atmosphere comes from the accent tint and the hairline. */
+  .play-hud {
+    position: relative;
+    background:
+      radial-gradient(140% 220% at 50% 0%, var(--surface-tint) 0%, transparent 65%),
+      linear-gradient(180deg, var(--surface-raised) 0%, var(--surface-sunken) 100%);
+    border-bottom: 1px solid var(--surface-edge);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+  }
+
+  /* Accent hairline along the bottom edge — the one place the HUD takes colour. */
+  .play-hud::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--accent-border) 25%,
+      var(--accent-primary) 50%,
+      var(--accent-border) 75%,
+      transparent 100%
+    );
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Divider between HUD clusters (world state / character actions). */
+  .play-hud-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 0.25rem 0.125rem;
+    background: var(--surface-edge);
+  }
+
+  /* Secondary strip under the HUD: scene illustration, transient banners. */
+  .play-hud-strip {
+    background: var(--surface-sunken);
+    border-bottom: 1px solid var(--surface-edge);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
   }
 
   /* === PLAY OVERLAY SHELL === */

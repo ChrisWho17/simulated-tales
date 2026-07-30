@@ -1,5 +1,9 @@
-// AdventureHeader - Extracted header component from AdventureDisplay
-// Contains the title, toolbar buttons, and status indicators
+// AdventureHeader — the HUD bar above the story.
+//
+// Two clusters: world state on the left of the divider (pace, weather), the
+// character's own screens on the right (sheet, pack, saves, settings). Anything
+// a player reaches for once a session lives in the overflow menu rather than
+// spending a permanent slot.
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -18,14 +22,22 @@ import {
   Snowflake,
   Flame,
   Wind,
+  MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { SavesDropdown } from '@/components/campaign';
 import { PacingIndicator } from '@/components/game/PacingIndicator';
 import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
 import { RadialMenuTrigger } from '@/components/game/RadialQuickMenu';
 import { WeatherState, WEATHER_CONFIGS, WeatherType } from '@/game/weatherSystem';
-import { GameTimeState, TimeMultiplier, TIME_MULTIPLIER_CONFIG } from '@/game/timeProgressionSystem';
+import { GameTimeState, TimeMultiplier } from '@/game/timeProgressionSystem';
 
 export interface AdventureHeaderProps {
   // Weather state
@@ -50,7 +62,9 @@ export interface AdventureHeaderProps {
   onRestart: () => void;
 }
 
-// Helper to get weather icon
+const HUD_BUTTON_CLASS =
+  'h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/80 hover:text-primary';
+
 function getWeatherIcon(weatherType: WeatherType) {
   switch (weatherType) {
     case 'storm':
@@ -72,7 +86,6 @@ function getWeatherIcon(weatherType: WeatherType) {
   }
 }
 
-// Helper to get weather button color class
 function getWeatherColorClass(weatherType: WeatherType): string {
   switch (weatherType) {
     case 'storm':
@@ -109,11 +122,13 @@ export function AdventureHeader({
   onOpenSettings,
   onRestart,
 }: AdventureHeaderProps) {
+  const weatherName = WEATHER_CONFIGS[weatherState.current].name;
+  
   return (
-    <header className="relative z-20 glass-panel border-0 border-b border-[var(--accent-border)] rounded-none">
-      <div className="flex items-center justify-between px-2 py-1 gap-1">
+    <header className="play-hud relative z-20">
+      <div className="flex items-center justify-between gap-2 px-2 py-1">
         {/* Title - Tappable on mobile */}
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1">
           <button
             onClick={onOpenMobileQuickMenu}
             className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0 md:cursor-default active:scale-95 transition-transform"
@@ -122,122 +137,129 @@ export function AdventureHeader({
             UNTOLD
           </button>
           <span
-            className="text-[8px] font-mono text-muted-foreground/50 bg-muted/20 px-1 py-0.5 rounded border border-border/20 cursor-default"
+            className="hidden sm:inline text-[8px] font-mono text-muted-foreground/60 bg-muted/20 px-1 py-0.5 rounded border border-border/20 cursor-default"
             title={`Build: ${BUILD_NUMBER}`}
           >
             {VERSION_STRING}
           </span>
         </div>
 
-        {/* Toolbar buttons - grouped together with no-shrink */}
-        <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto">
-          {/* Ambient Feed Button - Mobile only */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenAmbientFeedModal}
-            className="md:hidden h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
-            title="World Events"
-          >
-            <Globe className="w-4 h-4" />
-            {hasNewAmbientEvents && (
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-            )}
-          </Button>
-
-          {/* Ambient Feed Button - Desktop */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenAmbientFeedModal}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
-            title="World Events"
-          >
-            <Globe className="w-4 h-4" />
-            {hasNewAmbientEvents && (
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-            )}
-          </Button>
-
-          {/* Pacing Indicator */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {/* World state: how fast time moves and what the sky is doing. */}
           <PacingIndicator
             currentMultiplier={timeState.multiplier}
             onMultiplierChange={onTimeMultiplierChange}
           />
 
-          {/* Weather Button */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onOpenWeatherModal}
-            className={`h-7 w-7 md:h-7 md:w-7 flex-shrink-0 frosted-button ${getWeatherColorClass(weatherState.current)}`}
-            title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
+            className={`${HUD_BUTTON_CLASS} ${
+              weatherEnabled ? getWeatherColorClass(weatherState.current) : ''
+            }`}
+            title={
+              weatherEnabled
+                ? `Weather: ${weatherName}`
+                : `Weather: ${weatherName} (effects off)`
+            }
           >
             {getWeatherIcon(weatherState.current)}
           </Button>
 
-          {/* Character Sheet Button - Hidden on mobile */}
+          {/* World events — mobile keeps a dedicated button; on desktop it sits
+              in the overflow menu below. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenAmbientFeedModal}
+            className={`md:hidden relative ${HUD_BUTTON_CLASS}`}
+            title="World Events"
+          >
+            <Globe className="w-4 h-4" />
+            {hasNewAmbientEvents && (
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            )}
+          </Button>
+
+          <div className="play-hud-divider hidden md:block" aria-hidden="true" />
+
+          {/* The character's own screens. */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onOpenCharacterSheet}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+            className={`hidden md:flex ${HUD_BUTTON_CLASS}`}
             title="Character Sheet"
           >
             <ScrollText className="w-4 h-4" />
           </Button>
 
-          {/* Inventory Button - Hidden on mobile */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onOpenInventory}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+            className={`hidden md:flex ${HUD_BUTTON_CLASS}`}
             title="Inventory (Ctrl+I)"
           >
             <Backpack className="w-4 h-4" />
           </Button>
 
-          {/* Bookmarks Button - Hidden on mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenBookmarks}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
-            title="Bookmarks (Ctrl+B)"
-          >
-            <Bookmark className="w-4 h-4" />
-          </Button>
-
-          {/* Saves Dropdown */}
+          {/* Trigger hidden on mobile; the dialog still opens from the quick menu. */}
           <SavesDropdown />
 
-          {/* Cloud Sync Indicator - Hidden on mobile */}
           <div className="hidden md:block">
             <CloudSyncIndicator />
           </div>
 
-          {/* Settings - Hidden on mobile */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onOpenSettings}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
+            className={`hidden md:flex ${HUD_BUTTON_CLASS}`}
             title="Settings"
           >
             <Sliders className="w-4 h-4" />
           </Button>
 
-          {/* Restart - Hidden on mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onRestart}
-            className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
-            title="New Adventure"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </Button>
+          {/* Everything reached for once a session. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`hidden md:flex relative ${HUD_BUTTON_CLASS}`}
+                title="More"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+                {hasNewAmbientEvents && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={onOpenAmbientFeedModal} className="gap-2">
+                <Globe className="w-4 h-4" />
+                World Events
+                {hasNewAmbientEvents && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenBookmarks} className="gap-2">
+                <Bookmark className="w-4 h-4" />
+                Bookmarks
+                <span className="ml-auto text-[10px] text-muted-foreground">Ctrl+B</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onRestart}
+                className="gap-2 text-destructive focus:text-destructive"
+              >
+                <RotateCcw className="w-4 h-4" />
+                New Adventure
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Radial Menu Trigger - Mobile only */}
           <RadialMenuTrigger

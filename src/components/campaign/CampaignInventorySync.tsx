@@ -13,6 +13,7 @@ import {
 import {
   initializeStartingGear,
   needsStartingGear,
+  StartingGearItem,
 } from '@/game/storyInventoryBridge';
 import { unifiedInventory } from '@/game/unifiedInventoryBridge';
 import { setLogCampaignId, forceFlush } from '@/services/inventorySyncLogger';
@@ -86,8 +87,19 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
     if (needsStartingGear(inventory.state)) {
       const genre = activeCampaign.meta?.primaryGenre || 'fantasy';
       const playerClass = activeCampaign.player?.classId || 'default';
+      // Character creation resolves the kit — gear edits, or equipment scanned
+      // off the portrait merged with the class loadout. The class table is only
+      // the fallback for campaigns created before that ran.
+      const playerAny = activeCampaign.player as unknown as {
+        customStartingGear?: StartingGearItem[];
+        startingGearSource?: string;
+      } | undefined;
+      const resolvedGear = playerAny?.customStartingGear;
       
-      console.log(`[CampaignInventorySync] Initializing starting gear for ${genre}/${playerClass}`);
+      console.log(
+        `[CampaignInventorySync] Initializing starting gear for ${genre}/${playerClass}` +
+        (resolvedGear?.length ? ` from resolved kit (${playerAny?.startingGearSource || 'custom'})` : '')
+      );
       
       // Mark as initialized BEFORE adding items to prevent loops
       hasInitializedGearRef.current.add(activeCampaignId);
@@ -95,7 +107,7 @@ export function CampaignInventorySync({ children }: CampaignInventorySyncProps) 
       // Small delay to ensure state is settled
       setTimeout(() => {
         if (needsStartingGear(inventory.state)) {
-          initializeStartingGear(inventory, genre, playerClass);
+          initializeStartingGear(inventory, genre, playerClass, resolvedGear);
           console.log(`[CampaignInventorySync] Starting gear initialized`);
         }
       }, 100);

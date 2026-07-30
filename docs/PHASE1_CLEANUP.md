@@ -36,4 +36,24 @@
  * [x] Tokens: 'ink' (warm brass) is the new default preset; borders/glows in Button, Card
  *     and play chrome route through --accent-* so the color picker drives them
  * [ ] AdventureDisplay god-file slice — still deferred
+ *
+ * Pass 3 — Deferred items (Cursor):
+ * [x] P1.8 Character-gen inventory from imagery. Generating a portrait now scans it for
+ *     visible gear and reconciles that with the class kit; skipping the portrait keeps the
+ *     class kit alone. New edge function scan-portrait-gear (NEEDS DEPLOY).
+ *     See docs/PORTRAIT_GEAR_SCAN.md
+ * [x] customStartingGear is finally read. It was written at character creation and dropped
+ *     on the floor by CampaignInventorySync, so gear-editor edits never reached play.
+ * [x] Class change clears stale gear edits (a mage kept the warrior's plate, because the
+ *     gear editor only rebuilds its list while no custom gear is held)
+ * [x] Header HUD: AdventureDisplay now renders the AdventureHeader it already had —
+ *     ~170 lines of duplicated inline JSX gone, duplicate world-events button removed,
+ *     low-frequency actions (world events, bookmarks, new adventure) moved to an overflow
+ *     menu, clusters split by a divider
+ * [x] Tokens: .play-hud / .play-hud-strip / .play-hud-divider read the surface tokens, so
+ *     the bar stays legible with story text scrolling under it; glass-panel-subtle moved
+ *     off its hardcoded slate onto --surface-sunken + --surface-tint
+ * [x] Weather overlay migrated to PlayOverlayShell (Escape, focus trap, mobile full-screen)
+ * [ ] AdventureDisplay god-file slice — still deferred, but ~200 lines lighter
+ * [ ] CheatModeSplash overlay migration — still deferred (3.9k-line dev panel)
  */

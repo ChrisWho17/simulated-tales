@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { VERSION_STRING, BUILD_NUMBER } from '@/lib/version';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,7 @@ import { BookmarkButton } from '@/components/ui/BookmarkButton';
 import { BookmarksSidebar } from '@/components/ui/BookmarksSidebar';
 import { TypewriterNarrative } from '@/components/ui/TypewriterText';
 import { SystemBadgesSummary } from '@/components/game/SystemHighlight';
-import { Send, RotateCcw, Settings, Loader2, Heart, Coins, Backpack, ImageIcon, Zap, Brain, Shield, Sliders, ChevronDown, Package, Sparkles, Swords, Key, Gem, ScrollText, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye, Bookmark, Globe } from 'lucide-react';
+import { Send, RotateCcw, Settings, Loader2, Heart, Coins, ImageIcon, Zap, Brain, Shield, ChevronDown, Package, Sparkles, Swords, Key, Gem, FlaskConical, CircleDollarSign, Wind, Cloud, CloudRain, CloudLightning, CloudFog, Sun, Snowflake, Flame, Timer, Volume2, VolumeX, TrendingUp, TrendingDown, Minus, AlertTriangle, Droplets, Eye } from 'lucide-react';
 import { RPGCharacter, InventoryItem, getStatModifier, CHARACTER_CLASSES, CHARACTER_BACKGROUNDS, CharacterStats, calculateMaxHealth } from '@/types/rpgCharacter';
 import { DiceRollModal } from './DiceRollModal';
 import { CharacterSheet } from './CharacterSheet';
@@ -18,7 +17,7 @@ import { StoryRollbackModal } from './StoryRollbackModal';
 import { PlayerMoodIndicator } from './PlayerMoodIndicator';
 import { LevelUpModal } from './LevelUpModal';
 import { NarrativeLoadingIndicator } from './NarrativeLoadingIndicator';
-import { SavesDropdown } from '@/components/campaign';
+import { AdventureHeader } from './AdventureHeader';
 
 import { SceneIllustration } from '@/components/game/SceneIllustration';
 import { DiceRollDisplay } from '@/components/game/DiceRollDisplay';
@@ -31,10 +30,9 @@ import { RelationshipsQuickView } from '@/components/game/RelationshipsQuickView
 import { TimeDisplay } from '@/components/game/TimeDisplay';
 import { TimeSkipModal } from '@/components/game/TimeSkipModal';
 import { QuestQuickView } from '@/components/game/QuestQuickView';
-import { PacingIndicator } from '@/components/game/PacingIndicator';
 import { MobileQuickMenu } from '@/components/game/MobileQuickMenu';
-import { RadialQuickMenu, RadialMenuTrigger } from '@/components/game/RadialQuickMenu';
-import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
+import { RadialQuickMenu } from '@/components/game/RadialQuickMenu';
+import { PlayOverlayShell } from '@/components/game/PlayOverlayShell';
 import { initializeQuestLog, QuestLog } from '@/game/questSystem';
 import { 
   GameTimeState, 
@@ -1822,184 +1820,35 @@ export function AdventureDisplay({
       })()}
 
       {/* Header */}
-      <header className="relative z-20 glass-panel border-0 border-b rounded-none" style={{ borderBottomColor: 'var(--accent-border)' }}>
-        <div className="flex items-center justify-between px-2 py-1 gap-1">
-          {/* Title - Tappable on mobile */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowMobileQuickMenu(true)}
-              className="text-[11px] font-display font-bold tracking-wide fiery-gold-text flex-shrink-0 md:cursor-default active:scale-95 transition-transform"
-              data-text="UNTOLD"
-            >
-              UNTOLD
-            </button>
-            <span 
-              className="text-[8px] font-mono text-muted-foreground/50 bg-muted/20 px-1 py-0.5 rounded border border-border/20 cursor-default"
-              title={`Build: ${BUILD_NUMBER}`}
-            >
-              {VERSION_STRING}
-            </span>
-          </div>
-          
-          {/* Toolbar buttons - grouped together with no-shrink */}
-          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto">
-            {/* Ambient Feed Button - Mobile only, opens world events modal */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setShowAmbientFeedModal(true);
-                setLastSeenAmbientCount(ambientFeed.entries.length);
-              }}
-              className="md:hidden h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
-              title="World Events"
-            >
-              <Globe className="w-4 h-4" />
-              {hasNewAmbientEvents && (
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-              )}
-            </Button>
-            
-            {/* Ambient Feed Button - Desktop, same icon for consistency */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setShowAmbientFeedModal(true);
-                setLastSeenAmbientCount(ambientFeed.entries.length);
-              }}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary relative"
-              title="World Events"
-            >
-              <Globe className="w-4 h-4" />
-              {hasNewAmbientEvents && (
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-              )}
-            </Button>
-            
-            {/* Pacing Indicator - Compact dropdown */}
-            <PacingIndicator
-              currentMultiplier={timeState.multiplier}
-              onMultiplierChange={(multiplier) => {
-                setTimeState(prev => ({ ...prev, multiplier }));
-                toast({
-                  title: "Time Pace Changed",
-                  description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
-                });
-              }}
-            />
-            
-            {/* Weather Button - Now visible on mobile too */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowWeatherModal(true)}
-              className={`h-7 w-7 md:h-7 md:w-7 flex-shrink-0 frosted-button ${
-                weatherState.current === 'storm' ? 'text-yellow-400' : 
-                weatherState.current === 'rain' ? 'text-blue-400' : 
-                weatherState.current === 'fog' ? 'text-violet-400' : 
-                weatherState.current === 'heat_wave' ? 'text-red-400' : 
-                weatherState.current === 'wind' ? 'text-orange-400' :
-                weatherState.current === 'snow' ? 'text-cyan-400' :
-                weatherState.current === 'cloudy' ? 'text-slate-400' :
-                'text-amber-400'
-              }`}
-              title={`Weather: ${WEATHER_CONFIGS[weatherState.current].name}`}
-            >
-              {weatherState.current === 'storm' ? (
-                <CloudLightning className="w-4 h-4" />
-              ) : weatherState.current === 'rain' ? (
-                <CloudRain className="w-4 h-4" />
-              ) : weatherState.current === 'fog' ? (
-                <CloudFog className="w-4 h-4" />
-              ) : weatherState.current === 'heat_wave' ? (
-                <Flame className="w-4 h-4" />
-              ) : weatherState.current === 'wind' ? (
-                <Wind className="w-4 h-4" />
-              ) : weatherState.current === 'snow' ? (
-                <Snowflake className="w-4 h-4" />
-              ) : weatherState.current === 'cloudy' ? (
-                <Cloud className="w-4 h-4" />
-              ) : (
-                <Sun className="w-4 h-4" />
-              )}
-            </Button>
-            
-            {/* Character Sheet Button - Hidden on mobile, accessible via quick menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowCharacterSheet(true)}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Character Sheet"
-            >
-              <ScrollText className="w-4 h-4" />
-            </Button>
-            
-            {/* Inventory Button - Hidden on mobile, accessible via quick menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowInventory(true)}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Inventory (Ctrl+I)"
-            >
-              <Backpack className="w-4 h-4" />
-            </Button>
-            
-            {/* Bookmarks Button - Hidden on mobile, accessible via quick menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowBookmarks(true)}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Bookmarks (Ctrl+B)"
-            >
-              <Bookmark className="w-4 h-4" />
-            </Button>
-            
-            {/* Saves Dropdown - Trigger hidden on mobile, but dialog works via quick menu event */}
-            <SavesDropdown />
-            
-            
-            
-            {/* Cloud Sync Indicator - Hidden on mobile */}
-            <div className="hidden md:block">
-              <CloudSyncIndicator />
-            </div>
-            
-            {/* Settings - Hidden on mobile, accessible via quick menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowSettings(true)}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-primary"
-              title="Settings"
-            >
-              <Sliders className="w-4 h-4" />
-            </Button>
-            
-            {/* Restart - Hidden on mobile, accessible via quick menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRestart}
-              className="hidden md:flex h-7 w-7 flex-shrink-0 frosted-button text-muted-foreground/70 hover:text-destructive"
-              title="New Adventure"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-            
-            {/* Radial Menu Trigger - Mobile only, opens Skyrim-style menu */}
-            <RadialMenuTrigger onClick={() => window.dispatchEvent(new CustomEvent('open-radial-menu'))} />
-          </div>
-        </div>
-      </header>
+      <AdventureHeader
+        weatherState={weatherState}
+        weatherEnabled={weatherEnabled}
+        timeState={timeState}
+        onTimeMultiplierChange={(multiplier) => {
+          setTimeState(prev => ({ ...prev, multiplier }));
+          toast({
+            title: "Time Pace Changed",
+            description: `Each action now advances ${TIME_MULTIPLIER_CONFIG[multiplier].label.toLowerCase()} of game time.`,
+          });
+        }}
+        hasNewAmbientEvents={hasNewAmbientEvents}
+        onOpenMobileQuickMenu={() => setShowMobileQuickMenu(true)}
+        onOpenAmbientFeedModal={() => {
+          setShowAmbientFeedModal(true);
+          setLastSeenAmbientCount(ambientFeed.entries.length);
+        }}
+        onOpenWeatherModal={() => setShowWeatherModal(true)}
+        onOpenCharacterSheet={() => setShowCharacterSheet(true)}
+        onOpenInventory={() => setShowInventory(true)}
+        onOpenBookmarks={() => setShowBookmarks(true)}
+        onOpenSettings={() => setShowSettings(true)}
+        onRestart={onRestart}
+      />
 
 
       {/* Auto-generated Scene Illustration */}
       {(sceneImageUrl || isGeneratingScene) && (
-        <div className="relative z-20 p-4 bg-background/50 backdrop-blur-sm border-b border-border/50">
+        <div className="play-hud-strip relative z-20 p-4">
           <div className="max-w-3xl mx-auto">
             <SceneIllustration
               imageUrl={sceneImageUrl}
@@ -2607,16 +2456,22 @@ export function AdventureDisplay({
         </div>
       )}
 
-      {/* Weather Modal with Particles and Forecast */}
-      {showWeatherModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
-          onClick={() => setShowWeatherModal(false)}
-        >
-          <div 
-            className="glass-panel p-6 max-w-md w-full mx-4 space-y-4 animate-scale-in relative overflow-hidden max-h-[85vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
+      {/* Weather overlay with Particles and Forecast */}
+      <PlayOverlayShell
+        open={showWeatherModal}
+        onClose={() => setShowWeatherModal(false)}
+        title="Weather"
+        subtitle={weatherEnabled ? undefined : 'Visual effects are off'}
+        icon={<Cloud className="w-5 h-5" />}
+        size="sm"
+        bodyClassName="px-4 py-4 sm:px-5"
+        footer={(
+          <Button onClick={() => setShowWeatherModal(false)} className="w-full" variant="outline">
+            Close
+          </Button>
+        )}
+      >
+          <div className="relative space-y-4 overflow-hidden">
             {/* Particle Effects Background */}
             {(() => {
               const transitionOpacity = getWeatherTransitionOpacity(weatherState);
@@ -2737,13 +2592,8 @@ export function AdventureDisplay({
                 </p>
               </TabsContent>
             </Tabs>
-            
-            <Button onClick={() => setShowWeatherModal(false)} className="w-full relative z-10" variant="outline">
-              Close
-            </Button>
           </div>
-        </div>
-      )}
+      </PlayOverlayShell>
       
       {/* Inventory Screen Modal */}
       <InventoryScreen 

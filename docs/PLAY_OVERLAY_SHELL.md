@@ -64,7 +64,19 @@ underline pick up `--accent-primary`.
 ## Migrated
 
 `SettingsPanel`, `CharacterSheet`, `LevelUpModal`, `RelationshipJournalDetail`,
-`InventoryScreen`, `ArsenalScreen`, `ItemActionModal`, `CompanionPanel`.
+`InventoryScreen`, `ArsenalScreen`, `ItemActionModal`, `CompanionPanel`, and the
+weather overlay inside `AdventureDisplay`.
+
+## Sibling: the HUD bar
+
+`.play-hud` in `src/index.css` is the overlay shell's counterpart for the bar
+pinned above the story (`AdventureHeader`). It reads the same `--surface-*`
+tokens, but at real opacity rather than glass — story text scrolls underneath it,
+and a translucent bar made both illegible. Accent shows up only in the hairline
+along its bottom edge, mirroring the overlay surface's top hairline.
+
+`.play-hud-strip` is the quieter variant for what sits directly beneath the bar
+(currently the scene illustration).
 
 ## Not migrated, and why
 

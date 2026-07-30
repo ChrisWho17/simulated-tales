@@ -807,7 +807,13 @@ export interface InventoryDispatcher {
 export function initializeStartingGear(
   inventory: InventoryDispatcher,
   genre: string,
-  characterClass: string = 'default'
+  characterClass: string = 'default',
+  /**
+   * A kit resolved at character creation — the player's gear edits, or the
+   * equipment scanned off their portrait reconciled with the class kit. When
+   * present it replaces the genre/class table lookup entirely.
+   */
+  resolvedGear?: StartingGearItem[]
 ): { items: InventoryItem[]; equipped: Partial<EquippedState> } {
   // Map genre aliases
   const genreMap: Record<string, string> = {
@@ -827,10 +833,13 @@ export function initializeStartingGear(
   
   const normalizedGenre = genreMap[genre.toLowerCase()] || genre.toLowerCase();
   const genreGear = STARTING_GEAR[normalizedGenre] || STARTING_GEAR.fantasy;
-  const gearList = genreGear[characterClass.toLowerCase()] || genreGear.default;
+  const usingResolvedGear = Array.isArray(resolvedGear) && resolvedGear.length > 0;
+  const gearList = usingResolvedGear
+    ? resolvedGear
+    : (genreGear[characterClass.toLowerCase()] || genreGear.default);
   
   console.log(`[StartingGear] Initializing for genre: ${normalizedGenre}, class: ${characterClass}`);
-  console.log(`[StartingGear] Adding ${gearList.length} items`);
+  console.log(`[StartingGear] Adding ${gearList.length} items (${usingResolvedGear ? 'resolved at creation' : 'class table'})`);
   
   const addedItems: InventoryItem[] = [];
   const equippedSlots: Partial<EquippedState> = {};

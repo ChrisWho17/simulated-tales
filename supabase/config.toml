@@ -17,3 +17,7 @@ verify_jwt = false
 
 [functions.generate-companion-dialogue]
 verify_jwt = false
+
+# Portrait gear scan runs during character creation, often before sign-in.
+[functions.scan-portrait-gear]
+verify_jwt = false

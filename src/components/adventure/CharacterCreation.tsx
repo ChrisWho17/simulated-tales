@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,7 +25,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { 
   ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
-  Eye, Crosshair, Zap, Blend, Plus, Shirt, Scissors, Syringe, Palette
+  Eye, Crosshair, Zap, Blend, Plus, Shirt, Scissors, Syringe, Palette,
+  Backpack, ScanLine, Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
@@ -36,6 +37,14 @@ import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
 import { CustomClassBuilder, CustomClassData } from './CustomClassBuilder';
 import { StartingGearEditor } from './StartingGearEditor';
 import { StartingGearItem } from '@/game/storyInventoryBridge';
+import {
+  ScannedGearItem,
+  StartingGearSource,
+  gearNameKey,
+  getClassKit,
+  reconcileStartingGear,
+} from '@/game/portraitGearScan';
+import { scanPortraitForGear } from '@/services/portraitGearScanner';
 import { AppearanceAccordions } from './AppearanceAccordions';
 
 interface CharacterCreationProps {
@@ -155,6 +164,20 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const handleGearChange = useCallback((gear: StartingGearItem[]) => {
     setCustomGear(gear);
   }, []);
+  
+  // A different class is a different loadout. Holding on to the previous one
+  // left a mage carrying the warrior's plate, because the gear editor only
+  // rebuilds its list while no custom gear is held.
+  useEffect(() => {
+    setCustomGear(null);
+  }, [selectedClass]);
+  
+  // Gear read off the portrait. Only populated once a portrait exists — without
+  // imagery the character starts on the class kit alone.
+  const [scannedGear, setScannedGear] = useState<ScannedGearItem[]>([]);
+  const [isScanningGear, setIsScanningGear] = useState(false);
+  const [gearScanNote, setGearScanNote] = useState<string | null>(null);
+  const [excludedGearKeys, setExcludedGearKeys] = useState<string[]>([]);
   
   const handleCustomClassComplete = useCallback((data: CustomClassData) => {
     setCustomClass(data);
@@ -278,15 +301,77 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }));
   };
 
+  // Custom classes have no gear table of their own, so they resolve against the
+  // genre default — the same fallback the gear editor uses.
+  const gearClassId = customClass && selectedClass === customClass.id ? 'default' : selectedClass;
+
+  const resolvedClassName = useMemo(() => {
+    if (customClass && selectedClass === customClass.id) return customClass.name;
+    return blendedClasses.find(c => c.id === selectedClass)?.name || selectedClass;
+  }, [customClass, selectedClass, blendedClasses]);
+
+  /** The kit before the portrait gets a say: the player's edits, or the class default. */
+  const baseGear = useMemo<StartingGearItem[]>(
+    () => customGear ?? getClassKit(genre, gearClassId || 'default'),
+    [customGear, genre, gearClassId]
+  );
+
+  const includedScannedGear = useMemo(
+    () => scannedGear.filter(item => !excludedGearKeys.includes(gearNameKey(item.name))),
+    [scannedGear, excludedGearKeys]
+  );
+
+  /**
+   * With a portrait, what it shows leads and the class kit fills the gaps.
+   * Without one, the class kit is the whole answer.
+   */
+  const resolvedGear = useMemo(
+    () => reconcileStartingGear(portraitUrl ? includedScannedGear : [], baseGear),
+    [portraitUrl, includedScannedGear, baseGear]
+  );
+
+  const toggleScannedItem = useCallback((name: string) => {
+    const key = gearNameKey(name);
+    setExcludedGearKeys(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }, []);
+
+  const runGearScan = useCallback(async (imageUrl: string) => {
+    setIsScanningGear(true);
+    setGearScanNote(null);
+    try {
+      const result = await scanPortraitForGear({
+        imageUrl,
+        genre,
+        characterClass: resolvedClassName,
+      });
+
+      setScannedGear(result.items);
+      setExcludedGearKeys([]);
+
+      if (result.items.length > 0) {
+        toast.success(
+          `Read ${result.items.length} item${result.items.length === 1 ? '' : 's'} off your portrait`
+        );
+      } else {
+        setGearScanNote(
+          result.error || 'No distinct gear was visible. Your class loadout stands as it is.'
+        );
+      }
+    } finally {
+      setIsScanningGear(false);
+    }
+  }, [genre, resolvedClassName]);
+
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
       
-      // Get class name for prompt
+      const className = resolvedClassName;
       const selectedClassData = customClass && selectedClass === customClass.id
         ? { name: customClass.name }
         : blendedClasses.find(c => c.id === selectedClass);
-      const className = selectedClassData?.name || selectedClass;
       
       // Build character appearance data including all customizations - pass directly to edge function
       const characterData = {
@@ -345,6 +430,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       setDetectedKeywords(result.detectedKeywords || null);
       
       toast.success('Portrait generated!');
+      
+      // The portrait is now the character's imagery, so its visible gear becomes
+      // the starting kit. Deliberately not awaited: the scan is an enhancement
+      // and must not hold the portrait step hostage.
+      void runGearScan(result.imageUrl);
     } catch (error) {
       console.error('Error generating portrait:', error);
       toast.error('Failed to generate portrait', { 
@@ -372,10 +462,17 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       // Note: stat bonuses are already applied in createGenreCharacter via classData
       // Note: abilities are already set in createGenreCharacter via classData
     }
-    // Add custom gear if modified
-    if (customGear) {
-      (character as any).customStartingGear = customGear;
-    }
+    // The resolved starting kit. With a portrait this is the visible gear plus
+    // whatever the class kit still needs to fill; without one it is the class
+    // kit (or the player's edits to it) untouched.
+    const gearSource: StartingGearSource =
+      portraitUrl && resolvedGear.fromPortrait.length > 0 ? 'portrait-scan' : 'class';
+    (character as any).customStartingGear = resolvedGear.gear;
+    (character as any).startingGearSource = gearSource;
+    console.log(
+      `[CharacterCreation] Starting kit (${gearSource}): ${resolvedGear.fromPortrait.length} from portrait, ` +
+      `${resolvedGear.fromClassKit.length} from class kit, ${resolvedGear.skipped.length} superseded`
+    );
     // Add selected hybrid traits
     if (selectedHybridTraits.length > 0) {
       (character as any).hybridTraits = selectedHybridTraits;
@@ -1286,8 +1383,81 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     )}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
-                    Portrait is optional. You can skip this step.
+                    Portrait is optional. Generate one and your visible gear becomes your
+                    starting kit; skip it and you start with your class loadout.
                   </p>
+                  
+                  {/* Gear read off the portrait */}
+                  {portraitUrl && (isScanningGear || scannedGear.length > 0 || gearScanNote) && (
+                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-sm font-medium text-primary flex items-center gap-2">
+                          <Backpack className="w-4 h-4" />
+                          Gear From Your Portrait
+                        </h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => runGearScan(portraitUrl)}
+                          disabled={isScanningGear}
+                          className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                        >
+                          <ScanLine className="w-3 h-3" />
+                          Rescan
+                        </Button>
+                      </div>
+                      
+                      {isScanningGear ? (
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Reading the equipment in your portrait...
+                        </p>
+                      ) : scannedGear.length > 0 ? (
+                        <>
+                          <div className="space-y-1">
+                            {scannedGear.map((item) => {
+                              const excluded = excludedGearKeys.includes(gearNameKey(item.name));
+                              return (
+                                <button
+                                  key={item.name}
+                                  onClick={() => toggleScannedItem(item.name)}
+                                  className={`w-full flex items-center gap-2 p-1.5 rounded text-left transition-colors ${
+                                    excluded
+                                      ? 'opacity-40 hover:opacity-70'
+                                      : 'bg-background/50 hover:bg-primary/10'
+                                  }`}
+                                  title={excluded ? 'Add back to your starting kit' : 'Leave this out of your starting kit'}
+                                >
+                                  <span className="text-primary/70 shrink-0">
+                                    {item.category === 'weapons' ? <Sword className="w-3.5 h-3.5" />
+                                      : item.category === 'apparel' ? <Shirt className="w-3.5 h-3.5" />
+                                      : <Package className="w-3.5 h-3.5" />}
+                                  </span>
+                                  <span className={`text-xs flex-1 truncate ${excluded ? 'line-through' : 'text-foreground'}`}>
+                                    {item.name}
+                                  </span>
+                                  {item.autoEquip && !excluded && (
+                                    <span className="text-[10px] text-muted-foreground/70 shrink-0">
+                                      equipped
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                            Starting with {resolvedGear.gear.length} items — {resolvedGear.fromPortrait.length} from
+                            this portrait, {resolvedGear.fromClassKit.length} from your class loadout. Tap an item to
+                            leave it out.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {gearScanNote}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   
                   {/* Detected Keywords Feedback */}
                   {detectedKeywords && detectedKeywords.keywords.length > 0 && (
