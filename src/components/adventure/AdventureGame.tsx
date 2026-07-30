@@ -200,6 +200,7 @@ import {
   incrementLifetimeStat, 
   recordGenrePlayed 
 } from '@/lib/lifetimeStats';
+import { beginNewAdventureAchievements } from '@/lib/achievementPersistence';
 import {
   DirectorSettings,
   DEFAULT_DIRECTOR_SETTINGS,
@@ -450,6 +451,11 @@ export function AdventureGame() {
               genreTitle: savedGenre,
               diceMode: loadDiceMode(),
             });
+            window.dispatchEvent(
+              new CustomEvent('achievement-genre-context', {
+                detail: { genre: savedGenre },
+              })
+            );
             
             // Rebuild character visual profile from localStorage character
             const charAny = char as any;
@@ -1287,11 +1293,15 @@ export function AdventureGame() {
     console.log('[Character Visual] Built visual profile:', visualProfile.fullVisualDescription.slice(0, 100) + '...');
     
     try {
-      // Track lifetime stats for campaign start
+      // Track lifetime stats first so genre-started progress reads fresh counts
       incrementLifetimeStat('campaignsStarted');
       if (scenarioSelection.genre) {
         recordGenrePlayed(scenarioSelection.genre);
       }
+
+      // New adventure: clear This Tale unlocks, keep Global, unlock genre first-play
+      beginNewAdventureAchievements(scenarioSelection.genre || 'fantasy');
+
       
       // Initialize campaign memory for new adventure
       const campaignId = `campaign_${char.name}_${Date.now()}`;

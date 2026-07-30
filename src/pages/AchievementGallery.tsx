@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Trophy, Star, Lock, ArrowLeft, Calendar, Clock, Award, TrendingUp, Sparkles, Share2 } from 'lucide-react';
+import { Trophy, Lock, ArrowLeft, Calendar, Clock, Award, Sparkles, Globe, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useAchievements, Achievement, ACHIEVEMENT_CATEGORIES } from '@/components/game/Achievements';
+import { useAchievements, Achievement, ACHIEVEMENT_CATEGORIES, type AchievementScope } from '@/components/game/Achievements';
 import { AchievementExport } from '@/components/game/AchievementExport';
 import { format } from 'date-fns';
 
@@ -94,6 +94,9 @@ function AchievementCard({ achievement, index }: { achievement: Achievement; ind
             )}>
               {achievement.rarity}
             </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+              {achievement.scope === 'global' ? 'Global' : 'Tale'}
+            </span>
           </div>
           
           {/* Description */}
@@ -157,6 +160,7 @@ export default function AchievementGallery() {
   const navigate = useNavigate();
   const { achievements, unlockedAchievements } = useAchievements();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [scopeFilter, setScopeFilter] = useState<'all' | AchievementScope>('all');
   const [sortBy, setSortBy] = useState<'rarity' | 'date' | 'name'>('date');
   
   // Compute stats
@@ -170,6 +174,10 @@ export default function AchievementGallery() {
       legendary: unlocked.filter(a => a.rarity === 'legendary').length,
     };
     const mostRecent = unlocked.sort((a, b) => (b.unlockedAt || 0) - (a.unlockedAt || 0))[0];
+    const globalUnlocked = achievements.filter(a => a.scope === 'global' && a.unlockedAt).length;
+    const globalTotal = achievements.filter(a => a.scope === 'global').length;
+    const runUnlocked = achievements.filter(a => a.scope === 'run' && a.unlockedAt).length;
+    const runTotal = achievements.filter(a => a.scope === 'run').length;
     
     return {
       total: achievements.length,
@@ -177,14 +185,20 @@ export default function AchievementGallery() {
       percentage: Math.round((unlocked.length / achievements.length) * 100),
       rarityCount,
       mostRecent,
+      globalUnlocked,
+      globalTotal,
+      runUnlocked,
+      runTotal,
     };
   }, [achievements]);
   
   // Filter and sort achievements
   const displayedAchievements = useMemo(() => {
-    let filtered = selectedCategory === 'all' 
-      ? achievements 
-      : achievements.filter(a => a.category === selectedCategory);
+    let filtered = achievements.filter(a => {
+      if (scopeFilter !== 'all' && a.scope !== scopeFilter) return false;
+      if (selectedCategory === 'all') return true;
+      return a.category === selectedCategory;
+    });
     
     // Sort
     const rarityOrder = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
@@ -205,7 +219,7 @@ export default function AchievementGallery() {
           return 0;
       }
     });
-  }, [achievements, selectedCategory, sortBy]);
+  }, [achievements, selectedCategory, sortBy, scopeFilter]);
   
   // Category counts
   const categoryCounts = useMemo(() => {
@@ -244,7 +258,7 @@ export default function AchievementGallery() {
                 Trophy Room
               </h1>
               <p className="text-muted-foreground">
-                Your collection of accomplishments and legendary feats
+                Global trophies persist forever — This Tale resets with each new adventure
               </p>
             </div>
           </div>
@@ -266,16 +280,16 @@ export default function AchievementGallery() {
             color="border-amber-400/30"
           />
           <StatCard 
-            title="Completion Rate" 
-            value={`${stats.percentage}%`}
-            icon={TrendingUp}
-            color="border-green-400/30"
+            title="Global" 
+            value={`${stats.globalUnlocked}/${stats.globalTotal}`}
+            icon={Globe}
+            color="border-blue-400/30"
           />
           <StatCard 
-            title="Rare+ Unlocked" 
-            value={stats.rarityCount.rare + stats.rarityCount.epic + stats.rarityCount.legendary}
-            icon={Star}
-            color="border-blue-400/30"
+            title="This Tale" 
+            value={`${stats.runUnlocked}/${stats.runTotal}`}
+            icon={BookOpen}
+            color="border-green-400/30"
           />
           <StatCard 
             title="Legendary" 
@@ -311,6 +325,35 @@ export default function AchievementGallery() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Scope Filter */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button
+            variant={scopeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScopeFilter('all')}
+          >
+            All
+          </Button>
+          <Button
+            variant={scopeFilter === 'global' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScopeFilter('global')}
+            className="gap-1.5"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            Global
+          </Button>
+          <Button
+            variant={scopeFilter === 'run' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScopeFilter('run')}
+            className="gap-1.5"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            This Tale
+          </Button>
+        </div>
         
         {/* Category Filter */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -385,6 +428,8 @@ export default function AchievementGallery() {
                     <p className="font-medium text-sm">{stats.mostRecent.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {stats.mostRecent.unlockedAt && format(new Date(stats.mostRecent.unlockedAt), 'MMM d')}
+                      {' · '}
+                      {stats.mostRecent.scope === 'global' ? 'Global' : 'This Tale'}
                     </p>
                   </div>
                 </div>

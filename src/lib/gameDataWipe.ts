@@ -52,6 +52,10 @@ const STORAGE_KEY_PATTERNS = [
   // Stats and achievements
   'untold_lifetime_stats',
   'untold_lifetime_achievements',
+  'untold-achievements',
+  'untold-achievement-progress',
+  'untold-achievement-lifetime-companions',
+  'lwe_achievements',
   'session_stats',
   'lifetime_',
   

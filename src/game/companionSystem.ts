@@ -196,6 +196,15 @@ class CompanionSystemManager {
     this.addMemory(companionId, 'event', 'Joined the party', 10);
     companion.wantsToSpeak = true;
     companion.pendingReaction = generateJoinReaction(companion);
+
+    eventBus.emit({
+      type: 'COMPANION_RECRUITED',
+      timestamp: Date.now(),
+      tick: 0,
+      source: 'companionSystem',
+      priority: 'normal',
+      data: { companionId, companionName: companion.name },
+    } as any);
     
     return { success: true, message: `${companion.name} has joined your party!` };
   }

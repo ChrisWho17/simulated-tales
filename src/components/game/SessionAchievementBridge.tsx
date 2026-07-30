@@ -133,13 +133,26 @@ export function SessionAchievementBridge() {
         }
       });
       
-      // Check for perfectionist - all achievements unlocked
-      const totalAchievements = allAchievements.filter(a => a.id !== 'perfectionist');
-      const unlockedAchievements = totalAchievements.filter(a => a.unlockedAt);
-      
+      // Check for perfectionist - all achievements unlocked (at least once in current state)
+      const totalAchievements = allAchievements.filter(
+        (a) => a.id !== 'perfectionist' && a.id !== 'global_completionist' && a.id !== 'cheater'
+      );
+      const unlockedAchievements = totalAchievements.filter((a) => a.unlockedAt);
+
       if (unlockedAchievements.length === totalAchievements.length) {
         achievements.unlockAchievement('perfectionist');
         console.log('[SessionAchievementBridge] Unlocked: Perfectionist (all achievements)');
+      }
+
+      // Genre master — all genre first-play unlocks
+      const genreFirstPlays = allAchievements.filter(
+        (a) => a.id.startsWith('genre_first_') && a.scope === 'global'
+      );
+      if (
+        genreFirstPlays.length > 0 &&
+        genreFirstPlays.every((a) => a.unlockedAt)
+      ) {
+        achievements.unlockAchievement('genre_master');
       }
     };
     

@@ -1,118 +1,26 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Star, Lock, X, Sparkles } from 'lucide-react';
+import { Trophy, Lock, X, Sparkles, Globe, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { AchievementParticles, LegendaryAchievementCelebration } from './AchievementParticles';
+import {
+  ACHIEVEMENT_CATEGORIES,
+  type AchievementCategory,
+  type AchievementRarity,
+  type AchievementScope,
+} from '@/lib/achievementCatalog';
+import {
+  mergeAchievementsWithCatalog,
+  persistAchievements,
+  resetRunAchievementStorage,
+  type Achievement,
+} from '@/lib/achievementPersistence';
 
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: 'exploration' | 'combat' | 'social' | 'story' | 'secret' | 'merchant' | 'collector' | 'diplomat';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  unlockedAt?: number;
-  progress?: number;
-  maxProgress?: number;
-  hasRewards?: boolean; // Flag indicating this achievement has claimable rewards
-}
-
-export const ACHIEVEMENT_CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🏆' },
-  { id: 'exploration', name: 'Exploration', icon: '🗺️' },
-  { id: 'combat', name: 'Combat', icon: '⚔️' },
-  { id: 'social', name: 'Social', icon: '💬' },
-  { id: 'story', name: 'Story', icon: '📖' },
-  { id: 'merchant', name: 'Merchant', icon: '💰' },
-  { id: 'collector', name: 'Collector', icon: '🎁' },
-  { id: 'diplomat', name: 'Diplomat', icon: '🤝' },
-  { id: 'secret', name: 'Secret', icon: '❓' },
-] as const;
-
-// Pre-defined achievements
-const ACHIEVEMENTS: Achievement[] = [
-  // Tutorial / Meta
-  { id: 'dust_off_the_cover', name: 'Dust Off the Cover', description: 'Complete the tutorial and begin your first adventure', icon: '📕', category: 'story', rarity: 'common' },
-  
-  // Exploration
-  { id: 'first_steps', name: 'First Steps', description: 'Visit your first location', icon: '👣', category: 'exploration', rarity: 'common' },
-  { id: 'wanderer', name: 'Wanderer', description: 'Visit 5 different locations', icon: '🗺️', category: 'exploration', rarity: 'uncommon', maxProgress: 5 },
-  { id: 'explorer', name: 'Explorer', description: 'Visit 15 different locations', icon: '🧭', category: 'exploration', rarity: 'rare', maxProgress: 15 },
-  { id: 'cartographer', name: 'Cartographer', description: 'Visit 30 different locations', icon: '📍', category: 'exploration', rarity: 'epic', maxProgress: 30 },
-  
-  // Combat
-  { id: 'first_blood', name: 'First Blood', description: 'Win your first combat', icon: '⚔️', category: 'combat', rarity: 'common' },
-  { id: 'survivor', name: 'Survivor', description: 'Win 5 combats', icon: '🛡️', category: 'combat', rarity: 'uncommon', maxProgress: 5 },
-  { id: 'warrior', name: 'Warrior', description: 'Win 20 combats', icon: '🗡️', category: 'combat', rarity: 'rare', maxProgress: 20 },
-  { id: 'champion', name: 'Champion', description: 'Win a combat without taking damage', icon: '👑', category: 'combat', rarity: 'epic' },
-  { id: 'pacifist', name: 'Pacifist', description: 'De-escalate 5 potential combats', icon: '🕊️', category: 'combat', rarity: 'rare', maxProgress: 5 },
-  
-  // Social
-  { id: 'hello_stranger', name: 'Hello, Stranger', description: 'Meet your first NPC', icon: '👋', category: 'social', rarity: 'common' },
-  { id: 'socialite', name: 'Socialite', description: 'Meet 10 different NPCs', icon: '🤝', category: 'social', rarity: 'uncommon', maxProgress: 10 },
-  { id: 'networker', name: 'Networker', description: 'Meet 25 different NPCs', icon: '🌐', category: 'social', rarity: 'rare', maxProgress: 25 },
-  { id: 'silver_tongue', name: 'Silver Tongue', description: 'Succeed in 10 persuasion checks', icon: '💬', category: 'social', rarity: 'rare', maxProgress: 10 },
-  { id: 'trusted_ally', name: 'Trusted Ally', description: 'Reach maximum trust with an NPC', icon: '💖', category: 'social', rarity: 'epic' },
-  
-  // Story
-  { id: 'chapter_one', name: 'Chapter One', description: 'Complete your first quest', icon: '📖', category: 'story', rarity: 'common' },
-  { id: 'storyteller', name: 'Storyteller', description: 'Complete 5 quests', icon: '📚', category: 'story', rarity: 'uncommon', maxProgress: 5 },
-  { id: 'legend', name: 'Legend', description: 'Complete 15 quests', icon: '🏆', category: 'story', rarity: 'rare', maxProgress: 15 },
-  { id: 'decisive', name: 'Decisive', description: 'Make 100 choices', icon: '🎯', category: 'story', rarity: 'rare', maxProgress: 100 },
-  
-  // Merchant - Trading achievements
-  { id: 'first_sale', name: 'First Sale', description: 'Complete your first trade', icon: '💰', category: 'merchant', rarity: 'common' },
-  { id: 'haggler', name: 'Haggler', description: 'Successfully negotiate 5 trades', icon: '🤑', category: 'merchant', rarity: 'uncommon', maxProgress: 5 },
-  { id: 'shrewd_trader', name: 'Shrewd Trader', description: 'Complete 20 profitable trades', icon: '📊', category: 'merchant', rarity: 'rare', maxProgress: 20 },
-  { id: 'merchant_prince', name: 'Merchant Prince', description: 'Amass 10,000 currency through trade', icon: '👑', category: 'merchant', rarity: 'epic', maxProgress: 10000 },
-  { id: 'black_market', name: 'Black Market', description: 'Trade illegal or contraband items', icon: '🕶️', category: 'merchant', rarity: 'rare' },
-  
-  // Collector - Gathering achievements
-  { id: 'magpie', name: 'Magpie', description: 'Collect your first rare item', icon: '🎁', category: 'collector', rarity: 'common' },
-  { id: 'hoarder', name: 'Hoarder', description: 'Own 50 items simultaneously', icon: '📦', category: 'collector', rarity: 'uncommon', maxProgress: 50 },
-  { id: 'treasure_hunter', name: 'Treasure Hunter', description: 'Find 10 rare or better items', icon: '💎', category: 'collector', rarity: 'rare', maxProgress: 10 },
-  { id: 'curator', name: 'Curator', description: 'Collect one item from 5 different categories', icon: '🏛️', category: 'collector', rarity: 'rare', maxProgress: 5 },
-  { id: 'legendary_finder', name: 'Legendary Finder', description: 'Discover a legendary artifact', icon: '⭐', category: 'collector', rarity: 'legendary' },
-  
-  // Diplomat - Alliance achievements
-  { id: 'ambassador', name: 'Ambassador', description: 'Form your first alliance', icon: '🤝', category: 'diplomat', rarity: 'common' },
-  { id: 'peacekeeper', name: 'Peacekeeper', description: 'Resolve 3 conflicts peacefully', icon: '☮️', category: 'diplomat', rarity: 'uncommon', maxProgress: 3 },
-  { id: 'faction_friend', name: 'Faction Friend', description: 'Gain positive standing with 3 factions', icon: '🏰', category: 'diplomat', rarity: 'rare', maxProgress: 3 },
-  { id: 'grand_alliance', name: 'Grand Alliance', description: 'Unite 5 different factions', icon: '🌍', category: 'diplomat', rarity: 'epic', maxProgress: 5 },
-  { id: 'world_peace', name: 'World Peace', description: 'Achieve positive standing with all factions', icon: '🕊️', category: 'diplomat', rarity: 'legendary' },
-  
-  // Secret - Time-based
-  { id: 'lucky_roll', name: 'Lucky Roll', description: 'Roll a natural 20', icon: '🎲', category: 'secret', rarity: 'uncommon' },
-  { id: 'unlucky', name: 'Unlucky', description: 'Roll a natural 1', icon: '💀', category: 'secret', rarity: 'uncommon' },
-  { id: 'persistent', name: 'Persistent', description: 'Play for 1 hour in a single session', icon: '⏰', category: 'secret', rarity: 'rare' },
-  { id: 'dedicated', name: 'Dedicated', description: 'Play for 5 hours total', icon: '🎮', category: 'secret', rarity: 'epic', maxProgress: 5 },
-  { id: 'marathon', name: 'Marathon Runner', description: 'Play for 10 consecutive hours', icon: '🏃', category: 'secret', rarity: 'legendary', maxProgress: 10 },
-  { id: 'night_owl', name: 'Night Owl', description: 'Play past midnight', icon: '🦉', category: 'secret', rarity: 'uncommon' },
-  { id: 'early_bird', name: 'Early Bird', description: 'Play between 5 AM and 7 AM', icon: '🌅', category: 'secret', rarity: 'uncommon' },
-  { id: 'weekend_warrior', name: 'Weekend Warrior', description: 'Play for 3+ hours on a weekend', icon: '🎯', category: 'secret', rarity: 'rare' },
-  
-  // Streak-based achievements
-  { id: 'daily_player', name: 'Daily Player', description: 'Play for 3 consecutive days', icon: '📅', category: 'secret', rarity: 'uncommon', maxProgress: 3 },
-  { id: 'weekly_streak', name: 'Weekly Streak', description: 'Play for 7 consecutive days', icon: '📆', category: 'secret', rarity: 'rare', maxProgress: 7 },
-  { id: 'monthly_dedication', name: 'Monthly Dedication', description: 'Play for 30 consecutive days', icon: '🗓️', category: 'secret', rarity: 'legendary', maxProgress: 30 },
-  { id: 'comeback_kid', name: 'Comeback Kid', description: 'Return after a 7+ day break', icon: '🔄', category: 'secret', rarity: 'uncommon' },
-  
-  // Category completion achievements (Perfectionist)
-  { id: 'exploration_master', name: 'Exploration Master', description: 'Complete all exploration achievements', icon: '🗺️', category: 'secret', rarity: 'epic' },
-  { id: 'combat_master', name: 'Combat Master', description: 'Complete all combat achievements', icon: '⚔️', category: 'secret', rarity: 'epic' },
-  { id: 'social_master', name: 'Social Master', description: 'Complete all social achievements', icon: '💬', category: 'secret', rarity: 'epic' },
-  { id: 'story_master', name: 'Story Master', description: 'Complete all story achievements', icon: '📖', category: 'secret', rarity: 'epic' },
-  { id: 'merchant_master', name: 'Merchant Master', description: 'Complete all merchant achievements', icon: '💰', category: 'secret', rarity: 'epic' },
-  { id: 'collector_master', name: 'Collector Master', description: 'Complete all collector achievements', icon: '🎁', category: 'secret', rarity: 'epic' },
-  { id: 'diplomat_master', name: 'Diplomat Master', description: 'Complete all diplomat achievements', icon: '🤝', category: 'secret', rarity: 'epic' },
-  { id: 'perfectionist', name: 'Perfectionist', description: 'Unlock every achievement in the game', icon: '👑', category: 'secret', rarity: 'legendary' },
-  
-  // Cheater achievement
-  { id: 'cheater', name: 'I Saw What You Did', description: 'I saw what you did 👀', icon: '👀', category: 'secret', rarity: 'legendary' },
-];
+export type { Achievement, AchievementCategory, AchievementRarity, AchievementScope };
+export { ACHIEVEMENT_CATEGORIES };
 
 interface AchievementsContextType {
   achievements: Achievement[];
@@ -120,10 +28,11 @@ interface AchievementsContextType {
   unlockAchievement: (id: string) => void;
   updateProgress: (id: string, progress: number) => void;
   getAchievement: (id: string) => Achievement | undefined;
+  /** Clear This Tale (run) unlocks; keep Global */
+  resetRunAchievements: () => void;
 }
 
 const AchievementsContext = createContext<AchievementsContextType | null>(null);
-const STORAGE_KEY = 'untold-achievements';
 
 export function useAchievements() {
   const context = useContext(AchievementsContext);
@@ -138,59 +47,55 @@ export function useAchievementsOptional() {
 }
 
 export function AchievementsProvider({ children }: { children: ReactNode }) {
-  const [achievements, setAchievements] = useState<Achievement[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Merge saved data with base achievements
-        return ACHIEVEMENTS.map(base => ({
-          ...base,
-          ...parsed.find((p: Achievement) => p.id === base.id),
-        }));
-      }
-    } catch (e) {
-      console.error('Failed to load achievements:', e);
-    }
-    return [...ACHIEVEMENTS];
-  });
+  const [achievements, setAchievements] = useState<Achievement[]>(() =>
+    mergeAchievementsWithCatalog()
+  );
 
   const [pendingNotification, setPendingNotification] = useState<Achievement | null>(null);
   const [showLegendaryCelebration, setShowLegendaryCelebration] = useState(false);
-  
-  // Track notifications shown this session to prevent duplicates
+
   const notifiedThisSession = useRef<Set<string>>(new Set());
 
   const unlockedAchievements = new Set(
-    achievements.filter(a => a.unlockedAt).map(a => a.id)
+    achievements.filter((a) => a.unlockedAt).map((a) => a.id)
   );
 
-  // Save achievements
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(achievements));
+    persistAchievements(achievements);
   }, [achievements]);
 
+  // New adventure / new save: wipe run progress, keep global
+  useEffect(() => {
+    const onReset = () => {
+      notifiedThisSession.current.clear();
+      setAchievements(mergeAchievementsWithCatalog());
+    };
+    window.addEventListener('achievements-run-reset', onReset);
+    return () => window.removeEventListener('achievements-run-reset', onReset);
+  }, []);
+
+  const resetRunAchievements = useCallback(() => {
+    resetRunAchievementStorage();
+    notifiedThisSession.current.clear();
+    setAchievements(mergeAchievementsWithCatalog());
+  }, []);
+
   const unlockAchievement = useCallback((id: string) => {
-    // Prevent duplicate notifications in same session
     if (notifiedThisSession.current.has(id)) return;
-    
-    setAchievements(prev => {
-      const achievement = prev.find(a => a.id === id);
+
+    setAchievements((prev) => {
+      const achievement = prev.find((a) => a.id === id);
       if (!achievement || achievement.unlockedAt) return prev;
 
-      // Mark as notified this session BEFORE showing notification
       notifiedThisSession.current.add(id);
 
-      const updated = prev.map(a =>
+      const updated = prev.map((a) =>
         a.id === id ? { ...a, unlockedAt: Date.now() } : a
       );
 
-      // Show notification
-      const unlocked = updated.find(a => a.id === id);
+      const unlocked = updated.find((a) => a.id === id);
       if (unlocked) {
         setPendingNotification(unlocked);
-        
-        // Show legendary celebration for legendary achievements
         if (unlocked.rarity === 'legendary') {
           setShowLegendaryCelebration(true);
           setTimeout(() => setShowLegendaryCelebration(false), 3000);
@@ -202,28 +107,24 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProgress = useCallback((id: string, progress: number) => {
-    // Prevent duplicate notifications in same session
     if (notifiedThisSession.current.has(id)) return;
-    
-    setAchievements(prev => {
-      const achievement = prev.find(a => a.id === id);
+
+    setAchievements((prev) => {
+      const achievement = prev.find((a) => a.id === id);
       if (!achievement || achievement.unlockedAt) return prev;
 
       const newProgress = Math.min(progress, achievement.maxProgress || progress);
       const shouldUnlock = achievement.maxProgress && newProgress >= achievement.maxProgress;
 
       if (shouldUnlock) {
-        // Mark as notified this session BEFORE showing notification
         notifiedThisSession.current.add(id);
-        
-        const updated = prev.map(a =>
+
+        const updated = prev.map((a) =>
           a.id === id ? { ...a, progress: newProgress, unlockedAt: Date.now() } : a
         );
-        const unlocked = updated.find(a => a.id === id);
+        const unlocked = updated.find((a) => a.id === id);
         if (unlocked) {
           setPendingNotification(unlocked);
-          
-          // Show legendary celebration for legendary achievements
           if (unlocked.rarity === 'legendary') {
             setShowLegendaryCelebration(true);
             setTimeout(() => setShowLegendaryCelebration(false), 3000);
@@ -232,34 +133,35 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
         return updated;
       }
 
-      return prev.map(a =>
+      return prev.map((a) =>
         a.id === id ? { ...a, progress: newProgress } : a
       );
     });
   }, []);
 
-  const getAchievement = (id: string) => achievements.find(a => a.id === id);
+  const getAchievement = (id: string) => achievements.find((a) => a.id === id);
 
-  // Show toast notification
   useEffect(() => {
     if (pendingNotification) {
-      toast.custom(() => (
-        <AchievementToast achievement={pendingNotification} />
-      ), { duration: pendingNotification.rarity === 'legendary' ? 6000 : 4000 });
+      toast.custom(() => <AchievementToast achievement={pendingNotification} />, {
+        duration: pendingNotification.rarity === 'legendary' ? 6000 : 4000,
+      });
       setPendingNotification(null);
     }
   }, [pendingNotification]);
 
   return (
-    <AchievementsContext.Provider value={{
-      achievements,
-      unlockedAchievements,
-      unlockAchievement,
-      updateProgress,
-      getAchievement,
-    }}>
+    <AchievementsContext.Provider
+      value={{
+        achievements,
+        unlockedAchievements,
+        unlockAchievement,
+        updateProgress,
+        getAchievement,
+        resetRunAchievements,
+      }}
+    >
       {children}
-      {/* Legendary achievement celebration overlay */}
       <LegendaryAchievementCelebration isActive={showLegendaryCelebration} />
     </AchievementsContext.Provider>
   );
@@ -267,8 +169,7 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
 
 function AchievementToast({ achievement }: { achievement: Achievement }) {
   const [showParticles, setShowParticles] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   const rarityColors = {
     common: 'border-slate-400 bg-slate-500/20',
     uncommon: 'border-green-400 bg-green-500/20',
@@ -276,7 +177,7 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
     epic: 'border-purple-400 bg-purple-500/20',
     legendary: 'border-amber-400 bg-amber-500/20',
   };
-  
+
   const rarityGlows = {
     common: '',
     uncommon: 'shadow-[0_0_15px_rgba(74,222,128,0.3)]',
@@ -284,14 +185,10 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
     epic: 'shadow-[0_0_25px_rgba(168,85,247,0.5)]',
     legendary: 'shadow-[0_0_30px_rgba(251,191,36,0.6)]',
   };
-  
-  // Play achievement sound on mount
+
   useEffect(() => {
-    // Create a simple achievement unlock sound using Web Audio API
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Different sounds based on rarity
       const frequencies = {
         common: [523, 659],
         uncommon: [523, 659, 784],
@@ -299,33 +196,26 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
         epic: [392, 523, 659, 784, 1047],
         legendary: [392, 494, 587, 698, 880, 1047],
       };
-      
       const notes = frequencies[achievement.rarity];
       const duration = achievement.rarity === 'legendary' ? 0.15 : 0.1;
-      
+
       notes.forEach((freq, i) => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
         oscillator.frequency.value = freq;
         oscillator.type = achievement.rarity === 'legendary' ? 'sine' : 'triangle';
-        
         const startTime = audioContext.currentTime + i * duration;
         const volume = 0.1;
-        
         gainNode.gain.setValueAtTime(0, startTime);
         gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.02);
         gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 2);
-        
         oscillator.start(startTime);
         oscillator.stop(startTime + duration * 2);
       });
-    } catch (e) {
-      // Audio not supported, fail silently
-      console.log('[Achievement] Audio not available');
+    } catch {
+      // Audio not supported
     }
   }, [achievement.rarity]);
 
@@ -336,20 +226,18 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
       transition={{ type: 'spring', damping: 15, stiffness: 300 }}
       className={cn(
-        "relative flex items-center gap-3 px-4 py-3 rounded-lg border-2 overflow-hidden",
-        "backdrop-blur-md bg-background/90",
+        'relative flex items-center gap-3 px-4 py-3 rounded-lg border-2 overflow-hidden',
+        'backdrop-blur-md bg-background/90',
         rarityColors[achievement.rarity],
         rarityGlows[achievement.rarity]
       )}
     >
-      {/* Particle effects */}
-      <AchievementParticles 
-        isActive={showParticles} 
+      <AchievementParticles
+        isActive={showParticles}
         rarity={achievement.rarity}
         onComplete={() => setShowParticles(false)}
       />
-      
-      {/* Shimmer effect for rare+ */}
+
       {['rare', 'epic', 'legendary'].includes(achievement.rarity) && (
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
@@ -358,9 +246,9 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
           transition={{ duration: 1.5, ease: 'easeInOut' }}
         />
       )}
-      
+
       <div className="relative z-10">
-        <motion.span 
+        <motion.span
           className="text-2xl block"
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -371,16 +259,18 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
         <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 animate-pulse" />
       </div>
       <div className="relative z-10">
-        <motion.div 
+        <motion.div
           className="flex items-center gap-2"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15 }}
         >
           <Trophy className="w-4 h-4 text-yellow-400" />
-          <span className="font-bold text-sm">Achievement Unlocked!</span>
+          <span className="font-bold text-sm">
+            {achievement.scope === 'global' ? 'Global Achievement!' : 'Tale Achievement!'}
+          </span>
         </motion.div>
-        <motion.p 
+        <motion.p
           className="font-medium"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -388,7 +278,7 @@ function AchievementToast({ achievement }: { achievement: Achievement }) {
         >
           {achievement.name}
         </motion.p>
-        <motion.p 
+        <motion.p
           className="text-xs text-muted-foreground"
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -409,12 +299,20 @@ interface AchievementsDisplayProps {
 export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProps) {
   const { achievements, unlockedAchievements } = useAchievements();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [scopeFilter, setScopeFilter] = useState<'all' | AchievementScope>('all');
 
-  const categories = ACHIEVEMENT_CATEGORIES.map(c => c.id);
-  
-  const filteredAchievements = selectedCategory === 'all'
-    ? achievements
-    : achievements.filter(a => a.category === selectedCategory);
+  const categories = ACHIEVEMENT_CATEGORIES.map((c) => c.id);
+
+  const filteredAchievements = achievements.filter((a) => {
+    if (scopeFilter !== 'all' && a.scope !== scopeFilter) return false;
+    if (selectedCategory === 'all') return true;
+    return a.category === selectedCategory;
+  });
+
+  const globalUnlocked = achievements.filter((a) => a.scope === 'global' && a.unlockedAt).length;
+  const globalTotal = achievements.filter((a) => a.scope === 'global').length;
+  const runUnlocked = achievements.filter((a) => a.scope === 'run' && a.unlockedAt).length;
+  const runTotal = achievements.filter((a) => a.scope === 'run').length;
 
   const rarityColors = {
     common: 'text-slate-400 border-slate-400/30',
@@ -440,7 +338,7 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25 }}
             className="glass-panel w-full max-w-2xl max-h-[85vh] overflow-hidden"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-border/30">
               <div className="flex items-center gap-2">
@@ -455,10 +353,38 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
               </Button>
             </div>
 
-            {/* Category Filter */}
+            {/* Scope: Global vs This Tale */}
+            <div className="p-3 border-b border-border/30 flex flex-wrap gap-2">
+              <Button
+                variant={scopeFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setScopeFilter('all')}
+              >
+                All
+              </Button>
+              <Button
+                variant={scopeFilter === 'global' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setScopeFilter('global')}
+                className="gap-1.5"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                Global ({globalUnlocked}/{globalTotal})
+              </Button>
+              <Button
+                variant={scopeFilter === 'run' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setScopeFilter('run')}
+                className="gap-1.5"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                This Tale ({runUnlocked}/{runTotal})
+              </Button>
+            </div>
+
             <div className="p-3 border-b border-border/30 overflow-x-auto">
               <div className="flex gap-2">
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <Button
                     key={cat}
                     variant={selectedCategory === cat ? 'default' : 'outline'}
@@ -472,7 +398,7 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
               </div>
             </div>
 
-            <ScrollArea className="p-4 max-h-[60vh]">
+            <ScrollArea className="p-4 max-h-[55vh]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredAchievements.map((achievement, index) => {
                   const isUnlocked = !!achievement.unlockedAt;
@@ -483,17 +409,19 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                       className={cn(
-                        "p-3 rounded-lg border transition-all",
-                        isUnlocked 
+                        'p-3 rounded-lg border transition-all',
+                        isUnlocked
                           ? rarityColors[achievement.rarity]
-                          : "border-border/20 opacity-60"
+                          : 'border-border/20 opacity-60'
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={cn(
-                          "text-2xl relative",
-                          !isUnlocked && "grayscale opacity-50"
-                        )}>
+                        <div
+                          className={cn(
+                            'text-2xl relative',
+                            !isUnlocked && 'grayscale opacity-50'
+                          )}
+                        >
                           {isUnlocked ? (
                             achievement.icon
                           ) : (
@@ -501,18 +429,27 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className={cn(
-                              "font-medium text-sm truncate",
-                              !isUnlocked && "text-muted-foreground"
-                            )}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3
+                              className={cn(
+                                'font-medium text-sm truncate',
+                                !isUnlocked && 'text-muted-foreground'
+                              )}
+                            >
                               {achievement.name}
                             </h3>
-                            <span className={cn(
-                              "text-[10px] uppercase px-1.5 py-0.5 rounded font-medium",
-                              rarityColors[achievement.rarity].replace('border-', 'bg-').replace('/30', '/20')
-                            )}>
+                            <span
+                              className={cn(
+                                'text-[10px] uppercase px-1.5 py-0.5 rounded font-medium',
+                                rarityColors[achievement.rarity]
+                                  .replace('border-', 'bg-')
+                                  .replace('/30', '/20')
+                              )}
+                            >
                               {achievement.rarity}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {achievement.scope === 'global' ? 'Global' : 'This Tale'}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -521,10 +458,12 @@ export function AchievementsDisplay({ isOpen, onClose }: AchievementsDisplayProp
                           {achievement.maxProgress && !isUnlocked && (
                             <div className="mt-2">
                               <div className="h-1.5 bg-black/30 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-[var(--accent-primary)] transition-all"
-                                  style={{ 
-                                    width: `${((achievement.progress || 0) / achievement.maxProgress) * 100}%` 
+                                  style={{
+                                    width: `${
+                                      ((achievement.progress || 0) / achievement.maxProgress) * 100
+                                    }%`,
                                   }}
                                 />
                               </div>
