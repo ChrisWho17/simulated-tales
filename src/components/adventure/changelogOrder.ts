@@ -29,10 +29,19 @@ export function buildExpectedSequence(versions: string[]): string[] {
   if (versions.length === 0) return [];
   const parsed = versions.map(parseVersion);
 
+  // Build-style patch numbers (>= 100, e.g. 0.4.801) are intentional jumps and
+  // are not part of the contiguous patch walk — they're appended in order.
+  const isBuildPatch = (patch: number) => patch >= 100;
+
   // Group max patch by "major.minor"
   const maxPatchByMinor = new Map<string, number>();
   const minorsByMajor = new Map<number, Set<number>>();
   for (const [maj, min, patch] of parsed) {
+    if (isBuildPatch(patch)) {
+      if (!minorsByMajor.has(maj)) minorsByMajor.set(maj, new Set());
+      minorsByMajor.get(maj)!.add(min);
+      continue;
+    }
     const key = `${maj}.${min}`;
     maxPatchByMinor.set(key, Math.max(maxPatchByMinor.get(key) ?? 0, patch));
     if (!minorsByMajor.has(maj)) minorsByMajor.set(maj, new Set());
@@ -44,10 +53,18 @@ export function buildExpectedSequence(versions: string[]): string[] {
   for (const maj of majors) {
     const minors = [...minorsByMajor.get(maj)!].sort((a, b) => a - b);
     for (const min of minors) {
-      const maxPatch = maxPatchByMinor.get(`${maj}.${min}`)!;
-      for (let p = 0; p <= maxPatch; p++) {
-        expected.push(`${maj}.${min}.${p}`);
+      const maxPatch = maxPatchByMinor.get(`${maj}.${min}`);
+      if (maxPatch !== undefined) {
+        for (let p = 0; p <= maxPatch; p++) {
+          expected.push(`${maj}.${min}.${p}`);
+        }
       }
+      // Append any build-style patches for this group, ascending.
+      const builds = parsed
+        .filter(([a, b, c]) => a === maj && b === min && isBuildPatch(c))
+        .map(([, , c]) => c)
+        .sort((a, b) => a - b);
+      for (const b of builds) expected.push(`${maj}.${min}.${b}`);
     }
   }
   return expected;

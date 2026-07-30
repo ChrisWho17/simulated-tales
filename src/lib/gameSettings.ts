@@ -136,6 +136,15 @@ export interface GameSettings {
   // Testing — force deterministic variance seed for reproducible narratives
   forceVarianceSeedEnabled?: boolean;
   forceVarianceSeed?: string;
+
+  /** Where saves are cached: mirrored, local-only, or cloud-only. */
+  storagePipeline?: 'mirror' | 'local' | 'cloud';
+
+  /** Hide the PWA install promo banner. */
+  hidePwaInstall?: boolean;
+
+  /** Hide the version hotfixes badge. */
+  hideHotfixBadge?: boolean;
 }
 
 // Single source of truth. This module used to read/write its own

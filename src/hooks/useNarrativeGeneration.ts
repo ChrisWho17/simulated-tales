@@ -177,6 +177,7 @@ export interface NarrativeGenerationResult {
       mutateTone?: boolean;
       pendingCompanionIntroduction?: unknown;
       pendingCompanionId?: string;
+      socialReactionBatch?: import('@/game/socialReactionSystem').SocialReactionBatch | null;
     }
   ) => Record<string, any> | null;
   /**
@@ -187,6 +188,10 @@ export interface NarrativeGenerationResult {
     settings?: Partial<NarrativeRequestSettings>;
     directorSettings?: DirectorSettings;
   }) => void;
+  /** Seed the social reaction batch used by the next generation. */
+  setSocialReactionBatch: (
+    batch: import('@/game/socialReactionSystem').SocialReactionBatch | null
+  ) => void;
   setLastFailedAction: React.Dispatch<React.SetStateAction<{ action: string; diceRoll?: any; storySnapshot: StoryEntry[] } | null>>;
   setPendingMechanics: React.Dispatch<React.SetStateAction<GameMechanics | undefined>>;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
