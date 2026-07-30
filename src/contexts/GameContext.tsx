@@ -196,6 +196,18 @@ export interface GameSettings {
   
   // Director settings
   directorSettings: DirectorSettings;
+
+  /** Optional Accent / Panel / Text chrome overrides layered on the preset. */
+  customUiColors?: CustomUiColors;
+
+  /** Where saves are cached: mirrored, local-only, or cloud-only. */
+  storagePipeline?: 'mirror' | 'local' | 'cloud';
+
+  /** Hide the PWA install promo banner. */
+  hidePwaInstall?: boolean;
+
+  /** Hide the version hotfixes badge. */
+  hideHotfixBadge?: boolean;
 }
 
 const defaultNarratorConfig: NarratorConfig = {
