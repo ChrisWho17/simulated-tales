@@ -204,17 +204,54 @@ function buildGameplaySystemsContext(settings: NarrativeRequestSettings) {
       ? 'CONSEQUENCES — FORGIVING: failure redirects rather than punishes.'
       : 'CONSEQUENCES — BALANCED: failure costs something proportionate.';
 
+  const socialWeight = depth.socialWeight || 'balanced';
+  const combatWeight = depth.combatWeight || 'balanced';
+  const mysteryDensity = depth.mysteryDensity || 'medium';
+  const microEventFrequency = depth.microEventFrequency || 'occasional';
+
+  const socialDirective = socialWeight === 'heavy'
+    ? 'SCENE MIX — SOCIAL HEAVY: favor dialogue, relationships, reputation, and negotiation over fights.'
+    : socialWeight === 'light'
+      ? 'SCENE MIX — SOCIAL LIGHT: keep social scenes brief; push toward action and physical stakes.'
+      : 'SCENE MIX — SOCIAL BALANCED: mix conversation and action fairly.';
+
+  const combatDirective = combatWeight === 'heavy'
+    ? 'SCENE MIX — COMBAT HEAVY: threats escalate to violence more often; keep combat consequential.'
+    : combatWeight === 'light'
+      ? 'SCENE MIX — COMBAT LIGHT: de-escalate or avoid fights when the player seeks another path.'
+      : 'SCENE MIX — COMBAT BALANCED: combat appears when stakes warrant it.';
+
+  const mysteryDirective = mysteryDensity === 'high'
+    ? 'MYSTERY — DENSE: plant clues, secrets, and unanswered questions frequently.'
+    : mysteryDensity === 'low'
+      ? 'MYSTERY — CLEAR: keep motives and facts relatively transparent.'
+      : 'MYSTERY — MEDIUM: occasional secrets without constant puzzle density.';
+
+  const microEventDirective = microEventFrequency === 'frequent'
+    ? 'WORLD INTERRUPTIONS — FREQUENT: small ambient events may interrupt the scene often.'
+    : microEventFrequency === 'rare'
+      ? 'WORLD INTERRUPTIONS — RARE: keep the scene focused; interrupt sparingly.'
+      : 'WORLD INTERRUPTIONS — OCCASIONAL: light ambient interruptions when natural.';
+
   return {
     worldTone: depth.worldTone || 'balanced',
     consequenceIntensity: depth.consequenceIntensity || 'balanced',
-    socialWeight: depth.socialWeight || 'balanced',
-    combatWeight: depth.combatWeight || 'balanced',
-    mysteryDensity: depth.mysteryDensity || 'medium',
-    microEventFrequency: depth.microEventFrequency || 'occasional',
+    socialWeight,
+    combatWeight,
+    mysteryDensity,
+    microEventFrequency,
     gunNutDepth: depth.gunNutDepth || 'standard',
     activeSystems,
     disabledSystems,
-    directives: [toneDirective, consequenceDirective, ...activeSystems],
+    directives: [
+      toneDirective,
+      consequenceDirective,
+      socialDirective,
+      combatDirective,
+      mysteryDirective,
+      microEventDirective,
+      ...activeSystems,
+    ],
   };
 }
 
@@ -505,10 +542,15 @@ export function buildNarrativeRequestBody(
     ...extraDirectives,
   ].filter(Boolean);
 
+  // Honour player micro-event frequency (presets / in-depth settings), not a flat always-on roll.
+  const microFreq = settings.inDepthSettings?.microEventFrequency || 'occasional';
+  const microChance =
+    microFreq === 'rare' ? 0.22 : microFreq === 'frequent' ? 0.78 : 0.48;
   const microEvents = turnCount > 10 ? getGenreMicroEvents(genre) : [];
-  const selectedMicroEvent = microEvents.length > 0
-    ? microEvents[Math.floor(Math.random() * microEvents.length)]
-    : null;
+  const selectedMicroEvent =
+    microEvents.length > 0 && Math.random() < microChance
+      ? microEvents[Math.floor(Math.random() * microEvents.length)]
+      : null;
 
   const sanitizedCharacter = sanitizeCharacterForAPI(activeChar);
 

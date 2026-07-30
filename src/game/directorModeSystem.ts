@@ -476,12 +476,23 @@ export function getEffectiveDirectorKnobs(settings: DirectorSettings): DirectorK
 // ============= PROMPT INJECTION =============
 
 export function buildDirectorPromptBlock(settings: DirectorSettings): string {
-  if (settings.rawGame || !settings.enabled) {
+  if (!settings.enabled) {
     return `## DIRECTOR: RAW GAME MODE
 - No narrative steering beyond core rules
 - Player actions create reactions
 - No pacing nudges or DM pressure
 - Core sim runs, DM stays hands-off`;
+  }
+
+  // Raw Game + Director ON: difficulty + description only (matches Settings UI / edge prompt)
+  if (settings.rawGame) {
+    return [
+      '## DIRECTOR: RAW GAME + DIFFICULTY',
+      `mode: ${settings.mode.toUpperCase()}`,
+      `descriptionLevel: ${settings.descriptionLevel}`,
+      '- Pure simulation with difficulty and prose depth only',
+      '- No director personality or pacing steering',
+    ].join('\n');
   }
   
   const knobs = getEffectiveDirectorKnobs(settings);

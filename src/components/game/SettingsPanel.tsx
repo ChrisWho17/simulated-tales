@@ -590,7 +590,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       <button
                         key={weight}
                         onClick={() => updateSettings({ 
-                          inDepthSettings: { ...settings.inDepthSettings, socialWeight: weight }
+                          inDepthSettings: {
+                            ...settings.inDepthSettings,
+                            // UI: light = Combat focus, heavy = Social focus, balanced = Both
+                            socialWeight: weight,
+                            combatWeight:
+                              weight === 'light' ? 'heavy' : weight === 'heavy' ? 'light' : 'balanced',
+                          }
                         })}
                         className={cn(
                           "px-3 py-2 text-xs rounded-md border transition-colors",

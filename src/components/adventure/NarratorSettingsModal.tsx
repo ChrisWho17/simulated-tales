@@ -123,7 +123,7 @@ export function NarratorSettingsModal({
                   <div>
                     <h3 className="text-sm font-medium">Raw Game Mode</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Pure simulation, no narrative steering
+                      Pure simulation, no narrative steering — difficulty and description still apply
                     </p>
                   </div>
                   <Switch
@@ -135,33 +135,80 @@ export function NarratorSettingsModal({
                   />
                 </div>
 
-                {!settings.rawGame && (
-                  <>
-                    {/* Difficulty Mode Selection */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-primary" />
-                        Difficulty Mode
-                      </h3>
-                      <div className="grid grid-cols-4 gap-2">
-                        {DIRECTIVE_MODES.map((mode) => (
-                          <button
-                            key={mode.id}
-                            onClick={() => handleModeChange(mode.id)}
+                {/* Difficulty Mode — available whenever Director is ON (including Raw Game) */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-primary" />
+                    Difficulty Mode
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {DIRECTIVE_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => handleModeChange(mode.id)}
+                        className={cn(
+                          "p-3 rounded-lg border text-center transition-all",
+                          settings.mode === mode.id
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-primary/50 bg-background/50"
+                        )}
+                      >
+                        <div className="text-2xl mb-1">{mode.icon}</div>
+                        <div className="text-xs font-medium">{mode.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Description Level — available whenever Director is ON */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    Narrator Description
+                  </h3>
+                  <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border/30">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Vague</span>
+                      <span className="text-foreground font-medium">
+                        {DESCRIPTION_LEVELS.find(l => l.id === settings.descriptionLevel)?.name || 'Balanced'}
+                      </span>
+                      <span>Very Descriptive</span>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="flex justify-between px-1 mb-2">
+                        {DESCRIPTION_LEVELS.map((_, index) => (
+                          <div 
+                            key={index}
                             className={cn(
-                              "p-3 rounded-lg border text-center transition-all",
-                              settings.mode === mode.id
-                                ? "border-primary bg-primary/10"
-                                : "border-border/50 hover:border-primary/50 bg-background/50"
+                              "w-0.5 h-3 rounded-full transition-colors",
+                              DESCRIPTION_LEVELS.findIndex(l => l.id === settings.descriptionLevel) >= index
+                                ? "bg-primary"
+                                : "bg-border"
                             )}
-                          >
-                            <div className="text-2xl mb-1">{mode.icon}</div>
-                            <div className="text-xs font-medium">{mode.name}</div>
-                          </button>
+                          />
                         ))}
                       </div>
+                      <Slider
+                        value={[DESCRIPTION_LEVELS.findIndex(l => l.id === settings.descriptionLevel)]}
+                        onValueChange={(value) => {
+                          const level = DESCRIPTION_LEVELS[value[0]]?.id || 'balanced';
+                          setSettings(prev => ({ ...prev, descriptionLevel: level }));
+                        }}
+                        min={0}
+                        max={4}
+                        step={1}
+                      />
                     </div>
+                    
+                    <p className="text-[10px] text-muted-foreground text-center mt-1">
+                      {DESCRIPTION_LEVELS.find(l => l.id === settings.descriptionLevel)?.description}
+                    </p>
+                  </div>
+                </div>
 
+                {!settings.rawGame && (
+                  <>
                     {/* Tightness Slider */}
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium flex items-center gap-2">
@@ -186,54 +233,6 @@ export function NarratorSettingsModal({
                           max={100}
                           step={5}
                         />
-                      </div>
-                    </div>
-
-                    {/* Description Level Slider */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                        Narrator Description
-                      </h3>
-                      <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border/30">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Vague</span>
-                          <span className="text-foreground font-medium">
-                            {DESCRIPTION_LEVELS.find(l => l.id === settings.descriptionLevel)?.name || 'Balanced'}
-                          </span>
-                          <span>Very Descriptive</span>
-                        </div>
-                        
-                        {/* Visual slider with marks */}
-                        <div className="relative">
-                          <div className="flex justify-between px-1 mb-2">
-                            {DESCRIPTION_LEVELS.map((_, index) => (
-                              <div 
-                                key={index}
-                                className={cn(
-                                  "w-0.5 h-3 rounded-full transition-colors",
-                                  DESCRIPTION_LEVELS.findIndex(l => l.id === settings.descriptionLevel) >= index
-                                    ? "bg-primary"
-                                    : "bg-border"
-                                )}
-                              />
-                            ))}
-                          </div>
-                          <Slider
-                            value={[DESCRIPTION_LEVELS.findIndex(l => l.id === settings.descriptionLevel)]}
-                            onValueChange={(value) => {
-                              const level = DESCRIPTION_LEVELS[value[0]]?.id || 'balanced';
-                              setSettings(prev => ({ ...prev, descriptionLevel: level }));
-                            }}
-                            min={0}
-                            max={4}
-                            step={1}
-                          />
-                        </div>
-                        
-                        <p className="text-[10px] text-muted-foreground text-center mt-1">
-                          {DESCRIPTION_LEVELS.find(l => l.id === settings.descriptionLevel)?.description}
-                        </p>
                       </div>
                     </div>
 

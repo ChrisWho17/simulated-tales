@@ -1366,8 +1366,49 @@ const DIRECTOR_NARRATOR_PROFILES: Record<string, { voice: string; detailLevel: s
   noir_narrator: { voice: 'NOIR', detailLevel: 'RICH', emotionalLeakage: true, narrativeHooks: ['Shadows have secrets', 'Everyone lies', 'The city is cruel'], openingStyle: 'The rain hasn\'t stopped in three days. Neither have the lies. This city chews up the honest and spits out the survivors.' },
 };
 
+function formatDifficultyModeRules(mode: DirectorContext['mode']): string {
+  if (mode === 'fun') {
+    return `DIRECTOR RULES:
+• Fun Mode: Be playful and permissive. Cinematic chaos is welcome.
+• High fail-forward - failures create new opportunities, not dead ends.
+• Generous with resources and hints.
+• Invention budget is HIGH - embrace wild player ideas.`;
+  }
+  if (mode === 'easy') {
+    return `DIRECTOR RULES:
+• Easy Mode: Forgiving consequences, generous hints.
+• Strong fail-forward - every failure opens a new door.
+• Resources are plentiful, scarcity is rare.
+• Guide players subtly toward success.`;
+  }
+  if (mode === 'hard') {
+    return `DIRECTOR RULES:
+• Hard Mode: High stakes, low safety net.
+• Limited fail-forward - failures have real, lasting consequences.
+• Resources are scarce, every decision matters.
+• The world is dangerous and unforgiving.`;
+  }
+  return `DIRECTOR RULES:
+• Medium Mode: Balanced consequences matter.
+• Moderate fail-forward - failures have costs but create content.
+• Resources require management, scarcity exists but isn't crushing.
+• Let players make meaningful mistakes.`;
+}
+
 function formatDirectorContext(director: DirectorContext): string {
-  if (director.rawGame || !director.enabled) {
+  // Description level instructions - from player settings, overrides director type default
+  const descriptionLevelInstructions: Record<string, string> = {
+    'vague': 'EXTREMELY BRIEF. 1-2 sentences maximum per beat. Leave almost everything to imagination. Skip sensory details entirely. Focus only on what changes or matters for action.',
+    'minimal': 'SPARSE. Essential facts only. Avoid adjectives and metaphors. Be direct and economical. Let gaps speak.',
+    'balanced': 'MODERATE. Balance description with forward momentum. Include key sensory details but don\'t linger. Paint enough to see, not so much to slow.',
+    'detailed': 'RICH. Layer sensory details to build atmosphere. Describe environments, characters, and moods with care. Immerse the reader in every scene.',
+    'vivid': 'DENSE AND ELABORATE. Miss nothing. Every surface tells a story. Use rich metaphors, elaborate prose, and immersive sensory descriptions. Paint full scenes with texture, sound, smell, and emotional resonance. The world is thick with meaning.',
+  };
+  const descriptionLevel = director.descriptionLevel || 'balanced';
+
+  // Director OFF = pure raw. Director ON + Raw Game = difficulty + description only
+  // (matches Settings UI: "Raw Game ON = only difficulty modes enabled").
+  if (!director.enabled) {
     return `\n\n=== DIRECTOR MODE: RAW GAME ===
 No narrative steering beyond core rules.
 - Player actions create reactions, world responds naturally
@@ -1375,6 +1416,23 @@ No narrative steering beyond core rules.
 - Core simulation runs, DM stays hands-off
 - Consequences emerge organically from player choices
 - No guiding hand pushing toward specific outcomes`;
+  }
+
+  if (director.rawGame) {
+    return `\n\n=== DIRECTOR MODE: RAW GAME + DIFFICULTY ===
+Mode: ${director.mode.toUpperCase()}
+Pure simulation with player-configured difficulty and prose depth — no director personality steering.
+
+=== DESCRIPTION LEVEL: ${descriptionLevel.toUpperCase()} ===
+${descriptionLevelInstructions[descriptionLevel]}
+
+${formatDifficultyModeRules(director.mode)}
+
+RAW GAME RULES:
+- Player actions create reactions, world responds naturally
+- No pacing nudges or artificial DM pressure beyond the difficulty rules above
+- Consequences follow the selected difficulty mode
+- No guiding hand pushing toward a specific plot or director personality`;
   }
   
   const typeProfile = DIRECTOR_TYPES[director.directorType];
@@ -1416,15 +1474,6 @@ No narrative steering beyond core rules.
     'CLINICAL': 'Efficient. Precise. No wasted words. The facts speak; emotion is for the reader to supply.',
   };
   
-  // Description level instructions - from player settings, overrides director type default
-  const descriptionLevelInstructions: Record<string, string> = {
-    'vague': 'EXTREMELY BRIEF. 1-2 sentences maximum per beat. Leave almost everything to imagination. Skip sensory details entirely. Focus only on what changes or matters for action.',
-    'minimal': 'SPARSE. Essential facts only. Avoid adjectives and metaphors. Be direct and economical. Let gaps speak.',
-    'balanced': 'MODERATE. Balance description with forward momentum. Include key sensory details but don\'t linger. Paint enough to see, not so much to slow.',
-    'detailed': 'RICH. Layer sensory details to build atmosphere. Describe environments, characters, and moods with care. Immerse the reader in every scene.',
-    'vivid': 'DENSE AND ELABORATE. Miss nothing. Every surface tells a story. Use rich metaphors, elaborate prose, and immersive sensory descriptions. Paint full scenes with texture, sound, smell, and emotional resonance. The world is thick with meaning.',
-  };
-  
   return `\n\n=== DIRECTOR MODE: ${typeProfile.name.toUpperCase()} ===
 Mode: ${director.mode.toUpperCase()}
 Director Type: ${typeProfile.name}
@@ -1437,8 +1486,8 @@ Tags: ${typeProfile.tags.join(', ')}
 === NARRATOR PERSONALITY: ${narratorProfile.voice} ===
 ${voiceInstructions[narratorProfile.voice] || 'Write with evocative, immersive prose.'}
 
-=== DESCRIPTION LEVEL: ${(director.descriptionLevel || 'balanced').toUpperCase()} ===
-${descriptionLevelInstructions[director.descriptionLevel || 'balanced']}
+=== DESCRIPTION LEVEL: ${descriptionLevel.toUpperCase()} ===
+${descriptionLevelInstructions[descriptionLevel]}
 
 ${narratorProfile.emotionalLeakage ? 'EMOTIONAL BLEED: ENABLED - Allow the player character\'s emotional state to color perception.' : 'EMOTIONAL BLEED: DISABLED - Maintain narrative distance from character emotions.'}
 
@@ -1453,23 +1502,7 @@ PERSONALITY SETTINGS:
 • Weirdness: ${director.weirdness.toUpperCase()} - ${weirdnessDesc[director.weirdness] || 'Grounded events'}
 • Guidance: ${director.guidance.toUpperCase()} - ${guidanceDesc[director.guidance] || 'Subtle hints'}
 
-DIRECTOR RULES:
-${director.mode === 'fun' ? `• Fun Mode: Be playful and permissive. Cinematic chaos is welcome.
-• High fail-forward - failures create new opportunities, not dead ends.
-• Generous with resources and hints.
-• Invention budget is HIGH - embrace wild player ideas.` : ''}
-${director.mode === 'easy' ? `• Easy Mode: Forgiving consequences, generous hints.
-• Strong fail-forward - every failure opens a new door.
-• Resources are plentiful, scarcity is rare.
-• Guide players subtly toward success.` : ''}
-${director.mode === 'medium' ? `• Medium Mode: Balanced consequences matter.
-• Moderate fail-forward - failures have costs but create content.
-• Resources require management, scarcity exists but isn't crushing.
-• Let players make meaningful mistakes.` : ''}
-${director.mode === 'hard' ? `• Hard Mode: High stakes, low safety net.
-• Limited fail-forward - failures have real, lasting consequences.
-• Resources are scarce, every decision matters.
-• The world is dangerous and unforgiving.` : ''}
+${formatDifficultyModeRules(director.mode)}
 
 CRITICAL DIRECTOR COMMANDS:
 - Player must initiate direct NPC engagement (unless dire circumstances)
