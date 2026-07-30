@@ -314,6 +314,21 @@ export function AdventureGame() {
   const { shouldShow: shouldShowWizard } = useFirstTimeWizard();
   const [showWizard, setShowWizard] = useState(shouldShowWizard);
   
+  // Fail open: if CampaignContext never finishes (hung cloud sync), leave the
+  // splash after a short wait so Opera/Lovable never show an endless black/init screen.
+  useEffect(() => {
+    if (phase !== 'loading' || hasInitialized.current) return;
+    if (campaignContext?.isInitialized) return;
+    const failOpen = setTimeout(() => {
+      if (hasInitialized.current || phase !== 'loading') return;
+      console.warn('[AdventureGame] Campaign init timed out — starting fresh UI');
+      hasInitialized.current = true;
+      setInitialLoading(false);
+      setPhase('scenario');
+    }, 12000);
+    return () => clearTimeout(failOpen);
+  }, [phase, campaignContext?.isInitialized]);
+
   // Initialize from active campaign or localStorage after initial loading completes
   useEffect(() => {
     // Skip if not done loading or already initialized

@@ -191,49 +191,74 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
   // Isolation guard
   const isolationGuardRef = useRef<CampaignIsolationGuard | null>(null);
   
-  // Initialize
+  // Initialize — always reach isInitialized so AdventureGame cannot sit on
+  // the loading splash forever if cloud sync / integrity load hangs or throws.
   useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
-      await UnifiedSaveArchitecture.initialize();
-      setAccount(convertAccount(UnifiedSaveArchitecture.getAccount()));
-      setConflicts(UnifiedSaveArchitecture.getConflicts());
-      
-      // Load campaigns with recovery handling
       try {
-        const list = await UnifiedSaveArchitecture.listCampaigns();
-        setCampaigns(list);
-      } catch (e) {
-        console.error('[CampaignContext] Failed to list campaigns, attempting recovery:', e);
-        // Auto-repair corrupted index
+        // Cap cloud/auth work so a hung getSession/sync cannot block first paint.
+        await Promise.race([
+          UnifiedSaveArchitecture.initialize(),
+          new Promise<void>((resolve) => setTimeout(resolve, 8000)),
+        ]);
+        if (cancelled) return;
+
+        setAccount(convertAccount(UnifiedSaveArchitecture.getAccount()));
+        setConflicts(UnifiedSaveArchitecture.getConflicts());
+      
+        // Load campaigns with recovery handling
         try {
-          localStorage.removeItem('lwe_campaign_index');
-          localStorage.removeItem('guest_local_campaigns');
-          console.log('[CampaignContext] Corrupted campaign index removed');
-        } catch {
-          // Ignore
+          const list = await UnifiedSaveArchitecture.listCampaigns();
+          if (!cancelled) setCampaigns(list);
+        } catch (e) {
+          console.error('[CampaignContext] Failed to list campaigns, attempting recovery:', e);
+          // Auto-repair corrupted index
+          try {
+            localStorage.removeItem('lwe_campaign_index');
+            localStorage.removeItem('guest_local_campaigns');
+            console.log('[CampaignContext] Corrupted campaign index removed');
+          } catch {
+            // Ignore
+          }
+          if (!cancelled) setCampaigns([]);
         }
-        setCampaigns([]);
-      }
       
-      // Load active campaign if any
-      const activeId = UnifiedSaveArchitecture.getActiveCampaignId();
-      if (activeId) {
-        // Use integrity-validated load
-        const { campaign, integrityResult } = await DataIntegrityService.loadWithValidation(activeId);
-        if (campaign) {
-          reportIntegrityResult(integrityResult, campaign.meta?.name);
-          setupCampaignForLoad(campaign);
-          setActiveCampaign(campaign);
-        } else if (integrityResult.status === 'unrecoverable') {
-          toast.error('Could not load your last campaign', {
-            description: 'The save file is unreadable and no backup was available. Your other campaigns are unaffected.',
-            duration: 12000,
-          });
+        // Load active campaign if any
+        const activeId = UnifiedSaveArchitecture.getActiveCampaignId();
+        if (activeId) {
+          try {
+            const { campaign, integrityResult } = await Promise.race([
+              DataIntegrityService.loadWithValidation(activeId),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Campaign load timed out')), 10000)
+              ),
+            ]);
+            if (cancelled) return;
+            if (campaign) {
+              reportIntegrityResult(integrityResult, campaign.meta?.name);
+              setupCampaignForLoad(campaign);
+              setActiveCampaign(campaign);
+            } else if (integrityResult.status === 'unrecoverable') {
+              toast.error('Could not load your last campaign', {
+                description: 'The save file is unreadable and no backup was available. Your other campaigns are unaffected.',
+                duration: 12000,
+              });
+            }
+          } catch (e) {
+            console.error('[CampaignContext] Active campaign load failed:', e);
+            toast.error('Could not restore your last session', {
+              description: 'Starting fresh — your other saves should still be in the list.',
+              duration: 8000,
+            });
+          }
         }
+      } catch (e) {
+        console.error('[CampaignContext] Initialization failed:', e);
+      } finally {
+        if (!cancelled) setIsInitialized(true);
       }
-      
-      // Mark initialization complete
-      setIsInitialized(true);
     };
     
     init();
@@ -253,6 +278,7 @@ export const CampaignProvider: React.FC<CampaignProviderProps> = ({ children }) 
     });
     
     return () => {
+      cancelled = true;
       unsubAccount();
       unsubConflicts();
       unsubSync();
