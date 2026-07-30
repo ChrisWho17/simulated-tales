@@ -177,6 +177,7 @@ export interface NarrativeGenerationResult {
       mutateTone?: boolean;
       pendingCompanionIntroduction?: unknown;
       pendingCompanionId?: string;
+      socialReactionBatch?: import('@/game/socialReactionSystem').SocialReactionBatch | null;
     }
   ) => Record<string, any> | null;
   /**
