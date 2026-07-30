@@ -29,8 +29,8 @@ import { orderChangelog } from './changelog';
 export function VersionHotfixesBadge() {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>(CHANGELOG);
   const latest = changelog[0];
-  const highlights = latest?.highlights ?? [];
-  const fixes = latest?.fixes ?? [];
+  const highlights = entryList(latest, 'highlights');
+  const fixes = entryList(latest, 'fixes');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState<ChangelogEntry | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
@@ -209,8 +209,8 @@ export function VersionHotfixesBadge() {
                     : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]';
                   const accent = isMajor ? 'text-primary' : 'text-amber-400';
                   const events = [
-                    ...(entry.highlights ?? []).map((h) => ({ kind: 'highlight' as const, text: h })),
-                    ...entry.fixes.map((f) => ({ kind: 'fix' as const, text: f })),
+                    ...entryList(entry, 'highlights').map((h) => ({ kind: 'highlight' as const, text: h })),
+                    ...entryList(entry, 'fixes').map((f) => ({ kind: 'fix' as const, text: f })),
                   ];
                   const preview = events.slice(0, 2);
                   const remaining = events.length - preview.length;
@@ -285,7 +285,8 @@ export function VersionHotfixesBadge() {
           {selected && (() => {
             const isMajor = /\.\d+\.0$/.test(selected.version);
             const accent = isMajor ? 'text-primary' : 'text-amber-400';
-            const highlights = selected.highlights ?? [];
+            const highlights = entryList(selected, 'highlights');
+            const selectedFixes = entryList(selected, 'fixes');
             return (
               <>
                 <SheetHeader className="p-4 bg-gradient-to-r from-primary/15 via-amber-500/10 to-orange-500/10">
@@ -324,11 +325,11 @@ export function VersionHotfixesBadge() {
 
                     <section>
                       <h4 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-orange-400 mb-2">
-                        <Bug className="w-3 h-3" /> Fixes ({selected.fixes.length})
+                        <Bug className="w-3 h-3" /> Fixes ({selectedFixes.length})
                       </h4>
-                      {selected.fixes.length ? (
+                      {selectedFixes.length ? (
                         <ul className="space-y-1.5">
-                          {selected.fixes.map((f, i) => (
+                          {selectedFixes.map((f, i) => (
                             <li
                               key={i}
                               className="text-xs text-foreground/80 flex items-start gap-1.5 leading-snug break-words"
