@@ -28,8 +28,13 @@ describe('VersionHotfixesBadge', () => {
 
   it('shows the hotfix count badge matching latest changelog fixes length', () => {
     render(<VersionHotfixesBadge />);
-    const badge = screen.getByTestId('hotfixes-count-badge');
-    expect(badge.textContent).toBe(String(latest.fixes.length));
+    if (latest.fixes.length > 0) {
+      const badge = screen.getByTestId('hotfixes-count-badge');
+      expect(badge.textContent).toBe(String(latest.fixes.length));
+    } else {
+      // No badge renders when the latest patch has zero fixes.
+      expect(screen.queryByTestId('hotfixes-count-badge')).toBeNull();
+    }
   });
 
   it('renders highlights popover with latest version entries', async () => {
@@ -54,12 +59,16 @@ describe('VersionHotfixesBadge', () => {
     const popover = await screen.findByTestId('hotfixes-popover');
     expect(popover.textContent).toContain(`v${latest.version}`);
 
-    const list = within(popover).getByTestId('hotfixes-list');
-    const items = within(list).getAllByRole('listitem');
-    expect(items).toHaveLength(latest.fixes.length);
-    latest.fixes.forEach((f, i) => {
-      expect(items[i].textContent).toContain(f);
-    });
+    if (latest.fixes.length > 0) {
+      const list = within(popover).getByTestId('hotfixes-list');
+      const items = within(list).getAllByRole('listitem');
+      expect(items).toHaveLength(latest.fixes.length);
+      latest.fixes.forEach((f, i) => {
+        expect(items[i].textContent).toContain(f);
+      });
+    } else {
+      expect(popover.textContent).toContain('No hotfixes in this patch.');
+    }
   });
 
   it('opens full hotfix history dialog showing every changelog entry', async () => {
