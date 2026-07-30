@@ -20,4 +20,20 @@
  * [x] sanitizeCharacterForAPI shared lib (AdventureGame + useNarrativeGeneration)
  * [x] GamePhase extracted to types/gamePhase.ts
  * [ ] Larger AdventureDisplay / CheatModeSplash slices — deferred (safer follow-up)
+ *
+ * Pass 2 — Viability + Play Chrome Overhaul (Cursor):
+ * [x] validateContent gate added to zone transitions, opening narrative, regenerate-world
+ *     (previously only the player-action path ran the world bible)
+ * [x] Active party companions reach the AI via companionPartyContext (was pending-intro only)
+ * [x] Director settings: GameSettingsMenu now reads the campaign-aware source
+ *     SettingsPanel already used; removed the duplicate StateSyncBus emit in AdventureGame
+ *     so updateSettings is the single write path
+ * [x] PlayOverlayShell — shared overlay chrome (backdrop, header, scroll body, footer,
+ *     Escape close, focus trap, mobile full-screen). Migrated: SettingsPanel,
+ *     CharacterSheet, LevelUpModal, RelationshipJournalDetail, InventoryScreen,
+ *     ArsenalScreen, ItemActionModal, CompanionPanel
+ * [x] SettingsPanel tabs grouped Play / World / Data / More (no features removed)
+ * [x] Tokens: 'ink' (warm brass) is the new default preset; borders/glows in Button, Card
+ *     and play chrome route through --accent-* so the color picker drives them
+ * [ ] AdventureDisplay god-file slice — still deferred
  */
