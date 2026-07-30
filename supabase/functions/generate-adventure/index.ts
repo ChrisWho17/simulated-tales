@@ -347,6 +347,17 @@ interface AdventureRequest {
     agencyLevel?: string;
     directives?: string[];
   };
+  /** Live personality-weighted reactions from the client's social reaction system */
+  socialReactionContext?: {
+    promptBlock?: string;
+    reactions?: Array<{
+      npcName: string;
+      act: string;
+      cue: string;
+      statusAfter: string;
+      intensity: string;
+    }>;
+  };
   // World consistency systems
   consistencyContext?: {
     objectOwnership: string;   // Item ownership context
@@ -1732,6 +1743,20 @@ function parseMechanicsFromNarrative(narrative: string): Record<string, any> {
     mechanics.relationshipMoments = relationshipMoments;
   }
 
+  // Story companion recruitment tags
+  const recruitNames: string[] = [];
+  for (const m of narrative.matchAll(/\[RECRUIT:([^\]]+)\]/gi)) {
+    const name = m[1]?.trim();
+    if (name) recruitNames.push(name);
+  }
+  for (const m of narrative.matchAll(/\[COMPANION_JOIN:([^:\]]+)(?::[^\]]*)?\]/gi)) {
+    const name = m[1]?.trim();
+    if (name) recruitNames.push(name);
+  }
+  if (recruitNames.length > 0) {
+    mechanics.companionsRecruited = [...new Set(recruitNames)];
+  }
+
   const milestoneChanges = [...narrative.matchAll(/\[MILESTONE:([^:]+):([^\]]+)\]/g)].map(m => ({
     npcName: m[1].trim(),
     milestoneType: m[2].trim(),
@@ -1786,6 +1811,8 @@ function stripMechanicTagsFromNarrative(narrative: string): string {
     .replace(/\[NPC:[^\]]+\]/gi, '')
     .replace(/\[AFFINITY:[^\]]+\]/gi, '')
     .replace(/\[TRUST:[^\]]+\]/gi, '')
+    .replace(/\[RECRUIT:[^\]]+\]/gi, '')
+    .replace(/\[COMPANION_JOIN:[^\]]+\]/gi, '')
 
     // Language
     .replace(/\[LEARN_LANGUAGE:[^\]]+\]/gi, '')
@@ -1828,7 +1855,7 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as AdventureRequest;
-    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext, socialPresenceContext } = requestData;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext, socialPresenceContext, socialReactionContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
@@ -1856,6 +1883,11 @@ serve(async (req) => {
       systemContent += `\n\n${socialPresenceContext.npcCompanionGuidance}`;
     } else if (socialPresenceContext?.directives?.length) {
       systemContent += `\n\n=== SOCIAL PRESENCE (NPCs & COMPANIONS) ===\n${socialPresenceContext.directives.map((d: string) => `- ${d}`).join('\n')}`;
+    }
+
+    // Personality-weighted live reactions (client computed from what the player just said)
+    if (socialReactionContext?.promptBlock) {
+      systemContent += `\n\n${socialReactionContext.promptBlock}`;
     }
     
     // === QUALITY ENFORCEMENT SYSTEM - AAA Narrative Quality for Marathon Sessions ===
@@ -2912,6 +2944,16 @@ ${pendingCompanionIntroduction}`;
       }
     }
 
+    // Story-driven companion recruitment (always available — not adult-gated)
+    systemContent += `
+
+=== STORY COMPANION RECRUITMENT ===
+When an NPC genuinely commits to joining the player's party as a lasting companion, include ONE tag:
+[RECRUIT:CharacterName]
+or [COMPANION_JOIN:CharacterName]
+or [COMPANION_JOIN:CharacterName:brief reason]
+Only when they truly join (not a temporary escort). Custom-created companions are handled separately by the player.`;
+
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
     }
@@ -3076,6 +3118,16 @@ Examples:
 [RELATIONSHIP:Elena:first_flirt:She laughed at your witty remark, a faint blush coloring her cheeks]
 [RELATIONSHIP:Marcus:first_kiss:Under the moonlit garden, your lips finally met in a tender embrace]
 [RELATIONSHIP:Lyra:confession:You finally told her how you truly feel, heart pounding with vulnerability]
+
+COMPANION RECRUITMENT (STORY JOIN):
+When an NPC or story character genuinely commits to traveling with the player as a companion, include ONE of:
+[RECRUIT:CharacterName]
+[COMPANION_JOIN:CharacterName]
+or with optional reason: [COMPANION_JOIN:CharacterName:brief reason]
+Only emit when they truly join the party (not a temporary escort or one-scene ally).
+Examples:
+[RECRUIT:Elena]
+[COMPANION_JOIN:Marcus:He swore to see this through with you]
 
 MILESTONE TRACKING:
 When relationship status changes significantly, include:

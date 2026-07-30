@@ -37,6 +37,8 @@ const MECHANIC_TAG_PATTERNS = [
   /\[NPC:[^\]]+\]/gi,
   /\[AFFINITY:[^\]]+\]/gi,
   /\[TRUST:[^\]]+\]/gi,
+  /\[RECRUIT:[^\]]+\]/gi,
+  /\[COMPANION_JOIN:[^\]]+\]/gi,
   
   // Language and communication
   /\[LANGUAGE:[^\]]+\]/gi,

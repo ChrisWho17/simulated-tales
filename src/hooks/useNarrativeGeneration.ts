@@ -330,6 +330,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
   // `applyPendingSettings` seed the refs before that first generation runs.
   const settingsRef = useRef<NarrativeRequestSettings>(settings);
   const directorSettingsRef = useRef<DirectorSettings | null>(directorSettings);
+  const socialReactionBatchRef = useRef<import('@/game/socialReactionSystem').SocialReactionBatch | null>(null);
   settingsRef.current = settings;
   directorSettingsRef.current = directorSettings;
 
@@ -346,6 +347,12 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     }
   }, []);
 
+  const setSocialReactionBatch = useCallback((
+    batch: import('@/game/socialReactionSystem').SocialReactionBatch | null
+  ) => {
+    socialReactionBatchRef.current = batch;
+  }, []);
+
   const buildRequestBody = useCallback((
     scenario: string,
     playerAction: string | undefined,
@@ -359,6 +366,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       mutateTone?: boolean;
       pendingCompanionIntroduction?: unknown;
       pendingCompanionId?: string;
+      socialReactionBatch?: import('@/game/socialReactionSystem').SocialReactionBatch | null;
     }
   ): Record<string, any> | null => {
     let companionIntro = options?.pendingCompanionIntroduction;
@@ -418,6 +426,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       sessionStartMs: sessionStartRef.current,
       pendingCompanionIntroduction: companionIntro,
       pendingCompanionId: companionId,
+      socialReactionBatch: options?.socialReactionBatch ?? socialReactionBatchRef.current,
     });
 
     if (result.nextToneState) {
@@ -499,6 +508,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           retryLevel,
           extraDirectives,
           mutateTone: true,
+          socialReactionBatch: socialReactionBatchRef.current,
         }
       );
 
@@ -798,6 +808,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
     generateNarrative,
     buildRequestBody,
     applyPendingSettings,
+    setSocialReactionBatch,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,

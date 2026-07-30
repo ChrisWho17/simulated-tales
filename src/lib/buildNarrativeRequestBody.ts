@@ -46,6 +46,7 @@ import { WorldBible } from '@/game/worldBible/types';
 import { PressureState, getPressureAtmosphere } from '@/game/pressureClockSystem';
 import { companionSystem } from '@/game/companionSystem';
 import { buildSocialPresenceDirectives } from '@/lib/socialPresenceDirectives';
+import type { SocialReactionBatch } from '@/game/socialReactionSystem';
 
 /**
  * Depth/realism toggles the player configures in Settings. These used to live
@@ -127,6 +128,8 @@ export interface BuildNarrativeRequestBodyInput {
   sessionStartMs: number;
   pendingCompanionIntroduction?: unknown;
   pendingCompanionId?: string;
+  /** Personality-weighted reactions from the player's last line */
+  socialReactionBatch?: SocialReactionBatch | null;
 }
 
 export interface BuildNarrativeRequestBodyResult {
@@ -332,6 +335,7 @@ export function buildNarrativeRequestBody(
     sessionStartMs,
     pendingCompanionIntroduction,
     pendingCompanionId,
+    socialReactionBatch,
   } = input;
 
   const genre = scenarioSelection?.genre || 'fantasy';
@@ -551,6 +555,20 @@ export function buildNarrativeRequestBody(
     ...(stream ? { stream: true } : {}),
     ...(pendingCompanionIntroduction ? { pendingCompanionIntroduction } : {}),
     ...(pendingCompanionId ? { pendingCompanionId } : {}),
+    ...(socialReactionBatch?.promptBlock
+      ? {
+          socialReactionContext: {
+            promptBlock: socialReactionBatch.promptBlock,
+            reactions: socialReactionBatch.reactions.map(r => ({
+              npcName: r.npcName,
+              act: r.act,
+              cue: r.reactionCue,
+              statusAfter: r.statusAfter,
+              intensity: r.intensity,
+            })),
+          },
+        }
+      : {}),
   };
 
   if (includeBasicContext) {

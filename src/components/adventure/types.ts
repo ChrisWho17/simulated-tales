@@ -22,4 +22,6 @@ export interface GameMechanics {
   skillImprovements?: Array<{ skill: string; amount: number; reason: string }>;
   relationshipMoments?: Array<{ npcName: string; momentType: string; description: string }>;
   milestoneChanges?: Array<{ npcName: string; milestoneType: string }>;
+  /** Names from [RECRUIT:] / [COMPANION_JOIN:] story tags */
+  companionsRecruited?: string[];
 }

@@ -20,6 +20,15 @@ import { SETTINGS_PRESETS } from '@/components/game/SettingsPresetSelector';
 import { loadColorPreference, getSavedColorId, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
 import { RPGCharacter, migrateCharacterHealth } from '@/types/rpgCharacter';
 import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
+import {
+  applyPersonalitySocialReactions,
+  parseRecruitTags,
+  parseRelationshipTags,
+  recruitCompanionFromStory,
+  applyStoryRelationshipMoments,
+} from '@/game/socialReactionSystem';
+import type { SocialReactionBatch } from '@/game/socialReactionSystem';
+import { toast as sonnerToast } from 'sonner';
 import { buildCharacterVisualProfile, CharacterVisualProfile } from '@/lib/characterConsistentIllustration';
 import { playerStateManager } from '@/game/playerStateManager';
 import { GameGenre, GENRE_DATA } from '@/types/genreData';
@@ -300,6 +309,7 @@ export function AdventureGame() {
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
   const hasInitialized = useRef<boolean>(false);
+  const socialReactionRef = useRef<SocialReactionBatch | null>(null);
   
   // === WORLD REGENERATION & LOCK SYSTEM ===
   // Track if the starting world is locked (after regeneration or 2nd player action)
@@ -775,6 +785,7 @@ export function AdventureGame() {
     generateNarrative,
     buildRequestBody,
     applyPendingSettings,
+    setSocialReactionBatch,
     setLastFailedAction,
     setPendingMechanics,
     setIsLoading,
@@ -869,6 +880,7 @@ export function AdventureGame() {
       ],
       pendingCompanionIntroduction: companionContext || undefined,
       pendingCompanionId: pendingCompanion?.companionId,
+      socialReactionBatch: socialReactionRef.current,
     });
 
     return body || {
@@ -1400,6 +1412,48 @@ export function AdventureGame() {
     setScenarioSelection(null);
   }, []);
 
+  /** Recruit from story tags + apply RELATIONSHIP moments into unified meters. */
+  const applyStorySocialAndRecruitTags = useCallback((
+    rawNarrative: string,
+    turn: number,
+    genre: string,
+    mechanics?: { relationshipMoments?: Array<{ npcName: string; momentType: string; description: string }>; companionsRecruited?: string[] } | null
+  ) => {
+    const recruitNames = [
+      ...parseRecruitTags(rawNarrative),
+      ...(mechanics?.companionsRecruited || []),
+    ];
+    const uniqueRecruits = [...new Set(recruitNames.map(n => n.trim()).filter(Boolean))];
+    for (const name of uniqueRecruits) {
+      const result = recruitCompanionFromStory({
+        name,
+        genre,
+        reason: 'Chose to stand with you through the story.',
+      });
+      if (result.success) {
+        sonnerToast(`${result.companion?.name || name} joined your party`, {
+          description: result.message,
+          duration: 4000,
+        });
+      } else if (result.message && !/already|full/i.test(result.message)) {
+        console.warn('[StoryRecruit]', result.message);
+      }
+    }
+
+    const momentsFromText = parseRelationshipTags(rawNarrative);
+    const momentsFromMechanics = mechanics?.relationshipMoments || [];
+    const seen = new Set<string>();
+    const moments = [...momentsFromText, ...momentsFromMechanics].filter(m => {
+      const key = `${m.npcName}|${m.momentType}|${m.description}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (moments.length > 0) {
+      applyStoryRelationshipMoments({ moments, tick: turn });
+    }
+  }, []);
+
   // Player action during game
   const handlePlayerAction = useCallback(async (action: string, diceRoll?: any) => {
     if (!character || !scenarioSelection) return;
@@ -1491,10 +1545,26 @@ export function AdventureGame() {
     // === COMPANION TIMING: Update turn tracking for pending companions ===
     updateCompanionTurnTracking();
 
+    // === SOCIAL REALISM: personality-weighted reactions to what the player said ===
+    socialReactionRef.current = applyPersonalitySocialReactions({
+      playerAction: action,
+      genre: scenarioSelection.genre,
+      tick: currentTurn,
+    });
+    setSocialReactionBatch(socialReactionRef.current);
+    if (socialReactionRef.current.reactions.length > 0) {
+      const sharp = socialReactionRef.current.reactions.filter(r => r.intensity === 'sharp');
+      if (sharp[0]) {
+        sonnerToast(sharp[0].npcName, { description: sharp[0].reactionCue, duration: 3500 });
+      }
+    }
+
     // Check if streaming is enabled (typewriter mode implies streaming support)
     const useStreaming = settings.typewriterEnabled && settings.textSpeed !== 'instant';
     
     let narrative: string | null = null;
+    /** Raw AI text (with mechanic tags) for recruit/relationship parsing before display strip. */
+    let rawNarrativeForTags: string | null = null;
     
     if (useStreaming) {
       // === STREAMING NARRATIVE GENERATION ===
@@ -1605,6 +1675,7 @@ export function AdventureGame() {
           // on its non-streaming branch. Clean here so [LOOT:]/[XP:] tags never reach
           // the story entry that gets persisted and replayed as conversationHistory.
           if (narrative) {
+            rawNarrativeForTags = narrative;
             narrative = cleanNarrativeForDisplay(narrative);
           }
 
@@ -1640,6 +1711,16 @@ export function AdventureGame() {
     }
     
     if (narrative) {
+      // Story recruit + RELATIONSHIP meters (raw tags on stream; mechanics on non-stream)
+      applyStorySocialAndRecruitTags(
+        rawNarrativeForTags || narrative,
+        currentTurn,
+        scenarioSelection.genre,
+        latestMechanicsRef.current
+      );
+      socialReactionRef.current = null;
+      setSocialReactionBatch(null);
+
       const narratorEntry: StoryEntry = {
         id: `narrator_${Date.now()}`,
         role: 'narrator',
@@ -1865,7 +1946,7 @@ export function AdventureGame() {
         campaignContext.addNarrativeEntry(fallbackEntry);
       }
     }
-  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory, sessionStats]);
+  }, [story, scenarioSelection, character, generateNarrative, saveData, checkSceneTriggers, campaignMemory, updateCampaignMemory, advanceCampaignTime, campaignContext, worldState.securityLevel, processActionForRipples, advanceTurn, inventory, sessionStats, setSocialReactionBatch, applyStorySocialAndRecruitTags]);
 
   // Retry last failed action
   const retryLastAction = useCallback(async () => {
