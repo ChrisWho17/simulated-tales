@@ -16,7 +16,7 @@ import { loadSettings } from '@/lib/gameSettings';
 export function isDevSurfaceEnabled(): boolean {
   if (IS_DEV) return true;
   try {
-    return !!loadSettings().cheatModeEnabled;
+    return !!loadSettings().inDepthSettings?.cheatModeEnabled;
   } catch {
     return false;
   }
