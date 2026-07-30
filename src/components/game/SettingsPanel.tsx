@@ -18,7 +18,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
 import { TimeMultiplier, TIME_MULTIPLIER_CONFIG } from '@/game/timeProgressionSystem';
-import { COLOR_PRESETS } from '@/lib/colorTheme';
+import { ThemeGrid } from '@/components/ui/ThemeGrid';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -1190,26 +1190,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-[var(--accent-secondary)]" />
                   <h3 className="text-sm font-medium">Color Theme</h3>
+                  <span className="ml-auto text-xs text-muted-foreground">{colorTheme.name}</span>
                 </div>
-                <div className="grid grid-cols-6 gap-2">
-                  {COLOR_PRESETS.map((color) => (
-                    <button
-                      key={color.id}
-                      onClick={() => setColorTheme(color.id)}
-                      className={cn(
-                        "w-10 h-10 rounded-full transition-all",
-                        colorTheme.id === color.id 
-                          ? "ring-2 ring-white ring-offset-2 ring-offset-background scale-110"
-                          : "hover:scale-105"
-                      )}
-                      style={{
-                        background: `linear-gradient(135deg, ${color.primary}, ${color.secondary})`,
-                        boxShadow: colorTheme.id === color.id ? `0 0 20px ${color.glow}` : undefined
-                      }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
+                <ThemeGrid value={colorTheme.id} onSelect={setColorTheme} />
               </div>
               
               {/* Scene Illustrations */}

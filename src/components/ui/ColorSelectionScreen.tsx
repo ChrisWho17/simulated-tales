@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { User, Check } from 'lucide-react';
+import { User } from 'lucide-react';
 import { COLOR_PRESETS, ColorPreset, applyColorTheme, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
-import { cn } from '@/lib/utils';
+import { ThemeGrid } from '@/components/ui/ThemeGrid';
 
 interface ColorSelectionScreenProps {
   onSelect: (colorId: string) => void;
@@ -43,45 +43,18 @@ export function ColorSelectionScreen({ onSelect, currentSelection }: ColorSelect
         </p>
         
         {/* Color Grid */}
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4 sm:gap-5 p-6 glass-panel mb-8">
-          {COLOR_PRESETS.map(color => (
-            <div key={color.id} className="flex flex-col items-center gap-2">
-              <button
-                onClick={() => setSelected(color.id)}
-                className={cn(
-                  "w-12 h-12 sm:w-14 sm:h-14 rounded-full cursor-pointer transition-all duration-300 relative",
-                  "border-3 shadow-lg flex items-center justify-center",
-                  selected === color.id 
-                    ? "border-white scale-110" 
-                    : "border-transparent hover:scale-115 hover:border-white/50"
-                )}
-                style={{ 
-                  background: `linear-gradient(135deg, ${color.primary}, ${color.secondary})`,
-                  boxShadow: selected === color.id 
-                    ? `0 0 30px ${color.glow}, 0 8px 25px rgba(0, 0, 0, 0.4)` 
-                    : `0 4px 15px rgba(0, 0, 0, 0.3)`
-                }}
-                aria-label={color.name}
-              >
-                {selected === color.id && (
-                  <Check className="w-5 h-5 text-white drop-shadow-lg" />
-                )}
-              </button>
-              <span className={cn(
-                "text-xs transition-opacity duration-200 whitespace-nowrap",
-                selected === color.id ? "text-foreground opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100"
-              )}>
-                {color.name.split(' ')[0]}
-              </span>
-            </div>
-          ))}
+        <div className="p-4 sm:p-6 glass-panel mb-8 text-left">
+          <ThemeGrid value={selected} onSelect={setSelected} />
         </div>
         
         {/* Live Preview Panel */}
         <div className="glass-panel p-6 mb-8">
-          <h3 className="font-display text-lg mb-5" style={{ color: previewColor.primary }}>
-            Preview
+          <h3 className="font-display text-lg mb-1" style={{ color: previewColor.primary }}>
+            {previewColor.name}
           </h3>
+          {previewColor.blurb && (
+            <p className="text-xs text-muted-foreground mb-5">{previewColor.blurb}</p>
+          )}
           
           <div className="flex flex-col items-center gap-5">
             {/* Preview portrait frame */}

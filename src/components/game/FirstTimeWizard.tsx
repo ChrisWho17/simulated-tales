@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, ChevronLeft, Sparkles, Palette, Wand2, 
@@ -9,7 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { COLOR_PRESETS, ColorPreset, applyColorTheme, loadColorPreference, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
+import { COLOR_PRESETS, applyColorTheme, DEFAULT_COLOR_ID, getFeaturedPresets } from '@/lib/colorTheme';
+import { ThemeGrid } from '@/components/ui/ThemeGrid';
 import { StepTransition, useStepDirection, StaggerChildren, StaggerItem } from '@/components/ui/PageTransition';
 import { SETTINGS_PRESETS, PresetId } from './SettingsPresetSelector';
 
@@ -76,6 +77,9 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
   // Track direction for smooth transitions
   const stepDirection = useStepDirection(currentStep);
   
+  // A short curated list here; the full library is in Settings → Display.
+  const featuredPresets = useMemo(() => getFeaturedPresets(), []);
+
   // User selections
   const [selectedTheme, setSelectedTheme] = useState<string>(DEFAULT_COLOR_ID);
   const [selectedPreset, setSelectedPreset] = useState<PresetId>('story');
@@ -238,45 +242,17 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
 
                 {/* Theme Step */}
                 {currentStep === 1 && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-4 gap-3">
-                      {COLOR_PRESETS.slice(0, 8).map((preset) => (
-                        <button
-                          key={preset.id}
-                          onClick={() => handleThemeSelect(preset.id)}
-                          className={cn(
-                            "group relative p-4 rounded-xl border-2 transition-all duration-200",
-                            selectedTheme === preset.id
-                              ? "border-[var(--accent-primary)] scale-105"
-                              : "border-border/50 hover:border-border"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "w-10 h-10 rounded-full mx-auto mb-2 ring-2 ring-offset-2 ring-offset-background transition-all",
-                              selectedTheme === preset.id ? "ring-current" : "ring-transparent"
-                            )}
-                            style={{ 
-                              background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})`,
-                              color: preset.primary,
-                            }}
-                          />
-                          <p className="text-xs text-center text-muted-foreground group-hover:text-foreground">
-                            {preset.name.split(' ')[0]}
-                          </p>
-                          {selectedTheme === preset.id && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                              style={{ background: preset.primary }}
-                            >
-                              <Check className="w-3 h-3 text-white" />
-                            </motion.div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="space-y-3">
+                    <ThemeGrid
+                      value={selectedTheme}
+                      onSelect={handleThemeSelect}
+                      presets={featuredPresets}
+                      variant="compact"
+                      showFilters={false}
+                    />
+                    <p className="text-xs text-center text-muted-foreground">
+                      Every palette — and a tone filter — lives in Settings → Display.
+                    </p>
                   </div>
                 )}
 

@@ -66,6 +66,17 @@ underline pick up `--accent-primary`.
 `SettingsPanel`, `CharacterSheet`, `LevelUpModal`, `RelationshipJournalDetail`,
 `InventoryScreen`, `ArsenalScreen`, `ItemActionModal`, `CompanionPanel`.
 
-Not yet migrated: `SaveLoadMenu`, `WeaponInspectionModal`, `CheatModeSplash`,
-`AdventureModals` and the companion sub-modals. They still work; they just carry
-their own chrome.
+## Not migrated, and why
+
+`SaveLoadMenu`, `WeaponInspectionModal` and `AdventureModals` have **no importers**
+— verified repo-wide. They carry their own chrome and nothing reaches them, so
+migrating them would change no pixel a player sees. Each now says so at the top of
+the file. They were left in place rather than deleted: `SaveLoadMenu` sits on the
+legacy save layer that `docs/SAVE_STACK.md` puts under document-and-deprecate, and
+deleting components is a separate call from a UI pass.
+
+`CheatModeSplash` **is** live (AdventureDisplay renders it) but is a ~3.9k-line dev
+panel with its own nested screen router. It is not an easy migration and it is
+gated behind cheat commands, so it keeps its own chrome for now.
+
+The companion sub-modals inside `CheatModeSplash` are in the same bucket.

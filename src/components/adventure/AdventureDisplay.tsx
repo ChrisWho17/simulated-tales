@@ -735,50 +735,77 @@ export function AdventureDisplay({
     });
   }, [onLoadSave, toast]);
 
-  // Auto-save every 5 minutes when enabled
+  // Auto-save every 5 minutes when enabled.
+  //
+  // The interval mounts once. Everything it needs lives in a ref that each render
+  // refreshes — depending on `story`/`character` directly would tear the timer down
+  // and restart it on every turn, so during active play the 5 minutes never elapsed
+  // and an autosave only ever landed if the player stopped and read for a while.
+  const autoSaveEnabled = gameContext?.settings?.autoSave ?? true;
+  const hasCharacter = Boolean(character?.name);
+
+  const autoSavePayloadRef = useRef({
+    story,
+    character,
+    weatherState,
+    timeState,
+    currentMood,
+    campaignMemory: gameContext?.campaignMemory,
+    getExtendedSaveState,
+    onPersistExtendedToCampaign,
+    toast,
+  });
+
+  autoSavePayloadRef.current = {
+    story,
+    character,
+    weatherState,
+    timeState,
+    currentMood,
+    campaignMemory: gameContext?.campaignMemory,
+    getExtendedSaveState,
+    onPersistExtendedToCampaign,
+    toast,
+  };
+
   useEffect(() => {
-    const autoSaveEnabled = gameContext?.settings?.autoSave ?? true;
-    
-    if (!autoSaveEnabled || !character?.name) return;
-    
+    if (!autoSaveEnabled || !hasCharacter) return;
+
     const AUTO_SAVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
-    
+
     const performAutoSave = () => {
-      const extended = getExtendedSaveState?.() || {};
+      const current = autoSavePayloadRef.current;
+      if (!current.character?.name) return;
+
+      const extended = current.getExtendedSaveState?.() || {};
       const gameState = {
-        story,
-        character,
+        story: current.story,
+        character: current.character,
         timestamp: Date.now(),
-        weatherState: extended.weatherState ?? weatherState,
-        timeState: extended.timeState ?? timeState,
+        weatherState: extended.weatherState ?? current.weatherState,
+        timeState: extended.timeState ?? current.timeState,
         directorSettings: extended.directorSettings,
         languageState: extended.languageState,
         toneState: extended.toneState,
-        currentMood: extended.currentMood ?? currentMood,
+        currentMood: extended.currentMood ?? current.currentMood,
         adultContent: extended.adultContent,
       };
-      
-      // Include campaign memory in auto-save
-      const campaignMem = gameContext?.campaignMemory ?? undefined;
-      saveGame(character.name, gameState, true, campaignMem);
-      onPersistExtendedToCampaign?.();
-      
-      // Subtle toast notification for auto-save
-      toast({
+
+      saveGame(current.character.name, gameState, true, current.campaignMemory ?? undefined);
+      current.onPersistExtendedToCampaign?.();
+
+      current.toast({
         title: "Progress saved",
-        description: `${character.name}'s adventure auto-saved`,
+        description: `${current.character.name}'s adventure auto-saved`,
         duration: 2000,
       });
-      
-      console.log(`[Auto-Save] ${character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
+
+      console.log(`[Auto-Save] ${current.character.name}'s adventure saved at ${new Date().toLocaleTimeString()}`);
     };
-    
-    // Set up interval
+
     const intervalId = setInterval(performAutoSave, AUTO_SAVE_INTERVAL);
-    
-    // Cleanup on unmount or when settings change
     return () => clearInterval(intervalId);
-  }, [gameContext?.settings?.autoSave, gameContext?.campaignMemory, character, story, toast, getExtendedSaveState, weatherState, timeState, currentMood, onPersistExtendedToCampaign]);
+  }, [autoSaveEnabled, hasCharacter]);
 
   // NOTE: No auto-scroll on new content - preserves reading position for immersion
   // User scrolls down manually to see new content
@@ -2876,10 +2903,20 @@ export function AdventureDisplay({
         onClearEntries={ambientFeed.clearFeed}
       />
       
-      {/* Companion Quick View - Floating mini-cards in top-right */}
+      {/*
+        Companion Quick View — desktop-only party rail.
+
+        It lives on the left rail because the ConsequenceFeed claims `top-20 right-4`
+        for transient notifications, and the two were landing on the exact same
+        coordinates. Expanded, this rail runs to roughly 25rem, so stacking it under
+        the feed on the right would need measured heights. The left rail below the
+        header is otherwise empty (SessionStats and AmbientFeed both anchor to the
+        bottom), and this is hidden on mobile where the feed has the right side to
+        itself.
+      */}
       <CompanionQuickView
         onOpenPanel={() => setShowCompanionPanel(true)}
-        className="fixed top-20 right-4 z-30 hidden md:block"
+        className="fixed top-20 left-4 z-30 hidden md:block"
       />
       
       {/* Companion Warning Toast - Monitors and alerts companion status */}

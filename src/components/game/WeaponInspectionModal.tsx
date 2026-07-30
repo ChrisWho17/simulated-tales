@@ -1,6 +1,10 @@
 /**
  * Weapon Inspection Modal - Tarkov-style detailed weapon view
  * Shows parts, attachments, and individual component conditions
+ *
+ * UNREFERENCED as of the pass-3 audit — nothing imports this, so it was skipped
+ * rather than migrated onto PlayOverlayShell. Arsenal covers weapon detail in
+ * play today. Wire this up on the shell if per-part inspection is revived.
  */
 
 import { useState, useMemo } from 'react';

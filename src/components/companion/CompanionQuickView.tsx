@@ -110,10 +110,13 @@ export function CompanionQuickView({ onOpenPanel, onCompanionClick, className }:
   return (
     <TooltipProvider>
       <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        // The caller owns which rail this sits on — `right-4` here would survive a
+        // `left-4` override, since tailwind-merge treats the two as different
+        // properties and would pin both edges.
         className={cn(
-          "fixed right-4 top-20 z-30",
+          "fixed z-30",
           className
         )}
       >

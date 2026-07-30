@@ -49,6 +49,9 @@ export default {
         },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
+        /* Currency and daylight. Fixed rather than accent-derived so coin values
+           don't turn cyan under a cool preset. */
+        gold: "var(--gold)",
         // Rarity colors
         rarity: {
           common: "var(--rarity-common)",
@@ -124,6 +127,14 @@ export default {
           from: { opacity: "0", transform: "translateX(-20px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
+        "slide-up": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "pulse-slow": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.55" },
+        },
         "glow-pulse": {
           "0%, 100%": { boxShadow: "0 0 20px rgba(139, 92, 246, 0.4)" },
           "50%": { boxShadow: "0 0 30px rgba(139, 92, 246, 0.6)" },
@@ -174,6 +185,8 @@ export default {
         "scale-in": "scale-in 0.3s ease-out forwards",
         "slide-in-right": "slide-in-right 0.4s ease-out forwards",
         "slide-in-left": "slide-in-left 0.4s ease-out forwards",
+        "slide-up": "slide-up 0.3s ease-out forwards",
+        "pulse-slow": "pulse-slow 3.5s ease-in-out infinite",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "float": "float 6s ease-in-out infinite",
         "shimmer": "shimmer 2s linear infinite",

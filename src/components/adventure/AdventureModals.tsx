@@ -1,6 +1,11 @@
 // ============================================================================
 // ADVENTURE MODALS - Extracted modal rendering from AdventureDisplay
 // ============================================================================
+//
+// UNREFERENCED as of the pass-3 audit. The extraction landed but AdventureDisplay
+// still renders these modals inline, so this file is a parallel copy that no
+// route reaches. Treat AdventureDisplay as the live one; finishing the extraction
+// means deleting the inline block there, not editing both.
 
 import { GameGenre } from '@/types/genreData';
 import { RPGCharacter, DiceRoll } from '@/types/rpgCharacter';

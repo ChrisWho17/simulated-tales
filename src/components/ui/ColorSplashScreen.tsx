@@ -1,7 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, X, Palette, Sparkles, Flame, Snowflake, Waves, Zap, Sun, Moon, Star } from 'lucide-react';
-import { COLOR_PRESETS, ColorPreset, applyColorTheme, getSavedColorId, DEFAULT_COLOR_ID } from '@/lib/colorTheme';
-import { cn } from '@/lib/utils';
+import { Check, X, Palette, Sparkles, Flame, Snowflake, Waves, Zap, Sun, Star } from 'lucide-react';
+import {
+  COLOR_PRESETS,
+  COLOR_TONES,
+  ColorPreset,
+  ColorTone,
+  applyColorTheme,
+  getPresetTone,
+  getSavedColorId,
+  DEFAULT_COLOR_ID,
+} from '@/lib/colorTheme';
+import { ThemeGrid } from '@/components/ui/ThemeGrid';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ColorSplashScreenProps {
@@ -21,13 +30,10 @@ const EFFECT_ICONS: Record<string, React.ReactNode> = {
   ember: <Flame className="w-3 h-3" />,
 };
 
-// Category labels
-const CATEGORY_LABELS = {
-  classic: '✦ Classic',
-  nature: '🌿 Nature',
-  cosmic: '🌌 Cosmic',
-  elemental: '🔥 Elemental',
-};
+const TONE_LABELS: Record<ColorTone, string> = COLOR_TONES.reduce(
+  (acc, entry) => ({ ...acc, [entry.id]: entry.label }),
+  {} as Record<ColorTone, string>
+);
 
 // Background effect component
 function ThemeEffect({ color, effect }: { color: ColorPreset; effect?: string }) {
@@ -137,63 +143,9 @@ function ThemeEffect({ color, effect }: { color: ColorPreset; effect?: string })
   );
 }
 
-// Color swatch component
-function ColorSwatch({ 
-  color, 
-  isSelected, 
-  onClick 
-}: { 
-  color: ColorPreset; 
-  isSelected: boolean; 
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.15 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={cn(
-        "relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl cursor-pointer transition-all duration-300",
-        "border-2 shadow-lg flex items-center justify-center overflow-hidden group",
-        isSelected 
-          ? "border-white ring-2 ring-white/30" 
-          : "border-white/10 hover:border-white/40"
-      )}
-      style={{ 
-        background: `linear-gradient(135deg, ${color.primary}, ${color.secondary})`,
-        boxShadow: isSelected 
-          ? `0 0 30px ${color.glow}, 0 8px 24px rgba(0, 0, 0, 0.5)` 
-          : `0 4px 16px rgba(0, 0, 0, 0.4)`
-      }}
-    >
-      {/* Shine effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      
-      {/* Effect icon */}
-      {color.effect && !isSelected && (
-        <div className="absolute bottom-0.5 right-0.5 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
-          {EFFECT_ICONS[color.effect]}
-        </div>
-      )}
-      
-      {/* Selected checkmark */}
-      {isSelected && (
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm"
-        >
-          <Check className="w-6 h-6 text-white drop-shadow-lg" />
-        </motion.div>
-      )}
-    </motion.button>
-  );
-}
-
 export function ColorSplashScreen({ open, onClose }: ColorSplashScreenProps) {
   const [selected, setSelected] = useState(() => getSavedColorId() || DEFAULT_COLOR_ID);
   const [originalColor, setOriginalColor] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   // Store original color when opening
   useEffect(() => {
@@ -231,27 +183,7 @@ export function ColorSplashScreen({ open, onClose }: ColorSplashScreenProps) {
   };
 
   const previewColor = COLOR_PRESETS.find(c => c.id === selected) || COLOR_PRESETS[0];
-  
-  // Group colors by category
-  const groupedColors = useMemo(() => {
-    const groups: Record<string, ColorPreset[]> = {
-      classic: [],
-      nature: [],
-      cosmic: [],
-      elemental: [],
-    };
-    COLOR_PRESETS.forEach(color => {
-      if (groups[color.category]) {
-        groups[color.category].push(color);
-      }
-    });
-    return groups;
-  }, []);
 
-  const filteredColors = activeCategory 
-    ? groupedColors[activeCategory] || []
-    : COLOR_PRESETS;
-  
   return (
     <AnimatePresence>
       {open && (
@@ -302,75 +234,14 @@ export function ColorSplashScreen({ open, onClose }: ColorSplashScreenProps) {
               </motion.p>
             </div>
             
-            {/* Category filters */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="flex flex-wrap justify-center gap-2 mb-6"
-            >
-              <button
-                onClick={() => setActiveCategory(null)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                  activeCategory === null
-                    ? "text-white"
-                    : "bg-muted/30 text-muted-foreground hover:text-foreground"
-                )}
-                style={activeCategory === null ? { 
-                  background: `linear-gradient(135deg, ${previewColor.primary}, ${previewColor.secondary})`,
-                  boxShadow: `0 0 20px ${previewColor.glow}`
-                } : {}}
-              >
-                All Themes
-              </button>
-              {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveCategory(key)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                    activeCategory === key
-                      ? "text-white"
-                      : "bg-muted/30 text-muted-foreground hover:text-foreground"
-                  )}
-                  style={activeCategory === key ? { 
-                    background: `linear-gradient(135deg, ${previewColor.primary}, ${previewColor.secondary})`,
-                    boxShadow: `0 0 20px ${previewColor.glow}`
-                  } : {}}
-                >
-                  {label}
-                </button>
-              ))}
-            </motion.div>
-            
-            {/* Color Grid */}
+            {/* Color Grid — the tone rail and named swatches come from the shared picker */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="glass-panel p-6 mb-6"
+              className="glass-panel p-4 sm:p-6 mb-6 text-left"
             >
-              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-3 sm:gap-4">
-                <AnimatePresence mode="popLayout">
-                  {filteredColors.map((color, index) => (
-                    <motion.div
-                      key={color.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ delay: index * 0.02 }}
-                    >
-                      <ColorSwatch
-                        color={color}
-                        isSelected={selected === color.id}
-                        onClick={() => setSelected(color.id)}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+              <ThemeGrid value={selected} onSelect={setSelected} />
             </motion.div>
             
             {/* Selected Theme Info */}
@@ -391,8 +262,11 @@ export function ColorSplashScreen({ open, onClose }: ColorSplashScreenProps) {
                   />
                   <div>
                     <h3 className="font-display text-lg text-foreground">{previewColor.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{CATEGORY_LABELS[previewColor.category]}</span>
+                    {previewColor.blurb && (
+                      <p className="text-sm text-muted-foreground">{previewColor.blurb}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{TONE_LABELS[getPresetTone(previewColor)]}</span>
                       {previewColor.effect && (
                         <>
                           <span>•</span>

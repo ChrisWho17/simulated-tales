@@ -1,6 +1,17 @@
 // ============================================================================
 // SAVE/LOAD MENU UI - Comprehensive save slot management
 // ============================================================================
+//
+// UNREFERENCED as of the pass-3 audit — nothing imports this. It was left in
+// place rather than deleted or migrated onto PlayOverlayShell:
+//
+//  - It builds on the legacy save layer, and docs/SAVE_STACK.md puts that layer
+//    under document-and-deprecate, so it should not gain new chrome.
+//  - Deleting it is a separate call from a UI pass.
+//
+// If save slot management comes back, route it through UnifiedSave /
+// CampaignContext and rebuild the chrome on PlayOverlayShell rather than
+// reviving these Dialogs.
 
 import React, { useState, useRef } from 'react';
 import { 

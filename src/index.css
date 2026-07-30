@@ -69,7 +69,14 @@
     --surface-raised: rgba(20, 19, 26, 0.97);
     --surface-sunken: rgba(12, 11, 17, 0.97);
     --surface-edge: rgba(255, 255, 255, 0.09);
+    /* Atmospheric wash over raised surfaces + the halo behind narrative prose.
+       Both follow the active preset (see applyColorTheme). */
     --overlay-wash: rgba(208, 160, 95, 0.07);
+    --surface-tint: rgba(208, 160, 95, 0.09);
+    --narrative-glow: rgba(208, 160, 95, 0.26);
+
+    /* Coin / daylight gold. Accent-independent on purpose. */
+    --gold: #d9a94f;
     
     /* Gradient Colors */
     --gradient-start: #8b5cf6;
@@ -1097,16 +1104,6 @@
   @keyframes breathe {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 0.2; }
-  }
-
-  /* Shimmer for sci-fi */
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  .animate-shimmer {
-    animation: shimmer 3s ease-in-out infinite;
   }
 
   /* === SLIDE ANIMATIONS === */
@@ -2376,21 +2373,12 @@ body {
   line-height: var(--line-height-base, 1.5);
 }
 
-/* Shimmer animation for favorites */
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
+/* The `shimmer` keyframes and the animation itself live in tailwind.config.ts —
+   defining them here too shadowed them, and the two copies had ended up sweeping
+   in opposite directions. All this adds is the oversized background the sweep
+   needs, so callers that only supply a gradient still animate. The gradient stays
+   the element's business: a cyan HUD shimmer and a gold favourites shimmer share
+   this class. */
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
-  background: linear-gradient(
-    90deg,
-    rgba(251, 191, 36, 0.1) 0%,
-    rgba(251, 191, 36, 0.4) 25%,
-    rgba(253, 224, 71, 0.6) 50%,
-    rgba(251, 191, 36, 0.4) 75%,
-    rgba(251, 191, 36, 0.1) 100%
-  );
   background-size: 200% 100%;
 }
