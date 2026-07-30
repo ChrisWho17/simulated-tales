@@ -27,7 +27,7 @@ import { DiceMode, loadDiceMode, saveDiceMode } from '@/game/diceSystem';
 import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { toast } from 'sonner';
-import { generateNeutralContinuation } from '@/lib/narrativeFilter';
+import { generateNeutralContinuation, cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
 import { MechanicsSyncDebugPanel } from '@/components/debug/MechanicsSyncDebugPanel';
 import { validateRestoredState } from '@/lib/saveConsistencyCheck';
 import { inventoryRollbackLedger } from '@/lib/inventoryRollbackLedger';
@@ -218,6 +218,11 @@ const CHARACTER_KEY = STORAGE_KEYS.ADVENTURE_CHARACTER;
 const SCENARIO_KEY = STORAGE_KEYS.ADVENTURE_SCENARIO;
 const GENRE_KEY = STORAGE_KEYS.ADVENTURE_GENRE;
 const COLOR_KEY = STORAGE_KEYS.UI_COLOR_THEME;
+
+// Upper bound for a single AI turn. Kept below the 90s narrativeGuard stale-lock
+// window so a hung request surfaces as a normal failure before the lock is
+// force-released underneath it.
+const STREAMING_TURN_TIMEOUT_MS = 75000;
 
 export function AdventureGame() {
   const navigate = useNavigate();
@@ -1045,7 +1050,12 @@ export function AdventureGame() {
     
     // Use an IIFE with timeout protection
     (async () => {
-      const TIMEOUT_MS = 8000; // 8 second timeout
+      // The opening call is a full narrative generation like any other turn, so it
+      // gets the same budget. The old 8s race abandoned good responses (and left the
+      // request running) well before the model could realistically finish.
+      const TIMEOUT_MS = STREAMING_TURN_TIMEOUT_MS;
+      const openingAbort = new AbortController();
+      const openingTimeoutId = setTimeout(() => openingAbort.abort(), TIMEOUT_MS);
       
       try {
         const requestBody = buildRequestBody(
@@ -1062,8 +1072,7 @@ export function AdventureGame() {
           adultContent: settings.adultContent,
         };
 
-        // Race between API call and timeout
-        const fetchPromise = fetch(
+        const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
           {
             method: 'POST',
@@ -1072,14 +1081,9 @@ export function AdventureGame() {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify(requestBody),
+            signal: openingAbort.signal,
           }
         );
-        
-        const timeoutPromise = new Promise<Response>((_, reject) => 
-          setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
-        );
-        
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
         
         if (!response.ok) {
           throw new Error(`API returned ${response.status}`);
@@ -1136,6 +1140,7 @@ export function AdventureGame() {
           campaignContext.addNarrativeEntry(fallbackStory[0]);
         }
       } finally {
+        clearTimeout(openingTimeoutId);
         if (generatingForCampaignId.current === currentCampaignId) {
           generatingForCampaignId.current = null;
         }
@@ -1403,6 +1408,12 @@ export function AdventureGame() {
       }
     }
 
+    // === TURN RESET: Mechanics must never carry over between turns ===
+    // Both the sync ref and the state are cleared before generation so a turn
+    // that returns no loot/damage/xp cannot re-apply the previous turn's values.
+    latestMechanicsRef.current = undefined;
+    setPendingMechanics(undefined);
+
     // === WORLD LOCK: Increment player action count and lock after 2nd action ===
     playerActionCount.current += 1;
     if (playerActionCount.current >= 2 && !worldLocked) {
@@ -1454,105 +1465,140 @@ export function AdventureGame() {
       // === STREAMING NARRATIVE GENERATION ===
       console.log('[handlePlayerAction] Using streaming narrative generation');
       setIsLoading(true);
-      
-      const streamResult = await streamingNarrative.streamNarrative(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
-        await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character),
-        {
-          onComplete: (fullContent, mechanics) => {
-            console.log('[handlePlayerAction] Streaming complete, mechanics:', mechanics);
-            
-            // Apply fallback detection for damage, heal, gold when streaming
-            let enhancedMechanics = mechanics ? { ...(mechanics as Record<string, unknown>) } : {} as Record<string, unknown>;
-            
-            if (fullContent) {
-              // === FALLBACK DAMAGE DETECTION (streaming) ===
-              const detectedDamage = detectMissingDamageTags(fullContent, enhancedMechanics.damage as number | undefined, { minConfidence: 'high' });
-              if (detectedDamage !== null) {
-                console.log('[handlePlayerAction] Streaming fallback damage:', detectedDamage);
-                enhancedMechanics.damage = detectedDamage;
-              }
-              
-              // === FALLBACK HEAL DETECTION (streaming) ===
-              const detectedHeal = detectMissingHealTags(fullContent, enhancedMechanics.heal as number | undefined, { minConfidence: 'high' });
-              if (detectedHeal !== null) {
-                console.log('[handlePlayerAction] Streaming fallback heal:', detectedHeal);
-                enhancedMechanics.heal = detectedHeal;
-              }
-              
-              // === FALLBACK GOLD DETECTION (streaming) ===
-              const detectedGold = detectMissingGoldTags(fullContent, enhancedMechanics.goldGained as number | undefined, { minConfidence: 'high' });
-              if (detectedGold !== null) {
-                console.log('[handlePlayerAction] Streaming fallback gold:', detectedGold);
-                enhancedMechanics.goldGained = detectedGold;
-              }
-              
-              // === FALLBACK LOOT DETECTION (streaming) ===
-              const existingLoot = Array.isArray(enhancedMechanics.lootGained) 
-                ? enhancedMechanics.lootGained 
-                : (enhancedMechanics.lootGained ? [enhancedMechanics.lootGained] : []);
-              const detectedLoot = detectMissingLootTags(fullContent, existingLoot, { minConfidence: 'high' });
-              if (detectedLoot.length > 0) {
-                console.log('[handlePlayerAction] Streaming fallback loot:', detectedLoot);
-                enhancedMechanics.lootGained = [...existingLoot, ...detectedLoot];
-              }
-            }
-            
-            if (Object.keys(enhancedMechanics).length > 0) {
-              // Update synchronous ref FIRST so handlePlayerAction can read it immediately
-              latestMechanicsRef.current = {
-                ...(latestMechanicsRef.current || {}),
-                ...(enhancedMechanics as GameMechanics),
-              };
-              setPendingMechanics(prev => ({ ...prev, ...enhancedMechanics }));
-            }
-          },
-          onError: (errorMsg) => {
-            console.error('[handlePlayerAction] Streaming error:', errorMsg);
-            // Toast is shown by the else clause when narrative is null
-          },
-        }
-      );
-      
-      narrative = streamResult?.content || null;
 
-      // Streaming used to skip echo guards — catch action reiteration and retry once.
-      if (narrative && isEchoResponse(narrative, action)) {
-        console.error('[handlePlayerAction] Streaming echo detected — retrying once');
-        streamingNarrative.reset();
-        const retryResult = await streamingNarrative.streamNarrative(
+      // Streaming turns take the same lock as the non-streaming path so two
+      // generations can never overlap and cross-apply each other's mechanics.
+      const lockId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const lockAcquired = await acquireGenerationLock(lockId);
+
+      if (!lockAcquired) {
+        console.warn('[handlePlayerAction] Generation lock denied, dropping turn');
+        setIsLoading(false);
+        toast.error('Another turn is still generating', {
+          description: 'Please wait for the current response to finish.',
+        });
+        return;
+      }
+
+      // generateNarrative acquires this same lock, so the non-streaming fallback
+      // has to run after we release it or it would queue behind ourselves.
+      let needsFullFallback = false;
+
+      try {
+        const streamResult = await streamingNarrative.streamNarrative(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
-          await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character, {
-            antiEcho: `ANTI-ECHO: Do NOT restate or paraphrase ("${action.slice(0, 120)}"). Advance with consequences and sensory detail.`,
-          }),
-          { onComplete: () => {}, onError: () => {} }
+          await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character),
+          {
+            timeoutMs: STREAMING_TURN_TIMEOUT_MS,
+            onComplete: (fullContent, mechanics) => {
+              console.log('[handlePlayerAction] Streaming complete, mechanics:', mechanics);
+
+              // Apply fallback detection for damage, heal, gold when streaming
+              let enhancedMechanics = mechanics ? { ...(mechanics as Record<string, unknown>) } : {} as Record<string, unknown>;
+
+              if (fullContent) {
+                // === FALLBACK DAMAGE DETECTION (streaming) ===
+                const detectedDamage = detectMissingDamageTags(fullContent, enhancedMechanics.damage as number | undefined, { minConfidence: 'high' });
+                if (detectedDamage !== null) {
+                  console.log('[handlePlayerAction] Streaming fallback damage:', detectedDamage);
+                  enhancedMechanics.damage = detectedDamage;
+                }
+
+                // === FALLBACK HEAL DETECTION (streaming) ===
+                const detectedHeal = detectMissingHealTags(fullContent, enhancedMechanics.heal as number | undefined, { minConfidence: 'high' });
+                if (detectedHeal !== null) {
+                  console.log('[handlePlayerAction] Streaming fallback heal:', detectedHeal);
+                  enhancedMechanics.heal = detectedHeal;
+                }
+
+                // === FALLBACK GOLD DETECTION (streaming) ===
+                const detectedGold = detectMissingGoldTags(fullContent, enhancedMechanics.goldGained as number | undefined, { minConfidence: 'high' });
+                if (detectedGold !== null) {
+                  console.log('[handlePlayerAction] Streaming fallback gold:', detectedGold);
+                  enhancedMechanics.goldGained = detectedGold;
+                }
+
+                // === FALLBACK LOOT DETECTION (streaming) ===
+                const existingLoot = Array.isArray(enhancedMechanics.lootGained) 
+                  ? enhancedMechanics.lootGained 
+                  : (enhancedMechanics.lootGained ? [enhancedMechanics.lootGained] : []);
+                const detectedLoot = detectMissingLootTags(fullContent, existingLoot, { minConfidence: 'high' });
+                if (detectedLoot.length > 0) {
+                  console.log('[handlePlayerAction] Streaming fallback loot:', detectedLoot);
+                  enhancedMechanics.lootGained = [...existingLoot, ...detectedLoot];
+                }
+              }
+
+              if (Object.keys(enhancedMechanics).length > 0) {
+                // REPLACE, never merge: merging let a previous turn's loot/damage/xp
+                // leak into this turn. The ref is set first so handlePlayerAction can
+                // read it synchronously below.
+                latestMechanicsRef.current = enhancedMechanics as GameMechanics;
+                setPendingMechanics(enhancedMechanics as GameMechanics);
+              }
+            },
+            onError: (errorMsg) => {
+              console.error('[handlePlayerAction] Streaming error:', errorMsg);
+              // Toast is shown by the else clause when narrative is null
+            },
+          }
         );
-        if (retryResult?.content && !isEchoResponse(retryResult.content, action)) {
-          narrative = retryResult.content;
-        } else {
-          // Fall back to full non-streaming path (has stronger quality gates)
-          narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+
+        narrative = streamResult?.content || null;
+
+        // Streaming used to skip echo guards — catch action reiteration and retry once.
+        if (narrative && isEchoResponse(narrative, action)) {
+          console.error('[handlePlayerAction] Streaming echo detected — retrying once');
+          streamingNarrative.reset();
+          const retryResult = await streamingNarrative.streamNarrative(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
+            await buildStreamingRequestBody(scenarioSelection.scenario, action, updatedStory, diceRoll, character, {
+              antiEcho: `ANTI-ECHO: Do NOT restate or paraphrase ("${action.slice(0, 120)}"). Advance with consequences and sensory detail.`,
+            }),
+            { timeoutMs: STREAMING_TURN_TIMEOUT_MS, onComplete: () => {}, onError: () => {} }
+          );
+          if (retryResult?.content && !isEchoResponse(retryResult.content, action)) {
+            narrative = retryResult.content;
+          } else {
+            // Fall back to full non-streaming path (has stronger quality gates)
+            needsFullFallback = true;
+          }
         }
-      }
 
-      // Keep language post-processing connected on the streaming path too
-      if (narrative) {
-        narrative = postProcessLanguageInResponse(narrative, languageState);
-      }
+        if (!needsFullFallback) {
+          // Streamed tokens arrive raw: the edge function only strips mechanic tags
+          // on its non-streaming branch. Clean here so [LOOT:]/[XP:] tags never reach
+          // the story entry that gets persisted and replayed as conversationHistory.
+          if (narrative) {
+            narrative = cleanNarrativeForDisplay(narrative);
+          }
 
-      // Genre contract / hard-lock must still gate streaming (simulation-first rule)
-      if (narrative) {
-        const validation = validateContent(narrative);
-        if (!validation.success) {
-          console.warn('[handlePlayerAction] Streaming narrative blocked by world bible:', validation.log);
-          narrative = validation.content || getContextualFallback(scenarioSelection.genre);
-        } else {
-          narrative = validation.content;
+          // Keep language post-processing connected on the streaming path too
+          if (narrative) {
+            narrative = postProcessLanguageInResponse(narrative, languageState);
+          }
+
+          // Genre contract / hard-lock must still gate streaming (simulation-first rule)
+          if (narrative) {
+            const validation = validateContent(narrative);
+            if (!validation.success) {
+              console.warn('[handlePlayerAction] Streaming narrative blocked by world bible:', validation.log);
+              narrative = validation.content || getContextualFallback(scenarioSelection.genre);
+            } else {
+              narrative = validation.content;
+            }
+          }
         }
+      } finally {
+        releaseGenerationLock(lockId);
+        setIsLoading(false);
+        streamingNarrative.reset();
       }
 
-      setIsLoading(false);
-      streamingNarrative.reset();
+      if (needsFullFallback) {
+        // Already tag-stripped, world-bible gated and language-processed internally.
+        narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+      }
     } else {
       // === NON-STREAMING NARRATIVE GENERATION ===
       narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);

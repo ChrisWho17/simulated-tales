@@ -318,6 +318,25 @@ interface AdventureRequest {
   rippleContext?: RippleContext; // Consequence ripples and world state
   unreliableInfoContext?: UnreliableInfoContext; // Rumors and NPC reliability
   locationContext?: LocationTransitionContext; // Zone and location context
+  // Companion systems (client always sends these when a party/intro is pending)
+  pendingCompanionIntroduction?: string; // Pre-formatted arrival briefing
+  pendingCompanionId?: string;
+  companionPartyContext?: {
+    partySize: number;
+    members: Array<{
+      name: string;
+      mood?: string;
+      affinity?: number;
+      trust?: number;
+      respect?: number;
+      combatRole?: string;
+      skills?: string[];
+      internalThoughts?: string;
+      pendingReaction?: string;
+      wantsToSpeak?: boolean;
+    }>;
+    speakingCue?: string;
+  };
   // World consistency systems
   consistencyContext?: {
     objectOwnership: string;   // Item ownership context
@@ -1559,6 +1578,217 @@ function calculateSimilarity(str1: string, str2: string): number {
   return union.size > 0 ? intersection.size / union.size : 0;
 }
 
+/**
+ * Single source of truth for mechanic-tag parsing.
+ *
+ * Both the streaming and non-streaming branches call this. They previously had
+ * separate parsers and the streaming one only understood ROLL/XP/GOLD/LOOT/
+ * DAMAGE/HEAL, so drops, uses, skills, relationships, milestones, languages and
+ * chapter ends were silently discarded whenever the player had streaming on.
+ */
+function parseMechanicsFromNarrative(narrative: string): Record<string, any> {
+  const mechanics: Record<string, any> = {};
+  if (!narrative) return mechanics;
+
+  const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
+  if (rollMatch) {
+    mechanics.rollRequired = {
+      stat: rollMatch[1],
+      difficulty: parseInt(rollMatch[2]),
+      reason: rollMatch[3],
+    };
+  }
+
+  // XP supports [XP:amount:stat=weight,...:difficulty:risk:reason] and the
+  // legacy [XP:amount:reason] form.
+  const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
+  let totalXp = 0;
+  const xpReasons: string[] = [];
+  const xpEvents: any[] = [];
+
+  for (const match of xpMatches) {
+    const amount = parseInt(match[1]);
+    const rest = match[2];
+
+    const newFormatMatch = rest.match(/^([^:]+):(\w+):(\w+):(.+)$/);
+    if (newFormatMatch) {
+      const statsStr = newFormatMatch[1];
+      const difficulty = newFormatMatch[2];
+      const risk = newFormatMatch[3];
+      const reason = newFormatMatch[4];
+
+      const contributingStats: Record<string, number> = {};
+      for (const part of statsStr.split(',')) {
+        const [stat, weight] = part.split('=');
+        if (stat && weight) {
+          contributingStats[stat.trim()] = parseFloat(weight);
+        }
+      }
+
+      xpEvents.push({ amount, contributingStats, difficulty, risk, reason });
+      totalXp += amount;
+      xpReasons.push(reason);
+    } else {
+      totalXp += amount;
+      xpReasons.push(rest);
+      xpEvents.push({ amount, reason: rest });
+    }
+  }
+
+  const neutralXpMatch = narrative.match(/\[NEUTRAL_XP:([^\]]+)\]/);
+  if (neutralXpMatch) {
+    xpEvents.push({ amount: Math.floor(Math.random() * 3) + 1, isNeutral: true, reason: neutralXpMatch[1] });
+  }
+
+  if (totalXp > 0 || xpEvents.length > 0) {
+    mechanics.xpGained = { amount: totalXp, reason: xpReasons.join(', '), events: xpEvents };
+  }
+
+  if (narrative.includes('[CHAPTER_END]')) {
+    mechanics.chapterEnd = true;
+  }
+
+  // Gold: [GOLD:50] / [GOLD:+50] gains, [GOLD:-50] losses
+  const goldMatches = [...narrative.matchAll(/\[GOLD:\+?(\d+)\]/g)];
+  const totalGold = goldMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+  if (totalGold > 0) {
+    mechanics.goldGained = totalGold;
+  }
+
+  const goldLossMatches = [...narrative.matchAll(/\[GOLD:-(\d+)\]/g)];
+  const goldLost = goldLossMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+  if (goldLost > 0) {
+    mechanics.goldLost = goldLost;
+  }
+
+  const allLoot = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)].map(m => m[1]);
+  if (allLoot.length > 0) {
+    mechanics.lootGained = allLoot;
+  }
+
+  const droppedItems = [...narrative.matchAll(/\[DROP:([^\]]+)\]/g)].map(m => m[1]);
+  if (droppedItems.length > 0) {
+    mechanics.itemsDropped = droppedItems;
+  }
+
+  const usedItems = [...narrative.matchAll(/\[USE:([^\]]+)\]/g)].map(m => m[1]);
+  if (usedItems.length > 0) {
+    mechanics.itemsUsed = usedItems;
+  }
+
+  const skillImprovements = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)].map(m => ({
+    skill: m[1],
+    amount: parseInt(m[2]),
+    reason: m[3],
+  }));
+  if (skillImprovements.length > 0) {
+    mechanics.skillImprovements = skillImprovements;
+  }
+
+  // Sum ALL damage/heal tags rather than only the first match
+  const damageMatches = [...narrative.matchAll(/\[DAMAGE:(\d+)\]/g)];
+  const totalDamage = damageMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+  if (totalDamage > 0) {
+    mechanics.damage = totalDamage;
+  }
+
+  const healMatches = [...narrative.matchAll(/\[HEAL:(\d+)\]/g)];
+  const totalHeal = healMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
+  if (totalHeal > 0) {
+    mechanics.heal = totalHeal;
+  }
+
+  const relationshipMoments = [...narrative.matchAll(/\[RELATIONSHIP:([^:]+):([^:]+):([^\]]+)\]/g)].map(m => ({
+    npcName: m[1].trim(),
+    momentType: m[2].trim(),
+    description: m[3].trim(),
+  }));
+  if (relationshipMoments.length > 0) {
+    mechanics.relationshipMoments = relationshipMoments;
+  }
+
+  const milestoneChanges = [...narrative.matchAll(/\[MILESTONE:([^:]+):([^\]]+)\]/g)].map(m => ({
+    npcName: m[1].trim(),
+    milestoneType: m[2].trim(),
+  }));
+  if (milestoneChanges.length > 0) {
+    mechanics.milestoneChanges = milestoneChanges;
+  }
+
+  const languagesLearned = [...narrative.matchAll(/\[LEARN_LANGUAGE:([^:]+):([^\]]+)\]/g)].map(m => ({
+    language: m[1].trim().toLowerCase(),
+    reason: m[2].trim(),
+  }));
+  if (languagesLearned.length > 0) {
+    mechanics.languagesLearned = languagesLearned;
+  }
+
+  return mechanics;
+}
+
+/**
+ * Strips every mechanic tag so the narrative is safe to display and persist.
+ */
+function stripMechanicTagsFromNarrative(narrative: string): string {
+  if (!narrative) return narrative;
+
+  return narrative
+    // Combat and dice mechanics
+    .replace(/\[ROLL:[^\]]+\]/gi, '')
+    .replace(/\[DAMAGE:\d+\]/gi, '')
+    .replace(/\[HEAL:\d+\]/gi, '')
+    .replace(/\[CRITICAL(?:_HIT)?\]/gi, '')
+    .replace(/\[MISS\]/gi, '')
+    .replace(/\[FUMBLE\]/gi, '')
+
+    // Economy and items
+    .replace(/\[GOLD:[+-]?\d+\]/gi, '')
+    .replace(/\[LOOT:[^\]]+\]/gi, '')
+    .replace(/\[DROP:[^\]]+\]/gi, '')
+    .replace(/\[USE:[^\]]+\]/gi, '')
+    .replace(/\[ITEM:[^\]]+\]/gi, '')
+
+    // Progression
+    .replace(/\[XP:[^\]]+\]/gi, '')
+    .replace(/\[NEUTRAL_XP:[^\]]+\]/gi, '')
+    .replace(/\[LEVEL_UP\]/gi, '')
+    .replace(/\[CHAPTER_END\]/gi, '')
+    .replace(/\[SKILL:[^\]]+\]/gi, '')
+
+    // Relationships and NPCs
+    .replace(/\[RELATIONSHIP:[^\]]+\]/gi, '')
+    .replace(/\[MILESTONE:[^\]]+\]/gi, '')
+    .replace(/\[NPC:[^\]]+\]/gi, '')
+    .replace(/\[AFFINITY:[^\]]+\]/gi, '')
+    .replace(/\[TRUST:[^\]]+\]/gi, '')
+
+    // Language
+    .replace(/\[LEARN_LANGUAGE:[^\]]+\]/gi, '')
+    .replace(/\[LANGUAGE:[^\]]+\]/gi, '')
+    .replace(/\[TRANSLATE:[^\]]+\]/gi, '')
+
+    // Quest and location
+    .replace(/\[QUEST:[^\]]+\]/gi, '')
+    .replace(/\[LOCATION:[^\]]+\]/gi, '')
+    .replace(/\[DISCOVERY:[^\]]+\]/gi, '')
+
+    // Time and weather
+    .replace(/\[TIME:[^\]]+\]/gi, '')
+    .replace(/\[WEATHER:[^\]]+\]/gi, '')
+
+    // Generic event/companion tags
+    .replace(/\[COMPANION:[^\]]+\]/gi, '')
+    .replace(/\[EVENT:[^\]]+\]/gi, '')
+    .replace(/\[TRIGGER:[^\]]+\]/gi, '')
+    .replace(/\[FLAG:[^\]]+\]/gi, '')
+    .replace(/\[CLOCK:[^\]]+\]/gi, '')
+
+    // Clean orphaned brackets and extra whitespace
+    .replace(/\[\s*\]/g, '')
+    .replace(/  +/g, ' ')
+    .trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -1573,7 +1803,7 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as AdventureRequest;
-    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement } = requestData;
+    const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
     
@@ -2593,6 +2823,45 @@ FACTION STANDING:
 - Betrayal creates permanent enemies`;
     }
     
+    // ============= COMPANIONS =============
+    if (companionPartyContext && companionPartyContext.members?.length > 0) {
+      systemContent += `\n\n=== ACTIVE PARTY (${companionPartyContext.partySize} COMPANION${companionPartyContext.partySize === 1 ? '' : 'S'}) ===
+These companions are physically present. They react, interject, and have opinions.
+${companionPartyContext.members.map(m => {
+  const bonds = [
+    m.affinity !== undefined ? `affinity ${m.affinity}` : null,
+    m.trust !== undefined ? `trust ${m.trust}` : null,
+    m.respect !== undefined ? `respect ${m.respect}` : null,
+  ].filter(Boolean).join(', ');
+  const details = [
+    m.mood ? `Mood: ${m.mood}` : null,
+    m.combatRole ? `Role: ${m.combatRole}` : null,
+    bonds ? `Bonds: ${bonds}` : null,
+    m.skills && m.skills.length > 0 ? `Skills: ${m.skills.join(', ')}` : null,
+    m.internalThoughts ? `Privately thinking: ${m.internalThoughts}` : null,
+  ].filter(Boolean).join(' | ');
+  return `- ${m.name}${details ? ` — ${details}` : ''}`;
+}).join('\n')}
+
+RULES:
+- Never silently drop a companion from the scene. If they are present, they are present.
+- Give at least one companion a reaction, line, or beat when the moment warrants it.
+- Their mood and bonds shape how they respond—low trust reads as guarded, high affinity as warm.`;
+
+      if (companionPartyContext.speakingCue) {
+        systemContent += `\n\nCOMPANIONS WAITING TO SPEAK (honour these THIS turn):
+${companionPartyContext.speakingCue}`;
+      }
+    }
+
+    if (pendingCompanionIntroduction) {
+      systemContent += `\n\n=== PENDING COMPANION INTRODUCTION ===
+${pendingCompanionIntroduction}`;
+      if (pendingCompanionId) {
+        systemContent += `\nWhen this companion joins, mark it with [COMPANION:${pendingCompanionId}] so the game can register their arrival.`;
+      }
+    }
+
     if (cheatMode) {
       systemContent += CHEAT_MODE_ADDITION;
     }
@@ -3239,71 +3508,6 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
 
     console.log('Calling AI with messages:', messages.length, 'Character:', character?.name || 'none', 'Has memory:', !!memoryContext?.fullContext);
 
-    // Helper function to parse mechanics from narrative (for streaming)
-    function parseNarrativeMechanics(narrative: string): Record<string, any> {
-      const mechanics: Record<string, any> = {};
-      
-      const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
-      if (rollMatch) {
-        mechanics.rollRequired = {
-          stat: rollMatch[1],
-          difficulty: parseInt(rollMatch[2]),
-          reason: rollMatch[3]
-        };
-      }
-      
-      const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
-      if (xpMatches.length > 0) {
-        let totalXp = 0;
-        for (const match of xpMatches) {
-          totalXp += parseInt(match[1]);
-        }
-        mechanics.xpGained = { amount: totalXp };
-      }
-      
-      // Parse gold gains - handle both [GOLD:50] and [GOLD:+50] formats
-      const goldMatches = [...narrative.matchAll(/\[GOLD:\+?(\d+)\]/g)];
-      if (goldMatches.length > 0) {
-        let totalGold = 0;
-        for (const match of goldMatches) {
-          totalGold += parseInt(match[1]);
-        }
-        mechanics.goldGained = totalGold;
-        console.log('[parseNarrativeMechanics] Parsed gold:', totalGold);
-      }
-      
-      // Also check for gold loss [GOLD:-50]
-      const goldLossMatches = [...narrative.matchAll(/\[GOLD:-(\d+)\]/g)];
-      if (goldLossMatches.length > 0) {
-        let totalLoss = 0;
-        for (const match of goldLossMatches) {
-          totalLoss += parseInt(match[1]);
-        }
-        mechanics.goldLost = totalLoss;
-        console.log('[parseNarrativeMechanics] Parsed gold loss:', totalLoss);
-      }
-      
-      const lootMatches = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)];
-      if (lootMatches.length > 0) {
-        mechanics.lootGained = lootMatches.map(m => m[1]);
-      }
-      
-      // FIX: Sum ALL damage/heal tags (was only first match)
-      const damageMatches = [...narrative.matchAll(/\[DAMAGE:(\d+)\]/g)];
-      if (damageMatches.length > 0) {
-        mechanics.damage = damageMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
-        console.log(`[parseNarrativeMechanics] Parsed ${damageMatches.length} damage tag(s), total:`, mechanics.damage);
-      }
-      
-      const healMatches = [...narrative.matchAll(/\[HEAL:(\d+)\]/g)];
-      if (healMatches.length > 0) {
-        mechanics.heal = healMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
-        console.log(`[parseNarrativeMechanics] Parsed ${healMatches.length} heal tag(s), total:`, mechanics.heal);
-      }
-      
-      return mechanics;
-    }
-
     // Check if streaming is requested (from parsed request body)
     const streamRequested = (requestData as any).stream === true;
     
@@ -3368,43 +3572,78 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       
       const stream = new ReadableStream({
         async start(controller) {
+          // SSE frames do not align with network chunks: a `data:` line can be
+          // split across two reads. Keep the remainder in textBuffer and only
+          // consume up to the last complete newline (mirrors the client hook).
+          let textBuffer = '';
+          let sentDone = false;
+
+          const emitToken = (jsonStr: string) => {
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const token = parsed.choices?.[0]?.delta?.content;
+              if (token) {
+                fullNarrative += token;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                  choices: [{ delta: { content: token } }]
+                })}\n\n`));
+              }
+            } catch {
+              // Ignore parse errors for malformed frames
+            }
+          };
+
+          const finish = () => {
+            if (sentDone) return;
+            sentDone = true;
+            // Parse mechanics from the assembled narrative and send final message
+            const mechanics = parseMechanicsFromNarrative(fullNarrative);
+            if (mechanics && Object.keys(mechanics).length > 0) {
+              console.log('[generate-adventure] Streaming mechanics:', Object.keys(mechanics));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ mechanics })}\n\n`));
+            }
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          };
+
           try {
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
-              
-              const chunk = decoder.decode(value, { stream: true });
-              const lines = chunk.split('\n');
-              
-              for (const line of lines) {
-                if (!line.trim() || !line.startsWith('data: ')) continue;
-                
+
+              textBuffer += decoder.decode(value, { stream: true });
+
+              let newlineIndex: number;
+              while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+                let line = textBuffer.slice(0, newlineIndex);
+                textBuffer = textBuffer.slice(newlineIndex + 1);
+
+                if (line.endsWith('\r')) line = line.slice(0, -1);
+                if (!line.trim() || line.startsWith(':')) continue;
+                if (!line.startsWith('data: ')) continue;
+
                 const jsonStr = line.slice(6).trim();
                 if (jsonStr === '[DONE]') {
-                  // Parse mechanics from full narrative and send final message
-                  const mechanics = parseNarrativeMechanics(fullNarrative);
-                  if (mechanics && Object.keys(mechanics).length > 0) {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ mechanics })}\n\n`));
-                  }
-                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                  finish();
                   continue;
                 }
-                
-                try {
-                  const parsed = JSON.parse(jsonStr);
-                  const token = parsed.choices?.[0]?.delta?.content;
-                  if (token) {
-                    fullNarrative += token;
-                    // Forward the token to client
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                      choices: [{ delta: { content: token } }]
-                    })}\n\n`));
-                  }
-                } catch {
-                  // Ignore parse errors for incomplete chunks
-                }
+
+                emitToken(jsonStr);
               }
             }
+
+            // Flush whatever is left over after the final read
+            const tail = textBuffer.trim();
+            if (tail.startsWith('data: ')) {
+              const jsonStr = tail.slice(6).trim();
+              if (jsonStr === '[DONE]') {
+                finish();
+              } else {
+                emitToken(jsonStr);
+              }
+            }
+
+            // Upstream may end without an explicit [DONE]
+            finish();
             controller.close();
           } catch (error) {
             console.error('[generate-adventure] Stream error:', error);
@@ -3501,252 +3740,12 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     }
     
     // calculateSimilarity is defined at module scope (above serve())
-    // Parse out any game mechanics from the narrative
-    const rollMatch = narrative.match(/\[ROLL:(\w+):(\d+):([^\]]+)\]/);
-    
-    // Parse XP with new format: [XP:amount:stat1=weight,stat2=weight:difficulty:risk:reason]
-    // Also support legacy format: [XP:amount:reason]
-    const xpMatches = [...narrative.matchAll(/\[XP:(\d+):([^\]]+)\]/g)];
-    let totalXp = 0;
-    const xpReasons: string[] = [];
-    const xpEvents: any[] = [];
-    
-    for (const match of xpMatches) {
-      const amount = parseInt(match[1]);
-      const rest = match[2];
-      
-      // Check if it's the new format with stat weights
-      const newFormatMatch = rest.match(/^([^:]+):(\w+):(\w+):(.+)$/);
-      if (newFormatMatch) {
-        const statsStr = newFormatMatch[1];
-        const difficulty = newFormatMatch[2];
-        const risk = newFormatMatch[3];
-        const reason = newFormatMatch[4];
-        
-        // Parse stat weights
-        const contributingStats: Record<string, number> = {};
-        const statParts = statsStr.split(',');
-        for (const part of statParts) {
-          const [stat, weight] = part.split('=');
-          if (stat && weight) {
-            contributingStats[stat.trim()] = parseFloat(weight);
-          }
-        }
-        
-        xpEvents.push({ amount, contributingStats, difficulty, risk, reason });
-        totalXp += amount;
-        xpReasons.push(reason);
-      } else {
-        // Legacy format
-        totalXp += amount;
-        xpReasons.push(rest);
-        xpEvents.push({ amount, reason: rest });
-      }
-    }
-    
-    // Parse neutral XP
-    const neutralXpMatch = narrative.match(/\[NEUTRAL_XP:([^\]]+)\]/);
-    if (neutralXpMatch) {
-      xpEvents.push({ amount: Math.floor(Math.random() * 3) + 1, isNeutral: true, reason: neutralXpMatch[1] });
-    }
-    
-    // Check for chapter end
-    const isChapterEnd = narrative.includes('[CHAPTER_END]');
-    
-    // Parse ALL gold awards (handle both [GOLD:50] and [GOLD:+50] formats)
-    const goldMatches = [...narrative.matchAll(/\[GOLD:\+?(\d+)\]/g)];
-    let totalGold = 0;
-    for (const match of goldMatches) {
-      totalGold += parseInt(match[1]);
-    }
-    console.log('[generate-adventure] Parsed gold from narrative:', totalGold);
-    
-    // Parse gold losses [GOLD:-50]
-    const goldLossMatches = [...narrative.matchAll(/\[GOLD:-(\d+)\]/g)];
-    let goldLost = 0;
-    for (const match of goldLossMatches) {
-      goldLost += parseInt(match[1]);
-    }
-    
-    // Parse ALL loot items
-    const lootMatches = [...narrative.matchAll(/\[LOOT:([^\]]+)\]/g)];
-    const allLoot: string[] = [];
-    for (const match of lootMatches) {
-      allLoot.push(match[1]);
-    }
-    
-    // Parse ALL dropped/discarded items (NEW - fixes item duplication bug)
-    const dropMatches = [...narrative.matchAll(/\[DROP:([^\]]+)\]/g)];
-    const droppedItems: string[] = [];
-    for (const match of dropMatches) {
-      droppedItems.push(match[1]);
-    }
-    
-    // Parse ALL consumed/used items (NEW - Phase 2 inventory enforcement)
-    const useMatches = [...narrative.matchAll(/\[USE:([^\]]+)\]/g)];
-    const usedItems: string[] = [];
-    for (const match of useMatches) {
-      usedItems.push(match[1]);
-    }
-    
-    // Parse ALL skill improvements
-    const skillMatches = [...narrative.matchAll(/\[SKILL:([^:]+):(\d+):([^\]]+)\]/g)];
-    const skillImprovements: Array<{ skill: string; amount: number; reason: string }> = [];
-    for (const match of skillMatches) {
-      skillImprovements.push({
-        skill: match[1],
-        amount: parseInt(match[2]),
-        reason: match[3]
-      });
-    }
-    
-    // FIX: Sum ALL damage/heal tags (was only first match)
-    const damageMatches = [...narrative.matchAll(/\[DAMAGE:(\d+)\]/g)];
-    const healMatches = [...narrative.matchAll(/\[HEAL:(\d+)\]/g)];
-    const totalDamage = damageMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
-    const totalHeal = healMatches.reduce((sum, m) => sum + parseInt(m[1]), 0);
-    
-    // Parse relationship moments (for 18+ romance tracking)
-    const relationshipMatches = [...narrative.matchAll(/\[RELATIONSHIP:([^:]+):([^:]+):([^\]]+)\]/g)];
-    const relationshipMoments: Array<{ npcName: string; momentType: string; description: string }> = [];
-    for (const match of relationshipMatches) {
-      relationshipMoments.push({
-        npcName: match[1].trim(),
-        momentType: match[2].trim(),
-        description: match[3].trim()
-      });
-    }
-    
-    // Parse milestone changes
-    const milestoneMatches = [...narrative.matchAll(/\[MILESTONE:([^:]+):([^\]]+)\]/g)];
-    const milestoneChanges: Array<{ npcName: string; milestoneType: string }> = [];
-    for (const match of milestoneMatches) {
-      milestoneChanges.push({
-        npcName: match[1].trim(),
-        milestoneType: match[2].trim()
-      });
-    }
-    
-    // Parse language learning events
-    const languageLearnMatches = [...narrative.matchAll(/\[LEARN_LANGUAGE:([^:]+):([^\]]+)\]/g)];
-    const languagesLearned: Array<{ language: string; reason: string }> = [];
-    for (const match of languageLearnMatches) {
-      languagesLearned.push({
-        language: match[1].trim().toLowerCase(),
-        reason: match[2].trim()
-      });
-    }
+    // Mechanics parsing and tag stripping are shared with the streaming branch
+    // above so both paths always understand exactly the same tag vocabulary.
+    const mechanics = parseMechanicsFromNarrative(narrative);
 
     // Clean the narrative of ALL mechanic tags for display
-    // This comprehensive regex catches all bracketed mechanics
-    let cleanNarrative = narrative
-      // Combat and dice mechanics
-      .replace(/\[ROLL:[^\]]+\]/gi, '')
-      .replace(/\[DAMAGE:\d+\]/gi, '')
-      .replace(/\[HEAL:\d+\]/gi, '')
-      .replace(/\[CRITICAL(?:_HIT)?\]/gi, '')
-      .replace(/\[MISS\]/gi, '')
-      .replace(/\[FUMBLE\]/gi, '')
-      
-      // Economy and items
-      .replace(/\[GOLD:[+-]?\d+\]/gi, '')
-      .replace(/\[LOOT:[^\]]+\]/gi, '')
-      .replace(/\[DROP:[^\]]+\]/gi, '')
-      .replace(/\[USE:[^\]]+\]/gi, '')
-      .replace(/\[ITEM:[^\]]+\]/gi, '')
-      
-      // Progression
-      .replace(/\[XP:[^\]]+\]/gi, '')
-      .replace(/\[NEUTRAL_XP:[^\]]+\]/gi, '')
-      .replace(/\[LEVEL_UP\]/gi, '')
-      .replace(/\[CHAPTER_END\]/gi, '')
-      .replace(/\[SKILL:[^\]]+\]/gi, '')
-      
-      // Relationships and NPCs
-      .replace(/\[RELATIONSHIP:[^\]]+\]/gi, '')
-      .replace(/\[MILESTONE:[^\]]+\]/gi, '')
-      .replace(/\[NPC:[^\]]+\]/gi, '')
-      .replace(/\[AFFINITY:[^\]]+\]/gi, '')
-      .replace(/\[TRUST:[^\]]+\]/gi, '')
-      
-      // Language
-      .replace(/\[LEARN_LANGUAGE:[^\]]+\]/gi, '')
-      .replace(/\[LANGUAGE:[^\]]+\]/gi, '')
-      .replace(/\[TRANSLATE:[^\]]+\]/gi, '')
-      
-      // Quest and location
-      .replace(/\[QUEST:[^\]]+\]/gi, '')
-      .replace(/\[LOCATION:[^\]]+\]/gi, '')
-      .replace(/\[DISCOVERY:[^\]]+\]/gi, '')
-      
-      // Time and weather
-      .replace(/\[TIME:[^\]]+\]/gi, '')
-      .replace(/\[WEATHER:[^\]]+\]/gi, '')
-      
-      // Generic event/companion tags
-      .replace(/\[COMPANION:[^\]]+\]/gi, '')
-      .replace(/\[EVENT:[^\]]+\]/gi, '')
-      .replace(/\[TRIGGER:[^\]]+\]/gi, '')
-      .replace(/\[FLAG:[^\]]+\]/gi, '')
-      .replace(/\[CLOCK:[^\]]+\]/gi, '')
-      
-      // Clean orphaned brackets and extra whitespace
-      .replace(/\[\s*\]/g, '')
-      .replace(/  +/g, ' ')
-      .trim();
-
-    const mechanics: any = {};
-    
-    if (rollMatch) {
-      mechanics.rollRequired = {
-        stat: rollMatch[1],
-        difficulty: parseInt(rollMatch[2]),
-        reason: rollMatch[3]
-      };
-    }
-    if (totalXp > 0 || xpEvents.length > 0) {
-      mechanics.xpGained = { amount: totalXp, reason: xpReasons.join(', '), events: xpEvents };
-    }
-    if (isChapterEnd) {
-      mechanics.chapterEnd = true;
-    }
-    if (totalGold > 0) {
-      mechanics.goldGained = totalGold;
-      console.log('[generate-adventure] Mechanics goldGained:', totalGold);
-    }
-    if (goldLost > 0) {
-      mechanics.goldLost = goldLost;
-      console.log('[generate-adventure] Mechanics goldLost:', goldLost);
-    }
-    if (allLoot.length > 0) {
-      mechanics.lootGained = allLoot;
-    }
-    if (droppedItems.length > 0) {
-      mechanics.itemsDropped = droppedItems;
-    }
-    if (usedItems.length > 0) {
-      mechanics.itemsUsed = usedItems;
-    }
-    if (skillImprovements.length > 0) {
-      mechanics.skillImprovements = skillImprovements;
-    }
-    if (totalDamage > 0) {
-      mechanics.damage = totalDamage;
-      console.log(`[generate-adventure] Mechanics damage (${damageMatches.length} tag(s)):`, mechanics.damage);
-    }
-    if (totalHeal > 0) {
-      mechanics.heal = totalHeal;
-      console.log(`[generate-adventure] Mechanics heal (${healMatches.length} tag(s)):`, mechanics.heal);
-    }
-    if (relationshipMoments.length > 0) {
-      mechanics.relationshipMoments = relationshipMoments;
-    }
-    if (milestoneChanges.length > 0) {
-      mechanics.milestoneChanges = milestoneChanges;
-    }
-    if (languagesLearned.length > 0) {
-      mechanics.languagesLearned = languagesLearned;
-    }
+    const cleanNarrative = stripMechanicTagsFromNarrative(narrative);
 
     console.log('Generated narrative length:', cleanNarrative.length, 'Mechanics:', Object.keys(mechanics));
 

@@ -43,6 +43,7 @@ export function useStreamingNarrative() {
     options: StreamingOptions = {}
   ): Promise<{ content: string; mechanics?: unknown } | null> => {
     const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT;
     
     // Check network status first
     if (!getNetworkStatus()) {
@@ -58,7 +59,6 @@ export function useStreamingNarrative() {
       abortControllerRef.current.abort();
     }
     
-    abortControllerRef.current = new AbortController();
     contentRef.current = '';
     
     setState({
@@ -71,6 +71,18 @@ export function useStreamingNarrative() {
 
     // Attempt streaming with retry logic
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // One controller per attempt: a timed-out attempt leaves its controller
+      // aborted, so reusing it would kill the retry before it starts.
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      contentRef.current = '';
+
+      let timedOut = false;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, timeoutMs);
+
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
@@ -79,7 +91,7 @@ export function useStreamingNarrative() {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({ ...body, stream: true }),
-          signal: abortControllerRef.current?.signal,
+          signal: controller.signal,
         });
 
         // Handle rate limit and payment errors (no retry)
@@ -191,14 +203,17 @@ export function useStreamingNarrative() {
       } catch (error: unknown) {
         const err = error as Error;
         
-        if (err.name === 'AbortError') {
-          // Intentional abort - don't retry
+        if (err.name === 'AbortError' && !timedOut) {
+          // Caller cancelled (or a newer stream superseded this one) - don't retry
           setState(prev => ({ ...prev, isStreaming: false }));
           return null;
         }
         
-        // Log the error
-        console.error(`[useStreamingNarrative] Attempt ${attempt + 1} failed:`, err);
+        // A timeout surfaces as an AbortError; report it as the timeout it was.
+        const failure = timedOut
+          ? new Error(`Narrative stream timed out after ${Math.round(timeoutMs / 1000)}s`)
+          : err;
+        console.error(`[useStreamingNarrative] Attempt ${attempt + 1} failed:`, failure);
         
         // If we have retries left, update state and continue
         if (attempt < maxRetries) {
@@ -210,7 +225,7 @@ export function useStreamingNarrative() {
         }
         
         // Final failure
-        const errorMsg = err.message || 'Failed to stream narrative';
+        const errorMsg = failure.message || 'Failed to stream narrative';
         setState(prev => ({
           ...prev,
           isStreaming: false,
@@ -218,6 +233,8 @@ export function useStreamingNarrative() {
         }));
         options.onError?.(errorMsg);
         return null;
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
     

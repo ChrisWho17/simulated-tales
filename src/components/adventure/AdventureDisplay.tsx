@@ -72,7 +72,6 @@ import {
 import { GameGenre } from '@/types/genreData';
 import { MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH, isValidMoodAnchor } from '@/game/moodSystem';
 import { CoreMoodType, MoodState as MoodSystemState, MoodLogEntry } from '@/game/moodSystem';
-import { ConsequenceFeed } from '@/components/game/ConsequenceFeed';
 import { DirectorStatusIndicator } from '@/components/game/DirectorStatusIndicator';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useRegisteredNPCNames, parseTextForNPCLinks } from './NPCNameLink';
@@ -849,60 +848,11 @@ export function AdventureDisplay({
       });
     }
 
-    // === INVENTORY CHANGES - Using campaign-isolated inventory system ===
-    const lootItems = pendingMechanics.lootGained 
-      ? (Array.isArray(pendingMechanics.lootGained) ? pendingMechanics.lootGained : [pendingMechanics.lootGained])
-      : [];
-    const droppedItems = pendingMechanics.itemsDropped || [];
-    
-    // Process loot pickups through inventory system
-    if (lootItems.length > 0) {
-      console.log('[AdventureDisplay] Processing loot pickup:', lootItems);
-      for (const itemName of lootItems) {
-        // Convert string item name to inventory item
-        const newItem: Partial<InvItem> = {
-          id: `item_${itemName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
-          name: itemName,
-          category: categorizeItem(itemName),
-          description: `A ${itemName} found during your adventure.`,
-          weight: 1,
-          value: 10,
-          quantity: 1,
-          stackable: isStackableItem(itemName),
-        };
-        inventory.addItem(newItem as InvItem, 1);
-        toast({
-          title: `Found: ${itemName}`,
-          description: "Added to inventory",
-          duration: 2500,
-        });
-      }
-      hasStatChanges = true;
-    }
-    
-    // Process item drops through inventory system
-    if (droppedItems.length > 0) {
-      console.log('[AdventureDisplay] Processing item drops:', droppedItems);
-      for (const itemName of droppedItems) {
-        // Find the item in inventory by name (fuzzy match)
-        const item = inventory.state.items.find(i => 
-          i.name.toLowerCase() === itemName.toLowerCase() ||
-          i.name.toLowerCase().includes(itemName.toLowerCase()) ||
-          itemName.toLowerCase().includes(i.name.toLowerCase())
-        );
-        if (item) {
-          inventory.dropItem(item.instanceId);
-          toast({
-            title: `Dropped: ${item.name}`,
-            description: "Removed from inventory",
-            duration: 2500,
-          });
-          hasStatChanges = true;
-        } else {
-          console.warn(`[AdventureDisplay] Item to drop not found: ${itemName}`);
-        }
-      }
-    }
+    // === INVENTORY CHANGES ===
+    // Intentionally NOT handled here. AdventureGame.handlePlayerAction owns all
+    // inventory mutation via processStoryInventoryUpdate (storyInventorySync),
+    // which also emits the add/remove toasts and records the rollback ledger
+    // entry. Applying loot/drops here as well double-granted every item.
 
     // Apply XP through leveling system
     if (pendingMechanics.xpGained && pendingMechanics.xpGained.amount > 0) {
@@ -1806,7 +1756,7 @@ export function AdventureDisplay({
     <ImmersionLayer
       statChanges={immersion.statChanges}
       onRemoveStatChange={immersion.removeStatChange}
-      showConsequenceFeed={true}
+      showConsequenceFeed={gameContext?.settings?.showConsequenceFeed ?? true}
       showFloatingStats={true}
       showAmbientFeed={true}
       floatingStatsPosition="center"
@@ -2559,8 +2509,7 @@ export function AdventureDisplay({
         initialMode={cheatModePanel.initialMode}
       />
       
-      {/* Consequence Feed - show if enabled in settings */}
-      {(gameContext?.settings?.showConsequenceFeed ?? true) && <ConsequenceFeed compact={false} />}
+      {/* Consequence Feed is rendered once by the wrapping ImmersionLayer above. */}
       
       {/* Check Self Modal */}
       {showCheckSelfModal && (
