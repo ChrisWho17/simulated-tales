@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Slider } from '@/components/ui/slider';
 import { APP_STAGE, APP_VERSION, BUILD_NUMBER } from '@/lib/version';
 import { PATCHNOTES_UPDATE_EVENT } from '@/components/PwaUpdatePrompt';
-import { CHANGELOG, fetchLatestChangelog, type ChangelogEntry } from './changelog';
+import { CHANGELOG, entryList, fetchLatestChangelog, type ChangelogEntry } from './changelog';
 
 export { CHANGELOG } from './changelog';
 export type { ChangelogEntry } from './changelog';
@@ -130,6 +130,13 @@ export function WhatsNewModal() {
   };
 
   const currentChangelog = changelog[currentIndex] ?? CHANGELOG[0];
+  // Defensive: a patch (or a fetched changelog payload) may omit any section.
+  const currentHighlights = entryList(currentChangelog, 'highlights');
+  const currentFeatures = entryList(currentChangelog, 'features');
+  const currentImprovements = entryList(currentChangelog, 'improvements');
+  const currentFixes = entryList(currentChangelog, 'fixes');
+  const hasAnyNotes =
+    currentHighlights.length + currentFeatures.length + currentImprovements.length + currentFixes.length > 0;
   const displayVersion = `v${currentChangelog.version}-${APP_STAGE}`;
   const canGoOlder = currentIndex < changelog.length - 1;
   const canGoNewer = currentIndex > 0;
@@ -270,14 +277,14 @@ export function WhatsNewModal() {
                   transition={{ type: 'spring', damping: 22, stiffness: 260 }}
                   className="p-6 space-y-5"
                 >
-                  {currentChangelog.highlights.length > 0 && (
+                  {currentHighlights.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 text-amber-400" />
                         <span className="text-sm font-semibold text-amber-400">Highlights</span>
                       </div>
                       <ul className="space-y-1.5">
-                        {currentChangelog.highlights.map((item, i) => (
+                        {currentHighlights.map((item, i) => (
                           <motion.li
                             key={i}
                             initial={{ opacity: 0, x: -8 }}
@@ -292,14 +299,14 @@ export function WhatsNewModal() {
                     </div>
                   )}
 
-                  {currentChangelog.features.length > 0 && (
+                  {currentFeatures.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Gift className="w-4 h-4 text-green-400" />
                         <span className="text-sm font-semibold text-green-400">New Features</span>
                       </div>
                       <ul className="space-y-1.5">
-                        {currentChangelog.features.map((item, i) => (
+                        {currentFeatures.map((item, i) => (
                           <motion.li
                             key={i}
                             initial={{ opacity: 0, x: -8 }}
@@ -314,14 +321,14 @@ export function WhatsNewModal() {
                     </div>
                   )}
 
-                  {currentChangelog.improvements.length > 0 && (
+                  {currentImprovements.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Zap className="w-4 h-4 text-blue-400" />
                         <span className="text-sm font-semibold text-blue-400">Improvements</span>
                       </div>
                       <ul className="space-y-1.5">
-                        {currentChangelog.improvements.map((item, i) => (
+                        {currentImprovements.map((item, i) => (
                           <motion.li
                             key={i}
                             initial={{ opacity: 0, x: -8 }}
@@ -336,14 +343,14 @@ export function WhatsNewModal() {
                     </div>
                   )}
 
-                  {currentChangelog.fixes.length > 0 && (
+                  {currentFixes.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Bug className="w-4 h-4 text-orange-400" />
                         <span className="text-sm font-semibold text-orange-400">Bug Fixes</span>
                       </div>
                       <ul className="space-y-1.5">
-                        {currentChangelog.fixes.map((item, i) => (
+                        {currentFixes.map((item, i) => (
                           <motion.li
                             key={i}
                             initial={{ opacity: 0, x: -8 }}
@@ -356,6 +363,14 @@ export function WhatsNewModal() {
                         ))}
                       </ul>
                     </div>
+                  )}
+                  {!hasAnyNotes && (
+                    <p
+                      className="text-sm text-muted-foreground italic"
+                      data-testid="whatsnew-empty-state"
+                    >
+                      No patch notes recorded for this release yet.
+                    </p>
                   )}
                 </motion.div>
               </AnimatePresence>
