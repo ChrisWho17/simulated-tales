@@ -96,6 +96,12 @@ export function isTerminalStatus(status: number): boolean {
 /**
  * One OpenRouter chat-completions request with a timeout.
  * Returns the raw Response so callers can stream or buffer as needed.
+ *
+ * For non-streaming calls the body is drained inside the timeout window: an
+ * abort timer that is cleared as soon as the headers arrive leaves the body
+ * read unbounded, and a provider that stalls mid-body hangs the whole turn.
+ * Streaming calls keep the headers-only behaviour by design — the caller owns
+ * the stream and its own idle handling.
  */
 export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Response> {
   const key = getOpenRouterKey();
@@ -115,7 +121,7 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    return await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
@@ -133,10 +139,17 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
       }),
       signal: controller.signal,
     });
+
+    if (stream) return res;
+
+    // Buffer inside the timeout window so a stalled body can't hang the turn.
+    const text = await res.text();
+    return new Response(text, { status: res.status, headers: res.headers });
   } finally {
     clearTimeout(timer);
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // Usage logging (server-side only, never returned to the browser)
