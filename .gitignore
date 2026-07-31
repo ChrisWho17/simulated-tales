@@ -13,8 +13,10 @@ dist-ssr
 *.local
 
 # Secrets / env
-.env
-.env.*
+# NOTE: .env holds only public Lovable Cloud values (URL + publishable key)
+# and MUST stay tracked, otherwise published builds boot with no backend.
+.env.local
+.env.*.local
 !.env.example
 
 # Editor directories and files
