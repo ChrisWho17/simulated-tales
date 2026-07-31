@@ -407,7 +407,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
-        // Body shape details (bust, hips, muscle, shoulders)
+        // Body shape details (chest scalar, hips, muscle, shoulders)
+        chestSizeValue:
+          typeof appearance.full?.chestSizeValue === 'number'
+            ? appearance.full.chestSizeValue
+            : cupLetterToScalar(appearance.full?.bustSize, 0.28),
         bustSize: appearance.full?.bustSize,
         hipWidth: appearance.full?.hipWidth,
         muscleDefinition: appearance.full?.muscleDefinition,
