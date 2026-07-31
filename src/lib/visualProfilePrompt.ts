@@ -130,11 +130,61 @@ export interface SceneContextInput {
   chestVisible?: boolean;
 }
 
+/**
+ * Size-ratio and mark-placement contract. Image models get the gist of a body
+ * but drift on relative scale and on where a mark actually sits, so scale is
+ * restated as head-heights and every mark is pinned to a named landmark.
+ */
+function proportionAnchors(profile: VisualProfileV2): string {
+  const cm = profile.body.heightCm;
+  const parts: string[] = [];
+
+  if (cm) {
+    const heads = Math.max(6.5, Math.min(8.2, 6.5 + (cm - 150) / 25));
+    const relation =
+      cm < 155 ? 'noticeably short, clearly smaller than an average adult; doorways, furniture and other characters tower over them'
+        : cm < 165 ? 'below average height, slightly smaller than an average adult'
+        : cm < 178 ? 'average adult height'
+        : cm < 190 ? 'tall, clearly taller than an average adult'
+        : 'very tall and towering, looks cramped under normal doorways and low ceilings';
+    parts.push(
+      `SCALE: ${Math.round(cm)}cm — ${relation}; drawn at about ${heads.toFixed(1)} head-heights, with head size, limb length and torso length matching this exact stature`
+    );
+  } else {
+    parts.push(`SCALE: ${profile.body.heightBand} stature, consistent head-to-body ratio`);
+  }
+
+  if (profile.identity.sex !== 'male') {
+    parts.push(
+      `CHEST RATIO: bust volume locked at ${(Math.min(1, Math.max(0, profile.chest.chestSizeValue)) * 100).toFixed(0)}% of the range, measured against ribcage, shoulder and hip width — do not normalise toward average`
+    );
+  }
+
+  const marks = [
+    profile.face.facialScars?.length ? `facial scars: ${profile.face.facialScars.join('; ')}` : '',
+    profile.face.piercings?.length ? `piercings: ${profile.face.piercings.join('; ')}` : '',
+    profile.details.bodyScars?.length ? `body scars: ${profile.details.bodyScars.join('; ')}` : '',
+    profile.details.bodyTattoos?.length ? `tattoos: ${profile.details.bodyTattoos.join('; ')}` : '',
+    profile.details.prosthetics?.length ? `prosthetics: ${profile.details.prosthetics.join('; ')}` : '',
+  ].filter(Boolean);
+
+  parts.push(
+    marks.length
+      ? `PLACEMENT (exact, nowhere else): ${marks.join('. ')}. Anchor each to the named landmark (left/right, above/below the joint) and add no extra marks`
+      : 'PLACEMENT: clean skin — no extra tattoos, scars or piercings'
+  );
+
+  parts.push('ANATOMY: correct finger count, symmetrical eyes, clothing and jewelry sitting exactly on the body part they belong to');
+
+  return parts.join('\n');
+}
+
 /** One structured block per character, in a stable field order. */
 export function buildCharacterPromptBlock(
   profile: VisualProfileV2,
   context: SceneContextInput = {}
 ): string {
+
   const chest = buildChestPrompt({
     chestSizeValue: profile.chest.chestSizeValue,
     chestShape: profile.chest.chestShape,
