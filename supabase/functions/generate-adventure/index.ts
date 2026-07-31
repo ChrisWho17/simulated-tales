@@ -1906,6 +1906,19 @@ serve(async (req) => {
     const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext, socialPresenceContext, socialReactionContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
+
+    // ===== Dual-model narration: Live Narrator settings + hidden Director Brief =====
+    const aiNarration = ((requestData as any).aiNarration ?? {}) as {
+      narratorModel?: string;
+      fallbackModel?: string;
+    };
+    const directorBriefContext = typeof (requestData as any).directorBriefContext === 'string'
+      ? (requestData as any).directorBriefContext
+      : '';
+    const directorMemoryContext = (requestData as any).directorMemoryContext as
+      | { sceneSummary?: string; relevantMemories?: string[] }
+      | undefined;
+    
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
