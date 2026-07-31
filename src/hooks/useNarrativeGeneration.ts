@@ -7,6 +7,7 @@
 
 import { useCallback, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { storyDirectorService } from '@/services/storyDirectorService';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
