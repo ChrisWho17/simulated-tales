@@ -357,6 +357,13 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               />
             </div>
           </div>
+
+          {/* AI Narration (dual-model: Live Narrator + Story Director) */}
+          <div className="p-3 rounded-lg border border-border/30 bg-background/20">
+            <AiNarrationSettings />
+          </div>
+
+
           
           {/* Trophy Room Link */}
           <Button
