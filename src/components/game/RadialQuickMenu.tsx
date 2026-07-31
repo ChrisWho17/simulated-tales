@@ -5,7 +5,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, ScrollText, Backpack, Bookmark, 
-  RotateCcw, X, Info, FolderOpen, Sliders, Users
+  RotateCcw, X, Info, FolderOpen, Sliders, Users, Globe, Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
