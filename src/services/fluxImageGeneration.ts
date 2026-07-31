@@ -1,6 +1,38 @@
 // FLUX.1 Portrait Generation - Secure server-side implementation via edge function
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Hard client-side ceiling for one portrait request. The edge function has its
+ * own (shorter) budget, so hitting this means the network or the function host
+ * stalled — either way the UI must be released instead of spinning forever.
+ */
+const PORTRAIT_TIMEOUT_MS = 125_000;
+
+class PortraitTimeoutError extends Error {
+  constructor() {
+    super('Portrait generation timed out. The art service is slow right now — try again.');
+    this.name = 'PortraitTimeoutError';
+  }
+}
+
+/** Races an edge-function invoke against a timeout so the caller always settles. */
+async function invokePortrait(body: Record<string, unknown>) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new PortraitTimeoutError()), PORTRAIT_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      supabase.functions.invoke('generate-portrait', { body }),
+      timeout,
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+
 // Detected clothing item from portrait analysis
 export interface DetectedClothingItem {
   item: string;
