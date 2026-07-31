@@ -2949,6 +2949,12 @@ FACTION STANDING:
     }
     
     // ============= COMPANIONS =============
+    if (companionPartyContext && (companionPartyContext as any).presenceRule) {
+      systemContent += `\n\n=== PRESENCE LOCK (ABSOLUTE) ===
+${(companionPartyContext as any).presenceRule}
+An absent character may only enter the scene if the narrative first shows them travelling here over plausible time and distance. Never have them "appear in the corner", answer, or react from off-screen.`;
+    }
+
     if (companionPartyContext && companionPartyContext.members?.length > 0) {
       systemContent += `\n\n=== ACTIVE PARTY (${companionPartyContext.partySize} COMPANION${companionPartyContext.partySize === 1 ? '' : 'S'}) ===
 These companions are physically present. They react, interject, and have opinions.
@@ -3664,7 +3670,9 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // ============= AAA QUALITY CONFIG FOR 24+ HOUR SESSIONS =============
     const aiRequestBody = {
       // Use the higher-quality pro model for narrative generation
-      model: 'google/gemini-2.5-pro',
+      // Flash: same narrative contract, several times faster than 2.5-pro.
+      // Long turns were timing out client-side at 60s on the pro model.
+      model: 'google/gemini-3.6-flash',
       messages,
       temperature: 0.78,          // Balanced: creative but coherent for long sessions
       max_tokens: 2500,           // Increased to prevent mid-sentence truncation
