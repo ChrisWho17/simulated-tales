@@ -285,6 +285,24 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
       color: 'text-muted-foreground',
       glowColor: 'hsl(var(--muted-foreground))',
     },
+    ...(onOpenAmbientFeed
+      ? [{
+          icon: <Globe className="w-5 h-5" />,
+          label: 'World',
+          onClick: onOpenAmbientFeed,
+          color: 'text-sky-400',
+          glowColor: 'rgb(56 189 248)',
+        }]
+      : []),
+    ...(onExportTaleCard
+      ? [{
+          icon: <Share2 className="w-5 h-5" />,
+          label: 'Tale Card',
+          onClick: onExportTaleCard,
+          color: 'text-amber-300',
+          glowColor: 'rgb(252 211 77)',
+        }]
+      : []),
     {
       icon: <RotateCcw className="w-5 h-5" />,
       label: 'New Story',
