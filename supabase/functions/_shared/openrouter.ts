@@ -16,6 +16,8 @@ export const OPENROUTER_MODELS = {
   narrator: Deno.env.get('OPENROUTER_NARRATOR_MODEL') || 'aion-labs/aion-3.0',
   director: Deno.env.get('OPENROUTER_DIRECTOR_MODEL') || 'deepseek/deepseek-v4-pro',
   fallback: Deno.env.get('OPENROUTER_FALLBACK_MODEL') || 'deepseek/deepseek-v4-pro',
+  /** Small side-calls: NPC/companion dialogue, ruleset enhancement. */
+  utility: Deno.env.get('OPENROUTER_UTILITY_MODEL') || 'deepseek/deepseek-chat',
 } as const;
 
 /**
