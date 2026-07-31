@@ -230,9 +230,8 @@ export function useSceneIllustration({
       // image model must honour (exact chest scalar included).
       const characterSheets = structuredProfiles
         .map(p => buildCharacterPromptBlock(p, {
-          clothing: p.wardrobe.currentOutfit,
-          equipment: p.wardrobe.weapons?.join(', '),
-          injuries: p.bodyDetails.currentInjuries?.join(', '),
+          emotion: trigger.type,
+          location: trigger.location || undefined,
         }))
         .join('\n\n')
         .slice(0, 2400);
@@ -356,6 +355,7 @@ export function useSceneIllustration({
             turnId: jobTurnId,
             castIds: structuredProfiles.map(pr => pr.identity.characterId),
             profileVersion,
+            attempt,
           },
           {
             campaignId: jobCampaignId,
