@@ -341,7 +341,16 @@ async function extractPromptWithHaiku(
   weather?: string,
   worldLore?: string,
   characterProfile?: CharacterVisualProfile | null,
-  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>,
+  extra?: {
+    clothing?: string;
+    equipment?: string;
+    injuries?: string;
+    emotion?: string;
+    camera?: string;
+    location?: string;
+    hasReferences?: boolean;
+  }
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
   if (!Deno.env.get('OPENROUTER_API_KEY')) {
     console.log('OPENROUTER_API_KEY not configured, skipping prompt preprocessing');
@@ -363,6 +372,15 @@ async function extractPromptWithHaiku(
     const castLine = describeCast(cast);
     if (castLine) {
       contextParts.push(`CAST (exact people in frame — match count and gender exactly):\n${castLine}`);
+    }
+    if (extra?.clothing) contextParts.push(`CLOTHING: ${extra.clothing}`);
+    if (extra?.equipment) contextParts.push(`EQUIPMENT: ${extra.equipment}`);
+    if (extra?.injuries) contextParts.push(`INJURIES: ${extra.injuries}`);
+    if (extra?.emotion) contextParts.push(`EMOTION: ${extra.emotion}`);
+    if (extra?.camera) contextParts.push(`CAMERA: ${extra.camera}`);
+    if (extra?.location) contextParts.push(`LOCATION: ${extra.location}`);
+    if (extra?.hasReferences) {
+      contextParts.push('REFERENCE IMAGES PROVIDED: match the referenced faces, bodies and outfits exactly; do not reinvent them.');
     }
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
@@ -2231,12 +2249,20 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as SceneImageRequest;
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      console.error('[generate-scene-image] LOVABLE_API_KEY not configured');
+    if (!Deno.env.get('OPENROUTER_API_KEY')) {
+      console.error('[generate-scene-image] OPENROUTER_API_KEY not configured');
       throw new Error('Service configuration error');
     }
+
+    const jobIds = {
+      campaignId: requestData.campaignId,
+      sceneId: requestData.sceneId,
+      turnId: requestData.turnId,
+    };
+    const referenceImages = (requestData.referenceImages || [])
+      .filter((u) => typeof u === 'string' && u.length > 8)
+      .slice(0, 4);
 
     // Normalize request - support both short and long keys
     const reqAny = requestData as any;
@@ -2290,7 +2316,16 @@ serve(async (req) => {
       weather,
       worldLore,
       requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter),
-      requestData.cast
+      requestData.cast,
+      {
+        clothing: requestData.clothing,
+        equipment: requestData.equipment,
+        injuries: requestData.injuries,
+        emotion: requestData.emotion,
+        camera: requestData.camera,
+        location: requestData.currentLocation,
+        hasReferences: referenceImages.length > 0,
+      }
     );
     
     if (haikuResult.extractedPrompt) {
@@ -2324,7 +2359,10 @@ serve(async (req) => {
     console.log('Negative prompt:', negativePrompt.slice(0, 200) + '...');
 
     // Use retry logic with progressive softening
-    const result = await generateImageWithRetry(prompt, negativePrompt, 3);
+    const result = await generateImageWithRetry(prompt, negativePrompt, 3, {
+      turnId: jobIds.turnId,
+      referenceImages,
+    });
 
     if (result.error === 'Rate limit exceeded') {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
@@ -2347,9 +2385,27 @@ serve(async (req) => {
       });
     }
 
-    console.log('Scene image generated successfully', { softeningLevel: result.softeningLevel, usedHaiku });
+    // Permanent storage, keyed to this exact campaign / scene / turn.
+    const stored = await persistIllustration(result.imageUrl, jobIds);
+
+    console.log('Scene image generated successfully', {
+      softeningLevel: result.softeningLevel,
+      usedHaiku,
+      model: result.model,
+      usedFallback: result.usedFallback,
+      stored: !!stored,
+      ...jobIds,
+    });
     return new Response(JSON.stringify({ 
-      imageUrl: result.imageUrl,
+      imageUrl: stored?.url || result.imageUrl,
+      storagePath: stored?.path || null,
+      model: result.model,
+      usedFallbackModel: !!result.usedFallback,
+      usedReferenceImages: referenceImages.length,
+      visualProfileVersion: requestData.visualProfileVersion ?? null,
+      campaignId: jobIds.campaignId ?? null,
+      sceneId: jobIds.sceneId ?? null,
+      turnId: jobIds.turnId ?? null,
       softeningApplied: result.softeningLevel > 0,
       softeningLevel: result.softeningLevel,
       usedHaikuPreprocessing: usedHaiku,
