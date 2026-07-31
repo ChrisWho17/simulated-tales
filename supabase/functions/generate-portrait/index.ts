@@ -1399,6 +1399,23 @@ function normalizeGenre(rawGenre: string): string {
 }
 
 // ============================================================================
+// CHEST SCALAR -> DESCRIPTOR
+// Mirrors src/lib/chestScale.ts so client and server describe the exact same
+// stored value in the same way.
+// ============================================================================
+function chestScalarDescriptor(value: number): string {
+  const v = Math.min(1, Math.max(0, value));
+  if (v < 0.06) return 'completely flat chest, no bust';
+  if (v < 0.16) return 'very small bust, barely-there chest';
+  if (v < 0.3) return 'small bust, petite chest, subtle curve';
+  if (v < 0.45) return 'medium natural bust, balanced feminine proportions';
+  if (v < 0.6) return 'large full bust, noticeably prominent chest';
+  if (v < 0.75) return 'very large heavy bust, strongly prominent chest';
+  if (v < 0.88) return 'huge bust, very heavy prominent chest dominating the torso silhouette';
+  return 'massive bust, extremely large heavy chest, dramatically oversized silhouette';
+}
+
+// ============================================================================
 // BUILD PROMPT FUNCTION
 // ============================================================================
 function buildPrompt(body: any): { prompt: string; negative: string; detectedKeywords: any } {
@@ -1408,7 +1425,7 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     additionalDetails, characterAdditionals, customDescription,
     characterClass, genre, nationality, ethnicity, origin,
     tattoos, tattooStyle, piercings, piercingStyle, scars, implants, prosthetics, mutations,
-    bustSize, hipWidth, muscleDefinition, bodyHair,
+    bustSize, chestSizeValue, hipWidth, muscleDefinition, bodyHair,
     clothingStyle, clothingDetails, distinguishingFeatures, accessories,
     // Gear override for cheat mode
     hasEquippedGear, currentGearDescription,
@@ -1510,8 +1527,10 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
   
   // Body proportions - female/other characters
   if (gender === 'female' || gender === 'other') {
-    // Add bust size description if specified
-    if (bustSize && BUST_MODIFIER[bustSize]) {
+    // Exact stored scalar (0 = flat .. 1 = massive) wins over the cup letter.
+    if (typeof chestSizeValue === 'number' && Number.isFinite(chestSizeValue)) {
+      identityParts.push(chestScalarDescriptor(chestSizeValue));
+    } else if (bustSize && BUST_MODIFIER[bustSize]) {
       identityParts.push(BUST_MODIFIER[bustSize]);
     }
     // Add hip width description if specified
