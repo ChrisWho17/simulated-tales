@@ -6,6 +6,8 @@ import { GameTimeState, getTimeOfDay as getGameTimeOfDay } from '@/game/timeProg
 import { GameGenre } from '@/types/genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { revokeDisplayImageUrl, toDisplayImageUrl } from '@/lib/sceneImageUrl';
+import { resolveSceneCast, type CompanionLike } from '@/lib/sceneCast';
+import { companionSystem } from '@/game/companionSystem';
 
 interface UseSceneIllustrationOptions {
   genre: GameGenre;
@@ -94,6 +96,24 @@ export function useSceneIllustration({
         content: e.content,
       }));
 
+      // Who is actually in this moment? Illustrations were inventing genders
+      // (a male protagonist for a female player, etc.) because the image prompt
+      // only ever saw the player's profile and never the party.
+      let activeCompanions: CompanionLike[] = [];
+      try {
+        activeCompanions = (companionSystem.getActiveCompanions() || []) as unknown as CompanionLike[];
+      } catch {
+        activeCompanions = [];
+      }
+      const sceneCast = resolveSceneCast({
+        playerName: characterVisualProfile?.name,
+        playerGender: characterVisualProfile?.gender,
+        playerAppearance: characterVisualProfile?.fullVisualDescription,
+        companions: activeCompanions,
+        narratorText: lastNarratorMessage,
+        recentText: recentStory.map(e => e.content),
+      });
+
       // Derive time-of-day string from hour
       const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
 
@@ -129,6 +149,8 @@ export function useSceneIllustration({
             lastUserAction: lastPlayerAction,
             messageHistory,
             characterProfile: characterVisualProfile,
+            cast: sceneCast,
+            playerGender: characterVisualProfile?.gender,
             genre: genre || worldBible?.primaryGenre || 'fantasy',
             era: worldBible?.warEra || worldBible?.techTier || undefined,
             currentLocation: trigger.location || undefined,
