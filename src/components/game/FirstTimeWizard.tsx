@@ -148,7 +148,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-lg"
+        className="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-black/90 backdrop-blur-lg"
       >
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -175,13 +175,13 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
           variant="ghost"
           size="sm"
           onClick={handleSkip}
-          className="absolute top-4 right-4 z-50 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+          className="fixed top-3 right-3 z-[60] text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
         >
           Skip Setup
         </Button>
 
         {/* Progress bar */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-48 h-1 bg-muted/30 rounded-full overflow-hidden">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 w-32 sm:w-48 h-1 z-[55] bg-muted/30 rounded-full overflow-hidden">
           <motion.div 
             className="h-full rounded-full"
             style={{ background: 'var(--accent-gradient)' }}
@@ -192,7 +192,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
         </div>
 
         {/* Main content */}
-        <div className="relative z-10 w-full max-w-2xl mx-4">
+        <div className="relative z-10 w-full max-w-2xl mx-auto px-4 pt-20 pb-10 sm:pt-24 min-h-full flex flex-col justify-center">
           <StepTransition 
             stepKey={step.id} 
             direction={currentStep > 0 ? 'forward' : 'forward'}
@@ -205,17 +205,17 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.1, type: 'spring', damping: 15 }}
-                  className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
+                  className="mx-auto w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center"
                   style={{ background: 'var(--accent-gradient)' }}
                 >
                   <div className="text-white">{step.icon}</div>
                 </motion.div>
-                <h1 className="text-3xl font-display text-foreground">{step.title}</h1>
-                <p className="text-muted-foreground">{step.subtitle}</p>
+                <h1 className="text-2xl sm:text-3xl font-display text-foreground">{step.title}</h1>
+                <p className="text-sm sm:text-base text-muted-foreground">{step.subtitle}</p>
               </div>
 
               {/* Step content */}
-              <div className="glass-panel p-6">
+              <div className="glass-panel p-4 sm:p-6">
                 {/* Welcome Step */}
                 {currentStep === 0 && (
                   <div className="text-center space-y-6 py-4">
@@ -258,7 +258,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
 
                 {/* Preset Step */}
                 {currentStep === 2 && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {SETTINGS_PRESETS.map((preset) => (
                       <Card
                         key={preset.id}
@@ -379,7 +379,7 @@ export function FirstTimeWizard({ onComplete, forceShow = false }: FirstTimeWiza
                 </div>
                 <Button
                   onClick={handleNext}
-                  className="gap-1 min-w-[140px]"
+                  className="gap-1 min-w-[120px] sm:min-w-[140px]"
                   style={{ background: 'var(--accent-gradient)' }}
                 >
                   {currentStep === WIZARD_STEPS.length - 1 ? (
