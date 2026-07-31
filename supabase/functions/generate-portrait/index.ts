@@ -1416,8 +1416,106 @@ function chestScalarDescriptor(value: number): string {
 }
 
 // ============================================================================
+// PROPORTION + PLACEMENT ANCHORS
+// ----------------------------------------------------------------------------
+// Image models routinely get "the idea" of a body but miss relative scale and
+// the exact position of marks. These anchors restate size as measurable ratios
+// (head-heights, comparison to the frame) and pin every mark to a named body
+// landmark, then forbid the model from re-inventing either.
+// ============================================================================
+
+/** Parse 5'4", 5 ft 4, 162cm, "tall" etc. into centimetres when possible. */
+function heightToCm(raw: unknown): number | null {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw > 100 ? raw : null;
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim().toLowerCase();
+  const cm = s.match(/(\d{2,3})\s*cm/);
+  if (cm) return Number(cm[1]);
+  const ftIn = s.match(/(\d)\s*(?:'|ft|feet)\s*(\d{1,2})?/);
+  if (ftIn) return Math.round(Number(ftIn[1]) * 30.48 + Number(ftIn[2] || 0) * 2.54);
+  return null;
+}
+
+function heightAnchor(height: unknown): string {
+  const cm = heightToCm(height);
+  if (cm) {
+    const feet = Math.floor(cm / 30.48);
+    const inches = Math.round((cm / 2.54) % 12);
+    // Real human figure drawing runs ~7 heads for short adults to ~8 for tall.
+    const heads = Math.max(6.5, Math.min(8.2, 6.5 + (cm - 150) / 25));
+    const relation =
+      cm < 155 ? 'noticeably short — reads clearly smaller than an average adult, doorways and furniture tower over them'
+      : cm < 165 ? 'below average height — slightly smaller than an average adult'
+      : cm < 178 ? 'average adult height'
+      : cm < 190 ? 'tall — clearly taller than an average adult, head sits high in the frame'
+      : 'very tall — towering, must look cramped and stooped near normal doorways and low ceilings';
+    return `EXACT SCALE: ${feet}'${inches}" (${cm}cm), ${relation}; figure drawn at approximately ${heads.toFixed(1)} head-heights total, head size, limb length and torso length must all match this exact stature, not a generic model body`;
+  }
+  if (typeof height === 'string' && height.trim()) {
+    return `EXACT SCALE: ${height} stature; head size, limb length and torso length must match this stature consistently, not a generic model body`;
+  }
+  return 'EXACT SCALE: average adult proportions, consistent head-to-body ratio';
+}
+
+function buildProportionAnchors(input: {
+  height?: unknown;
+  build?: string;
+  gender?: string;
+  chestSizeValue?: number;
+  bustSize?: string;
+  hipWidth?: string;
+  tattoos?: string[];
+  scars?: string[];
+  piercings?: string[];
+  prosthetics?: string[];
+}): string {
+  const parts: string[] = [heightAnchor(input.height)];
+
+  const isFem = input.gender === 'female' || input.gender === 'other';
+  if (isFem && typeof input.chestSizeValue === 'number') {
+    const v = Math.min(1, Math.max(0, input.chestSizeValue));
+    parts.push(
+      `CHEST SCALE RATIO: bust volume is locked at ${(v * 100).toFixed(0)}% of the maximum range and must read at that exact size relative to the ribcage, shoulder width and hips — do not normalise it toward an average chest`
+    );
+  }
+  if (input.hipWidth) {
+    parts.push(`HIP RATIO: hip width must stay in correct proportion to shoulder width as described (${input.hipWidth}), measured across the widest point of the hips`);
+  }
+  if (input.build) {
+    parts.push(`MASS RATIO: body mass, limb thickness and torso depth must all agree with the stated ${input.build} build — no slimming, no over-muscling`);
+  }
+
+  // Placement: models blur "has a scar" into "scar somewhere". Name the spot.
+  const placements: string[] = [];
+  const listWithSide = (label: string, items?: string[]) => {
+    if (!items?.length) return;
+    placements.push(
+      `${label} — each one rendered exactly where stated and nowhere else: ${items.join('; ')}`
+    );
+  };
+  listWithSide('TATTOO PLACEMENT', input.tattoos);
+  listWithSide('SCAR PLACEMENT', input.scars);
+  listWithSide('PIERCING PLACEMENT', input.piercings);
+  listWithSide('PROSTHETIC PLACEMENT', input.prosthetics);
+  if (placements.length) {
+    parts.push(
+      `${placements.join('. ')}. Anchor every mark to the named body landmark (left/right side, above/below the joint) and add no extra tattoos, scars or piercings anywhere else on the body`
+    );
+  } else {
+    parts.push('CLEAN SKIN: no tattoos, scars or piercings anywhere unless listed above');
+  }
+
+  parts.push(
+    'ANATOMY CHECK: correct hand and finger count, symmetrical eye placement, jewelry and clothing seams sitting exactly on the body part they belong to'
+  );
+
+  return parts.join('. ');
+}
+
+// ============================================================================
 // BUILD PROMPT FUNCTION
 // ============================================================================
+
 function buildPrompt(body: any): { prompt: string; negative: string; detectedKeywords: any } {
   const {
     name, gender, age, build, skinTone, height,
@@ -2247,8 +2345,24 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     promptSections.push(`[USER PRIORITY - MUST FOLLOW: ${userDesc}]`);
   }
   
-  // 12. Art style
+  // 12. Proportion + placement contract. Diffusion models drift on relative
+  // size and on WHERE a mark sits, so both are stated explicitly and last.
+  promptSections.push(buildProportionAnchors({
+    height,
+    build,
+    gender,
+    chestSizeValue,
+    bustSize,
+    hipWidth,
+    tattoos,
+    scars,
+    piercings,
+    prosthetics,
+  }));
+
+  // 13. Art style
   promptSections.push(`ART STYLE: ${STYLE_LOCK}`);
+
   
   const prompt = promptSections.join('. ');
   

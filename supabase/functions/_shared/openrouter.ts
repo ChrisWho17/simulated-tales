@@ -200,10 +200,14 @@ export interface ImageGenOptions {
   /** Approved reference images (canonical portrait / full body / location). */
   referenceImages?: string[];
   size?: string;
+  /** Per-attempt timeout. Kept well under the whole-call budget. */
   timeoutMs?: number;
+  /** Hard ceiling for the whole call including every retry/fallback. */
+  totalBudgetMs?: number;
   turnId?: string;
   appLabel?: string;
 }
+
 
 export interface ImageGenResult {
   imageUrl: string | null;
@@ -231,13 +235,15 @@ function extractImageUrl(payload: any): string | null {
 async function requestImage(
   model: string,
   opts: ImageGenOptions,
-  withReferences: boolean
+  withReferences: boolean,
+  attemptMs: number
 ): Promise<{ res: Response; body: any | null }> {
   const key = getOpenRouterKey();
   if (!key) throw new Error('OPENROUTER_API_KEY not configured');
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
+  const timer = setTimeout(() => controller.abort(), attemptMs);
+
 
   const body: Record<string, unknown> = {
     model,
@@ -284,14 +290,37 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
   let lastStatus: number | null = null;
   let lastError = 'unknown error';
 
+  // A stuck provider call used to be able to hold the request for minutes
+  // (4 attempts x 120s). Everything now runs inside one hard budget, and each
+  // attempt only gets the time that is actually left.
+  const totalBudgetMs = opts.totalBudgetMs ?? 110_000;
+  const perAttemptMs = opts.timeoutMs ?? 45_000;
+  const deadline = Date.now() + totalBudgetMs;
+
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     // Reference images first; if the model rejects that shape, retry text-only.
     const attempts = opts.referenceImages?.length ? [true, false] : [false];
     for (const withRefs of attempts) {
+      const remaining = deadline - Date.now();
+      if (remaining < 8_000) {
+        return {
+          imageUrl: null,
+          model: null,
+          usedFallback: true,
+          status: lastStatus,
+          error: `illustration timed out (${lastError})`,
+        };
+      }
       const started = Date.now();
       try {
-        const { res, body } = await requestImage(model, opts, withRefs);
+        const { res, body } = await requestImage(
+          model,
+          opts,
+          withRefs,
+          Math.min(perAttemptMs, remaining - 2_000)
+        );
+
         lastStatus = res.status;
         if (res.ok) {
           const imageUrl = extractImageUrl(body);
@@ -329,8 +358,23 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
           return { imageUrl: null, model, usedFallback: i > 0, status: res.status, error: lastError };
         }
       } catch (err) {
-        lastError = String(err);
+        const aborted = err instanceof DOMException && err.name === 'AbortError';
+        lastError = aborted ? `attempt timed out after ${Date.now() - started}ms` : String(err);
+        logOpenRouterUsage({
+          fn: 'illustration',
+          role: 'illustration',
+          model,
+          turnId: opts.turnId,
+          totalMs: Date.now() - started,
+          usedFallback: i > 0,
+          status: null,
+          failureReason: lastError,
+        });
+        // A timeout means this model is not responding — do not burn the
+        // remaining budget on a second shape for the same model.
+        if (aborted) break;
       }
+
     }
   }
 

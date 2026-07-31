@@ -1,6 +1,38 @@
 // FLUX.1 Portrait Generation - Secure server-side implementation via edge function
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Hard client-side ceiling for one portrait request. The edge function has its
+ * own (shorter) budget, so hitting this means the network or the function host
+ * stalled — either way the UI must be released instead of spinning forever.
+ */
+const PORTRAIT_TIMEOUT_MS = 125_000;
+
+class PortraitTimeoutError extends Error {
+  constructor() {
+    super('Portrait generation timed out. The art service is slow right now — try again.');
+    this.name = 'PortraitTimeoutError';
+  }
+}
+
+/** Races an edge-function invoke against a timeout so the caller always settles. */
+async function invokePortrait(body: Record<string, unknown>) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new PortraitTimeoutError()), PORTRAIT_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      supabase.functions.invoke('generate-portrait', { body }),
+      timeout,
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+
 // Detected clothing item from portrait analysis
 export interface DetectedClothingItem {
   item: string;
@@ -78,11 +110,7 @@ export interface PortraitCharacterData {
 export async function generatePortraitWithFlux(prompt: string): Promise<string> {
   console.log('[Portrait] Calling edge function with prompt only (legacy mode):', prompt.substring(0, 100) + '...');
   
-  const { data, error } = await supabase.functions.invoke('generate-portrait', {
-    body: {
-      customPrompt: prompt,
-    }
-  });
+  const { data, error } = await invokePortrait({ customPrompt: prompt });
 
   if (error) {
     console.error('[Portrait] Edge function error:', error);
@@ -117,8 +145,7 @@ export async function generatePortraitWithCharacterData(
     additionalDetails: characterData.additionalDetails?.substring(0, 50),
   });
   
-  const { data, error } = await supabase.functions.invoke('generate-portrait', {
-    body: {
+  const { data, error } = await invokePortrait({
       name: characterData.name || 'Character',
       gender: characterData.gender || 'male',
       age: characterData.age,
@@ -157,8 +184,8 @@ export async function generatePortraitWithCharacterData(
       environmentContext: characterData.environmentContext,
       // Genre for styling
       genre: genre,
-    }
   });
+
 
   if (error) {
     console.error('[Portrait] Edge function error:', error);
