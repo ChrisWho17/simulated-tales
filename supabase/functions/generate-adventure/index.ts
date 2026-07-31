@@ -972,6 +972,21 @@ IMPORTANT RULES:
 - NEVER include formatting instructions or technical guidance in the narrative
 - If you need to request a dice roll, use ONLY the [ROLL:stat:difficulty:reason] format, nothing else
 
+===== ENTITY IDENTITY PERSISTENCE (MANDATORY) =====
+Once something has been introduced, its FUNDAMENTAL NATURE IS LOCKED for the rest of the story.
+- A drone stays a machine. It CANNOT become a person, and a person CANNOT be "described as a drone."
+- An animal stays an animal. An object stays an object. A corpse stays dead.
+- A named NPC keeps the same species, gender, body, name and role they were introduced with.
+- When the player investigates or interacts with an entity, REVEAL more detail about the SAME entity — never swap it for a different kind of thing.
+- If the truth about an entity is different from first impressions, it must be explained IN-FICTION as a mistake in PERCEPTION and stated as such ("what she took for a drone was actually..."), and only if that reveal was seeded earlier. Never silently morph it.
+- If you are unsure what an entity was, re-read the last 2-3 narrator responses and reuse those exact facts. Do NOT invent a replacement.
+
+ENTITY DRIFT SELF-CHECK before writing:
+- Did any object, machine, creature or NPC change category since it was introduced? → REWRITE and restore the original nature.
+- Am I calling a human a "drone" or a "drone" a human? → REWRITE.
+- Did an offscreen person (spouse, ally, someone merely mentioned in conversation) suddenly appear on the battlefield? → REMOVE them. People only enter the scene if they plausibly traveled there, and their arrival must be justified in the prose.
+
+
 CRITICAL - ANTI-REPETITION SYSTEM (MANDATORY):
 You have ADVANCED repetition detection and must ACTIVELY AVOID repeating content.
 
