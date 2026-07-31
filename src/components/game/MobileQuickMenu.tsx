@@ -4,7 +4,8 @@
 import React from 'react';
 import { 
   Settings, Trophy, ScrollText, Backpack, Bookmark, 
-  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen, Users
+  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen, Users,
+  Globe, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,11 @@ interface MobileQuickMenuProps {
   onOpenSaves: () => void;
   onRestart: () => void;
   onOpenCompanions?: () => void;
+  /** World events feed — desktop reaches this from the overflow menu. */
+  onOpenAmbientFeed?: () => void;
+  /** Share tale card — desktop reaches this from the overflow menu. */
+  onExportTaleCard?: () => void;
+  hasNewAmbientEvents?: boolean;
   characterName?: string;
   currentTime?: string;
   currentWeather?: string;
