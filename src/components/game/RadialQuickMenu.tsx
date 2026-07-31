@@ -190,6 +190,8 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
   onOpenSaves,
   onRestart,
   onOpenCompanions,
+  onOpenAmbientFeed,
+  onExportTaleCard,
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
