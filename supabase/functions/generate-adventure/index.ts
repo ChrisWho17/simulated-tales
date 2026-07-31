@@ -3670,7 +3670,9 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // ============= AAA QUALITY CONFIG FOR 24+ HOUR SESSIONS =============
     const aiRequestBody = {
       // Use the higher-quality pro model for narrative generation
-      model: 'google/gemini-2.5-pro',
+      // Flash: same narrative contract, several times faster than 2.5-pro.
+      // Long turns were timing out client-side at 60s on the pro model.
+      model: 'google/gemini-3.6-flash',
       messages,
       temperature: 0.78,          // Balanced: creative but coherent for long sessions
       max_tokens: 2500,           // Increased to prevent mid-sentence truncation
