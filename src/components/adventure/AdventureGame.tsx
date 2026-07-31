@@ -1448,8 +1448,14 @@ export function AdventureGame() {
       setStory(fallbackStory);
       saveData(fallbackStory, char, scenarioSelection.scenario, scenarioSelection.genre || 'fantasy');
     } finally {
+      // Opening is on screen (real, director, or fallback) — release the lock and
+      // make sure nothing else treats this campaign as "needs an opening".
+      openingInFlightRef.current = false;
+      needsInitialNarrative.current = false;
+      lastCampaignIdRef.current = campaignContext?.activeCampaign?.id ?? lastCampaignIdRef.current;
       setIsLoading(false);
     }
+
   }, [
     pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign,
     campaignContext, worldBible, settings.adultContent, cheatMode, applyPendingSettings,
