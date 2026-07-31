@@ -56,8 +56,9 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
 
   const notifiedThisSession = useRef<Set<string>>(new Set());
 
-  const unlockedAchievements = new Set(
-    achievements.filter((a) => a.unlockedAt).map((a) => a.id)
+  const unlockedAchievements = useMemo(
+    () => new Set(achievements.filter((a) => a.unlockedAt).map((a) => a.id)),
+    [achievements]
   );
 
   useEffect(() => {
