@@ -310,7 +310,12 @@ export function AdventureGame() {
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
+  // True while the "start story" flow is already producing the opening narrative.
+  // Campaign creation during that flow must never kick off a SECOND opening call
+  // (which used to land later and silently replace the intro the player just read).
+  const openingInFlightRef = useRef<boolean>(false);
   const hasInitialized = useRef<boolean>(false);
+
   const socialReactionRef = useRef<SocialReactionBatch | null>(null);
   
   // === WORLD REGENERATION & LOCK SYSTEM ===
