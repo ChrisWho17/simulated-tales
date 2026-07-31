@@ -3909,6 +3909,8 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       return new Response(stream, {
         headers: {
           ...corsHeaders,
+          ...narratorHeaders,
+          'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms',
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
@@ -4005,9 +4007,17 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
 
     return new Response(JSON.stringify({ 
       narrative: cleanNarrative,
-      mechanics: Object.keys(mechanics).length > 0 ? mechanics : undefined
+      mechanics: Object.keys(mechanics).length > 0 ? mechanics : undefined,
+      modelUsed,
+      usedFallback,
+      narratorLatencyMs,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        ...narratorHeaders,
+        'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms',
+        'Content-Type': 'application/json',
+      },
     });
 
   } catch (error) {
