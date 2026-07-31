@@ -3946,7 +3946,7 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         headers: {
           ...corsHeaders,
           ...narratorHeaders,
-          'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms',
+          'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms, X-Turn-Id',
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
@@ -3957,6 +3957,23 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // Non-streaming response
     const data = await response.json();
     let narrative = data.choices?.[0]?.message?.content;
+
+    {
+      const usage = extractUsage(data);
+      logOpenRouterUsage({
+        fn: 'generate-adventure',
+        role: usedFallback ? 'fallback' : 'narrator',
+        model: modelUsed,
+        turnId,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        costUsd: usage.costUsd,
+        totalMs: Date.now() - narratorStarted,
+        retries,
+        usedFallback,
+        status: response.status,
+      });
+    }
 
     if (!narrative) {
       throw new Error('No narrative generated');
