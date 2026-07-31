@@ -1575,6 +1575,12 @@ export function AdventureGame() {
     let narrative: string | null = null;
     /** Raw AI text (with mechanic tags) for recruit/relationship parsing before display strip. */
     let rawNarrativeForTags: string | null = null;
+    /**
+     * The streaming path bypasses useNarrativeGeneration, which is where Director
+     * bookkeeping lives. Track it here so the hidden Director Brief, scene
+     * summaries and long-term memory keep advancing on streamed turns too.
+     */
+    let streamTurnNeedsDirectorRecord = false;
     
     if (useStreaming) {
       // === STREAMING NARRATIVE GENERATION ===
@@ -1713,7 +1719,10 @@ export function AdventureGame() {
 
       if (needsFullFallback) {
         // Already tag-stripped, world-bible gated and language-processed internally.
+        // generateNarrative does its own Director bookkeeping — don't double count.
         narrative = await generateNarrative(scenarioSelection.scenario, action, updatedStory, diceRoll);
+      } else if (narrative) {
+        streamTurnNeedsDirectorRecord = true;
       }
     } else {
       // === NON-STREAMING NARRATIVE GENERATION ===
@@ -1761,6 +1770,31 @@ export function AdventureGame() {
         }
       }
       
+      // === DUAL-MODEL NARRATION: Director bookkeeping for the streaming path ===
+      if (streamTurnNeedsDirectorRecord) {
+        try {
+          const liveTags = latestMechanicsRef.current;
+          storyDirectorService.recordCompletedTurn(action, narrative);
+          storyDirectorService.maybeRunDirector({
+            scenario: scenarioSelection.scenario,
+            genre: scenarioSelection.genre,
+            characterName: character.name,
+            location: playerLocation?.currentZone?.name,
+            signals: {
+              majorDecision: Boolean(diceRoll?.criticalSuccess || diceRoll?.criticalFailure),
+              questChanged: Boolean(
+                (liveTags as Record<string, unknown> | null)?.questStarted ||
+                (liveTags as Record<string, unknown> | null)?.questCompleted ||
+                (liveTags as Record<string, unknown> | null)?.questFailed
+              ),
+              npcIntroduced: npcResult.registered.length > 0,
+            },
+          });
+        } catch (directorError) {
+          console.warn('[StoryDirector] streaming bookkeeping skipped:', directorError);
+        }
+      }
+
       // === COMBAT ACHIEVEMENT BRIDGE: Detect combat outcomes from narrative ===
       const combatResult = processNarrativeForCombatAchievements(narrative, currentTurn);
       if (combatResult.type) {
