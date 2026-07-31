@@ -110,10 +110,10 @@ export function buildStrictDirective(profiles: VisualProfileV2[]): string {
  */
 export function shouldReplaceCanonical(
   profile: VisualProfileV2,
-  result: ValidationResult
+  result: ValidationResult,
+  candidateProfileVersion: number
 ): boolean {
   if (!result.valid) return false;
-  return !profile.references.canonicalPortraitUrl || profile.references.lastApprovedPortraitId === undefined
-    ? true
-    : true;
+  // Never let an older job overwrite art approved for a newer appearance.
+  return candidateProfileVersion >= profile.visualProfileVersion;
 }
