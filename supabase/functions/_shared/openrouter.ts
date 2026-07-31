@@ -200,10 +200,14 @@ export interface ImageGenOptions {
   /** Approved reference images (canonical portrait / full body / location). */
   referenceImages?: string[];
   size?: string;
+  /** Per-attempt timeout. Kept well under the whole-call budget. */
   timeoutMs?: number;
+  /** Hard ceiling for the whole call including every retry/fallback. */
+  totalBudgetMs?: number;
   turnId?: string;
   appLabel?: string;
 }
+
 
 export interface ImageGenResult {
   imageUrl: string | null;
