@@ -301,6 +301,21 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }));
   };
 
+  // Chest size is stored as an exact scalar. The cup letter is kept in sync
+  // only so older systems and saves keep resolving.
+  const updateChestSize = (value: number) => {
+    setAppearance(prev => ({
+      ...prev,
+      detailLevel,
+      full: {
+        ...prev.full,
+        chestSizeValue: value,
+        bustSize: scalarToCupLetter(value) as NonNullable<typeof prev.full>['bustSize'],
+      },
+    }));
+  };
+
+
   // Custom classes have no gear table of their own, so they resolve against the
   // genre default — the same fallback the gear editor uses.
   const gearClassId = customClass && selectedClass === customClass.id ? 'default' : selectedClass;
