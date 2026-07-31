@@ -303,11 +303,30 @@ function buildActivePartyContext() {
     console.warn('[buildNarrativeRequestBody] Failed to read companion party:', e);
     return undefined;
   }
-  if (!active || active.length === 0) return undefined;
+  let absent: ReturnType<typeof companionSystem.getAbsentCompanions> = [];
+  try {
+    absent = companionSystem.getAbsentCompanions() || [];
+  } catch {
+    absent = [];
+  }
+
+  const absentMembers = absent
+    .filter(c => c.status !== 'dead')
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name,
+      status: c.status,
+      note:
+        c.status === 'waiting'
+          ? 'left behind at another location — cannot speak, act, or appear this turn'
+          : 'not travelling with the player — absent from the scene',
+    }));
+
+  if ((!active || active.length === 0) && absentMembers.length === 0) return undefined;
 
   return {
-    partySize: active.length,
-    members: active.map(companion => ({
+    partySize: active?.length || 0,
+    members: (active || []).map(companion => ({
       name: companion.name,
       mood: companion.mood,
       affinity: companion.affinity,
@@ -319,8 +338,17 @@ function buildActivePartyContext() {
       pendingReaction: companion.pendingReaction || undefined,
       wantsToSpeak: !!companion.wantsToSpeak,
     })),
+    absentMembers: absentMembers.length > 0 ? absentMembers : undefined,
+    presenceRule:
+      absentMembers.length > 0
+        ? `PRESENCE LOCK: Only these characters are physically present: ${
+            (active || []).map(c => c.name).join(', ') || 'the player alone'
+          }. These are NOT present and must not speak, react, or appear until the story shows them travelling here: ${absentMembers
+            .map(m => m.name)
+            .join(', ')}.`
+        : undefined,
     // Panel actions surface these; the narrator should honour them this turn.
-    speakingCue: active
+    speakingCue: (active || [])
       .filter(c => c.wantsToSpeak || c.pendingReaction)
       .map(c => `${c.name}: ${c.pendingReaction || 'has something to say'}`)
       .join('\n') || undefined,
