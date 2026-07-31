@@ -774,6 +774,10 @@ export function buildNarrativeRequestBody(
       narratorModel: aiNarrationConfig.narratorModel,
       fallbackModel: aiNarrationConfig.fallbackModel,
     };
+    // Unique per submitted turn: correlates server usage logs and lets the
+    // client discard a stale response that lands after a newer turn.
+    requestBody.turnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
 
     const directorContextPacket = storyDirectorService.buildNarratorContext(playerAction ?? '');
     const briefText = formatBriefForNarrator(directorContextPacket.directorBrief);
