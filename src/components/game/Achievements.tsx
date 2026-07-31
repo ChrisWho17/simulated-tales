@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Lock, X, Sparkles, Globe, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
