@@ -173,6 +173,70 @@ export function useSceneIllustration({
         });
       }
 
+      // ---- Structured Visual Profiles (v2) -------------------------------
+      // Old saves get promoted first, then the player and every active
+      // companion are guaranteed a structured profile so the prompt is built
+      // from exact stored values instead of loose flavour text.
+      migrateVisualProfiles(jobCampaignId);
+
+      const structuredProfiles: VisualProfileV2[] = [];
+
+      if (characterVisualProfile?.name) {
+        const prev = getVisualProfileV2(jobCampaignId, characterVisualProfile.name);
+        const player = prev ?? buildVisualProfile(
+          {
+            gender: characterVisualProfile.gender,
+            age: characterVisualProfile.age,
+            build: characterVisualProfile.physicalDescription?.build,
+            height: characterVisualProfile.physicalDescription?.height,
+            skinTone: characterVisualProfile.physicalDescription?.skinTone,
+            faceShape: characterVisualProfile.physicalDescription?.faceShape,
+            hairColor: characterVisualProfile.hair?.color,
+            hairStyle: characterVisualProfile.hair?.style,
+            hairLength: characterVisualProfile.hair?.length,
+            eyeColor: characterVisualProfile.eyes?.color,
+            scars: characterVisualProfile.facialFeatures?.scars ? [characterVisualProfile.facialFeatures.scars] : [],
+            tattoos: characterVisualProfile.facialFeatures?.tattoos ? [characterVisualProfile.facialFeatures.tattoos] : [],
+            piercings: characterVisualProfile.facialFeatures?.piercings ? [characterVisualProfile.facialFeatures.piercings] : [],
+            currentOutfit: characterVisualProfile.currentOutfit,
+            customDescription: characterVisualProfile.fullVisualDescription,
+          },
+          {
+            characterId: characterVisualProfile.name,
+            name: characterVisualProfile.name,
+            isPlayer: true,
+            matureContentAllowed: true,
+          }
+        );
+        if (!prev) saveVisualProfileV2(jobCampaignId, player);
+        structuredProfiles.push(player);
+      }
+
+      for (const companion of activeCompanions) {
+        const c = companion as unknown as { id?: string; name?: string; gender?: string; appearance?: string };
+        if (!c?.name) continue;
+        const prev = getVisualProfileV2(jobCampaignId, c.name);
+        const npc = prev ?? buildNpcVisualProfile({
+          id: c.name,
+          name: c.name,
+          gender: c.gender,
+          appearance: { customDescription: c.appearance },
+        });
+        if (!prev) saveVisualProfileV2(jobCampaignId, npc);
+        structuredProfiles.push(npc);
+      }
+
+      // Structured, field-ordered character sheets — the identity contract the
+      // image model must honour (exact chest scalar included).
+      const characterSheets = structuredProfiles
+        .map(p => buildCharacterPromptBlock(p, {
+          clothing: p.wardrobe.currentOutfit,
+          equipment: p.wardrobe.weapons?.join(', '),
+          injuries: p.bodyDetails.currentInjuries?.join(', '),
+        }))
+        .join('\n\n')
+        .slice(0, 2400);
+
       // Approved references always beat text: never redraw an established
       // character from description when we hold a canonical portrait.
       const castIds = sceneCast.map(c => c.name);
@@ -242,6 +306,8 @@ export function useSceneIllustration({
             injuries: playerProfile?.currentInjuries,
             emotion: trigger.type,
             camera: trigger.priority <= 1 ? 'dynamic close action shot' : 'cinematic establishing shot',
+            characterSheets: characterSheets || undefined,
+            strictIdentity: strictDirective || undefined,
           }),
         }
       );
