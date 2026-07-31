@@ -144,39 +144,58 @@ export function SessionStatsProvider({ children, onPlayTimeReached, onLifetimeAc
   // Track last reported hour milestone for achievement unlocks
   const lastReportedHour = useRef<number>(Math.floor(stats.totalPlayTime / 3600));
 
-  // Track play time and trigger achievement milestones
+  // Keep a live mirror of stats for interval work without re-creating timers.
+  const statsRef = useRef(stats);
+  statsRef.current = stats;
+
+  const playTimeCallbackRef = useRef(onPlayTimeReached);
+  playTimeCallbackRef.current = onPlayTimeReached;
+
+  // Track play time. The clock ticks every second, but we only commit to React
+  // state every 10s — a per-second setState re-rendered the entire game tree
+  // and was the main cause of the "story goes sluggish after a while" stutter.
   useEffect(() => {
+    const PUBLISH_EVERY = 10;
+    let pending = 0;
+
     const interval = setInterval(() => {
+      pending += 1;
+      if (pending < PUBLISH_EVERY) return;
+
+      const delta = pending;
+      pending = 0;
+
       setStats(prev => {
-        const newPlayTime = prev.totalPlayTime + 1;
+        const newPlayTime = prev.totalPlayTime + delta;
         const currentHour = Math.floor(newPlayTime / 3600);
-        
-        // Check if we've crossed a new hour milestone
+
         if (currentHour > lastReportedHour.current) {
           lastReportedHour.current = currentHour;
-          // Trigger the callback for achievement system
-          if (onPlayTimeReached) {
-            onPlayTimeReached(currentHour);
-          }
-          console.log(`[SessionStats] Play time milestone reached: ${currentHour} hour(s)`);
+          playTimeCallbackRef.current?.(currentHour);
         }
-        
-        return {
-          ...prev,
-          totalPlayTime: newPlayTime,
-        };
+
+        return { ...prev, totalPlayTime: newPlayTime };
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [onPlayTimeReached]);
 
-  // Save stats periodically
+    return () => clearInterval(interval);
+  }, []);
+
+  // Save stats periodically. Uses a ref so the timer isn't reset on every
+  // stats change (which previously meant it never actually fired).
   useEffect(() => {
     const interval = setInterval(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [stats]);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(statsRef.current));
+      } catch { /* storage full — non-fatal */ }
+    }, 15000);
+    return () => {
+      clearInterval(interval);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(statsRef.current));
+      } catch { /* ignore */ }
+    };
+  }, []);
 
   const incrementStat = useCallback((stat: keyof SessionStatsData, value = 1) => {
     setStats(prev => ({
