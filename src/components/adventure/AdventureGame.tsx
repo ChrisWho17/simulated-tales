@@ -1176,15 +1176,24 @@ export function AdventureGame() {
           content: narrativeContent,
           timestamp: Date.now(),
         }];
-        
-        setStory(newStory);
-        saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
-        
-        if (campaignContext) {
-          campaignContext.addNarrativeEntry(newStory[0]);
+
+        // Late arrivals must never overwrite a story the player is already reading.
+        let applied = false;
+        setStory(prev => {
+          if (prev.length > 0) return prev;
+          applied = true;
+          return newStory;
+        });
+
+        if (applied) {
+          saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+          if (campaignContext) {
+            campaignContext.addNarrativeEntry(newStory[0]);
+          }
+          console.log('[AdventureGame] Initial narrative set successfully');
+        } else {
+          console.log('[AdventureGame] Opening discarded — story already started');
         }
-        
-        console.log('[AdventureGame] Initial narrative set successfully');
       } catch (error) {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
         
@@ -1202,11 +1211,19 @@ export function AdventureGame() {
           content: fallbackContent,
           timestamp: Date.now(),
         }];
-        setStory(fallbackStory);
-        saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
-        if (campaignContext) {
-          campaignContext.addNarrativeEntry(fallbackStory[0]);
+        let fallbackApplied = false;
+        setStory(prev => {
+          if (prev.length > 0) return prev;
+          fallbackApplied = true;
+          return fallbackStory;
+        });
+        if (fallbackApplied) {
+          saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+          if (campaignContext) {
+            campaignContext.addNarrativeEntry(fallbackStory[0]);
+          }
         }
+
       } finally {
         clearTimeout(openingTimeoutId);
         if (generatingForCampaignId.current === currentCampaignId) {
