@@ -253,9 +253,22 @@ export function buildScenePrompt(
     .map(p => `${p.identity.name} (${p.identity.sex})`)
     .join(', ')}`;
 
+  // With several characters in frame, relative height is the thing models get
+  // wrong most, so state the ordering explicitly on top of each per-character
+  // scale block.
+  const withHeights = profiles.filter(p => p.body.heightCm);
+  const relativeHeights = withHeights.length > 1
+    ? `RELATIVE HEIGHT (must be visible in the composition): ${[...withHeights]
+        .sort((a, b) => (b.body.heightCm as number) - (a.body.heightCm as number))
+        .map(p => `${p.identity.name} ${Math.round(p.body.heightCm as number)}cm`)
+        .join(' > ')}. Match these differences exactly when the characters stand near each other.`
+    : '';
+
   const prompt = [
     castLine,
+    relativeHeights,
     ...profiles.map(p => buildCharacterPromptBlock(p, context)),
+
     context.action ? `ACTION: ${context.action}` : '',
     context.emotion ? `EMOTION: ${context.emotion}` : '',
     context.location ? `LOCATION: ${context.location}` : '',
