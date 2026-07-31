@@ -29,31 +29,30 @@ export interface AiNarrationConfig {
   debug: boolean;
 }
 
-/** Heavy models only — no flash / mini / nano / lite / luna for narration. */
+/** OpenRouter model ids. The key itself lives only in the edge functions. */
 export const NARRATOR_MODEL_OPTIONS = [
-  { id: 'openai/gpt-5.5', label: 'GPT-5.5 (recommended)' },
-  { id: 'openai/gpt-5.6-sol', label: 'GPT-5.6 Sol (heaviest)' },
-  { id: 'openai/gpt-5.4', label: 'GPT-5.4' },
-  { id: 'openai/gpt-5.2', label: 'GPT-5.2' },
-  { id: 'openai/gpt-5', label: 'GPT-5' },
+  { id: 'aion-labs/aion-3.0', label: 'Aion 3.0 (recommended)' },
+  { id: 'deepseek/deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+  { id: 'anthropic/claude-sonnet-4.5', label: 'Claude Sonnet 4.5' },
+  { id: 'openai/gpt-5.5', label: 'GPT-5.5' },
 ] as const;
 
 export const DIRECTOR_MODEL_OPTIONS = [
-  { id: 'openai/gpt-5.6-sol', label: 'GPT-5.6 Sol (recommended)' },
+  { id: 'deepseek/deepseek-v4-pro', label: 'DeepSeek V4 Pro (recommended)' },
+  { id: 'aion-labs/aion-3.0', label: 'Aion 3.0' },
   { id: 'openai/gpt-5.5', label: 'GPT-5.5' },
-  { id: 'openai/gpt-5.4', label: 'GPT-5.4' },
 ] as const;
 
 export const FALLBACK_MODEL_OPTIONS = [
-  { id: 'openai/gpt-5.4', label: 'GPT-5.4 (recommended)' },
-  { id: 'openai/gpt-5.2', label: 'GPT-5.2' },
-  { id: 'openai/gpt-5', label: 'GPT-5' },
+  { id: 'deepseek/deepseek-v4-pro', label: 'DeepSeek V4 Pro (recommended)' },
+  { id: 'aion-labs/aion-3.0', label: 'Aion 3.0' },
+  { id: 'deepseek/deepseek-chat', label: 'DeepSeek Chat' },
 ] as const;
 
 export const DEFAULT_AI_NARRATION_CONFIG: AiNarrationConfig = {
-  narratorModel: 'openai/gpt-5.5',
-  directorModel: 'openai/gpt-5.6-sol',
-  fallbackModel: 'openai/gpt-5.4',
+  narratorModel: 'aion-labs/aion-3.0',
+  directorModel: 'deepseek/deepseek-v4-pro',
+  fallbackModel: 'deepseek/deepseek-v4-pro',
   directorFrequency: 'normal',
   streaming: true,
   debug: false,
@@ -62,9 +61,9 @@ export const DEFAULT_AI_NARRATION_CONFIG: AiNarrationConfig = {
 /** Meaningful turns between automatic Director runs. */
 export const DIRECTOR_INTERVAL: Record<DirectorFrequency, number> = {
   off: Number.POSITIVE_INFINITY,
-  rare: 16,
-  normal: 8,
-  frequent: 4,
+  rare: 20,
+  normal: 10,
+  frequent: 5,
 };
 
 const ALLOWED_NARRATOR = new Set<string>(NARRATOR_MODEL_OPTIONS.map(o => o.id));

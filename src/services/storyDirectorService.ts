@@ -192,6 +192,7 @@ class StoryDirectorService {
       const { data, error } = await supabase.functions.invoke('story-director', {
         body: {
           model: cfg.directorModel,
+          turnId: `director_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           triggerReason: reason,
           scenario: context.scenario ?? '',
           genre: context.genre ?? '',

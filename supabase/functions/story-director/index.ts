@@ -2,22 +2,23 @@
  * Story Director — the hidden dungeon master.
  *
  * Produces a compact JSON Director Brief. Never writes visible prose.
- * Runs on the gateway Responses API (streamed, then accumulated server-side)
- * because reasoning runs are too slow for a buffered request.
+ * Runs on OpenRouter (DeepSeek V4 Pro by default) with a timeout and one retry.
+ * The player never waits on this: the client keeps using the previous brief.
  */
+
+import {
+  callOpenRouter,
+  extractUsage,
+  isTerminalStatus,
+  logOpenRouterUsage,
+  resolveDirectorModel,
+  getOpenRouterKey,
+} from '../_shared/openrouter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const DEFAULT_DIRECTOR_MODEL = Deno.env.get('STORY_DIRECTOR_MODEL') || 'openai/gpt-5.6-sol';
-
-const ALLOWED_MODELS = new Set([
-  'openai/gpt-5.6-sol',
-  'openai/gpt-5.5',
-  'openai/gpt-5.4',
-]);
 
 const SYSTEM_PROMPT = `You are the STORY DIRECTOR for an interactive text RPG.
 
@@ -77,17 +78,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+    if (!getOpenRouterKey()) {
+      return new Response(JSON.stringify({ error: 'OPENROUTER_API_KEY not configured', brief: null }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const body = await req.json().catch(() => ({}));
-    const requestedModel = typeof body.model === 'string' ? body.model : '';
-    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : DEFAULT_DIRECTOR_MODEL;
+    const model = resolveDirectorModel(typeof body.model === 'string' ? body.model : undefined);
+    const turnId = typeof body.turnId === 'string' ? body.turnId : undefined;
 
     const {
       triggerReason = 'manual',
@@ -127,71 +127,76 @@ Deno.serve(async (req) => {
     }
     userParts.push('Produce the updated Director Brief now as JSON only.');
 
+    const messages = [
+      { role: 'system' as const, content: SYSTEM_PROMPT },
+      { role: 'user' as const, content: userParts.join('\n\n') },
+    ];
+
     const started = Date.now();
+    let retries = 0;
+    let response = await callOpenRouter({
+      model,
+      messages,
+      temperature: 0.6,
+      max_tokens: 2000,
+      timeoutMs: 60_000,
+      turnId,
+    }).catch(() => null);
 
-    // Responses API, streamed. A buffered reasoning call would exceed the
-    // platform request timeout; we accumulate the SSE deltas server-side
-    // because nothing here renders progressively.
-    const upstream = await fetch('https://ai.gateway.lovable.dev/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Lovable-API-Key': LOVABLE_API_KEY,
-        'X-Lovable-AIG-SDK': 'fetch',
-      },
-      body: JSON.stringify({
+    // One retry, only for non-terminal failures.
+    if (!response || (!response.ok && !isTerminalStatus(response.status))) {
+      retries = 1;
+      response = await callOpenRouter({
         model,
-        instructions: SYSTEM_PROMPT,
-        input: userParts.join('\n\n'),
-        stream: true,
-        // Low effort: this is a compact planning document, not deep prose.
-        reasoning: { effort: 'low', summary: 'auto' },
-        max_output_tokens: 2000,
-      }),
-    });
+        messages,
+        temperature: 0.6,
+        max_tokens: 2000,
+        timeoutMs: 60_000,
+        turnId,
+      }).catch(() => null);
+    }
 
-    if (!upstream.ok || !upstream.body) {
-      const errText = await upstream.text().catch(() => '');
-      console.error('[story-director] gateway error', upstream.status, errText.slice(0, 500));
+    if (!response || !response.ok) {
+      const status = response?.status ?? 0;
+      const errText = response ? await response.text().catch(() => '') : 'network/timeout';
+      console.error('[story-director] OpenRouter error', status, errText.slice(0, 400));
+      logOpenRouterUsage({
+        fn: 'story-director',
+        role: 'director',
+        model,
+        turnId,
+        totalMs: Date.now() - started,
+        retries,
+        failureReason: `status=${status}`,
+        status,
+      });
       return new Response(
-        JSON.stringify({ error: `Director unavailable (${upstream.status})`, brief: null }),
+        JSON.stringify({ error: `Director unavailable (${status})`, brief: null }),
         {
-          status: [429, 402, 403].includes(upstream.status) ? upstream.status : 502,
+          status: [429, 402, 403].includes(status) ? status : 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let text = '';
+    const payload = await response.json().catch(() => null);
+    const text: string = payload?.choices?.[0]?.message?.content ?? '';
+    const usage = extractUsage(payload);
+    const totalMs = Date.now() - started;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lastNewline = buffer.lastIndexOf('\n');
-      if (lastNewline === -1) continue;
-      const lines = buffer.slice(0, lastNewline).split('\n');
-      buffer = buffer.slice(lastNewline + 1);
-
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const payload = line.slice(5).trim();
-        if (!payload || payload === '[DONE]') continue;
-        try {
-          const evt = JSON.parse(payload);
-          if (evt.type === 'response.output_text.delta' && typeof evt.delta === 'string') {
-            text += evt.delta;
-          } else if (evt.type === 'response.completed' && typeof evt.response?.output_text === 'string') {
-            if (!text) text = evt.response.output_text;
-          }
-        } catch {
-          /* skip malformed frame */
-        }
-      }
-    }
+    logOpenRouterUsage({
+      fn: 'story-director',
+      role: 'director',
+      model,
+      turnId,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      costUsd: usage.costUsd,
+      totalMs,
+      retries,
+      usedFallback: false,
+      status: response.status,
+    });
 
     const parsed = extractJson(text);
     if (!parsed) {
@@ -202,10 +207,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[story-director] brief generated in ${Date.now() - started}ms via ${model}`);
+    console.log(`[story-director] brief generated in ${totalMs}ms via ${model}`);
 
     return new Response(
-      JSON.stringify({ brief: parsed, model, latencyMs: Date.now() - started }),
+      JSON.stringify({ brief: parsed, model, latencyMs: totalMs }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
