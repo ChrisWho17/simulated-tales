@@ -43,6 +43,8 @@ export interface PortraitCharacterData {
   accessories?: string[];
   details?: string[];
   // Body shape details
+  /** Exact continuous chest size (0..1). Preferred over the legacy cup letter. */
+  chestSizeValue?: number;
   bustSize?: string;
   hipWidth?: string;
   muscleDefinition?: string;
@@ -131,6 +133,7 @@ export async function generatePortraitWithCharacterData(
       distinguishingFeatures: characterData.distinguishingFeatures || [],
       accessories: characterData.accessories || [],
       // Body shape details
+      chestSizeValue: characterData.chestSizeValue,
       bustSize: characterData.bustSize,
       hipWidth: characterData.hipWidth,
       muscleDefinition: characterData.muscleDefinition,
