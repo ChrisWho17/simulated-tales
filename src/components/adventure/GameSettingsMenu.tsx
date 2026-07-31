@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Settings, Dices, Eye, Save, Sparkles, Volume2, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Swords, Trophy, Trash2, Highlighter, Clapperboard, Zap, Check, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { AiNarrationSettings } from '@/components/adventure/AiNarrationSettings';
 import { useGame } from '@/contexts/GameContext';
 import { useCampaignOptional } from '@/contexts/CampaignContext';
 import { DICE_MODES, DiceMode } from '@/game/diceSystem';
@@ -357,6 +358,13 @@ export function GameSettingsMenu({ className, currentGenre, onRunSystemsTest, is
               />
             </div>
           </div>
+
+          {/* AI Narration (dual-model: Live Narrator + Story Director) */}
+          <div className="p-3 rounded-lg border border-border/30 bg-background/20">
+            <AiNarrationSettings />
+          </div>
+
+
           
           {/* Trophy Room Link */}
           <Button

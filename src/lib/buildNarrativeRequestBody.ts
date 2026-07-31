@@ -9,6 +9,9 @@ import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { cleanPlayerInputForPrompt } from '@/lib/narrativeGuard';
+import { loadAiNarrationConfig } from '@/game/aiNarrationConfig';
+import { formatBriefForNarrator } from '@/game/storyDirectorSystem';
+import { storyDirectorService } from '@/services/storyDirectorService';
 import {
   generateAntiDriftDirectives,
   SessionState,
@@ -761,9 +764,34 @@ export function buildNarrativeRequestBody(
     };
   }
 
+  // ===== Dual-model narration =====
+  // Live Narrator model selection + the hidden Director Brief and the trimmed
+  // memory packet. The Director itself runs asynchronously elsewhere; here we
+  // only attach whatever brief is already available.
+  {
+    const aiNarrationConfig = loadAiNarrationConfig();
+    requestBody.aiNarration = {
+      narratorModel: aiNarrationConfig.narratorModel,
+      fallbackModel: aiNarrationConfig.fallbackModel,
+    };
+
+    const directorContextPacket = storyDirectorService.buildNarratorContext(playerAction ?? '');
+    const briefText = formatBriefForNarrator(directorContextPacket.directorBrief);
+    if (briefText) {
+      requestBody.directorBriefContext = briefText;
+    }
+    if (directorContextPacket.sceneSummary || directorContextPacket.relevantMemories.length) {
+      requestBody.directorMemoryContext = {
+        sceneSummary: directorContextPacket.sceneSummary,
+        relevantMemories: directorContextPacket.relevantMemories,
+      };
+    }
+  }
+
   console.log(
     `[buildNarrativeRequestBody] size=${JSON.stringify(requestBody).length} chars retry=${retryLevel} stream=${stream}`
   );
+
 
   return { requestBody, nextToneState };
 }

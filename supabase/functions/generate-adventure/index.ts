@@ -1906,6 +1906,19 @@ serve(async (req) => {
     const { scenario, playerAction, cheatMode, character, diceRoll, memoryContext, emotionalContext, reputationContext, genreContract, adultContent, characterAppearance, narratorConfig, toneContext, languageContext, npcPsychologyContext, rippleContext, unreliableInfoContext, locationContext, consistencyContext, lifeSimContext, backgroundNPCActionsContext, diceMode, pressureClockContext, npcMotivationContext, memoryBiteContext, signatureDetailContext, failForwardContext, relationshipMeterContext, microEventContext, voiceSignatureContext, npcPersonalityContext, storiedLootEnabled, enableNPCAccents, weatherContext, timeContext, npcScheduleContext, livingWorldContext, narrativeContractContext, directorContext, clothingArmorContext, qualityEnforcement, pendingCompanionIntroduction, pendingCompanionId, companionPartyContext, gameplaySystemsContext, socialPresenceContext, socialReactionContext } = requestData;
     // Ensure conversationHistory is always an array (handle both old and new field names)
     const conversationHistory = requestData.conversationHistory || (requestData as any).storyHistory || [];
+
+    // ===== Dual-model narration: Live Narrator settings + hidden Director Brief =====
+    const aiNarration = ((requestData as any).aiNarration ?? {}) as {
+      narratorModel?: string;
+      fallbackModel?: string;
+    };
+    const directorBriefContext = typeof (requestData as any).directorBriefContext === 'string'
+      ? (requestData as any).directorBriefContext
+      : '';
+    const directorMemoryContext = (requestData as any).directorMemoryContext as
+      | { sceneSummary?: string; relevantMemories?: string[] }
+      | undefined;
+    
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -3662,34 +3675,96 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       }
     }
 
+    // ===== Hidden Director Brief: injected last so it outranks earlier context =====
+    if (directorBriefContext || directorMemoryContext?.sceneSummary || directorMemoryContext?.relevantMemories?.length) {
+      const directorParts: string[] = [];
+      if (directorMemoryContext?.sceneSummary) {
+        directorParts.push(`SCENE SO FAR (compressed):\n${directorMemoryContext.sceneSummary}`);
+      }
+      if (directorMemoryContext?.relevantMemories?.length) {
+        directorParts.push(
+          `RELEVANT LONG-TERM MEMORIES:\n${directorMemoryContext.relevantMemories.map(m => `- ${m}`).join('\n')}`
+        );
+      }
+      if (directorBriefContext) directorParts.push(directorBriefContext);
+      directorParts.push(
+        'The Director Brief is hidden stage direction. Obey it, never quote it, never mention a director, brief, objective, tension value or any planning language in your prose.'
+      );
+      messages.push({ role: 'system', content: directorParts.join('\n\n') });
+    }
+
     console.log('Calling AI with messages:', messages.length, 'Character:', character?.name || 'none', 'Has memory:', !!memoryContext?.fullContext);
 
     // Check if streaming is requested (from parsed request body)
     const streamRequested = (requestData as any).stream === true;
-    
-    // ============= AAA QUALITY CONFIG FOR 24+ HOUR SESSIONS =============
-    const aiRequestBody = {
-      // Use the higher-quality pro model for narrative generation
-      // Flash: same narrative contract, several times faster than 2.5-pro.
-      // Long turns were timing out client-side at 60s on the pro model.
-      model: 'google/gemini-3.6-flash',
-      messages,
-      temperature: 0.78,          // Balanced: creative but coherent for long sessions
-      max_tokens: 2500,           // Increased to prevent mid-sentence truncation
-      top_p: 0.88,                // Focused responses with room for creativity
-      frequency_penalty: 0.20,    // Prevent phrase repetition in long sessions
-      presence_penalty: 0.30,     // Encourage topic diversity, prevent loops
-      stream: streamRequested,
-    };
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(aiRequestBody),
-    });
+    // ============= DUAL-MODEL NARRATION: LIVE NARRATOR =============
+    // The Live Narrator writes every visible turn. The Story Director runs
+    // separately (story-director function) and only supplies the brief above.
+    const HEAVY_NARRATOR_MODELS = new Set([
+      'openai/gpt-5.5',
+      'openai/gpt-5.6-sol',
+      'openai/gpt-5.4',
+      'openai/gpt-5.2',
+      'openai/gpt-5',
+    ]);
+    const narratorModel = HEAVY_NARRATOR_MODELS.has(aiNarration.narratorModel ?? '')
+      ? aiNarration.narratorModel!
+      : 'openai/gpt-5.5';
+    const fallbackModel = HEAVY_NARRATOR_MODELS.has(aiNarration.fallbackModel ?? '')
+      ? aiNarration.fallbackModel!
+      : 'openai/gpt-5.4';
+
+    // OpenAI reasoning models reject temperature/top_p/penalties and require
+    // max_completion_tokens. Gemini keeps the original sampling config.
+    const buildRequestBody = (model: string) =>
+      model.startsWith('openai/')
+        ? {
+            model,
+            messages,
+            // Prose, not puzzles: low effort keeps latency down per turn.
+            reasoning_effort: 'low',
+            max_completion_tokens: 2500,
+            stream: streamRequested,
+          }
+        : {
+            model,
+            messages,
+            temperature: 0.78,
+            max_tokens: 2500,
+            top_p: 0.88,
+            frequency_penalty: 0.20,
+            presence_penalty: 0.30,
+            stream: streamRequested,
+          };
+
+    const callNarrator = (model: string) =>
+      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildRequestBody(model)),
+      });
+
+    const narratorStarted = Date.now();
+    let modelUsed = narratorModel;
+    let response = await callNarrator(narratorModel);
+
+    // 429/402 are terminal for the user; only genuine upstream failures fall back.
+    if (!response.ok && ![429, 402, 403].includes(response.status)) {
+      const firstError = await response.clone().text().catch(() => '');
+      console.warn(
+        `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); falling back to ${fallbackModel}. ${firstError.slice(0, 200)}`
+      );
+      modelUsed = fallbackModel;
+      response = await callNarrator(fallbackModel);
+    }
+    console.log(
+      `[generate-adventure] Narrator ${modelUsed} responded in ${Date.now() - narratorStarted}ms (status ${response.status})`
+    );
+
 
     if (!response.ok) {
       const errorText = await response.text();

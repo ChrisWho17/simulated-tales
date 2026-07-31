@@ -7,6 +7,7 @@
 
 import { useCallback, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { storyDirectorService } from '@/services/storyDirectorService';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
@@ -701,7 +702,28 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           }
           
           const processedContent = postProcessLanguageInResponse(validation.content, languageState);
+
+          // ===== Dual-model narration bookkeeping =====
+          // Record the completed turn, then let the Story Director decide in the
+          // background whether it should refresh its brief. Never awaited: the
+          // player's next turn must not wait on the Director.
+          try {
+            storyDirectorService.recordCompletedTurn(playerAction ?? '', processedContent);
+            storyDirectorService.maybeRunDirector({
+              scenario: scenarioSelection?.scenario,
+              genre: genre,
+              characterName: activeChar?.name || character?.name,
+              signals: {
+                majorDecision: Boolean(diceRoll?.criticalSuccess || diceRoll?.criticalFailure),
+                questChanged: Boolean(finalMechanics?.questStarted || finalMechanics?.questCompleted),
+              },
+            });
+          } catch (directorError) {
+            console.warn('[StoryDirector] bookkeeping skipped:', directorError);
+          }
+
           return processedContent;
+
         }
       }
       
