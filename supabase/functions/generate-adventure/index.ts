@@ -3712,74 +3712,48 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // Check if streaming is requested (from parsed request body)
     const streamRequested = (requestData as any).stream === true;
 
-    // ============= DUAL-MODEL NARRATION: LIVE NARRATOR =============
+    // ============= DUAL-MODEL NARRATION: LIVE NARRATOR (OpenRouter) =============
     // The Live Narrator writes every visible turn. The Story Director runs
     // separately (story-director function) and only supplies the brief above.
-    const HEAVY_NARRATOR_MODELS = new Set([
-      'openai/gpt-5.5',
-      'openai/gpt-5.6-sol',
-      'openai/gpt-5.4',
-      'openai/gpt-5.2',
-      'openai/gpt-5',
-    ]);
-    const narratorModel = HEAVY_NARRATOR_MODELS.has(aiNarration.narratorModel ?? '')
-      ? aiNarration.narratorModel!
-      : 'openai/gpt-5.5';
-    const fallbackModel = HEAVY_NARRATOR_MODELS.has(aiNarration.fallbackModel ?? '')
-      ? aiNarration.fallbackModel!
-      : 'openai/gpt-5.4';
-
-    // OpenAI reasoning models reject temperature/top_p/penalties and require
-    // max_completion_tokens. Gemini keeps the original sampling config.
-    const buildRequestBody = (model: string) =>
-      model.startsWith('openai/')
-        ? {
-            model,
-            messages,
-            // Prose, not puzzles: low effort keeps latency down per turn.
-            reasoning_effort: 'low',
-            max_completion_tokens: 2500,
-            stream: streamRequested,
-          }
-        : {
-            model,
-            messages,
-            temperature: 0.78,
-            max_tokens: 2500,
-            top_p: 0.88,
-            frequency_penalty: 0.20,
-            presence_penalty: 0.30,
-            stream: streamRequested,
-          };
+    // Model ids live in supabase/functions/_shared/openrouter.ts.
+    const narratorModel = resolveNarratorModel(aiNarration.narratorModel);
+    const fallbackModel = resolveFallbackModel(aiNarration.fallbackModel);
 
     const callNarrator = (model: string) =>
-      fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(buildRequestBody(model)),
+      callOpenRouter({
+        model,
+        messages,
+        stream: streamRequested,
+        temperature: 0.78,
+        max_tokens: 2500,
+        top_p: 0.88,
+        frequency_penalty: 0.20,
+        presence_penalty: 0.30,
+        timeoutMs: 90_000,
+        turnId,
+      }).catch((err) => {
+        console.warn(`[generate-adventure] Narrator request failed to start: ${err?.message ?? err}`);
+        return new Response(JSON.stringify({ error: 'upstream_unreachable' }), { status: 503 });
       });
 
     const narratorStarted = Date.now();
     let modelUsed = narratorModel;
     let usedFallback = false;
+    let retries = 0;
     let response = await callNarrator(narratorModel);
 
-    // 429/402/403 are terminal for the user (rate limit / credits); only genuine
-    // upstream failures retry. Policy: ONE retry on the same narrator model,
-    // then — and only then — the heavy fallback model. Never a light model.
-    const isTerminal = (status: number) => [429, 402, 403].includes(status);
-
-    if (!response.ok && !isTerminal(response.status)) {
+    // 4xx statuses are terminal for the user (bad request / credits / rate
+    // limit); only genuine upstream failures retry. Policy: ONE retry on the
+    // same narrator model, then — and only then — the fallback model.
+    if (!response.ok && !isTerminalStatus(response.status)) {
       const firstError = await response.clone().text().catch(() => '');
       console.warn(
         `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); retrying once. ${firstError.slice(0, 200)}`
       );
+      retries = 1;
       response = await callNarrator(narratorModel);
 
-      if (!response.ok && !isTerminal(response.status)) {
+      if (!response.ok && !isTerminalStatus(response.status)) {
         const retryError = await response.clone().text().catch(() => '');
         console.warn(
           `[generate-adventure] Narrator retry failed (${response.status}); falling back to ${fallbackModel}. ${retryError.slice(0, 200)}`
@@ -3793,11 +3767,25 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     console.log(
       `[generate-adventure] Narrator ${modelUsed} responded in ${narratorLatencyMs}ms (status ${response.status}, fallback=${usedFallback})`
     );
+    if (!response.ok) {
+      logOpenRouterUsage({
+        fn: 'generate-adventure',
+        role: usedFallback ? 'fallback' : 'narrator',
+        model: modelUsed,
+        turnId,
+        totalMs: narratorLatencyMs,
+        retries,
+        usedFallback,
+        status: response.status,
+        failureReason: `status=${response.status}`,
+      });
+    }
     // Debug-mode telemetry for the client (never contains prompts or secrets).
     const narratorHeaders = {
       'X-Narrator-Model': modelUsed,
       'X-Narrator-Fallback': usedFallback ? '1' : '0',
       'X-Narrator-Latency-Ms': String(narratorLatencyMs),
+      'X-Turn-Id': turnId,
     };
 
 
