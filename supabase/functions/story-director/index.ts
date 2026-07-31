@@ -138,7 +138,8 @@ Deno.serve(async (req) => {
       model,
       messages,
       temperature: 0.6,
-      max_tokens: 2000,
+      max_tokens: 3000,
+      response_format: { type: 'json_object' },
       timeoutMs: 60_000,
       turnId,
     }).catch(() => null);
@@ -150,7 +151,8 @@ Deno.serve(async (req) => {
         model,
         messages,
         temperature: 0.6,
-        max_tokens: 2000,
+        max_tokens: 3000,
+        response_format: { type: 'json_object' },
         timeoutMs: 60_000,
         turnId,
       }).catch(() => null);
@@ -180,7 +182,14 @@ Deno.serve(async (req) => {
     }
 
     const payload = await response.json().catch(() => null);
-    const text: string = payload?.choices?.[0]?.message?.content ?? '';
+    const msg = payload?.choices?.[0]?.message ?? {};
+    // Reasoning models can put the JSON in `reasoning` when `content` is empty.
+    const text: string = (typeof msg.content === 'string' && msg.content.trim())
+      ? msg.content
+      : (typeof msg.reasoning === 'string' ? msg.reasoning : '');
+    if (!text) {
+      console.warn('[story-director] Empty content', JSON.stringify(payload?.choices?.[0] ?? {}).slice(0, 300));
+    }
     const usage = extractUsage(payload);
     const totalMs = Date.now() - started;
 

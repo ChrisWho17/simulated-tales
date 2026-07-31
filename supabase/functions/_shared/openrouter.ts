@@ -79,6 +79,7 @@ export interface OpenRouterCallOptions {
   frequency_penalty?: number;
   presence_penalty?: number;
   max_tokens?: number;
+  response_format?: { type: 'json_object' };
   /** Hard timeout for the request. Streaming responses only time out on headers. */
   timeoutMs?: number;
   /** Correlates every log line for one player turn. */
