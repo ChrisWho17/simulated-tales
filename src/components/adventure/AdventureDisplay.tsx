@@ -2810,6 +2810,11 @@ export function AdventureDisplay({
         }}
         onRestart={onRestart}
         onOpenCompanions={() => setShowCompanionPanel(true)}
+        onOpenAmbientFeed={() => {
+          setShowAmbientFeedModal(true);
+          setLastSeenAmbientCount(ambientFeed.entries.length);
+        }}
+        onExportTaleCard={handleExportTaleCard}
       />
       
       {/* Companion Story Events - introductions and resurrections */}
