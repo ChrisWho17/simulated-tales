@@ -2949,6 +2949,12 @@ FACTION STANDING:
     }
     
     // ============= COMPANIONS =============
+    if (companionPartyContext && (companionPartyContext as any).presenceRule) {
+      systemContent += `\n\n=== PRESENCE LOCK (ABSOLUTE) ===
+${(companionPartyContext as any).presenceRule}
+An absent character may only enter the scene if the narrative first shows them travelling here over plausible time and distance. Never have them "appear in the corner", answer, or react from off-screen.`;
+    }
+
     if (companionPartyContext && companionPartyContext.members?.length > 0) {
       systemContent += `\n\n=== ACTIVE PARTY (${companionPartyContext.partySize} COMPANION${companionPartyContext.partySize === 1 ? '' : 'S'}) ===
 These companions are physically present. They react, interject, and have opinions.
