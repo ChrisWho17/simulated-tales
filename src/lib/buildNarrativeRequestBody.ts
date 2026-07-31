@@ -9,6 +9,9 @@ import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
 import { StoryEntry } from '@/components/adventure/types';
 import { cleanPlayerInputForPrompt } from '@/lib/narrativeGuard';
+import { loadAiNarrationConfig } from '@/game/aiNarrationConfig';
+import { formatBriefForNarrator } from '@/game/storyDirectorSystem';
+import { storyDirectorService } from '@/services/storyDirectorService';
 import {
   generateAntiDriftDirectives,
   SessionState,
