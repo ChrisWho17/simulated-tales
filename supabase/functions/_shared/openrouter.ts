@@ -144,7 +144,7 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
 
 export interface UsageLogEntry {
   fn: string;
-  role: 'narrator' | 'director' | 'fallback';
+  role: 'narrator' | 'director' | 'fallback' | 'illustration' | 'utility';
   model: string;
   turnId?: string;
   inputTokens?: number | null;
