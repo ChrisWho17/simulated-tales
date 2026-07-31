@@ -8,6 +8,7 @@
 import { useCallback, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { storyDirectorService } from '@/services/storyDirectorService';
+import { recordNarrationTelemetry } from '@/game/aiNarrationConfig';
 import { RPGCharacter } from '@/types/rpgCharacter';
 import { sanitizeCharacterForAPI } from '@/lib/sanitizeCharacterForAPI';
 import { GameGenre } from '@/types/genreData';
@@ -708,6 +709,11 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
           // background whether it should refresh its brief. Never awaited: the
           // player's next turn must not wait on the Director.
           try {
+            recordNarrationTelemetry({
+              lastModelUsed: typeof (data as any).modelUsed === 'string' ? (data as any).modelUsed : null,
+              usedFallback: Boolean((data as any).usedFallback),
+              lastLatencyMs: typeof (data as any).narratorLatencyMs === 'number' ? (data as any).narratorLatencyMs : null,
+            });
             storyDirectorService.recordCompletedTurn(playerAction ?? '', processedContent);
             storyDirectorService.maybeRunDirector({
               scenario: scenarioSelection?.scenario,

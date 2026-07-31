@@ -6,6 +6,7 @@ import { useDirectorSettings } from '@/hooks/useDirectorSettings';
 import { useCampaignSync } from '@/hooks/useCampaignSync';
 import { usePlayerStateSync } from '@/hooks/usePlayerStateSync';
 import { useSceneIllustration } from '@/hooks/useSceneIllustration';
+import { storyDirectorService } from '@/services/storyDirectorService';
 import { useNarrativeGeneration } from '@/hooks/useNarrativeGeneration';
 import { AdventureCreator, ScenarioSelection } from './AdventureCreator';
 import { CharacterCreation } from './CharacterCreation';
@@ -1779,7 +1780,7 @@ export function AdventureGame() {
             scenario: scenarioSelection.scenario,
             genre: scenarioSelection.genre,
             characterName: character.name,
-            location: playerLocation?.currentZone?.name,
+            location: playerLocation?.zoneName,
             signals: {
               majorDecision: Boolean(diceRoll?.criticalSuccess || diceRoll?.criticalFailure),
               questChanged: Boolean(
