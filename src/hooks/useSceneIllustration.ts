@@ -272,11 +272,14 @@ export function useSceneIllustration({
           ].filter(Boolean).join('\n')
         : undefined;
 
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-      const response = await fetch(
+      // One attempt = one image request. Validation may ask for exactly one
+      // stricter retry; the canonical references are never overwritten by a
+      // failed attempt.
+      const requestImage = async (strictDirective: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+        try {
+          return await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
           method: 'POST',
@@ -309,41 +312,82 @@ export function useSceneIllustration({
             characterSheets: characterSheets || undefined,
             strictIdentity: strictDirective || undefined,
           }),
+            }
+          );
+        } finally {
+          clearTimeout(timeoutId);
         }
-      );
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        console.error('[SceneIllustration] Response not OK:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
-      console.log('[SceneIllustration] Response:', {
-        hasImageUrl: !!data.imageUrl,
-        imageUrlLen: typeof data.imageUrl === 'string' ? data.imageUrl.length : 0,
-        error: data.error,
-      });
-      
-      // Late arrival from a superseded turn — discard it.
-      if (jobId !== jobSeqRef.current) {
-        console.log('[SceneIllustration] Stale job discarded', { jobId, latest: jobSeqRef.current });
-        return;
-      }
-      if (data.turnId && data.turnId !== jobTurnId) {
-        console.log('[SceneIllustration] Turn mismatch, image discarded');
+      };
+
+      let data: { imageUrl?: string; error?: string; turnId?: string } | null = null;
+      let strictDirective = '';
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await requestImage(strictDirective);
+
+        if (!response.ok) {
+          console.error('[SceneIllustration] Response not OK:', response.status);
+          return;
+        }
+
+        const payload = await response.json();
+        console.log('[SceneIllustration] Response:', {
+          attempt,
+          hasImageUrl: !!payload.imageUrl,
+          imageUrlLen: typeof payload.imageUrl === 'string' ? payload.imageUrl.length : 0,
+          error: payload.error,
+        });
+
+        // Late arrival from a superseded turn — discard it.
+        if (jobId !== jobSeqRef.current) {
+          console.log('[SceneIllustration] Stale job discarded', { jobId, latest: jobSeqRef.current });
+          return;
+        }
+        if (payload.turnId && payload.turnId !== jobTurnId) {
+          console.log('[SceneIllustration] Turn mismatch, image discarded');
+          return;
+        }
+
+        const validation = validateIllustration(
+          {
+            imageUrl: payload.imageUrl || null,
+            campaignId: jobCampaignId,
+            sceneId: jobSceneId,
+            turnId: jobTurnId,
+            castIds: structuredProfiles.map(pr => pr.identity.characterId),
+            profileVersion,
+          },
+          {
+            campaignId: jobCampaignId,
+            sceneId: jobSceneId,
+            turnId: jobTurnId,
+            profiles: structuredProfiles,
+          }
+        );
+
+        if (validation.valid) {
+          data = payload;
+          break;
+        }
+
+        console.warn('[SceneIllustration] Validation failed:', validation.issues);
+        if (attempt === 0 && validation.shouldRetry) {
+          strictDirective =
+            validation.strictRetryDirective || buildStrictDirective(structuredProfiles);
+          continue;
+        }
+        // Keep the existing image rather than adopting a bad one.
         return;
       }
 
-      if (data.imageUrl) {
+      if (data?.imageUrl) {
         const display = toDisplayImageUrl(data.imageUrl);
         if (display) {
           adoptDisplayUrl(data.imageUrl);
         } else {
           console.error('[SceneIllustration] Image payload invalid or truncated');
         }
-      } else if (data.error) {
+      } else if (data?.error) {
         console.error('[SceneIllustration] Generation error:', data.error);
       }
     } catch (error) {
