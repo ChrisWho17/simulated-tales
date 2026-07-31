@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
       ? msg.content
       : (typeof msg.reasoning === 'string' ? msg.reasoning : '');
     if (!text) {
-      console.warn('[story-director] Empty content', JSON.stringify(payload?.choices?.[0］ ?? {}).slice(0, 300));
+      console.warn('[story-director] Empty content', JSON.stringify(payload?.choices?.[0] ?? {}).slice(0, 300));
     }
     const usage = extractUsage(payload);
     const totalMs = Date.now() - started;
