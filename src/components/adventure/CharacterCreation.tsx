@@ -882,17 +882,39 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     {/* Female/Other Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
                       <>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-sm text-muted-foreground">Cup Size</label>
-                            <select
-                              value={appearance.full?.bustSize || 'C'}
-                              onChange={(e) => updateAppearance('full', 'bustSize', e.target.value)}
-                              className="w-full mt-1 p-2 rounded-lg bg-background border border-border/50"
-                            >
-                              {CUP_SIZE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
-                          </div>
+                        {(() => {
+                          const chestValue =
+                            typeof appearance.full?.chestSizeValue === 'number'
+                              ? appearance.full.chestSizeValue
+                              : cupLetterToScalar(appearance.full?.bustSize, 0.28);
+                          return (
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <label className="text-sm text-muted-foreground">Chest Size</label>
+                                <span className="text-xs text-primary font-medium">
+                                  {chestLabel(chestValue)}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={Math.round(chestValue * 100)}
+                                onChange={(e) => updateChestSize(Number(e.target.value) / 100)}
+                                aria-label="Chest size"
+                                className="w-full mt-2 accent-primary"
+                              />
+                              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                                <span>Flat</span>
+                                <span>Medium</span>
+                                <span>Massive</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div className="grid grid-cols-2 gap-4">
+
                           <div>
                             <label className="text-sm text-muted-foreground">Hip Width</label>
                             <select
