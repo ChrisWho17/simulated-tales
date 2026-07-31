@@ -1232,7 +1232,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     })();
-  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody, gateOpeningNarrative]);
+  }, [phase, character, scenarioSelection, story.length, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody, gateOpeningNarrative]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
