@@ -234,3 +234,19 @@ class StoryDirectorService {
 }
 
 export const storyDirectorService = new StoryDirectorService();
+
+// Bind the director state to whichever campaign is active, so briefs and
+// long-term memory never leak between saves.
+import { StateSyncBus } from '@/services/stateSyncBus';
+
+StateSyncBus.subscribe('campaign:loaded', (event) => {
+  storyDirectorService.attachCampaign(event.payload.campaignId);
+});
+StateSyncBus.subscribe('campaign:deleted', (event) => {
+  try {
+    localStorage.removeItem(`${KEY_PREFIX}${event.payload.campaignId}`);
+  } catch {
+    /* nothing to clean */
+  }
+});
+
