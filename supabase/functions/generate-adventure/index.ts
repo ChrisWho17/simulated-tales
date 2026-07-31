@@ -3837,6 +3837,12 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       const decoder = new TextDecoder();
       
       let fullNarrative = '';
+      let firstTokenAt: number | null = null;
+      let streamUsage: { inputTokens: number | null; outputTokens: number | null; costUsd: number | null } = {
+        inputTokens: null,
+        outputTokens: null,
+        costUsd: null,
+      };
       
       const stream = new ReadableStream({
         async start(controller) {
@@ -3849,8 +3855,10 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
           const emitToken = (jsonStr: string) => {
             try {
               const parsed = JSON.parse(jsonStr);
+              if (parsed.usage) streamUsage = extractUsage(parsed);
               const token = parsed.choices?.[0]?.delta?.content;
               if (token) {
+                if (firstTokenAt === null) firstTokenAt = Date.now();
                 fullNarrative += token;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                   choices: [{ delta: { content: token } }]
@@ -3864,6 +3872,20 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
           const finish = () => {
             if (sentDone) return;
             sentDone = true;
+            logOpenRouterUsage({
+              fn: 'generate-adventure',
+              role: usedFallback ? 'fallback' : 'narrator',
+              model: modelUsed,
+              turnId,
+              inputTokens: streamUsage.inputTokens,
+              outputTokens: streamUsage.outputTokens,
+              costUsd: streamUsage.costUsd,
+              timeToFirstTokenMs: firstTokenAt ? firstTokenAt - narratorStarted : null,
+              totalMs: Date.now() - narratorStarted,
+              retries,
+              usedFallback,
+              status: 200,
+            });
             // Parse mechanics from the assembled narrative and send final message
             const mechanics = parseMechanicsFromNarrative(fullNarrative);
             if (mechanics && Object.keys(mechanics).length > 0) {
