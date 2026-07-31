@@ -525,7 +525,11 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       
       console.log(`[generateNarrative] Request body size: ${JSON.stringify(requestBody).length} chars (retryLevel: ${retryLevel})`);
 
-      const FETCH_TIMEOUT_MS = 60000;
+      // Must sit above the edge function's own narrator budget (~100s plus
+      // request overhead). At 60s the client aborted turns the server was
+      // still legitimately working on, which is what made the first turn feel
+      // like it hung and then failed.
+      const FETCH_TIMEOUT_MS = 120000;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         console.warn('[generateNarrative] Fetch timeout, aborting request');
@@ -533,6 +537,7 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       }, FETCH_TIMEOUT_MS);
 
       let response: Response;
+      let data: any;
       try {
         response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adventure`,
@@ -546,36 +551,40 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
             signal: controller.signal,
           }
         );
+
+        if (response.status === 429) {
+          console.error('[AI] Rate limit exceeded (429)');
+          toast.error('AI is busy. Please wait a moment and try again.', {
+            duration: 5000,
+            description: 'Rate limit exceeded'
+          });
+          return getContextualFallback(genre);
+        }
+
+        if (response.status === 402) {
+          console.error('[AI] Payment required (402)');
+          toast.error('AI credits depleted. Please add credits to continue.', {
+            duration: 8000,
+            description: 'Usage limit reached'
+          });
+          return getContextualFallback(genre);
+        }
+
+        // Parsed inside the abort window: a stalled body would otherwise hang
+        // the turn forever with the spinner still up.
+        data = await response.json();
       } catch (fetchError: any) {
-        clearTimeout(timeoutId);
         if (fetchError.name === 'AbortError') {
           console.error('[generateNarrative] Request timed out after', FETCH_TIMEOUT_MS, 'ms');
           toast.error('AI took too long to respond. Try again.', { duration: 5000 });
           return getContextualFallback(genre);
         }
         throw fetchError;
-      }
-      clearTimeout(timeoutId);
-
-      if (response.status === 429) {
-        console.error('[AI] Rate limit exceeded (429)');
-        toast.error('AI is busy. Please wait a moment and try again.', {
-          duration: 5000,
-          description: 'Rate limit exceeded'
-        });
-        return getContextualFallback(genre);
-      }
-      
-      if (response.status === 402) {
-        console.error('[AI] Payment required (402)');
-        toast.error('AI credits depleted. Please add credits to continue.', {
-          duration: 8000,
-          description: 'Usage limit reached'
-        });
-        return getContextualFallback(genre);
+      } finally {
+        clearTimeout(timeoutId);
       }
 
-      const data = await response.json();
+
       
       if (data.error) {
         console.error('[AI] API returned error:', data.error);

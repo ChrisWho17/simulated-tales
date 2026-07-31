@@ -134,29 +134,33 @@ Deno.serve(async (req) => {
 
     const started = Date.now();
     let retries = 0;
-    let response = await callOpenRouter({
-      model,
-      messages,
-      temperature: 0.6,
-      max_tokens: 3000,
-      response_format: { type: 'json_object' },
-      timeoutMs: 60_000,
-      turnId,
-    }).catch(() => null);
+    // The director brief is advisory — it must never be the reason a turn
+    // takes minutes. Both attempts share one budget.
+    const deadline = started + 70_000;
+    const attemptMs = () => Math.max(10_000, Math.min(35_000, deadline - Date.now() - 2_000));
 
-    // One retry, only for non-terminal failures.
-    if (!response || (!response.ok && !isTerminalStatus(response.status))) {
-      retries = 1;
-      response = await callOpenRouter({
+    const callDirector = () =>
+      callOpenRouter({
         model,
         messages,
         temperature: 0.6,
         max_tokens: 3000,
         response_format: { type: 'json_object' },
-        timeoutMs: 60_000,
+        timeoutMs: attemptMs(),
         turnId,
       }).catch(() => null);
+
+    let response = await callDirector();
+
+    // One retry, only for non-terminal failures and only if time remains.
+    if (
+      (!response || (!response.ok && !isTerminalStatus(response.status))) &&
+      deadline - Date.now() > 12_000
+    ) {
+      retries = 1;
+      response = await callDirector();
     }
+
 
     if (!response || !response.ok) {
       const status = response?.status ?? 0;

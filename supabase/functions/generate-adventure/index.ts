@@ -3719,6 +3719,15 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     const narratorModel = resolveNarratorModel(aiNarration.narratorModel);
     const fallbackModel = resolveFallbackModel(aiNarration.fallbackModel);
 
+    // One hard budget for the whole narrator chain. Three sequential 90s
+    // attempts could previously hold a turn for 4.5 minutes; each attempt now
+    // gets only the time that is actually left, and the chain stops early
+    // rather than starting an attempt it cannot finish.
+    const NARRATOR_BUDGET_MS = 100_000;
+    const narratorDeadline = Date.now() + NARRATOR_BUDGET_MS;
+    const remainingMs = () => narratorDeadline - Date.now();
+    const canAttempt = () => remainingMs() > 12_000;
+
     const callNarrator = (model: string) =>
       callOpenRouter({
         model,
@@ -3729,11 +3738,16 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         top_p: 0.88,
         frequency_penalty: 0.20,
         presence_penalty: 0.30,
-        timeoutMs: 90_000,
+        timeoutMs: Math.max(12_000, Math.min(45_000, remainingMs() - 2_000)),
         turnId,
       }).catch((err) => {
-        console.warn(`[generate-adventure] Narrator request failed to start: ${err?.message ?? err}`);
-        return new Response(JSON.stringify({ error: 'upstream_unreachable' }), { status: 503 });
+        const aborted = err instanceof DOMException && err.name === 'AbortError';
+        console.warn(
+          `[generate-adventure] Narrator request ${aborted ? 'timed out' : 'failed to start'}: ${err?.message ?? err}`
+        );
+        return new Response(JSON.stringify({ error: aborted ? 'upstream_timeout' : 'upstream_unreachable' }), {
+          status: aborted ? 504 : 503,
+        });
       });
 
     const narratorStarted = Date.now();
@@ -3747,22 +3761,29 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     // same narrator model, then — and only then — the fallback model.
     if (!response.ok && !isTerminalStatus(response.status)) {
       const firstError = await response.clone().text().catch(() => '');
-      console.warn(
-        `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); retrying once. ${firstError.slice(0, 200)}`
-      );
-      retries = 1;
-      response = await callNarrator(narratorModel);
+      // A timeout means this model is not responding; skip the same-model
+      // retry and spend the remaining budget on the fallback instead.
+      const timedOut = response.status === 504;
 
-      if (!response.ok && !isTerminalStatus(response.status)) {
+      if (!timedOut && canAttempt()) {
+        console.warn(
+          `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); retrying once. ${firstError.slice(0, 200)}`
+        );
+        retries = 1;
+        response = await callNarrator(narratorModel);
+      }
+
+      if (!response.ok && !isTerminalStatus(response.status) && canAttempt()) {
         const retryError = await response.clone().text().catch(() => '');
         console.warn(
-          `[generate-adventure] Narrator retry failed (${response.status}); falling back to ${fallbackModel}. ${retryError.slice(0, 200)}`
+          `[generate-adventure] Narrator failed (${response.status}); falling back to ${fallbackModel}. ${retryError.slice(0, 200)}`
         );
         modelUsed = fallbackModel;
         usedFallback = true;
         response = await callNarrator(fallbackModel);
       }
     }
+
     const narratorLatencyMs = Date.now() - narratorStarted;
     console.log(
       `[generate-adventure] Narrator ${modelUsed} responded in ${narratorLatencyMs}ms (status ${response.status}, fallback=${usedFallback})`
