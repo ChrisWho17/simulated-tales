@@ -101,7 +101,7 @@ export function CompanionQuickView({ onOpenPanel, onCompanionClick, className }:
         prev.every((c, i) =>
           c.id === active[i].id &&
           c.mood === active[i].mood &&
-          c.loyalty === active[i].loyalty &&
+          c.affinity === active[i].affinity &&
           c.trust === active[i].trust
         )
           ? prev
