@@ -12,8 +12,15 @@ import {
   collectReferenceImages,
   referenceVersion,
   getVisualProfile,
+  getVisualProfileV2,
+  saveVisualProfileV2,
+  migrateVisualProfiles,
   upsertVisualProfile,
 } from '@/lib/visualProfileStore';
+import { buildVisualProfile, buildNpcVisualProfile } from '@/lib/visualProfileBuilder';
+import { buildCharacterPromptBlock } from '@/lib/visualProfilePrompt';
+import { validateIllustration, buildStrictDirective } from '@/lib/visualProfileValidation';
+import type { VisualProfileV2 } from '@/types/visualProfile';
 
 interface UseSceneIllustrationOptions {
   genre: GameGenre;
