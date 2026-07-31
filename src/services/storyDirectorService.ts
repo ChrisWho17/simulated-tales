@@ -32,6 +32,8 @@ class StoryDirectorService {
   private state: DirectorState;
   private listeners = new Set<Listener>();
   private running = false;
+  /** Signals raised while a run is in flight — merged into the next run. */
+  private pendingSignals: DirectorTriggerSignals | null = null;
 
   constructor() {
     const cfg = loadAiNarrationConfig();
@@ -159,7 +161,15 @@ class StoryDirectorService {
       cfg.directorFrequency,
       context.signals ?? {}
     );
-    if (!reason) return;
+    if (!reason) {
+      this.pendingSignals = null;
+      return;
+    }
+    if (this.running) {
+      // Several triggers in the same window collapse into ONE follow-up run.
+      this.pendingSignals = { ...(this.pendingSignals ?? {}), ...(context.signals ?? {}) };
+      return;
+    }
     void this.runDirector(reason, context);
   }
 
@@ -170,6 +180,7 @@ class StoryDirectorService {
       genre?: string;
       characterName?: string;
       location?: string;
+      signals?: DirectorTriggerSignals;
     } = {}
   ): Promise<DirectorBrief | null> {
     if (this.running) return this.state.currentDirectorBrief;
@@ -198,16 +209,24 @@ class StoryDirectorService {
 
       if (error) throw error;
 
-      const brief = validateDirectorBrief(data?.brief ?? data, cfg.directorModel, reason);
+      const nextVersion = (this.state.briefVersion ?? 0) + 1;
+      const brief = validateDirectorBrief(data?.brief ?? data, cfg.directorModel, reason, nextVersion);
       if (!brief) {
         // Invalid JSON — keep the previous brief, never block the player.
         console.warn('[StoryDirector] Invalid brief payload; keeping previous brief');
         return this.state.currentDirectorBrief;
       }
 
+      // An out-of-order response can never replace a newer stored brief.
+      if (brief.version <= (this.state.briefVersion ?? 0)) {
+        console.warn('[StoryDirector] Stale brief discarded (version guard)');
+        return this.state.currentDirectorBrief;
+      }
+
       this.state = {
         ...this.state,
         currentDirectorBrief: brief,
+        briefVersion: brief.version,
         unresolvedPlotThreads: brief.unresolvedThreads,
         lastDirectorRun: this.state.meaningfulTurnCount,
         directorTriggerReason: reason,
@@ -225,6 +244,12 @@ class StoryDirectorService {
       return this.state.currentDirectorBrief;
     } finally {
       this.running = false;
+      const queued = this.pendingSignals;
+      this.pendingSignals = null;
+      if (queued && Object.keys(queued).length > 0) {
+        // Run the coalesced follow-up once the in-flight job settled.
+        setTimeout(() => this.maybeRunDirector({ ...context, signals: queued }), 0);
+      }
     }
   }
 
