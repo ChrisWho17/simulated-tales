@@ -1,3 +1,4 @@
+import { OPENROUTER_MODELS } from "../_shared/openrouter.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -373,9 +374,9 @@ serve(async (req) => {
     const request: CompanionDialogueRequest = await req.json();
     const { companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType, genre, triggerQuirk } = request;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("[generate-companion-dialogue] LOVABLE_API_KEY not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
+      console.error("[generate-companion-dialogue] OPENROUTER_API_KEY not configured");
       return new Response(
         JSON.stringify({ 
           dialogue: generateFallbackDialogue(companion, dialogueType),
@@ -393,14 +394,14 @@ serve(async (req) => {
     const systemPrompt = buildCompanionSystemPrompt(companion, genre, voiceInstructions);
     const userPrompt = buildDialoguePrompt(companion, situation, playerAction, recentEvents, location, timeOfDay, dialogueType, triggerQuirk, voiceProfile);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: OPENROUTER_MODELS.utility,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
