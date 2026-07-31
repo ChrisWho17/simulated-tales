@@ -140,7 +140,10 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const getAchievement = (id: string) => achievements.find((a) => a.id === id);
+  const getAchievement = useCallback(
+    (id: string) => achievements.find((a) => a.id === id),
+    [achievements]
+  );
 
   useEffect(() => {
     if (pendingNotification) {
@@ -151,17 +154,27 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     }
   }, [pendingNotification]);
 
+  const contextValue = useMemo(
+    () => ({
+      achievements,
+      unlockedAchievements,
+      unlockAchievement,
+      updateProgress,
+      getAchievement,
+      resetRunAchievements,
+    }),
+    [
+      achievements,
+      unlockedAchievements,
+      unlockAchievement,
+      updateProgress,
+      getAchievement,
+      resetRunAchievements,
+    ]
+  );
+
   return (
-    <AchievementsContext.Provider
-      value={{
-        achievements,
-        unlockedAchievements,
-        unlockAchievement,
-        updateProgress,
-        getAchievement,
-        resetRunAchievements,
-      }}
-    >
+    <AchievementsContext.Provider value={contextValue}>
       {children}
       <LegendaryAchievementCelebration isActive={showLegendaryCelebration} />
     </AchievementsContext.Provider>
