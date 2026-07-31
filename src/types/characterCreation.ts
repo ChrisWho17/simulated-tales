@@ -434,7 +434,7 @@ export function formatAppearanceForAI(appearance: TieredAppearance, genre: strin
   }
   if (detailLevel === 'all' && full) {
     if (simple.gender === 'female' || simple.gender === 'other') {
-      if (full.bustSize) description += `, ${full.bustSize} bust`;
+      if (full.bustSize) description += `, ${full.bustSize} bust, curvy hourglass figure with a big round butt`;
       if (full.hipWidth) description += `, ${full.hipWidth} hips`;
     }
     if (simple.gender === 'male' || simple.gender === 'other') {

@@ -492,34 +492,35 @@ export function buildPortraitPrompt(
   } else if (character.bustSize) {
     const cupSizeDescriptions: Record<string, string> = {
       // Very small to small
-      'AA': 'very petite flat chest, minimal bust',
-      'A': 'petite small bust, modest chest',
-      'B': 'small bust, subtle feminine curves',
+      'AA': 'completely flat chest, no bust (breast volume 0.10x baseline)',
+      'A': 'very small bust, barely-there chest (breast volume 0.5x baseline)',
+      'B': 'small but clearly present bust (breast volume 1x baseline)',
       // Average
-      'C': 'average bust, natural feminine curves',
+      'C': 'full medium bust, distinctly rounded feminine chest (breast volume 2x baseline)',
       // Full to large
-      'D': 'full bust, noticeable cleavage, feminine curves',
-      'DD': 'large full bust, prominent cleavage, voluptuous',
-      'E': 'very full large bust, prominent cleavage, curvy',
+      'D': 'large bust with noticeable cleavage (breast volume 3x baseline)',
+      'DD': 'large heavy bust, deep cleavage (breast volume 3.5x baseline)',
+      'E': 'very large heavy bust, prominent deep cleavage (breast volume 4.5x baseline)',
       // Very large
-      'F': 'very large bust, heavy breasts, prominent cleavage, voluptuous figure',
-      'G': 'extra large bust, huge breasts, very prominent cleavage, voluptuous',
+      'F': 'very large heavy bust straining the outfit (breast volume 5x baseline)',
+      'G': 'huge bust, greatly enlarged heavy chest (breast volume 6x baseline)',
       // Huge+
-      'H': 'huge bust, massive breasts, extremely prominent, very voluptuous',
-      'I': 'massive bust, enormous breasts, extremely heavy, voluptuous figure',
-      'J': 'enormous bust, gigantic breasts, extremely prominent, very curvy',
-      'K': 'extremely large bust, gigantic heavy breasts, massively prominent',
+      'H': 'huge bust dominating the torso silhouette (breast volume 6.5x baseline)',
+      'I': 'massive bust, enormously heavy chest (breast volume 7x baseline)',
+      'J': 'massive bust, extremely oversized heavy chest (breast volume 7.5x baseline)',
+      'K': 'massive bust, extremely oversized heavy chest, dramatically exaggerated silhouette (breast volume 8x baseline)',
       // Legacy mappings for backwards compatibility
-      'flat': 'flat chest, minimal bust',
-      'small': 'small bust, petite chest',
-      'medium': 'average bust, natural feminine curves',
-      'large': 'large bust, full chest, prominent cleavage',
-      'very large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
-      'very_large': 'very large bust, huge breasts, prominent cleavage, voluptuous',
+      'flat': 'completely flat chest, no bust (breast volume 0.10x baseline)',
+      'small': 'small but clearly present bust (breast volume 1x baseline)',
+      'medium': 'full medium bust, distinctly rounded feminine chest (breast volume 2x baseline)',
+      'large': 'large heavy bust, deep cleavage (breast volume 3.5x baseline)',
+      'very large': 'huge bust, greatly enlarged heavy chest (breast volume 6x baseline)',
+      'very_large': 'huge bust, greatly enlarged heavy chest (breast volume 6x baseline)',
     };
     const bustDesc = cupSizeDescriptions[character.bustSize];
     if (bustDesc) {
       details.push(bustDesc);
+      details.push('curvy hourglass figure, wide full hips and a big round prominent butt');
     }
   }
   

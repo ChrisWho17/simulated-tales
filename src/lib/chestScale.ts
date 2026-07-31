@@ -10,6 +10,8 @@ import { clampScalar, type ChestShape, type ScalarRange } from '@/types/visualPr
 
 export interface ChestBand {
   label: string;
+  /** Relative breast volume multiplier, 0.10x (flat) .. 8x (massive). */
+  multiplier: number;
   /** Inclusive lower bound of the band. */
   min: number;
   /** Wording handed to the image model. */
@@ -17,15 +19,22 @@ export interface ChestBand {
 }
 
 export const CHEST_BANDS: ChestBand[] = [
-  { label: 'Flat', min: 0.0, prompt: 'completely flat chest, no bust' },
-  { label: 'Very Small', min: 0.06, prompt: 'very small bust, barely-there chest' },
-  { label: 'Small', min: 0.16, prompt: 'small bust, petite chest, subtle curve' },
-  { label: 'Medium', min: 0.3, prompt: 'medium natural bust, balanced feminine proportions' },
-  { label: 'Large', min: 0.45, prompt: 'large full bust, noticeably prominent chest' },
-  { label: 'Very Large', min: 0.6, prompt: 'very large heavy bust, strongly prominent chest' },
-  { label: 'Huge', min: 0.75, prompt: 'huge bust, very heavy prominent chest dominating the torso silhouette' },
-  { label: 'Massive', min: 0.88, prompt: 'massive bust, extremely large heavy chest, dramatically oversized silhouette' },
+  { label: 'Flat', min: 0.0, multiplier: 0.1, prompt: 'completely flat chest, no bust at all (breast volume 0.10x baseline)' },
+  { label: 'Very Small', min: 0.06, multiplier: 0.5, prompt: 'very small bust, barely-there chest (breast volume 0.5x baseline)' },
+  { label: 'Small', min: 0.16, multiplier: 1, prompt: 'small but clearly present bust, softly rounded chest (breast volume 1x baseline)' },
+  { label: 'Medium', min: 0.3, multiplier: 2, prompt: 'full medium bust, distinctly rounded feminine chest (breast volume 2x baseline)' },
+  { label: 'Large', min: 0.45, multiplier: 3.5, prompt: 'large heavy bust with deep cleavage, prominent chest (breast volume 3.5x baseline)' },
+  { label: 'Very Large', min: 0.6, multiplier: 5, prompt: 'very large heavy bust, greatly enlarged chest straining the outfit (breast volume 5x baseline)' },
+  { label: 'Huge', min: 0.75, multiplier: 6.5, prompt: 'huge bust, enormously heavy chest dominating the torso silhouette (breast volume 6.5x baseline)' },
+  { label: 'Massive', min: 0.88, multiplier: 8, prompt: 'massive bust, extremely oversized heavy chest, dramatically exaggerated silhouette (breast volume 8x baseline)' },
 ];
+
+/** Continuous volume multiplier: 0.10x at completely flat up to 8x at massive. */
+export function chestVolumeMultiplier(value: ScalarRange): number {
+  const v = clampScalar(value);
+  const m = 0.1 + (8 - 0.1) * Math.pow(v, 1.35);
+  return Math.round(m * 100) / 100;
+}
 
 /** Cup letters kept only as a legacy bridge for older saves and presets. */
 export const CUP_LETTER_SCALARS: Record<string, number> = {
@@ -139,7 +148,11 @@ export function buildChestPrompt(input: ChestPromptInput): string {
 
   const value = clampScalar(input.chestSizeValue, 0.3);
   const band = chestBandFor(value);
-  const parts: string[] = [band.prompt];
+  const parts: string[] = [
+    band.prompt,
+    `breast size multiplier ${chestVolumeMultiplier(value).toFixed(2)}x`,
+    'curvy hourglass figure, wide full hips and a big round prominent butt',
+  ];
 
   if (value > 0.05) {
     if (input.chestShape) parts.push(SHAPE_WORDS[input.chestShape] ?? '');
