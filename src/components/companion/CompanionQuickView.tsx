@@ -95,7 +95,18 @@ export function CompanionQuickView({ onOpenPanel, onCompanionClick, className }:
   useEffect(() => {
     const loadCompanions = () => {
       const active = companionSystem.getActiveCompanions();
-      setCompanions(active);
+      // Poll runs every 3s; avoid a re-render when nothing meaningful changed.
+      setCompanions((prev) =>
+        prev.length === active.length &&
+        prev.every((c, i) =>
+          c.id === active[i].id &&
+          c.mood === active[i].mood &&
+          c.affinity === active[i].affinity &&
+          c.trust === active[i].trust
+        )
+          ? prev
+          : active
+      );
     };
 
     loadCompanions();

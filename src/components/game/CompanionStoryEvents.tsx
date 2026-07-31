@@ -184,10 +184,17 @@ export function useCompanionStoryEvents() {
     try {
       const intros = getPendingIntroductions();
       const undisplayedIntros = intros.filter((i: PendingCompanionIntroduction) => !i.displayed);
-      setPendingIntroductions(undisplayedIntros);
-      
+      setPendingIntroductions((prev) =>
+        prev.length === undisplayedIntros.length &&
+        prev.every((p, i) => p.companionId === undisplayedIntros[i].companionId)
+          ? prev
+          : undisplayedIntros
+      );
+
       const resurrections = JSON.parse(localStorage.getItem(STORAGE_KEYS.PENDING_RESURRECTION_EVENTS) || '[]');
-      setPendingResurrections(resurrections);
+      setPendingResurrections((prev) =>
+        prev.length === resurrections.length ? prev : resurrections
+      );
     } catch (e) {
       console.error('Failed to load companion events:', e);
     }

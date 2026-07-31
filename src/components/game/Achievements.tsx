@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Lock, X, Sparkles, Globe, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -56,8 +56,9 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
 
   const notifiedThisSession = useRef<Set<string>>(new Set());
 
-  const unlockedAchievements = new Set(
-    achievements.filter((a) => a.unlockedAt).map((a) => a.id)
+  const unlockedAchievements = useMemo(
+    () => new Set(achievements.filter((a) => a.unlockedAt).map((a) => a.id)),
+    [achievements]
   );
 
   useEffect(() => {
@@ -139,7 +140,10 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const getAchievement = (id: string) => achievements.find((a) => a.id === id);
+  const getAchievement = useCallback(
+    (id: string) => achievements.find((a) => a.id === id),
+    [achievements]
+  );
 
   useEffect(() => {
     if (pendingNotification) {
@@ -150,17 +154,27 @@ export function AchievementsProvider({ children }: { children: ReactNode }) {
     }
   }, [pendingNotification]);
 
+  const contextValue = useMemo(
+    () => ({
+      achievements,
+      unlockedAchievements,
+      unlockAchievement,
+      updateProgress,
+      getAchievement,
+      resetRunAchievements,
+    }),
+    [
+      achievements,
+      unlockedAchievements,
+      unlockAchievement,
+      updateProgress,
+      getAchievement,
+      resetRunAchievements,
+    ]
+  );
+
   return (
-    <AchievementsContext.Provider
-      value={{
-        achievements,
-        unlockedAchievements,
-        unlockAchievement,
-        updateProgress,
-        getAchievement,
-        resetRunAchievements,
-      }}
-    >
+    <AchievementsContext.Provider value={contextValue}>
       {children}
       <LegendaryAchievementCelebration isActive={showLegendaryCelebration} />
     </AchievementsContext.Provider>

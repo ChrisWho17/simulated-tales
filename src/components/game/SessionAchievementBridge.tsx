@@ -45,6 +45,20 @@ function daysBetween(date1: string, date2: string): number {
 export function SessionAchievementBridge() {
   const sessionStats = useSessionStatsOptional();
   const achievements = useAchievementsOptional();
+
+  // Context values change on every stats tick. Holding them in refs keeps the
+  // timers below from being torn down and re-created (which re-fired every
+  // check and spammed the console / localStorage many times per minute).
+  const achievementsRef = useRef(achievements);
+  achievementsRef.current = achievements;
+  const sessionStatsRef = useRef(sessionStats);
+  sessionStatsRef.current = sessionStats;
+  const loggedOnce = useRef<Set<string>>(new Set());
+  const logOnce = (key: string, message: string) => {
+    if (loggedOnce.current.has(key)) return;
+    loggedOnce.current.add(key);
+    console.log(message);
+  };
   const lastCheckedHour = useRef<number>(0);
   const sessionStartTime = useRef<number>(Date.now());
   const weekendPlayTime = useRef<number>(0);
@@ -52,6 +66,7 @@ export function SessionAchievementBridge() {
   
   // Check and update play streak on mount
   useEffect(() => {
+    const achievements = achievementsRef.current;
     if (!achievements || streakChecked.current) return;
     streakChecked.current = true;
     
@@ -95,15 +110,15 @@ export function SessionAchievementBridge() {
       achievements.updateProgress('weekly_streak', streakData.currentStreak);
       achievements.updateProgress('monthly_dedication', streakData.currentStreak);
       
-      console.log(`[SessionAchievementBridge] Play streak: ${streakData.currentStreak} days`);
+      logOnce('streak', `[SessionAchievementBridge] Play streak: ${streakData.currentStreak} days`);
     }
-  }, [achievements]);
+  }, []);
   
   // Check category completion achievements
   useEffect(() => {
-    if (!achievements) return;
-    
     const checkCategoryCompletion = () => {
+      const achievements = achievementsRef.current;
+      if (!achievements) return;
       const allAchievements = achievements.achievements;
       
       // Category mappings
@@ -141,7 +156,7 @@ export function SessionAchievementBridge() {
 
       if (unlockedAchievements.length === totalAchievements.length) {
         achievements.unlockAchievement('perfectionist');
-        console.log('[SessionAchievementBridge] Unlocked: Perfectionist (all achievements)');
+        logOnce('perfectionist', '[SessionAchievementBridge] Unlocked: Perfectionist (all achievements)');
       }
 
       // Genre master — all genre first-play unlocks
@@ -158,16 +173,17 @@ export function SessionAchievementBridge() {
     
     // Check on mount and periodically
     checkCategoryCompletion();
-    const interval = setInterval(checkCategoryCompletion, 30000); // Every 30 seconds
+    const interval = setInterval(checkCategoryCompletion, 60000); // Every minute
     
     return () => clearInterval(interval);
-  }, [achievements]);
+  }, []);
   
   // Check play time achievements every 10 seconds
   useEffect(() => {
-    if (!sessionStats || !achievements) return;
-    
     const checkPlayTimeAchievements = () => {
+      const sessionStats = sessionStatsRef.current;
+      const achievements = achievementsRef.current;
+      if (!sessionStats || !achievements) return;
       const hours = sessionStats.getTotalPlayTimeHours();
       const currentHour = Math.floor(hours);
       const now = new Date();
@@ -186,7 +202,7 @@ export function SessionAchievementBridge() {
         // Persistent achievement - 1 hour of play in single session
         if (sessionHours >= 1) {
           achievements.unlockAchievement('persistent');
-          console.log('[SessionAchievementBridge] Unlocked: Persistent (1 hour session)');
+          logOnce('persistent', '[SessionAchievementBridge] Unlocked: Persistent (1 hour session)');
         }
         
         // Dedicated achievement - 5 hours of play total (progress based)
@@ -196,7 +212,6 @@ export function SessionAchievementBridge() {
         const consecutiveHours = Math.floor(sessionHours);
         if (consecutiveHours > 0) {
           achievements.updateProgress('marathon', consecutiveHours);
-          console.log(`[SessionAchievementBridge] Marathon progress: ${consecutiveHours}/10 hours`);
         }
       }
       
@@ -210,7 +225,7 @@ export function SessionAchievementBridge() {
       // Early bird check - playing between 5am and 7am
       if (currentRealHour >= 5 && currentRealHour < 7) {
         achievements.unlockAchievement('early_bird');
-        console.log('[SessionAchievementBridge] Unlocked: Early Bird (5-7 AM play)');
+        logOnce('early_bird', '[SessionAchievementBridge] Unlocked: Early Bird (5-7 AM play)');
       }
       
       // Weekend warrior - track weekend play time
@@ -218,7 +233,7 @@ export function SessionAchievementBridge() {
         weekendPlayTime.current = sessionHours;
         if (weekendPlayTime.current >= 3) {
           achievements.unlockAchievement('weekend_warrior');
-          console.log('[SessionAchievementBridge] Unlocked: Weekend Warrior (3+ hours on weekend)');
+          logOnce('weekend_warrior', '[SessionAchievementBridge] Unlocked: Weekend Warrior (3+ hours on weekend)');
         }
       }
     };
@@ -226,11 +241,11 @@ export function SessionAchievementBridge() {
     // Initial check
     checkPlayTimeAchievements();
     
-    // Check every 10 seconds for efficiency
-    const interval = setInterval(checkPlayTimeAchievements, 10000);
+    // Check every 30 seconds for efficiency
+    const interval = setInterval(checkPlayTimeAchievements, 30000);
     
     return () => clearInterval(interval);
-  }, [sessionStats, achievements]);
+  }, []);
   
   // No UI - this is just a bridge component
   return null;
