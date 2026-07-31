@@ -56,6 +56,8 @@ RULES:
 - Describe the most visually striking moment from the narrative
 - When PLAYER_APPEARANCE is present and the narrative shows the player in frame, describe that figure using those exact physical traits (build, skin tone, hair, eyes, distinguishing marks, worn gear). Consistency across illustrations matters more than variety — the same person must be recognisable every time.
 - If the moment is purely environmental and the player is not present, omit the figure entirely rather than inventing a different-looking one
+- CAST FIDELITY IS MANDATORY: when CAST is provided it lists every person in frame and their gender. Depict exactly that many people, with exactly those genders. Never swap, add, or remove a figure. A female character is always described as a woman; a male character as a man. Getting the cast wrong ruins the illustration.
+- State each figure's gender explicitly in the prompt (e.g. "two women", "a woman and a man") so the image model cannot default to male figures
 - Never include character names, only evocative descriptors (the weary traveler, the shadowed figure)
 - Never include text/signs in prompts
 - Prefer establishing shots and dynamic compositions over static poses
@@ -265,6 +267,65 @@ function summariseAppearance(profile?: CharacterVisualProfile | null): string | 
   return (summary || profile.fullVisualDescription || '').slice(0, 400) || null;
 }
 
+
+/**
+ * Render the resolved cast into an unambiguous block for the prompt model.
+ * Without this the model only ever saw the player's traits and freely invented
+ * extra figures of the wrong gender.
+ */
+function describeCast(
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+): string | null {
+  if (!cast || cast.length === 0) return null;
+  const lines = cast.map((member, index) => {
+    const g = (member.gender || 'unknown').toLowerCase();
+    const noun = g === 'female' ? 'WOMAN (female)' : g === 'male' ? 'MAN (male)' : g === 'nonbinary' ? 'androgynous person' : 'person';
+    const label = member.role === 'player' ? 'protagonist' : 'companion';
+    const look = member.appearance ? ` — ${String(member.appearance).slice(0, 200)}` : '';
+    return `${index + 1}. ${label}: ${noun}${look}`;
+  });
+  const females = cast.filter(c => (c.gender || '').toLowerCase() === 'female').length;
+  const males = cast.filter(c => (c.gender || '').toLowerCase() === 'male').length;
+  lines.push(`TOTAL FIGURES: ${cast.length} (${females} female, ${males} male). Do not depict any other people in the foreground.`);
+  return lines.join('\n');
+}
+
+/** Short, literal statement of who is in frame, appended to the image prompt. */
+function castCompositionClause(
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+): string {
+  if (!cast || cast.length === 0) return '';
+  const females = cast.filter(c => (c.gender || '').toLowerCase() === 'female').length;
+  const males = cast.filter(c => (c.gender || '').toLowerCase() === 'male').length;
+  const others = cast.length - females - males;
+  const parts: string[] = [];
+  if (females) parts.push(females === 1 ? 'exactly one woman' : `exactly ${females} women`);
+  if (males) parts.push(males === 1 ? 'exactly one man' : `exactly ${males} men`);
+  if (others) parts.push(others === 1 ? 'one androgynous figure' : `${others} androgynous figures`);
+  if (parts.length === 0) return '';
+  return `${parts.join(' and ')} in frame, no other foreground people`;
+}
+
+/**
+ * Negative-prompt guards so the image model cannot substitute genders.
+ */
+function castGenderNegatives(
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+): string {
+  if (!cast || cast.length === 0) return '';
+  const genders = cast.map(c => (c.gender || '').toLowerCase());
+  const hasMale = genders.includes('male');
+  const hasFemale = genders.includes('female');
+  const negatives: string[] = [];
+  if (hasFemale && !hasMale) {
+    negatives.push('man', 'male figure', 'masculine face', 'beard', 'stubble', 'male soldier');
+  }
+  if (hasMale && !hasFemale) {
+    negatives.push('woman', 'female figure', 'feminine face');
+  }
+  return negatives.join(', ');
+}
+
 async function extractPromptWithHaiku(
   genre: string,
   action: string | null,
@@ -273,7 +334,8 @@ async function extractPromptWithHaiku(
   timeOfDay?: string,
   weather?: string,
   worldLore?: string,
-  characterProfile?: CharacterVisualProfile | null
+  characterProfile?: CharacterVisualProfile | null,
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
@@ -294,6 +356,10 @@ async function extractPromptWithHaiku(
     if (worldLore) contextParts.push(`WORLD_LORE:\n${worldLore.slice(0, 900)}`);
     const appearance = summariseAppearance(characterProfile);
     if (appearance) contextParts.push(`PLAYER_APPEARANCE: ${appearance}`);
+    const castLine = describeCast(cast);
+    if (castLine) {
+      contextParts.push(`CAST (exact people in frame — match count and gender exactly):\n${castLine}`);
+    }
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
     
@@ -346,7 +412,9 @@ async function extractPromptWithHaiku(
 function buildFinalPromptFromHaiku(
   extractedPrompt: string,
   genre: string,
-  bannedElements?: string[]
+  bannedElements?: string[],
+  genderNegatives?: string,
+  castClause?: string
 ): { prompt: string; negativePrompt: string } {
   const normalizedGenre = genre.toLowerCase().replace(/[\s-]+/g, '-');
   const styleTokens = genreStyleTokens[normalizedGenre] || genreStyleTokens['fantasy'] || '';
@@ -358,10 +426,14 @@ function buildFinalPromptFromHaiku(
   const negativePrompt = [
     genreNegativePrompts[normalizedGenre] || DEFAULT_NEGATIVE,
     loreNegatives,
+    genderNegatives,
   ].filter(Boolean).join(', ');
   
   // Prepend genre style tokens to the extracted prompt
-  const prompt = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
+  const base = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
+  // Hard-state the cast composition at the tail so the image model cannot
+  // silently swap genders even if the prompt model glossed over it.
+  const prompt = castClause ? `${base}, ${castClause}` : base;
   
   return { prompt, negativePrompt };
 }
@@ -810,6 +882,8 @@ interface SceneImageRequest {
   worldLore?: string;
   bannedElements?: string[];
   npcsPresent?: Array<{ name: string; description: string; currentActivity?: string }>;
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>;
+  playerGender?: string;
   // Legacy
   playerCharacter?: {
     name?: string; gender?: string; role?: string; build?: string;
@@ -2151,6 +2225,7 @@ serve(async (req) => {
       hasNarratorMessage: !!lastNarratorMessage,
       hasUserAction: !!lastUserAction,
       hasCharacterProfile: !!requestData.characterProfile,
+      cast: (requestData.cast || []).map(c => `${c.role}:${c.gender}`),
       hasLegacyCharacter: !!requestData.playerCharacter,
     });
 
@@ -2169,12 +2244,19 @@ serve(async (req) => {
       timeOfDay,
       weather,
       worldLore,
-      requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter)
+      requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter),
+      requestData.cast
     );
     
     if (haikuResult.extractedPrompt) {
       // Use Haiku-extracted prompt with genre tokens
-      const haikuPrompt = buildFinalPromptFromHaiku(haikuResult.extractedPrompt, genre, bannedElements);
+      const haikuPrompt = buildFinalPromptFromHaiku(
+        haikuResult.extractedPrompt,
+        genre,
+        bannedElements,
+        castGenderNegatives(requestData.cast),
+        castCompositionClause(requestData.cast)
+      );
       prompt = haikuPrompt.prompt;
       negativePrompt = haikuPrompt.negativePrompt;
       usedHaiku = true;
