@@ -2247,8 +2247,24 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
     promptSections.push(`[USER PRIORITY - MUST FOLLOW: ${userDesc}]`);
   }
   
-  // 12. Art style
+  // 12. Proportion + placement contract. Diffusion models drift on relative
+  // size and on WHERE a mark sits, so both are stated explicitly and last.
+  promptSections.push(buildProportionAnchors({
+    height,
+    build,
+    gender,
+    chestSizeValue,
+    bustSize,
+    hipWidth,
+    tattoos,
+    scars,
+    piercings,
+    prosthetics,
+  }));
+
+  // 13. Art style
   promptSections.push(`ART STYLE: ${STYLE_LOCK}`);
+
   
   const prompt = promptSections.join('. ');
   
