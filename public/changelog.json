@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "0.4.8002",
+      "date": "July 2026",
+      "title": "Install Wrapper & Genre Palettes",
+      "highlights": [
+        "The Install App wrapper is back on the campaign screen, with live install status",
+        "Theme picker gains a genre tab rail — palettes tuned per genre",
+        "War genre ships real camo swatches, including orange / grey / black digital"
+      ],
+      "features": [
+        "Genre palettes for Fantasy, Sci-Fi, Horror, Mystery, Pirate, Western, Cyberpunk, Post-Apoc, War and Modern life",
+        "Camo palettes: Woodland, Desert, Digital, Urban, Night Ops and Blaze Digital, drawn as patterned swatches"
+      ],
+      "improvements": [
+        "Tone filters and genre tabs stack, so you can narrow by feel and setting at once",
+        "Every previous palette is untouched and still selectable"
+      ],
+      "fixes": [
+        "Added the missing web app manifest and icon links so installing to the home screen works again on Samsung Internet and Chrome",
+        "Verified a clean start with no stale service worker, no dark screen and no missing icons"
+      ]
+    },
+    {
       "version": "0.4.801",
       "date": "July 2026",
       "title": "Creators Mark Consolidation",
