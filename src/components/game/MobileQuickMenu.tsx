@@ -120,6 +120,24 @@ export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuP
       color: 'text-cyan-400',
       description: 'Save & Load',
     },
+    ...(onOpenAmbientFeed
+      ? [{
+          icon: <Globe className="w-5 h-5" />,
+          label: 'World',
+          onClick: () => { onOpenAmbientFeed(); onClose(); },
+          color: hasNewAmbientEvents ? 'text-primary' : 'text-sky-400',
+          description: 'World events',
+        }]
+      : []),
+    ...(onExportTaleCard
+      ? [{
+          icon: <Share2 className="w-5 h-5" />,
+          label: 'Tale Card',
+          onClick: () => { onExportTaleCard(); onClose(); },
+          color: 'text-amber-300',
+          description: 'Share tale',
+        }]
+      : []),
     {
       icon: <Settings className="w-5 h-5" />,
       label: 'Settings',
