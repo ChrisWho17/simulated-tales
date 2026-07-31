@@ -17,6 +17,7 @@ import {
   FALLBACK_MODEL_OPTIONS,
   NarrationTelemetry,
   getNarrationTelemetry,
+  estimateTokens,
   loadAiNarrationConfig,
   saveAiNarrationConfig,
 } from '@/game/aiNarrationConfig';
