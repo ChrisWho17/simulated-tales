@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  callOpenRouter,
+  generateIllustration,
+  logOpenRouterUsage,
+  OPENROUTER_MODELS,
+} from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -891,6 +897,19 @@ interface SceneImageRequest {
   };
   sceneDescription?: string;
   recentStory?: string[];
+  // Illustration job identity — an older job must never attach to a newer turn
+  campaignId?: string;
+  sceneId?: string;
+  turnId?: string;
+  // Approved reference imagery for established characters / locations
+  referenceImages?: string[];
+  visualProfileVersion?: number;
+  // Extracted scene facts
+  clothing?: string;
+  equipment?: string;
+  injuries?: string;
+  emotion?: string;
+  camera?: string;
   playerAction?: string;
   style?: string;
 }
