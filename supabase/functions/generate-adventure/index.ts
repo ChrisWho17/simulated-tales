@@ -3801,6 +3801,18 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         });
       }
       
+      if (response.status === 403) {
+        // Workspace credit limit reached — surface it instead of silently
+        // returning filler prose.
+        return new Response(JSON.stringify({
+          error: 'AI credit limit reached for this workspace. Add credits or raise the limit to continue.',
+          narrative: null,
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, ...narratorHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
           error: 'Usage limit reached. Please add credits to continue.',
