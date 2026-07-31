@@ -12,6 +12,7 @@ import {
   collectReferenceImages,
   referenceVersion,
   getVisualProfile,
+  upsertVisualProfile,
 } from '@/lib/visualProfileStore';
 
 interface UseSceneIllustrationOptions {
@@ -132,6 +133,38 @@ export function useSceneIllustration({
         narratorText: lastNarratorMessage,
         recentText: recentStory.map(e => e.content),
       });
+
+      // Keep the persistent Visual Profiles current before we read them back.
+      if (characterVisualProfile?.name) {
+        upsertVisualProfile(jobCampaignId, {
+          id: characterVisualProfile.name,
+          name: characterVisualProfile.name,
+          canonicalPortraitUrl: characterVisualProfile.portraitUrl,
+          permanentDescription: characterVisualProfile.fullVisualDescription,
+          lockedTraits: [
+            characterVisualProfile.gender,
+            characterVisualProfile.physicalDescription?.build,
+            characterVisualProfile.physicalDescription?.height,
+            characterVisualProfile.physicalDescription?.skinTone,
+            characterVisualProfile.hair?.color && `${characterVisualProfile.hair.color} hair`,
+            characterVisualProfile.eyes?.color && `${characterVisualProfile.eyes.color} eyes`,
+            characterVisualProfile.facialFeatures?.scars,
+            characterVisualProfile.facialFeatures?.tattoos,
+          ].filter(Boolean) as string[],
+          currentClothing: characterVisualProfile.currentOutfit,
+          currentEquipment: characterVisualProfile.currentEquipment,
+        });
+      }
+      for (const companion of activeCompanions) {
+        const c = companion as unknown as { id?: string; name?: string; portraitUrl?: string; appearance?: string };
+        if (!c?.name) continue;
+        upsertVisualProfile(jobCampaignId, {
+          id: c.name,
+          name: c.name,
+          canonicalPortraitUrl: c.portraitUrl,
+          permanentDescription: c.appearance || '',
+        });
+      }
 
       // Approved references always beat text: never redraw an established
       // character from description when we hold a canonical portrait.
