@@ -358,8 +358,23 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
           return { imageUrl: null, model, usedFallback: i > 0, status: res.status, error: lastError };
         }
       } catch (err) {
-        lastError = String(err);
+        const aborted = err instanceof DOMException && err.name === 'AbortError';
+        lastError = aborted ? `attempt timed out after ${Date.now() - started}ms` : String(err);
+        logOpenRouterUsage({
+          fn: 'illustration',
+          role: 'illustration',
+          model,
+          turnId: opts.turnId,
+          totalMs: Date.now() - started,
+          usedFallback: i > 0,
+          status: null,
+          failureReason: lastError,
+        });
+        // A timeout means this model is not responding — do not burn the
+        // remaining budget on a second shape for the same model.
+        if (aborted) break;
       }
+
     }
   }
 
