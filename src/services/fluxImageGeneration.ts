@@ -184,8 +184,8 @@ export async function generatePortraitWithCharacterData(
       environmentContext: characterData.environmentContext,
       // Genre for styling
       genre: genre,
-    }
   });
+
 
   if (error) {
     console.error('[Portrait] Edge function error:', error);
