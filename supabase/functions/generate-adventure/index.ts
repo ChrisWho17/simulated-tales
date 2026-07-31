@@ -1,4 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  callOpenRouter,
+  extractUsage,
+  getOpenRouterKey,
+  isTerminalStatus,
+  logOpenRouterUsage,
+  resolveFallbackModel,
+  resolveNarratorModel,
+} from "../_shared/openrouter.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
