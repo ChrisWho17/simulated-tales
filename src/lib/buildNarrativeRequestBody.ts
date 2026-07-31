@@ -761,9 +761,34 @@ export function buildNarrativeRequestBody(
     };
   }
 
+  // ===== Dual-model narration =====
+  // Live Narrator model selection + the hidden Director Brief and the trimmed
+  // memory packet. The Director itself runs asynchronously elsewhere; here we
+  // only attach whatever brief is already available.
+  {
+    const aiNarrationConfig = loadAiNarrationConfig();
+    requestBody.aiNarration = {
+      narratorModel: aiNarrationConfig.narratorModel,
+      fallbackModel: aiNarrationConfig.fallbackModel,
+    };
+
+    const directorContextPacket = storyDirectorService.buildNarratorContext(playerAction ?? '');
+    const briefText = formatBriefForNarrator(directorContextPacket.directorBrief);
+    if (briefText) {
+      requestBody.directorBriefContext = briefText;
+    }
+    if (directorContextPacket.sceneSummary || directorContextPacket.relevantMemories.length) {
+      requestBody.directorMemoryContext = {
+        sceneSummary: directorContextPacket.sceneSummary,
+        relevantMemories: directorContextPacket.relevantMemories,
+      };
+    }
+  }
+
   console.log(
     `[buildNarrativeRequestBody] size=${JSON.stringify(requestBody).length} chars retry=${retryLevel} stream=${stream}`
   );
+
 
   return { requestBody, nextToneState };
 }
