@@ -585,25 +585,6 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
       }
 
 
-      if (response.status === 429) {
-        console.error('[AI] Rate limit exceeded (429)');
-        toast.error('AI is busy. Please wait a moment and try again.', {
-          duration: 5000,
-          description: 'Rate limit exceeded'
-        });
-        return getContextualFallback(genre);
-      }
-      
-      if (response.status === 402) {
-        console.error('[AI] Payment required (402)');
-        toast.error('AI credits depleted. Please add credits to continue.', {
-          duration: 8000,
-          description: 'Usage limit reached'
-        });
-        return getContextualFallback(genre);
-      }
-
-      const data = await response.json();
       
       if (data.error) {
         console.error('[AI] API returned error:', data.error);
