@@ -5,6 +5,12 @@
 // persistent Visual Profile so illustrations never re-invent a face that has
 // already been approved. Reference images always beat a text description.
 // ============================================================================
+import {
+  createEmptyVisualProfile,
+  VISUAL_PROFILE_SCHEMA_VERSION,
+  type VisualProfileV2,
+} from '@/types/visualProfile';
+
 
 export interface VisualProfile {
   /** Stable id: player id, companion id or NPC id. */
