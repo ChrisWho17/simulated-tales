@@ -56,6 +56,8 @@ import { createFailureSnapshot } from '@/lib/saveRecovery/pipeline';
 import { runInvariants } from '@/lib/saveRecovery/invariants';
 import { Progress } from '@/components/ui/progress';
 import { FailureSnapshot } from '@/lib/saveRecovery/types';
+import { InstallAppButton } from '@/components/adventure/InstallAppButton';
+import { PwaStatusIndicator } from '@/components/PwaStatusIndicator';
 
 // Genre badge colors
 const GENRE_COLORS: Record<string, string> = {
@@ -734,7 +736,10 @@ export function CampaignManager({ onCreateNew, onSelectCampaign }: CampaignManag
               className="hidden"
               onChange={handleImportFile}
             />
-            
+
+            <PwaStatusIndicator />
+            <InstallAppButton />
+
             <Button
               onClick={onCreateNew}
               disabled={!canCreate}
