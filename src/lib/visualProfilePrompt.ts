@@ -204,8 +204,10 @@ export function buildCharacterPromptBlock(
     `HAIR: ${hairWording(profile)}`,
     detailWording(profile) ? `DETAILS: ${detailWording(profile)}` : '',
     wardrobeWording(profile) ? `OUTFIT AND GEAR: ${wardrobeWording(profile)}` : '',
+    proportionAnchors(profile),
     profile.lockedTraits.length ? `LOCKED TRAITS (must not change): ${profile.lockedTraits.join('; ')}` : '',
   ];
+
 
   return lines.filter(Boolean).join('\n');
 }
