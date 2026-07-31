@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "0.4.8003",
+      "date": "July 2026",
+      "title": "Visual Profile Tuning",
+      "highlights": [
+        "Chest scaling refined across the full range with stronger descriptive intensity in portraits and scene art",
+        "Bust selections now drive curvier hourglass body framing in generated imagery"
+      ],
+      "features": [],
+      "improvements": [
+        "Visual profile prompts carry the updated intensity scale into every illustration path"
+      ],
+      "fixes": []
+    },
+    {
       "version": "0.4.8002",
       "date": "July 2026",
       "title": "Install Wrapper & Genre Palettes",
