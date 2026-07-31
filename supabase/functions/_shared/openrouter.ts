@@ -290,14 +290,37 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
   let lastStatus: number | null = null;
   let lastError = 'unknown error';
 
+  // A stuck provider call used to be able to hold the request for minutes
+  // (4 attempts x 120s). Everything now runs inside one hard budget, and each
+  // attempt only gets the time that is actually left.
+  const totalBudgetMs = opts.totalBudgetMs ?? 110_000;
+  const perAttemptMs = opts.timeoutMs ?? 45_000;
+  const deadline = Date.now() + totalBudgetMs;
+
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     // Reference images first; if the model rejects that shape, retry text-only.
     const attempts = opts.referenceImages?.length ? [true, false] : [false];
     for (const withRefs of attempts) {
+      const remaining = deadline - Date.now();
+      if (remaining < 8_000) {
+        return {
+          imageUrl: null,
+          model: null,
+          usedFallback: true,
+          status: lastStatus,
+          error: `illustration timed out (${lastError})`,
+        };
+      }
       const started = Date.now();
       try {
-        const { res, body } = await requestImage(model, opts, withRefs);
+        const { res, body } = await requestImage(
+          model,
+          opts,
+          withRefs,
+          Math.min(perAttemptMs, remaining - 2_000)
+        );
+
         lastStatus = res.status;
         if (res.ok) {
           const imageUrl = extractImageUrl(body);
