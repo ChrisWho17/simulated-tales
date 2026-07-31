@@ -290,6 +290,22 @@ function describeCast(
   return lines.join('\n');
 }
 
+/** Short, literal statement of who is in frame, appended to the image prompt. */
+function castCompositionClause(
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+): string {
+  if (!cast || cast.length === 0) return '';
+  const females = cast.filter(c => (c.gender || '').toLowerCase() === 'female').length;
+  const males = cast.filter(c => (c.gender || '').toLowerCase() === 'male').length;
+  const others = cast.length - females - males;
+  const parts: string[] = [];
+  if (females) parts.push(females === 1 ? 'exactly one woman' : `exactly ${females} women`);
+  if (males) parts.push(males === 1 ? 'exactly one man' : `exactly ${males} men`);
+  if (others) parts.push(others === 1 ? 'one androgynous figure' : `${others} androgynous figures`);
+  if (parts.length === 0) return '';
+  return `${parts.join(' and ')} in frame, no other foreground people`;
+}
+
 /**
  * Negative-prompt guards so the image model cannot substitute genders.
  */
@@ -397,7 +413,8 @@ function buildFinalPromptFromHaiku(
   extractedPrompt: string,
   genre: string,
   bannedElements?: string[],
-  genderNegatives?: string
+  genderNegatives?: string,
+  castClause?: string
 ): { prompt: string; negativePrompt: string } {
   const normalizedGenre = genre.toLowerCase().replace(/[\s-]+/g, '-');
   const styleTokens = genreStyleTokens[normalizedGenre] || genreStyleTokens['fantasy'] || '';
@@ -413,7 +430,10 @@ function buildFinalPromptFromHaiku(
   ].filter(Boolean).join(', ');
   
   // Prepend genre style tokens to the extracted prompt
-  const prompt = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
+  const base = styleTokens ? `${styleTokens}, ${extractedPrompt}` : extractedPrompt;
+  // Hard-state the cast composition at the tail so the image model cannot
+  // silently swap genders even if the prompt model glossed over it.
+  const prompt = castClause ? `${base}, ${castClause}` : base;
   
   return { prompt, negativePrompt };
 }
@@ -2205,6 +2225,7 @@ serve(async (req) => {
       hasNarratorMessage: !!lastNarratorMessage,
       hasUserAction: !!lastUserAction,
       hasCharacterProfile: !!requestData.characterProfile,
+      cast: (requestData.cast || []).map(c => `${c.role}:${c.gender}`),
       hasLegacyCharacter: !!requestData.playerCharacter,
     });
 
@@ -2233,7 +2254,8 @@ serve(async (req) => {
         haikuResult.extractedPrompt,
         genre,
         bannedElements,
-        castGenderNegatives(requestData.cast)
+        castGenderNegatives(requestData.cast),
+        castCompositionClause(requestData.cast)
       );
       prompt = haikuPrompt.prompt;
       negativePrompt = haikuPrompt.negativePrompt;
