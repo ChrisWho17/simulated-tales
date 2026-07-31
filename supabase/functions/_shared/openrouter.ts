@@ -144,7 +144,7 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
 
 export interface UsageLogEntry {
   fn: string;
-  role: 'narrator' | 'director' | 'fallback';
+  role: 'narrator' | 'director' | 'fallback' | 'illustration' | 'utility';
   model: string;
   turnId?: string;
   inputTokens?: number | null;
@@ -180,4 +180,159 @@ export function extractUsage(payload: unknown): {
     outputTokens: num(usage.completion_tokens),
     costUsd: num(usage.cost) ?? num((usage as { total_cost?: number }).total_cost),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Illustration route (OpenRouter Images API)
+// ---------------------------------------------------------------------------
+//
+// Illustration is a SEPARATE job from narration: it uses the same protected
+// OPENROUTER_API_KEY and the same account, but its own models, its own
+// endpoint and its own cost log role, so spend can be attributed per role.
+
+export const OPENROUTER_IMAGE_MODELS = {
+  heavy: Deno.env.get('OPENROUTER_IMAGE_MODEL') || 'black-forest-labs/flux.2-max',
+  fallback: Deno.env.get('OPENROUTER_IMAGE_FALLBACK_MODEL') || 'openai/gpt-image-2',
+} as const;
+
+export interface ImageGenOptions {
+  prompt: string;
+  /** Approved reference images (canonical portrait / full body / location). */
+  referenceImages?: string[];
+  size?: string;
+  timeoutMs?: number;
+  turnId?: string;
+  appLabel?: string;
+}
+
+export interface ImageGenResult {
+  imageUrl: string | null;
+  model: string | null;
+  usedFallback: boolean;
+  status: number | null;
+  error?: string;
+  costUsd?: number | null;
+}
+
+/** Pull the first usable image out of any of OpenRouter's response shapes. */
+function extractImageUrl(payload: any): string | null {
+  const d = payload?.data?.[0];
+  if (d?.b64_json) return `data:image/png;base64,${d.b64_json}`;
+  if (typeof d?.url === 'string') return d.url;
+  if (typeof d?.image_url?.url === 'string') return d.image_url.url;
+  const msgImage = payload?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (typeof msgImage === 'string') return msgImage;
+  const direct = payload?.images?.[0];
+  if (typeof direct === 'string') return direct;
+  if (typeof direct?.image_url?.url === 'string') return direct.image_url.url;
+  return null;
+}
+
+async function requestImage(
+  model: string,
+  opts: ImageGenOptions,
+  withReferences: boolean
+): Promise<{ res: Response; body: any | null }> {
+  const key = getOpenRouterKey();
+  if (!key) throw new Error('OPENROUTER_API_KEY not configured');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
+
+  const body: Record<string, unknown> = {
+    model,
+    prompt: opts.prompt,
+    n: 1,
+    ...(opts.size ? { size: opts.size } : {}),
+  };
+  if (withReferences && opts.referenceImages?.length) {
+    body.image = opts.referenceImages.slice(0, 4);
+  }
+
+  try {
+    const res = await fetch(`${OPENROUTER_BASE_URL}/images`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://theuntoldstories.lovable.app',
+        'X-Title': opts.appLabel ?? 'The Untold Stories',
+        ...(opts.turnId ? { 'X-Turn-Id': opts.turnId } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    let parsed: any = null;
+    try {
+      parsed = await res.clone().json();
+    } catch {
+      parsed = null;
+    }
+    return { res, body: parsed };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Generate one illustration. Heavy model first, documented fallback second.
+ * Never throws for provider failures — the caller must be able to drop the
+ * illustration without touching the story.
+ */
+export async function generateIllustration(opts: ImageGenOptions): Promise<ImageGenResult> {
+  const models = [OPENROUTER_IMAGE_MODELS.heavy, OPENROUTER_IMAGE_MODELS.fallback];
+  let lastStatus: number | null = null;
+  let lastError = 'unknown error';
+
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    // Reference images first; if the model rejects that shape, retry text-only.
+    const attempts = opts.referenceImages?.length ? [true, false] : [false];
+    for (const withRefs of attempts) {
+      const started = Date.now();
+      try {
+        const { res, body } = await requestImage(model, opts, withRefs);
+        lastStatus = res.status;
+        if (res.ok) {
+          const imageUrl = extractImageUrl(body);
+          if (imageUrl) {
+            const costUsd =
+              typeof body?.usage?.cost === 'number' ? body.usage.cost : null;
+            logOpenRouterUsage({
+              fn: 'illustration',
+              role: 'illustration',
+              model,
+              turnId: opts.turnId,
+              costUsd,
+              totalMs: Date.now() - started,
+              usedFallback: i > 0,
+              status: res.status,
+            });
+            return { imageUrl, model, usedFallback: i > 0, status: res.status, costUsd };
+          }
+          lastError = 'no image in response';
+          continue;
+        }
+        lastError = (await res.text()).slice(0, 400);
+        logOpenRouterUsage({
+          fn: 'illustration',
+          role: 'illustration',
+          model,
+          turnId: opts.turnId,
+          totalMs: Date.now() - started,
+          usedFallback: i > 0,
+          status: res.status,
+          failureReason: lastError,
+        });
+        // Auth/credit problems affect every model — stop immediately.
+        if (res.status === 401 || res.status === 402 || res.status === 403) {
+          return { imageUrl: null, model, usedFallback: i > 0, status: res.status, error: lastError };
+        }
+      } catch (err) {
+        lastError = String(err);
+      }
+    }
+  }
+
+  return { imageUrl: null, model: null, usedFallback: true, status: lastStatus, error: lastError };
 }

@@ -626,6 +626,7 @@ export function AdventureGame() {
     timeState,
     worldBible,
     sceneIllustrationsEnabled: settings.sceneIllustrations,
+    campaignId: campaignContext?.activeCampaign?.id ?? null,
   });
   
   // Streaming narrative hook for word-by-word AI response

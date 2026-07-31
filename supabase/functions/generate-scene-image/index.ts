@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  callOpenRouter,
+  generateIllustration,
+  logOpenRouterUsage,
+  OPENROUTER_MODELS,
+} from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -335,12 +341,19 @@ async function extractPromptWithHaiku(
   weather?: string,
   worldLore?: string,
   characterProfile?: CharacterVisualProfile | null,
-  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
+  cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>,
+  extra?: {
+    clothing?: string;
+    equipment?: string;
+    injuries?: string;
+    emotion?: string;
+    camera?: string;
+    location?: string;
+    hasReferences?: boolean;
+  }
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  
-  if (!LOVABLE_API_KEY) {
-    console.log('LOVABLE_API_KEY not configured, skipping Haiku preprocessing');
+  if (!Deno.env.get('OPENROUTER_API_KEY')) {
+    console.log('OPENROUTER_API_KEY not configured, skipping prompt preprocessing');
     return { extractedPrompt: null, error: 'API key not configured' };
   }
   
@@ -360,28 +373,38 @@ async function extractPromptWithHaiku(
     if (castLine) {
       contextParts.push(`CAST (exact people in frame — match count and gender exactly):\n${castLine}`);
     }
+    if (extra?.clothing) contextParts.push(`CLOTHING: ${extra.clothing}`);
+    if (extra?.equipment) contextParts.push(`EQUIPMENT: ${extra.equipment}`);
+    if (extra?.injuries) contextParts.push(`INJURIES: ${extra.injuries}`);
+    if (extra?.emotion) contextParts.push(`EMOTION: ${extra.emotion}`);
+    if (extra?.camera) contextParts.push(`CAMERA: ${extra.camera}`);
+    if (extra?.location) contextParts.push(`LOCATION: ${extra.location}`);
+    if (extra?.hasReferences) {
+      contextParts.push('REFERENCE IMAGES PROVIDED: match the referenced faces, bodies and outfits exactly; do not reinvent them.');
+    }
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: HAIKU_SYSTEM_PROMPT },
-          { role: 'user', content: contextParts.join('\n') }
-        ],
-        max_tokens: 150,
-        temperature: 0.7,
-      }),
+    const response = await callOpenRouter({
+      model: OPENROUTER_MODELS.utility,
+      messages: [
+        { role: 'system', content: HAIKU_SYSTEM_PROMPT },
+        { role: 'user', content: contextParts.join('\n') },
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+      timeoutMs: 30_000,
     });
     
     const elapsed = Date.now() - startTime;
-    console.log(`Haiku response in ${elapsed}ms, status: ${response.status}`);
+    console.log(`Prompt extraction in ${elapsed}ms, status: ${response.status}`);
+    logOpenRouterUsage({
+      fn: 'generate-scene-image',
+      role: 'utility',
+      model: OPENROUTER_MODELS.utility,
+      totalMs: elapsed,
+      status: response.status,
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -891,6 +914,19 @@ interface SceneImageRequest {
   };
   sceneDescription?: string;
   recentStory?: string[];
+  // Illustration job identity — an older job must never attach to a newer turn
+  campaignId?: string;
+  sceneId?: string;
+  turnId?: string;
+  // Approved reference imagery for established characters / locations
+  referenceImages?: string[];
+  visualProfileVersion?: number;
+  // Extracted scene facts
+  clothing?: string;
+  equipment?: string;
+  injuries?: string;
+  emotion?: string;
+  camera?: string;
   playerAction?: string;
   style?: string;
 }
@@ -2091,81 +2127,108 @@ function enhanceNegativePrompt(original: string, level: 1 | 2 | 3): string {
 async function generateImageWithRetry(
   prompt: string,
   negativePrompt: string,
-  maxRetries: number = 3
-): Promise<{ imageUrl: string | null; error?: string; softeningLevel: number }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    return { imageUrl: null, error: 'LOVABLE_API_KEY is not configured', softeningLevel: 0 };
+  maxRetries: number = 3,
+  job?: { turnId?: string; referenceImages?: string[] }
+): Promise<{ imageUrl: string | null; error?: string; softeningLevel: number; model?: string | null; usedFallback?: boolean }> {
+  if (!Deno.env.get('OPENROUTER_API_KEY')) {
+    return { imageUrl: null, error: 'OPENROUTER_API_KEY is not configured', softeningLevel: 0 };
   }
 
   let currentPrompt = prompt;
   let softeningLevel = 0;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    console.log(`Image generation attempt ${attempt + 1}/${maxRetries + 1} (softening level: ${softeningLevel})`);
-    
-    const imagePrompt = `Generate a cinematic scene illustration: ${currentPrompt}. Wide shot, atmospheric, detailed environment, professional quality. Avoid: ${negativePrompt}`;
-    
-    try {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image-preview',
-          messages: [
-            { role: 'user', content: imagePrompt }
-          ],
-          modalities: ['image', 'text'],
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        if (imageData) {
-          console.log(`Image generated successfully at softening level ${softeningLevel}`);
-          return { imageUrl: imageData, softeningLevel };
-        }
-        console.log('No image in response, retrying with softened prompt...');
-      }
-      
-      // Handle specific error codes
-      if (response.status === 429) {
-        console.log('Rate limited, not retrying');
-        return { imageUrl: null, error: 'Rate limit exceeded', softeningLevel };
-      }
-      
-      if (response.status === 402) {
-        console.log('Usage limit reached, not retrying');
-        return { imageUrl: null, error: 'API limit reached', softeningLevel };
-      }
-      
-      // Check for content rejection
-      const errorText = await response.text();
-      console.error('API error:', response.status, errorText);
-      
-      if (attempt < maxRetries) {
-        // Apply next level of softening
-        softeningLevel = (attempt + 1) as 1 | 2 | 3;
-        console.log(`Applying softening level ${softeningLevel}`);
-        currentPrompt = softenPrompt(prompt, softeningLevel as 1 | 2 | 3);
-        continue;
-      }
-    } catch (error) {
-      console.error('Request error:', error);
-      if (attempt >= maxRetries) {
-        return { imageUrl: null, error: `Request failed: ${error}`, softeningLevel };
-      }
+    console.log(`[illustration] attempt ${attempt + 1}/${maxRetries + 1} (softening ${softeningLevel})`);
+
+    const imagePrompt = `Cinematic scene illustration: ${currentPrompt}. Wide shot, atmospheric, detailed environment, professional quality. Avoid: ${negativePrompt}`;
+
+    const result = await generateIllustration({
+      prompt: imagePrompt,
+      referenceImages: job?.referenceImages,
+      turnId: job?.turnId,
+      timeoutMs: 120_000,
+    });
+
+    if (result.imageUrl) {
+      return {
+        imageUrl: result.imageUrl,
+        softeningLevel,
+        model: result.model,
+        usedFallback: result.usedFallback,
+      };
     }
+
+    if (result.status === 429) return { imageUrl: null, error: 'Rate limit exceeded', softeningLevel };
+    if (result.status === 402) return { imageUrl: null, error: 'API limit reached', softeningLevel };
+
+    console.error('[illustration] failed:', result.status, result.error);
+
+    if (attempt < maxRetries) {
+      softeningLevel = (attempt + 1) as 1 | 2 | 3;
+      currentPrompt = softenPrompt(prompt, softeningLevel as 1 | 2 | 3);
+      continue;
+    }
+    return { imageUrl: null, error: result.error || 'Image generation failed', softeningLevel };
   }
-  
-  // All retries exhausted
-  console.log('All retry attempts exhausted');
+
   return { imageUrl: null, error: 'Image generation failed after all retries', softeningLevel: 3 };
+}
+
+// ============================================================================
+// PERMANENT STORAGE
+// ============================================================================
+
+/**
+ * Push the generated image into the private `scene-illustrations` bucket and
+ * return a long-lived signed URL. Keys are namespaced by campaign + scene +
+ * turn so an image can only ever belong to the beat it was generated for.
+ */
+async function persistIllustration(
+  imageUrl: string,
+  ids: { campaignId?: string; sceneId?: string; turnId?: string }
+): Promise<{ url: string; path: string } | null> {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) return null;
+
+    let bytes: Uint8Array;
+    let contentType = 'image/png';
+    if (imageUrl.startsWith('data:image/')) {
+      const comma = imageUrl.indexOf(',');
+      contentType = imageUrl.slice(5, imageUrl.indexOf(';'));
+      const binary = atob(imageUrl.slice(comma + 1));
+      bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    } else {
+      const res = await fetch(imageUrl);
+      if (!res.ok) return null;
+      contentType = res.headers.get('content-type') || contentType;
+      bytes = new Uint8Array(await res.arrayBuffer());
+    }
+
+    const safe = (v?: string) => (v || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'unknown';
+    const ext = contentType.includes('jpeg') ? 'jpg' : contentType.includes('webp') ? 'webp' : 'png';
+    const path = `${safe(ids.campaignId)}/${safe(ids.sceneId)}/${safe(ids.turnId)}_${Date.now()}.${ext}`;
+
+    const admin = createClient(supabaseUrl, serviceKey);
+    const { error } = await admin.storage
+      .from('scene-illustrations')
+      .upload(path, bytes, { contentType, upsert: true });
+    if (error) {
+      console.error('[illustration] storage upload failed:', error.message);
+      return null;
+    }
+
+    const { data: signed } = await admin.storage
+      .from('scene-illustrations')
+      .createSignedUrl(path, 60 * 60 * 24 * 365);
+    if (!signed?.signedUrl) return null;
+    return { url: signed.signedUrl, path };
+  } catch (err) {
+    console.error('[illustration] persist error:', err);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -2186,12 +2249,20 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json() as SceneImageRequest;
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      console.error('[generate-scene-image] LOVABLE_API_KEY not configured');
+    if (!Deno.env.get('OPENROUTER_API_KEY')) {
+      console.error('[generate-scene-image] OPENROUTER_API_KEY not configured');
       throw new Error('Service configuration error');
     }
+
+    const jobIds = {
+      campaignId: requestData.campaignId,
+      sceneId: requestData.sceneId,
+      turnId: requestData.turnId,
+    };
+    const referenceImages = (requestData.referenceImages || [])
+      .filter((u) => typeof u === 'string' && u.length > 8)
+      .slice(0, 4);
 
     // Normalize request - support both short and long keys
     const reqAny = requestData as any;
@@ -2245,7 +2316,16 @@ serve(async (req) => {
       weather,
       worldLore,
       requestData.characterProfile || buildLegacyCharacterProfile(requestData.playerCharacter),
-      requestData.cast
+      requestData.cast,
+      {
+        clothing: requestData.clothing,
+        equipment: requestData.equipment,
+        injuries: requestData.injuries,
+        emotion: requestData.emotion,
+        camera: requestData.camera,
+        location: requestData.currentLocation,
+        hasReferences: referenceImages.length > 0,
+      }
     );
     
     if (haikuResult.extractedPrompt) {
@@ -2279,7 +2359,10 @@ serve(async (req) => {
     console.log('Negative prompt:', negativePrompt.slice(0, 200) + '...');
 
     // Use retry logic with progressive softening
-    const result = await generateImageWithRetry(prompt, negativePrompt, 3);
+    const result = await generateImageWithRetry(prompt, negativePrompt, 3, {
+      turnId: jobIds.turnId,
+      referenceImages,
+    });
 
     if (result.error === 'Rate limit exceeded') {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded', imageUrl: null }), {
@@ -2302,9 +2385,27 @@ serve(async (req) => {
       });
     }
 
-    console.log('Scene image generated successfully', { softeningLevel: result.softeningLevel, usedHaiku });
+    // Permanent storage, keyed to this exact campaign / scene / turn.
+    const stored = await persistIllustration(result.imageUrl, jobIds);
+
+    console.log('Scene image generated successfully', {
+      softeningLevel: result.softeningLevel,
+      usedHaiku,
+      model: result.model,
+      usedFallback: result.usedFallback,
+      stored: !!stored,
+      ...jobIds,
+    });
     return new Response(JSON.stringify({ 
-      imageUrl: result.imageUrl,
+      imageUrl: stored?.url || result.imageUrl,
+      storagePath: stored?.path || null,
+      model: result.model,
+      usedFallbackModel: !!result.usedFallback,
+      usedReferenceImages: referenceImages.length,
+      visualProfileVersion: requestData.visualProfileVersion ?? null,
+      campaignId: jobIds.campaignId ?? null,
+      sceneId: jobIds.sceneId ?? null,
+      turnId: jobIds.turnId ?? null,
       softeningApplied: result.softeningLevel > 0,
       softeningLevel: result.softeningLevel,
       usedHaikuPreprocessing: usedHaiku,
