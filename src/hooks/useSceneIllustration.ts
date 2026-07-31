@@ -12,8 +12,15 @@ import {
   collectReferenceImages,
   referenceVersion,
   getVisualProfile,
+  getVisualProfileV2,
+  saveVisualProfileV2,
+  migrateVisualProfiles,
   upsertVisualProfile,
 } from '@/lib/visualProfileStore';
+import { buildVisualProfile, buildNpcVisualProfile } from '@/lib/visualProfileBuilder';
+import { buildCharacterPromptBlock } from '@/lib/visualProfilePrompt';
+import { validateIllustration, buildStrictDirective } from '@/lib/visualProfileValidation';
+import type { VisualProfileV2 } from '@/types/visualProfile';
 
 interface UseSceneIllustrationOptions {
   genre: GameGenre;
@@ -166,6 +173,69 @@ export function useSceneIllustration({
         });
       }
 
+      // ---- Structured Visual Profiles (v2) -------------------------------
+      // Old saves get promoted first, then the player and every active
+      // companion are guaranteed a structured profile so the prompt is built
+      // from exact stored values instead of loose flavour text.
+      migrateVisualProfiles(jobCampaignId);
+
+      const structuredProfiles: VisualProfileV2[] = [];
+
+      if (characterVisualProfile?.name) {
+        const prev = getVisualProfileV2(jobCampaignId, characterVisualProfile.name);
+        const player = prev ?? buildVisualProfile(
+          {
+            gender: characterVisualProfile.gender,
+            age: characterVisualProfile.age,
+            build: characterVisualProfile.physicalDescription?.build,
+            height: characterVisualProfile.physicalDescription?.height,
+            skinTone: characterVisualProfile.physicalDescription?.skinTone,
+            faceShape: characterVisualProfile.physicalDescription?.faceShape,
+            hairColor: characterVisualProfile.hair?.color,
+            hairStyle: characterVisualProfile.hair?.style,
+            hairLength: characterVisualProfile.hair?.length,
+            eyeColor: characterVisualProfile.eyes?.color,
+            scars: characterVisualProfile.facialFeatures?.scars ? [characterVisualProfile.facialFeatures.scars] : [],
+            tattoos: characterVisualProfile.facialFeatures?.tattoos ? [characterVisualProfile.facialFeatures.tattoos] : [],
+            piercings: characterVisualProfile.facialFeatures?.piercings ? [characterVisualProfile.facialFeatures.piercings] : [],
+            currentOutfit: characterVisualProfile.currentOutfit,
+            customDescription: characterVisualProfile.fullVisualDescription,
+          },
+          {
+            characterId: characterVisualProfile.name,
+            name: characterVisualProfile.name,
+            isPlayer: true,
+            matureContentAllowed: true,
+          }
+        );
+        if (!prev) saveVisualProfileV2(jobCampaignId, player);
+        structuredProfiles.push(player);
+      }
+
+      for (const companion of activeCompanions) {
+        const c = companion as unknown as { id?: string; name?: string; gender?: string; appearance?: string };
+        if (!c?.name) continue;
+        const prev = getVisualProfileV2(jobCampaignId, c.name);
+        const npc = prev ?? buildNpcVisualProfile({
+          id: c.name,
+          name: c.name,
+          gender: c.gender,
+          appearance: { customDescription: c.appearance },
+        });
+        if (!prev) saveVisualProfileV2(jobCampaignId, npc);
+        structuredProfiles.push(npc);
+      }
+
+      // Structured, field-ordered character sheets — the identity contract the
+      // image model must honour (exact chest scalar included).
+      const characterSheets = structuredProfiles
+        .map(p => buildCharacterPromptBlock(p, {
+          emotion: trigger.type,
+          location: trigger.location || undefined,
+        }))
+        .join('\n\n')
+        .slice(0, 2400);
+
       // Approved references always beat text: never redraw an established
       // character from description when we hold a canonical portrait.
       const castIds = sceneCast.map(c => c.name);
@@ -201,11 +271,14 @@ export function useSceneIllustration({
           ].filter(Boolean).join('\n')
         : undefined;
 
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
-
-      const response = await fetch(
+      // One attempt = one image request. Validation may ask for exactly one
+      // stricter retry; the canonical references are never overwritten by a
+      // failed attempt.
+      const requestImage = async (strictDirective: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+        try {
+          return await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scene-image`,
         {
           method: 'POST',
@@ -235,42 +308,86 @@ export function useSceneIllustration({
             injuries: playerProfile?.currentInjuries,
             emotion: trigger.type,
             camera: trigger.priority <= 1 ? 'dynamic close action shot' : 'cinematic establishing shot',
+            characterSheets: characterSheets || undefined,
+            strictIdentity: strictDirective || undefined,
           }),
+            }
+          );
+        } finally {
+          clearTimeout(timeoutId);
         }
-      );
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        console.error('[SceneIllustration] Response not OK:', response.status);
-        return;
-      }
-      
-      const data = await response.json();
-      console.log('[SceneIllustration] Response:', {
-        hasImageUrl: !!data.imageUrl,
-        imageUrlLen: typeof data.imageUrl === 'string' ? data.imageUrl.length : 0,
-        error: data.error,
-      });
-      
-      // Late arrival from a superseded turn — discard it.
-      if (jobId !== jobSeqRef.current) {
-        console.log('[SceneIllustration] Stale job discarded', { jobId, latest: jobSeqRef.current });
-        return;
-      }
-      if (data.turnId && data.turnId !== jobTurnId) {
-        console.log('[SceneIllustration] Turn mismatch, image discarded');
+      };
+
+      let data: { imageUrl?: string; error?: string; turnId?: string } | null = null;
+      let strictDirective = '';
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await requestImage(strictDirective);
+
+        if (!response.ok) {
+          console.error('[SceneIllustration] Response not OK:', response.status);
+          return;
+        }
+
+        const payload = await response.json();
+        console.log('[SceneIllustration] Response:', {
+          attempt,
+          hasImageUrl: !!payload.imageUrl,
+          imageUrlLen: typeof payload.imageUrl === 'string' ? payload.imageUrl.length : 0,
+          error: payload.error,
+        });
+
+        // Late arrival from a superseded turn — discard it.
+        if (jobId !== jobSeqRef.current) {
+          console.log('[SceneIllustration] Stale job discarded', { jobId, latest: jobSeqRef.current });
+          return;
+        }
+        if (payload.turnId && payload.turnId !== jobTurnId) {
+          console.log('[SceneIllustration] Turn mismatch, image discarded');
+          return;
+        }
+
+        const validation = validateIllustration(
+          {
+            imageUrl: payload.imageUrl || null,
+            campaignId: jobCampaignId,
+            sceneId: jobSceneId,
+            turnId: jobTurnId,
+            castIds: structuredProfiles.map(pr => pr.identity.characterId),
+            profileVersion,
+            attempt,
+          },
+          {
+            campaignId: jobCampaignId,
+            sceneId: jobSceneId,
+            turnId: jobTurnId,
+            profiles: structuredProfiles,
+          }
+        );
+
+        if (validation.valid) {
+          data = payload;
+          break;
+        }
+
+        console.warn('[SceneIllustration] Validation failed:', validation.issues);
+        if (attempt === 0 && validation.shouldRetry) {
+          strictDirective =
+            validation.strictRetryDirective || buildStrictDirective(structuredProfiles);
+          continue;
+        }
+        // Keep the existing image rather than adopting a bad one.
         return;
       }
 
-      if (data.imageUrl) {
+      if (data?.imageUrl) {
         const display = toDisplayImageUrl(data.imageUrl);
         if (display) {
           adoptDisplayUrl(data.imageUrl);
         } else {
           console.error('[SceneIllustration] Image payload invalid or truncated');
         }
-      } else if (data.error) {
+      } else if (data?.error) {
         console.error('[SceneIllustration] Generation error:', data.error);
       }
     } catch (error) {

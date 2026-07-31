@@ -23,6 +23,11 @@ export interface DetailedAppearance {
 export interface FullAppearance {
   // Cup sizes for realistic body proportions (AA through K+)
   bustSize?: 'AA' | 'A' | 'B' | 'C' | 'D' | 'DD' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K';
+  /** Exact continuous chest size (0 = flat, 1 = extremely large). Source of truth. */
+  chestSizeValue?: number;
+  chestShape?: string;
+  chestSpacing?: number;
+  chestPosition?: number;
   hipWidth?: 'narrow' | 'average' | 'wide' | 'very wide';
   // Muscle definition - from soft (none) to big (bodybuilder)
   muscleDefinition?: 'soft' | 'toned' | 'fit' | 'defined' | 'muscular' | 'very_muscular' | 'big';

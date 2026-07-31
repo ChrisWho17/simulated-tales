@@ -1,3 +1,5 @@
+import { buildChestPrompt } from '@/lib/chestScale';
+
 // Portrait Prompt Builder for FLUX.1 Schnell
 // Optimized for realistic, waist-up character portraits with detailed environments
 
@@ -156,6 +158,8 @@ export interface CharacterAppearance {
   hasBeard?: boolean;
   customDescription?: string;
   // Full appearance (18+) options
+  /** Exact continuous chest size (0..1). Takes priority over bustSize. */
+  chestSizeValue?: number;
   bustSize?: string;
   hipWidth?: string;
   muscleDefinition?: string;
@@ -478,7 +482,14 @@ export function buildPortraitPrompt(
   
   // Full appearance (18+) customizations - cup sizes, hips, muscle, intimate details
   // Cup size to realistic portrait description mapping
-  if (character.bustSize) {
+  if (typeof character.chestSizeValue === 'number') {
+    // Exact stored scalar wins over any legacy cup letter.
+    const chestDesc = buildChestPrompt({
+      chestSizeValue: character.chestSizeValue,
+      adultEligible: true,
+    });
+    if (chestDesc) details.push(chestDesc);
+  } else if (character.bustSize) {
     const cupSizeDescriptions: Record<string, string> = {
       // Very small to small
       'AA': 'very petite flat chest, minimal bust',

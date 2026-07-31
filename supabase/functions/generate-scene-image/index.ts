@@ -918,6 +918,10 @@ interface SceneImageRequest {
   campaignId?: string;
   sceneId?: string;
   turnId?: string;
+  // Structured, field-ordered character sheets built from saved Visual Profiles
+  characterSheets?: string;
+  /** Stricter identity directive used on a single validation retry. */
+  strictIdentity?: string;
   // Approved reference imagery for established characters / locations
   referenceImages?: string[];
   visualProfileVersion?: number;
@@ -2353,6 +2357,15 @@ serve(async (req) => {
       const legacyPrompt = buildIllustrationPrompt(requestData, characterProfile);
       prompt = legacyPrompt.prompt;
       negativePrompt = legacyPrompt.negativePrompt;
+    }
+
+    // Structured Visual Profile sheets are an identity contract: they lead the
+    // prompt so exact body/chest/face/hair values survive prompt compression.
+    if (requestData.characterSheets) {
+      prompt = `${requestData.characterSheets.slice(0, 2400)}\n\nSCENE: ${prompt}`;
+    }
+    if (requestData.strictIdentity) {
+      prompt = `${requestData.strictIdentity.slice(0, 600)}\n${prompt}`;
     }
 
     console.log('Final prompt preview:', prompt.slice(0, 600) + '...');
