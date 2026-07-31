@@ -205,9 +205,16 @@ export function AiNarrationSettings() {
             Memories: {directorState.longTermMemories.length}
           </p>
           <p className="text-[10px] text-muted-foreground break-words">
+            First token:{' '}
+            {telemetry.lastTimeToFirstTokenMs != null
+              ? `${telemetry.lastTimeToFirstTokenMs}ms`
+              : 'n/a'}{' '}
+            · Context ≈{estimateTokens(storyDirectorService.buildNarratorContext(''))} tok
+          </p>
+          <p className="text-[10px] text-muted-foreground break-words">
             Brief:{' '}
             {brief
-              ? `${brief.triggerReason} · tension ${brief.tension}/10 · ${brief.unresolvedThreads.length} threads`
+              ? `v${brief.version ?? 0} · ${brief.triggerReason} · tension ${brief.tension}/10 · ${brief.unresolvedThreads.length} threads`
               : 'none yet'}
           </p>
           {brief?.storyObjective && (
