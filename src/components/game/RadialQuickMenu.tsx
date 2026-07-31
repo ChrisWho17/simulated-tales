@@ -150,6 +150,10 @@ interface RadialQuickMenuProps {
   onOpenSaves: () => void;
   onRestart: () => void;
   onOpenCompanions?: () => void;
+  /** World events feed — desktop reaches this from the overflow menu. */
+  onOpenAmbientFeed?: () => void;
+  /** Share tale card — desktop reaches this from the overflow menu. */
+  onExportTaleCard?: () => void;
 }
 
 interface RadialMenuItem {
