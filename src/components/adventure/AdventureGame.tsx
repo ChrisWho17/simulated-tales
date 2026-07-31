@@ -1302,7 +1302,13 @@ export function AdventureGame() {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
       return;
     }
-    
+
+    // This flow owns the opening narrative from here until it lands. Creating the
+    // campaign below must not trigger the "empty history" auto-opening path.
+    openingInFlightRef.current = true;
+    needsInitialNarrative.current = false;
+
+
     // Single write path: updateSettings owns the GameContext write and emits the
     // StateSyncBus event that feeds useDirectorSettings and the generation path.
     setDirectorSettings(directorChoice);
