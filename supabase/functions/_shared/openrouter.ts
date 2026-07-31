@@ -235,13 +235,15 @@ function extractImageUrl(payload: any): string | null {
 async function requestImage(
   model: string,
   opts: ImageGenOptions,
-  withReferences: boolean
+  withReferences: boolean,
+  attemptMs: number
 ): Promise<{ res: Response; body: any | null }> {
   const key = getOpenRouterKey();
   if (!key) throw new Error('OPENROUTER_API_KEY not configured');
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120_000);
+  const timer = setTimeout(() => controller.abort(), attemptMs);
+
 
   const body: Record<string, unknown> = {
     model,
