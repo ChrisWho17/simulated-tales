@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateIllustration } from "../_shared/openrouter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -2259,53 +2260,22 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
 // IMAGE GENERATION - Lovable AI with Gemini
 // ============================================================================
 async function generateImage(prompt: string, _negative: string): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  if (!Deno.env.get("OPENROUTER_API_KEY")) {
+    throw new Error("OPENROUTER_API_KEY not configured");
+  }
 
-  console.log("Generating photorealistic portrait with Lovable AI");
+  console.log("Generating portrait via OpenRouter");
   console.log("Prompt length:", prompt.length);
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      modalities: ["image", "text"]
-    }),
-  });
+  const result = await generateIllustration({ prompt, size: "1024x1024" });
+  const imageUrl = result.imageUrl;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[generate-portrait] API error:", response.status, errorText);
-    if (response.status === 429) {
-      throw new Error("Rate limit exceeded, please try again later");
-    }
-    if (response.status === 402) {
-      throw new Error("Service temporarily unavailable");
-    }
-    throw new Error("Image generation failed");
-  }
-
-  const data = await response.json();
-  console.log("Lovable AI response received");
-
-  // Extract image from response
-  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-  
   if (!imageUrl) {
-    console.error("[generate-portrait] No image in response:", JSON.stringify(data).substring(0, 500));
+    console.error("[generate-portrait] No image returned:", result.error);
     throw new Error("Image generation failed");
   }
 
+  console.log("Portrait generated:", result.model, "fallback:", !!result.usedFallback);
   console.log("Portrait generated successfully (base64 length:", imageUrl.length, ")");
   return imageUrl;
 }
