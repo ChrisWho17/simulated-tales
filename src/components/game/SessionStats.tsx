@@ -384,19 +384,32 @@ export function SessionStatsProvider({ children, onPlayTimeReached, onLifetimeAc
     };
   }, []); // Empty deps - use ref for stable callback
 
+  const contextValue = useMemo(() => ({
+    stats,
+    incrementStat,
+    addNpcEncounter,
+    addLocationVisit,
+    addFactionEncounter,
+    resetSession,
+    getFormattedPlayTime,
+    getTotalPlayTimeHours,
+    exportAsText,
+    mergeToLifetimeStats,
+  }), [
+    stats,
+    incrementStat,
+    addNpcEncounter,
+    addLocationVisit,
+    addFactionEncounter,
+    resetSession,
+    getFormattedPlayTime,
+    getTotalPlayTimeHours,
+    exportAsText,
+    mergeToLifetimeStats,
+  ]);
+
   return (
-    <SessionStatsContext.Provider value={{ 
-      stats, 
-      incrementStat, 
-      addNpcEncounter, 
-      addLocationVisit, 
-      addFactionEncounter,
-      resetSession,
-      getFormattedPlayTime,
-      getTotalPlayTimeHours,
-      exportAsText,
-      mergeToLifetimeStats,
-    }}>
+    <SessionStatsContext.Provider value={contextValue}>
       {children}
     </SessionStatsContext.Provider>
   );
