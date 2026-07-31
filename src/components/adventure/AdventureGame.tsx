@@ -310,7 +310,12 @@ export function AdventureGame() {
   
   // Track if we need to generate initial narrative for a restored campaign with empty history
   const needsInitialNarrative = useRef<boolean>(false);
+  // True while the "start story" flow is already producing the opening narrative.
+  // Campaign creation during that flow must never kick off a SECOND opening call
+  // (which used to land later and silently replace the intro the player just read).
+  const openingInFlightRef = useRef<boolean>(false);
   const hasInitialized = useRef<boolean>(false);
+
   const socialReactionRef = useRef<SocialReactionBatch | null>(null);
   
   // === WORLD REGENERATION & LOCK SYSTEM ===
@@ -508,9 +513,17 @@ export function AdventureGame() {
     // A different campaign is now active - reinitialize!
     console.log('[AdventureGame] Campaign changed from', lastCampaignIdRef.current, 'to', currentCampaignId);
     lastCampaignIdRef.current = currentCampaignId;
-    
+
     const campaign = campaignContext.activeCampaign;
-    
+
+    // A campaign created by the start-story flow arrives with an empty history while
+    // the opening narrative is still being generated. Don't wipe/duplicate it here.
+    if (openingInFlightRef.current && campaign.narrativeHistory.length === 0) {
+      console.log('[AdventureGame] Opening already in flight, skipping campaign re-init');
+      needsInitialNarrative.current = false;
+      return;
+    }
+
     // Set relationship journal context for this campaign + character
     setJournalContext(campaign.id, campaign.player.name);
     
@@ -519,6 +532,7 @@ export function AdventureGame() {
     
     setCharacter(migratedPlayer);
     setStory(campaign.narrativeHistory);
+
     setScenarioSelection({
       scenario: campaign.scenario,
       genre: campaign.meta.primaryGenre,
@@ -1073,8 +1087,19 @@ export function AdventureGame() {
   useEffect(() => {
     // Must be in playing phase with the flag set
     if (phase !== 'playing' || !needsInitialNarrative.current) return;
+    // The start-story flow is already generating the opening — never double up
+    if (openingInFlightRef.current) {
+      needsInitialNarrative.current = false;
+      return;
+    }
+    // An opening already exists on screen; don't replace what the player is reading
+    if (story.length > 0) {
+      needsInitialNarrative.current = false;
+      return;
+    }
     // Must have required data
     if (!character || !scenarioSelection) return;
+
     
     // Get current campaign ID
     const currentCampaignId = campaignContext?.activeCampaign?.id || 'local';
@@ -1151,15 +1176,24 @@ export function AdventureGame() {
           content: narrativeContent,
           timestamp: Date.now(),
         }];
-        
-        setStory(newStory);
-        saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
-        
-        if (campaignContext) {
-          campaignContext.addNarrativeEntry(newStory[0]);
+
+        // Late arrivals must never overwrite a story the player is already reading.
+        let applied = false;
+        setStory(prev => {
+          if (prev.length > 0) return prev;
+          applied = true;
+          return newStory;
+        });
+
+        if (applied) {
+          saveData(newStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+          if (campaignContext) {
+            campaignContext.addNarrativeEntry(newStory[0]);
+          }
+          console.log('[AdventureGame] Initial narrative set successfully');
+        } else {
+          console.log('[AdventureGame] Opening discarded — story already started');
         }
-        
-        console.log('[AdventureGame] Initial narrative set successfully');
       } catch (error) {
         console.error('[AdventureGame] Failed to generate initial narrative:', error);
         
@@ -1177,11 +1211,19 @@ export function AdventureGame() {
           content: fallbackContent,
           timestamp: Date.now(),
         }];
-        setStory(fallbackStory);
-        saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
-        if (campaignContext) {
-          campaignContext.addNarrativeEntry(fallbackStory[0]);
+        let fallbackApplied = false;
+        setStory(prev => {
+          if (prev.length > 0) return prev;
+          fallbackApplied = true;
+          return fallbackStory;
+        });
+        if (fallbackApplied) {
+          saveData(fallbackStory, character, scenarioSelection.scenario, scenarioSelection.genre);
+          if (campaignContext) {
+            campaignContext.addNarrativeEntry(fallbackStory[0]);
+          }
         }
+
       } finally {
         clearTimeout(openingTimeoutId);
         if (generatingForCampaignId.current === currentCampaignId) {
@@ -1190,7 +1232,7 @@ export function AdventureGame() {
         setIsLoading(false);
       }
     })();
-  }, [phase, character, scenarioSelection, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody, gateOpeningNarrative]);
+  }, [phase, character, scenarioSelection, story.length, saveData, campaignContext, settings.adultContent, worldBible, buildRequestBody, gateOpeningNarrative]);
 
   // Step 1: Scenario selection -> Color selection
   const handleScenarioSelect = useCallback((selection: ScenarioSelection) => {
@@ -1260,7 +1302,13 @@ export function AdventureGame() {
       console.error('[AdventureGame] handleNarratorConfirm called without pending character or scenario');
       return;
     }
-    
+
+    // This flow owns the opening narrative from here until it lands. Creating the
+    // campaign below must not trigger the "empty history" auto-opening path.
+    openingInFlightRef.current = true;
+    needsInitialNarrative.current = false;
+
+
     // Single write path: updateSettings owns the GameContext write and emits the
     // StateSyncBus event that feeds useDirectorSettings and the generation path.
     setDirectorSettings(directorChoice);
@@ -1400,8 +1448,14 @@ export function AdventureGame() {
       setStory(fallbackStory);
       saveData(fallbackStory, char, scenarioSelection.scenario, scenarioSelection.genre || 'fantasy');
     } finally {
+      // Opening is on screen (real, director, or fallback) — release the lock and
+      // make sure nothing else treats this campaign as "needs an opening".
+      openingInFlightRef.current = false;
+      needsInitialNarrative.current = false;
+      lastCampaignIdRef.current = campaignContext?.activeCampaign?.id ?? lastCampaignIdRef.current;
       setIsLoading(false);
     }
+
   }, [
     pendingCharacter, scenarioSelection, generateNarrative, saveData, initializeCampaign,
     campaignContext, worldBible, settings.adultContent, cheatMode, applyPendingSettings,
