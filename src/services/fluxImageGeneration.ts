@@ -110,11 +110,7 @@ export interface PortraitCharacterData {
 export async function generatePortraitWithFlux(prompt: string): Promise<string> {
   console.log('[Portrait] Calling edge function with prompt only (legacy mode):', prompt.substring(0, 100) + '...');
   
-  const { data, error } = await supabase.functions.invoke('generate-portrait', {
-    body: {
-      customPrompt: prompt,
-    }
-  });
+  const { data, error } = await invokePortrait({ customPrompt: prompt });
 
   if (error) {
     console.error('[Portrait] Edge function error:', error);
@@ -149,8 +145,7 @@ export async function generatePortraitWithCharacterData(
     additionalDetails: characterData.additionalDetails?.substring(0, 50),
   });
   
-  const { data, error } = await supabase.functions.invoke('generate-portrait', {
-    body: {
+  const { data, error } = await invokePortrait({
       name: characterData.name || 'Character',
       gender: characterData.gender || 'male',
       age: characterData.age,
