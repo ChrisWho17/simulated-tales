@@ -5,7 +5,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, ScrollText, Backpack, Bookmark, 
-  RotateCcw, X, Info, FolderOpen, Sliders, Users
+  RotateCcw, X, Info, FolderOpen, Sliders, Users, Globe, Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -150,6 +150,10 @@ interface RadialQuickMenuProps {
   onOpenSaves: () => void;
   onRestart: () => void;
   onOpenCompanions?: () => void;
+  /** World events feed — desktop reaches this from the overflow menu. */
+  onOpenAmbientFeed?: () => void;
+  /** Share tale card — desktop reaches this from the overflow menu. */
+  onExportTaleCard?: () => void;
 }
 
 interface RadialMenuItem {
@@ -186,6 +190,8 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
   onOpenSaves,
   onRestart,
   onOpenCompanions,
+  onOpenAmbientFeed,
+  onExportTaleCard,
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -279,6 +285,24 @@ export const RadialQuickMenu = React.forwardRef<HTMLDivElement, RadialQuickMenuP
       color: 'text-muted-foreground',
       glowColor: 'hsl(var(--muted-foreground))',
     },
+    ...(onOpenAmbientFeed
+      ? [{
+          icon: <Globe className="w-5 h-5" />,
+          label: 'World',
+          onClick: onOpenAmbientFeed,
+          color: 'text-sky-400',
+          glowColor: 'rgb(56 189 248)',
+        }]
+      : []),
+    ...(onExportTaleCard
+      ? [{
+          icon: <Share2 className="w-5 h-5" />,
+          label: 'Tale Card',
+          onClick: onExportTaleCard,
+          color: 'text-amber-300',
+          glowColor: 'rgb(252 211 77)',
+        }]
+      : []),
     {
       icon: <RotateCcw className="w-5 h-5" />,
       label: 'New Story',

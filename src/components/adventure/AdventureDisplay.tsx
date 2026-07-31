@@ -2785,6 +2785,12 @@ export function AdventureDisplay({
         }}
         onRestart={onRestart}
         onOpenCompanions={() => setShowCompanionPanel(true)}
+        onOpenAmbientFeed={() => {
+          setShowAmbientFeedModal(true);
+          setLastSeenAmbientCount(ambientFeed.entries.length);
+        }}
+        onExportTaleCard={handleExportTaleCard}
+        hasNewAmbientEvents={hasNewAmbientEvents}
         characterName={character.name}
         currentTime={`${timeState.hour}:${String(timeState.minute).padStart(2, '0')}`}
         currentWeather={WEATHER_CONFIGS[weatherState.current].name}
@@ -2804,6 +2810,11 @@ export function AdventureDisplay({
         }}
         onRestart={onRestart}
         onOpenCompanions={() => setShowCompanionPanel(true)}
+        onOpenAmbientFeed={() => {
+          setShowAmbientFeedModal(true);
+          setLastSeenAmbientCount(ambientFeed.entries.length);
+        }}
+        onExportTaleCard={handleExportTaleCard}
       />
       
       {/* Companion Story Events - introductions and resurrections */}

@@ -4,7 +4,8 @@
 import React from 'react';
 import { 
   Settings, Trophy, ScrollText, Backpack, Bookmark, 
-  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen, Users
+  Clock, CloudRain, RotateCcw, Save, X, Info, FolderOpen, Users,
+  Globe, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,11 @@ interface MobileQuickMenuProps {
   onOpenSaves: () => void;
   onRestart: () => void;
   onOpenCompanions?: () => void;
+  /** World events feed — desktop reaches this from the overflow menu. */
+  onOpenAmbientFeed?: () => void;
+  /** Share tale card — desktop reaches this from the overflow menu. */
+  onExportTaleCard?: () => void;
+  hasNewAmbientEvents?: boolean;
   characterName?: string;
   currentTime?: string;
   currentWeather?: string;
@@ -48,6 +54,9 @@ export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuP
   onOpenSaves,
   onRestart,
   onOpenCompanions,
+  onOpenAmbientFeed,
+  onExportTaleCard,
+  hasNewAmbientEvents,
   characterName,
   currentTime,
   currentWeather,
@@ -111,6 +120,24 @@ export const MobileQuickMenu = React.forwardRef<HTMLDivElement, MobileQuickMenuP
       color: 'text-cyan-400',
       description: 'Save & Load',
     },
+    ...(onOpenAmbientFeed
+      ? [{
+          icon: <Globe className="w-5 h-5" />,
+          label: 'World',
+          onClick: () => { onOpenAmbientFeed(); onClose(); },
+          color: hasNewAmbientEvents ? 'text-primary' : 'text-sky-400',
+          description: 'World events',
+        }]
+      : []),
+    ...(onExportTaleCard
+      ? [{
+          icon: <Share2 className="w-5 h-5" />,
+          label: 'Tale Card',
+          onClick: () => { onExportTaleCard(); onClose(); },
+          color: 'text-amber-300',
+          description: 'Share tale',
+        }]
+      : []),
     {
       icon: <Settings className="w-5 h-5" />,
       label: 'Settings',
