@@ -151,7 +151,8 @@ Deno.serve(async (req) => {
         model,
         messages,
         temperature: 0.6,
-        max_tokens: 2000,
+        max_tokens: 3000,
+        response_format: { type: 'json_object' },
         timeoutMs: 60_000,
         turnId,
       }).catch(() => null);
