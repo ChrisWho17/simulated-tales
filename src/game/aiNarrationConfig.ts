@@ -1,9 +1,9 @@
 /**
  * AI Narration configuration — dual-model narration.
  *
- * Live Narrator  : writes every visible turn (default openai/gpt-5.5)
- * Story Director : writes the hidden Director Brief (default openai/gpt-5.6-sol)
- * Fallback       : used only if the Live Narrator fails twice (default openai/gpt-5.4)
+ * Live Narrator  : writes every visible turn (default aion-labs/aion-3.0)
+ * Story Director : writes the hidden Director Brief (default deepseek/deepseek-v4-pro)
+ * Fallback       : used only if the Live Narrator fails twice (default deepseek/deepseek-v4-pro)
  *
  * Model ids are intentionally configurable so they can be swapped without a
  * code change. Lightweight models (flash / mini / nano / lite / luna) are
