@@ -5,6 +5,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { getNetworkStatus } from '@/lib/resilienceUtils';
+import { recordNarrationTelemetry } from '@/game/aiNarrationConfig';
 
 interface StreamingState {
   content: string;
@@ -77,6 +78,8 @@ export function useStreamingNarrative() {
       abortControllerRef.current = controller;
       contentRef.current = '';
 
+      const requestStarted = Date.now();
+      let firstTokenAt: number | null = null;
       let timedOut = false;
       const timeoutId = setTimeout(() => {
         timedOut = true;
@@ -115,6 +118,12 @@ export function useStreamingNarrative() {
           throw new Error(`Stream failed: ${response.status}`);
         }
 
+        // Debug telemetry: which model actually answered (fallback visibility).
+        recordNarrationTelemetry({
+          lastModelUsed: response.headers.get('X-Narrator-Model'),
+          usedFallback: response.headers.get('X-Narrator-Fallback') === '1',
+        });
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let textBuffer = '';
@@ -149,6 +158,12 @@ export function useStreamingNarrative() {
               // Handle narrative token
               const token = parsed.choices?.[0]?.delta?.content as string | undefined;
               if (token) {
+                if (firstTokenAt === null) {
+                  firstTokenAt = Date.now();
+                  recordNarrationTelemetry({
+                    lastTimeToFirstTokenMs: firstTokenAt - requestStarted,
+                  });
+                }
                 contentRef.current += token;
                 setState(prev => ({ ...prev, content: contentRef.current }));
                 options.onToken?.(token);
@@ -196,6 +211,7 @@ export function useStreamingNarrative() {
           isComplete: true,
         }));
         
+        recordNarrationTelemetry({ lastLatencyMs: Date.now() - requestStarted });
         options.onComplete?.(contentRef.current, mechanics);
         
         return { content: contentRef.current, mechanics };

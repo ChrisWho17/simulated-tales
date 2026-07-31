@@ -43,6 +43,8 @@ export interface DirectorBrief {
   futureDevelopments: string[];
   /** Local bookkeeping (not model output). */
   generatedAt: number;
+  /** Monotonic per-campaign version: an older brief can never replace a newer one. */
+  version: number;
   model: string;
   triggerReason: DirectorTriggerReason;
 }
@@ -84,6 +86,8 @@ export interface DirectorState {
   unresolvedPlotThreads: string[];
   lastDirectorRun: number | null;
   directorTriggerReason: DirectorTriggerReason | null;
+  /** Highest brief version ever stored for this campaign. */
+  briefVersion: number;
   narratorModel: string;
   directorModel: string;
 }
@@ -102,6 +106,7 @@ export function createDirectorState(
     unresolvedPlotThreads: [],
     lastDirectorRun: null,
     directorTriggerReason: null,
+    briefVersion: 0,
     narratorModel,
     directorModel,
   };
@@ -123,7 +128,8 @@ const asStringArray = (value: unknown, cap = 12): string[] => {
 export function validateDirectorBrief(
   raw: unknown,
   model: string,
-  triggerReason: DirectorTriggerReason
+  triggerReason: DirectorTriggerReason,
+  version = 0
 ): DirectorBrief | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
@@ -189,6 +195,7 @@ export function validateDirectorBrief(
     continuityWarnings: asStringArray(r.continuityWarnings),
     futureDevelopments: asStringArray(r.futureDevelopments),
     generatedAt: Date.now(),
+    version,
     model,
     triggerReason,
   };
@@ -254,6 +261,7 @@ export interface DirectorTriggerSignals {
   worldEvent?: boolean;
   continuityConflict?: boolean;
   majorDecision?: boolean;
+  npcIntroduced?: boolean;
   manual?: boolean;
 }
 
@@ -272,7 +280,7 @@ export function evaluateDirectorTrigger(
 
   if (signals.continuityConflict) return 'continuity-conflict';
   if (signals.questChanged) return 'quest-change';
-  if (signals.majorNpcChanged) return 'npc-major-change';
+  if (signals.majorNpcChanged || signals.npcIntroduced) return 'npc-major-change';
   if (signals.newFaction) return 'new-faction';
   if (signals.newRegion) return 'new-region';
   if (signals.worldEvent) return 'world-event';

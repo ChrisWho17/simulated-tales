@@ -3750,20 +3750,41 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
 
     const narratorStarted = Date.now();
     let modelUsed = narratorModel;
+    let usedFallback = false;
     let response = await callNarrator(narratorModel);
 
-    // 429/402 are terminal for the user; only genuine upstream failures fall back.
-    if (!response.ok && ![429, 402, 403].includes(response.status)) {
+    // 429/402/403 are terminal for the user (rate limit / credits); only genuine
+    // upstream failures retry. Policy: ONE retry on the same narrator model,
+    // then — and only then — the heavy fallback model. Never a light model.
+    const isTerminal = (status: number) => [429, 402, 403].includes(status);
+
+    if (!response.ok && !isTerminal(response.status)) {
       const firstError = await response.clone().text().catch(() => '');
       console.warn(
-        `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); falling back to ${fallbackModel}. ${firstError.slice(0, 200)}`
+        `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); retrying once. ${firstError.slice(0, 200)}`
       );
-      modelUsed = fallbackModel;
-      response = await callNarrator(fallbackModel);
+      response = await callNarrator(narratorModel);
+
+      if (!response.ok && !isTerminal(response.status)) {
+        const retryError = await response.clone().text().catch(() => '');
+        console.warn(
+          `[generate-adventure] Narrator retry failed (${response.status}); falling back to ${fallbackModel}. ${retryError.slice(0, 200)}`
+        );
+        modelUsed = fallbackModel;
+        usedFallback = true;
+        response = await callNarrator(fallbackModel);
+      }
     }
+    const narratorLatencyMs = Date.now() - narratorStarted;
     console.log(
-      `[generate-adventure] Narrator ${modelUsed} responded in ${Date.now() - narratorStarted}ms (status ${response.status})`
+      `[generate-adventure] Narrator ${modelUsed} responded in ${narratorLatencyMs}ms (status ${response.status}, fallback=${usedFallback})`
     );
+    // Debug-mode telemetry for the client (never contains prompts or secrets).
+    const narratorHeaders = {
+      'X-Narrator-Model': modelUsed,
+      'X-Narrator-Fallback': usedFallback ? '1' : '0',
+      'X-Narrator-Latency-Ms': String(narratorLatencyMs),
+    };
 
 
     if (!response.ok) {
@@ -3780,6 +3801,18 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
         });
       }
       
+      if (response.status === 403) {
+        // Workspace credit limit reached — surface it instead of silently
+        // returning filler prose.
+        return new Response(JSON.stringify({
+          error: 'AI credit limit reached for this workspace. Add credits or raise the limit to continue.',
+          narrative: null,
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, ...narratorHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
           error: 'Usage limit reached. Please add credits to continue.',
@@ -3888,6 +3921,8 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
       return new Response(stream, {
         headers: {
           ...corsHeaders,
+          ...narratorHeaders,
+          'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms',
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
@@ -3984,9 +4019,17 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
 
     return new Response(JSON.stringify({ 
       narrative: cleanNarrative,
-      mechanics: Object.keys(mechanics).length > 0 ? mechanics : undefined
+      mechanics: Object.keys(mechanics).length > 0 ? mechanics : undefined,
+      modelUsed,
+      usedFallback,
+      narratorLatencyMs,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        ...narratorHeaders,
+        'Access-Control-Expose-Headers': 'X-Narrator-Model, X-Narrator-Fallback, X-Narrator-Latency-Ms',
+        'Content-Type': 'application/json',
+      },
     });
 
   } catch (error) {
