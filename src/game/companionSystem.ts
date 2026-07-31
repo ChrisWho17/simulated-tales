@@ -741,9 +741,22 @@ class CompanionSystemManager {
   getCompanion(id: string) { return this.companions.get(id); }
   
   getActiveCompanions() { 
+    // Presence gate: only companions physically travelling with the player.
+    // 'waiting' (left at a location), 'left', 'dead', 'hostile' and 'rejected'
+    // must never be handed to the narrator as if they were in the scene.
     return this.activeCompanions
       .map(id => this.companions.get(id))
-      .filter((c): c is CompanionState => c !== undefined);
+      .filter((c): c is CompanionState =>
+        c !== undefined && (c.status === 'active' || c.status === 'romance')
+      );
+  }
+
+  /** Companions the player knows but who are NOT in the scene right now. */
+  getAbsentCompanions() {
+    return Array.from(this.companions.values()).filter(c =>
+      !this.activeCompanions.includes(c.id) ||
+      (c.status !== 'active' && c.status !== 'romance')
+    );
   }
   
   getAllCompanions() { 
