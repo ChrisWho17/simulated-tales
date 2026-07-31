@@ -3753,7 +3753,7 @@ IF UNSURE: Default to dialogue for short conversational inputs, physical action 
     let response = await callNarrator(narratorModel);
 
     // 429/402 are terminal for the user; only genuine upstream failures fall back.
-    if (!response.ok && response.status !== 429 && response.status !== 402) {
+    if (!response.ok && ![429, 402, 403].includes(response.status)) {
       const firstError = await response.clone().text().catch(() => '');
       console.warn(
         `[generate-adventure] Narrator ${narratorModel} failed (${response.status}); falling back to ${fallbackModel}. ${firstError.slice(0, 200)}`

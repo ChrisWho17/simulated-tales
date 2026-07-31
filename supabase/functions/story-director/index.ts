@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: `Director unavailable (${upstream.status})`, brief: null }),
         {
-          status: upstream.status === 429 || upstream.status === 402 ? upstream.status : 502,
+          status: [429, 402, 403].includes(upstream.status) ? upstream.status : 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
