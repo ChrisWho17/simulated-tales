@@ -8,6 +8,11 @@ import { StoryEntry } from '@/components/adventure/types';
 import { revokeDisplayImageUrl, toDisplayImageUrl } from '@/lib/sceneImageUrl';
 import { resolveSceneCast, type CompanionLike } from '@/lib/sceneCast';
 import { companionSystem } from '@/game/companionSystem';
+import {
+  collectReferenceImages,
+  referenceVersion,
+  getVisualProfile,
+} from '@/lib/visualProfileStore';
 
 interface UseSceneIllustrationOptions {
   genre: GameGenre;
@@ -25,6 +30,10 @@ interface UseSceneIllustrationOptions {
     campaignName?: string;
   } | null;
   sceneIllustrationsEnabled: boolean;
+  /** Illustrations attach only to this campaign. */
+  campaignId?: string | null;
+  /** Current scene identity, so an image can't land on the wrong beat. */
+  sceneId?: string | null;
 }
 
 /**
@@ -58,6 +67,8 @@ export function useSceneIllustration({
   timeState,
   worldBible,
   sceneIllustrationsEnabled,
+  campaignId,
+  sceneId,
 }: UseSceneIllustrationOptions): SceneIllustrationReturn {
   const [sceneImageUrl, setSceneImageUrl] = useState<string | null>(null);
   const [isGeneratingScene, setIsGeneratingScene] = useState(false);
@@ -65,6 +76,9 @@ export function useSceneIllustration({
   const lastIllustrationTick = useRef<number>(0);
   const turnsSinceIllustration = useRef<number>(Number.MAX_SAFE_INTEGER);
   const displayUrlRef = useRef<string | null>(null);
+  // Monotonic job counter. A slow illustration that resolves after a newer one
+  // was started is dropped instead of attaching itself to the newer turn.
+  const jobSeqRef = useRef<number>(0);
 
   const adoptDisplayUrl = useCallback((raw: string | null) => {
     const next = raw ? toDisplayImageUrl(raw) : null;
@@ -83,8 +97,13 @@ export function useSceneIllustration({
     lastIllustrationTick.current = Date.now();
     turnsSinceIllustration.current = 0;
 
+    const jobId = ++jobSeqRef.current;
+    const jobCampaignId = campaignId || 'local';
+    const jobSceneId = sceneId || trigger.location || 'scene';
+    const jobTurnId = `${story.length}_${Date.now()}`;
+
     setIsGeneratingScene(true);
-    console.log('[SceneIllustration] Starting generation for trigger:', trigger.type);
+    console.log('[SceneIllustration] Starting generation for trigger:', trigger.type, { jobId, jobTurnId });
     
     try {
       // Get recent story entries for context (last 10 for better understanding)
@@ -113,6 +132,21 @@ export function useSceneIllustration({
         narratorText: lastNarratorMessage,
         recentText: recentStory.map(e => e.content),
       });
+
+      // Approved references always beat text: never redraw an established
+      // character from description when we hold a canonical portrait.
+      const castIds = sceneCast.map(c => c.name);
+      const referenceImages = collectReferenceImages(jobCampaignId, [
+        characterVisualProfile?.name,
+        ...castIds,
+      ]);
+      const profileVersion = referenceVersion(jobCampaignId, [
+        characterVisualProfile?.name,
+        ...castIds,
+      ]);
+      const playerProfile = characterVisualProfile?.name
+        ? getVisualProfile(jobCampaignId, characterVisualProfile.name)
+        : null;
 
       // Derive time-of-day string from hour
       const timeOfDayPeriod = timeState ? getGameTimeOfDay(timeState.hour) : undefined;
@@ -158,6 +192,16 @@ export function useSceneIllustration({
             weather: weatherState?.current || undefined,
             worldLore,
             bannedElements: worldBible?.bannedElements?.slice(0, 16) || undefined,
+            campaignId: jobCampaignId,
+            sceneId: jobSceneId,
+            turnId: jobTurnId,
+            referenceImages,
+            visualProfileVersion: profileVersion,
+            clothing: playerProfile?.currentClothing || characterVisualProfile?.currentOutfit,
+            equipment: playerProfile?.currentEquipment || characterVisualProfile?.currentEquipment,
+            injuries: playerProfile?.currentInjuries,
+            emotion: trigger.type,
+            camera: trigger.priority <= 1 ? 'dynamic close action shot' : 'cinematic establishing shot',
           }),
         }
       );
@@ -176,6 +220,16 @@ export function useSceneIllustration({
         error: data.error,
       });
       
+      // Late arrival from a superseded turn — discard it.
+      if (jobId !== jobSeqRef.current) {
+        console.log('[SceneIllustration] Stale job discarded', { jobId, latest: jobSeqRef.current });
+        return;
+      }
+      if (data.turnId && data.turnId !== jobTurnId) {
+        console.log('[SceneIllustration] Turn mismatch, image discarded');
+        return;
+      }
+
       if (data.imageUrl) {
         const display = toDisplayImageUrl(data.imageUrl);
         if (display) {
@@ -193,9 +247,9 @@ export function useSceneIllustration({
         console.error('[SceneIllustration] Failed to generate:', error);
       }
     } finally {
-      setIsGeneratingScene(false);
+      if (jobId === jobSeqRef.current) setIsGeneratingScene(false);
     }
-  }, [isGeneratingScene, genre, characterVisualProfile, story, weatherState, timeState, worldBible, adoptDisplayUrl]);
+  }, [isGeneratingScene, genre, characterVisualProfile, story, weatherState, timeState, worldBible, adoptDisplayUrl, campaignId, sceneId]);
 
   const checkSceneTriggers = useCallback((eventType: string, content: string) => {
     // Respect the scene illustrations setting
