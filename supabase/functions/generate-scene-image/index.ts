@@ -343,10 +343,8 @@ async function extractPromptWithHaiku(
   characterProfile?: CharacterVisualProfile | null,
   cast?: Array<{ name: string; gender: string; role: string; appearance?: string }>
 ): Promise<{ extractedPrompt: string | null; error?: string }> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  
-  if (!LOVABLE_API_KEY) {
-    console.log('LOVABLE_API_KEY not configured, skipping Haiku preprocessing');
+  if (!Deno.env.get('OPENROUTER_API_KEY')) {
+    console.log('OPENROUTER_API_KEY not configured, skipping prompt preprocessing');
     return { extractedPrompt: null, error: 'API key not configured' };
   }
   
@@ -369,25 +367,26 @@ async function extractPromptWithHaiku(
     contextParts.push(`ACTION: ${action || 'none'}`);
     contextParts.push(`NARRATOR: ${narratorText.slice(0, 1500)}`);
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: HAIKU_SYSTEM_PROMPT },
-          { role: 'user', content: contextParts.join('\n') }
-        ],
-        max_tokens: 150,
-        temperature: 0.7,
-      }),
+    const response = await callOpenRouter({
+      model: OPENROUTER_MODELS.utility,
+      messages: [
+        { role: 'system', content: HAIKU_SYSTEM_PROMPT },
+        { role: 'user', content: contextParts.join('\n') },
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+      timeoutMs: 30_000,
     });
     
     const elapsed = Date.now() - startTime;
-    console.log(`Haiku response in ${elapsed}ms, status: ${response.status}`);
+    console.log(`Prompt extraction in ${elapsed}ms, status: ${response.status}`);
+    logOpenRouterUsage({
+      fn: 'generate-scene-image',
+      role: 'utility',
+      model: OPENROUTER_MODELS.utility,
+      totalMs: elapsed,
+      status: response.status,
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
