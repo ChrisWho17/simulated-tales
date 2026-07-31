@@ -189,7 +189,14 @@ class StoryDirectorService {
     const started = Date.now();
 
     try {
-      const { data, error } = await supabase.functions.invoke('story-director', {
+      // The brief is advisory. If the function stalls, the player must not be
+      // held behind it — bail out and keep whatever brief we already have.
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('director timed out')), 80_000);
+      });
+
+      const invoke = supabase.functions.invoke('story-director', {
         body: {
           model: cfg.directorModel,
           turnId: `director_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -208,7 +215,12 @@ class StoryDirectorService {
         },
       });
 
+      const { data, error } = await Promise.race([invoke, timeout]).finally(() => {
+        if (timer) clearTimeout(timer);
+      });
+
       if (error) throw error;
+
 
       const nextVersion = (this.state.briefVersion ?? 0) + 1;
       const brief = validateDirectorBrief(data?.brief ?? data, cfg.directorModel, reason, nextVersion);
