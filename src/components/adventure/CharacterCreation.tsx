@@ -20,6 +20,7 @@ import {
   CLOTHING_STYLE_OPTIONS, CLOTHING_DETAIL_OPTIONS,
   formatAppearanceForAI
 } from '@/types/characterCreation';
+import { chestLabel, cupLetterToScalar, scalarToCupLetter } from '@/lib/chestScale';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
