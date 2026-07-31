@@ -513,9 +513,17 @@ export function AdventureGame() {
     // A different campaign is now active - reinitialize!
     console.log('[AdventureGame] Campaign changed from', lastCampaignIdRef.current, 'to', currentCampaignId);
     lastCampaignIdRef.current = currentCampaignId;
-    
+
     const campaign = campaignContext.activeCampaign;
-    
+
+    // A campaign created by the start-story flow arrives with an empty history while
+    // the opening narrative is still being generated. Don't wipe/duplicate it here.
+    if (openingInFlightRef.current && campaign.narrativeHistory.length === 0) {
+      console.log('[AdventureGame] Opening already in flight, skipping campaign re-init');
+      needsInitialNarrative.current = false;
+      return;
+    }
+
     // Set relationship journal context for this campaign + character
     setJournalContext(campaign.id, campaign.player.name);
     
@@ -524,6 +532,7 @@ export function AdventureGame() {
     
     setCharacter(migratedPlayer);
     setStory(campaign.narrativeHistory);
+
     setScenarioSelection({
       scenario: campaign.scenario,
       genre: campaign.meta.primaryGenre,
