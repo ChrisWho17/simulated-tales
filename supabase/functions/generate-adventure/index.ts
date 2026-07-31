@@ -1929,9 +1929,14 @@ serve(async (req) => {
       | undefined;
     
     
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('[generate-adventure] LOVABLE_API_KEY not configured');
+    // Unique id per player turn — correlates logs and lets the client discard
+    // an older response that lands after a newer turn.
+    const turnId = typeof (requestData as any).turnId === 'string'
+      ? (requestData as any).turnId
+      : `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    if (!getOpenRouterKey()) {
+      console.error('[generate-adventure] OPENROUTER_API_KEY not configured');
       throw new Error('Service configuration error');
     }
 
