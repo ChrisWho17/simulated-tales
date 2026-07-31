@@ -58,7 +58,14 @@ export function useCompanionIntroduction(): UseCompanionIntroductionReturn {
   // Load pending introductions from localStorage
   const loadIntroductions = useCallback(() => {
     const intros = getPendingIntroductions();
-    setPendingIntroductions(intros);
+    // Only publish when the data actually changed — this runs on a 2s poll and
+    // an unconditional setState re-rendered consumers forever.
+    setPendingIntroductions((prev) =>
+      prev.length === intros.length &&
+      prev.every((p, i) => p.companionId === intros[i].companionId && p.displayed === intros[i].displayed)
+        ? prev
+        : intros
+    );
   }, []);
 
   // Load on mount and listen for storage changes
