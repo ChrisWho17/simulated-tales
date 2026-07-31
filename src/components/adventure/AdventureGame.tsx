@@ -1087,8 +1087,19 @@ export function AdventureGame() {
   useEffect(() => {
     // Must be in playing phase with the flag set
     if (phase !== 'playing' || !needsInitialNarrative.current) return;
+    // The start-story flow is already generating the opening — never double up
+    if (openingInFlightRef.current) {
+      needsInitialNarrative.current = false;
+      return;
+    }
+    // An opening already exists on screen; don't replace what the player is reading
+    if (story.length > 0) {
+      needsInitialNarrative.current = false;
+      return;
+    }
     // Must have required data
     if (!character || !scenarioSelection) return;
+
     
     // Get current campaign ID
     const currentCampaignId = campaignContext?.activeCampaign?.id || 'local';
