@@ -108,6 +108,8 @@ export function saveAiNarrationConfig(config: AiNarrationConfig): void {
 
 export interface NarrationTelemetry {
   lastLatencyMs: number | null;
+  /** Time from request start to the first visible streamed token. */
+  lastTimeToFirstTokenMs: number | null;
   lastInputTokens: number | null;
   lastOutputTokens: number | null;
   lastModelUsed: string | null;
@@ -118,6 +120,7 @@ export interface NarrationTelemetry {
 
 const telemetry: NarrationTelemetry = {
   lastLatencyMs: null,
+  lastTimeToFirstTokenMs: null,
   lastInputTokens: null,
   lastOutputTokens: null,
   lastModelUsed: null,
