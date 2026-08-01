@@ -1129,7 +1129,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       onUpdateAppearance={updateAppearance}
                       genre={genre}
                     />
-                  </div>
+                  </CreationSection>
                 )}
               </ScrollArea>
             </div>
