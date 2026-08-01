@@ -23,6 +23,7 @@ import {
 import { chestLabel, cupLetterToScalar, scalarToCupLetter } from '@/lib/chestScale';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CreationSection } from './CreationSection';
 import { 
   ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
