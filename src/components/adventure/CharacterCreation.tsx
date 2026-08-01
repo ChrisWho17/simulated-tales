@@ -827,9 +827,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
               
               <ScrollArea className="h-[350px] pr-4">
                 {/* Simple Level - Always shown */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Gender</h3>
+                <div className="space-y-2">
+                  <CreationSection
+                    title="Gender"
+                    defaultOpen
+                    summary={GENDER_OPTIONS.find(o => o.value === appearance.simple.gender)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {GENDER_OPTIONS.map(opt => (
                         <button
@@ -856,10 +859,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         <span>Both anatomies</span>
                       </label>
                     )}
-                  </div>
+                  </CreationSection>
 
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Height</h3>
+                  {/* Languages — collapsible tab directly under Gender */}
+                  {languageBarriersEnabled && (
+                    <CreationSection
+                      title="Languages"
+                      summary={`${languagePointsRemaining}/${LANGUAGE_POINT_POOL} pts`}
+                    >
+                      {renderLanguages()}
+                    </CreationSection>
+                  )}
+
+                  <CreationSection
+                    title="Height"
+                    summary={HEIGHT_OPTIONS.find(o => o.value === appearance.simple.height)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {HEIGHT_OPTIONS.map(opt => (
                         <button
@@ -875,10 +890,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </CreationSection>
 
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Build</h3>
+                  <CreationSection
+                    title="Build"
+                    summary={BUILD_OPTIONS.find(o => o.value === appearance.simple.build)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {BUILD_OPTIONS.map(opt => (
                         <button
@@ -894,8 +911,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </CreationSection>
                 </div>
+
 
                 {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (
