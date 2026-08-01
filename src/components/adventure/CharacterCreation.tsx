@@ -1012,6 +1012,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         ))}
                       </div>
                     </div>
+                    </div>
+                  </CreationSection>
                   </div>
                 )}
 
