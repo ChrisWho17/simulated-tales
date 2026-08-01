@@ -238,10 +238,13 @@ export const GENRE_LANGUAGE_CATALOGS: Record<string, LanguageOption[]> = {
       { id: 'dock', name: 'Dockside' },
       { id: 'uptown', name: 'Uptown' },
     ]},
+    { code: 'es', name: 'Spanish', dialects: [{ id: 'latin', name: 'Latin American' }, { id: 'spain', name: 'Spain' }] },
     { code: 'fr', name: 'French', dialects: [{ id: 'parisian', name: 'Parisian' }] },
     { code: 'de', name: 'German', dialects: [{ id: 'high', name: 'High German' }] },
     { code: 'it', name: 'Italian', dialects: [{ id: 'roman', name: 'Roman' }] },
+    { code: 'ru', name: 'Russian', dialects: [{ id: 'standard', name: 'Standard' }] },
   ],
+
   pirate: [
     { code: 'en', name: 'Sailor\'s English', dialects: [
       { id: 'caribbean', name: 'Caribbean' },
