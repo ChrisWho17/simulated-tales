@@ -1000,14 +1000,60 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   </CreationSection>
 
                   {/* Languages — collapsible tab directly under Gender */}
-                  {languageBarriersEnabled && (
-                    <CreationSection
-                      title="Languages"
-                      summary={`${languagePointsRemaining}/${LANGUAGE_POINT_POOL} pts`}
-                    >
-                      {renderLanguages()}
-                    </CreationSection>
-                  )}
+                  <CreationSection
+                    title="Languages"
+                    summary={
+                      languageBarriersEnabled
+                        ? `${languagePointsRemaining}/${LANGUAGE_POINT_POOL} pts`
+                        : 'Off'
+                    }
+                  >
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">Language barriers</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {([
+                            { id: 'disabled', label: 'Off', hint: 'Everyone understands you' },
+                            { id: 'light', label: 'Light', hint: 'Occasional barriers' },
+                            { id: 'immersive', label: 'Immersive', hint: 'Full barriers' },
+                          ] as const).map(opt => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() =>
+                                game?.updateSettings({
+                                  languageSettings: {
+                                    translateEnabled: false,
+                                    playerKnownLanguages: ['en', 'common'],
+                                    ...(game.settings.languageSettings ?? {}),
+                                    barrierMode: opt.id,
+                                  },
+                                })
+
+                              }
+                              className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                                barrierMode === opt.id
+                                  ? 'border-primary bg-primary/15 text-foreground'
+                                  : 'border-border/40 text-muted-foreground hover:bg-primary/5'
+                              }`}
+                              title={opt.hint}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {languageBarriersEnabled ? (
+                        renderLanguages()
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Language barriers are off — everyone speaks your tongue. Pick Light or
+                          Immersive to choose a native language and spend language points.
+                        </p>
+                      )}
+                    </div>
+                  </CreationSection>
+
 
                   <CreationSection
                     title="Height"
