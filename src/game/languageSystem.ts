@@ -418,7 +418,7 @@ export function getEffectiveProficiency(
     // Same family → treat as basic in immersive? Keep unknown; family handled in light mode.
     return 'unknown';
   }
-  let level = skill.speaking;
+  let level: ProficiencyLevel = skill.speaking;
   if (
     speechDialect &&
     skill.dialect &&
