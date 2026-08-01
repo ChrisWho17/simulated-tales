@@ -917,8 +917,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
 
                 {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (
-                  <div className="space-y-4 mt-6 pt-4 border-t border-border/30">
-                    <h3 className="text-primary font-medium">Detailed Features</h3>
+                  <div className="mt-2">
+                  <CreationSection title="Detailed Features" tone="accent">
+                    <div className="space-y-4">
+
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
