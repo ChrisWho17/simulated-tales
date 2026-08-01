@@ -12,6 +12,7 @@ import {
   lowerProficiency,
   companionTranslate,
   postProcessLanguageInResponse,
+  splitLanguageDisplayHtml,
   createLanguageSystemState,
   applyCharacterProfileToState,
   areDistantDialects,
@@ -152,5 +153,18 @@ describe('Language Barriers 2.0 — creation points & companions', () => {
     );
     expect(out).toContain('foreign-text');
     expect(out).not.toContain('[LANGUAGE:');
+  });
+
+  it('splits language display HTML into typed segments for React renderers', () => {
+    const segments = splitLanguageDisplayHtml(
+      'He said <span class="foreign-text">"Xael"</span> <span class="translation">*Hello*</span> softly.'
+    );
+    expect(segments).toEqual([
+      { kind: 'text', text: 'He said ' },
+      { kind: 'foreign', text: '"Xael"' },
+      { kind: 'text', text: ' ' },
+      { kind: 'translation', text: 'Hello' },
+      { kind: 'text', text: ' softly.' },
+    ]);
   });
 });

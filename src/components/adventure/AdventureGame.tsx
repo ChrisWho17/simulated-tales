@@ -102,7 +102,9 @@ import {
   createLanguageSystemState, 
   buildLanguageContext,
   postProcessLanguageInResponse,
+  collectMisunderstandingsFromTaggedSpeech,
   learnLanguage,
+  addLanguageExposure,
   getLanguageDisplayName,
   applyCharacterProfileToState,
   ensureLocationLanguage,
@@ -1748,6 +1750,30 @@ export function AdventureGame() {
                 }
               }
 
+              // Language Barriers 2.0: stream mechanics include learn/exposure tags
+              const learned = enhancedMechanics.languagesLearned as
+                | Array<{ language: string; reason: string }>
+                | undefined;
+              if (learned?.length) {
+                for (const entry of learned) {
+                  setLanguageState(prev => learnLanguage(prev, entry.language));
+                  toast.success(`You've learned ${getLanguageDisplayName(entry.language)}!`, {
+                    description: entry.reason,
+                    duration: 5000,
+                  });
+                }
+              }
+              const exposures = enhancedMechanics.languageExposures as
+                | Array<{ language: string; amount: number }>
+                | undefined;
+              if (exposures?.length) {
+                for (const exp of exposures) {
+                  setLanguageState(prev =>
+                    addLanguageExposure(prev, exp.language, exp.amount || 10)
+                  );
+                }
+              }
+
               if (Object.keys(enhancedMechanics).length > 0) {
                 // REPLACE, never merge: merging let a previous turn's loot/damage/xp
                 // leak into this turn. The ref is set first so handlePlayerAction can
@@ -1785,21 +1811,25 @@ export function AdventureGame() {
         }
 
         if (!needsFullFallback) {
-          // Streamed tokens arrive raw: the edge function only strips mechanic tags
-          // on its non-streaming branch. Clean here so [LOOT:]/[XP:] tags never reach
-          // the story entry that gets persisted and replayed as conversationHistory.
+          // Streamed tokens arrive raw: edge strips mechanic tags on non-streaming only.
+          // Language Barriers must run BEFORE cleanNarrativeForDisplay — cleaning strips
+          // [LANGUAGE:] tags and would leave clear English with no proficiency processing.
           if (narrative) {
             rawNarrativeForTags = narrative;
-            narrative = cleanNarrativeForDisplay(narrative);
-          }
-
-          // Keep language post-processing connected on the streaming path too
-          if (narrative) {
-            narrative = postProcessLanguageInResponse(
+            const genre = scenarioSelection?.genre || 'fantasy';
+            const misunderstandings = collectMisunderstandingsFromTaggedSpeech(
               narrative,
               languageState,
-              scenarioSelection?.genre || 'fantasy'
+              genre
             );
+            if (misunderstandings.length > 0) {
+              setLanguageState(prev => ({
+                ...prev,
+                misunderstandings: [...prev.misunderstandings, ...misunderstandings].slice(-40),
+              }));
+            }
+            narrative = postProcessLanguageInResponse(narrative, languageState, genre);
+            narrative = cleanNarrativeForDisplay(narrative);
           }
 
           // Genre contract / hard-lock must still gate streaming (simulation-first rule)

@@ -59,6 +59,10 @@ import { useDiceRoll, toDicePlayer } from '@/hooks/useDiceRoll';
 import { useGameOptional } from '@/contexts/GameContext';
 import { DiceRollResult, DifficultyTier } from '@/game/diceSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
+import {
+  LANGUAGE_DISPLAY_CLASS,
+  splitLanguageDisplayHtml,
+} from '@/game/languageSystem';
 import { saveGame, GameSave } from '@/lib/saveSystem';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -1690,6 +1694,20 @@ export function AdventureDisplay({
     moodConfig: typeof MOOD_COLORS[CoreMoodType] | null,
     tintableWords?: Set<string>
   ): React.ReactNode[] => {
+    // Language Barriers emit span markup — render as React nodes (CSS classes in index.css).
+    if (/class="(foreign-text|partial-gloss|translation|companion-translation)"/i.test(text)) {
+      return splitLanguageDisplayHtml(text).flatMap((seg, idx) => {
+        if (seg.kind === 'text') {
+          return formatTextSegment(seg.text, `${keyPrefix}-lang-${idx}`, moodConfig, tintableWords);
+        }
+        return [
+          <span key={`${keyPrefix}-lang-${idx}`} className={LANGUAGE_DISPLAY_CLASS[seg.kind]}>
+            {seg.text}
+          </span>,
+        ];
+      });
+    }
+
     const result: React.ReactNode[] = [];
     // Split by bold markers first
     const boldParts = text.split(/\*\*(.+?)\*\*/g);

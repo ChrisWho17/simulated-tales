@@ -22,7 +22,6 @@ import {
 } from '@/types/characterCreation';
 import { chestLabel, cupLetterToScalar, scalarToCupLetter } from '@/lib/chestScale';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CreationSection } from './CreationSection';
 import { 
   ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
@@ -1002,6 +1001,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   {/* Languages — collapsible tab directly under Gender */}
                   <CreationSection
                     title="Languages"
+                    defaultOpen
                     summary={
                       languageBarriersEnabled
                         ? `${languagePointsRemaining}/${LANGUAGE_POINT_POOL} pts`
@@ -1020,17 +1020,19 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             <button
                               key={opt.id}
                               type="button"
-                              onClick={() =>
-                                game?.updateSettings({
+                              onClick={() => {
+                                if (!game?.updateSettings) return;
+                                game.updateSettings({
                                   languageSettings: {
-                                    translateEnabled: false,
-                                    playerKnownLanguages: ['en', 'common'],
-                                    ...(game.settings.languageSettings ?? {}),
+                                    ...(game.settings.languageSettings ?? {
+                                      barrierMode: 'disabled' as const,
+                                      translateEnabled: false,
+                                      playerKnownLanguages: ['en', 'common'],
+                                    }),
                                     barrierMode: opt.id,
                                   },
-                                })
-
-                              }
+                                });
+                              }}
                               className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
                                 barrierMode === opt.id
                                   ? 'border-primary bg-primary/15 text-foreground'

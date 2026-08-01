@@ -43,6 +43,8 @@ const MECHANIC_TAG_PATTERNS = [
   // Language and communication
   /\[LANGUAGE:[^\]]+\]/gi,
   /\[LEARN_LANGUAGE:[^\]]+\]/gi,
+  /\[LANGUAGE_EXPOSURE:[^\]]+\]/gi,
+  /\[TRANSLATED_BY:[^\]]+\]/gi,
   /\[TRANSLATE:[^\]]+\]/gi,
   
   // Quest and location

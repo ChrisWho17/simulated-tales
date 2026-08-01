@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ImageIcon, RotateCcw, Bookmark, BookmarkCheck } from 'lucide-react';
 import { CoreMoodType, MOOD_COLORS, getAnchorWords, MAX_ANCHORS_PER_PARAGRAPH } from '@/game/moodSystem';
 import { cleanNarrativeForDisplay } from '@/lib/narrativeFilter';
+import {
+  LANGUAGE_DISPLAY_CLASS,
+  splitLanguageDisplayHtml,
+} from '@/game/languageSystem';
 import { parseTextForNPCLinks } from './NPCNameLink';
 import { RegisteredNPC } from '@/game/npcIdentityRegistry';
 import { TypewriterText } from '@/components/ui/TypewriterText';
@@ -154,6 +158,40 @@ const FormatTextSegment = memo(function FormatTextSegment({
   openCharacterSheet: () => void;
   enableSystemHighlight?: boolean;
 }): React.ReactElement {
+  // Language Barriers emit <span class="foreign-text|…"> — render as React, not raw HTML.
+  if (/class="(foreign-text|partial-gloss|translation|companion-translation)"/i.test(text)) {
+    const segments = splitLanguageDisplayHtml(text);
+    return (
+      <>
+        {segments.map((seg, idx) => {
+          if (seg.kind === 'text') {
+            return (
+              <FormatTextSegment
+                key={`${keyPrefix}-lang-${idx}`}
+                text={seg.text}
+                keyPrefix={`${keyPrefix}-lang-${idx}`}
+                moodConfig={moodConfig}
+                tintableWords={tintableWords}
+                npcNameMap={npcNameMap}
+                playerName={playerName}
+                openCharacterSheet={openCharacterSheet}
+                enableSystemHighlight={enableSystemHighlight}
+              />
+            );
+          }
+          return (
+            <span
+              key={`${keyPrefix}-lang-${idx}`}
+              className={LANGUAGE_DISPLAY_CLASS[seg.kind]}
+            >
+              {seg.text}
+            </span>
+          );
+        })}
+      </>
+    );
+  }
+
   const result: React.ReactNode[] = [];
   
   // Split by bold markers first

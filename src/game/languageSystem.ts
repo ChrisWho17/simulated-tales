@@ -1182,6 +1182,59 @@ export function postProcessLanguageInResponse(
   });
 }
 
+/** Segments produced by postProcessLanguageInResponse for React (not raw HTML). */
+export type LanguageDisplaySegment =
+  | { kind: 'text'; text: string }
+  | { kind: 'foreign' | 'gloss' | 'translation' | 'companion'; text: string };
+
+const LANGUAGE_DISPLAY_SPAN_RE =
+  /<span class="(foreign-text|partial-gloss|translation|companion-translation)">([\s\S]*?)<\/span>/gi;
+
+/**
+ * Split proficiency display HTML into typed segments the story UI can render
+ * without dangerouslySetInnerHTML (AdventureDisplay / MemoizedStoryEntry).
+ */
+export function splitLanguageDisplayHtml(input: string): LanguageDisplaySegment[] {
+  if (!input || !/<span class="(foreign-text|partial-gloss|translation|companion-translation)">/i.test(input)) {
+    return [{ kind: 'text', text: input }];
+  }
+
+  const segments: LanguageDisplaySegment[] = [];
+  let lastIndex = 0;
+  const re = new RegExp(LANGUAGE_DISPLAY_SPAN_RE.source, 'gi');
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(input)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ kind: 'text', text: input.slice(lastIndex, match.index) });
+    }
+    const cls = match[1];
+    let text = match[2];
+    let kind: LanguageDisplaySegment['kind'] = 'text';
+    if (cls === 'foreign-text') kind = 'foreign';
+    else if (cls === 'partial-gloss') kind = 'gloss';
+    else if (cls === 'translation') kind = 'translation';
+    else kind = 'companion';
+
+    // Translated-in-italics wraps meaning in *…*; CSS already italicizes .translation.
+    if (kind === 'translation') {
+      text = text.replace(/^\*([\s\S]*)\*$/, '$1');
+    }
+    segments.push({ kind, text });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < input.length) {
+    segments.push({ kind: 'text', text: input.slice(lastIndex) });
+  }
+  return segments.length > 0 ? segments : [{ kind: 'text', text: input }];
+}
+
+export const LANGUAGE_DISPLAY_CLASS: Record<Exclude<LanguageDisplaySegment['kind'], 'text'>, string> = {
+  foreign: 'foreign-text',
+  gloss: 'partial-gloss',
+  translation: 'translation',
+  companion: 'companion-translation',
+};
+
 // ─── Learning & misunderstandings ────────────────────────────────────────────
 
 export function recordMisunderstanding(

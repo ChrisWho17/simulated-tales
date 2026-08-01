@@ -24,4 +24,6 @@ export interface GameMechanics {
   milestoneChanges?: Array<{ npcName: string; milestoneType: string }>;
   /** Names from [RECRUIT:] / [COMPANION_JOIN:] story tags */
   companionsRecruited?: string[];
+  languagesLearned?: Array<{ language: string; reason: string }>;
+  languageExposures?: Array<{ language: string; amount: number }>;
 }
