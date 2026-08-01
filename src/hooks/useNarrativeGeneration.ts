@@ -53,7 +53,15 @@ import {
   getNextReadyCompanion,
   buildCompanionIntroductionContext,
 } from '@/game/companionTimingSystem';
-import { postProcessLanguageInResponse, learnLanguage, getLanguageDisplayName, LanguageSystemState, buildLanguageContext } from '@/game/languageSystem';
+import {
+  postProcessLanguageInResponse,
+  collectMisunderstandingsFromTaggedSpeech,
+  learnLanguage,
+  addLanguageExposure,
+  getLanguageDisplayName,
+  LanguageSystemState,
+  buildLanguageContext,
+} from '@/game/languageSystem';
 import { ToneState, analyzePlayerTone, updateToneState, buildToneContext } from '@/game/toneSystem';
 import { WEATHER_CONFIGS, WeatherState, getWeatherNarrativeContext, formatWeatherEffectsForAI } from '@/game/weatherSystem';
 import { GameTimeState, buildTimeContext } from '@/game/timeProgressionSystem';
@@ -639,13 +647,16 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
         
         if (finalMechanics.languagesLearned && finalMechanics.languagesLearned.length > 0) {
           for (const learned of finalMechanics.languagesLearned) {
-            if (!languageState.playerKnownLanguages.includes(learned.language)) {
-              setLanguageState(prev => learnLanguage(prev, learned.language));
-              toast.success(`You've learned ${getLanguageDisplayName(learned.language)}!`, {
-                description: learned.reason,
-                duration: 5000,
-              });
-            }
+            setLanguageState(prev => learnLanguage(prev, learned.language));
+            toast.success(`You've learned ${getLanguageDisplayName(learned.language)}!`, {
+              description: learned.reason,
+              duration: 5000,
+            });
+          }
+        }
+        if (finalMechanics.languageExposures && finalMechanics.languageExposures.length > 0) {
+          for (const exp of finalMechanics.languageExposures as Array<{ language: string; amount: number }>) {
+            setLanguageState(prev => addLanguageExposure(prev, exp.language, exp.amount || 10));
           }
         }
       }
@@ -711,7 +722,22 @@ export function useNarrativeGeneration(deps: NarrativeGenerationDependencies): N
             return validation.content || getContextualFallback(genre);
           }
           
-          const processedContent = postProcessLanguageInResponse(validation.content, languageState);
+          const misunderstandings = collectMisunderstandingsFromTaggedSpeech(
+            validation.content,
+            languageState,
+            genre
+          );
+          if (misunderstandings.length > 0) {
+            setLanguageState(prev => ({
+              ...prev,
+              misunderstandings: [...prev.misunderstandings, ...misunderstandings].slice(-40),
+            }));
+          }
+          const processedContent = postProcessLanguageInResponse(
+            validation.content,
+            languageState,
+            genre
+          );
 
           // ===== Dual-model narration bookkeeping =====
           // Record the completed turn, then let the Story Director decide in the

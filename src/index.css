@@ -277,6 +277,18 @@
     font-style: italic;
   }
   
+  .partial-gloss {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.95em;
+    font-style: italic;
+  }
+  
+  .companion-translation {
+    color: hsl(200 55% 55%);
+    font-style: italic;
+    font-size: 0.95em;
+  }
+  
   .translation {
     color: hsl(270 70% 60%);
     font-style: italic;

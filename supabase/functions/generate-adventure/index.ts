@@ -129,8 +129,11 @@ interface ToneContext {
 }
 
 interface LanguageContext {
+  mode?: 'disabled' | 'light' | 'immersive';
   playerKnownLanguages: string[];
   translateEnabled: boolean;
+  characterProfile?: unknown;
+  locationLanguage?: unknown;
   languageInstructions: string;
 }
 
@@ -1829,6 +1832,13 @@ function parseMechanicsFromNarrative(narrative: string): Record<string, any> {
   if (languagesLearned.length > 0) {
     mechanics.languagesLearned = languagesLearned;
   }
+  const languageExposures = [...narrative.matchAll(/\[LANGUAGE_EXPOSURE:([^:]+):([^\]]+)\]/g)].map(m => ({
+    language: m[1].trim().toLowerCase(),
+    amount: Math.max(1, Math.min(40, parseInt(m[2].trim(), 10) || 10)),
+  }));
+  if (languageExposures.length > 0) {
+    mechanics.languageExposures = languageExposures;
+  }
 
   return mechanics;
 }
@@ -1873,6 +1883,8 @@ function stripMechanicTagsFromNarrative(narrative: string): string {
 
     // Language
     .replace(/\[LEARN_LANGUAGE:[^\]]+\]/gi, '')
+    .replace(/\[LANGUAGE_EXPOSURE:[^\]]+\]/gi, '')
+    .replace(/\[TRANSLATED_BY:[^\]]+\]/gi, '')
     .replace(/\[LANGUAGE:[^\]]+\]/gi, '')
     .replace(/\[TRANSLATE:[^\]]+\]/gi, '')
 
@@ -2431,20 +2443,29 @@ CLOTHING/ARMOR NARRATIVE RULES - CRITICAL:
       systemContent += '\n\n' + toneContext.toneInstructions;
     }
     
-    // Add language barrier context
+    // Add language barrier context (Language Barriers 2.0)
     if (languageContext?.languageInstructions) {
       systemContent += '\n\n' + languageContext.languageInstructions;
-      
-      // Add language learning trigger instructions
-      systemContent += `
 
-LANGUAGE LEARNING (use sparingly - most players don't think about languages):
-If an NPC naturally offers to teach the player a phrase or word, or if the player attempts extended communication in a foreign language through gestures/context, you MAY include:
-[LEARN_LANGUAGE:languageCode:reason]
-- Only trigger when it makes narrative sense (studying with a teacher, NPC patiently explaining, extended immersion)
-- This should be rare and feel like a natural story moment, not a gamified mechanic
-- Example: [LEARN_LANGUAGE:elvish:The elven scholar spent hours teaching you the basics of her tongue]
-- Do NOT force this - it's a minor detail that adds flavor when appropriate`;
+      const barrierMode = languageContext.mode || 'disabled';
+      if (barrierMode === 'disabled') {
+        systemContent += `\n\nLANGUAGE BARRIERS ARE DISABLED — communicate normally; do not use [LANGUAGE:] tags.`;
+      } else {
+        systemContent += `
+
+LANGUAGE BARRIERS 2.0 (mode: ${barrierMode}):
+- Write TRUE dialogue inside tags; the client obscures by PC proficiency.
+- Format: [LANGUAGE: code|dialect] "True meaning in clear English"
+- Optional companion claim: [LANGUAGE: code|dialect] "True meaning" [TRANSLATED_BY: CompanionName]
+- Player options and NPC reactions must match what the PC understood (bluff/nod risks narrative consequences).
+- Foreign speakers need a reason (merchant, refugee, soldier, port, scholar) — not random polyglots in a quiet village.
+- NPCs may simplify, gesture, translate, frustrate, assume understood, or exploit confusion based on personality.
+
+LANGUAGE LEARNING (use sparingly):
+[LEARN_LANGUAGE:languageCode:reason] — rare breakthrough (teacher, long immersion)
+[LANGUAGE_EXPOSURE:languageCode:amount] — gradual exposure (amount 5–25); living in a region, companion tutoring, books
+- Do NOT force language mechanics every turn`;
+      }
     }
     
     // ============= NEW SYSTEMS INTEGRATION =============

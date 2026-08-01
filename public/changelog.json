@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "0.4.8004",
+      "date": "July 2026",
+      "title": "Language Barriers 2.0",
+      "highlights": [
+        "Language Barriers setting: Disabled, Light, or Immersive",
+        "Character creation language profile with limited language points",
+        "Proficiency-based interpretation — fragments, broken paraphrase, dialect penalties"
+      ],
+      "features": [
+        "Translated in Italics soft assist restored in Settings",
+        "Genre-aware location/NPC language assignment (no random village polyglots)",
+        "Companion translations labeled as claims, biased by loyalty",
+        "Misunderstanding memory + gradual language exposure learning"
+      ],
+      "improvements": [
+        "Narrative prompts teach the GM to match player options to PC comprehension"
+      ],
+      "fixes": []
+    },
+    {
       "version": "0.4.8003",
       "date": "July 2026",
       "title": "Optimization",

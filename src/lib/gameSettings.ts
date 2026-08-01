@@ -4,6 +4,7 @@ import {
   DirectorSettings, 
   DEFAULT_DIRECTOR_SETTINGS 
 } from '@/game/directorModeSystem';
+import type { LanguageBarrierMode } from '@/game/languageSystem';
 import { DEFAULT_COLOR_ID, DEFAULT_CUSTOM_UI_COLORS, type CustomUiColors } from '@/lib/colorTheme';
 import { STORAGE_KEYS } from '@/lib/storageKeys';
 
@@ -24,8 +25,11 @@ export interface NarratorConfig {
 
 // Language settings
 export interface LanguageSettings {
-  translateEnabled: boolean;        // Show translations for foreign languages
-  playerKnownLanguages: string[];   // Languages the player character knows
+  /** Disabled = everyone communicates; Light = accents/occasional misses; Immersive = full barriers. */
+  barrierMode: LanguageBarrierMode;
+  /** Soft assist: show true meaning in italics (Translated in Italics). */
+  translateEnabled: boolean;
+  playerKnownLanguages: string[];
 }
 
 // Audio settings - Simplified to weather-only ambient sounds
@@ -162,6 +166,7 @@ export const DEFAULT_NARRATOR_CONFIG: NarratorConfig = {
 };
 
 export const DEFAULT_LANGUAGE_SETTINGS: LanguageSettings = {
+  barrierMode: 'disabled',
   translateEnabled: false,
   playerKnownLanguages: ['en', 'common'],
 };
@@ -277,6 +282,10 @@ export function loadSettings(): GameSettings {
       merged.customUiColors = {
         ...DEFAULT_CUSTOM_UI_COLORS,
         ...(parsed.customUiColors ?? {}),
+      };
+      merged.languageSettings = {
+        ...DEFAULT_LANGUAGE_SETTINGS,
+        ...(parsed.languageSettings ?? {}),
       };
       return merged;
     }

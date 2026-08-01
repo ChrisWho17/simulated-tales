@@ -103,7 +103,11 @@ import {
   buildLanguageContext,
   postProcessLanguageInResponse,
   learnLanguage,
-  getLanguageDisplayName
+  getLanguageDisplayName,
+  applyCharacterProfileToState,
+  ensureLocationLanguage,
+  deserializeLanguageState,
+  CharacterLanguageProfile,
 } from '@/game/languageSystem';
 import {
   NPCGrudgeContext,
@@ -658,9 +662,12 @@ export function AdventureGame() {
   const [languageState, setLanguageState] = useState<LanguageSystemState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE_STATE);
-      if (saved) return JSON.parse(saved);
+      if (saved) return deserializeLanguageState(saved);
     } catch {}
-    return createLanguageSystemState();
+    return createLanguageSystemState({
+      mode: settings.languageSettings?.barrierMode ?? 'disabled',
+      translateEnabled: settings.languageSettings?.translateEnabled ?? false,
+    });
   });
   
   // === GAME LOOP: Manages ripples, world state, rumors, NPCs ===
@@ -699,11 +706,29 @@ export function AdventureGame() {
     if (settings.languageSettings) {
       setLanguageState(prev => ({
         ...prev,
+        mode: settings.languageSettings.barrierMode ?? prev.mode ?? 'disabled',
         translateEnabled: settings.languageSettings.translateEnabled,
         playerKnownLanguages: settings.languageSettings.playerKnownLanguages || prev.playerKnownLanguages,
       }));
     }
   }, [settings.languageSettings]);
+
+  // Assign genre-aware location languages when the player moves (barriers on)
+  useEffect(() => {
+    if (languageState.mode === 'disabled') return;
+    const zoneId = playerLocation?.zoneId || playerLocation?.zoneName;
+    if (!zoneId) return;
+    const genre = scenarioSelection?.genre || 'fantasy';
+    setLanguageState(prev =>
+      ensureLocationLanguage(
+        prev,
+        zoneId,
+        genre,
+        playerLocation.zoneType || 'settlement',
+        playerLocation.zoneName || zoneId
+      )
+    );
+  }, [playerLocation?.zoneId, playerLocation?.zoneName, playerLocation?.zoneType, languageState.mode, scenarioSelection?.genre]);
   
   // === PERIODIC VALIDATION: Run every 5 turns to catch drift ===
   // Note: Object registry validation removed - using campaign-isolated inventory system
@@ -830,7 +855,7 @@ export function AdventureGame() {
       enableAdrenalineSystem: settings.enableAdrenalineSystem,
       enableWoundSystem: settings.enableWoundSystem,
       enableInventoryWeight: settings.enableInventoryWeight,
-      enableLanguageBarrier: (settings.languageSettings?.playerKnownLanguages?.length ?? 2) <= 3,
+      enableLanguageBarrier: (settings.languageSettings?.barrierMode ?? 'disabled') !== 'disabled',
     },
     diceMode,
     directorSettings,
@@ -1028,7 +1053,8 @@ export function AdventureGame() {
         const validation = validateContent(data.narrative);
         const gatedNarrative = postProcessLanguageInResponse(
           validation.success ? validation.content : (validation.content || data.narrative),
-          languageState
+          languageState,
+          scenarioSelection?.genre || 'fantasy'
         );
         if (!validation.success) {
           console.warn('[Zone Transition] Narrative adjusted by world bible:', validation.log);
@@ -1323,6 +1349,22 @@ export function AdventureGame() {
     
     // CRITICAL: Set character and transition to playing phase immediately
     setCharacter(char);
+    const langProfile = (char as { languageProfile?: CharacterLanguageProfile }).languageProfile;
+    if (langProfile) {
+      setLanguageState(prev =>
+        applyCharacterProfileToState(
+          prev,
+          langProfile,
+          settings.languageSettings?.barrierMode ?? prev.mode
+        )
+      );
+    } else {
+      setLanguageState(prev => ({
+        ...prev,
+        mode: settings.languageSettings?.barrierMode ?? prev.mode,
+        translateEnabled: settings.languageSettings?.translateEnabled ?? prev.translateEnabled,
+      }));
+    }
     setPhase('playing');
     setIsLoading(true);
     
@@ -1753,7 +1795,11 @@ export function AdventureGame() {
 
           // Keep language post-processing connected on the streaming path too
           if (narrative) {
-            narrative = postProcessLanguageInResponse(narrative, languageState);
+            narrative = postProcessLanguageInResponse(
+              narrative,
+              languageState,
+              scenarioSelection?.genre || 'fantasy'
+            );
           }
 
           // Genre contract / hard-lock must still gate streaming (simulation-first rule)

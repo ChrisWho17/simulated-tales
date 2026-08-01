@@ -958,6 +958,45 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
                 
                 <div className="space-y-2 pl-1">
+                  <div className="py-2 space-y-2">
+                    <div>
+                      <span className="text-sm">Language Barriers</span>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Disabled: everyone communicates. Light: accents and occasional misses. Immersive: full proficiency system.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { id: 'disabled', label: 'Disabled' },
+                        { id: 'light', label: 'Light' },
+                        { id: 'immersive', label: 'Immersive' },
+                      ] as const).map(opt => {
+                        const active = (settings.languageSettings?.barrierMode ?? 'disabled') === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => updateSettings({
+                              languageSettings: {
+                                ...settings.languageSettings,
+                                barrierMode: opt.id,
+                                translateEnabled: settings.languageSettings?.translateEnabled ?? false,
+                                playerKnownLanguages: settings.languageSettings?.playerKnownLanguages || ['en', 'common'],
+                              },
+                            })}
+                            className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                              active
+                                ? 'bg-primary/20 text-primary border-primary/40'
+                                : 'bg-muted/40 text-muted-foreground border-border hover:border-primary/30'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between py-2">
                     <div>
                       <span className="text-sm">NPC Accents & Dialects</span>
@@ -971,15 +1010,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   
                   <div className="flex items-center justify-between py-2">
                     <div>
-                      <span className="text-sm">Show Translations</span>
-                      <p className="text-xs text-muted-foreground">Display translations for foreign languages in purple italics</p>
+                      <span className="text-sm">Translated in Italics</span>
+                      <p className="text-xs text-muted-foreground">Soft assist — show true meaning in purple italics under foreign speech</p>
                     </div>
                     <Switch 
                       checked={settings.languageSettings?.translateEnabled ?? false}
                       onCheckedChange={(checked) => updateSettings({ 
                         languageSettings: {
                           ...settings.languageSettings,
-                          translateEnabled: checked
+                          barrierMode: settings.languageSettings?.barrierMode ?? 'disabled',
+                          translateEnabled: checked,
+                          playerKnownLanguages: settings.languageSettings?.playerKnownLanguages || ['en', 'common'],
                         }
                       })}
                     />
@@ -998,7 +1039,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         </span>
                       ))}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2 italic">Learn new languages through gameplay</p>
+                    <p className="text-xs text-muted-foreground mt-2 italic">Set at character creation when barriers are enabled; learn more through gameplay</p>
                   </div>
                 </div>
               </div>

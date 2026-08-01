@@ -24,7 +24,11 @@ import {
   getGenreWritingInstructions,
   getGenreMicroEvents,
 } from '@/lib/narrativeGenreEnforcement';
-import { LanguageSystemState, buildLanguageContext } from '@/game/languageSystem';
+import {
+  LanguageSystemState,
+  buildLanguageContext,
+  ensureLocationLanguage,
+} from '@/game/languageSystem';
 import { ToneState, analyzePlayerTone, updateToneState, buildToneContext } from '@/game/toneSystem';
 import { WEATHER_CONFIGS, WeatherState, getWeatherNarrativeContext, formatWeatherEffectsForAI } from '@/game/weatherSystem';
 import { GameTimeState, buildTimeContext, TimeOfDayPeriod } from '@/game/timeProgressionSystem';
@@ -434,10 +438,45 @@ export function buildNarrativeRequestBody(
     }
   }
 
-  const languageInstructions = buildLanguageContext(languageState);
+  const partyForLanguage = (() => {
+    try {
+      return companionSystem.getActiveCompanions().map(c => ({
+        id: c.id,
+        name: c.name,
+        affinity: c.affinity,
+        trust: c.trust,
+        knownLanguages: undefined as string[] | undefined,
+      }));
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const zoneKey = playerLocation?.zoneName || 'current';
+  const locationLang =
+    languageState.locationLanguages[zoneKey] ||
+    (languageState.mode !== 'disabled'
+      ? ensureLocationLanguage(
+          languageState,
+          zoneKey,
+          genre,
+          playerLocation?.zoneType || 'settlement',
+          playerLocation?.zoneName || zoneKey
+        ).locationLanguages[zoneKey]
+      : undefined);
+
+  const languageInstructions = buildLanguageContext(languageState, undefined, {
+    genre,
+    location: locationLang,
+    companions: partyForLanguage,
+    recentMisunderstandings: languageState.misunderstandings,
+  });
   const languageContextPayload = {
+    mode: languageState.mode,
     playerKnownLanguages: languageState.playerKnownLanguages,
     translateEnabled: languageState.translateEnabled,
+    characterProfile: languageState.characterProfile || null,
+    locationLanguage: locationLang || null,
     languageInstructions,
   };
 

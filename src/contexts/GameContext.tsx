@@ -100,7 +100,12 @@ export interface NarratorConfig {
   emotionalLeakage: boolean;
 }
 
+export type LanguageBarrierMode = 'disabled' | 'light' | 'immersive';
+
 export interface LanguageSettings {
+  /** Disabled | Light | Immersive language barriers. */
+  barrierMode: LanguageBarrierMode;
+  /** Translated in Italics — soft assist showing true meaning. */
   translateEnabled: boolean;
   playerKnownLanguages: string[];
 }
@@ -217,6 +222,7 @@ const defaultNarratorConfig: NarratorConfig = {
 };
 
 const defaultLanguageSettings: LanguageSettings = {
+  barrierMode: 'disabled',
   translateEnabled: false,
   playerKnownLanguages: ['en', 'common'],
 };
@@ -438,7 +444,14 @@ const loadSettings = (): GameSettings => {
     const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...defaultSettings, ...parsed };
+      return {
+        ...defaultSettings,
+        ...parsed,
+        languageSettings: {
+          ...defaultLanguageSettings,
+          ...(parsed.languageSettings ?? {}),
+        },
+      };
     }
   } catch (e) {
     console.error('Failed to load game settings:', e);
