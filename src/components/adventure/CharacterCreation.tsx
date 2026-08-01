@@ -23,6 +23,7 @@ import {
 import { chestLabel, cupLetterToScalar, scalarToCupLetter } from '@/lib/chestScale';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CreationSection } from './CreationSection';
 import { 
   ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle,
@@ -614,20 +615,23 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const canProceed = () => {
     switch (step) {
       case 'name': return name.trim().length >= 2;
-      case 'appearance': return true;
+      // Languages live inside the Appearance step now, so its gate applies here.
+      case 'appearance':
+        return !languageBarriersEnabled ||
+          (languagePointsRemaining >= 0 && !!languageProfile.nativeLanguage);
       case 'class': return selectedClass !== '';
       case 'background': return selectedBackground !== '';
       case 'stats': return true;
       case 'traits': return selectedTraits.length >= 1;
       case 'phobias': return true; // Phobias are optional
-      case 'languages': return languagePointsRemaining >= 0 && !!languageProfile.nativeLanguage;
+      case 'languages': return true; // legacy step, no longer in the flow
       case 'portrait': return true;
     }
   };
 
-  const steps: CreationStep[] = languageBarriersEnabled
-    ? ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'languages', 'portrait']
-    : ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
+  const steps: CreationStep[] =
+    ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
+
 
   const setNativeLanguage = (code: string) => {
     const option = languageCatalog.find(l => l.code === code);
@@ -766,6 +770,140 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     </div>
   );
 
+  const renderLanguages = () => (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Choose your native tongue and spend limited language points on secondary languages.
+        Literacy is separate from speaking. Mode: <span className="text-foreground">{barrierMode}</span>.
+      </p>
+      <div className="flex items-center justify-between text-sm">
+        <span>Language points remaining</span>
+        <span className={languagePointsRemaining < 0 ? 'text-destructive' : 'text-primary font-medium'}>
+          {languagePointsRemaining} / {LANGUAGE_POINT_POOL}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Native language</h3>
+        <div className="flex flex-wrap gap-2">
+          {languageCatalog.map(lang => (
+            <button
+              key={lang.code}
+              type="button"
+              onClick={() => setNativeLanguage(lang.code)}
+              className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                languageProfile.nativeLanguage === lang.code
+                  ? 'bg-primary/20 border-primary text-primary'
+                  : 'bg-background/50 border-border/30 hover:border-primary/50'
+              }`}
+            >
+              {lang.name}
+            </button>
+          ))}
+        </div>
+        <h3 className="text-sm font-medium mt-3">Native dialect</h3>
+        <div className="flex flex-wrap gap-2">
+          {(languageCatalog.find(l => l.code === languageProfile.nativeLanguage)?.dialects || []).map(d => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => setNativeDialect(d.id)}
+              className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                languageProfile.nativeDialect === d.id
+                  ? 'bg-primary/20 border-primary text-primary'
+                  : 'bg-background/50 border-border/30 hover:border-primary/50'
+              }`}
+            >
+              {d.name}{d.isolated ? ' (isolated)' : ''}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Native speaking is free. Literacy above conversational costs points.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Secondary languages</h3>
+        <div className="space-y-3">
+          {languageCatalog
+            .filter(l => l.code !== languageProfile.nativeLanguage)
+            .map(lang => {
+              const skill = languageProfile.known.find(k => k.language === lang.code);
+              const selected = !!skill;
+              return (
+                <div
+                  key={lang.code}
+                  className={`p-3 rounded-lg border ${
+                    selected ? 'border-primary/40 bg-primary/5' : 'border-border/30 bg-background/40'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleSecondaryLanguage(lang.code)}
+                    className="w-full flex items-center justify-between text-left gap-2"
+                  >
+                    <span className="text-sm font-medium">{lang.name}</span>
+                    <span className="text-xs text-muted-foreground">{selected ? 'Remove' : 'Add (costs points)'}</span>
+                  </button>
+                  {selected && skill && (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <label className="text-xs space-y-1">
+                        <span className="text-muted-foreground">Speaking</span>
+                        <select
+                          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
+                          value={skill.speaking}
+                          onChange={e => updateSecondarySkill(lang.code, 'speaking', e.target.value)}
+                        >
+                          {SPEAKING_PICKABLE.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-xs space-y-1">
+                        <span className="text-muted-foreground">Literacy</span>
+                        <select
+                          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
+                          value={skill.literacy}
+                          onChange={e => updateSecondarySkill(lang.code, 'literacy', e.target.value)}
+                        >
+                          {PROFICIENCY_ORDER.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-xs space-y-1 sm:col-span-2">
+                        <span className="text-muted-foreground">Dialect</span>
+                        <select
+                          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
+                          value={skill.dialect}
+                          onChange={e => updateSecondarySkill(lang.code, 'dialect', e.target.value)}
+                        >
+                          {lang.dialects.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p className="break-words">
+          Known: {languageProfile.known.map(k =>
+            `${getLanguageDisplayName(k.language)} (${k.speaking}/${k.literacy})`
+          ).join(' · ')}
+        </p>
+        <p className="italic">You cannot pick everything — points are limited on purpose.</p>
+      </div>
+    </div>
+  );
+
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-2xl">
@@ -827,9 +965,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
               
               <ScrollArea className="h-[350px] pr-4">
                 {/* Simple Level - Always shown */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Gender</h3>
+                <div className="space-y-2">
+                  <CreationSection
+                    title="Gender"
+                    defaultOpen
+                    summary={GENDER_OPTIONS.find(o => o.value === appearance.simple.gender)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {GENDER_OPTIONS.map(opt => (
                         <button
@@ -856,10 +997,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         <span>Both anatomies</span>
                       </label>
                     )}
-                  </div>
+                  </CreationSection>
 
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Height</h3>
+                  {/* Languages — collapsible tab directly under Gender */}
+                  {languageBarriersEnabled && (
+                    <CreationSection
+                      title="Languages"
+                      summary={`${languagePointsRemaining}/${LANGUAGE_POINT_POOL} pts`}
+                    >
+                      {renderLanguages()}
+                    </CreationSection>
+                  )}
+
+                  <CreationSection
+                    title="Height"
+                    summary={HEIGHT_OPTIONS.find(o => o.value === appearance.simple.height)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {HEIGHT_OPTIONS.map(opt => (
                         <button
@@ -875,10 +1028,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </CreationSection>
 
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Build</h3>
+                  <CreationSection
+                    title="Build"
+                    summary={BUILD_OPTIONS.find(o => o.value === appearance.simple.build)?.label}
+                  >
                     <div className="flex flex-wrap gap-2">
                       {BUILD_OPTIONS.map(opt => (
                         <button
@@ -894,13 +1049,16 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </CreationSection>
                 </div>
+
 
                 {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (
-                  <div className="space-y-4 mt-6 pt-4 border-t border-border/30">
-                    <h3 className="text-primary font-medium">Detailed Features</h3>
+                  <div className="mt-2">
+                  <CreationSection title="Detailed Features" tone="accent">
+                    <div className="space-y-4">
+
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -992,16 +1150,20 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                         ))}
                       </div>
                     </div>
+                    </div>
+                  </CreationSection>
                   </div>
                 )}
 
                 {/* All Level (18+) */}
                 {detailLevel === 'all' && (
-                  <div className="space-y-4 mt-6 pt-4 border-t border-destructive/30">
-                    <h3 className="text-destructive font-medium flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      Adult Content
-                    </h3>
+                  <CreationSection
+                    title="Adult Content"
+                    tone="danger"
+                    icon={<Eye className="w-4 h-4 text-destructive" />}
+                  >
+                    <div className="space-y-4">
+
                     
                     {/* Female/Other Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
@@ -1111,7 +1273,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       onUpdateAppearance={updateAppearance}
                       genre={genre}
                     />
-                  </div>
+                    </div>
+                  </CreationSection>
                 )}
               </ScrollArea>
             </div>
@@ -1493,142 +1656,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Languages Step — only when Language Barriers are Light/Immersive */}
-          {step === 'languages' && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-primary">Languages</h2>
-              <p className="text-sm text-muted-foreground">
-                Choose your native tongue and spend limited language points on secondary languages.
-                Literacy is separate from speaking. Mode: <span className="text-foreground">{barrierMode}</span>.
-              </p>
-              <div className="flex items-center justify-between text-sm">
-                <span>Language points remaining</span>
-                <span className={languagePointsRemaining < 0 ? 'text-destructive' : 'text-primary font-medium'}>
-                  {languagePointsRemaining} / {LANGUAGE_POINT_POOL}
-                </span>
-              </div>
+          {/* Languages now live inside the Appearance step, collapsed under Gender. */}
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Native language</h3>
-                <div className="flex flex-wrap gap-2">
-                  {languageCatalog.map(lang => (
-                    <button
-                      key={lang.code}
-                      type="button"
-                      onClick={() => setNativeLanguage(lang.code)}
-                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                        languageProfile.nativeLanguage === lang.code
-                          ? 'bg-primary/20 border-primary text-primary'
-                          : 'bg-background/50 border-border/30 hover:border-primary/50'
-                      }`}
-                    >
-                      {lang.name}
-                    </button>
-                  ))}
-                </div>
-                <h3 className="text-sm font-medium mt-3">Native dialect</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(languageCatalog.find(l => l.code === languageProfile.nativeLanguage)?.dialects || []).map(d => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setNativeDialect(d.id)}
-                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                        languageProfile.nativeDialect === d.id
-                          ? 'bg-primary/20 border-primary text-primary'
-                          : 'bg-background/50 border-border/30 hover:border-primary/50'
-                      }`}
-                    >
-                      {d.name}{d.isolated ? ' (isolated)' : ''}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Native speaking is free. Literacy above conversational costs points.
-                </p>
-              </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Secondary languages</h3>
-                <ScrollArea className="h-[220px] pr-2">
-                  <div className="space-y-3">
-                    {languageCatalog
-                      .filter(l => l.code !== languageProfile.nativeLanguage)
-                      .map(lang => {
-                        const skill = languageProfile.known.find(k => k.language === lang.code);
-                        const selected = !!skill;
-                        return (
-                          <div
-                            key={lang.code}
-                            className={`p-3 rounded-lg border ${
-                              selected ? 'border-primary/40 bg-primary/5' : 'border-border/30 bg-background/40'
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => toggleSecondaryLanguage(lang.code)}
-                              className="w-full flex items-center justify-between text-left"
-                            >
-                              <span className="text-sm font-medium">{lang.name}</span>
-                              <span className="text-xs text-muted-foreground">{selected ? 'Remove' : 'Add (costs points)'}</span>
-                            </button>
-                            {selected && skill && (
-                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                                <label className="text-xs space-y-1">
-                                  <span className="text-muted-foreground">Speaking</span>
-                                  <select
-                                    className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
-                                    value={skill.speaking}
-                                    onChange={e => updateSecondarySkill(lang.code, 'speaking', e.target.value)}
-                                  >
-                                    {SPEAKING_PICKABLE.map(p => (
-                                      <option key={p} value={p}>{p}</option>
-                                    ))}
-                                  </select>
-                                </label>
-                                <label className="text-xs space-y-1">
-                                  <span className="text-muted-foreground">Literacy</span>
-                                  <select
-                                    className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
-                                    value={skill.literacy}
-                                    onChange={e => updateSecondarySkill(lang.code, 'literacy', e.target.value)}
-                                  >
-                                    {PROFICIENCY_ORDER.map(p => (
-                                      <option key={p} value={p}>{p}</option>
-                                    ))}
-                                  </select>
-                                </label>
-                                <label className="text-xs space-y-1 sm:col-span-2">
-                                  <span className="text-muted-foreground">Dialect</span>
-                                  <select
-                                    className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-xs"
-                                    value={skill.dialect}
-                                    onChange={e => updateSecondarySkill(lang.code, 'dialect', e.target.value)}
-                                  >
-                                    {lang.dialects.map(d => (
-                                      <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                  </select>
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                  </div>
-                </ScrollArea>
-              </div>
-
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>
-                  Known: {languageProfile.known.map(k =>
-                    `${getLanguageDisplayName(k.language)} (${k.speaking}/${k.literacy})`
-                  ).join(' · ')}
-                </p>
-                <p className="italic">You cannot pick everything — points are limited on purpose.</p>
-              </div>
-            </div>
-          )}
 
           {/* Portrait Step */}
           {step === 'portrait' && (
