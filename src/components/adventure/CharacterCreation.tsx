@@ -615,20 +615,23 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const canProceed = () => {
     switch (step) {
       case 'name': return name.trim().length >= 2;
-      case 'appearance': return true;
+      // Languages live inside the Appearance step now, so its gate applies here.
+      case 'appearance':
+        return !languageBarriersEnabled ||
+          (languagePointsRemaining >= 0 && !!languageProfile.nativeLanguage);
       case 'class': return selectedClass !== '';
       case 'background': return selectedBackground !== '';
       case 'stats': return true;
       case 'traits': return selectedTraits.length >= 1;
       case 'phobias': return true; // Phobias are optional
-      case 'languages': return languagePointsRemaining >= 0 && !!languageProfile.nativeLanguage;
+      case 'languages': return true; // legacy step, no longer in the flow
       case 'portrait': return true;
     }
   };
 
-  const steps: CreationStep[] = languageBarriersEnabled
-    ? ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'languages', 'portrait']
-    : ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
+  const steps: CreationStep[] =
+    ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
+
 
   const setNativeLanguage = (code: string) => {
     const option = languageCatalog.find(l => l.code === code);
