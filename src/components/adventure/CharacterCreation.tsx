@@ -1015,11 +1015,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
 
                 {/* All Level (18+) */}
                 {detailLevel === 'all' && (
-                  <div className="space-y-4 mt-6 pt-4 border-t border-destructive/30">
-                    <h3 className="text-destructive font-medium flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      Adult Content
-                    </h3>
+                  <CreationSection
+                    title="Adult Content"
+                    tone="danger"
+                    icon={<Eye className="w-4 h-4 text-destructive" />}
+                  >
+                    <div className="space-y-4">
+
                     
                     {/* Female/Other Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
