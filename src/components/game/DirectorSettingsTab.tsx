@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Clapperboard, AlertTriangle, Sparkles, Gauge, Users, 
   Skull, Laugh, Compass, Info, ChevronDown, ChevronRight,
-  Zap, BookOpen
+  Zap, BookOpen, Shield, Dices
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -19,7 +19,14 @@ import {
   getDirectorTypesByCategory,
   computeDirectorKnobs,
   getRawGameKnobs,
+  normalizeDirectorSettings,
+  DM_FULL_CONTROL_EXPLANATION,
 } from '@/game/directorModeSystem';
+import {
+  RulesEngineSettings,
+  DifficultyDisplay,
+  normalizeRulesSettings,
+} from '@/game/dnd5eResolution';
 import {
   Collapsible,
   CollapsibleContent,
@@ -49,12 +56,34 @@ const indexToDescriptionLevel = (index: number): DescriptionLevel => {
 interface DirectorSettingsTabProps {
   directorSettings: DirectorSettings;
   onUpdate: (settings: DirectorSettings) => void;
+  /** Only the campaign owner/DM may toggle DM Full Control. */
+  isCampaignOwner?: boolean;
 }
 
+const ToggleRow: React.FC<{
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}> = ({ label, hint, checked, onChange }) => (
+  <div className="flex items-center justify-between gap-3 py-1">
+    <div className="min-w-0">
+      <span className="text-sm">{label}</span>
+      <p className="text-xs text-muted-foreground break-words">{hint}</p>
+    </div>
+    <Switch checked={checked} onCheckedChange={onChange} />
+  </div>
+);
+
 export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
-  directorSettings,
+  directorSettings: rawDirectorSettings,
   onUpdate,
+  isCampaignOwner = true,
 }) => {
+  const directorSettings = normalizeDirectorSettings(rawDirectorSettings);
+  const rules: RulesEngineSettings = normalizeRulesSettings(directorSettings.rules);
+  const updateRules = (patch: Partial<RulesEngineSettings>) =>
+    onUpdate({ ...directorSettings, rules: { ...rules, ...patch } });
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   
   // Get current description level as index
@@ -156,7 +185,7 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
               </p>
             </div>
             <Switch
-              checked={rules && directorSettings.dmFullControl === true}
+              checked={directorSettings.dmFullControl === true}
               disabled={!isCampaignOwner}
               onCheckedChange={(checked) => onUpdate({ ...directorSettings, dmFullControl: checked })}
             />
