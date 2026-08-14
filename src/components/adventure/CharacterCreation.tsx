@@ -506,12 +506,20 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     const instruction = portraitEditPrompt.trim();
     if (!portraitUrl || instruction.length < 3) return;
 
+    if (portraitEditStrength === 'major' && !confirmMajorEdit) {
+      setConfirmMajorEdit(true);
+      return;
+    }
+
+    const sourceUrl = portraitUrl;
     setIsEditingPortrait(true);
     try {
-      const editedUrl = await editPortraitImage(portraitUrl, instruction);
+      const editedUrl = await editPortraitImage(sourceUrl, instruction, portraitEditStrength);
+      setPortraitHistory(prev => [...prev, { url: sourceUrl, instruction, strength: portraitEditStrength }]);
       setPortraitUrl(editedUrl);
       setPortraitEditPrompt('');
-      setShowPortraitEditor(false);
+      setConfirmMajorEdit(false);
+      setShowBeforeAfter(true);
       toast.success('Portrait updated');
       void runGearScan(editedUrl);
     } catch (error) {
@@ -522,6 +530,17 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     } finally {
       setIsEditingPortrait(false);
     }
+  };
+
+  /** Step back to the portrait as it was before the most recent edit. */
+  const handleUndoPortraitEdit = () => {
+    if (!portraitHistory.length) return;
+    const previous = portraitHistory[portraitHistory.length - 1];
+    setPortraitHistory(prev => prev.slice(0, -1));
+    setPortraitUrl(previous.url);
+    setShowBeforeAfter(false);
+    toast.success('Reverted to the previous portrait');
+    void runGearScan(previous.url);
   };
 
 
