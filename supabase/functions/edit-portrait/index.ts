@@ -131,6 +131,18 @@ serve(async (req) => {
       },
     });
 
+    // Some providers reject the strength params outright. Retry the same
+    // image-to-image edit without them rather than dropping to a text-only
+    // regeneration, which is what produced brand-new characters before.
+    if (!result.imageUrl) {
+      console.warn('[edit-portrait] Retrying edit without strength params:', result.error);
+      result = await generateIllustration({
+        prompt,
+        referenceImages: [imageUrl],
+        editOnly: true,
+      });
+    }
+
     if (!result.imageUrl) {
       console.error('[edit-portrait] No image returned:', result.error);
       return new Response(JSON.stringify({ error: 'Unable to edit portrait at this time' }), {
