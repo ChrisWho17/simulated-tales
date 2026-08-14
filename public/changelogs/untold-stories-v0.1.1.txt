@@ -1,0 +1,29 @@
+======================================================================
+  UNTOLD STORIES — v0.1.1 (June 2025)
+  Alpha Launch Hotfix
+======================================================================
+
+Highlights
+----------
+  - Stability pass on first-time wizard
+  - Adventure creator no longer loses state on refresh
+
+Features
+--------
+  - Onboarding preferences persist to local storage
+
+Improvements
+------------
+  - Smoother splash screen transition
+
+Fixes
+-----
+  - Fixed wizard crash when selecting custom genre
+  - Resolved theme reset on hard reload
+
+Build log
+---------
+  - First-time wizard stability.
+  - Adventure creator state persistence.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

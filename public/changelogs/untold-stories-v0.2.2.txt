@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.2.2 (October 2025)
+  Difficulty & Correction Polish
+======================================================================
+
+Highlights
+----------
+  - Difficulty presets fully wired into narrator prompts
+  - Player correction commands recognized inline
+
+Features
+--------
+  - Hardcore preset enforces strict failure consequences
+  - /retcon, /soften, /harden meta-commands
+
+Improvements
+------------
+  - More consistent tone across long sessions
+
+Fixes
+-----
+  - Fixed difficulty preset not persisting across saves
+  - Resolved correction commands echoing into prose
+
+Build log
+---------
+  - Difficulty presets wired to narrator.
+  - Player correction meta-commands.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

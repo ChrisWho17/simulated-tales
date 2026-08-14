@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.4.8006 (August 2026)
+  Stability & Performance
+======================================================================
+
+Highlights
+----------
+  - Server-side portrait uploads eliminate timeout hangs on slow mobile networks
+  - Streamlined image pipeline returns lightweight public URLs instead of base64 payloads
+  - Improved first-turn story reliability and wrapped-app compatibility
+
+Improvements
+------------
+  - Faster portrait delivery with durable cloud storage URLs
+  - Reduced client memory pressure during illustration generation
+
+Fixes
+-----
+  - Fixed portrait generation stuck on 'Generating...' or failing with timeout errors
+  - Fixed wrapped app cutting off long-running portrait uploads
+  - Fixed first story turn hitching on slow connections
+
+Build log
+---------
+  - Server-side portrait uploads to Supabase storage bucket (npc-portraits).
+  - Public URL returns instead of base64; eliminates timeout hangs.
+  - fluxImageGeneration.ts client timeout removed.
+  - First-turn story hitching resolved by synchronizing client/server timeouts.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

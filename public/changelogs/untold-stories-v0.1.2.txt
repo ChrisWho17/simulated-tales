@@ -1,0 +1,29 @@
+======================================================================
+  UNTOLD STORIES — v0.1.2 (July 2025)
+  Dice & Loot Hotfix
+======================================================================
+
+Highlights
+----------
+  - Diced Out mode probability curves rebalanced
+  - [LOOT:item] tags now stripped from displayed prose
+
+Features
+--------
+  - Per-attribute dice modifiers surface in roll preview
+
+Improvements
+------------
+  - Inventory tooltips show source roll on hover
+
+Fixes
+-----
+  - Fixed loot tags leaking into narrative text
+  - Resolved double-rolling on quick action repeats
+
+Build log
+---------
+  - Diced Out mode rebalanced.
+  - [LOOT:item] tags stripped from prose.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

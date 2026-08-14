@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.3.1 (December 2025)
+  Schedule & Grudge Fixes
+======================================================================
+
+Highlights
+----------
+  - Smoother NPC schedule transitions across day boundaries
+  - Grudge decay now follows McCullough's forgiveness research
+
+Features
+--------
+  - Per-NPC forgiveness rate based on personality
+  - Schedule conflict resolver for overlapping appointments
+
+Improvements
+------------
+  - Faster world tick when many NPCs are co-located
+
+Fixes
+-----
+  - Fixed NPCs stuck mid-schedule after a save/load cycle
+  - Resolved grudges never decaying for high-trust NPCs
+
+Build log
+---------
+  - NPC schedule transitions.
+  - Grudge decay per McCullough's forgiveness research.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

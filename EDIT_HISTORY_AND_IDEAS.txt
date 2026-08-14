@@ -225,6 +225,7 @@ changelog highlights or release notes.
 
 0.4.8007-alpha — August 2026
 ------------------------------
+- [2026-08-14] Release tooling: scripts/edit-history.mjs added: check (completeness gate), sync (auto-append new published builds), export (versioned downloadable changelog per build in public/changelogs/), append (manual system-change notes). Wired to npm prebuild so every publish updates this log.
 Public label: Optimization
 - Language & story-language consistency across saves and loads.
 - lockStoryLanguage() pins resolved primary tongue/foreigner role at campaign
@@ -273,6 +274,7 @@ Public label: Optimization
 
 0.4.8001-alpha — July 2026
 --------------------------
+- (published as 0.4.801 in public/changelog.json)
 - WhatsNew modal touch/slider fix.
 - Language barrier strengthening.
 - Mobile menu parity with desktop.

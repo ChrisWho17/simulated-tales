@@ -1,0 +1,33 @@
+======================================================================
+  UNTOLD STORIES — v0.4.0 (February 2026)
+  Companion Framework
+======================================================================
+
+Highlights
+----------
+  - Introduced the companion party system
+  - Voice archetypes for distinct companion speech
+  - Sentient autonomy engine for independent reactions
+
+Features
+--------
+  - Up to 3 active companions in the party
+  - 15 voice archetypes defining speech tempo and traits
+  - Autonomous companion narrative feed
+
+Improvements
+------------
+  - Unified companion data structure across systems
+
+Fixes
+-----
+  - Fixed party slot leaks when dismissing companions
+  - Resolved companion portrait caching errors
+
+Build log
+---------
+  - Companion party system.
+  - 15 voice archetypes.
+  - Sentient autonomy engine.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

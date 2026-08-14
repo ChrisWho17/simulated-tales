@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.3.2 (January 2026)
+  Memory Decay Tuning
+======================================================================
+
+Highlights
+----------
+  - Refined three-tier memory capacities and decay curves
+  - Rumor truth-value calculation more resistant to noise
+
+Features
+--------
+  - Ebbinghaus-style decay applied per-memory-tier
+  - NPCs now consolidate short-term into long-term overnight
+
+Improvements
+------------
+  - Lower memory footprint for long sessions
+
+Fixes
+-----
+  - Fixed NPCs dropping critical memories too early
+  - Resolved rumor truth values getting stuck at 0
+
+Build log
+---------
+  - Memory decay tuning.
+  - Rumor truth-value calculation.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

@@ -1,0 +1,34 @@
+======================================================================
+  UNTOLD STORIES — v0.4.1 (March 2026)
+  Companion System Enhancements
+======================================================================
+
+Highlights
+----------
+  - Dynamic companion commentary during gameplay
+  - Companion equipment management
+  - Relationship event system foundation
+
+Features
+--------
+  - Companions react to player actions and story events
+  - Equipment sharing between player and companions
+  - Trust, affinity, and respect tracking
+
+Improvements
+------------
+  - Smoother companion dialogue generation
+  - Better party management UI
+
+Fixes
+-----
+  - Fixed companion stat calculations
+  - Resolved dialogue duplication issues
+
+Build log
+---------
+  - Dynamic companion commentary.
+  - Equipment sharing.
+  - Trust/affinity/respect tracking.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

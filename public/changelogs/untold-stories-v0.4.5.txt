@@ -1,0 +1,34 @@
+======================================================================
+  UNTOLD STORIES — v0.4.5 (June 2026)
+  Hotfix Update Delivery
+======================================================================
+
+Highlights
+----------
+  - Patch notes now load from a shared no-store changelog source
+  - Version and hotfix UI stays visible during first-time onboarding
+  - Service worker updates wait for the player's reload choice
+
+Features
+--------
+  - Patch notes can refresh their content after service worker activation without a full page reload when possible
+  - The same changelog source powers the What's New modal, version badge, timeline, and release detail panel
+
+Improvements
+------------
+  - New patch-note data bypasses stale cached app bundles by fetching /changelog.json with no-store
+  - Update availability remains visible from the global app shell instead of only the scenario creator
+
+Fixes
+-----
+  - Fixed hotfix notes not appearing when the app version did not advance
+  - Fixed generated service worker activating immediately before the reload toast could be shown
+  - Fixed first-time setup hiding the version badge and What's New modal
+
+Build log
+---------
+  - Patch notes load from no-store changelog source.
+  - Version/hotfix UI visible during onboarding.
+  - Service worker updates wait for player reload.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

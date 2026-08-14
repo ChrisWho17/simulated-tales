@@ -1,0 +1,23 @@
+======================================================================
+  UNTOLD STORIES — v0.4.8007 (August 2026)
+  Optimization
+======================================================================
+
+Highlights
+----------
+  - Optimization
+
+Build log
+---------
+  - [2026-08-14] Release tooling: scripts/edit-history.mjs added: check (completeness gate), sync (auto-append new published builds), export (versioned downloadable changelog per build in public/changelogs/), append (manual system-change notes). Wired to npm prebuild so every publish updates this log.
+  Public label: Optimization
+  - Language & story-language consistency across saves and loads.
+  - lockStoryLanguage() pins resolved primary tongue/foreigner role at campaign
+    finalization.
+  - handleLoadSave mirrors language settings back into global settings.
+  - DM Full Control and 5E Rules surfaced in Director Settings (campaign owner).
+  - D&D 5E resolution engine wired into narrator prompts.
+  - storyLanguageSetup.ts for native/foreigner status and translation assistance.
+  - UI badges for DM Full Control in adventure header.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

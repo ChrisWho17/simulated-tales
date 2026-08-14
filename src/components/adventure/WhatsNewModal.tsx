@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Gift, Zap, Bug, Star } from 'lucide-react';
+import { X, Sparkles, Gift, Zap, Bug, Star, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VERSION_STRING, APP_VERSION, BUILD_NUMBER } from '@/lib/version';
@@ -159,13 +159,26 @@ export function WhatsNewModal() {
             </ScrollArea>
 
             {/* Footer */}
-            <div className="p-4 border-t border-border/50 bg-muted/20">
+            <div className="p-4 border-t border-border/50 bg-muted/20 space-y-2">
               <Button 
                 onClick={handleClose}
                 className="w-full"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
                 Got it, let's play!
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full"
+              >
+                <a
+                  href={`/changelogs/untold-stories-v${currentChangelog.version ?? APP_VERSION}.txt`}
+                  download
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download release notes
+                </a>
               </Button>
             </div>
           </motion.div>

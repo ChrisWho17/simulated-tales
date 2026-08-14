@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.4.8004 (July 2026)
+  Language Barriers 2.0
+======================================================================
+
+Highlights
+----------
+  - Language Barriers setting: Disabled, Light, or Immersive
+  - Character creation language profile with limited language points
+  - Proficiency-based interpretation — fragments, broken paraphrase, dialect penalties
+
+Features
+--------
+  - Translated in Italics soft assist restored in Settings
+  - Genre-aware location/NPC language assignment (no random village polyglots)
+  - Companion translations labeled as claims, biased by loyalty
+  - Misunderstanding memory + gradual language exposure learning
+
+Improvements
+------------
+  - Narrative prompts teach the GM to match player options to PC comprehension
+
+Build log
+---------
+  - Language Barriers 2.0 restored through Cursor changes.
+  - Collapsible sections in Character Creation (CreationSection component).
+  - Language tab moved under Gender, always visible, with in-section toggle.
+  - Common-language catalog overhaul.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14
