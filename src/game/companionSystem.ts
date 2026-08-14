@@ -226,7 +226,14 @@ class CompanionSystemManager {
       companion.romanticInterest = 20 + Math.floor(Math.random() * 20);
     }
     
+    // Dedupe by name within the campaign so repeated intros can't clone an NPC.
+    const dupe = this.findByName(companion.name, companion.campaignId);
+    if (dupe && dupe.id !== companion.id) {
+      this.companions.delete(dupe.id);
+      this.activeCompanions = this.activeCompanions.filter(cid => cid !== dupe.id);
+    }
     this.companions.set(id, companion);
+
     console.log(`[Companion] Created: ${name} (${template}) for campaign: ${companion.campaignId || 'none'}`);
     
     return companion;
