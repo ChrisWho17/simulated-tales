@@ -82,9 +82,45 @@ class CompanionSystemManager {
   // ========== CAMPAIGN ISOLATION ==========
   
   setActiveCampaign(campaignId: string | null): void {
+    const previous = this.activeCampaignId;
     this.activeCampaignId = campaignId;
+
+    // Hard isolation: when the campaign changes, drop every in-memory companion
+    // that does not belong to the new campaign. Without this, the singleton keeps
+    // the previous story's party alive and they "intrude" into a brand new save.
+    if (previous !== campaignId) {
+      for (const [id, c] of Array.from(this.companions.entries())) {
+        if (campaignId && c.campaignId && c.campaignId !== campaignId) {
+          this.companions.delete(id);
+        } else if (!campaignId) {
+          this.companions.delete(id);
+        } else if (!c.campaignId) {
+          // Orphans (pre-isolation saves) are adopted by the campaign loading them.
+          c.campaignId = campaignId;
+        }
+      }
+      this.activeCompanions = this.activeCompanions.filter(id => this.companions.has(id));
+    }
+
     console.log(`[Companion] Active campaign set to: ${campaignId || 'none'}`);
   }
+
+  /** Wipes all companion state (used when starting a brand new story). */
+  reset(): void {
+    this.companions.clear();
+    this.activeCompanions = [];
+    this.activeCampaignId = null;
+  }
+
+  /** Existing companion in the active campaign with the same name, if any. */
+  private findByName(name: string, campaignId?: string): CompanionState | undefined {
+    const key = name.trim().toLowerCase();
+    const scope = campaignId ?? this.activeCampaignId ?? undefined;
+    return Array.from(this.companions.values()).find(
+      c => c.name.trim().toLowerCase() === key && (!scope || !c.campaignId || c.campaignId === scope)
+    );
+  }
+
   
   getActiveCampaignId(): string | null {
     return this.activeCampaignId;
