@@ -1,0 +1,408 @@
+================================================================================
+  UNTOLD STORIES — INTERNAL EDIT HISTORY & DESIGN IDEAS LOG
+  Confidential / Not for public patch notes
+  Last updated: 2026-08-14 (v0.4.8007-alpha)
+================================================================================
+
+This file is the single source of truth for every meaningful edit, system 
+change, and design idea that has shaped the project. Items marked 
+[LEAVE OUT OF PATCH NOTES] are intentionally excluded from public 
+public/changelog.json.
+
+================================================================================
+  TABLE OF CONTENTS
+================================================================================
+
+1.  Current Version & Build Identity
+2.  [LEAVE OUT OF PATCH NOTES] — Sensitive / explicit tuning
+3.  Major Systems & Architecture
+    3.1  Character Creation & Physicality
+    3.2  Visual Profile & Image Generation
+    3.3  AI Narration & Director Systems
+    3.4  Language & Immersion
+    3.5  Companions & NPCs
+    3.6  Storage, Saves & Campaign Isolation
+    3.7  UI / UX / Mobile / PWA
+4.  Version-by-Version History (newest first)
+5.  Pending / Experimental Ideas
+
+================================================================================
+  1. CURRENT VERSION & BUILD IDENTITY
+================================================================================
+
+- APP_VERSION:  0.4.8007
+- APP_STAGE:    alpha
+- Display:      v0.4.8007-alpha
+
+Build number is derived from BUILD_TIME: YYMMDD.HHMM
+
+================================================================================
+  2. [LEAVE OUT OF PATCH NOTES] — SENSITIVE / EXPLICIT TUNING
+================================================================================
+
+These directives are internal only. They must never appear in public-facing
+changelog highlights or release notes.
+
+2.1 Breast size scaling for generative imagery and NPC recognition
+------------------------------------------------------------------
+- The public UI previously exposed labels AA through K. Internally this is now
+  represented as a continuous 0..1 scalar for image generation consistency.
+- Old label mapping:
+    AA = flat
+    A  = bud
+    B  = noticeable
+    C  = normal
+    D  = bigger
+    E  = bigger
+    F  = really bigger
+    G  = massive
+    H  = huge
+    I  = massive
+    J  = back breaking
+    K  = bigger and back
+- Updated volume multiplier range: 0.1x (flat) to 8x (massive).
+- Weight gain is allowed to increase apparent size; weight loss is NOT allowed
+  to decrease it. Height must NOT drive size scaling.
+- In portrait/scene prompt building the scalar is translated into a descriptive
+  phrase appropriate to the image model.
+
+2.2 "Bust" additional detail keyword
+-------------------------------------
+- When the player selects "Bust" as a body focus or additional detail, the
+  prompt assembler injects:
+    "curvy hourglass figure, big round prominent butt, pronounced bust"
+  into the image prompt and the narrator context.
+- This is intentionally more explicit than the public genre copy.
+
+2.3 Height / weight framing in imagery
+--------------------------------------
+- Very short characters (down to 4'2") trigger low eye-line framing, oversized
+  environments, and NPC reactions (bending down, condescension, child mistakes).
+- Tall characters trigger high eye-line, cramped-space difficulty, etc.
+- Weight range: 40–400 lb (imperial) / ~18–181 kg (metric). Build + weight
+  together drive body-type descriptors in prompts and NPC reactions.
+
+2.4 Custom height outside brackets
+----------------------------------
+- A custom height slider allows 4'2" to ~7'6" so players can create characters
+  outside the preset brackets. Conversion to cm and head-height count is
+  computed for prompt accuracy.
+
+================================================================================
+  3. MAJOR SYSTEMS & ARCHITECTURE
+================================================================================
+
+3.1 CHARACTER CREATION & PHYSICALITY
+------------------------------------
+- Height presets + custom slider (4'2" – ~7'6"), metric/imperial toggle.
+- Weight slider (40–400 lb / ~18–181 kg), optional.
+- Body build: slender, athletic, average, stocky, muscular, heavyset, etc.
+- Breast size: continuous 0..1 scalar with volume multiplier 0.1x–8x.
+- Two-tone hair: primary color + optional secondary streak/tip/underlayer.
+- Expanded hairstyle list: Pixie, Bob, Lob, Fade, Crew Cut, Top Knot, Box
+  Braids, Cornrows, Pompadour, Quiff, Twin Tails, Hime Cut, and more.
+- Tone/voice presets per character.
+- Nationality, accent, primary language, and additional languages (opt-in).
+- Story language relationship (native speaker / foreigner) with language points
+  and proficiency.
+- Military preset: "Soldier on Tour" added to genre/scenario setup.
+
+3.2 VISUAL PROFILE & IMAGE GENERATION
+--------------------------------------
+- VisualProfileV2 schema stores identity, body (width/muscle/fat scalars),
+  face, hair traits per persistent character.
+- chestScale.ts: 0..1 scalar translator for image prompts.
+- visualProfilePrompt.ts: assembles structured character-sheet prompts.
+- visualProfileValidation.ts: detects identity drift and triggers strict retry.
+- Image generation pipeline:
+    - Heavy model: black-forest-labs/flux.2-max via OpenRouter images API.
+    - Fallback: openai/gpt-image-2.
+    - Server-side upload to Supabase storage bucket (npc-portraits).
+    - Returns lightweight public URL instead of base64.
+    - Total budget ~110–125s, per-attempt 45s.
+- Portrait generation: consistent height-to-cm, head-height count, hip/chest
+  percentage locking, anatomical landmarks for tattoos/scars.
+- Scene cast enforcement: sceneCast.ts ensures gender consistency in imagery
+  (e.g. female player + named Sarah stays female).
+- Edit portrait system:
+    - True image-to-image editing using current portrait as reference.
+    - Low denoise strength by default: Subtle 0.2, Moderate 0.35, Major 0.55.
+    - Backend instruction: "Edit the supplied image. Do not regenerate the scene."
+    - Preserves face, identity, body proportions, pose, camera angle, framing,
+      lighting, background unless explicitly changed.
+    - If helmet covers face, preserve original identity underneath.
+    - Before/after comparison, undo, edit history.
+    - Warning on Major edits that may alter identity/composition.
+
+3.3 AI NARRATION & DIRECTOR SYSTEMS
+-----------------------------------
+- Dual-model AI narration architecture:
+    LIVE NARRATOR:   aion-labs/aion-3.0
+    STORY DIRECTOR:  deepseek/deepseek-v4-pro
+    FALLBACK:        deepseek/deepseek-v4-pro
+- All OpenRouter calls go through _shared/openrouter.ts with streaming, retries,
+  and timeout budgets.
+- Director settings moved to world-load phase; confirmed before story starts.
+- "Story Ruleset" optional start path for player immersion.
+- enhance-ruleset edge function expands player notes into detailed narrator
+  instructions.
+- DM Full Control toggle: AI Director has complete narrative authority; players
+  must operate within established storyline instead of redirecting it.
+- D&D 5E rules engine (dnd5eResolution.ts): d20 mechanics, modifiers, DC bands.
+  Uncertain actions resolved by actual stats, never arbitrary director fiat.
+- Narrator contract: may deny, complicate, withhold; never guarantee success;
+  never echo player input verbatim.
+- Anti-echo retry.
+- Immediate action execution tags: [DAMAGE:X], [HEAL:X], [GOLD:X], [LOOT:X].
+- Narrative filtering strips mechanic tags from displayed prose.
+- Tone adaptation system.
+- Leakage prevention / story recaps for long sessions.
+
+3.4 LANGUAGE & IMMERSION
+------------------------
+- Language Barriers 2.0: Disabled / Light / Immersive modes.
+- Collapsible language tab inside character creation, under Gender.
+- Genre-aware language catalogs: Modern Life, War, Mystery, etc.
+- Common languages for immersion: Spanish, French, German, Italian, Portuguese,
+  Russian, Mandarin/Cantonese, Japanese, Korean, Polish, ASL Sign Language.
+- Removed less common entries from these genre lists to match user preference.
+- lockStoryLanguage() prevents primary tongue / foreigner role drift across
+  turns and save loads.
+- Translated text in italics soft assist restored in Settings.
+- Companion translations labeled as claims, biased by loyalty.
+- Misunderstanding memory + gradual exposure learning.
+
+3.5 COMPANIONS & NPCs
+---------------------
+- Companion party system: up to 3 active companions.
+- 15 voice archetypes.
+- Sentient autonomy engine for independent reactions.
+- Relationship journal, goals panel, moods, grievance resolution.
+- Auto-swap on full party; join/dismiss text commands.
+- Companion portrait generation with emotional descriptors.
+- Journey timeline animation.
+- Presence lock: prevents companions from appearing in new stories when the
+  previous story no longer exists.
+- Campaign isolation: purge in-memory companions when switching campaigns.
+- Name-based deduplication in registerCompanion and deserialize.
+- NPC generation (genericNPCSystem.ts) with body-type diversity, height/weight
+  distributions, but not as deep as player characters.
+- Inspect character: player card with detailed stats/appearance.
+- Autonomous narrative feed and companion interruptions inline.
+
+3.6 STORAGE, SAVES & CAMPAIGN ISOLATION
+---------------------------------------
+- bigKVStore.ts: IndexedDB local cache pipeline.
+- Local/cloud mirroring options: mirror / local-only / cloud-only.
+- Cache keyed by save name + version to avoid stale sync.
+- staleCacheCleanup.ts forces bundle refreshes in production.
+- Save stack documented with single source of truth; legacy saves still load.
+- Offline queue export as JSON; server merge timeline.
+
+3.7 UI / UX / MOBILE / PWA
+--------------------------
+- Dark fantasy + cyberpunk glassmorphism design; semantic CSS variables;
+  primary #8B5CF6; no hardcoded colors.
+- 24 visual theme presets + ColorSplashScreen.
+- Genre tab rail in theme picker with palettes per genre.
+- Camo pattern swatches: Woodland, Desert, Digital, Urban, Night Ops, Blaze
+  Digital.
+- WhatsNew modal with patch history carousel; fixed touch/slider support.
+- Version badge top-right with patch highlights and hotfix popovers.
+- Hotfix history dialog from main menu.
+- PWA install wrapper restored on campaign screen; verified on Samsung Internet.
+- Manifest + icon links fixed for home-screen install.
+- Mobile keyboard focus fix: prevent focus loss on touch browsers.
+- First-time wizard responsive fixes for mobile scaling.
+- Main menu cleanup: removed "Create your own story" because Story Ruleset
+  overwrites it.
+- Text safety: overflow-wrap, hyphens to prevent UI cut-offs.
+- SEO: SeoHead component, sitemap, robots.txt, canonical, JSON-LD.
+
+================================================================================
+  4. VERSION-BY-VERSION HISTORY (NEWEST FIRST)
+================================================================================
+
+0.4.8007-alpha — August 2026
+------------------------------
+Public label: Optimization
+- Language & story-language consistency across saves and loads.
+- lockStoryLanguage() pins resolved primary tongue/foreigner role at campaign
+  finalization.
+- handleLoadSave mirrors language settings back into global settings.
+- DM Full Control and 5E Rules surfaced in Director Settings (campaign owner).
+- D&D 5E resolution engine wired into narrator prompts.
+- storyLanguageSetup.ts for native/foreigner status and translation assistance.
+- UI badges for DM Full Control in adventure header.
+
+0.4.8006-alpha — August 2026
+------------------------------
+- Server-side portrait uploads to Supabase storage bucket (npc-portraits).
+- Public URL returns instead of base64; eliminates timeout hangs.
+- fluxImageGeneration.ts client timeout removed.
+- First-turn story hitching resolved by synchronizing client/server timeouts.
+
+0.4.8005-alpha — August 2026
+------------------------------
+- Mobile keyboard fix: touch-scroll-container prevents focus loss.
+- Campaign isolation: purge companions on campaign switch.
+- Duplicate companion deduplication.
+- Portrait generation timeout diagnosis: client base64 payload size.
+
+0.4.8004-alpha — August 2026
+------------------------------
+- Language Barriers 2.0 restored through Cursor changes.
+- Collapsible sections in Character Creation (CreationSection component).
+- Language tab moved under Gender, always visible, with in-section toggle.
+- Common-language catalog overhaul.
+
+0.4.8003-alpha — July 2026
+--------------------------
+Public label: Optimization
+(Internal: breast size 0.1x–8x multiplier and "bust" curvy/butt prompt injection.)
+
+0.4.8002-alpha — July 2026
+--------------------------
+- PWA install wrapper restored.
+- Genre tab rail + camo palettes in ThemeGrid.
+- Version bump for Samsung Internet verification.
+- sceneCast.ts gender consistency in illustrations.
+- Mobile scaling for FirstTimeWizard.
+- Companion presence lock.
+- Narrator switched to gemini-3.6-flash for performance.
+
+0.4.8001-alpha — July 2026
+--------------------------
+- WhatsNew modal touch/slider fix.
+- Language barrier strengthening.
+- Mobile menu parity with desktop.
+- Fixed supabaseUrl required errors.
+- staleCacheCleanup.ts for production bundle refresh.
+
+0.4.8000-alpha — July 2026
+--------------------------
+- Removed "Create your own story" from main menu.
+- Soldier on Tour military preset.
+- Genre Setup continue button restored.
+- bigKVStore.ts local cache architecture.
+- Save keyed by name + version.
+- SEO findings fixed (SeoHead, sitemap, robots.txt).
+
+0.4.7-alpha — June 2026
+-----------------------
+- Custom height slider (4'2" – ~7'6").
+- Very Short height tier.
+- Weight 40–400 lb / ~18–181 kg.
+- Two-tone hair support.
+- Expanded hairstyle list.
+- Height/weight in imagery framing and NPC reactions.
+
+0.4.6-alpha — June 2026
+-----------------------
+- Nationality & languages opt-in.
+- New England accent replaces New York.
+- Director choice syncs into first scene.
+- "All (Scholar)" language option.
+
+0.4.5-alpha — June 2026
+-----------------------
+- Patch notes load from no-store changelog source.
+- Version/hotfix UI visible during onboarding.
+- Service worker updates wait for player reload.
+
+0.4.4-alpha — June 2026
+-----------------------
+- Version badge + hotfix popovers.
+- Full hotfix history dialog.
+- PWA install moved to Game Settings.
+- Storage bucket policy hardening.
+- Portrait prompt injection sanitization.
+- HIBP leaked-password protection.
+
+0.4.3-alpha — May 2026
+----------------------
+- Offline queue export.
+- Install button on campaign chooser.
+- Standalone-mode detection.
+
+0.4.2-alpha — April 2026
+------------------------
+- Companion loyalty quests (4 tiers).
+- Relationship milestone events.
+- Auto-increment build numbers.
+
+0.4.1-alpha — March 2026
+------------------------
+- Dynamic companion commentary.
+- Equipment sharing.
+- Trust/affinity/respect tracking.
+
+0.4.0-alpha — February 2026
+---------------------------
+- Companion party system.
+- 15 voice archetypes.
+- Sentient autonomy engine.
+
+0.3.2-alpha — January 2026
+--------------------------
+- Memory decay tuning.
+- Rumor truth-value calculation.
+
+0.3.1-alpha — December 2025
+---------------------------
+- NPC schedule transitions.
+- Grudge decay per McCullough's forgiveness research.
+
+0.3.0-alpha — November 2025
+---------------------------
+- Living world simulation.
+- Three-tier NPC memory.
+- Ambient background events.
+
+0.2.2-alpha — October 2025
+--------------------------
+- Difficulty presets wired to narrator.
+- Player correction meta-commands.
+
+0.2.1-alpha — September 2025
+----------------------------
+- Hard-lock genre option.
+- Secondary genre weight cap.
+
+0.2.0-alpha — August 2025
+-------------------------
+- Narrator contract.
+- Multi-genre blending.
+- Tone adaptation system.
+
+0.1.2-alpha — July 2025
+-----------------------
+- Diced Out mode rebalanced.
+- [LOOT:item] tags stripped from prose.
+
+0.1.1-alpha — June 2025
+-----------------------
+- First-time wizard stability.
+- Adventure creator state persistence.
+
+0.1.0-alpha — June 2025
+-----------------------
+- Origin / Untold Stories Alpha launch.
+- Core dice and inventory.
+- Initial dark fantasy + cyberpunk visual identity.
+
+================================================================================
+  5. PENDING / EXPERIMENTAL IDEAS
+================================================================================
+
+- Persistent Visual Profile for every important NPC (schema already in place;
+  apply to key recurring NPCs beyond player and companions).
+- Further anatomical landmark pinning for scars, tattoos, piercings.
+- Inpainting/masking support in portrait edit when provider allows.
+- Multiplayer/campaign-owner features (currently single-player only).
+- Full D&D 5E bestiary integration.
+- Additional genre-specific body presets.
+
+================================================================================
+  END OF LOG
+================================================================================
