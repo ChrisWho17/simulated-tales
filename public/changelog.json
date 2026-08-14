@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "0.4.8005",
+      "date": "August 2026",
+      "title": "Portrait & Campaign Stability",
+      "highlights": [
+        "Portrait generation pipeline restored with proper timeout handling",
+        "Mobile keyboard no longer closes on touch input",
+        "Campaign isolation prevents companions and story from bleeding across saves"
+      ],
+      "features": [],
+      "improvements": [
+        "Faster portrait response with clear failure feedback",
+        "Companion registry now deduplicates on load and creation"
+      ],
+      "fixes": [
+        "Fixed generative portraits stuck on 'Generating...'",
+        "Fixed duplicate companion entries (e.g., Lyra) appearing in the roster",
+        "Fixed new stories intertwining with previous campaign state"
+      ]
+    },
+    {
       "version": "0.4.8004",
       "date": "July 2026",
       "title": "Language Barriers 2.0",
