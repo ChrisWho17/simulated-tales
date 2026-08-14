@@ -2630,8 +2630,31 @@ export function AdventureGame() {
           ? saveAny.adultContent
           : undefined;
       if (restoredLanguage) {
-        try { setLanguageState(restoredLanguage as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore language:', e); }
+        try {
+          const lang = restoredLanguage as LanguageSystemState;
+          setLanguageState(lang as any);
+          // Mirror the save's language contract back into settings, otherwise the
+          // settings->languageState sync effect clobbers it with the previous
+          // campaign's globals (wrong story language / proficiency labels).
+          updateSettings({
+            languageSettings: {
+              ...(settings.languageSettings ?? {
+                barrierMode: 'disabled' as const,
+                translateEnabled: false,
+                playerKnownLanguages: ['en', 'common'],
+              }),
+              barrierMode: lang.mode ?? settings.languageSettings?.barrierMode ?? 'disabled',
+              translateEnabled: lang.translateEnabled ?? settings.languageSettings?.translateEnabled ?? false,
+              playerKnownLanguages:
+                lang.playerKnownLanguages?.length
+                  ? lang.playerKnownLanguages
+                  : settings.languageSettings?.playerKnownLanguages ?? ['en', 'common'],
+              storyLanguage: lang.storyLanguage ?? settings.languageSettings?.storyLanguage,
+            },
+          });
+        } catch (e) { console.warn('[handleLoadSave] Failed to restore language:', e); }
       }
+
       if (restoredTone) {
         try { setToneState(restoredTone as any); } catch (e) { console.warn('[handleLoadSave] Failed to restore tone:', e); }
       }
