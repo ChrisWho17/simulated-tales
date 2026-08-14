@@ -273,6 +273,7 @@ Public label: Optimization
 
 0.4.8001-alpha — July 2026
 --------------------------
+- (published as 0.4.801 in public/changelog.json)
 - WhatsNew modal touch/slider fix.
 - Language barrier strengthening.
 - Mobile menu parity with desktop.
