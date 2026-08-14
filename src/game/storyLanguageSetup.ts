@@ -128,6 +128,31 @@ export function pickForeignRole(seed?: string): string {
   return FOREIGN_ROLES[n % FOREIGN_ROLES.length];
 }
 
+/**
+ * Freeze the campaign's story language once, at campaign start.
+ * Automatic resolution depends on genre + the character profile, so leaving it
+ * unresolved lets the primary tongue (and the foreigner role) drift between
+ * character creation, later turns, and reloaded saves. Locking pins the values
+ * so every consumer — UI, prompts, saves — reports the same language.
+ */
+export function lockStoryLanguage(
+  setup: StoryLanguageSetup,
+  profile: CharacterLanguageProfile,
+  genre: string
+): StoryLanguageSetup {
+  const primaryLanguage = resolvePrimaryStoryLanguage(setup, profile, genre);
+  return {
+    ...setup,
+    primaryMode: 'manual',
+    primaryLanguage,
+    foreignRole:
+      setup.relationship === 'foreigner'
+        ? setup.foreignRole || pickForeignRole(profile.nativeLanguage + primaryLanguage)
+        : undefined,
+  };
+}
+
+
 export interface StoryLanguageSummary {
   relationship: LanguageRelationship;
   characterLanguage: string;
