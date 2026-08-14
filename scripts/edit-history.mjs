@@ -169,7 +169,7 @@ function append(argv) {
 
     if (!historyVersions(text).has(version)) {
       const marker = /(^\s*4\.\s+VERSION-BY-VERSION HISTORY[^\n]*\n=+\n\n?)/m;
-      text = marker.test(text) ? text.replace(marker, `$1${entry}`) : text.replace(/(={10,}\n\s*5\./m, `${entry}$1`);
+      text = marker.test(text) ? text.replace(marker, `$1${entry}`) : text.replace(/(={10,}\n\s*5\.)/m, `${entry}$1`);
     }
     // refresh header stamp
     text = text
