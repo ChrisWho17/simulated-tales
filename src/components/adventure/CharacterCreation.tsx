@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
-import { generatePortraitWithCharacterData, editPortraitImage } from '@/services/fluxImageGeneration';
+import { generatePortraitWithCharacterData, editPortraitImage, type PortraitEditStrength } from '@/services/fluxImageGeneration';
 import { SecondaryGenre } from './AdventureCreator';
 import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
 import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
