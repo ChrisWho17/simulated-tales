@@ -1,0 +1,30 @@
+======================================================================
+  UNTOLD STORIES — v0.2.1 (September 2025)
+  Genre Blending Hotfix
+======================================================================
+
+Highlights
+----------
+  - Hard-lock genre option stops unwanted multi-genre blending
+  - Cleaner secondary-genre weight enforcement
+
+Features
+--------
+  - Secondary genres capped at 50% total weight
+  - Hard-lock toggle disables multi-select UI
+
+Improvements
+------------
+  - Genre tag parser more tolerant of casing
+
+Fixes
+-----
+  - Fixed sci-fi bleeding into pure fantasy sessions
+  - Resolved hard-lock being silently ignored
+
+Build log
+---------
+  - Hard-lock genre option.
+  - Secondary genre weight cap.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

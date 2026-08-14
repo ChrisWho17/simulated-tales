@@ -1,0 +1,40 @@
+======================================================================
+  UNTOLD STORIES — v0.4.4 (June 2026)
+  PWA Polish & Patch Visibility
+======================================================================
+
+Highlights
+----------
+  - Top-right version badge with patch highlights and hotfix popovers
+  - Full hotfix history dialog browsable from the main menu
+  - PWA install moved into Game Settings for a cleaner main menu
+
+Features
+--------
+  - Star popover surfaces the latest patch highlights at a glance
+  - Envelope popover shows hotfix count plus full history dialog
+  - Install App card lives in Game Settings with confirmation animation
+
+Improvements
+------------
+  - Cleaner main menu layout — no banner above the title
+  - Patch history ordered chronologically from origin to current alpha
+
+Fixes
+-----
+  - Fixed PWA install banner being inconsistent across browsers
+  - Resolved duplicate version display in the title block
+  - Hardened storage bucket policies (service-role writes only)
+  - Sanitized portrait custom prompt input against injection
+  - Enabled HIBP leaked-password protection on auth
+
+Build log
+---------
+  - Version badge + hotfix popovers.
+  - Full hotfix history dialog.
+  - PWA install moved to Game Settings.
+  - Storage bucket policy hardening.
+  - Portrait prompt injection sanitization.
+  - HIBP leaked-password protection.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

@@ -1,0 +1,33 @@
+======================================================================
+  UNTOLD STORIES — v0.2.0 (August 2025)
+  Narrator Contract & Genre Blending
+======================================================================
+
+Highlights
+----------
+  - Strict narrator contract (no guaranteed success, no echoing)
+  - Multi-genre blending with hard-lock option
+  - Tone adaptation system
+
+Features
+--------
+  - Genre tag parsing and detection from prose
+  - Player correction meta-commands
+  - Difficulty presets (Casual / Story / Simulation / Hardcore)
+
+Improvements
+------------
+  - Cleaner mechanic-tag filtering from displayed prose
+
+Fixes
+-----
+  - Fixed narrator echoing player input verbatim
+  - Resolved tone drift across long sessions
+
+Build log
+---------
+  - Narrator contract.
+  - Multi-genre blending.
+  - Tone adaptation system.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

@@ -1,0 +1,37 @@
+======================================================================
+  UNTOLD STORIES — v0.4.8002 (July 2026)
+  Install Wrapper & Genre Palettes
+======================================================================
+
+Highlights
+----------
+  - The Install App wrapper is back on the campaign screen, with live install status
+  - Theme picker gains a genre tab rail — palettes tuned per genre
+  - War genre ships real camo swatches, including orange / grey / black digital
+
+Features
+--------
+  - Genre palettes for Fantasy, Sci-Fi, Horror, Mystery, Pirate, Western, Cyberpunk, Post-Apoc, War and Modern life
+  - Camo palettes: Woodland, Desert, Digital, Urban, Night Ops and Blaze Digital, drawn as patterned swatches
+
+Improvements
+------------
+  - Tone filters and genre tabs stack, so you can narrow by feel and setting at once
+  - Every previous palette is untouched and still selectable
+
+Fixes
+-----
+  - Added the missing web app manifest and icon links so installing to the home screen works again on Samsung Internet and Chrome
+  - Verified a clean start with no stale service worker, no dark screen and no missing icons
+
+Build log
+---------
+  - PWA install wrapper restored.
+  - Genre tab rail + camo palettes in ThemeGrid.
+  - Version bump for Samsung Internet verification.
+  - sceneCast.ts gender consistency in illustrations.
+  - Mobile scaling for FirstTimeWizard.
+  - Companion presence lock.
+  - Narrator switched to gemini-3.6-flash for performance.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

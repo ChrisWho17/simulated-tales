@@ -1,0 +1,142 @@
+{
+  "builds": [
+    {
+      "version": "0.4.8007",
+      "title": "Optimization",
+      "date": "August 2026",
+      "file": "/changelogs/untold-stories-v0.4.8007.txt"
+    },
+    {
+      "version": "0.4.8006",
+      "title": "Stability & Performance",
+      "date": "August 2026",
+      "file": "/changelogs/untold-stories-v0.4.8006.txt"
+    },
+    {
+      "version": "0.4.8004",
+      "title": "Language Barriers 2.0",
+      "date": "July 2026",
+      "file": "/changelogs/untold-stories-v0.4.8004.txt"
+    },
+    {
+      "version": "0.4.8003",
+      "title": "Optimization",
+      "date": "July 2026",
+      "file": "/changelogs/untold-stories-v0.4.8003.txt"
+    },
+    {
+      "version": "0.4.8002",
+      "title": "Install Wrapper & Genre Palettes",
+      "date": "July 2026",
+      "file": "/changelogs/untold-stories-v0.4.8002.txt"
+    },
+    {
+      "version": "0.4.801",
+      "title": "Creators Mark Consolidation",
+      "date": "July 2026",
+      "file": "/changelogs/untold-stories-v0.4.801.txt"
+    },
+    {
+      "version": "0.4.7",
+      "title": "Heights, Weights & Two-Tone Hair",
+      "date": "June 2026",
+      "file": "/changelogs/untold-stories-v0.4.7.txt"
+    },
+    {
+      "version": "0.4.6",
+      "title": "Accent Toggle & Director Sync",
+      "date": "June 2026",
+      "file": "/changelogs/untold-stories-v0.4.6.txt"
+    },
+    {
+      "version": "0.4.5",
+      "title": "Hotfix Update Delivery",
+      "date": "June 2026",
+      "file": "/changelogs/untold-stories-v0.4.5.txt"
+    },
+    {
+      "version": "0.4.4",
+      "title": "PWA Polish & Patch Visibility",
+      "date": "June 2026",
+      "file": "/changelogs/untold-stories-v0.4.4.txt"
+    },
+    {
+      "version": "0.4.3",
+      "title": "Offline Queue & Debug Tooling",
+      "date": "May 2026",
+      "file": "/changelogs/untold-stories-v0.4.3.txt"
+    },
+    {
+      "version": "0.4.2",
+      "title": "Companion Loyalty & Relationship Events",
+      "date": "April 2026",
+      "file": "/changelogs/untold-stories-v0.4.2.txt"
+    },
+    {
+      "version": "0.4.1",
+      "title": "Companion System Enhancements",
+      "date": "March 2026",
+      "file": "/changelogs/untold-stories-v0.4.1.txt"
+    },
+    {
+      "version": "0.4.0",
+      "title": "Companion Framework",
+      "date": "February 2026",
+      "file": "/changelogs/untold-stories-v0.4.0.txt"
+    },
+    {
+      "version": "0.3.2",
+      "title": "Memory Decay Tuning",
+      "date": "January 2026",
+      "file": "/changelogs/untold-stories-v0.3.2.txt"
+    },
+    {
+      "version": "0.3.1",
+      "title": "Schedule & Grudge Fixes",
+      "date": "December 2025",
+      "file": "/changelogs/untold-stories-v0.3.1.txt"
+    },
+    {
+      "version": "0.3.0",
+      "title": "Living World Simulation",
+      "date": "November 2025",
+      "file": "/changelogs/untold-stories-v0.3.0.txt"
+    },
+    {
+      "version": "0.2.2",
+      "title": "Difficulty & Correction Polish",
+      "date": "October 2025",
+      "file": "/changelogs/untold-stories-v0.2.2.txt"
+    },
+    {
+      "version": "0.2.1",
+      "title": "Genre Blending Hotfix",
+      "date": "September 2025",
+      "file": "/changelogs/untold-stories-v0.2.1.txt"
+    },
+    {
+      "version": "0.2.0",
+      "title": "Narrator Contract & Genre Blending",
+      "date": "August 2025",
+      "file": "/changelogs/untold-stories-v0.2.0.txt"
+    },
+    {
+      "version": "0.1.2",
+      "title": "Dice & Loot Hotfix",
+      "date": "July 2025",
+      "file": "/changelogs/untold-stories-v0.1.2.txt"
+    },
+    {
+      "version": "0.1.1",
+      "title": "Alpha Launch Hotfix",
+      "date": "June 2025",
+      "file": "/changelogs/untold-stories-v0.1.1.txt"
+    },
+    {
+      "version": "0.1.0",
+      "title": "Origin — Untold Stories Alpha",
+      "date": "June 2025",
+      "file": "/changelogs/untold-stories-v0.1.0.txt"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+======================================================================
+  UNTOLD STORIES — v0.4.3 (May 2026)
+  Offline Queue & Debug Tooling
+======================================================================
+
+Highlights
+----------
+  - Export offline queue + server merge timeline as JSON
+  - Install button visible on the campaign chooser (incl. iframe preview)
+  - Installed/running status indicator next to Install
+
+Features
+--------
+  - DebugPwa: one-click export of queued items, ticks and hashes
+  - Install button fallback dialog with iOS/Android instructions
+  - Standalone-mode detection with status pill
+
+Improvements
+------------
+  - More robust service-worker registration guards for previews
+  - Better diagnostics for merge conflicts and offline replays
+
+Fixes
+-----
+  - Fixed Install button not appearing inside the Lovable preview iframe
+  - Resolved missing download affordance on the campaign chooser
+  - Fixed offline queue items lost on quick reconnect
+
+Build log
+---------
+  - Offline queue export.
+  - Install button on campaign chooser.
+  - Standalone-mode detection.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

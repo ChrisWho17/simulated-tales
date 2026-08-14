@@ -1,0 +1,32 @@
+======================================================================
+  UNTOLD STORIES — v0.1.0 (June 2025)
+  Origin — Untold Stories Alpha
+======================================================================
+
+Highlights
+----------
+  - First playable alpha of the text RPG engine
+  - Core dice and inventory systems
+  - Initial dark fantasy + cyberpunk visual identity
+
+Features
+--------
+  - Adventure creator with genre selection
+  - Dice modes: Normal Dice and Diced Out
+  - Loot via [LOOT:item] AI tags
+
+Improvements
+------------
+  - Baseline glassmorphism UI and dynamic theme variables
+
+Fixes
+-----
+  - Initial release — no prior hotfixes
+
+Build log
+---------
+  - Origin / Untold Stories Alpha launch.
+  - Core dice and inventory.
+  - Initial dark fantasy + cyberpunk visual identity.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

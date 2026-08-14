@@ -1,0 +1,33 @@
+======================================================================
+  UNTOLD STORIES — v0.4.6 (June 2026)
+  Accent Toggle & Director Sync
+======================================================================
+
+Highlights
+----------
+  - Nationality & languages are now opt-in for full narrative freedom
+  - New England accent replaces New York in the nationality list
+  - Director choice now syncs into your very first scene
+
+Features
+--------
+  - New "All (Scholar)" option instantly grants fluency in every language
+  - Toggle hides nationality, primary language, and additional languages when unused
+
+Improvements
+------------
+  - Accent descriptors refined for clearer regional voice
+
+Fixes
+-----
+  - Fixed Choose Your Director settings not reaching the opening narrative
+  - Director tightness, cruelty, and weirdness now influence the very first turn
+
+Build log
+---------
+  - Nationality & languages opt-in.
+  - New England accent replaces New York.
+  - Director choice syncs into first scene.
+  - "All (Scholar)" language option.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14

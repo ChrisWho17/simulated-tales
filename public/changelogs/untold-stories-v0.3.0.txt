@@ -1,0 +1,34 @@
+======================================================================
+  UNTOLD STORIES — v0.3.0 (November 2025)
+  Living World Simulation
+======================================================================
+
+Highlights
+----------
+  - NPC schedules and autonomous actions
+  - Three-tier NPC memory system
+  - Ambient background events feed
+
+Features
+--------
+  - World ticks advance NPCs even when player is idle
+  - Perception filtering for altered states
+  - Grudge and forgiveness modeling for NPCs
+
+Improvements
+------------
+  - Faster simulation tick performance
+  - More plausible NPC routines
+
+Fixes
+-----
+  - Fixed NPCs forgetting recent interactions
+  - Resolved schedule overlap deadlocks
+
+Build log
+---------
+  - Living world simulation.
+  - Three-tier NPC memory.
+  - Ambient background events.
+
+Generated from EDIT_HISTORY_AND_IDEAS.txt on 2026-08-14
