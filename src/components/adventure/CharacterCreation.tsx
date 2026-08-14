@@ -171,6 +171,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   // Portrait state
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [showPortraitEditor, setShowPortraitEditor] = useState(false);
+  const [portraitEditPrompt, setPortraitEditPrompt] = useState('');
+  const [isEditingPortrait, setIsEditingPortrait] = useState(false);
   const [detectedKeywords, setDetectedKeywords] = useState<{
     personalityScore: number;
     keywords: { category: string; keyword: string; effect: string }[];
