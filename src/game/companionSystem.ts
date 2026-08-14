@@ -129,6 +129,13 @@ class CompanionSystemManager {
   // ========== COMPANION MANAGEMENT ==========
   
   registerCompanion(companion: CompanionState): void {
+    // Dedupe: the same named companion must never exist twice in one campaign.
+    const existing = this.findByName(companion.name, companion.campaignId);
+    if (existing && existing.id !== companion.id) {
+      this.companions.delete(existing.id);
+      this.activeCompanions = this.activeCompanions.filter(id => id !== existing.id);
+    }
+
     if (this.companions.size >= this.maxTotalCompanions) {
       const inactiveCompanions = Array.from(this.companions.entries())
         .filter(([cid]) => !this.activeCompanions.includes(cid))
@@ -138,10 +145,15 @@ class CompanionSystemManager {
         this.companions.delete(inactiveCompanions[0][0]);
       }
     }
-    
+
+    if (!companion.campaignId && this.activeCampaignId) {
+      companion.campaignId = this.activeCampaignId;
+    }
+
     this.companions.set(companion.id, companion);
     console.log(`[Companion] Registered: ${companion.name} (${companion.id})`);
   }
+
   
   createCompanion(
     id: string,
