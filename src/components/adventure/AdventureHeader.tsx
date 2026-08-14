@@ -38,6 +38,7 @@ import { CloudSyncIndicator } from '@/components/game/CloudSyncIndicator';
 import { RadialMenuTrigger } from '@/components/game/RadialQuickMenu';
 import { WeatherState, WEATHER_CONFIGS, WeatherType } from '@/game/weatherSystem';
 import { GameTimeState, TimeMultiplier } from '@/game/timeProgressionSystem';
+import { DmFullControlBadge } from './DmFullControlBadge';
 
 export interface AdventureHeaderProps {
   // Weather state
@@ -50,6 +51,9 @@ export interface AdventureHeaderProps {
   
   // Ambient feed
   hasNewAmbientEvents: boolean;
+
+  /** Shows the "DM Full Control Active" indicator when the Director owns canon. */
+  dmFullControl?: boolean;
   
   // Action handlers
   onOpenMobileQuickMenu: () => void;
@@ -114,6 +118,7 @@ export function AdventureHeader({
   timeState,
   onTimeMultiplierChange,
   hasNewAmbientEvents,
+  dmFullControl = false,
   onOpenMobileQuickMenu,
   onOpenAmbientFeedModal,
   onOpenWeatherModal,
@@ -144,6 +149,7 @@ export function AdventureHeader({
           >
             {VERSION_STRING}
           </span>
+          <DmFullControlBadge active={dmFullControl} className="ml-1 flex-shrink-0" />
         </div>
 
         <div className="flex items-center gap-0.5 flex-shrink-0">
