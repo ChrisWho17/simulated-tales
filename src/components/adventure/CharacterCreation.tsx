@@ -1743,13 +1743,63 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
               
               <div className="flex flex-col md:flex-row gap-6 items-center">
                 {/* Portrait Preview */}
-                <div className="w-48 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden shrink-0">
-                  {portraitUrl ? (
-                    <img src={portraitUrl} alt="Character portrait" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-16 h-16 text-muted-foreground/30" />
+                <div className="flex flex-col items-center gap-2 shrink-0">
+                  <div className="w-48 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden">
+                    {portraitUrl ? (
+                      <img src={portraitUrl} alt="Character portrait" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-16 h-16 text-muted-foreground/30" />
+                    )}
+                  </div>
+
+                  {/* Small tweaks to the image that already exists — not a regenerate. */}
+                  {portraitUrl && (
+                    <div className="w-48 space-y-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                        onClick={() => setShowPortraitEditor(v => !v)}
+                        disabled={isGeneratingPortrait || isEditingPortrait}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit Image
+                      </Button>
+
+                      {showPortraitEditor && (
+                        <div className="space-y-2 p-2 rounded-lg border border-border/40 bg-background/50">
+                          <Textarea
+                            value={portraitEditPrompt}
+                            onChange={(e) => setPortraitEditPrompt(e.target.value)}
+                            placeholder="e.g. add a small scar on the left cheek, warmer lighting, zip the jacket"
+                            className="text-xs min-h-[70px] resize-none"
+                            maxLength={600}
+                            disabled={isEditingPortrait}
+                          />
+                          <p className="text-[10px] text-muted-foreground leading-snug">
+                            Keeps the same face and pose — only your requested tweak changes.
+                          </p>
+                          <Button
+                            size="sm"
+                            className="w-full gap-2 text-xs"
+                            onClick={handleEditPortrait}
+                            disabled={isEditingPortrait || portraitEditPrompt.trim().length < 3}
+                          >
+                            {isEditingPortrait ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Applying...
+                              </>
+                            ) : (
+                              'Apply Tweak'
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+
                 
                 <div className="flex-1 space-y-4">
                   {/* Character Summary */}
