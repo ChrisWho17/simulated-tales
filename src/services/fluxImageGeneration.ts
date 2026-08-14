@@ -183,3 +183,25 @@ export async function generatePortraitWithCharacterData(
     detectedKeywords: data.detectedKeywords,
   };
 }
+
+/**
+ * Tweak an existing portrait. The current image is sent back to the model as a
+ * reference so only the requested adjustment changes — this is not a regenerate.
+ */
+export async function editPortraitImage(
+  imageUrl: string,
+  instruction: string,
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('edit-portrait', {
+    body: { imageUrl, instruction },
+  });
+
+  if (error) {
+    console.error('[Portrait] Edit function error:', error);
+    throw new Error(`Portrait edit failed: ${error.message}`);
+  }
+  if (!data?.imageUrl) {
+    throw new Error('No edited image returned');
+  }
+  return data.imageUrl as string;
+}
