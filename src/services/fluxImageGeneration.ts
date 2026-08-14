@@ -184,16 +184,19 @@ export async function generatePortraitWithCharacterData(
   };
 }
 
+export type PortraitEditStrength = 'subtle' | 'moderate' | 'major';
+
 /**
- * Tweak an existing portrait. The current image is sent back to the model as a
- * reference so only the requested adjustment changes — this is not a regenerate.
+ * Tweak an existing portrait. The current image is the source canvas for a true
+ * image-to-image edit, so only the requested elements change.
  */
 export async function editPortraitImage(
   imageUrl: string,
   instruction: string,
+  strength: PortraitEditStrength = 'moderate',
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke('edit-portrait', {
-    body: { imageUrl, instruction },
+    body: { imageUrl, instruction, strength },
   });
 
   if (error) {

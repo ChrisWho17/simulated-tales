@@ -219,6 +219,13 @@ export interface ImageGenOptions {
   totalBudgetMs?: number;
   turnId?: string;
   appLabel?: string;
+  /**
+   * True image-to-image edit. The reference image is the source canvas; the
+   * call must never silently degrade into a text-only regeneration.
+   */
+  editOnly?: boolean;
+  /** Extra provider params (e.g. strength / input_fidelity) merged into body. */
+  extraBody?: Record<string, unknown>;
 }
 
 
@@ -263,6 +270,7 @@ async function requestImage(
     prompt: opts.prompt,
     n: 1,
     ...(opts.size ? { size: opts.size } : {}),
+    ...(opts.extraBody ?? {}),
   };
   if (withReferences && opts.referenceImages?.length) {
     body.image = opts.referenceImages.slice(0, 4);
@@ -313,7 +321,11 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     // Reference images first; if the model rejects that shape, retry text-only.
-    const attempts = opts.referenceImages?.length ? [true, false] : [false];
+    // For an edit, dropping the reference would regenerate a brand new
+    // character — so an edit only ever runs the with-reference shape.
+    const attempts = opts.referenceImages?.length
+      ? (opts.editOnly ? [true] : [true, false])
+      : [false];
     for (const withRefs of attempts) {
       const remaining = deadline - Date.now();
       if (remaining < 8_000) {

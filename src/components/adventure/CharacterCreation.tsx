@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePlayerPortraitReference, savePlayerPortraitUrl } from '@/game/playerPortraitReference';
-import { generatePortraitWithCharacterData, editPortraitImage } from '@/services/fluxImageGeneration';
+import { generatePortraitWithCharacterData, editPortraitImage, type PortraitEditStrength } from '@/services/fluxImageGeneration';
 import { SecondaryGenre } from './AdventureCreator';
 import { getBlendedClasses, getBlendedBackgrounds, getBlendedTraits, getHybridTraits, HybridTrait } from '@/game/genreBlendSystem';
 import { getGenreTitle, GENRE_ICONS } from '@/lib/genreDetection';
@@ -174,6 +174,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [showPortraitEditor, setShowPortraitEditor] = useState(false);
   const [portraitEditPrompt, setPortraitEditPrompt] = useState('');
   const [isEditingPortrait, setIsEditingPortrait] = useState(false);
+  const [portraitEditStrength, setPortraitEditStrength] = useState<PortraitEditStrength>('subtle');
+  /** Previous portraits, newest last — powers undo and the edit history list. */
+  const [portraitHistory, setPortraitHistory] = useState<{ url: string; instruction: string; strength: PortraitEditStrength }[]>([]);
+  const [showBeforeAfter, setShowBeforeAfter] = useState(false);
+  const [confirmMajorEdit, setConfirmMajorEdit] = useState(false);
   const [detectedKeywords, setDetectedKeywords] = useState<{
     personalityScore: number;
     keywords: { category: string; keyword: string; effect: string }[];
@@ -501,12 +506,20 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     const instruction = portraitEditPrompt.trim();
     if (!portraitUrl || instruction.length < 3) return;
 
+    if (portraitEditStrength === 'major' && !confirmMajorEdit) {
+      setConfirmMajorEdit(true);
+      return;
+    }
+
+    const sourceUrl = portraitUrl;
     setIsEditingPortrait(true);
     try {
-      const editedUrl = await editPortraitImage(portraitUrl, instruction);
+      const editedUrl = await editPortraitImage(sourceUrl, instruction, portraitEditStrength);
+      setPortraitHistory(prev => [...prev, { url: sourceUrl, instruction, strength: portraitEditStrength }]);
       setPortraitUrl(editedUrl);
       setPortraitEditPrompt('');
-      setShowPortraitEditor(false);
+      setConfirmMajorEdit(false);
+      setShowBeforeAfter(true);
       toast.success('Portrait updated');
       void runGearScan(editedUrl);
     } catch (error) {
@@ -517,6 +530,17 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     } finally {
       setIsEditingPortrait(false);
     }
+  };
+
+  /** Step back to the portrait as it was before the most recent edit. */
+  const handleUndoPortraitEdit = () => {
+    if (!portraitHistory.length) return;
+    const previous = portraitHistory[portraitHistory.length - 1];
+    setPortraitHistory(prev => prev.slice(0, -1));
+    setPortraitUrl(previous.url);
+    setShowBeforeAfter(false);
+    toast.success('Reverted to the previous portrait');
+    void runGearScan(previous.url);
   };
 
 
@@ -1755,6 +1779,44 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   {/* Small tweaks to the image that already exists — not a regenerate. */}
                   {portraitUrl && (
                     <div className="w-48 space-y-2">
+                      {/* Before / after against the pre-edit source image. */}
+                      {portraitHistory.length > 0 && showBeforeAfter && (
+                        <div className="space-y-1 p-2 rounded-lg border border-border/40 bg-background/50">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Before / After</p>
+                          <div className="grid grid-cols-2 gap-1">
+                            <img
+                              src={portraitHistory[portraitHistory.length - 1].url}
+                              alt="Portrait before the last edit"
+                              className="w-full h-24 object-cover rounded"
+                            />
+                            <img
+                              src={portraitUrl}
+                              alt="Portrait after the last edit"
+                              className="w-full h-24 object-cover rounded"
+                            />
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-[10px] h-7"
+                              onClick={handleUndoPortraitEdit}
+                              disabled={isEditingPortrait}
+                            >
+                              Undo
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1 text-[10px] h-7"
+                              onClick={() => setShowBeforeAfter(false)}
+                            >
+                              Keep
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1776,9 +1838,45 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             maxLength={600}
                             disabled={isEditingPortrait}
                           />
+
+                          {/* How far the edit may move away from the source image. */}
+                          <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Change strength</p>
+                            <div className="grid grid-cols-3 gap-1">
+                              {(['subtle', 'moderate', 'major'] as PortraitEditStrength[]).map(level => (
+                                <Button
+                                  key={level}
+                                  size="sm"
+                                  variant={portraitEditStrength === level ? 'default' : 'outline'}
+                                  className="text-[10px] h-7 capitalize px-1"
+                                  onClick={() => {
+                                    setPortraitEditStrength(level);
+                                    setConfirmMajorEdit(false);
+                                  }}
+                                  disabled={isEditingPortrait}
+                                >
+                                  {level}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+
                           <p className="text-[10px] text-muted-foreground leading-snug">
-                            Keeps the same face and pose — only your requested tweak changes.
+                            Edits the current image only — same face, pose, framing and background.
                           </p>
+
+                          {portraitEditStrength === 'major' && (
+                            <p className="text-[10px] leading-snug text-destructive">
+                              Warning: Major edits can alter identity or composition. Use Subtle for gear and detail changes.
+                            </p>
+                          )}
+
+                          {confirmMajorEdit && (
+                            <p className="text-[10px] leading-snug text-destructive">
+                              Press Apply again to confirm this Major edit.
+                            </p>
+                          )}
+
                           <Button
                             size="sm"
                             className="w-full gap-2 text-xs"
@@ -1790,10 +1888,39 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 Applying...
                               </>
+                            ) : confirmMajorEdit ? (
+                              'Confirm Major Edit'
                             ) : (
                               'Apply Tweak'
                             )}
                           </Button>
+
+                          {/* Edit history — revert step by step. */}
+                          {portraitHistory.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-border/30">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                  Edit history ({portraitHistory.length})
+                                </p>
+                                <button
+                                  className="text-[10px] text-primary hover:underline"
+                                  onClick={handleUndoPortraitEdit}
+                                  disabled={isEditingPortrait}
+                                >
+                                  Undo last
+                                </button>
+                              </div>
+                              <ul className="space-y-1 max-h-24 overflow-y-auto">
+                                {[...portraitHistory].reverse().map((entry, i) => (
+                                  <li key={`${entry.url}-${i}`} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                    <img src={entry.url} alt="Previous portrait version" className="w-6 h-6 rounded object-cover" />
+                                    <span className="truncate flex-1">{entry.instruction}</span>
+                                    <span className="capitalize opacity-70">{entry.strength}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
