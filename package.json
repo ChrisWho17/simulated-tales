@@ -13,7 +13,8 @@
     "history:export": "node scripts/edit-history.mjs export",
     "history:append": "node scripts/edit-history.mjs append",
     "history:publish": "node scripts/edit-history.mjs publish",
-    "prebuild": "node scripts/edit-history.mjs check && node scripts/edit-history.mjs export"
+    "prebuild": "node scripts/edit-history.mjs sync && node scripts/edit-history.mjs check && node scripts/edit-history.mjs export",
+    "history:sync": "node scripts/edit-history.mjs sync"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

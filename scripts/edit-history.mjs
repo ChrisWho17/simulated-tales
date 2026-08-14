@@ -202,11 +202,35 @@ function append(argv) {
   fs.writeFileSync(HISTORY, text);
 }
 
+/* ----------------------------------------------------------------- sync */
+// Auto-append any published build (from public/changelog.json) that is not yet
+// documented in the history log. Runs automatically before every build/publish.
+function sync() {
+  const text = read(HISTORY);
+  const hv = historyVersions(text);
+  const undocumented = changelogEntries().filter((e) => !hv.has(e.version));
+  if (undocumented.length === 0) {
+    console.log('History log already documents every published build.');
+  }
+  for (const e of undocumented.reverse()) {
+    const notes = [...(e.highlights ?? []), ...(e.features ?? []), ...(e.improvements ?? []), ...(e.fixes ?? [])];
+    append(['--version', e.version, '--title', e.title ?? 'Release', ...notes.flatMap((n) => ['--note', n])]);
+  }
+  // keep the header stamp pinned to the current APP_VERSION
+  const { version } = appVersion();
+  if (!historyVersions(read(HISTORY)).has(version)) {
+    append(['--version', version, '--title', 'Optimization', '--note', 'Optimization.']);
+  }
+}
+
 /* ----------------------------------------------------------------- main */
 const [cmd, ...rest] = process.argv.slice(2);
 switch (cmd) {
   case 'check':
     check();
+    break;
+  case 'sync':
+    sync();
     break;
   case 'export':
     exportChangelogs();
@@ -215,8 +239,9 @@ switch (cmd) {
     append(rest);
     break;
   case 'publish':
-    // convenience: append + check + export in one pass
-    append(rest);
+    // convenience: append + sync + check + export in one pass
+    if (rest.length) append(rest);
+    sync();
     if (check()) exportChangelogs();
     break;
   default:
