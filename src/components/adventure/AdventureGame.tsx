@@ -2829,6 +2829,7 @@ export function AdventureGame() {
     return (
       <>
       <AdventureDisplay
+        dmFullControl={(settings.directorSettings || directorSettings)?.dmFullControl === true}
         story={story}
         onPlayerAction={handlePlayerAction}
         onRestart={handleRestart}

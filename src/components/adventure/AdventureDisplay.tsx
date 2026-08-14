@@ -324,6 +324,7 @@ export function AdventureDisplay({
   streamingState,
   getExtendedSaveState,
   onPersistExtendedToCampaign,
+  dmFullControl = false,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
