@@ -2392,7 +2392,72 @@ function buildPrompt(body: any): { prompt: string; negative: string; detectedKey
 // ============================================================================
 // IMAGE GENERATION - Lovable AI with Gemini
 // ============================================================================
-async function generateImage(prompt: string, _negative: string): Promise<string> {
+interface StoredPortrait {
+  imageUrl: string;
+  storagePath: string;
+}
+
+async function persistPortrait(
+  sourceUrl: string,
+  userId: string | null,
+): Promise<StoredPortrait> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Portrait storage is not configured');
+  }
+
+  let bytes: Uint8Array;
+  let contentType = 'image/png';
+
+  if (sourceUrl.startsWith('data:image/')) {
+    const comma = sourceUrl.indexOf(',');
+    const semicolon = sourceUrl.indexOf(';');
+    if (comma < 0 || semicolon < 0 || semicolon > comma) {
+      throw new Error('Image provider returned malformed portrait data');
+    }
+    contentType = sourceUrl.slice(5, semicolon) || contentType;
+    const binary = atob(sourceUrl.slice(comma + 1));
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  } else {
+    const imageResponse = await fetch(sourceUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Unable to download generated portrait (${imageResponse.status})`);
+    }
+    contentType = imageResponse.headers.get('content-type') || contentType;
+    bytes = new Uint8Array(await imageResponse.arrayBuffer());
+  }
+
+  const extension = contentType.includes('jpeg')
+    ? 'jpg'
+    : contentType.includes('webp')
+      ? 'webp'
+      : 'png';
+  const owner = (userId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'guest';
+  const storagePath = `players/${owner}/${crypto.randomUUID()}.${extension}`;
+  const admin = createClient(supabaseUrl, serviceKey);
+  const { error } = await admin.storage
+    .from('npc-portraits')
+    .upload(storagePath, bytes, { contentType, upsert: false });
+
+  if (error) {
+    throw new Error(`Portrait storage upload failed: ${error.message}`);
+  }
+
+  const { data } = admin.storage.from('npc-portraits').getPublicUrl(storagePath);
+  if (!data.publicUrl) {
+    throw new Error('Portrait storage returned no public URL');
+  }
+
+  return { imageUrl: data.publicUrl, storagePath };
+}
+
+async function generateImage(
+  prompt: string,
+  _negative: string,
+  userId: string | null,
+): Promise<StoredPortrait> {
   if (!Deno.env.get("OPENROUTER_API_KEY")) {
     throw new Error("OPENROUTER_API_KEY not configured");
   }
@@ -2409,8 +2474,10 @@ async function generateImage(prompt: string, _negative: string): Promise<string>
   }
 
   console.log("Portrait generated:", result.model, "fallback:", !!result.usedFallback);
-  console.log("Portrait generated successfully (base64 length:", imageUrl.length, ")");
-  return imageUrl;
+  console.log("Persisting portrait server-side; provider payload length:", imageUrl.length);
+  const stored = await persistPortrait(imageUrl, userId);
+  console.log("Portrait stored successfully:", stored.storagePath);
+  return stored;
 }
 
 // ============================================================================
@@ -2433,16 +2500,16 @@ serve(async (req) => {
     
     // Custom prompt mode
     if (body.customPrompt && !body.gender) {
-      const imageUrl = await generateImage(body.customPrompt, '');
-      return new Response(JSON.stringify({ imageUrl }), {
+      const stored = await generateImage(body.customPrompt, '', auth.userId);
+      return new Response(JSON.stringify(stored), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { prompt, negative, detectedKeywords } = buildPrompt(body);
-    const imageUrl = await generateImage(prompt, negative);
+    const stored = await generateImage(prompt, negative, auth.userId);
 
-    return new Response(JSON.stringify({ imageUrl, detectedKeywords }), {
+    return new Response(JSON.stringify({ ...stored, detectedKeywords }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
