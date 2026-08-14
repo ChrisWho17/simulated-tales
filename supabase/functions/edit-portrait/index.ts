@@ -79,6 +79,9 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const imageUrl = typeof body?.imageUrl === 'string' ? body.imageUrl.trim() : '';
     const instruction = typeof body?.instruction === 'string' ? body.instruction.trim() : '';
+    const rawStrength = typeof body?.strength === 'string' ? body.strength : 'moderate';
+    const strength: 'subtle' | 'moderate' | 'major' =
+      rawStrength === 'subtle' || rawStrength === 'major' ? rawStrength : 'moderate';
 
     if (!imageUrl || !/^https?:\/\/|^data:image\//.test(imageUrl)) {
       return new Response(JSON.stringify({ error: 'A current image is required' }), {
@@ -95,18 +98,37 @@ serve(async (req) => {
 
     const userId = await resolveUserId(req);
 
+    // Denoise / transformation strength. Low by default so the source image
+    // survives the edit instead of being reinterpreted from scratch.
+    const strengthValue = strength === 'subtle' ? 0.2 : strength === 'major' ? 0.55 : 0.35;
+    const strengthNote =
+      strength === 'subtle'
+        ? 'Use a very low transformation strength. Almost every pixel outside the edited region must stay identical.'
+        : strength === 'major'
+          ? 'Use a moderate transformation strength, but the person, pose, camera angle and background must still be recognisably the same image.'
+          : 'Use a low transformation strength. Only the edited region may change.';
+
     const prompt = [
-      'Edit the supplied reference photograph. This is a TWEAK, not a new image.',
-      'Keep the exact same person, face, identity, body proportions, pose, framing, lighting and background unless the requested change explicitly targets them.',
-      'Do not restyle, do not re-render as a different character, do not change age, ethnicity, build or camera angle.',
-      `Requested adjustment: ${instruction}`,
-      'Apply only that adjustment and return the otherwise identical portrait at the same quality.',
+      'Edit the supplied image. Do not regenerate the entire scene.',
+      'This is an IMAGE-TO-IMAGE EDIT of the provided source image, not a new illustration.',
+      'The text below is NOT a character description — it names only the elements to modify.',
+      'Preserve exactly: the original face, identity, skin tone, hair, gender, age, body proportions, pose, camera angle, framing, crop, aspect ratio, lighting and background.',
+      'If added gear such as a helmet or armour covers part of the character, the same original person remains underneath — never substitute a different character or a generic figure.',
+      'Mask and repaint only the objects or regions named in the request; leave every other pixel untouched.',
+      strengthNote,
+      `Requested change (edit these elements only): ${instruction}`,
+      'Return the otherwise identical portrait at the same dimensions and composition.',
     ].join(' ');
 
     const result = await generateIllustration({
       prompt,
       referenceImages: [imageUrl],
-      size: '1024x1024',
+      editOnly: true,
+      extraBody: {
+        strength: strengthValue,
+        image_strength: 1 - strengthValue,
+        input_fidelity: 'high',
+      },
     });
 
     if (!result.imageUrl) {
