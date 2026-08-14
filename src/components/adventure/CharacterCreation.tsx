@@ -174,6 +174,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const [showPortraitEditor, setShowPortraitEditor] = useState(false);
   const [portraitEditPrompt, setPortraitEditPrompt] = useState('');
   const [isEditingPortrait, setIsEditingPortrait] = useState(false);
+  const [portraitEditStrength, setPortraitEditStrength] = useState<PortraitEditStrength>('subtle');
+  /** Previous portraits, newest last — powers undo and the edit history list. */
+  const [portraitHistory, setPortraitHistory] = useState<{ url: string; instruction: string; strength: PortraitEditStrength }[]>([]);
+  const [showBeforeAfter, setShowBeforeAfter] = useState(false);
+  const [confirmMajorEdit, setConfirmMajorEdit] = useState(false);
   const [detectedKeywords, setDetectedKeywords] = useState<{
     personalityScore: number;
     keywords: { category: string; keyword: string; effect: string }[];
