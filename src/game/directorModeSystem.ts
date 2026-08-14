@@ -3,6 +3,14 @@
 // Controls DM manipulation features and narrative steering
 // ============================================================================
 
+import {
+  RulesEngineSettings,
+  DEFAULT_RULES_SETTINGS,
+  normalizeRulesSettings,
+} from './dnd5eResolution';
+
+export type { RulesEngineSettings } from './dnd5eResolution';
+
 // ============= TYPES =============
 
 export type DirectiveMode = 'fun' | 'easy' | 'medium' | 'hard';
@@ -83,6 +91,10 @@ export interface DirectorSettings {
   cruelty: PersonalityLevel;
   weirdness: WeirdnessLevel;
   guidance: GuidanceLevel;
+  /** DM Full Control — the Director owns narrative outcomes and campaign canon. */
+  dmFullControl: boolean;
+  /** 5E resolution rules and roll visibility. */
+  rules: RulesEngineSettings;
 }
 
 // ============= DEFAULT SETTINGS =============
@@ -98,7 +110,47 @@ export const DEFAULT_DIRECTOR_SETTINGS: DirectorSettings = {
   cruelty: 'honest',
   weirdness: 'grounded',
   guidance: 'light',
+  // Existing campaigns must stay untouched until the owner opts in.
+  dmFullControl: false,
+  rules: DEFAULT_RULES_SETTINGS,
 };
+
+/** Fill in fields missing from older saves/campaigns without changing behavior. */
+export function normalizeDirectorSettings(
+  input?: Partial<DirectorSettings> | null
+): DirectorSettings {
+  return {
+    ...DEFAULT_DIRECTOR_SETTINGS,
+    ...(input || {}),
+    dmFullControl: input?.dmFullControl === true,
+    rules: normalizeRulesSettings(input?.rules),
+  };
+}
+
+/**
+ * DM Full Control prompt contract. Included on every turn when active.
+ */
+export function buildDMFullControlBlock(settings: DirectorSettings): string {
+  if (!settings.dmFullControl) {
+    return [
+      '## DM FULL CONTROL: OFF',
+      '- Collaborative mode. Player framing may stand when it does not break canon.',
+    ].join('\n');
+  }
+  return [
+    '## DM FULL CONTROL: ACTIVE — AUTHORITY RULES',
+    '- You (the Director) hold complete authority over narrative outcomes and campaign canon.',
+    '- Treat every player message as an ATTEMPTED character action, never as an established fact or guaranteed outcome.',
+    '- Players may choose dialogue, movement, tactics, equipment, and any reasonable action available to their character.',
+    '- Players may NOT declare outcomes, assign their own roll result, alter a DC, rewrite established events, skip required story beats, invent world facts, or dictate what an NPC does or feels.',
+    '- If a player tries to hijack or contradict the storyline, reject or reinterpret it IN-WORLD. Never break immersion, never lecture the player out of character.',
+    '- Determine consequences from the current campaign state, character abilities, world rules, NPC motivations, and established canon.',
+    '- Resolve uncertainty with the 5E rules below — outcomes come from dice and stats, not from player assertion.',
+  ].join('\n');
+}
+
+export const DM_FULL_CONTROL_EXPLANATION =
+  'The Director controls narrative outcomes and campaign canon. You control your character\u2019s choices, but actions do not automatically succeed or alter the established storyline.';
 
 // ============= MODE BASELINES =============
 

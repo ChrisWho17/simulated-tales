@@ -87,6 +87,18 @@ export interface LanguageSystemState {
   playerLanguage: string;
   playerKnownLanguages: string[];
   translateEnabled: boolean;
+  /**
+   * Campaign story-language contract (relationship, primary tongue, translation
+   * assistance). Structurally matches StoryLanguageSetup — declared inline to
+   * keep languageSystem dependency-free.
+   */
+  storyLanguage?: {
+    relationship: 'native' | 'foreigner';
+    primaryMode: 'automatic' | 'manual';
+    primaryLanguage: string;
+    translationAssistance: 'off' | 'partial' | 'full';
+    foreignRole?: string;
+  };
   characterProfile?: CharacterLanguageProfile;
   locationLanguages: Record<string, LocationLanguageProfile>;
   misunderstandings: MisunderstandingRecord[];
