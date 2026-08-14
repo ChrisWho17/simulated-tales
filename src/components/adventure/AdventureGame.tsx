@@ -711,6 +711,8 @@ export function AdventureGame() {
         mode: settings.languageSettings.barrierMode ?? prev.mode ?? 'disabled',
         translateEnabled: settings.languageSettings.translateEnabled,
         playerKnownLanguages: settings.languageSettings.playerKnownLanguages || prev.playerKnownLanguages,
+        storyLanguage: settings.languageSettings.storyLanguage ?? prev.storyLanguage,
+
       }));
     }
   }, [settings.languageSettings]);
