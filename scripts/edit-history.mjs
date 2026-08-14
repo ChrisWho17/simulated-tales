@@ -44,7 +44,12 @@ function changelogEntries() {
 }
 
 function historyVersions(text) {
-  return new Set([...text.matchAll(/^(\d+\.\d+\.\d+[\w.-]*)\s+—/gm)].map((m) => m[1].replace(/-alpha$/, '')));
+  const set = new Set(
+    [...text.matchAll(/^(\d+\.\d+\.\d+[\w.-]*)\s+—/gm)].map((m) => m[1].replace(/-alpha$/, ''))
+  );
+  // aliases such as "(published as 0.4.801 in public/changelog.json)"
+  for (const m of text.matchAll(/published as ([\d.]+)/g)) set.add(m[1]);
+  return set;
 }
 
 function pendingIdeas(text) {
@@ -81,7 +86,7 @@ function check() {
   if (ideas.length === 0) problems.push('Pending / Experimental Ideas section is empty.');
 
   for (const n of [1, 2, 3, 4, 5]) {
-    if (!new RegExp(`^\\s*${n}\\.\\s+[A-Z]`, 'm').test(text)) problems.push(`Missing top-level section ${n}.`);
+    if (!new RegExp(`^\\s*${n}\\.\\s+[A-Z\\[]`, 'm').test(text)) problems.push(`Missing top-level section ${n}.`);
   }
 
   console.log(`Documented versions: ${hv.size}`);
