@@ -646,23 +646,33 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       savePlayerPortraitUrl(portraitUrl);
     }
 
+    // Freeze the campaign story language so the primary tongue / foreigner role
+    // cannot drift between creation, later turns, and reloaded saves.
+    const lockedStoryLanguage = lockStoryLanguage(storyLanguage, languageProfile, genre);
+
     if (languageBarriersEnabled) {
       const spent = calculateLanguagePointsSpent(languageProfile);
       (character as any).languageProfile = {
         ...languageProfile,
         languagePointsSpent: spent,
       } satisfies CharacterLanguageProfile;
-      if (game?.updateSettings) {
-        game.updateSettings({
-          languageSettings: {
-            ...game.settings.languageSettings,
-            barrierMode,
-            translateEnabled: game.settings.languageSettings?.translateEnabled ?? false,
-            playerKnownLanguages: profileToKnownLanguageCodes(languageProfile),
-          },
-        });
-      }
     }
+    if (game?.updateSettings) {
+      game.updateSettings({
+        languageSettings: {
+          ...(game.settings.languageSettings ?? {
+            barrierMode: 'disabled' as const,
+            translateEnabled: false,
+            playerKnownLanguages: ['en', 'common'],
+          }),
+          barrierMode,
+          translateEnabled: game.settings.languageSettings?.translateEnabled ?? false,
+          playerKnownLanguages: profileToKnownLanguageCodes(languageProfile),
+          storyLanguage: lockedStoryLanguage,
+        },
+      });
+    }
+
     
     console.log('[CharacterCreation] Saved portrait reference for consistent regeneration');
     
