@@ -2711,7 +2711,7 @@ export function AdventureGame() {
       setPhase('playing');
       toast.success(`Loaded ${save.characterName}'s adventure`);
     }
-  }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible, updateSettings, setDirectorSettings, setWeatherState, setTimeState, scenarioSelection, campaignContext]);
+  }, [restoreCampaignFromSave, initializeCampaign, worldBible, initializeWorldBible, updateSettings, settings.languageSettings, setDirectorSettings, setWeatherState, setTimeState, scenarioSelection, campaignContext]);
 
   const getExtendedSaveState = useCallback(() => ({
     weatherState,
