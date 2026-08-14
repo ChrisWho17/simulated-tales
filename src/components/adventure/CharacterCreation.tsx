@@ -63,6 +63,7 @@ import {
 import {
   DEFAULT_STORY_LANGUAGE_SETUP,
   summarizeStoryLanguage,
+  proficiencyLabel,
   getSelectablePrimaryLanguages,
 } from '@/game/storyLanguageSetup';
 
@@ -928,7 +929,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
 
       <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
         {storyLanguageSummary.relationship === 'foreigner'
-          ? `Foreigner — ${storyLanguageSummary.foreignRole}. Your ${storyLanguageSummary.primaryLanguageName} is ${storyLanguageSummary.proficiencyLabel.toLowerCase()}.`
+          ? `Foreigner — ${storyLanguageSummary.foreignRole}. Your ${storyLanguageSummary.primaryLanguageName} is ${proficiencyLabel(storyLanguageSummary.speaking).toLowerCase()}.`
           : `Native speaker of ${storyLanguageSummary.primaryLanguageName}.`}
       </p>
     </div>
