@@ -65,6 +65,7 @@ import {
   summarizeStoryLanguage,
   proficiencyLabel,
   getSelectablePrimaryLanguages,
+  lockStoryLanguage,
 } from '@/game/storyLanguageSetup';
 
 interface CharacterCreationProps {
