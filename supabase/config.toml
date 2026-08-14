@@ -21,3 +21,7 @@ verify_jwt = false
 # Portrait gear scan runs during character creation, often before sign-in.
 [functions.scan-portrait-gear]
 verify_jwt = false
+
+# Portrait tweaks happen during character creation, often before sign-in.
+[functions.edit-portrait]
+verify_jwt = false
