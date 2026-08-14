@@ -68,8 +68,13 @@ export function TouchScrollContainer({
 
   // Drag-to-scroll (content dragging)
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // Touch/pen already scroll natively. Capturing those pointers retargets the
+    // tap away from inputs on mobile browsers (Samsung Internet especially),
+    // which steals focus and slams the on-screen keyboard shut.
+    if (e.pointerType !== 'mouse') return;
     // Don't start drag if clicking on interactive elements
     const target = e.target as HTMLElement;
+
     const interactiveSelectors = [
       'button', 'input', 'select', 'textarea', 'a', 'label',
       '[role="button"]', '[role="checkbox"]', '[role="radio"]', '[role="switch"]',
