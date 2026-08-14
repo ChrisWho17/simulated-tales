@@ -816,12 +816,19 @@ class CompanionSystemManager {
   
   getAllCompanions() { 
     const all = Array.from(this.companions.values());
-    // Filter by active campaign if set
     if (this.activeCampaignId) {
-      return all.filter(c => c.campaignId === this.activeCampaignId || !c.campaignId);
+      // Orphans are adopted by the active campaign; other campaigns stay hidden.
+      return all.filter(c => {
+        if (!c.campaignId) {
+          c.campaignId = this.activeCampaignId!;
+          return true;
+        }
+        return c.campaignId === this.activeCampaignId;
+      });
     }
     return all;
   }
+
   
   // Get companions for a specific campaign (for loading/saving)
   getCompanionsForCampaign(campaignId: string) {
