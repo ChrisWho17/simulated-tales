@@ -108,6 +108,14 @@ export interface LanguageSettings {
   /** Translated in Italics — soft assist showing true meaning. */
   translateEnabled: boolean;
   playerKnownLanguages: string[];
+  /** Campaign story-language contract (see StoryLanguageSetup). */
+  storyLanguage?: {
+    relationship: 'native' | 'foreigner';
+    primaryMode: 'automatic' | 'manual';
+    primaryLanguage: string;
+    translationAssistance: 'off' | 'partial' | 'full';
+    foreignRole?: string;
+  };
 }
 
 export interface AudioSettings {
