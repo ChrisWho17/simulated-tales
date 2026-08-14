@@ -9,6 +9,7 @@ Highlights
 
 Build log
 ---------
+  - [2026-08-14] Release tooling: scripts/edit-history.mjs added: check (completeness gate), sync (auto-append new published builds), export (versioned downloadable changelog per build in public/changelogs/), append (manual system-change notes). Wired to npm prebuild so every publish updates this log.
   Public label: Optimization
   - Language & story-language consistency across saves and loads.
   - lockStoryLanguage() pins resolved primary tongue/foreigner role at campaign
