@@ -1696,16 +1696,20 @@ export function AdventureDisplay({
   ): React.ReactNode[] => {
     // Language Barriers emit span markup — render as React nodes (CSS classes in index.css).
     if (/class="(foreign-text|partial-gloss|translation|companion-translation)"/i.test(text)) {
-      return splitLanguageDisplayHtml(text).flatMap((seg, idx) => {
+      const nodes: React.ReactNode[] = [];
+      splitLanguageDisplayHtml(text).forEach((seg, idx) => {
         if (seg.kind === 'text') {
-          return formatTextSegment(seg.text, `${keyPrefix}-lang-${idx}`, moodConfig, tintableWords);
+          nodes.push(...formatTextSegment(seg.text, `${keyPrefix}-lang-${idx}`, moodConfig, tintableWords));
+        } else {
+          nodes.push(
+            <span key={`${keyPrefix}-lang-${idx}`} className={LANGUAGE_DISPLAY_CLASS[seg.kind]}>
+              {seg.text}
+            </span>
+          );
         }
-        return [
-          <span key={`${keyPrefix}-lang-${idx}`} className={LANGUAGE_DISPLAY_CLASS[seg.kind]}>
-            {seg.text}
-          </span>,
-        ];
       });
+      return nodes;
+
     }
 
     const result: React.ReactNode[] = [];
