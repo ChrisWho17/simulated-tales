@@ -60,6 +60,11 @@ import {
   getLanguageDisplayName,
   profileToKnownLanguageCodes,
 } from '@/game/languageSystem';
+import {
+  DEFAULT_STORY_LANGUAGE_SETUP,
+  summarizeStoryLanguage,
+  getSelectablePrimaryLanguages,
+} from '@/game/storyLanguageSetup';
 
 interface CharacterCreationProps {
   genre: GameGenre;
