@@ -860,7 +860,17 @@ class CompanionSystemManager {
   
   deserialize(data: { companions: CompanionState[]; activeIds: string[]; version?: number }) { 
     this.companions.clear(); 
+    const seenNames = new Set<string>();
     for (const c of data.companions) {
+      // Drop anything that belongs to a different campaign than the one loading.
+      if (this.activeCampaignId && c.campaignId && c.campaignId !== this.activeCampaignId) continue;
+      if (!c.campaignId && this.activeCampaignId) c.campaignId = this.activeCampaignId;
+
+      // Drop duplicate names from older, un-deduped saves.
+      const nameKey = c.name.trim().toLowerCase();
+      if (seenNames.has(nameKey)) continue;
+      seenNames.add(nameKey);
+
       // Ensure memories array exists and is properly sized
       if (!c.memories) c.memories = [];
       if (!c.conversationMemory) {
@@ -880,8 +890,9 @@ class CompanionSystemManager {
       }
       this.companions.set(c.id, c);
     }
-    this.activeCompanions = data.activeIds; 
+    this.activeCompanions = (data.activeIds || []).filter(id => this.companions.has(id)); 
   }
+
 }
 
 // Singleton export
