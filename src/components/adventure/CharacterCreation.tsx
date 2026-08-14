@@ -493,6 +493,31 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }
   };
 
+  /** Tweak the portrait that already exists instead of rolling a new one. */
+  const handleEditPortrait = async () => {
+    const instruction = portraitEditPrompt.trim();
+    if (!portraitUrl || instruction.length < 3) return;
+
+    setIsEditingPortrait(true);
+    try {
+      const editedUrl = await editPortraitImage(portraitUrl, instruction);
+      setPortraitUrl(editedUrl);
+      setPortraitEditPrompt('');
+      setShowPortraitEditor(false);
+      toast.success('Portrait updated');
+      void runGearScan(editedUrl);
+    } catch (error) {
+      console.error('Error editing portrait:', error);
+      toast.error('Failed to edit portrait', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsEditingPortrait(false);
+    }
+  };
+
+
+
   const handleComplete = () => {
     // Resolve class and background from blended lists or custom class
     let classData = customClass && selectedClass === customClass.id
