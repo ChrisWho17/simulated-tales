@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "version": "0.4.8007",
+      "date": "August 2026",
+      "title": "Optimization",
+      "highlights": [
+        "Optimization"
+      ],
+      "features": [],
+      "improvements": [],
+      "fixes": []
+    },
+    {
       "version": "0.4.8006",
       "date": "August 2026",
       "title": "Stability & Performance",
