@@ -286,6 +286,8 @@ interface AdventureDisplayProps {
   };
   /** Dual-write living-world fields into CampaignContext (canonical) without removing legacy GameSave. */
   onPersistExtendedToCampaign?: () => void;
+  /** Director owns campaign canon — surfaces a HUD indicator. */
+  dmFullControl?: boolean;
 }
 
 export function AdventureDisplay({
@@ -322,6 +324,7 @@ export function AdventureDisplay({
   streamingState,
   getExtendedSaveState,
   onPersistExtendedToCampaign,
+  dmFullControl = false,
 }: AdventureDisplayProps) {
   const [input, setInput] = useState('');
   const [showCharacterSheet, setShowCharacterSheet] = useState(false);
@@ -1972,6 +1975,7 @@ export function AdventureDisplay({
 
       {/* Header */}
       <AdventureHeader
+        dmFullControl={dmFullControl}
         weatherState={weatherState}
         weatherEnabled={weatherEnabled}
         timeState={timeState}

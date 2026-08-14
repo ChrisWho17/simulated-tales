@@ -60,6 +60,11 @@ import {
   getLanguageDisplayName,
   profileToKnownLanguageCodes,
 } from '@/game/languageSystem';
+import {
+  DEFAULT_STORY_LANGUAGE_SETUP,
+  summarizeStoryLanguage,
+  getSelectablePrimaryLanguages,
+} from '@/game/storyLanguageSetup';
 
 interface CharacterCreationProps {
   genre: GameGenre;
@@ -821,6 +826,114 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     </div>
   );
 
+  // ---- Story language relationship (native vs foreigner) ----
+  const storyLanguage = {
+    ...DEFAULT_STORY_LANGUAGE_SETUP,
+    ...(game?.settings?.languageSettings?.storyLanguage || {}),
+  };
+  const updateStoryLanguage = (patch: Partial<typeof storyLanguage>) => {
+    if (!game?.updateSettings) return;
+    game.updateSettings({
+      languageSettings: {
+        ...(game.settings.languageSettings ?? {
+          barrierMode: 'disabled' as const,
+          translateEnabled: false,
+          playerKnownLanguages: ['en', 'common'],
+        }),
+        storyLanguage: { ...storyLanguage, ...patch },
+      },
+    });
+  };
+  const storyLanguageSummary = summarizeStoryLanguage(storyLanguage, languageProfile, genre);
+  const primaryOptions = getSelectablePrimaryLanguages(genre, languageProfile, storyLanguage.relationship);
+
+  const renderStoryLanguage = () => (
+    <div className="space-y-3 pt-3 border-t border-border/20">
+      <h3 className="text-sm font-medium">Story language relationship</h3>
+      <div className="flex flex-wrap gap-2">
+        {([
+          { id: 'native' as const, label: 'Native speaker', hint: 'You belong here linguistically' },
+          { id: 'foreigner' as const, label: 'Foreigner', hint: 'You are an outsider learning the tongue' },
+        ]).map(opt => (
+          <button
+            key={opt.id}
+            type="button"
+            title={opt.hint}
+            onClick={() => updateStoryLanguage({ relationship: opt.id })}
+            className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+              storyLanguage.relationship === opt.id
+                ? 'border-primary bg-primary/15 text-foreground'
+                : 'border-border/40 text-muted-foreground hover:bg-primary/5'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Primary story language</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => updateStoryLanguage({ primaryMode: 'automatic', primaryLanguage: '' })}
+            className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+              storyLanguage.primaryMode === 'automatic'
+                ? 'border-primary bg-primary/15 text-foreground'
+                : 'border-border/40 text-muted-foreground hover:bg-primary/5'
+            }`}
+          >
+            Automatic
+          </button>
+          {primaryOptions.map(opt => (
+            <button
+              key={opt.code}
+              type="button"
+              onClick={() => updateStoryLanguage({ primaryMode: 'manual', primaryLanguage: opt.code })}
+              className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                storyLanguage.primaryMode === 'manual' && storyLanguage.primaryLanguage === opt.code
+                  ? 'border-primary bg-primary/15 text-foreground'
+                  : 'border-border/40 text-muted-foreground hover:bg-primary/5'
+              }`}
+            >
+              {opt.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Translation assistance</h3>
+        <div className="flex flex-wrap gap-2">
+          {([
+            { id: 'off' as const, label: 'Off' },
+            { id: 'partial' as const, label: 'Partial' },
+            { id: 'full' as const, label: 'Full' },
+          ]).map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => updateStoryLanguage({ translationAssistance: opt.id })}
+              className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                storyLanguage.translationAssistance === opt.id
+                  ? 'border-primary bg-primary/15 text-foreground'
+                  : 'border-border/40 text-muted-foreground hover:bg-primary/5'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+        {storyLanguageSummary.relationship === 'foreigner'
+          ? `Foreigner — ${storyLanguageSummary.foreignRole}. Your ${storyLanguageSummary.primaryLanguageName} is ${storyLanguageSummary.proficiencyLabel.toLowerCase()}.`
+          : `Native speaker of ${storyLanguageSummary.primaryLanguageName}.`}
+      </p>
+    </div>
+  );
+
   const renderLanguages = () => (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
@@ -1097,6 +1210,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           ))}
                         </div>
                       </div>
+                      {renderStoryLanguage()}
                       {languageBarriersEnabled ? (
                         renderLanguages()
                       ) : (

@@ -298,6 +298,13 @@ interface DirectorContext {
   cruelty: 'soft' | 'honest' | 'brutal';
   weirdness: 'grounded' | 'spicy' | 'unhinged';
   guidance: 'none' | 'light' | 'coach';
+  /** DM Full Control authority contract (client-built). */
+  dmFullControl?: boolean;
+  authorityBlock?: string;
+  /** D&D 5E resolution contract + character sheet (client-built). */
+  rulesBlock?: string;
+  /** Story-language relationship + proficiency contract (client-built). */
+  storyLanguageBlock?: string;
 }
 
 interface AdventureRequest {
@@ -1964,6 +1971,17 @@ serve(async (req) => {
     // This affects pacing, difficulty, and narrative style
     if (directorContext) {
       systemContent += formatDirectorContext(directorContext);
+      // Authority (DM Full Control), 5E resolution rules, and story-language contract
+      // are non-negotiable and apply even in Raw Game mode.
+      if (directorContext.authorityBlock) {
+        systemContent += `\n\n${directorContext.authorityBlock}`;
+      }
+      if (directorContext.rulesBlock) {
+        systemContent += `\n\n${directorContext.rulesBlock}`;
+      }
+      if (directorContext.storyLanguageBlock) {
+        systemContent += `\n\n${directorContext.storyLanguageBlock}`;
+      }
     }
 
     if (socialPresenceContext?.npcCompanionGuidance) {

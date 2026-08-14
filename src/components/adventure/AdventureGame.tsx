@@ -711,6 +711,8 @@ export function AdventureGame() {
         mode: settings.languageSettings.barrierMode ?? prev.mode ?? 'disabled',
         translateEnabled: settings.languageSettings.translateEnabled,
         playerKnownLanguages: settings.languageSettings.playerKnownLanguages || prev.playerKnownLanguages,
+        storyLanguage: settings.languageSettings.storyLanguage ?? prev.storyLanguage,
+
       }));
     }
   }, [settings.languageSettings]);
@@ -2829,6 +2831,7 @@ export function AdventureGame() {
     return (
       <>
       <AdventureDisplay
+        dmFullControl={(settings.directorSettings || directorSettings)?.dmFullControl === true}
         story={story}
         onPlayerAction={handlePlayerAction}
         onRestart={handleRestart}

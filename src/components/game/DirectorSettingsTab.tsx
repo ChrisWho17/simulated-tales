@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Clapperboard, AlertTriangle, Sparkles, Gauge, Users, 
   Skull, Laugh, Compass, Info, ChevronDown, ChevronRight,
-  Zap, BookOpen
+  Zap, BookOpen, Shield, Dices
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -19,7 +19,14 @@ import {
   getDirectorTypesByCategory,
   computeDirectorKnobs,
   getRawGameKnobs,
+  normalizeDirectorSettings,
+  DM_FULL_CONTROL_EXPLANATION,
 } from '@/game/directorModeSystem';
+import {
+  RulesEngineSettings,
+  DifficultyDisplay,
+  normalizeRulesSettings,
+} from '@/game/dnd5eResolution';
 import {
   Collapsible,
   CollapsibleContent,
@@ -49,12 +56,34 @@ const indexToDescriptionLevel = (index: number): DescriptionLevel => {
 interface DirectorSettingsTabProps {
   directorSettings: DirectorSettings;
   onUpdate: (settings: DirectorSettings) => void;
+  /** Only the campaign owner/DM may toggle DM Full Control. */
+  isCampaignOwner?: boolean;
 }
 
+const ToggleRow: React.FC<{
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}> = ({ label, hint, checked, onChange }) => (
+  <div className="flex items-center justify-between gap-3 py-1">
+    <div className="min-w-0">
+      <span className="text-sm">{label}</span>
+      <p className="text-xs text-muted-foreground break-words">{hint}</p>
+    </div>
+    <Switch checked={checked} onCheckedChange={onChange} />
+  </div>
+);
+
 export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
-  directorSettings,
+  directorSettings: rawDirectorSettings,
   onUpdate,
+  isCampaignOwner = true,
 }) => {
+  const directorSettings = normalizeDirectorSettings(rawDirectorSettings);
+  const rules: RulesEngineSettings = normalizeRulesSettings(directorSettings.rules);
+  const updateRules = (patch: Partial<RulesEngineSettings>) =>
+    onUpdate({ ...directorSettings, rules: { ...rules, ...patch } });
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   
   // Get current description level as index
@@ -145,7 +174,103 @@ export const DirectorSettingsTab: React.FC<DirectorSettingsTabProps> = ({
             </p>
           </div>
         )}
-        
+
+        {/* DM Full Control */}
+        <div className="space-y-3 pt-3 border-t border-border/20">
+          <div className="flex items-center justify-between gap-3 py-1">
+            <div className="min-w-0">
+              <span className="text-sm font-medium">DM Full Control</span>
+              <p className="text-xs text-muted-foreground break-words">
+                Director owns narrative outcomes and campaign canon
+              </p>
+            </div>
+            <Switch
+              checked={directorSettings.dmFullControl === true}
+              disabled={!isCampaignOwner}
+              onCheckedChange={(checked) => onUpdate({ ...directorSettings, dmFullControl: checked })}
+            />
+          </div>
+          {!isCampaignOwner && (
+            <p className="text-[10px] text-muted-foreground">
+              Only the campaign owner (DM) can change this.
+            </p>
+          )}
+          {directorSettings.dmFullControl && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/25">
+              <Shield className="w-4 h-4 text-[var(--accent-primary)] mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground break-words">
+                {DM_FULL_CONTROL_EXPLANATION}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Rules & Dice (D&D 5E) */}
+        <div className="space-y-3 pt-3 border-t border-border/20">
+          <div className="flex items-center gap-2">
+            <Dices className="w-4 h-4 text-[var(--accent-secondary)]" />
+            <h3 className="text-sm font-medium">Rules &amp; Dice (5E)</h3>
+          </div>
+
+          <ToggleRow
+            label="Visible Director rolls"
+            hint="Show the Director's hidden rolls after they resolve"
+            checked={rules.directorRollsVisible}
+            onChange={(v) => updateRules({ directorRollsVisible: v })}
+          />
+          <ToggleRow
+            label="Manual player rolls"
+            hint="Off = the Director rolls for you automatically"
+            checked={rules.playerRollMode === 'manual'}
+            onChange={(v) => updateRules({ playerRollMode: v ? 'manual' : 'auto' })}
+          />
+          <ToggleRow
+            label="Show roll breakdown"
+            hint="Die, modifier, proficiency, advantage, DC, outcome"
+            checked={rules.showRollBreakdown}
+            onChange={(v) => updateRules({ showRollBreakdown: v })}
+          />
+          <ToggleRow
+            label="Strict 5E rules"
+            hint="Off allows optional house rules"
+            checked={rules.strict5e}
+            onChange={(v) => updateRules({ strict5e: v })}
+          />
+          <ToggleRow
+            label="Auto character-sheet updates"
+            hint="Conditions, resources and injuries update themselves"
+            checked={rules.autoSheetUpdates}
+            onChange={(v) => updateRules({ autoSheetUpdates: v })}
+          />
+          <ToggleRow
+            label="Crits on ability checks"
+            hint="House rule: nat 20/nat 1 auto-resolve ability checks too"
+            checked={rules.critOnAbilityChecks}
+            onChange={(v) => updateRules({ critOnAbilityChecks: v })}
+          />
+
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Difficulty display</span>
+            <div className="flex flex-wrap gap-2">
+              {(['hidden', 'descriptive', 'exact'] as DifficultyDisplay[]).map(opt => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => updateRules({ difficultyDisplay: opt })}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-xs border transition-colors capitalize',
+                    rules.difficultyDisplay === opt
+                      ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-foreground'
+                      : 'border-border/40 text-muted-foreground hover:bg-[var(--accent-primary)]/5'
+                  )}
+                >
+                  {opt === 'exact' ? 'Exact DC' : opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Narrator Description Level - visible when Director is enabled */}
         {directorSettings.enabled && (
           <div className="space-y-3 pt-3 border-t border-border/20">

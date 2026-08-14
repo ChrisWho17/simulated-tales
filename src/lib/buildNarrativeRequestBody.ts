@@ -48,7 +48,17 @@ import { getPersonalityById } from '@/game/npcPersonalityTemplates';
 import { getAllNPCPersonalityContext } from '@/game/npcAutoRegistration';
 import { PropertySystem, RivalSystem, FactionSystem, buildLivingWorldContext } from '@/game/livingWorld';
 import { CoreMoodType, GENRE_MOOD_DESCRIPTORS } from '@/game/moodSystem';
-import { DirectorSettings } from '@/game/directorModeSystem';
+import {
+  DirectorSettings,
+  normalizeDirectorSettings,
+  buildDMFullControlBlock,
+} from '@/game/directorModeSystem';
+import { buildRulesPromptBlock } from '@/game/dnd5eResolution';
+import {
+  DEFAULT_STORY_LANGUAGE_SETUP,
+  summarizeStoryLanguage,
+  buildStoryLanguagePromptBlock,
+} from '@/game/storyLanguageSetup';
 import { WorldBible } from '@/game/worldBible/types';
 import { PressureState, getPressureAtmosphere } from '@/game/pressureClockSystem';
 import { companionSystem } from '@/game/companionSystem';
@@ -471,13 +481,27 @@ export function buildNarrativeRequestBody(
     companions: partyForLanguage,
     recentMisunderstandings: languageState.misunderstandings,
   });
+  const storyLanguageSummary = languageState.characterProfile
+    ? summarizeStoryLanguage(
+        { ...DEFAULT_STORY_LANGUAGE_SETUP, ...(languageState.storyLanguage || {}) },
+        languageState.characterProfile,
+        genre
+      )
+    : null;
+  const storyLanguageBlock = storyLanguageSummary
+    ? buildStoryLanguagePromptBlock(storyLanguageSummary)
+    : '';
+
   const languageContextPayload = {
     mode: languageState.mode,
     playerKnownLanguages: languageState.playerKnownLanguages,
     translateEnabled: languageState.translateEnabled,
     characterProfile: languageState.characterProfile || null,
     locationLanguage: locationLang || null,
-    languageInstructions,
+    storyLanguage: storyLanguageSummary,
+    languageInstructions: storyLanguageBlock
+      ? `${languageInstructions}\n\n${storyLanguageBlock}`
+      : languageInstructions,
   };
 
   let npcPsychologyPayload: { npcContexts: ReturnType<typeof buildSceneNPCContext> } | undefined;
@@ -703,8 +727,10 @@ export function buildNarrativeRequestBody(
 
     requestBody.gameplaySystemsContext = buildGameplaySystemsContext(settings);
 
-    const activeDirectorSettings = settings.directorSettings || directorSettings;
-    if (activeDirectorSettings) {
+    const activeDirectorSettings = normalizeDirectorSettings(
+      settings.directorSettings || directorSettings
+    );
+    if (settings.directorSettings || directorSettings) {
       requestBody.directorContext = {
         enabled: activeDirectorSettings.enabled,
         rawGame: activeDirectorSettings.rawGame,
@@ -715,6 +741,17 @@ export function buildNarrativeRequestBody(
         cruelty: activeDirectorSettings.cruelty,
         weirdness: activeDirectorSettings.weirdness,
         guidance: activeDirectorSettings.guidance,
+        dmFullControl: activeDirectorSettings.dmFullControl,
+        authorityBlock: buildDMFullControlBlock(activeDirectorSettings),
+        rulesBlock: buildRulesPromptBlock(activeDirectorSettings.rules, {
+          name: activeChar.name,
+          level: activeChar.level,
+          abilityScores: activeChar.stats,
+          proficientSkills: activeChar.skills,
+          knowledge: activeChar.abilities,
+          fears: (activeChar as unknown as { phobias?: string[] }).phobias,
+        }),
+        storyLanguageBlock: storyLanguageBlock || undefined,
       };
     }
 
