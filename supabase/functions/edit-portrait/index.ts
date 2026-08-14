@@ -120,7 +120,7 @@ serve(async (req) => {
       'Return the otherwise identical portrait at the same dimensions and composition.',
     ].join(' ');
 
-    const result = await generateIllustration({
+    let result = await generateIllustration({
       prompt,
       referenceImages: [imageUrl],
       editOnly: true,
