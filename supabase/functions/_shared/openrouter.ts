@@ -80,7 +80,7 @@ export interface OpenRouterCallOptions {
   presence_penalty?: number;
   max_tokens?: number;
   response_format?: { type: 'json_object' };
-  /** Hard timeout for the request. Streaming responses only time out on headers. */
+  /** Hard timeout for the request, including buffered body validation. */
   timeoutMs?: number;
   /** Correlates every log line for one player turn. */
   turnId?: string;
@@ -105,21 +105,47 @@ function assistantContent(payload: unknown): string {
   return '';
 }
 
+function streamedAssistantContent(sseText: string): string {
+  let content = '';
+  for (const rawLine of sseText.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.startsWith('data: ')) continue;
+    const data = line.slice(6).trim();
+    if (!data || data === '[DONE]') continue;
+    try {
+      const parsed = JSON.parse(data);
+      const token = parsed?.choices?.[0]?.delta?.content;
+      if (typeof token === 'string') content += token;
+    } catch {
+      // A malformed frame is ignored here; the downstream parser does the same.
+    }
+  }
+  return content.trim();
+}
+
+function invalidProviderResponse(detail: string): Response {
+  return new Response(JSON.stringify({
+    error: 'invalid_provider_response',
+    detail,
+  }), {
+    status: 502,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 /**
  * One OpenRouter chat-completions request with a timeout.
- * Returns the raw Response so callers can stream or buffer as needed.
  *
- * For non-streaming calls the body is drained inside the timeout window: an
- * abort timer that is cleared as soon as the headers arrive leaves the body
- * read unbounded, and a provider that stalls mid-body hangs the whole turn.
- * Streaming calls keep the headers-only behaviour by design — the caller owns
- * the stream and its own idle handling.
+ * A provider can return HTTP 200 while supplying no usable assistant content.
+ * That is not a successful game turn. Both buffered and SSE responses are
+ * validated before being handed to the caller. Empty/malformed 200 responses
+ * become retryable 502s, allowing generate-adventure's existing policy to try
+ * the narrator once more and then switch to its fallback model.
  *
- * OpenRouter/providers occasionally return HTTP 200 with an empty choices or
- * assistant-content payload. Treat that as a retryable 502 instead of a
- * successful turn. generate-adventure already retries non-terminal 5xx once on
- * the narrator and then switches to its fallback model, so invalid 200s no
- * longer leak into the story as a fake "continuation" failure.
+ * Streaming responses are buffered through this validation boundary first.
+ * The caller still receives the same SSE body, but only after it is known to
+ * contain real narrative tokens. This deliberately favors a committed story
+ * turn over low-latency token animation.
  */
 export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Response> {
   const key = getOpenRouterKey();
@@ -158,33 +184,26 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
       signal: controller.signal,
     });
 
-    if (stream) return res;
-
-    // Buffer inside the timeout window so a stalled body can't hang the turn.
+    // Always buffer inside the timeout window. For SSE this lets us distinguish
+    // "provider connected" from "provider actually narrated something" before
+    // generate-adventure commits the turn.
     const text = await res.text();
 
     if (res.ok) {
-      let parsed: unknown = null;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        return new Response(JSON.stringify({
-          error: 'invalid_provider_response',
-          detail: 'OpenRouter returned HTTP 200 with a non-JSON chat response.',
-        }), {
-          status: 502,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (!assistantContent(parsed)) {
-        return new Response(JSON.stringify({
-          error: 'invalid_provider_response',
-          detail: 'OpenRouter returned HTTP 200 without usable assistant content.',
-        }), {
-          status: 502,
-          headers: { 'Content-Type': 'application/json' },
-        });
+      if (stream) {
+        if (!streamedAssistantContent(text)) {
+          return invalidProviderResponse('OpenRouter returned HTTP 200 SSE without usable assistant content.');
+        }
+      } else {
+        let parsed: unknown = null;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          return invalidProviderResponse('OpenRouter returned HTTP 200 with a non-JSON chat response.');
+        }
+        if (!assistantContent(parsed)) {
+          return invalidProviderResponse('OpenRouter returned HTTP 200 without usable assistant content.');
+        }
       }
     }
 
@@ -272,7 +291,6 @@ export interface ImageGenOptions {
   extraBody?: Record<string, unknown>;
 }
 
-
 export interface ImageGenResult {
   imageUrl: string | null;
   model: string | null;
@@ -307,7 +325,6 @@ async function requestImage(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), attemptMs);
-
 
   const body: Record<string, unknown> = {
     model,
@@ -443,7 +460,6 @@ export async function generateIllustration(opts: ImageGenOptions): Promise<Image
         // remaining budget on a second shape for the same model.
         if (aborted) break;
       }
-
     }
   }
 
