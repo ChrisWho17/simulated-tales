@@ -93,6 +93,18 @@ export function isTerminalStatus(status: number): boolean {
   return [400, 401, 402, 403, 404, 429].includes(status);
 }
 
+function assistantContent(payload: unknown): string {
+  const content = (payload as any)?.choices?.[0]?.message?.content;
+  if (typeof content === 'string') return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => typeof part?.text === 'string' ? part.text : '')
+      .join('')
+      .trim();
+  }
+  return '';
+}
+
 /**
  * One OpenRouter chat-completions request with a timeout.
  * Returns the raw Response so callers can stream or buffer as needed.
@@ -102,6 +114,12 @@ export function isTerminalStatus(status: number): boolean {
  * read unbounded, and a provider that stalls mid-body hangs the whole turn.
  * Streaming calls keep the headers-only behaviour by design — the caller owns
  * the stream and its own idle handling.
+ *
+ * OpenRouter/providers occasionally return HTTP 200 with an empty choices or
+ * assistant-content payload. Treat that as a retryable 502 instead of a
+ * successful turn. generate-adventure already retries non-terminal 5xx once on
+ * the narrator and then switches to its fallback model, so invalid 200s no
+ * longer leak into the story as a fake "continuation" failure.
  */
 export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Response> {
   const key = getOpenRouterKey();
@@ -144,6 +162,32 @@ export async function callOpenRouter(opts: OpenRouterCallOptions): Promise<Respo
 
     // Buffer inside the timeout window so a stalled body can't hang the turn.
     const text = await res.text();
+
+    if (res.ok) {
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return new Response(JSON.stringify({
+          error: 'invalid_provider_response',
+          detail: 'OpenRouter returned HTTP 200 with a non-JSON chat response.',
+        }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!assistantContent(parsed)) {
+        return new Response(JSON.stringify({
+          error: 'invalid_provider_response',
+          detail: 'OpenRouter returned HTTP 200 without usable assistant content.',
+        }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     return new Response(text, { status: res.status, headers: res.headers });
   } finally {
     clearTimeout(timer);
