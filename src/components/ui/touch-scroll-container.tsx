@@ -1,5 +1,5 @@
 // ============================================================================
-// TOUCH SCROLL CONTAINER - Scrollable with visible slider and drag support
+// TOUCH SCROLL CONTAINER - Native mobile scrolling, desktop rail only
 // ============================================================================
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
@@ -13,6 +13,18 @@ interface TouchScrollContainerProps {
   showScrollButtons?: boolean;
 }
 
+interface ScrollInfo {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(
+    target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')
+  );
+}
+
 export function TouchScrollContainer({
   children,
   className,
@@ -20,206 +32,161 @@ export function TouchScrollContainer({
   showScrollButtons = true,
 }: TouchScrollContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const thumbRef = useRef<HTMLDivElement>(null);
-  const [scrollInfo, setScrollInfo] = useState({
+  const editingRef = useRef(false);
+  const [coarsePointer, setCoarsePointer] = useState(false);
+  const [scrollInfo, setScrollInfo] = useState<ScrollInfo>({
     scrollTop: 0,
     scrollHeight: 0,
     clientHeight: 0,
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [isThumbDragging, setIsThumbDragging] = useState(false);
-  const dragStartRef = useRef({ y: 0, scrollTop: 0 });
-  const thumbDragStartRef = useRef({ y: 0, scrollTop: 0 });
 
-  // Update scroll info
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const query = window.matchMedia('(pointer: coarse)');
+    const sync = () => setCoarsePointer(query.matches);
+    sync();
+    query.addEventListener?.('change', sync);
+    return () => query.removeEventListener?.('change', sync);
+  }, []);
+
   const updateScrollInfo = useCallback(() => {
-    if (containerRef.current) {
-      setScrollInfo({
-        scrollTop: containerRef.current.scrollTop,
-        scrollHeight: containerRef.current.scrollHeight,
-        clientHeight: containerRef.current.clientHeight,
-      });
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    const next: ScrollInfo = {
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
+      clientHeight: container.clientHeight,
+    };
+    setScrollInfo((previous) => (
+      previous.scrollTop === next.scrollTop &&
+      previous.scrollHeight === next.scrollHeight &&
+      previous.clientHeight === next.clientHeight
+        ? previous
+        : next
+    ));
   }, []);
 
   useEffect(() => {
-    updateScrollInfo();
     const container = containerRef.current;
-    if (container) {
-      container.addEventListener('scroll', updateScrollInfo);
-      const resizeObserver = new ResizeObserver(updateScrollInfo);
-      resizeObserver.observe(container);
-      return () => {
-        container.removeEventListener('scroll', updateScrollInfo);
-        resizeObserver.disconnect();
-      };
-    }
+    if (!container) return;
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (isEditableTarget(event.target)) editingRef.current = true;
+    };
+    const handleFocusOut = () => {
+      window.setTimeout(() => {
+        const active = document.activeElement;
+        editingRef.current = Boolean(active && container.contains(active) && isEditableTarget(active));
+        if (!editingRef.current) updateScrollInfo();
+      }, 0);
+    };
+    const handleResize = () => {
+      // Opening/closing a mobile keyboard resizes the viewport. Rebuilding a
+      // custom scrollbar during that resize can steal focus on Samsung/Chrome.
+      if (!editingRef.current) updateScrollInfo();
+    };
+
+    container.addEventListener('scroll', updateScrollInfo, { passive: true });
+    container.addEventListener('focusin', handleFocusIn);
+    container.addEventListener('focusout', handleFocusOut);
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+    updateScrollInfo();
+
+    return () => {
+      container.removeEventListener('scroll', updateScrollInfo);
+      container.removeEventListener('focusin', handleFocusIn);
+      container.removeEventListener('focusout', handleFocusOut);
+      resizeObserver.disconnect();
+    };
   }, [updateScrollInfo]);
 
-  // Calculate thumb position and size
-  const canScroll = scrollInfo.scrollHeight > scrollInfo.clientHeight;
-  const thumbHeight = canScroll
+  const canScroll = scrollInfo.scrollHeight > scrollInfo.clientHeight + 1;
+  const showDesktopRail = canScroll && !coarsePointer;
+  const thumbHeight = showDesktopRail
     ? Math.max(40, (scrollInfo.clientHeight / scrollInfo.scrollHeight) * scrollInfo.clientHeight)
     : 0;
-  const thumbTop = canScroll
-    ? (scrollInfo.scrollTop / (scrollInfo.scrollHeight - scrollInfo.clientHeight)) *
-      (scrollInfo.clientHeight - thumbHeight)
+  const thumbTop = showDesktopRail
+    ? (scrollInfo.scrollTop / Math.max(1, scrollInfo.scrollHeight - scrollInfo.clientHeight)) *
+      Math.max(0, scrollInfo.clientHeight - thumbHeight)
     : 0;
 
-  // Drag-to-scroll (content dragging)
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    // Touch/pen already scroll natively. Capturing those pointers retargets the
-    // tap away from inputs on mobile browsers (Samsung Internet especially),
-    // which steals focus and slams the on-screen keyboard shut.
-    if (e.pointerType !== 'mouse') return;
-    // Don't start drag if clicking on interactive elements
-    const target = e.target as HTMLElement;
-
-    const interactiveSelectors = [
-      'button', 'input', 'select', 'textarea', 'a', 'label',
-      '[role="button"]', '[role="checkbox"]', '[role="radio"]', '[role="switch"]',
-      '[role="tab"]', '[role="menuitem"]', '[role="option"]', '[role="listbox"]',
-      '[data-radix-collection-item]', '[data-clickable]',
-      'svg', 'path', // Icons are often SVGs
-    ].join(', ');
-    
-    if (target.closest(interactiveSelectors)) {
-      return;
-    }
-    
-    setIsDragging(true);
-    dragStartRef.current = {
-      y: e.clientY,
-      scrollTop: containerRef.current?.scrollTop || 0,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    
-    const deltaY = dragStartRef.current.y - e.clientY;
-    containerRef.current.scrollTop = dragStartRef.current.scrollTop + deltaY;
-  }, [isDragging]);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    setIsDragging(false);
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
-
-  // Thumb dragging
-  const handleThumbPointerDown = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    setIsThumbDragging(true);
-    thumbDragStartRef.current = {
-      y: e.clientY,
-      scrollTop: containerRef.current?.scrollTop || 0,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const handleThumbPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isThumbDragging || !containerRef.current) return;
-    
-    const deltaY = e.clientY - thumbDragStartRef.current.y;
-    const scrollRatio = (scrollInfo.scrollHeight - scrollInfo.clientHeight) / (scrollInfo.clientHeight - thumbHeight);
-    containerRef.current.scrollTop = thumbDragStartRef.current.scrollTop + deltaY * scrollRatio;
-  }, [isThumbDragging, scrollInfo, thumbHeight]);
-
-  const handleThumbPointerUp = useCallback((e: React.PointerEvent) => {
-    setIsThumbDragging(false);
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
-
-  // Scroll buttons
   const scrollBy = useCallback((amount: number) => {
-    if (containerRef.current) {
-      containerRef.current.scrollBy({ top: amount, behavior: 'smooth' });
-    }
+    containerRef.current?.scrollBy({ top: amount, behavior: 'smooth' });
   }, []);
+
+  const setScrollFromPointer = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container || !showDesktopRail) return;
+    event.preventDefault();
+    const track = event.currentTarget;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height)));
+    container.scrollTop = ratio * Math.max(0, container.scrollHeight - container.clientHeight);
+  }, [showDesktopRail]);
 
   const canScrollUp = scrollInfo.scrollTop > 0;
   const canScrollDown = scrollInfo.scrollTop < scrollInfo.scrollHeight - scrollInfo.clientHeight - 1;
 
   return (
-    <div className={cn("relative flex", className)}>
-      {/* Scrollable content area */}
+    <div className={cn('relative flex min-w-0', className)}>
       <div
         ref={containerRef}
         className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden",
-          "scrollbar-none", // Hide native scrollbar
-          isDragging && "cursor-grabbing select-none",
-          !isDragging && "cursor-grab",
-          contentClassName
+          'flex-1 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain',
+          // Mobile companion/options grids must never force nowrap overflow.
+          '[&_.grid]:min-w-0 [&_.grid>*]:min-w-0',
+          '[&_button]:min-w-0 max-md:[&_button]:whitespace-normal max-md:[&_button]:break-words',
+          contentClassName,
         )}
-        style={{ 
+        style={{
           WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          touchAction: 'pan-y',
+          scrollbarWidth: showDesktopRail ? 'none' : 'auto',
+          msOverflowStyle: showDesktopRail ? 'none' : 'auto',
         }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
       >
         {children}
       </div>
 
-      {/* Custom scrollbar track */}
-      {canScroll && (
-        <div className="w-6 flex flex-col items-center py-1 bg-muted/20 border-l border-border/30">
-          {/* Scroll up button */}
+      {showDesktopRail && (
+        <div className="w-6 shrink-0 flex flex-col items-center py-1 bg-muted/20 border-l border-border/30">
           {showScrollButtons && (
             <button
+              type="button"
               onClick={() => scrollBy(-100)}
               disabled={!canScrollUp}
               className={cn(
-                "p-1 rounded transition-colors",
-                canScrollUp 
-                  ? "text-primary hover:bg-primary/20 active:bg-primary/30" 
-                  : "text-muted-foreground/30"
+                'p-1 rounded transition-colors',
+                canScrollUp ? 'text-primary hover:bg-primary/20 active:bg-primary/30' : 'text-muted-foreground/30',
               )}
+              aria-label="Scroll up"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
           )}
 
-          {/* Track */}
-          <div className="flex-1 w-3 relative my-1">
+          <div
+            className="flex-1 w-3 relative my-1 cursor-pointer"
+            onPointerDown={setScrollFromPointer}
+          >
             <div className="absolute inset-0 rounded-full bg-muted/30" />
-            
-            {/* Thumb */}
             <div
-              ref={thumbRef}
-              className={cn(
-                "absolute left-0 right-0 rounded-full cursor-pointer transition-colors",
-                isThumbDragging 
-                  ? "bg-primary" 
-                  : "bg-primary/60 hover:bg-primary/80"
-              )}
-              style={{
-                top: thumbTop,
-                height: thumbHeight,
-              }}
-              onPointerDown={handleThumbPointerDown}
-              onPointerMove={handleThumbPointerMove}
-              onPointerUp={handleThumbPointerUp}
-              onPointerCancel={handleThumbPointerUp}
+              className="absolute left-0 right-0 rounded-full bg-primary/60"
+              style={{ top: thumbTop, height: thumbHeight }}
             />
           </div>
 
-          {/* Scroll down button */}
           {showScrollButtons && (
             <button
+              type="button"
               onClick={() => scrollBy(100)}
               disabled={!canScrollDown}
               className={cn(
-                "p-1 rounded transition-colors",
-                canScrollDown 
-                  ? "text-primary hover:bg-primary/20 active:bg-primary/30" 
-                  : "text-muted-foreground/30"
+                'p-1 rounded transition-colors',
+                canScrollDown ? 'text-primary hover:bg-primary/20 active:bg-primary/30' : 'text-muted-foreground/30',
               )}
+              aria-label="Scroll down"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
