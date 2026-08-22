@@ -3,13 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
   CharacterStats,
+  SpecialStat,
+  SPECIAL_STATS,
+  SPECIAL_ABBR,
+  SPECIAL_DESCRIPTIONS,
   getStatModifier,
+  normalizeStatBonuses,
+  buildSpecialStats,
+  calculateMaxHealth,
 } from '@/types/rpgCharacter';
 import { GameGenre, GENRE_DATA, createGenreCharacter } from '@/types/genreData';
-import { 
-  DetailLevel, Gender, TieredAppearance, 
+import {
+  DetailLevel, Gender, TieredAppearance,
   GENDER_OPTIONS, HEIGHT_OPTIONS, BUILD_OPTIONS,
   SKIN_TONES, HAIR_STYLES, HAIR_COLORS, EYE_COLORS, FACE_SHAPES,
   DISTINGUISHING_FEATURES, ACCESSORIES,
@@ -23,8 +30,8 @@ import {
 import { chestLabel, cupLetterToScalar, scalarToCupLetter } from '@/lib/chestScale';
 import { storyAIIntegration } from '@/game/storyAIIntegration';
 import { CreationSection } from './CreationSection';
-import { 
-  ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles, 
+import {
+  ChevronRight, ChevronLeft, ChevronDown, Sword, Shield, Wand2, Heart, Sparkles,
   Dices, Rocket, Skull, Search, Compass, User, Loader2, Wand, AlertCircle, Pencil,
   Eye, Crosshair, Zap, Blend, Plus, Shirt, Scissors, Syringe, Palette,
   Backpack, ScanLine, Package
@@ -83,7 +90,6 @@ type CreationStep = 'name' | 'appearance' | 'class' | 'background' | 'stats' | '
 
 const SPEAKING_PICKABLE: ProficiencyLevel[] = ['basic', 'broken', 'conversational', 'fluent'];
 
-// Available phobias for character creation
 const AVAILABLE_PHOBIAS = [
   { id: 'fear_heights', name: 'Fear of Heights', description: 'Intense fear when in high places' },
   { id: 'fear_darkness', name: 'Fear of Darkness', description: 'Uncomfortable in dark environments' },
@@ -99,7 +105,12 @@ const AVAILABLE_PHOBIAS = [
   { id: 'fear_failure', name: 'Fear of Failure', description: 'Paralyzed by fear of failing' },
 ];
 
-const STAT_POINT_POOL = 15;
+/** New Vegas-style total. Seven stats begin at 1, leaving 33 points to place. */
+const STAT_POINT_POOL = 40;
+
+function initialSpecialAllocation(): Record<SpecialStat, number> {
+  return Object.fromEntries(SPECIAL_STATS.map(stat => [stat, 1])) as Record<SpecialStat, number>;
+}
 
 export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onBack, isLoading, secondaryGenres = [], defaultClass }: CharacterCreationProps) {
   const game = useGameOptional();
@@ -116,46 +127,42 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const languagePointsRemaining = LANGUAGE_POINT_POOL - languagePointsSpent;
 
   const genreData = GENRE_DATA[genre];
-  
-  // Use blended data when secondary genres are present
+
   const blendedClasses = useMemo(() => {
     if (secondaryGenres.length === 0) return genreData.classes;
     return getBlendedClasses(genre, secondaryGenres);
   }, [genre, secondaryGenres, genreData.classes]);
-  
+
   const blendedBackgrounds = useMemo(() => {
     if (secondaryGenres.length === 0) return genreData.backgrounds;
     return getBlendedBackgrounds(genre, secondaryGenres);
   }, [genre, secondaryGenres, genreData.backgrounds]);
-  
+
   const blendedTraits = useMemo(() => {
-    if (secondaryGenres.length === 0) return genreData.traits;
-    return getBlendedTraits(genre, secondaryGenres);
+    const baseTraits = secondaryGenres.length === 0
+      ? genreData.traits
+      : getBlendedTraits(genre, secondaryGenres);
+    // Luck is both a SPECIAL attribute and a selectable character trait. The
+    // trait grants +1 effective LCK after base/class/origin math.
+    return baseTraits.includes('Lucky') ? baseTraits : [...baseTraits, 'Lucky'];
   }, [genre, secondaryGenres, genreData.traits]);
-  
-  // Get hybrid traits with narrative hooks
+
   const hybridTraits = useMemo(() => {
     if (secondaryGenres.length === 0) return [];
     return getHybridTraits(genre, secondaryGenres);
   }, [genre, secondaryGenres]);
-  
-  // Track selected hybrid traits separately
+
   const [selectedHybridTraits, setSelectedHybridTraits] = useState<string[]>([]);
-  
-  // Count hybrid classes added
   const hybridClassCount = blendedClasses.length - genreData.classes.length;
-  
+
   const [step, setStep] = useState<CreationStep>('name');
   const [name, setName] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>(defaultClass || '');
   const [selectedBackground, setSelectedBackground] = useState<string>('');
   const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
   const [selectedPhobias, setSelectedPhobias] = useState<string[]>([]);
-  const [statAllocation, setStatAllocation] = useState<Partial<CharacterStats>>({
-    strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0,
-  });
-  
-  // Appearance state
+  const [statAllocation, setStatAllocation] = useState<Record<SpecialStat, number>>(initialSpecialAllocation);
+
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('simple');
   const [appearance, setAppearance] = useState<TieredAppearance>({
     detailLevel: 'simple',
@@ -163,26 +170,23 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     detailed: { skinTone: 'Medium', hairStyle: 'Medium', hairColor: 'Brown', eyeColor: 'Brown', faceShape: 'oval', distinguishingFeatures: [], accessories: [] },
     full: { bustSize: 'C', hipWidth: 'average', muscleDefinition: 'toned', bodyHair: 'light', shoulderWidth: 'average', physique: '', isHermaphrodite: false, intimateDetails: '', piercings: [], piercingStyle: '', tattoos: [], tattooStyle: '', scars: [], prosthetics: [], implants: [], mutations: [], clothingStyle: 'genre_default', clothingDetails: [] },
   });
-  
-  // Collapsible section states
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     bodyMods: false,
     physicalMods: false,
     clothing: false,
   });
-  
+
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
-  
-  // Portrait state
+
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
   const [showPortraitEditor, setShowPortraitEditor] = useState(false);
   const [portraitEditPrompt, setPortraitEditPrompt] = useState('');
   const [isEditingPortrait, setIsEditingPortrait] = useState(false);
   const [portraitEditStrength, setPortraitEditStrength] = useState<PortraitEditStrength>('subtle');
-  /** Previous portraits, newest last — powers undo and the edit history list. */
   const [portraitHistory, setPortraitHistory] = useState<{ url: string; instruction: string; strength: PortraitEditStrength }[]>([]);
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
   const [confirmMajorEdit, setConfirmMajorEdit] = useState(false);
@@ -196,48 +200,53 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     clothingItems?: { item: string; slot: string; genre?: string[]; tags: string[] }[];
     genre?: string;
   } | null>(null);
-  
-  
-  // Custom class state
+
   const [showCustomClassBuilder, setShowCustomClassBuilder] = useState(false);
   const [customClass, setCustomClass] = useState<CustomClassData | null>(null);
-  
-  // Starting gear customization
   const [customGear, setCustomGear] = useState<StartingGearItem[] | null>(null);
-  
+
   const handleGearChange = useCallback((gear: StartingGearItem[]) => {
     setCustomGear(gear);
   }, []);
-  
-  // A different class is a different loadout. Holding on to the previous one
-  // left a mage carrying the warrior's plate, because the gear editor only
-  // rebuilds its list while no custom gear is held.
+
   useEffect(() => {
     setCustomGear(null);
   }, [selectedClass]);
-  
-  // Gear read off the portrait. Only populated once a portrait exists — without
-  // imagery the character starts on the class kit alone.
+
   const [scannedGear, setScannedGear] = useState<ScannedGearItem[]>([]);
   const [isScanningGear, setIsScanningGear] = useState(false);
   const [gearScanNote, setGearScanNote] = useState<string | null>(null);
   const [excludedGearKeys, setExcludedGearKeys] = useState<string[]>([]);
-  
+
   const handleCustomClassComplete = useCallback((data: CustomClassData) => {
     setCustomClass(data);
     setSelectedClass(data.id);
     setShowCustomClassBuilder(false);
   }, []);
 
-  const pointsSpent = Object.values(statAllocation).reduce((sum, val) => sum + (val || 0), 0);
+  const pointsSpent = SPECIAL_STATS.reduce((sum, stat) => sum + (statAllocation[stat] ?? 1), 0);
   const pointsRemaining = STAT_POINT_POOL - pointsSpent;
 
-  const adjustStat = (stat: keyof CharacterStats, delta: number) => {
-    const current = statAllocation[stat] || 0;
-    const newValue = current + delta;
-    if (newValue < 0 || newValue > 7) return;
+  const adjustStat = (stat: SpecialStat, delta: number) => {
+    const current = statAllocation[stat] ?? 1;
+    const next = current + delta;
+    if (next < 0 || next > 10) return;
     if (delta > 0 && pointsRemaining <= 0) return;
-    setStatAllocation(prev => ({ ...prev, [stat]: newValue }));
+    setStatAllocation(prev => ({ ...prev, [stat]: next }));
+  };
+
+  const randomizeSpecial = () => {
+    const next = initialSpecialAllocation();
+    let remaining = STAT_POINT_POOL - SPECIAL_STATS.length;
+    while (remaining > 0) {
+      const available = SPECIAL_STATS.filter(stat => next[stat] < 10);
+      if (available.length === 0) break;
+      const stat = available[Math.floor(Math.random() * available.length)];
+      next[stat] += 1;
+      remaining -= 1;
+    }
+    setStatAllocation(next);
+    toast.success('SPECIAL randomized', { description: '40 base points dispersed across all seven attributes.' });
   };
 
   const toggleTrait = (trait: string) => {
@@ -345,8 +354,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }));
   };
 
-  // Chest size is stored as an exact scalar. The cup letter is kept in sync
-  // only so older systems and saves keep resolving.
   const updateChestSize = (value: number) => {
     setAppearance(prev => ({
       ...prev,
@@ -359,9 +366,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }));
   };
 
-
-  // Custom classes have no gear table of their own, so they resolve against the
-  // genre default — the same fallback the gear editor uses.
   const gearClassId = customClass && selectedClass === customClass.id ? 'default' : selectedClass;
 
   const resolvedClassName = useMemo(() => {
@@ -369,7 +373,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     return blendedClasses.find(c => c.id === selectedClass)?.name || selectedClass;
   }, [customClass, selectedClass, blendedClasses]);
 
-  /** The kit before the portrait gets a say: the player's edits, or the class default. */
   const baseGear = useMemo<StartingGearItem[]>(
     () => customGear ?? getClassKit(genre, gearClassId || 'default'),
     [customGear, genre, gearClassId]
@@ -380,10 +383,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     [scannedGear, excludedGearKeys]
   );
 
-  /**
-   * With a portrait, what it shows leads and the class kit fills the gaps.
-   * Without one, the class kit is the whole answer.
-   */
   const resolvedGear = useMemo(
     () => reconcileStartingGear(portraitUrl ? includedScannedGear : [], baseGear),
     [portraitUrl, includedScannedGear, baseGear]
@@ -426,13 +425,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
   const handleGeneratePortrait = async () => {
     setIsGeneratingPortrait(true);
     try {
-      
       const className = resolvedClassName;
       const selectedClassData = customClass && selectedClass === customClass.id
         ? { name: customClass.name }
         : blendedClasses.find(c => c.id === selectedClass);
-      
-      // Build character appearance data including all customizations - pass directly to edge function
+
       const characterData = {
         name: name,
         gender: appearance.simple?.gender || 'male',
@@ -443,14 +440,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         eyeColor: appearance.detailed?.eyeColor || 'brown',
         skinTone: appearance.detailed?.skinTone || 'medium',
         faceShape: appearance.detailed?.faceShape,
-        // Distinguishing features and accessories
         distinguishingFeatures: appearance.detailed?.distinguishingFeatures || [],
         accessories: appearance.detailed?.accessories || [],
         details: [
           ...(appearance.detailed?.distinguishingFeatures || []),
           ...(appearance.detailed?.accessories || []),
         ],
-        // Body shape details (chest scalar, hips, muscle, shoulders)
         chestSizeValue:
           typeof appearance.full?.chestSizeValue === 'number'
             ? appearance.full.chestSizeValue
@@ -461,7 +456,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         bodyHair: appearance.full?.bodyHair,
         shoulderWidth: appearance.full?.shoulderWidth,
         physique: appearance.full?.physique,
-        // CRITICAL: Body modifications - passed directly to edge function
         piercings: appearance.full?.piercings || [],
         piercingStyle: appearance.full?.piercingStyle || '',
         tattoos: appearance.full?.tattoos || [],
@@ -472,13 +466,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         mutations: appearance.full?.mutations || [],
         clothingStyle: appearance.full?.clothingStyle || 'genre_default',
         clothingDetails: appearance.full?.clothingDetails || [],
-        // CRITICAL: Free-form description from "Additional Details" textarea
         additionalDetails: appearance.full?.intimateDetails || '',
-        // Class info for role-appropriate styling
         characterClass: className,
         portraitHints: (selectedClassData as any)?.portraitHints || [],
       };
-      
+
       console.log('[FLUX] Generating portrait with body modifications:', {
         piercings: characterData.piercings.length,
         tattoos: characterData.tattoos.length,
@@ -487,28 +479,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         prosthetics: characterData.prosthetics.length,
         mutations: characterData.mutations.length,
       });
-      
+
       const result = await generatePortraitWithCharacterData(characterData, genre);
       setPortraitUrl(result.imageUrl);
       setDetectedKeywords(result.detectedKeywords || null);
-      
       toast.success('Portrait generated!');
-      
-      // The portrait is now the character's imagery, so its visible gear becomes
-      // the starting kit. Deliberately not awaited: the scan is an enhancement
-      // and must not hold the portrait step hostage.
       void runGearScan(result.imageUrl);
     } catch (error) {
       console.error('Error generating portrait:', error);
-      toast.error('Failed to generate portrait', { 
-        description: error instanceof Error ? error.message : 'Unknown error' 
+      toast.error('Failed to generate portrait', {
+        description: error instanceof Error ? error.message : 'Unknown error'
       });
     } finally {
       setIsGeneratingPortrait(false);
     }
   };
 
-  /** Tweak the portrait that already exists instead of rolling a new one. */
   const handleEditPortrait = async () => {
     const instruction = portraitEditPrompt.trim();
     if (!portraitUrl || instruction.length < 3) return;
@@ -539,7 +525,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     }
   };
 
-  /** Step back to the portrait as it was before the most recent edit. */
   const handleUndoPortraitEdit = () => {
     if (!portraitHistory.length) return;
     const previous = portraitHistory[portraitHistory.length - 1];
@@ -550,28 +535,48 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     void runGearScan(previous.url);
   };
 
-
-
   const handleComplete = () => {
-    // Resolve class and background from blended lists or custom class
-    let classData = customClass && selectedClass === customClass.id
+    const classData = customClass && selectedClass === customClass.id
       ? { id: customClass.id, name: customClass.name, description: customClass.description, statBonuses: customClass.statBonuses, startingItems: [] as string[], abilities: customClass.abilities, portraitHints: [] as string[], clothingStyle: undefined }
       : blendedClasses.find(c => c.id === selectedClass);
-    
+
     const backgroundData = blendedBackgrounds.find(b => b.id === selectedBackground);
-    
-    const character = createGenreCharacter(name, selectedClass, selectedBackground, selectedTraits, statAllocation, genre, portraitUrl || undefined, classData, backgroundData);
-    // Add phobias to character data
+
+    // Keep createGenreCharacter responsible for genre inventory/skills/currency,
+    // then replace its legacy stat output with one authoritative SPECIAL sheet.
+    const character = createGenreCharacter(
+      name,
+      selectedClass,
+      selectedBackground,
+      selectedTraits,
+      statAllocation as Partial<CharacterStats>,
+      genre,
+      portraitUrl || undefined,
+      classData,
+      backgroundData,
+    );
+
+    const specialStats = buildSpecialStats(
+      statAllocation,
+      classData?.statBonuses,
+      backgroundData?.statBonuses,
+    );
+    if (selectedTraits.includes('Lucky')) {
+      specialStats.luck = (specialStats.luck ?? 1) + 1;
+    }
+    character.stats = specialStats;
+    character.maxHealth = calculateMaxHealth(specialStats, character.level);
+    character.currentHealth = character.maxHealth;
+    (character as any).statSystemVersion = 'special-v1';
+    (character as any).specialBaseStats = { ...statAllocation };
+    (character as any).specialClassBonuses = normalizeStatBonuses(classData?.statBonuses);
+    (character as any).specialOriginBonuses = normalizeStatBonuses(backgroundData?.statBonuses);
+    (character as any).luckTrait = selectedTraits.includes('Lucky');
+
     (character as any).phobias = selectedPhobias;
-    // Add custom class data if using a custom class
     if (customClass && selectedClass === customClass.id) {
       (character as any).customClass = customClass;
-      // Note: stat bonuses are already applied in createGenreCharacter via classData
-      // Note: abilities are already set in createGenreCharacter via classData
     }
-    // The resolved starting kit. With a portrait this is the visible gear plus
-    // whatever the class kit still needs to fill; without one it is the class
-    // kit (or the player's edits to it) untouched.
     const gearSource: StartingGearSource =
       portraitUrl && resolvedGear.fromPortrait.length > 0 ? 'portrait-scan' : 'class';
     (character as any).customStartingGear = resolvedGear.gear;
@@ -580,11 +585,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       `[CharacterCreation] Starting kit (${gearSource}): ${resolvedGear.fromPortrait.length} from portrait, ` +
       `${resolvedGear.fromClassKit.length} from class kit, ${resolvedGear.skipped.length} superseded`
     );
-    // Add selected hybrid traits
     if (selectedHybridTraits.length > 0) {
       (character as any).hybridTraits = selectedHybridTraits;
     }
-    // Add appearance data for consistent scene illustrations
     (character as any).gender = appearance.simple?.gender || 'male';
     (character as any).build = appearance.simple?.build || 'average';
     (character as any).height = appearance.simple?.height || 'average';
@@ -597,15 +600,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       ...(appearance.detailed?.distinguishingFeatures || []),
       ...(appearance.detailed?.accessories || []),
     ];
-    
-    // Add full appearance data for adult content (18+) - stored separately for AI context
     (character as any).fullAppearance = appearance.full;
     (character as any).tieredAppearance = appearance;
-    
-    // Generate full appearance description for AI using the formatAppearanceForAI helper
     (character as any).appearanceDescription = formatAppearanceForAI(appearance, genre);
-    
-    // Set up clothing context for NPC reactions
+
     if (appearance.full) {
       storyAIIntegration.setPlayerClothing({
         clothingStyle: appearance.full.clothingStyle,
@@ -617,8 +615,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
         mutations: appearance.full.mutations,
       }, genre);
     }
-    
-    // Save the locked portrait reference for gameplay regeneration
+
     savePlayerPortraitReference(
       {
         name,
@@ -641,14 +638,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       classData?.name,
       classData?.portraitHints
     );
-    
-    // Save the portrait URL if generated
-    if (portraitUrl) {
-      savePlayerPortraitUrl(portraitUrl);
-    }
 
-    // Freeze the campaign story language so the primary tongue / foreigner role
-    // cannot drift between creation, later turns, and reloaded saves.
+    if (portraitUrl) savePlayerPortraitUrl(portraitUrl);
+
     const lockedStoryLanguage = lockStoryLanguage(storyLanguage, languageProfile, genre);
 
     if (languageBarriersEnabled) {
@@ -674,32 +666,28 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       });
     }
 
-    
-    console.log('[CharacterCreation] Saved portrait reference for consistent regeneration');
-    
+    console.log('[CharacterCreation] Saved SPECIAL character + portrait reference');
     onComplete(character, scenario);
   };
 
   const canProceed = () => {
     switch (step) {
       case 'name': return name.trim().length >= 2;
-      // Languages live inside the Appearance step now, so its gate applies here.
       case 'appearance':
         return !languageBarriersEnabled ||
           (languagePointsRemaining >= 0 && !!languageProfile.nativeLanguage);
       case 'class': return selectedClass !== '';
       case 'background': return selectedBackground !== '';
-      case 'stats': return true;
+      case 'stats': return pointsRemaining === 0;
       case 'traits': return selectedTraits.length >= 1;
-      case 'phobias': return true; // Phobias are optional
-      case 'languages': return true; // legacy step, no longer in the flow
+      case 'phobias': return true;
+      case 'languages': return true;
       case 'portrait': return true;
     }
   };
 
   const steps: CreationStep[] =
     ['name', 'appearance', 'class', 'background', 'stats', 'traits', 'phobias', 'portrait'];
-
 
   const setNativeLanguage = (code: string) => {
     const option = languageCatalog.find(l => l.code === code);
@@ -772,7 +760,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
       return next;
     });
   };
-  
+
   const nextStep = () => {
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) setStep(steps[currentIndex + 1]);
@@ -794,7 +782,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     if (genre === 'mystery') return <Search className="w-5 h-5" />;
     if (genre === 'pirate') return <Compass className="w-5 h-5" />;
     if (genre === 'western') return <Crosshair className="w-5 h-5" />;
-    
+
     switch (classId) {
       case 'warrior': case 'marine': case 'enforcer': case 'solo': return <Sword className="w-5 h-5" />;
       case 'mage': case 'hacker': case 'occultist': case 'netrunner': return <Wand2 className="w-5 h-5" />;
@@ -838,7 +826,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     </div>
   );
 
-  // ---- Story language relationship (native vs foreigner) ----
   const storyLanguage = {
     ...DEFAULT_STORY_LANGUAGE_SETUP,
     ...(game?.settings?.languageSettings?.storyLanguage || {}),
@@ -1079,13 +1066,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
     </div>
   );
 
-
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-2xl">
-        {/* Header */}
         <div className="text-center mb-6 animate-fade-in">
-          {/* Genre Blend Indicator */}
           <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
             <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
               <span>{GENRE_ICONS[genre]}</span>
@@ -1104,7 +1088,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
               </>
             )}
           </div>
-          
+
           <h1 className="text-3xl md:text-4xl font-narrative font-bold text-gradient-gold mt-3 mb-2">
             Create Your Hero
           </h1>
@@ -1116,9 +1100,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
           </p>
         </div>
 
-        {/* Step Content */}
         <div className="bg-card/50 border border-border/30 rounded-lg p-6 mb-6 animate-fade-in">
-          {/* Name Step */}
           {step === 'name' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">What is your name?</h2>
@@ -1132,15 +1114,13 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Appearance Step */}
           {step === 'appearance' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Define Your Appearance</h2>
-              
+
               {renderDetailLevelSelector()}
-              
+
               <ScrollArea className="h-[350px] pr-4">
-                {/* Simple Level - Always shown */}
                 <div className="space-y-2">
                   <CreationSection
                     title="Gender"
@@ -1175,7 +1155,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     )}
                   </CreationSection>
 
-                  {/* Languages — collapsible tab directly under Gender */}
                   <CreationSection
                     title="Languages"
                     defaultOpen
@@ -1234,7 +1213,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     </div>
                   </CreationSection>
 
-
                   <CreationSection
                     title="Height"
                     summary={HEIGHT_OPTIONS.find(o => o.value === appearance.simple.height)?.label}
@@ -1278,14 +1256,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   </CreationSection>
                 </div>
 
-
-                {/* Detailed Level */}
                 {(detailLevel === 'detailed' || detailLevel === 'all') && (
                   <div className="mt-2">
                   <CreationSection title="Detailed Features" tone="accent">
                     <div className="space-y-4">
-
-                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm text-muted-foreground">Skin Tone</label>
@@ -1381,7 +1355,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   </div>
                 )}
 
-                {/* All Level (18+) */}
                 {detailLevel === 'all' && (
                   <CreationSection
                     title="Adult Content"
@@ -1389,9 +1362,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     icon={<Eye className="w-4 h-4 text-destructive" />}
                   >
                     <div className="space-y-4">
-
-                    
-                    {/* Female/Other Body Shape Options */}
                     {(appearance.simple.gender === 'female' || appearance.simple.gender === 'other') && (
                       <>
                         {(() => {
@@ -1426,7 +1396,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           );
                         })()}
                         <div className="grid grid-cols-2 gap-4">
-
                           <div>
                             <label className="text-sm text-muted-foreground">Hip Width</label>
                             <select
@@ -1448,12 +1417,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             </select>
                           </div>
                         </div>
-                        
-                        {/* Body shape presets removed - use Additional Description instead */}
                       </>
                     )}
 
-                    {/* Male Body Shape Options */}
                     {(appearance.simple.gender === 'male') && (
                       <>
                         <div className="grid grid-cols-3 gap-4">
@@ -1488,13 +1454,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             </select>
                           </div>
                         </div>
-                        
-                        {/* Body shape presets removed - use Additional Description instead */}
                       </>
                     )}
 
-                    {/* Appearance Accordions - Clothing, Piercings, Tattoos, Mods */}
-                    <AppearanceAccordions 
+                    <AppearanceAccordions
                       appearance={appearance}
                       onUpdateAppearance={updateAppearance}
                       genre={genre}
@@ -1506,7 +1469,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Class Step */}
           {step === 'class' && (
             <div className="space-y-4">
               {showCustomClassBuilder ? (
@@ -1529,16 +1491,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       )}
                     </div>
                   </div>
-                  
+
                   <ScrollArea className="h-[350px] pr-4">
                     <div className="grid gap-3">
-                      {/* Custom Class Option */}
                       {customClass && (
                         <button
                           onClick={() => setSelectedClass(customClass.id)}
                           className={`w-full p-4 rounded-lg text-left transition-all ${
-                            selectedClass === customClass.id 
-                              ? 'bg-primary/20 border-2 border-primary' 
+                            selectedClass === customClass.id
+                              ? 'bg-primary/20 border-2 border-primary'
                               : 'bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/30 hover:border-primary/50'
                           }`}
                         >
@@ -1554,10 +1515,10 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                               <p className="text-sm text-muted-foreground mt-1">{customClass.description}</p>
                               <div className="flex gap-4 mt-2 text-xs text-primary/80">
                                 <span>
-                                  +{Object.entries(customClass.statBonuses)
-                                    .filter(([_, v]) => v > 0)
-                                    .map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`)
-                                    .join(', +') || 'No bonuses'}
+                                  {Object.entries(normalizeStatBonuses(customClass.statBonuses))
+                                    .filter(([_, v]) => !!v)
+                                    .map(([k, v]) => `${(v || 0) > 0 ? '+' : ''}${v} ${SPECIAL_ABBR[k as SpecialStat]}`)
+                                    .join(', ') || 'No SPECIAL bonuses'}
                                 </span>
                               </div>
                               <div className="flex flex-wrap gap-1 mt-2">
@@ -1571,17 +1532,18 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           </div>
                         </button>
                       )}
-                      
+
                       {blendedClasses.map((charClass) => {
                         const isHybrid = !genreData.classes.some(c => c.id === charClass.id);
+                        const bonuses = normalizeStatBonuses(charClass.statBonuses);
                         return (
                           <button
                             key={charClass.id}
                             onClick={() => setSelectedClass(charClass.id)}
                             className={`w-full p-4 rounded-lg text-left transition-all ${
-                              selectedClass === charClass.id 
-                                ? 'bg-primary/20 border-2 border-primary' 
-                                : isHybrid 
+                              selectedClass === charClass.id
+                                ? 'bg-primary/20 border-2 border-primary'
+                                : isHybrid
                                   ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
                                   : 'bg-background/50 border border-border/30 hover:border-primary/50'
                             }`}
@@ -1599,7 +1561,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">{charClass.description}</p>
                                 <div className="flex gap-4 mt-2 text-xs text-primary/80">
-                                  <span>+{Object.entries(charClass.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
+                                  <span>{Object.entries(bonuses).map(([k, v]) => `${(v || 0) > 0 ? '+' : ''}${v} ${SPECIAL_ABBR[k as SpecialStat]}`).join(', ') || 'No SPECIAL bonus'}</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {charClass.abilities.map(ability => (
@@ -1615,8 +1577,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       })}
                     </div>
                   </ScrollArea>
-                  
-                  {/* Create Custom Class Button */}
+
                   <Button
                     variant="outline"
                     onClick={() => setShowCustomClassBuilder(true)}
@@ -1625,8 +1586,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     <Plus className="w-4 h-4" />
                     Create Custom Class
                   </Button>
-                  
-                  {/* Starting Gear Editor */}
+
                   {selectedClass && (
                     <StartingGearEditor
                       genre={genre}
@@ -1640,7 +1600,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Background Step */}
           {step === 'background' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1656,14 +1615,15 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                 <div className="grid gap-3">
                   {blendedBackgrounds.map((bg) => {
                     const isHybrid = !genreData.backgrounds.some(b => b.id === bg.id);
+                    const bonuses = normalizeStatBonuses(bg.statBonuses);
                     return (
                       <button
                         key={bg.id}
                         onClick={() => setSelectedBackground(bg.id)}
                         className={`w-full p-4 rounded-lg text-left transition-all ${
-                          selectedBackground === bg.id 
-                            ? 'bg-primary/20 border-2 border-primary' 
-                            : isHybrid 
+                          selectedBackground === bg.id
+                            ? 'bg-primary/20 border-2 border-primary'
+                            : isHybrid
                               ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
                               : 'bg-background/50 border border-border/30 hover:border-primary/50'
                         }`}
@@ -1677,10 +1637,9 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">{bg.description}</p>
-                        {/* Stat bonuses */}
-                        {Object.keys(bg.statBonuses).length > 0 && (
+                        {Object.keys(bonuses).length > 0 && (
                           <div className="flex gap-2 mt-2 text-xs text-accent">
-                            <span>+{Object.entries(bg.statBonuses).map(([k, v]) => `${v} ${k.slice(0, 3).toUpperCase()}`).join(', +')}</span>
+                            <span>{Object.entries(bonuses).map(([k, v]) => `${(v || 0) > 0 ? '+' : ''}${v} ${SPECIAL_ABBR[k as SpecialStat]}`).join(', ')}</span>
                           </div>
                         )}
                         <div className="flex gap-2 mt-2 flex-wrap">
@@ -1698,61 +1657,106 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Stats Step */}
           {step === 'stats' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-primary">Allocate your stats</h2>
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div>
+                  <h2 className="text-xl font-semibold text-primary">Build your S.P.E.C.I.A.L.</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Base stats start at 1. Base range is 0–10. Class and origin modifiers are mandatory and cost no allocation points.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={randomizeSpecial} className="gap-2">
+                  <Dices className="w-4 h-4" />
+                  Randomize SPECIAL
+                </Button>
+              </div>
+
+              <div className="flex justify-end">
                 <span className={`text-sm font-mono ${pointsRemaining > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {pointsRemaining} points remaining
+                  {pointsRemaining} / {STAT_POINT_POOL} points remaining
                 </span>
               </div>
+
               <div className="grid gap-3">
-                {(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map((stat) => {
-                  const base = 8;
-                  const allocated = statAllocation[stat] || 0;
-                  // Check custom class first, then blended classes
-                  const classBonus = (customClass && selectedClass === customClass.id)
-                    ? (customClass.statBonuses[stat] || 0)
-                    : (blendedClasses.find(c => c.id === selectedClass)?.statBonuses[stat] || 0);
-                  const bgBonus = blendedBackgrounds.find(b => b.id === selectedBackground)?.statBonuses[stat] || 0;
-                  const total = base + allocated + classBonus + bgBonus;
+                {SPECIAL_STATS.map((stat) => {
+                  const base = statAllocation[stat] ?? 1;
+                  const rawClassBonuses = customClass && selectedClass === customClass.id
+                    ? customClass.statBonuses
+                    : blendedClasses.find(c => c.id === selectedClass)?.statBonuses;
+                  const classBonus = normalizeStatBonuses(rawClassBonuses)[stat] || 0;
+                  const originBonus = normalizeStatBonuses(
+                    blendedBackgrounds.find(b => b.id === selectedBackground)?.statBonuses
+                  )[stat] || 0;
+                  const total = Math.max(0, base + classBonus + originBonus);
                   const modifier = getStatModifier(total);
 
                   return (
                     <div key={stat} className="p-3 bg-background/50 rounded-lg border border-border/30">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="font-medium capitalize">{stat}</span>
-                          {classBonus > 0 && (
-                            <span className="text-xs text-primary">(+{classBonus})</span>
-                          )}
-                          {bgBonus > 0 && (
-                            <span className="text-xs text-accent">(+{bgBonus})</span>
-                          )}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-primary w-8">{SPECIAL_ABBR[stat]}</span>
+                            <span className="font-medium capitalize">{stat}</span>
+                            {classBonus !== 0 && (
+                              <span className="text-xs text-primary">
+                                Class {classBonus > 0 ? '+' : ''}{classBonus}
+                              </span>
+                            )}
+                            {originBonus !== 0 && (
+                              <span className="text-xs text-accent">
+                                Origin {originBonus > 0 ? '+' : ''}{originBonus}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                            {SPECIAL_DESCRIPTIONS[stat]}
+                            {stat === 'luck' ? ' Selecting the Lucky trait later grants +1 effective LCK.' : ''}
+                          </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, -1)} disabled={allocated <= 0} className="h-8 w-8 shrink-0">-</Button>
-                          <div className="w-14 text-center shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => adjustStat(stat, -1)}
+                            disabled={base <= 0}
+                            className="h-8 w-8 shrink-0"
+                          >-</Button>
+                          <div className="w-16 text-center shrink-0">
                             <span className="text-lg font-bold">{total}</span>
-                            <span className="text-xs text-muted-foreground ml-0.5">({modifier >= 0 ? '+' : ''}{modifier})</span>
+                            {(classBonus !== 0 || originBonus !== 0) && (
+                              <span className="block text-[9px] text-muted-foreground">base {base}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground ml-0.5">
+                              ({modifier >= 0 ? '+' : ''}{modifier})
+                            </span>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => adjustStat(stat, 1)} disabled={allocated >= 7 || pointsRemaining <= 0} className="h-8 w-8 shrink-0">+</Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => adjustStat(stat, 1)}
+                            disabled={base >= 10 || pointsRemaining <= 0}
+                            className="h-8 w-8 shrink-0"
+                          >+</Button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {pointsRemaining > 0 && (
+                <p className="text-xs text-amber-400 text-center">
+                  Allocate all {STAT_POINT_POOL} base SPECIAL points before continuing.
+                </p>
+              )}
             </div>
           )}
 
-          {/* Traits Step */}
           {step === 'traits' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Select up to 3 personality traits</h2>
-              
-              {/* Hybrid Traits Section - Special narrative hooks */}
+
               {hybridTraits.length > 0 && (
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -1792,25 +1796,28 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   <div className="border-t border-border/30 pt-3" />
                 </div>
               )}
-              
-              {/* Standard Traits */}
+
               <div className="flex flex-wrap gap-2">
                 {blendedTraits.map((trait) => {
-                  const isFromSecondary = !genreData.traits.includes(trait);
+                  const isFromSecondary = !genreData.traits.includes(trait) && trait !== 'Lucky';
+                  const isLucky = trait === 'Lucky';
                   return (
                     <button
                       key={trait}
                       onClick={() => toggleTrait(trait)}
+                      title={isLucky ? '+1 effective LCK. Improves critical odds and search/scavenge fortune.' : undefined}
                       className={`px-3 py-2 rounded-lg text-sm transition-all ${
                         selectedTraits.includes(trait)
                           ? 'bg-primary text-primary-foreground'
-                          : isFromSecondary
-                            ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
-                            : 'bg-background/50 border border-border/30 hover:border-primary/50'
+                          : isLucky
+                            ? 'bg-amber-500/10 border border-amber-400/40 hover:border-amber-400'
+                            : isFromSecondary
+                              ? 'bg-accent/10 border border-accent/30 hover:border-accent/50'
+                              : 'bg-background/50 border border-border/30 hover:border-primary/50'
                       }`}
                       disabled={!selectedTraits.includes(trait) && selectedTraits.length >= 3}
                     >
-                      {trait}
+                      {isLucky ? '🎲 Lucky (+1 LCK)' : trait}
                       {isFromSecondary && !selectedTraits.includes(trait) && (
                         <span className="ml-1 text-[10px] text-accent">•</span>
                       )}
@@ -1822,12 +1829,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Phobias Step */}
           {step === 'phobias' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Character Fears (Optional)</h2>
               <p className="text-sm text-muted-foreground">
-                Select up to 5 phobias that shape how your character reacts. These affect roleplay and dialogue, 
+                Select up to 5 phobias that shape how your character reacts. These affect roleplay and dialogue,
                 not stats. You can skip this step if you prefer.
               </p>
               <p className="text-xs text-primary/70 italic">
@@ -1871,7 +1877,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   Selected: {selectedPhobias.length}/5
                 </p>
                 {selectedPhobias.length > 0 && (
-                  <button 
+                  <button
                     onClick={() => setSelectedPhobias([])}
                     className="text-xs text-primary hover:underline"
                   >
@@ -1882,17 +1888,11 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
             </div>
           )}
 
-          {/* Languages now live inside the Appearance step, collapsed under Gender. */}
-
-
-
-          {/* Portrait Step */}
           {step === 'portrait' && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-primary">Generate Your Portrait</h2>
-              
+
               <div className="flex flex-col md:flex-row gap-6 items-center">
-                {/* Portrait Preview */}
                 <div className="flex flex-col items-center gap-2 shrink-0">
                   <div className="w-48 h-64 rounded-lg border-2 border-dashed border-border/50 bg-muted/20 flex items-center justify-center overflow-hidden">
                     {portraitUrl ? (
@@ -1902,10 +1902,8 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     )}
                   </div>
 
-                  {/* Small tweaks to the image that already exists — not a regenerate. */}
                   {portraitUrl && (
                     <div className="w-48 space-y-2">
-                      {/* Before / after against the pre-edit source image. */}
                       {portraitHistory.length > 0 && showBeforeAfter && (
                         <div className="space-y-1 p-2 rounded-lg border border-border/40 bg-background/50">
                           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Before / After</p>
@@ -1965,7 +1963,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             disabled={isEditingPortrait}
                           />
 
-                          {/* How far the edit may move away from the source image. */}
                           <div className="space-y-1">
                             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Change strength</p>
                             <div className="grid grid-cols-3 gap-1">
@@ -2021,7 +2018,6 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                             )}
                           </Button>
 
-                          {/* Edit history — revert step by step. */}
                           {portraitHistory.length > 0 && (
                             <div className="space-y-1 pt-1 border-t border-border/30">
                               <div className="flex items-center justify-between">
@@ -2053,9 +2049,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                   )}
                 </div>
 
-                
                 <div className="flex-1 space-y-4">
-                  {/* Character Summary */}
                   <div className="p-4 bg-background/50 rounded-lg border border-border/30">
                     <h3 className="font-semibold text-primary mb-2">Character Summary</h3>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -2094,8 +2088,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                     Portrait is optional. Generate one and your visible gear becomes your
                     starting kit; skip it and you start with your class loadout.
                   </p>
-                  
-                  {/* Gear read off the portrait */}
+
                   {portraitUrl && (isScanningGear || scannedGear.length > 0 || gearScanNote) && (
                     <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
                       <div className="flex items-center justify-between gap-2">
@@ -2114,7 +2107,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           Rescan
                         </Button>
                       </div>
-                      
+
                       {isScanningGear ? (
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -2166,24 +2159,22 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       )}
                     </div>
                   )}
-                  
-                  {/* Detected Keywords Feedback */}
+
                   {detectedKeywords && detectedKeywords.keywords.length > 0 && (
                     <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 space-y-2">
                       <h4 className="text-sm font-medium text-primary flex items-center gap-2">
                         <Sparkles className="w-4 h-4" />
                         Detected Style Keywords
                       </h4>
-                      
-                      {/* Personality Score */}
+
                       {detectedKeywords.personalityScore !== 0 && (
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-muted-foreground">Personality:</span>
                           <span className={`font-medium ${
-                            detectedKeywords.personalityScore < 0 
-                              ? 'text-blue-500' 
-                              : detectedKeywords.personalityScore > 0 
-                                ? 'text-rose-500' 
+                            detectedKeywords.personalityScore < 0
+                              ? 'text-blue-500'
+                              : detectedKeywords.personalityScore > 0
+                                ? 'text-rose-500'
                                 : 'text-muted-foreground'
                           }`}>
                             {detectedKeywords.personalityScore <= -2 ? 'Very Modest' :
@@ -2197,15 +2188,14 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           </span>
                         </div>
                       )}
-                      
-                      {/* Keywords by Category */}
+
                       <div className="flex flex-wrap gap-1">
                         {detectedKeywords.keywords.map((kw, idx) => (
-                          <span 
+                          <span
                             key={idx}
                             className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                              kw.category === 'personality' 
-                                ? kw.effect === 'modest' 
+                              kw.category === 'personality'
+                                ? kw.effect === 'modest'
                                   ? 'bg-blue-500/20 text-blue-400'
                                   : 'bg-rose-500/20 text-rose-400'
                                 : kw.category === 'color'
@@ -2223,8 +2213,7 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                           </span>
                         ))}
                       </div>
-                      
-                      {/* Summary by category */}
+
                       <div className="text-[10px] text-muted-foreground space-y-0.5 pt-1 border-t border-border/30">
                         {detectedKeywords.colorMods.length > 0 && (
                           <div><Palette className="w-3 h-3 inline mr-1" />Colors: {detectedKeywords.colorMods.join(', ')}</div>
@@ -2241,14 +2230,12 @@ export function CharacterCreation({ genre, scenario, genreTitle, onComplete, onB
                       </div>
                     </div>
                   )}
-                  
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between">
           <Button variant="ghost" onClick={prevStep} className="gap-2">
             <ChevronLeft className="w-4 h-4" />
