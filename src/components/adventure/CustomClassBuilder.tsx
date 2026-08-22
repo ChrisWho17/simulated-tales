@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Plus, X, Wand2, Shield, Check } from 'lucide-react';
-import { GameGenre, GENRE_DATA } from '@/types/genreData';
+import { Sparkles, X, Wand2, Shield, Check } from 'lucide-react';
+import { GameGenre } from '@/types/genreData';
 import { getBlendedClasses } from '@/game/genreBlendSystem';
 import { SecondaryGenre } from './AdventureCreator';
+import { SPECIAL_STATS, SPECIAL_ABBR, type SpecialStat } from '@/types/rpgCharacter';
 
 interface CustomClassBuilderProps {
   genre: GameGenre;
@@ -20,54 +21,40 @@ export interface CustomClassData {
   name: string;
   description: string;
   abilities: string[];
-  statBonuses: Record<string, number>;
+  statBonuses: Record<SpecialStat, number>;
   sourceClasses: string[];
 }
 
 const MAX_ABILITIES = 5;
 const MAX_STAT_POINTS = 6;
 
+function emptySpecialBonuses(): Record<SpecialStat, number> {
+  return Object.fromEntries(SPECIAL_STATS.map(stat => [stat, 0])) as Record<SpecialStat, number>;
+}
+
 export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCancel }: CustomClassBuilderProps) {
-  const genreData = GENRE_DATA[genre];
-  
-  // All available classes from primary and secondary genres
-  const allClasses = useMemo(() => {
-    const classes = getBlendedClasses(genre, secondaryGenres);
-    return classes;
-  }, [genre, secondaryGenres]);
-  
-  // Collect all unique abilities from all classes
+  const allClasses = useMemo(() => getBlendedClasses(genre, secondaryGenres), [genre, secondaryGenres]);
+
   const allAbilities = useMemo(() => {
     const abilityMap = new Map<string, { ability: string; fromClass: string; classIcon: string }>();
     allClasses.forEach(cls => {
       cls.abilities.forEach(ability => {
         if (!abilityMap.has(ability)) {
-          abilityMap.set(ability, { 
-            ability, 
-            fromClass: cls.name,
-            classIcon: cls.id
-          });
+          abilityMap.set(ability, { ability, fromClass: cls.name, classIcon: cls.id });
         }
       });
     });
     return Array.from(abilityMap.values());
   }, [allClasses]);
-  
+
   const [customName, setCustomName] = useState('');
   const [customDescription, setCustomDescription] = useState('');
   const [selectedAbilities, setSelectedAbilities] = useState<string[]>([]);
-  const [statBonuses, setStatBonuses] = useState<Record<string, number>>({
-    strength: 0,
-    dexterity: 0,
-    constitution: 0,
-    intelligence: 0,
-    wisdom: 0,
-    charisma: 0,
-  });
-  
+  const [statBonuses, setStatBonuses] = useState<Record<SpecialStat, number>>(emptySpecialBonuses);
+
   const totalStatPoints = Object.values(statBonuses).reduce((a, b) => a + b, 0);
   const remainingStatPoints = MAX_STAT_POINTS - totalStatPoints;
-  
+
   const toggleAbility = (ability: string) => {
     if (selectedAbilities.includes(ability)) {
       setSelectedAbilities(prev => prev.filter(a => a !== ability));
@@ -75,15 +62,15 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
       setSelectedAbilities(prev => [...prev, ability]);
     }
   };
-  
-  const adjustStat = (stat: string, delta: number) => {
+
+  const adjustStat = (stat: SpecialStat, delta: number) => {
     const current = statBonuses[stat] || 0;
     const newValue = current + delta;
-    if (newValue < 0 || newValue > 3) return; // Max 3 per stat
+    if (newValue < 0 || newValue > 3) return;
     if (delta > 0 && remainingStatPoints <= 0) return;
     setStatBonuses(prev => ({ ...prev, [stat]: newValue }));
   };
-  
+
   const sourceClasses = useMemo(() => {
     const sources = new Set<string>();
     selectedAbilities.forEach(ability => {
@@ -92,21 +79,20 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
     });
     return Array.from(sources);
   }, [selectedAbilities, allAbilities]);
-  
+
   const canComplete = customName.trim().length >= 2 && selectedAbilities.length >= 2;
-  
+
   const handleComplete = () => {
-    const customClass: CustomClassData = {
+    onComplete({
       id: `custom_${Date.now()}`,
       name: customName.trim(),
       description: customDescription.trim() || `A unique hybrid combining ${sourceClasses.join(' and ')} techniques.`,
       abilities: selectedAbilities,
       statBonuses,
       sourceClasses,
-    };
-    onComplete(customClass);
+    });
   };
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -119,15 +105,14 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
           Cancel
         </Button>
       </div>
-      
+
       <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
         <p className="text-sm text-muted-foreground">
-          Create a unique hybrid class by selecting up to {MAX_ABILITIES} abilities from different base classes.
-          Mix and match to craft your perfect role!
+          Create a hybrid role with up to {MAX_ABILITIES} abilities and {MAX_STAT_POINTS} mandatory SPECIAL bonus points.
+          These bonuses are added after the character's base SPECIAL allocation and never consume base points.
         </p>
       </div>
-      
-      {/* Custom Class Name */}
+
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Class Name</label>
         <Input
@@ -137,8 +122,7 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
           className="bg-background border-border/50"
         />
       </div>
-      
-      {/* Description (optional) */}
+
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Description (optional)</label>
         <Input
@@ -148,57 +132,50 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
           className="bg-background border-border/50"
         />
       </div>
-      
-      {/* Stat Bonuses */}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-foreground">Stat Bonuses</label>
-          <span className="text-xs text-muted-foreground">
-            {remainingStatPoints} points remaining
-          </span>
+          <label className="text-sm font-medium text-foreground">SPECIAL Bonuses</label>
+          <span className="text-xs text-muted-foreground">{remainingStatPoints} points remaining</span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {Object.entries(statBonuses).map(([stat, value]) => (
-            <div 
-              key={stat}
-              className="flex items-center justify-between p-2 bg-background/50 rounded-lg border border-border/30"
-            >
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">{stat.slice(0, 3)}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => adjustStat(stat, -1)}
-                  disabled={value <= 0}
-                  className="w-5 h-5 rounded bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30 text-xs"
-                >
-                  -
-                </button>
-                <span className={`w-4 text-center text-sm font-medium ${value > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {value > 0 ? `+${value}` : '0'}
-                </span>
-                <button
-                  onClick={() => adjustStat(stat, 1)}
-                  disabled={remainingStatPoints <= 0 || value >= 3}
-                  className="w-5 h-5 rounded bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30 text-xs"
-                >
-                  +
-                </button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {SPECIAL_STATS.map(stat => {
+            const value = statBonuses[stat];
+            return (
+              <div
+                key={stat}
+                className="flex items-center justify-between p-2 bg-background/50 rounded-lg border border-border/30 min-w-0"
+              >
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">{SPECIAL_ABBR[stat]}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => adjustStat(stat, -1)}
+                    disabled={value <= 0}
+                    className="w-5 h-5 rounded bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30 text-xs"
+                  >-</button>
+                  <span className={`w-5 text-center text-sm font-medium ${value > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {value > 0 ? `+${value}` : '0'}
+                  </span>
+                  <button
+                    onClick={() => adjustStat(stat, 1)}
+                    disabled={remainingStatPoints <= 0 || value >= 3}
+                    className="w-5 h-5 rounded bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30 text-xs"
+                  >+</button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-      
-      {/* Ability Selection */}
+
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <label className="text-sm font-medium text-foreground">Select Abilities ({selectedAbilities.length}/{MAX_ABILITIES})</label>
           {sourceClasses.length > 0 && (
-            <span className="text-xs text-accent">
-              Hybrid of: {sourceClasses.join(', ')}
-            </span>
+            <span className="text-xs text-accent">Hybrid of: {sourceClasses.join(', ')}</span>
           )}
         </div>
-        
+
         <ScrollArea className="h-[280px] pr-4">
           <div className="space-y-2">
             {allClasses.map(cls => (
@@ -235,15 +212,14 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
           </div>
         </ScrollArea>
       </div>
-      
-      {/* Selected Abilities Summary */}
+
       {selectedAbilities.length > 0 && (
         <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
           <p className="text-xs text-muted-foreground mb-2">Selected Abilities:</p>
           <div className="flex flex-wrap gap-1">
             {selectedAbilities.map(ability => (
-              <Badge 
-                key={ability} 
+              <Badge
+                key={ability}
                 variant="secondary"
                 className="cursor-pointer hover:bg-destructive/20"
                 onClick={() => toggleAbility(ability)}
@@ -255,20 +231,15 @@ export function CustomClassBuilder({ genre, secondaryGenres, onComplete, onCance
           </div>
         </div>
       )}
-      
-      {/* Complete Button */}
-      <Button
-        onClick={handleComplete}
-        disabled={!canComplete}
-        className="w-full gap-2"
-      >
+
+      <Button onClick={handleComplete} disabled={!canComplete} className="w-full gap-2">
         <Sparkles className="w-4 h-4" />
         Create {customName || 'Custom Class'}
       </Button>
-      
+
       {!canComplete && (
         <p className="text-xs text-center text-muted-foreground">
-          {customName.trim().length < 2 
+          {customName.trim().length < 2
             ? 'Enter a class name (2+ characters)'
             : 'Select at least 2 abilities'}
         </p>
