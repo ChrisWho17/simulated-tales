@@ -134,9 +134,11 @@ export function TouchScrollContainer({
         ref={containerRef}
         className={cn(
           'flex-1 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain',
-          // Mobile companion/options grids must never force nowrap overflow.
+          // Companion/options grids must never force nowrap overflow. Some
+          // mobile browsers report a desktop-ish CSS viewport, so wrapping is
+          // intentionally not tied to a breakpoint.
           '[&_.grid]:min-w-0 [&_.grid>*]:min-w-0',
-          '[&_button]:min-w-0 max-md:[&_button]:whitespace-normal max-md:[&_button]:break-words',
+          '[&_button]:min-w-0 [&_button]:whitespace-normal [&_button]:break-words',
           contentClassName,
         )}
         style={{
