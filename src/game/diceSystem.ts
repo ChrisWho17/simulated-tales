@@ -1,5 +1,5 @@
 // ============================================================================
-// D20 DICE SYSTEM - Story/Partial/Full Modes
+// SPECIAL D20 RESOLUTION SYSTEM - Story / Partial / Full modes
 // ============================================================================
 
 export type DiceMode = 'story' | 'partial' | 'full';
@@ -17,23 +17,23 @@ export const DICE_MODES: Record<string, DiceModeInfo> = {
     id: 'story',
     name: 'Story Mode',
     icon: '📖',
-    description: 'Pure narrative experience. No dice rolls - outcomes are determined by story flow and player choices.',
-    color: '#8b5cf6'
+    description: 'No visible dice. SPECIAL still shapes what is plausible and how the world reacts.',
+    color: '#8b5cf6',
   },
   PARTIAL: {
     id: 'partial',
     name: 'Partial Dice',
     icon: '🎲',
-    description: 'Dice rolls for major events only: combat, critical choices, dramatic moments, and high-stakes situations.',
-    color: '#f59e0b'
+    description: 'SPECIAL checks resolve major danger, combat, critical social pressure and high-stakes choices.',
+    color: '#f59e0b',
   },
   FULL: {
     id: 'full',
     name: 'Full Dice',
     icon: '⚔️',
-    description: 'D&D-style gameplay. Every action is resolved with dice: combat, dialogue, exploration, crafting, and more.',
-    color: '#ef4444'
-  }
+    description: 'Every uncertain action resolves with SPECIAL before the narrator writes the turn outcome.',
+    color: '#ef4444',
+  },
 };
 
 // ============================================================================
@@ -41,17 +41,26 @@ export const DICE_MODES: Record<string, DiceModeInfo> = {
 // ============================================================================
 
 export type ActionCategory = 'major' | 'minor';
-export type StatType = 'strength' | 'agility' | 'intelligence' | 'charisma' | 'perception' | 'endurance';
+export type StatType =
+  | 'strength'
+  | 'perception'
+  | 'endurance'
+  | 'charisma'
+  | 'intelligence'
+  | 'agility'
+  | 'luck';
 
 export interface ActionDefinition {
   category: ActionCategory;
   stat: StatType;
   baseDC: number;
   name: string;
+  /** Luck assists the check in addition to the governing SPECIAL stat. */
+  luckAssisted?: boolean;
 }
 
 export const ACTION_CATEGORIES: Record<string, ActionDefinition> = {
-  // Major actions (Partial + Full mode)
+  // Major actions (Partial + Full)
   COMBAT_ATTACK: { category: 'major', stat: 'strength', baseDC: 12, name: 'Attack' },
   COMBAT_DEFEND: { category: 'major', stat: 'agility', baseDC: 10, name: 'Defend' },
   COMBAT_DODGE: { category: 'major', stat: 'agility', baseDC: 14, name: 'Dodge' },
@@ -62,12 +71,15 @@ export const ACTION_CATEGORIES: Record<string, ActionDefinition> = {
   RESIST_EFFECT: { category: 'major', stat: 'endurance', baseDC: 12, name: 'Resist' },
   SAVING_THROW: { category: 'major', stat: 'endurance', baseDC: 14, name: 'Saving Throw' },
   ROMANCE_ADVANCE: { category: 'major', stat: 'charisma', baseDC: 13, name: 'Romance' },
-  
-  // Minor actions (Full mode only)
+
+  // Minor actions (Full mode)
   PERCEPTION_CHECK: { category: 'minor', stat: 'perception', baseDC: 10, name: 'Perception' },
   STEALTH: { category: 'minor', stat: 'agility', baseDC: 12, name: 'Stealth' },
   LOCKPICK: { category: 'minor', stat: 'agility', baseDC: 14, name: 'Lockpicking' },
-  SEARCH: { category: 'minor', stat: 'perception', baseDC: 8, name: 'Search' },
+  SEARCH: { category: 'minor', stat: 'perception', baseDC: 10, name: 'Search', luckAssisted: true },
+  SCAVENGE: { category: 'minor', stat: 'perception', baseDC: 11, name: 'Scavenge', luckAssisted: true },
+  LUCK_CHECK: { category: 'minor', stat: 'luck', baseDC: 10, name: 'Luck' },
+  GAMBLE: { category: 'minor', stat: 'luck', baseDC: 11, name: 'Gamble' },
   PERSUADE_MINOR: { category: 'minor', stat: 'charisma', baseDC: 10, name: 'Persuasion' },
   HAGGLE: { category: 'minor', stat: 'charisma', baseDC: 11, name: 'Haggle' },
   CRAFT: { category: 'minor', stat: 'intelligence', baseDC: 12, name: 'Craft' },
@@ -79,32 +91,30 @@ export const ACTION_CATEGORIES: Record<string, ActionDefinition> = {
   RECALL: { category: 'minor', stat: 'intelligence', baseDC: 10, name: 'Recall Knowledge' },
   INSIGHT: { category: 'minor', stat: 'perception', baseDC: 12, name: 'Insight' },
   FLIRT: { category: 'minor', stat: 'charisma', baseDC: 10, name: 'Flirt' },
-  ENDURE: { category: 'minor', stat: 'endurance', baseDC: 10, name: 'Endure' }
+  ENDURE: { category: 'minor', stat: 'endurance', baseDC: 10, name: 'Endure' },
 };
 
 // ============================================================================
-// DIFFICULTY MODIFIERS (applied to roll, not DC)
+// DIFFICULTY
 // ============================================================================
 
 export type DifficultyTier = 'VERY_EASY' | 'EASY' | 'NORMAL' | 'HARD' | 'VERY_HARD';
 
 export interface DifficultyInfo {
-  modifier: number; // Added to the roll
+  modifier: number;
   label: string;
   color: string;
 }
 
-// Difficulty modifies the ROLL, not the DC. DC is fixed at 10.
-// Formula: d20 + statModifier + difficultyModifier >= 10
+/** Difficulty changes the roll. The base target stays readable and stable. */
 export const DIFFICULTY_MODIFIERS: Record<DifficultyTier, DifficultyInfo> = {
-  VERY_EASY: { modifier: +3, label: 'Very Easy', color: '#10b981' },
+  VERY_EASY: { modifier: +4, label: 'Very Easy', color: '#10b981' },
   EASY: { modifier: +2, label: 'Easy', color: '#22c55e' },
   NORMAL: { modifier: 0, label: 'Normal', color: '#64748b' },
   HARD: { modifier: -2, label: 'Hard', color: '#f59e0b' },
-  VERY_HARD: { modifier: -3, label: 'Very Hard', color: '#ef4444' },
+  VERY_HARD: { modifier: -4, label: 'Very Hard', color: '#ef4444' },
 };
 
-// Fixed DC for all checks - difficulty is handled via roll modifiers
 export const BASE_DC = 10;
 
 // ============================================================================
@@ -126,20 +136,21 @@ export const ROLL_RESULTS: Record<RollResultType, RollResultInfo> = {
   FAILURE: { label: 'Failure', color: '#dc2626', icon: '✗' },
   PARTIAL: { label: 'Partial Success', color: '#f59e0b', icon: '◐' },
   SUCCESS: { label: 'Success', color: '#22c55e', icon: '✓' },
-  CRITICAL_SUCCESS: { min: 20, max: 20, label: 'Critical Success', color: '#059669', icon: '⭐' }
+  CRITICAL_SUCCESS: { min: 20, max: 20, label: 'Critical Success', color: '#059669', icon: '⭐' },
 };
 
 // ============================================================================
-// PLAYER STATS INTERFACE (for dice system)
+// PLAYER STATS
 // ============================================================================
 
 export interface PlayerStats {
   strength: number;
-  agility: number;
-  intelligence: number;
-  charisma: number;
   perception: number;
   endurance: number;
+  charisma: number;
+  intelligence: number;
+  agility: number;
+  luck: number;
 }
 
 export interface Wound {
@@ -185,162 +196,128 @@ export interface DiceRollResult {
   result: RollResultInfo;
   modifierBreakdown: ModifierSource[];
   isCritical: boolean;
+  criticalSuccess?: boolean;
+  criticalFailure?: boolean;
+  luck: number;
   timestamp: number;
 }
 
 // ============================================================================
-// DICE ROLLING FUNCTIONS
+// DICE ROLLING
 // ============================================================================
 
 export const rollD20 = (): number => Math.floor(Math.random() * 20) + 1;
 
 export const rollDice = (sides: number, count = 1): { rolls: number[]; total: number } => {
   const rolls: number[] = [];
-  for (let i = 0; i < count; i++) {
-    rolls.push(Math.floor(Math.random() * sides) + 1);
-  }
+  for (let i = 0; i < count; i++) rolls.push(Math.floor(Math.random() * sides) + 1);
   return { rolls, total: rolls.reduce((a, b) => a + b, 0) };
 };
 
-/**
- * Convert stat (0-100) to D20 modifier (-5 to +10)
- * 50 = +0, every 10 points = +2
- * Includes validation to handle invalid inputs
- */
+/** SPECIAL 5 is neutral. Each point above/below 5 is one d20 modifier. */
 export const calculateStatModifier = (statValue: number): number => {
-  // Validate input
-  if (typeof statValue !== 'number' || isNaN(statValue)) return 0;
-  // Clamp to valid range
-  const clampedStat = Math.max(0, Math.min(100, statValue));
-  return Math.floor((clampedStat - 50) / 5);
+  if (typeof statValue !== 'number' || Number.isNaN(statValue)) return 0;
+  return Math.floor(statValue - 5);
 };
 
 /**
- * Get effective stat value after applying wounds and status effects
- * Includes validation to handle missing or invalid data
+ * Luck does not simply inflate every check. It changes improbable outcomes and
+ * gives search/scavenging a modest fortune assist, closer to New Vegas than a
+ * generic +LCK-to-everything stat.
  */
+export const calculateLuckSearchModifier = (luck: number): number => {
+  if (typeof luck !== 'number' || Number.isNaN(luck)) return 0;
+  return Math.max(-2, Math.min(2, Math.trunc((luck - 5) / 2)));
+};
+
+export const getCriticalRange = (luck: number): { successAt: number; failureAt: number } => {
+  const safeLuck = typeof luck === 'number' && !Number.isNaN(luck) ? luck : 1;
+  return {
+    // Exceptional Luck makes 19s critical. Very low Luck makes 2s dangerous.
+    successAt: safeLuck >= 9 ? 19 : 20,
+    failureAt: safeLuck <= 1 ? 2 : 1,
+  };
+};
+
+/** Apply wounds and temporary buffs/debuffs directly on the SPECIAL scale. */
 export const getEffectiveStatWithWounds = (player: DicePlayer, statName: StatType): number => {
-  // Validate player and stats exist
-  if (!player || !player.stats) return 50;
-  
-  const rawStat = player.stats[statName];
-  let base = typeof rawStat === 'number' && !isNaN(rawStat) ? rawStat : 50;
-  let modifier = 0;
-  
-  // Apply wound penalties safely
-  if (Array.isArray(player.wounds)) {
-    player.wounds.forEach(wound => {
-      if (wound?.statPenalties?.[statName]) {
-        const penalty = wound.statPenalties[statName];
-        if (typeof penalty === 'number' && !isNaN(penalty)) {
-          modifier += penalty;
-        }
-      }
-    });
+  if (!player?.stats) return 1;
+  const raw = player.stats[statName];
+  let value = typeof raw === 'number' && !Number.isNaN(raw) ? raw : 1;
+
+  for (const wound of player.wounds || []) {
+    const delta = wound?.statPenalties?.[statName];
+    if (typeof delta === 'number' && !Number.isNaN(delta)) value += delta;
   }
-  
-  // Apply status effect modifiers safely
-  if (Array.isArray(player.statusEffects)) {
-    player.statusEffects.forEach(effect => {
-      if (effect?.statModifiers?.[statName]) {
-        const effectMod = effect.statModifiers[statName];
-        if (typeof effectMod === 'number' && !isNaN(effectMod)) {
-          modifier += effectMod;
-        }
-      }
-    });
+  for (const effect of player.statusEffects || []) {
+    const delta = effect?.statModifiers?.[statName];
+    if (typeof delta === 'number' && !Number.isNaN(delta)) value += delta;
   }
-  
-  return Math.max(1, Math.min(100, base + modifier));
+
+  // Base creation is 0-10; class/equipment/status effects may push above 10.
+  return Math.max(0, Math.min(20, value));
 };
 
 /**
- * Perform a full dice roll with all modifiers
- * Includes comprehensive input validation
+ * One authoritative SPECIAL check. The result is intended to exist BEFORE the
+ * narrator writes consequences, so one player action remains one complete turn.
  */
 export const performDiceRoll = (
   player: DicePlayer,
   actionType: string,
   difficulty: DifficultyTier = 'NORMAL',
-  contextModifiers: ModifierSource[] = []
+  contextModifiers: ModifierSource[] = [],
+  forcedNaturalRoll?: number,
 ): DiceRollResult | null => {
-  // Validate inputs
   if (!player || !actionType) return null;
-  
   const action = ACTION_CATEGORIES[actionType];
   if (!action) {
     console.warn(`[DiceSystem] Unknown action type: ${actionType}`);
     return null;
   }
-  
-  const diffMod = DIFFICULTY_MODIFIERS[difficulty] || DIFFICULTY_MODIFIERS.NORMAL;
-  
-  // Fixed DC of 10 - difficulty modifies the roll, not the DC
-  const targetDC = BASE_DC;
-  
-  // Get stat and calculate modifier
+
+  const diff = DIFFICULTY_MODIFIERS[difficulty] || DIFFICULTY_MODIFIERS.NORMAL;
+  const targetDC = action.baseDC || BASE_DC;
   const effectiveStat = getEffectiveStatWithWounds(player, action.stat);
   const statModifier = calculateStatModifier(effectiveStat);
-  
-  // Roll the d20
-  const naturalRoll = rollD20();
-  
-  // Calculate total modifiers: stat + difficulty + context
-  let totalModifier = statModifier + diffMod.modifier;
+  const luck = getEffectiveStatWithWounds(player, 'luck');
+  const naturalRoll = typeof forcedNaturalRoll === 'number'
+    ? Math.max(1, Math.min(20, Math.floor(forcedNaturalRoll)))
+    : rollD20();
+
+  let totalModifier = statModifier + diff.modifier;
   const modifierBreakdown: ModifierSource[] = [
     { source: capitalize(action.stat), value: statModifier },
-    { source: `Difficulty (${diffMod.label})`, value: diffMod.modifier }
+    { source: `Difficulty (${diff.label})`, value: diff.modifier },
   ];
-  
-  // Add context modifiers (with validation)
-  const safeModifiers = Array.isArray(contextModifiers) ? contextModifiers : [];
-  safeModifiers.forEach(mod => {
-    if (mod && typeof mod.value === 'number' && !isNaN(mod.value)) {
+
+  if (action.luckAssisted && action.stat !== 'luck') {
+    const luckMod = calculateLuckSearchModifier(luck);
+    if (luckMod !== 0) {
+      totalModifier += luckMod;
+      modifierBreakdown.push({ source: 'Luck', value: luckMod });
+    }
+  }
+
+  for (const mod of Array.isArray(contextModifiers) ? contextModifiers : []) {
+    if (mod && typeof mod.value === 'number' && !Number.isNaN(mod.value)) {
       totalModifier += mod.value;
       modifierBreakdown.push(mod);
     }
-  });
-  
-  // Check for wounds affecting this stat (with validation)
-  if (Array.isArray(player.wounds)) {
-    player.wounds.forEach(wound => {
-      if (wound?.statPenalties?.[action.stat]) {
-        const rawPenalty = wound.statPenalties[action.stat];
-        if (typeof rawPenalty === 'number' && !isNaN(rawPenalty)) {
-          const penalty = Math.floor(rawPenalty / 5);
-          if (penalty !== 0) {
-            totalModifier += penalty;
-            modifierBreakdown.push({ 
-              source: `${wound.type || 'Wound'} (${wound.location || 'body'})`, 
-              value: penalty,
-              isWound: true 
-            });
-          }
-        }
-      }
-    });
   }
-  
+
   const totalRoll = naturalRoll + totalModifier;
-  
-  // Determine result: roll + modifiers >= DC 10
+  const criticalRange = getCriticalRange(luck);
+  const criticalSuccess = naturalRoll >= criticalRange.successAt;
+  const criticalFailure = naturalRoll <= criticalRange.failureAt;
+
   let result: RollResultInfo;
-  if (naturalRoll === 1) {
-    result = ROLL_RESULTS.CRITICAL_FAILURE;
-  } else if (naturalRoll === 20) {
-    result = ROLL_RESULTS.CRITICAL_SUCCESS;
-  } else if (totalRoll >= targetDC + 5) {
-    // Exceptional success (beat DC by 5+)
-    result = ROLL_RESULTS.SUCCESS;
-  } else if (totalRoll >= targetDC) {
-    result = ROLL_RESULTS.SUCCESS;
-  } else if (totalRoll >= targetDC - 3) {
-    // Within 3 of DC = partial success
-    result = ROLL_RESULTS.PARTIAL;
-  } else {
-    result = ROLL_RESULTS.FAILURE;
-  }
-  
+  if (criticalFailure) result = ROLL_RESULTS.CRITICAL_FAILURE;
+  else if (criticalSuccess) result = ROLL_RESULTS.CRITICAL_SUCCESS;
+  else if (totalRoll >= targetDC) result = ROLL_RESULTS.SUCCESS;
+  else if (totalRoll >= targetDC - 3) result = ROLL_RESULTS.PARTIAL;
+  else result = ROLL_RESULTS.FAILURE;
+
   return {
     action: action.name,
     actionType,
@@ -350,90 +327,108 @@ export const performDiceRoll = (
     totalModifier,
     totalRoll,
     targetDC,
-    difficulty: diffMod.label,
-    difficultyColor: diffMod.color,
+    difficulty: diff.label,
+    difficultyColor: diff.color,
     result,
     modifierBreakdown,
-    isCritical: naturalRoll === 1 || naturalRoll === 20,
-    timestamp: Date.now()
+    isCritical: criticalSuccess || criticalFailure,
+    criticalSuccess,
+    criticalFailure,
+    luck,
+    timestamp: Date.now(),
   };
 };
 
-/**
- * Check if we should roll dice based on the current mode and action type
- */
 export const shouldRollDice = (diceMode: DiceMode, actionType: string): boolean => {
   if (diceMode === 'story') return false;
-  
   const action = ACTION_CATEGORIES[actionType];
   if (!action) return false;
-  
-  if (diceMode === 'partial') {
-    return action.category === 'major';
-  }
-  
-  // Full mode - all actions
+  if (diceMode === 'partial') return action.category === 'major';
   return true;
 };
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// ACTION INFERENCE
 // ============================================================================
 
-const capitalize = (str: string): string => {
-  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-};
+export interface InferredAction {
+  actionType: keyof typeof ACTION_CATEGORIES;
+  confidence: 'high' | 'medium';
+}
 
 /**
- * Format a dice roll result for display in the narrative
+ * Lightweight deterministic classifier used by local/manual rolls and mirrored
+ * by the server turn resolver. It intentionally chooses broad SPECIAL checks,
+ * not hundreds of pseudo-skills.
  */
+export function inferActionType(input: string): InferredAction | null {
+  const text = String(input || '').toLowerCase().trim();
+  if (!text) return null;
+
+  if (/\b(scavenge|loot the room|search for supplies|search the area|rummage|forage)\b/.test(text))
+    return { actionType: 'SCAVENGE', confidence: 'high' };
+  if (/\b(search|look around|examine|inspect|investigate|listen|spot|scan|notice|find)\b/.test(text))
+    return { actionType: 'SEARCH', confidence: 'high' };
+  if (/\b(gamble|bet|wager|chance it|try my luck)\b/.test(text))
+    return { actionType: 'GAMBLE', confidence: 'high' };
+  if (/\b(sneak|hide|stealth|creep|silently)\b/.test(text))
+    return { actionType: 'STEALTH', confidence: 'high' };
+  if (/\b(lockpick|pick the lock|bypass the lock)\b/.test(text))
+    return { actionType: 'LOCKPICK', confidence: 'high' };
+  if (/\b(dodge|evade|duck|sidestep)\b/.test(text))
+    return { actionType: 'COMBAT_DODGE', confidence: 'high' };
+  if (/\b(flee|escape|run away|break away)\b/.test(text))
+    return { actionType: 'ESCAPE', confidence: 'high' };
+  if (/\b(attack|shoot|fire at|stab|slash|strike|punch|kick|grapple)\b/.test(text))
+    return { actionType: 'COMBAT_ATTACK', confidence: 'high' };
+  if (/\b(persuade|convince|negotiate|talk .* into|reason with|appeal to)\b/.test(text))
+    return { actionType: 'PERSUADE_MAJOR', confidence: 'high' };
+  if (/\b(intimidate|threaten|scare|coerce)\b/.test(text))
+    return { actionType: 'INTIMIDATE', confidence: 'high' };
+  if (/\b(flirt|seduce|charm)\b/.test(text))
+    return { actionType: 'FLIRT', confidence: 'high' };
+  if (/\b(haggle|barter|lower the price|better price)\b/.test(text))
+    return { actionType: 'HAGGLE', confidence: 'high' };
+  if (/\b(hack|repair|fix|craft|build|decode|solve|calculate|research)\b/.test(text))
+    return { actionType: 'CRAFT', confidence: 'high' };
+  if (/\b(heal|treat|bandage|medicine|stitch)\b/.test(text))
+    return { actionType: 'HEAL', confidence: 'high' };
+  if (/\b(endure|resist|withstand|hold my breath|push through|pain|poison)\b/.test(text))
+    return { actionType: 'ENDURE', confidence: 'high' };
+  if (/\b(lift|break|force open|kick down|bend|shove)\b/.test(text))
+    return { actionType: 'LIFT', confidence: 'high' };
+  if (/\b(climb|scale)\b/.test(text)) return { actionType: 'CLIMB', confidence: 'high' };
+  if (/\b(swim|dive across)\b/.test(text)) return { actionType: 'SWIM', confidence: 'high' };
+  if (/\b(jump|leap|vault)\b/.test(text)) return { actionType: 'JUMP', confidence: 'high' };
+
+  return null;
+}
+
+// ============================================================================
+// FORMATTING
+// ============================================================================
+
+const capitalize = (str: string): string => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
 export const formatRollForNarrative = (roll: DiceRollResult): string => {
   const modSign = roll.totalModifier >= 0 ? '+' : '';
-  const critText = roll.isCritical 
-    ? (roll.naturalRoll === 20 ? ' (CRITICAL!)' : ' (Critical Fail!)')
-    : '';
-  
   return [
-    `**${roll.action}** — ${roll.result.icon} ${roll.result.label}${critText}`,
-    `Roll: ${roll.naturalRoll} ${modSign}${roll.totalModifier} = ${roll.totalRoll} vs DC ${roll.targetDC} (${roll.difficulty})`,
-    roll.modifierBreakdown.length > 1 
+    `🎲 **${roll.action}** [${roll.stat.toUpperCase()} ${roll.effectiveStat}] — ${roll.result.icon} ${roll.result.label}`,
+    `d20 ${roll.naturalRoll} ${modSign}${roll.totalModifier} = ${roll.totalRoll} vs ${roll.targetDC} (${roll.difficulty})`,
+    roll.modifierBreakdown.length > 1
       ? `Modifiers: ${roll.modifierBreakdown.map(m => `${m.source} ${m.value >= 0 ? '+' : ''}${m.value}`).join(', ')}`
-      : ''
+      : '',
   ].filter(Boolean).join('\n');
 };
 
-/**
- * Get narrative flavor text for a roll result
- */
 export const getRollNarrative = (roll: DiceRollResult): string => {
   const narratives: Record<string, string[]> = {
-    CRITICAL_SUCCESS: [
-      'A masterful execution that exceeds all expectations.',
-      'Perfection. The kind of moment legends are made of.',
-      'You surpass even your own abilities in this moment.'
-    ],
-    SUCCESS: [
-      'Success. Your training serves you well.',
-      'It works as intended.',
-      'A solid performance.'
-    ],
-    PARTIAL: [
-      'Partially successful, but with complications.',
-      'It works... sort of. Not quite as planned.',
-      'Success, but at a cost.'
-    ],
-    FAILURE: [
-      'It doesn\'t work. Not this time.',
-      'Your efforts fall short.',
-      'Failure. Perhaps another approach?'
-    ],
-    CRITICAL_FAILURE: [
-      'A catastrophic failure with dire consequences.',
-      'Everything goes wrong in the worst possible way.',
-      'Disaster strikes. This will have repercussions.'
-    ]
+    CRITICAL_SUCCESS: ['Fortune and capability line up perfectly.', 'An exceptional break turns the attempt decisively in your favor.'],
+    SUCCESS: ['The attempt works.', 'Your capability carries the action through.'],
+    PARTIAL: ['You get what you wanted, but something comes with it.', 'The action works imperfectly and creates a complication.'],
+    FAILURE: ['The attempt fails forward and changes the situation.', 'You fall short, but the failure creates a new consequence rather than a dead end.'],
+    CRITICAL_FAILURE: ['Bad luck compounds the mistake into a serious complication.', 'The attempt goes catastrophically wrong and the world reacts.'],
   };
-  
   const resultKey = Object.entries(ROLL_RESULTS).find(([_, v]) => v.label === roll.result.label)?.[0] || 'FAILURE';
   const options = narratives[resultKey] || narratives.FAILURE;
   return options[Math.floor(Math.random() * options.length)];
@@ -451,8 +446,6 @@ export const saveDiceMode = (mode: DiceMode): void => {
 
 export const loadDiceMode = (): DiceMode => {
   const saved = localStorage.getItem(DICE_MODE_STORAGE_KEY);
-  if (saved && ['story', 'partial', 'full'].includes(saved)) {
-    return saved as DiceMode;
-  }
-  return 'story'; // Default
+  if (saved && ['story', 'partial', 'full'].includes(saved)) return saved as DiceMode;
+  return 'story';
 };
